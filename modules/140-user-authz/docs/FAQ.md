@@ -70,10 +70,52 @@ The `user-authz-controller` component reconciles the ClusterRoleBindings and Rol
 
 **Object status.** Every rule carries a `Ready` condition and the number of its bindings:
 
+To list all ClusterAuthorizationRules in the cluster, run:
+
 ```bash
 d8 k get clusterauthorizationrules
+```
+
+Example output:
+
+```console
+NAME        ACCESS LEVEL   READY   BINDINGS   AGE
+my-rule     Admin          True    3          5d
+```
+
+To list all AuthorizationRules in all namespaces of the cluster, run:
+
+```bash
 d8 k get authorizationrules -A
+```
+
+Example output:
+
+```console
+NAMESPACE   NAME       ACCESS LEVEL   READY   BINDINGS   AGE
+default     app-rule   Editor         True    2          3d
+team-a      dev-rule   User           False   0          1h
+```
+
+To get only the conditions of a specific ClusterAuthorizationRule, run:
+
+```bash
 d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
+```
+
+Example output:
+
+```json
+[
+  {
+    "lastTransitionTime": "2026-09-11T10:00:00Z",
+    "message": "3 bindings applied",
+    "observedGeneration": 1,
+    "reason": "BindingsApplied",
+    "status": "True",
+    "type": "Ready"
+  }
+]
 ```
 
 `Ready=True` with the reason `BindingsApplied` means the bindings match the rule. `Ready=False` names the problem: `InvalidSpec` (the rule cannot be rendered into bindings; the message says why) or `ApplyError` (the API server rejected a write; the message names the binding and the error). Events with the same reasons are recorded on the rule.
@@ -98,9 +140,9 @@ d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
 
 - `D8UserAuthzControllerUnavailable` and `D8UserAuthzControllerTargetDown` when the controller has unavailable replicas or is not scraped for 5 minutes.
 - `D8UserAuthzControllerReconcileErrorsHigh` on a sustained reconcile error rate.
--  `D8UserAuthzBindingsDrift` when bindings of some kind stay out of the desired state for 15 minutes.
+- `D8UserAuthzBindingsDrift` when bindings of some kind stay out of the desired state for 15 minutes.
 - `D8UserAuthzAuthorizationRulesInvalid` and `D8UserAuthzAuthorizationRuleInvalid` counting and naming the rules whose bindings cannot be applied for 10 minutes.
--  `D8UserAuthzCustomRolesNotAggregated` when the aggregated ClusterRole of an access level stays empty although custom roles for it exist.
+- `D8UserAuthzCustomRolesNotAggregated` when the aggregated ClusterRole of an access level stays empty although custom roles for it exist.
 
 When a rule stays `Ready=False` with `ApplyError` because a binding's `roleRef` was changed by hand, delete that binding: `roleRef` is immutable and the controller recreates the binding with the right one.
 
