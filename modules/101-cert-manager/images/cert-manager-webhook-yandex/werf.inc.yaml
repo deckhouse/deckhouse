@@ -1,4 +1,4 @@
-{{- $commit := "1a7dd500a97e9206fa5cfebb102decd3889e3544" }}
+{{- /* Vendored from https://github.com/yandex-cloud/cert-manager-webhook-yandex @ 1a7dd500a97e9206fa5cfebb102decd3889e3544 */}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -15,15 +15,15 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
-  - git clone $(cat /run/secrets/SOURCE_REPO)/yandex-cloud/cert-manager-webhook-yandex.git /src
   - cd /src
-  - git checkout {{ $commit }}
-  - rm -rf .git deploy testdata scripts
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
