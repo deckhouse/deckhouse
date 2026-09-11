@@ -1,16 +1,13 @@
 # The schema of the NEXT release's settings, present here on purpose.
 #
-# This release has no code that acts on `mode`, `primary` or `storage`: the implementation that reads
-# them ships in the release after this one. What this file buys is the ability to WRITE them before
-# the upgrade — and for a `Direct` cluster that is not a convenience but the only order that works.
-# Its nodes pull through the in-cluster address; the upgrade removes the objects serving that address
-# and the new implementation takes it over from the configuration below. Configuration that could
-# only be written afterwards would leave a gap with nothing serving the address, so it is accepted
-# now, sits unused, and is picked up on the other side.
+# Nothing in this release acts on `mode`, `primary` or `storage` — the implementation that reads them
+# ships in the release after this one. What the schema buys is the ability to WRITE them before the
+# upgrade, which for a `Direct` cluster is the only order that works: its nodes pull through the
+# in-cluster address, the upgrade removes the objects serving it, and the new implementation takes
+# that address over from the configuration below.
 #
-# Kept byte-identical to the next release's schema, including the validation rules, so that anything
-# accepted here is accepted there. Divergence would show up as a configuration that passes today and
-# is refused by the release it was written for.
+# Kept byte-identical to the next release's schema, validation rules included, so that anything
+# accepted here is accepted there.
 type: object
 x-deckhouse-validations:
   # These expressions are evaluated against the raw config values, BEFORE schema

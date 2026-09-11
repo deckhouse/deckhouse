@@ -14,24 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package implementation records whether this cluster may take a release that no longer carries
-// the previous registry implementation.
+// Package implementation records whether this cluster may take a release that no longer carries the
+// previous registry implementation.
 //
-// It exists in THIS release rather than in the one that removes the old implementation, and that is
-// not an accident of packaging: a release requirement is evaluated by the version already installed.
-// The release that declares `registryImplementation: V2` is judged by the code running here, so the
-// decision about who may upgrade has to ship one release ahead of the release it protects.
+// It lives in THIS release rather than in the one that removes the old implementation because a
+// release requirement is evaluated by the version already installed: the release that declares
+// `registryImplementation: V2` is judged by the code running here.
 //
-// What the value means is "an upgrade would not strand this cluster", not "the cluster runs the new
-// implementation" — nothing here can run it, the code is not in this release. The two coincide for
-// every cluster except the one this package was written for: a `Direct` cluster whose operator has
-// already written the new module's configuration, which will be picked up on the other side of the
-// upgrade.
+// The value means "an upgrade would not strand this cluster", not "the cluster runs the new
+// implementation" — that code is not in this release. The two coincide everywhere except the case
+// this package was written for: a `Direct` cluster whose operator has already written the new
+// module's configuration, which is picked up on the other side of the upgrade.
 package implementation
 
 const (
-	// ImplementationLegacy and ImplementationV2 are the two values a release can require.
-	// Spelled the same as in the release that consumes them, because they are compared as strings.
+	// ImplementationLegacy and ImplementationV2 are the two values a release can require, spelled
+	// as in the release that consumes them, because they are compared as strings.
 	ImplementationLegacy = "Legacy"
 	ImplementationV2     = "V2"
 
@@ -41,9 +39,8 @@ const (
 
 // legacyState is the part of the previous implementation's state this decision reads.
 //
-// Two fields, copied rather than imported, for the same reason the gate in the next release copies
-// them: the field names are the contract, and a rename shows up here as a mode that reads empty —
-// which fails closed.
+// Copied rather than imported, for the same reason the next release's gate copies them: the field
+// names are the contract, and a rename shows up here as a mode that reads empty — which fails closed.
 type legacyState struct {
 	Mode       string `json:"mode,omitempty"`
 	TargetMode string `json:"target_mode,omitempty"`
@@ -51,27 +48,24 @@ type legacyState struct {
 
 // decide answers whether an upgrade to a release without the previous implementation is safe.
 //
-// The shape of the danger, which is what the rules below are about: on the far side of the upgrade
-// the previous implementation's OBJECTS are gone — its Service, its in-cluster proxy — because that
-// release does not render them. A cluster whose nodes still point at the in-cluster address is then
-// left with an address nobody serves. So the question is not "which implementation is running" but
-// "does anything still depend on what the upgrade removes".
+// The question is not which implementation runs, but whether anything still depends on what the
+// upgrade removes: the release on the far side does not render the previous implementation's objects
+// — its Service, its in-cluster proxy — so a cluster whose nodes still point at the in-cluster
+// address would be left with an address nobody serves.
 //
-//   - No state at all: the previous implementation never took the cluster, so there is nothing to
-//     take away.
-//   - `Unmanaged`: it has already let go of the pull path — the nodes pull from a registry named in
-//     the configuration, not from anything the upgrade deletes.
-//   - `Direct` WITH the new module configured: the nodes do point at the in-cluster address, and
-//     what makes this safe is that the replacement for it is already written down. After the
-//     upgrade the new implementation serves that same address, and the node agent takes over the
-//     container runtime configuration. Without that configuration the address would be orphaned,
-//     which is why the mode alone is not enough.
-//   - Anything else, `Proxy` and `Local` included: refused. Those two keep state the upgrade cannot
+//   - No state at all: the previous implementation never took the cluster.
+//   - `Unmanaged`: it has already let go of the pull path, and the nodes pull from a registry named
+//     in the configuration rather than from anything the upgrade deletes.
+//   - `Direct` WITH the new module configured: the nodes do point at the in-cluster address, and its
+//     replacement is already written down — after the upgrade the new implementation serves that
+//     same address and the node agent takes over the container runtime configuration. The mode alone
+//     is not enough, because without that configuration the address would be orphaned.
+//   - Anything else, `Proxy` and `Local` included: refused. Both keep state the upgrade cannot
 //     account for — static pods with their own PKI on every node, and, for `Local`, the image store
 //     on the master disks.
 //
-// A transition in flight refuses in every case: the mode is what the cluster is, the target is where
-// it is going, and a cluster being reconfigured right now is not a cluster to upgrade.
+// A transition in flight refuses in every case: a cluster being reconfigured right now is not a
+// cluster to upgrade.
 func decide(legacy *legacyState, moduleConfigured bool) string {
 	if legacy == nil {
 		return ImplementationV2

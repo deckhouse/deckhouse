@@ -22,12 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestDecide is the whole of this backport: which clusters may take a release that no longer
-// carries the previous implementation.
+// TestDecide is the whole of this backport: which clusters may take a release that no longer carries
+// the previous implementation.
 //
-// It is a table because the answer is a policy, and a policy is worth reading in one place. The
-// interesting rows are the two `Direct` ones: that mode is the reason this package exists, and it
-// is admitted only when the operator has already said where images come from afterwards.
+// A table, because the answer is a policy worth reading in one place. The interesting rows are the
+// two `Direct` ones — that mode is why this package exists, and it is admitted only when the
+// operator has already said where images come from afterwards.
 func TestDecide(t *testing.T) {
 	for _, tc := range []struct {
 		name       string

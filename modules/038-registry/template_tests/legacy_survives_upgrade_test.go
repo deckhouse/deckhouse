@@ -25,12 +25,10 @@ import (
 
 // The objects that serve the in-cluster address must outlive the release that stops rendering them.
 //
-// This is the backport's whole purpose, and the failure it prevents was measured on a cluster: the
-// handover deleted the Service and the in-cluster proxy, the node's containerd was rewritten to the
-// in-cluster name with no agent yet to answer it, control-plane-manager then moved etcd to a new
-// digest, and the pull failed with `lookup registry.d8-system.svc: no such host`. etcd could not
-// start, the API went away, and with it bashible — so the agent that would have repaired the pull
-// path could never be installed. The cluster needed manual repair.
+// This is the backport's purpose. On a `Direct` cluster the nodes pull through the in-cluster
+// address; if the Service and the proxy behind it go away on the first reconciliation of the release
+// that no longer renders them, nothing answers that address until the node agent takes it over —
+// including the pulls the takeover itself depends on.
 //
 // `helm.sh/resource-policy: keep` is read by Helm off the object ALREADY IN THE CLUSTER, which is
 // why it has to be here, in the release installed before the upgrade, and not in the one that

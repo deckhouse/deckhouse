@@ -18,8 +18,8 @@ package implementation
 
 import "encoding/base64"
 
-// decodeBase64 exists so the filter above stays about the decision rather than about encodings:
-// a Secret read through an unstructured object hands over its data still encoded.
+// decodeBase64 keeps the state filter about the decision rather than about encodings: a Secret read
+// through an unstructured object hands over its data still encoded.
 func decodeBase64(raw string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(raw)
 }

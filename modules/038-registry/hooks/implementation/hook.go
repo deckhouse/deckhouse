@@ -41,8 +41,7 @@ var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
 		Queue: "/modules/registry/implementation",
 		// On every reconciliation rather than on a schedule: the answer changes the moment an
-		// operator writes the module's configuration, and a cluster that has just become
-		// upgradeable should not have to wait out a timer to be told so.
+		// operator writes the module's configuration.
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
@@ -75,8 +74,7 @@ func filterLegacyState(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	raw, found, err := unstructured.NestedString(obj.Object, "data", "state")
 	if err != nil || !found {
 		// An unreadable or absent state is reported as "present but empty", which `decide`
-		// refuses. Guessing "probably fine" here would let a cluster upgrade into an
-		// unserved address.
+		// refuses: guessing "probably fine" would let a cluster upgrade into an unserved address.
 		return legacyState{}, nil
 	}
 
@@ -93,9 +91,9 @@ func filterLegacyState(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 }
 
 // filterModuleConfig answers the one question the decision needs: has the operator written a
-// configuration the next release can act on. Both halves are required — `mode: Managed` without a
-// source of images is a configuration nothing can serve from, and `primary` under the default
-// `Unmanaged` mode is settings nothing applies.
+// configuration the next release can act on. Both halves are required — `mode: Managed` with no
+// source of images is unservable, and `primary` under the default `Unmanaged` mode is settings
+// nothing applies.
 func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	settings, _, err := unstructured.NestedMap(obj.Object, "spec", "settings")
 	if err != nil {
@@ -109,10 +107,9 @@ func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func handleImplementation(_ context.Context, input *go_hook.HookInput) error {
-	// Read through the module's own helper, which reports "no snapshot" as an error rather than
-	// as a zero value: the difference between "the previous implementation never recorded a
-	// state" and "it recorded one this code could not read" is the difference between admitting
-	// a cluster and refusing it.
+	// Read through the module's own helper, which reports "no snapshot" as an error rather than a
+	// zero value: "never recorded a state" and "recorded one this code could not read" are the
+	// difference between admitting a cluster and refusing it.
 	var legacy *legacyState
 	if state, err := helpers.SnapshotToSingle[legacyState](input, legacyStateSnapName); err == nil {
 		legacy = &state
