@@ -56,7 +56,11 @@ resource "ovirt_disk_resize" "master_boot_disk_resize" {
   size    = local.master_root_disk_size
 
   lifecycle {
-    ignore_changes = [disk_id]
+    # The disk is chosen when the VM is cloned, at the one moment nothing else is
+    # attached to it, and frozen here so that a volume attached later cannot take its
+    # place. It is chosen again only when there is a new VM to choose it from.
+    ignore_changes       = [disk_id]
+    replace_triggered_by = [ovirt_vm.master_vm]
   }
 }
 
@@ -81,6 +85,11 @@ resource "ovirt_disk_attachment" "master-kubernetes-data-attachment" {
   bootable       = false
   active         = true
 
+  # Attach the etcd disk only once the boot disk has been resized: the attachments data
+  # source is read on the way there, and it must see the disk the VM was cloned with as
+  # the only one.
+  depends_on = [ovirt_disk_resize.master_boot_disk_resize]
+
   lifecycle {
     ignore_changes = [disk_interface]
   }
@@ -88,8 +97,14 @@ resource "ovirt_disk_attachment" "master-kubernetes-data-attachment" {
 
 resource "ovirt_vm_start" "master_vm" {
   vm_id      = ovirt_vm.master_vm.id
-  #stop_behavior = "stop"
-  force_stop = true
+  # Power the VM off rather than asking the guest to shut itself down. Deckhouse holds
+  # a block inhibitor on handle-power-key and routes the key through a flow meant for a
+  # node still in the cluster, so an ACPI request from the engine is never acted on and
+  # the destroy waits for a machine that will not go down. Every other cloud provider
+  # ends a VM through its API the same way, and by this point the node has already been
+  # drained and taken out of etcd.
+  stop_behavior = "stop"
+  force_stop    = true
 
   depends_on = [ovirt_nic.master_vm_nic, ovirt_disk.master-kubernetes-data, ovirt_disk_attachment.master-kubernetes-data-attachment, ovirt_disk_resize.master_boot_disk_resize]
 }
