@@ -1,6 +1,4 @@
-{{- $moduleGateway := dict }}
-{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and (or .Values.istio.federation.enabled .Values.istio.multicluster.enabled) $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") (or .Values.istio.federation.enabled .Values.istio.multicluster.enabled) .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
   {{- if eq (include "helm_lib_module_https_mode" .) "Disabled" }}
     {{- fail "HTTPS is mandatory for spiffe endpoint" }}
   {{- end }}
@@ -10,10 +8,6 @@ kind: HTTPRoute
 metadata:
   name: metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
-  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-  annotations:
-    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
-  {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
 spec:
   hostnames:
@@ -35,16 +29,20 @@ spec:
     - path:
         type: PathPrefix
         value: /metadata/
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: istio-metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
-  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-  annotations:
-    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
-  {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
 spec:
   hostnames:
@@ -66,4 +64,12 @@ spec:
     - path:
         type: PathPrefix
         value: /metadata/
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
 {{- end }}

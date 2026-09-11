@@ -94,15 +94,14 @@ var _ = Describe("Module :: deckhouse-tools :: helm template :: custom-certifica
 			f.HelmRender()
 		})
 
-		It("Everything must render properly for cluster with default gateway", func() {
+		// CustomCertificate has no per-mechanism validation, so Gateway API reuses the Ingress secret.
+		It("Should reuse the ingress secret instead of creating a redundant copy", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			createdSecret := f.KubernetesResource("Secret", "d8-system", "tools-ingress-tls-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
 			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 
-			createdHTTPRouteSecret := f.KubernetesResource("Secret", "d8-system", "tools-httproute-tls-customcertificate")
-			Expect(createdHTTPRouteSecret.Exists()).To(BeTrue())
-			Expect(createdHTTPRouteSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
+			Expect(f.KubernetesResource("Secret", "d8-system", "tools-httproute-tls-customcertificate").Exists()).To(BeFalse())
 		})
 	})
 

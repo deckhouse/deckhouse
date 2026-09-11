@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
@@ -22,7 +22,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls" "httproute-tls") }}
         namespace: d8-system
       mode: Terminate
   - allowedRoutes:
@@ -55,9 +55,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
   annotations:
     alb.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
-  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
-  {{- end }}
 spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "documentation") }}
@@ -78,6 +75,14 @@ spec:
     - path:
         type: RegularExpression
         value: /(apple-touch|favicon|safari-pinned)(-[a-z0-9-]*)?\.(png|ico|svg)
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
   - backendRefs:
     - group: ""
       kind: Service
@@ -88,6 +93,14 @@ spec:
     - path:
         type: PathPrefix
         value: /images
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
   - backendRefs:
     - group: ""
       kind: Service
@@ -98,6 +111,14 @@ spec:
     - path:
         type: Exact
         value: /site.webmanifest
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -115,9 +136,6 @@ metadata:
     {{- if .Values.documentation.auth.satisfyAny }}
     alb.network.deckhouse.io/satisfy: "any"
     {{- end }}
-  {{- end }}
-  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
 spec:
   hostnames:
@@ -139,6 +157,14 @@ spec:
     - path:
         type: PathPrefix
         value: /modules
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
   - backendRefs:
     - group: ""
       kind: Service
@@ -149,6 +175,14 @@ spec:
     - path:
         type: PathPrefix
         value: /
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
 {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1

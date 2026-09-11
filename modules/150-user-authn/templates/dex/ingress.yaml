@@ -1,3 +1,4 @@
+{{- if eq (include "helm_lib_module_ingress_enabled" .) "true" }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -70,3 +71,4 @@ spec:
             name: dex
             port:
               number: 443
+{{- end }}

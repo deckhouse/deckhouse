@@ -1,7 +1,7 @@
 {{- if and (.Values.global.modules.publicDomainTemplate) (or (and (.Values.userAuthn.internal.publishAPI.enabled) (.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator)) }}
   {{- $moduleGateway := dict }}
   {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+  {{- if and (eq (include "helm_lib_module_ingress_enabled" .) "true") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -19,7 +19,7 @@ spec:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
   {{- end }}
-  {{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+  {{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
   {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
   {{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
     {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}

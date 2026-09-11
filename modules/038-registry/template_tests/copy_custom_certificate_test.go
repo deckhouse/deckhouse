@@ -98,4 +98,22 @@ var _ = Describe("Module :: registry :: helm template :: custom-certificate", fu
 
 	})
 
+	Context("With Gateway API enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("registry", customCertificateModeIngressEnable)
+			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.name", "shared-gateway")
+			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.namespace", "d8-alb")
+			f.HelmRender()
+		})
+
+		// CustomCertificate has no per-mechanism validation, so Gateway API reuses the Ingress secret.
+		It("Should reuse the ingress secret instead of creating a redundant copy", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-ingress-tls-customcertificate").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-httproute-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+
 })

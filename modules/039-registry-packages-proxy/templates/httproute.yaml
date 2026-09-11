@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) -}}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) -}}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
@@ -22,7 +22,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "registry-packages-proxy-httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls" "registry-packages-proxy-httproute-tls") }}
         namespace: d8-cloud-instance-manager
       mode: Terminate
   - allowedRoutes:
@@ -54,9 +54,6 @@ metadata:
   namespace: d8-cloud-instance-manager
   annotations:
     alb.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
-  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
-  {{- end }}
     alb.network.deckhouse.io/idle-timeout: "300"
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
 spec:
@@ -85,6 +82,14 @@ spec:
       # bootstrap), never via the public domain.
         type: PathPrefix
         value: /v1/images/
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
 {{- if (include "helm_lib_module_https_route_tls_enabled" . ) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -113,7 +118,7 @@ spec:
         type: PathPrefix
         value: /
 {{- end }}
-{{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
 {{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
   {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}

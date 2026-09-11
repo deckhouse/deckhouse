@@ -66,8 +66,9 @@
 | **Module Ephemeral Storage** |
 | [helm_lib_module_ephemeral_storage_logs_with_extra](#helm_lib_module_ephemeral_storage_logs_with_extra) |
 | [helm_lib_module_ephemeral_storage_only_logs](#helm_lib_module_ephemeral_storage_only_logs) |
-| **Module Gateway** |
+| **Module Gateway Api** |
 | [helm_lib_module_gateway](#helm_lib_module_gateway) |
+| [helm_lib_module_gateway_enabled](#helm_lib_module_gateway_enabled) |
 | **Module Generate Common Name** |
 | [helm_lib_module_generate_common_name](#helm_lib_module_generate_common_name) |
 | **Module Https** |
@@ -90,10 +91,10 @@
 | [helm_lib_internal_module_package_registry_base](#helm_lib_internal_module_package_registry_base) |
 | [helm_lib_internal_module_raw_name](#helm_lib_internal_module_raw_name) |
 | [helm_lib_internal_module_registry_base](#helm_lib_internal_module_registry_base) |
-| **Module Ingress Class** |
+| **Module Ingress** |
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
-| **Module Ingress Snippets** |
 | [helm_lib_module_ingress_configuration_snippet](#helm_lib_module_ingress_configuration_snippet) |
+| [helm_lib_module_ingress_enabled](#helm_lib_module_ingress_enabled) |
 | **Module Init Container** |
 | [helm_lib_module_init_container_chown_nobody_volume](#helm_lib_module_init_container_chown_nobody_volume) |
 | [helm_lib_module_init_container_chown_deckhouse_volume](#helm_lib_module_init_container_chown_deckhouse_volume) |
@@ -862,7 +863,7 @@ list:
 
 -  Template context with .Values, .Chart, etc 
 
-## Module Gateway
+## Module Gateway Api
 
 ### helm_lib_module_gateway
 
@@ -877,6 +878,20 @@ list:
 list:
 -  Template context with .Values, .Chart, etc 
 -  An empty dict to update with current default gateway name and namespace 
+
+
+### helm_lib_module_gateway_enabled
+
+ returns whether Gateway API is enabled from module settings or if not exists from global config, 
+ and, unlike a plain enabled flag, only true when a gateway is actually resolvable (see 
+ helm_lib_module_gateway) — there is no safe default gateway the way ingressClass defaults to 
+ "nginx", so an unresolvable gateway must not be treated as enabled or every gatewayAPI-gated 
+ template would have to re-check this itself to avoid rendering broken manifests. 
+
+#### Usage
+
+`{{- if eq (include "helm_lib_module_gateway_enabled" .) "true" }} `
+
 
 ## Module Generate Common Name
 
@@ -993,11 +1008,15 @@ list:
 
 ### helm_lib_module_https_secret_name
 
- returns custom certificate name 
+ or:    {{ include "helm_lib_module_https_secret_name" (list . "secret_name_prefix" "own_secret_name_prefix_for_gateway_api") }} 
+ returns secret_name_prefix's secret name for the current mode. With a third argument, CertManager 
+ mode uses it instead (Gateway API's own certificate, since it's validated through a separate 
+ ClusterIssuer); every other mode still uses secret_name_prefix, since CustomCertificate is the same 
+ static data regardless of mechanism and isn't duplicated 
 
 #### Usage
 
-`{{ include "helm_lib_module_https_secret_name (list . "secret_name_prefix") }} `
+`{{ include "helm_lib_module_https_secret_name" (list . "secret_name_prefix") }} `
 
 #### Arguments
 
@@ -1138,7 +1157,7 @@ list:
 -  Camelcased module name, the key the module values live under 
 -  Path appended to the override host 
 
-## Module Ingress Class
+## Module Ingress
 
 ### helm_lib_module_ingress_class
 
@@ -1148,11 +1167,7 @@ list:
 
 `{{ include "helm_lib_module_ingress_class" . }} `
 
-#### Arguments
 
--  Template context with .Values, .Chart, etc 
-
-## Module Ingress Snippets
 
 ### helm_lib_module_ingress_configuration_snippet
 
@@ -1165,6 +1180,16 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_ingress_enabled
+
+ returns whether Ingress is enabled from module settings or if not exists from global config 
+
+#### Usage
+
+`{{- if eq (include "helm_lib_module_ingress_enabled" .) "true" }} `
+
 
 ## Module Init Container
 
