@@ -15,6 +15,7 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+fromCacheVersion: "2026-09-11 10:30"
 git:
 - add: /go_lib/cloud-data
   to: /deckhouse/go_lib/cloud-data
