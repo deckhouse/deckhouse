@@ -5,7 +5,7 @@
       max by (name, options) (d8_user_authz_rule_needs_multitenancy) > 0
     for: 10m
     labels:
-      severity_level: "5"
+      severity_level: "6"
       tier: cluster
       d8_module: user-authz
       d8_component: user-authz
@@ -32,7 +32,7 @@
       max(d8_user_authz_rules_needing_multitenancy) > 50
     for: 10m
     labels:
-      severity_level: "5"
+      severity_level: "6"
       tier: cluster
       d8_module: user-authz
       d8_component: user-authz
