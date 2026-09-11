@@ -18,6 +18,8 @@ package nodeservices
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 var (
@@ -46,12 +48,28 @@ type UpstreamRegistry struct {
 	TTL      *string `json:"ttl,omitempty"`
 }
 
+// Validate constrains the upstream registry to an address the distribution
+// configuration can carry: `<scheme>://<host>` is concatenated into its
+// `remoteurl`, so the scheme decides TLS handling and the host decides where
+// cached images come from.
 func (upstream UpstreamRegistry) Validate() error {
 	return validation.ValidateStruct(&upstream,
-		validation.Field(&upstream.Scheme, validation.Required),
-		validation.Field(&upstream.Host, validation.Required),
-		validation.Field(&upstream.Path, validation.Required),
-		validation.Field(&upstream.User, validation.When(upstream.Password != "", validation.Required)),
-		validation.Field(&upstream.Password, validation.When(upstream.User != "", validation.Required)),
+		validation.Field(&upstream.Scheme, validation.Required, validation.By(helpers.URLScheme)),
+		validation.Field(&upstream.Host, validation.Required, validation.By(helpers.HostWithOptionalPort)),
+		validation.Field(&upstream.Path, validation.Required, validation.By(helpers.URLPath)),
+		// The credentials and the TTL are substituted into the distribution
+		// configuration through `quote`, which has no representation for
+		// invalid UTF-8 and returns an error rather than silently rewriting the
+		// value. Without a rule here that error surfaces during rendering and
+		// fails the whole static pod render, so a single bad byte in one
+		// upstream field stops the node services from reconciling at all.
+		// Checked here instead, where the failure names the field.
+		validation.Field(&upstream.User,
+			validation.When(upstream.Password != "", validation.Required),
+			validation.By(helpers.EncodableString)),
+		validation.Field(&upstream.Password,
+			validation.When(upstream.User != "", validation.Required),
+			validation.By(helpers.EncodableString)),
+		validation.Field(&upstream.TTL, validation.By(helpers.EncodableString)),
 	)
 }

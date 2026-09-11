@@ -25,7 +25,7 @@ spec:
   hostNetwork: true
   containers:
   - name: distribution
-    image: {{ .Images.Distribution }}
+    image: {{ quote .Images.Distribution }}
     imagePullPolicy: IfNotPresent
     securityContext:
       readOnlyRootFilesystem: true
@@ -37,21 +37,21 @@ spec:
     env:
       {{- if .HTTP }}
       - name: HTTP_PROXY
-        value: {{ .HTTP }}
+        value: {{ quote .HTTP }}
       - name: http_proxy
-        value: {{ .HTTP }}
+        value: {{ quote .HTTP }}
       {{- end }}
       {{- if .HTTPS }}
       - name: HTTPS_PROXY
-        value: {{ .HTTPS }}
+        value: {{ quote .HTTPS }}
       - name: https_proxy
-        value: {{ .HTTPS }}
+        value: {{ quote .HTTPS }}
       {{- end }}
       {{- if .NoProxy }}
       - name: NO_PROXY
-        value: {{ .NoProxy }}
+        value: {{ quote .NoProxy }}
       - name: no_proxy
-        value: {{ .NoProxy }}
+        value: {{ quote .NoProxy }}
       {{- end }}
   {{- end }}
 {{- end }}
@@ -85,7 +85,7 @@ spec:
       - mountPath: /pki
         name: pki
   - name: auth
-    image: {{ .Images.Auth }}
+    image: {{ quote .Images.Auth }}
     imagePullPolicy: IfNotPresent
     securityContext:
       readOnlyRootFilesystem: true
@@ -122,7 +122,7 @@ spec:
         name: pki
   {{- if .HasMirrorer }}
   - name: mirrorer
-    image: {{ .Images.Mirrorer }}
+    image: {{ quote .Images.Mirrorer }}
     imagePullPolicy: IfNotPresent
     securityContext:
       readOnlyRootFilesystem: true

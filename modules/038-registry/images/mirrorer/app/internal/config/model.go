@@ -20,9 +20,22 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/google/go-containerregistry/pkg/name"
 	"sigs.k8s.io/yaml"
+)
+
+var (
+	// These assertions are the reason the nested rules below run at all. Users
+	// and UserInfo appear as struct fields by value, so ozzo only reaches their
+	// Validate through the Validatable interface -- and a pointer receiver would
+	// leave the value type not implementing it, silently skipping every rule
+	// inside them.
+	_ validation.Validatable = Config{}
+	_ validation.Validatable = Users{}
+	_ validation.Validatable = UserInfo{}
 )
 
 type Config struct {
@@ -34,12 +47,54 @@ type Config struct {
 	Parallelizm     int      `json:"parallelizm,omitempty"`
 }
 
-func (config *Config) Validate() error {
-	return validation.ValidateStruct(config,
+func (config Config) Validate() error {
+	return validation.ValidateStruct(&config,
 		validation.Field(&config.Users, validation.Required),
-		validation.Field(&config.LocalAddress, validation.Required),
-		validation.Field(&config.RemoteAddresses, validation.Required),
+		// The addresses are handed to name.NewRegistry when the mirrorer is
+		// constructed. Checking them here means a bad one is reported as a
+		// configuration error at startup rather than after validation has
+		// already passed.
+		validation.Field(&config.LocalAddress, validation.Required, validation.By(registryAddress)),
+		validation.Field(&config.RemoteAddresses,
+			validation.Required,
+			validation.Each(validation.Required, validation.By(registryAddress)),
+		),
+		// A negative limit is not a small limit: errgroup.SetLimit reads it as
+		// no limit at all, which would have the mirrorer pull from every
+		// repository at once against the registry the whole cluster pulls from.
+		validation.Field(&config.Parallelizm, validation.Min(0)),
+		validation.Field(&config.SleepInterval, validation.Min(0)),
 	)
+}
+
+// registryAddress reports whether a value is an address the registry client can
+// construct: a bare `<host>[:<port>]` authority, with no scheme and no path.
+func registryAddress(value any) error {
+	raw, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("must be a string, got %T", value)
+	}
+	if raw == "" {
+		return nil
+	}
+	if _, err := name.NewRegistry(raw); err != nil {
+		return fmt.Errorf("is not a registry address: %w", err)
+	}
+	return nil
+}
+
+// headerSafeString rejects the characters that cannot travel in an HTTP header.
+// The credentials below are sent in the Authorization header of every request
+// to a replica, so a line break in one of them would split that request.
+func headerSafeString(value any) error {
+	raw, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("must be a string, got %T", value)
+	}
+	if i := strings.IndexAny(raw, "\r\n\x00"); i >= 0 {
+		return fmt.Errorf("must not contain %q at offset %d", raw[i], i)
+	}
+	return nil
 }
 
 type Users struct {
@@ -47,8 +102,8 @@ type Users struct {
 	Pusher UserInfo `json:"pusher"`
 }
 
-func (u *Users) Validate() error {
-	return validation.ValidateStruct(u,
+func (u Users) Validate() error {
+	return validation.ValidateStruct(&u,
 		validation.Field(&u.Puller, validation.Required),
 		validation.Field(&u.Pusher, validation.Required),
 	)
@@ -59,10 +114,10 @@ type UserInfo struct {
 	Password string `json:"password"`
 }
 
-func (ui *UserInfo) Validate() error {
-	return validation.ValidateStruct(ui,
-		validation.Field(&ui.Name, validation.Required),
-		validation.Field(&ui.Password, validation.Required),
+func (ui UserInfo) Validate() error {
+	return validation.ValidateStruct(&ui,
+		validation.Field(&ui.Name, validation.Required, validation.By(headerSafeString)),
+		validation.Field(&ui.Password, validation.Required, validation.By(headerSafeString)),
 	)
 }
 

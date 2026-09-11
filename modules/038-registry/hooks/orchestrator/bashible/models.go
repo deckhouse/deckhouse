@@ -265,6 +265,23 @@ func (b *ConfigBuilder) build() (*Config, error) {
 		return nil, fmt.Errorf("failed to compute config version: %w", err)
 	}
 	ret.Version = version
+
+	// The built configuration is deliberately not validated here.
+	//
+	// Two of the inputs come from objects the module does not own -- the master
+	// node addresses from Node.status.addresses, and the Unmanaged parameters
+	// from the deckhouse-registry secret -- and they reach sinks with no quoting
+	// of their own. The rules that bound them live in bashible.Config.Validate,
+	// and they are applied by the consumer: bashible-apiserver validates the
+	// secret when it reads it, in pkg/template/registry/controller.go, and
+	// refuses one it cannot validate.
+	//
+	// Validating here as well was tried and reverted. A check in this hook is a
+	// check on Deckhouse's own internal state, and a false positive in it does
+	// not reject one value -- it fails the orchestrator hook, which stops
+	// everything else the hook does. The consumer is the right place: it is
+	// where the data crosses a boundary, and a refusal there costs the registry
+	// configuration rather than the module.
 	return &ret, nil
 }
 

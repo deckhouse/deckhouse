@@ -23,6 +23,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 var (
@@ -287,6 +288,13 @@ func (s RegistrySettings) Validate() error {
 		validation.Field(&s.ImagesRepo,
 			validation.Required.Error("Field 'imagesRepo' is required"),
 			validation.Match(imagesRepoRegexp).Error(errorImagesRepoRegexp.Error()),
+			// The regexp states the shape for the operator; this states what the
+			// sinks need. The pattern alone admits an address whose host is ".."
+			// -- it allows dots in the host and treats "/" as a separator -- and
+			// a port of 0 or 99999, since it only counts digits. Both then reach
+			// a directory name under /etc/containerd/registry.d and a table key
+			// in hosts.toml.
+			validation.By(helpers.RegistryAddress),
 		),
 		validation.Field(&s.Scheme,
 			validation.Required.

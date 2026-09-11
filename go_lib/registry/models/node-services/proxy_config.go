@@ -18,6 +18,8 @@ package nodeservices
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 var (
@@ -30,6 +32,15 @@ type ProxyConfig struct {
 	NoProxy string `json:"no_proxy,omitempty"`
 }
 
+// Validate constrains the proxy settings to the shape the static pod manifest
+// can carry. The values become HTTP_PROXY / HTTPS_PROXY / NO_PROXY environment
+// variables in a manifest that kubelet runs as root on a control plane node, and
+// this configuration arrives from a Kubernetes secret, so an unconstrained value
+// is untrusted input for a privileged component.
 func (proxyConfig ProxyConfig) Validate() error {
-	return nil
+	return validation.ValidateStruct(&proxyConfig,
+		validation.Field(&proxyConfig.HTTP, validation.By(helpers.ProxyURL)),
+		validation.Field(&proxyConfig.HTTPS, validation.By(helpers.ProxyURL)),
+		validation.Field(&proxyConfig.NoProxy, validation.By(helpers.NoProxyList)),
+	)
 }

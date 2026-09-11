@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -158,6 +160,188 @@ func TestContextValidate(t *testing.T) {
 			}(),
 			wantErr: true,
 		},
+		// --- the validation added with the fuzz harnesses ------------------
+		//
+		// Each of these values reaches a sink with no quoting of its own: a
+		// proxy endpoint becomes `server <value>;` in the node balancer's NGINX
+		// configuration, and a hosts key becomes a directory name under
+		// /etc/containerd/registry.d. The rules that bound them live in
+		// go_lib/registry/helpers; what these cases pin is that the model
+		// applies them, and to which fields.
+		{
+			name: "Proxy endpoint as the module generates it",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.ProxyEndpoints = []string{"10.0.0.1:5001"}
+				return cfg
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "Proxy endpoint as an IPv6 endpoint",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.ProxyEndpoints = []string{"[fd00::1]:5001"}
+				return cfg
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "Proxy endpoint as the bootstrap placeholder",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.ProxyEndpoints = []string{helpers.NodeIPPlaceholder + ":5001"}
+				return cfg
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "Proxy endpoint without a port",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.ProxyEndpoints = []string{"10.0.0.1"}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Proxy endpoint as a DNS name",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.ProxyEndpoints = []string{"registry.example.com:5001"}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Proxy endpoint ending the NGINX directive",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.ProxyEndpoints = []string{"10.0.0.1:5001; return 200"}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Proxy endpoint carrying a command substitution",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.ProxyEndpoints = []string{"$(id > /tmp/pwned):5001"}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Proxy endpoint as the bare placeholder",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.ProxyEndpoints = []string{helpers.NodeIPPlaceholder}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Proxy endpoint as a placeholder near miss",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.ProxyEndpoints = []string{"${discovered_node_ip:-$(id)}:5001"}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Mirror host as the bootstrap placeholder",
+			input: func() *Context {
+				cfg := validContext()
+				mirror := validContextMirrorHost()
+				mirror.Host = helpers.NodeIPPlaceholder + ":5001"
+				cfg.Hosts = map[string]ContextHosts{"host1": {Mirrors: []ContextMirrorHost{mirror}}}
+				return cfg
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "Mirror host as a bare IPv6 address",
+			input: func() *Context {
+				cfg := validContext()
+				mirror := validContextMirrorHost()
+				mirror.Host = "fd00::1"
+				cfg.Hosts = map[string]ContextHosts{"host1": {Mirrors: []ContextMirrorHost{mirror}}}
+				return cfg
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "Mirror host carrying a path separator",
+			input: func() *Context {
+				cfg := validContext()
+				mirror := validContextMirrorHost()
+				mirror.Host = "mirror1.example.com/path"
+				cfg.Hosts = map[string]ContextHosts{"host1": {Mirrors: []ContextMirrorHost{mirror}}}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Mirror host traversing out of registry.d",
+			input: func() *Context {
+				cfg := validContext()
+				mirror := validContextMirrorHost()
+				mirror.Host = "../../../etc/cron.d/x"
+				cfg.Hosts = map[string]ContextHosts{"host1": {Mirrors: []ContextMirrorHost{mirror}}}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Mirror scheme in the wrong case",
+			input: func() *Context {
+				cfg := validContext()
+				mirror := validContextMirrorHost()
+				mirror.Scheme = "HTTPS"
+				cfg.Hosts = map[string]ContextHosts{"host1": {Mirrors: []ContextMirrorHost{mirror}}}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			// ozzo validates map values, not keys, so the model walks the keys
+			// itself. Without that loop this value would reach mkdir -p.
+			name: "Hosts key traversing out of registry.d",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.Hosts = map[string]ContextHosts{"../../../etc/cron.d": validContextHosts()}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Hosts key carrying a command substitution",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.Hosts = map[string]ContextHosts{"$(id)": validContextHosts()}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Hosts key that is empty",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.Hosts = map[string]ContextHosts{"": validContextHosts()}
+				return cfg
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Hosts key as the in-cluster address",
+			input: func() *Context {
+				cfg := validContext()
+				cfg.Hosts = map[string]ContextHosts{"registry.d8-system.svc:5001": validContextHosts()}
+				return cfg
+			}(),
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -197,7 +381,7 @@ func TestContextToMap(t *testing.T) {
 					Mode:                 "unmanaged",
 					Version:              "unknown",
 					ImagesBase:           "registry.d8-system.svc/deckhouse/system",
-					ProxyEndpoints:       []string{"192.168.1.1"},
+					ProxyEndpoints:       []string{"192.168.1.1:5001"},
 					Hosts: map[string]ContextHosts{
 						"registry.d8-system.svc": {
 							Mirrors: []ContextMirrorHost{{
@@ -225,7 +409,7 @@ func TestContextToMap(t *testing.T) {
 						"mode":                 "unmanaged",
 						"version":              "unknown",
 						"imagesBase":           "registry.d8-system.svc/deckhouse/system",
-						"proxyEndpoints":       []any{"192.168.1.1"},
+						"proxyEndpoints":       []any{"192.168.1.1:5001"},
 						"hosts": map[string]any{
 							"registry.d8-system.svc": map[string]any{
 								"mirrors": []any{
