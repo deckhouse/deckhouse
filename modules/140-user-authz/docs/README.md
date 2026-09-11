@@ -13,7 +13,7 @@ The experimental role-based access model is incompatible with the current one.
 
 The module implements a role-based access model based on the standard RBAC Kubernetes mechanism. It creates a set of cluster roles (ClusterRole) suitable for most user and group access management tasks.
 
-The bindings that grant users the access levels of ClusterAuthorizationRule and AuthorizationRule are reconciled by the `user-authz-controller` component: it watches the rules and keeps their ClusterRoleBindings and RoleBindings in sync, and reports the result in the `status` of each rule (`kubectl get clusterauthorizationrules` shows the `READY` and `BINDINGS` columns). A rule with an unsupported `accessLevel` gets `Ready=False` with the `InvalidSpec` reason instead of breaking the module. The controller exports metrics on the number of rules, desired and actual bindings and their drift, and the module ships alerts for an unavailable controller, a persistent drift and rules whose bindings cannot be applied (see [FAQ](faq.html#how-do-i-check-that-the-controller-keeps-the-bindings-in-sync)).
+The bindings that grant users the access levels of ClusterAuthorizationRule and AuthorizationRule are reconciled by the `user-authz-controller` component: it watches the rules and keeps their ClusterRoleBindings and RoleBindings in sync, and reports the result in the `status` of each rule (`d8 k get clusterauthorizationrules` shows the `READY` and `BINDINGS` columns). A rule with an unsupported `accessLevel` gets `Ready=False` with the `InvalidSpec` reason instead of breaking the module. The controller exports metrics on the number of rules, desired and actual bindings and their drift, and the module ships alerts for an unavailable controller, a persistent drift and rules whose bindings cannot be applied (see [FAQ](faq.html#how-do-i-check-that-the-controller-keeps-the-bindings-in-sync)).
 
 <div style="height: 0;" id="the-new-role-based-model"></div>
 
@@ -220,7 +220,7 @@ Currently, the multi-tenancy mode (namespace-based authorization) is implemented
 
 If a [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) Custom Resource contains the `namespaceSelector` field, neither `limitNamespaces` nor `allowAccessToSystemNamespaces`are taken into consideration.
 
-The `allowAccessToSystemNamespaces`, `namespaceSelector` and `limitNamespaces` options in the custom resource will no longer be applied if the authorization system's webhook is unavailable for some reason. As a result, users will have access to all namespaces. After the webhook availability is restored, the options will become relevant again.
+If the authorization webhook becomes unavailable, requests are **denied**, not allowed: the webhook runs before RBAC and is configured with `failurePolicy: Deny`, so a request it cannot answer does not reach RBAC. The exception is the identities listed in `matchConditions` of the AuthorizationConfiguration: control-plane components, kubelets, and the service accounts of the `kube-system` and `d8-*` namespaces bypass the webhook, so the cluster keeps running and Deckhouse can restore the webhook.
 
 ### Default access list for each role
 

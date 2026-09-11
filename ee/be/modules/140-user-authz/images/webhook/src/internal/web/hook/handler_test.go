@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -77,11 +79,6 @@ func fixtureCache() *dummyCache {
 		preferredVersions: map[string]string{
 			"object2.test": "v1",
 			"object1.test": "v1",
-		},
-		coreResources: cache.CoreResourcesDict{
-			"pods":       struct{}{},
-			"namespaces": struct{}{},
-			"services":   struct{}{},
 		},
 	}
 }
@@ -265,6 +262,9 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 		},
 		{
+			// No version of the group serves the resource, which is discovery answering that it
+			// does not exist. RBAC decides, and the API server turns that into a 404 rather than
+			// telling the caller they are forbidden from something that is not there.
 			Name:  "Cluster scoped. Without version. Version does not exists",
 			Group: []string{"normal"},
 			Attributes: WebhookResourceAttributes{
@@ -274,8 +274,8 @@ func TestAuthorizeRequest(t *testing.T) {
 				Namespace: "",
 			},
 			ResultStatus: WebhookRequestStatus{
-				Denied: true,
-				Reason: "webhook: kubernetes api request error",
+				Denied: false,
+				Reason: "",
 			},
 		},
 		{
@@ -697,26 +697,37 @@ func TestAuthorizeRequest(t *testing.T) {
 type dummyCache struct {
 	data              map[string]map[string]bool
 	preferredVersions map[string]string
-	coreResources     cache.CoreResourcesDict
+	// err, when set, stands for a discovery lookup that did not happen: a timeout, a 5xx, an
+	// aggregated APIService that is down. The real cache reports that differently from a resource
+	// it looked up and did not find, and the handler must too.
+	err error
 }
 
 func (d *dummyCache) Get(api, key string) (bool, error) {
-	return d.data[api][key], nil
-}
-
-func (d *dummyCache) GetCoreResources() (cache.CoreResourcesDict, error) {
-	return d.coreResources, nil
+	if d.err != nil {
+		return false, d.err
+	}
+	namespaced, ok := d.data[api][key]
+	if !ok {
+		// What the real cache returns after listing the group successfully and not finding the
+		// resource in it.
+		return false, fmt.Errorf("resource %s/%s is not found in cluster: %w", api, key, cache.ErrResourceAbsent)
+	}
+	return namespaced, nil
 }
 
 func (d *dummyCache) GetPreferredVersion(group, resource string) (string, error) {
+	if d.err != nil {
+		return "", d.err
+	}
 	if v, ok := d.preferredVersions[fmt.Sprintf("%s.%s", resource, group)]; ok {
 		return v, nil
 	}
 
-	return "", fmt.Errorf("not found")
+	return "", fmt.Errorf("no version of %s serves %s: %w", group, resource, cache.ErrNotFound)
 }
 
-func (d *dummyCache) Check() error {
+func (d *dummyCache) Check(context.Context) error {
 	return nil
 }
 
@@ -764,6 +775,151 @@ func ruleBinding(name, username string) *rbacv1.ClusterRoleBinding {
 		}},
 		Subjects: []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: username}},
 		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "user-authz:admin"},
+	}
+}
+
+// TestAuthorizeRequest_UnlistedDirectoryDeniesEverySubjectOfARule pins the state the serving gate
+// exists to keep off the wire, and the reason that gate has to wait for the rules and not only for
+// the bindings.
+//
+// The bindings index and the rules arrive over independent watches. With the index filled and the
+// directory still nil - the rules were never listed at all - the ordering guard cannot tell "this
+// rule does not cover you" from "I have not observed this rule", so EVERY subject whose access
+// comes from a ClusterAuthorizationRule is denied. Each denial is correct in isolation and
+// catastrophic in bulk: the API server caches denials for unauthorizedTTL, so they outlive the
+// startup that produced them. Answering 503 instead costs nothing, because a webhook in this state
+// has nothing to say.
+//
+// If this test ever starts reporting "no opinion", rulesListed in server.go may be relaxed. While
+// it reports a denial, the serving gate must include the rules source.
+func TestAuthorizeRequest_UnlistedDirectoryDeniesEverySubjectOfARule(t *testing.T) {
+	idx := binding.NewIndex()
+	idx.Upsert(ruleBinding("user-authz:team-a:admin", "alice"))
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    staticRules{dir: nil}, // the rules have not been listed even once
+		bindings: idx,
+	}
+
+	req := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "alice",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "team-a", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(req)
+
+	if !req.Status.Denied {
+		t.Fatal("a subject bound by a rule the webhook has never listed was granted; " +
+			"if that is now intended, revisit rulesListed in server.go before relaxing this test")
+	}
+	if req.Status.Reason != noNamespaceAccessReason {
+		t.Errorf("reason = %q, want %q", req.Status.Reason, noNamespaceAccessReason)
+	}
+
+	// A subject no binding names is still none of this layer's business, listed or not.
+	other := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "nobody",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "team-a", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(other)
+	if other.Status.Denied {
+		t.Errorf("an unbound subject was denied: %q", other.Status.Reason)
+	}
+}
+
+// A namespaceSelector whose namespace cannot be read must deny.
+//
+// Both wrong answers look alike from outside - a selector that does not match denies too - so the
+// selector here is one that WOULD match a namespace with no labels at all. If the lister error is
+// swallowed and an empty label set used instead, the subject is granted a namespace nobody
+// evaluated the selector against.
+func TestAuthorizeRequest_NamespaceLookupFailureDenies(t *testing.T) {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
+		},
+	}}
+	handler := &Handler{
+		logger: log.New(io.Discard, "", 0),
+		cache:  fixtureCache(),
+		rules: rulesFor(rules.Rule{
+			Name:              "by-selector",
+			Subjects:          []rules.Subject{{Kind: "User", Name: "selector-user"}},
+			NamespaceSelector: selector,
+		}),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister([]runtime.Object{
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "labelless"}},
+		}),
+	}
+
+	// The control: a namespace that exists and carries no labels is opened by this selector.
+	req := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "selector-user",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "labelless", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(req)
+	if req.Status.Denied {
+		t.Fatalf("the selector matches a namespace with no labels; got denied with %q", req.Status.Reason)
+	}
+
+	// And a namespace the lister cannot resolve is denied rather than treated as label-less.
+	denied := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "selector-user",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "unreadable", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(denied)
+	if !denied.Status.Denied || denied.Status.Reason != noNamespaceAccessReason {
+		t.Errorf("a namespace whose labels could not be read was not denied: denied=%v reason=%q",
+			denied.Status.Denied, denied.Status.Reason)
+	}
+}
+
+// A namespace cache that has not filled yet denies, it does not answer "no labels".
+//
+// An empty cache says "no such namespace" for every name, which is what a namespace with no labels
+// looks like - and a DoesNotExist selector matches that, so a rule would open every namespace in
+// the cluster for as long as the cache took to fill. The webhook held this predicate and did not
+// consult it; nothing exercised the branch once it did.
+func TestAuthorizeRequest_UnsyncedNamespaceCacheDenies(t *testing.T) {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
+		},
+	}}
+	newHandler := func(synced bool) *Handler {
+		return &Handler{
+			logger: log.New(io.Discard, "", 0),
+			cache:  fixtureCache(),
+			rules: rulesFor(rules.Rule{
+				Name:              "by-selector",
+				Subjects:          []rules.Subject{{Kind: "User", Name: "selector-user"}},
+				NamespaceSelector: selector,
+			}),
+			bindings: binding.NewIndex(),
+			nsLister: newFakeNamespaceLister([]runtime.Object{
+				&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "labelless"}},
+			}),
+			nsSynced: func() bool { return synced },
+		}
+	}
+	request := func() *WebhookRequest {
+		return &WebhookRequest{Spec: WebhookResourceSpec{
+			User:               "selector-user",
+			ResourceAttributes: WebhookResourceAttributes{Namespace: "labelless", Resource: "pods", Verb: "get"},
+		}}
+	}
+
+	// The control: with the cache filled, this selector opens a namespace with no labels.
+	if got := newHandler(true).authorizeRequest(request()); got.Status.Denied {
+		t.Fatalf("with the cache synced the selector opens the namespace; got denied with %q", got.Status.Reason)
+	}
+
+	// And with it still filling, the same request is denied rather than answered from nothing.
+	got := newHandler(false).authorizeRequest(request())
+	if !got.Status.Denied || got.Status.Reason != rules.NoNamespaceAccessReason {
+		t.Errorf("an unsynced namespace cache must deny: denied=%v reason=%q", got.Status.Denied, got.Status.Reason)
 	}
 }
 
@@ -896,5 +1052,111 @@ func TestAuthorizeRequest_GuardDoesNotNarrowObservedScope(t *testing.T) {
 	outOfScope := WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-b"}}
 	if got := handler.authorizeRequest(&WebhookRequest{Spec: outOfScope}); !got.Status.Denied {
 		t.Errorf("neither rule opens team-b, got %+v", got.Status)
+	}
+}
+
+// A cluster-scoped request for a resource that does not exist must not be denied. The webhook
+// cannot know whether RBAC grants it, and the API server answers 404 for a resource that is not
+// there - so denying turned every typo and every uninstalled CRD into "Forbidden" for anyone a
+// rule limits, including a SuperAdmin.
+func TestAuthorizeClusterScoped_AbsentResourceIsLeftToRBAC(t *testing.T) {
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    fixtureRules(),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	cases := []struct {
+		name  string
+		attrs WebhookResourceAttributes
+	}{
+		{
+			// The API server fills the version for real traffic, which is why the old escape hatch
+			// for a missing resource never ran outside hand-written SubjectAccessReviews.
+			"a resource of a group that does not exist, version filled in",
+			WebhookResourceAttributes{Group: "nonexistent.example.com", Version: "v1", Resource: "foos", Verb: "list"},
+		},
+		{
+			"a core resource that does not exist, version filled in",
+			WebhookResourceAttributes{Version: "v1", Resource: "foobars", Verb: "list"},
+		},
+		{
+			"a resource of a known group that the group does not serve",
+			WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "nosuchthing", Verb: "list"},
+		},
+		{
+			"no version, as a hand-written SubjectAccessReview leaves it",
+			WebhookResourceAttributes{Group: "nonexistent.example.com", Resource: "foos", Verb: "list"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := handler.authorizeRequest(&WebhookRequest{
+				Spec: WebhookResourceSpec{User: "limited", Group: []string{"limited"}, ResourceAttributes: tc.attrs},
+			})
+			if got.Status.Denied {
+				t.Errorf("denied with %q; a resource that does not exist is RBAC's to answer", got.Status.Reason)
+			}
+		})
+	}
+}
+
+// The distinction the fix rests on: when discovery could not be consulted we do not know whether
+// the resource is namespaced, and a cluster-wide list of a namespaced resource is exactly what a
+// limited subject must not get through the cluster-wide binding of its rule.
+func TestAuthorizeClusterScoped_UnreachableDiscoveryStillDenies(t *testing.T) {
+	broken := fixtureCache()
+	broken.err = errors.New("dial tcp 10.0.0.1:6443: i/o timeout")
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    broken,
+		rules:    fixtureRules(),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	got := handler.authorizeRequest(&WebhookRequest{
+		Spec: WebhookResourceSpec{
+			User:               "limited",
+			Group:              []string{"limited"},
+			ResourceAttributes: WebhookResourceAttributes{Version: "v1", Resource: "services", Verb: "list"},
+		},
+	})
+	if !got.Status.Denied {
+		t.Error("a lookup that did not happen must keep the request closed")
+	}
+	if got.Status.Reason != internalErrorReason {
+		t.Errorf("reason = %q, want the internal error reason", got.Status.Reason)
+	}
+}
+
+// A subject nobody limits is unaffected either way: the handler never reaches discovery for it.
+func TestAuthorizeClusterScoped_UnfilteredSubjectIgnoresDiscovery(t *testing.T) {
+	broken := fixtureCache()
+	broken.err = errors.New("dial tcp 10.0.0.1:6443: i/o timeout")
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    broken,
+		rules:    fixtureRules(),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	got := handler.authorizeRequest(&WebhookRequest{
+		Spec: WebhookResourceSpec{
+			User:               "nobody-limits-me",
+			ResourceAttributes: WebhookResourceAttributes{Version: "v1", Resource: "services", Verb: "list"},
+		},
+	})
+	if got.Status.Denied {
+		t.Errorf("denied with %q; the webhook has no opinion about a subject no rule names", got.Status.Reason)
 	}
 }

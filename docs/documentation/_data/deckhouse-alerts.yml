@@ -3646,51 +3646,8 @@ alerts:
         A legacy RBACv2 custom role is present in the cluster.
       severity: "7"
       markupFormat: markdown
-    - name: D8UserAuthzPermissionBrowserRulesNotSynced
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
-      moduleUrl: 140-user-authz
-      module: user-authz
-      edition: ce
-      description: |-
-        For more than 10 minutes at least one `permission-browser-apiserver` replica has not listed the `ClusterAuthorizationRules` (its rules informer reports `synced=0`).
-
-        While the rules are not listed, every subject bound by a controller-managed ClusterRoleBinding is reported as having no namespace access at all, so users see an empty or heavily truncated list of accessible namespaces. The report corrects itself once the informer syncs.
-
-        A cluster where the `ClusterAuthorizationRule` CRD does not exist also reports `synced=0`; there are then no rules to report on.
-
-        Check the replicas and their access to the CRD:
-
-        ```bash
-        d8 k -n d8-user-authz get pods -l app=permission-browser-apiserver
-        d8 k -n d8-user-authz logs -l app=permission-browser-apiserver -c apiserver --tail=100
-        d8 k get crd clusterauthorizationrules.deckhouse.io
-        ```
-      summary: |
-        Permission Browser has not listed the ClusterAuthorizationRules.
-      severity: "7"
-      markupFormat: markdown
-    - name: D8UserAuthzPermissionBrowserTargetDown
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
-      moduleUrl: 140-user-authz
-      module: user-authz
-      edition: ce
-      description: |-
-        Prometheus cannot collect metrics from `permission-browser-apiserver` in the `d8-user-authz` namespace.
-
-        Permission Browser keeps answering requests, but while this alert is active it cannot be told whether it has the current `ClusterAuthorizationRules`, so the access it reports may silently differ from the access the API server enforces.
-
-        Check the Deployment, its metrics sidecar and the scrape target:
-
-        ```bash
-        d8 k -n d8-user-authz get pods -l app=permission-browser-apiserver -o wide
-        d8 k -n d8-user-authz logs -l app=permission-browser-apiserver -c kube-rbac-proxy --tail=50
-        ```
-      summary: |
-        Prometheus is unable to scrape the Permission Browser API server.
-      severity: "7"
-      markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -3715,20 +3672,14 @@ alerts:
       description: |-
         Applying the `user-authz` Helm release took more than 5 minutes on average over the last 30 minutes. A release that does not finish within the module release timeout (20 minutes) fails, changes to ClusterAuthorizationRule and AuthorizationRule objects stop being applied and platform updates stall (the `D8DeckhouseCouldNotRunModule` alert fires in that case).
 
-        The usual cause is the size of the release: thousands of ClusterAuthorizationRule/AuthorizationRule objects, or many ClusterRoles annotated with `user-authz.deckhouse.io/access-level` bound one by one. Check the number of rules and of the module bindings:
+        If the cluster has just been updated to the release that moves the bindings to `user-authz-controller`, this is the one-time migration pass. It is proportional to the number of bindings and can exceed the timeout on clusters with more than 5000 of them; the module FAQ describes what to do in that case.
 
-        ```bash
-        d8 k get clusterauthorizationrules --no-headers | wc -l
-        d8 k get authorizationrules -A --no-headers | wc -l
-        d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
-        d8 k get rolebindings -A -l heritage=deckhouse,module=user-authz --no-headers | wc -l
-        ```
-
-        Check the module queue and the Deckhouse log for the release:
+        Otherwise the cause is outside the module: a slow API server, an object stuck with a finalizer, or the release engine itself. Check what the release is waiting on:
 
         ```bash
         d8 s queue list
         d8 k -n d8-system logs deploy/deckhouse | grep '"module":"user-authz"'
+        d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
         ```
       summary: |
         The user-authz module release takes more than 5 minutes.
@@ -3740,51 +3691,112 @@ alerts:
       module: user-authz
       edition: ce
       description: |-
-        Rendering the templates of the `user-authz` module took more than 30 seconds on average over the last 30 minutes; normally it takes about a second. Render time grows with the number of objects in the release, so this is an early sign that the release is getting too large and may stop fitting into the module release timeout.
+        Rendering the templates of the `user-authz` module took more than 30 seconds on average over the last 30 minutes; normally it takes about a second. The number of ClusterAuthorizationRule objects does not affect the render time, so the cause is outside the module — most often the Deckhouse Pod lacking CPU.
 
-        Check the number of rules and of the module bindings:
+        Check the resources of the Pod and the state of the queue:
 
         ```bash
-        d8 k get clusterauthorizationrules --no-headers | wc -l
-        d8 k get authorizationrules -A --no-headers | wc -l
-        d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+        d8 k -n d8-system top pod -l app=deckhouse
+        d8 s queue list
+        d8 k -n d8-system logs deploy/deckhouse | grep '"module":"user-authz"'
         ```
       summary: |
         Rendering the user-authz module templates takes more than 30 seconds.
       severity: "6"
       markupFormat: markdown
-    - name: D8UserAuthzWebhookRulesNotSynced
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+    - name: D8UserAuthzRuleNeedsMultiTenancy
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/multitenancy-misconfigured.yaml
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
       description: |-
-        For more than 10 minutes at least one `user-authz-webhook` instance has not listed the `ClusterAuthorizationRules` (its rules informer reports `synced=0`).
+        The `ClusterAuthorizationRule` `{{ $labels.name }}` sets `{{ $labels.options }}`, but `userAuthz.enableMultiTenancy` is off, so the authorization webhook that enforces those options is not deployed.
 
-        While the rules are not listed, the webhook keeps every subject that a controller-managed ClusterRoleBinding binds maximally restricted: those users are denied namespaced and cluster-scoped access until the rules arrive. The restriction lifts on its own once the informer syncs.
+        The rule is not partially applied. It is applied without its limits: the subjects named in it hold its access level in **every** namespace of the cluster, the system ones included.
 
-        A cluster where the `ClusterAuthorizationRule` CRD does not exist at all also reports `synced=0`; in that case there are no rules and no rule bindings, so nobody is restricted.
+        Either enable multi-tenancy, or remove the options from the rule:
 
-        Check the webhook and its access to the CRD:
+        ```bash
+        d8 k get clusterauthorizationrule {{ $labels.name }} -o yaml
+        d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
+        ```
+      summary: |
+        A ClusterAuthorizationRule asks for namespace limits that nothing enforces.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzRulePropagationLag
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        One instance of `user-authz-webhook` has not updated its rules for more than an hour while another instance has. The rules are changing in the cluster and this instance does not see the changes.
+
+        Find the instance and check its log:
 
         ```bash
         d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
         d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
-        d8 k get crd clusterauthorizationrules.deckhouse.io
         ```
+
+        An instance whose watch keeps failing becomes not ready, so check the readiness of the Pod as well.
       summary: |
-        The user-authz webhook has not listed the ClusterAuthorizationRules.
+        One user-authz webhook instance stopped picking up rule changes.
       severity: "6"
       markupFormat: markdown
-    - name: D8UserAuthzWebhookRulesQuarantined
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+    - name: D8UserAuthzRulesNeedMultiTenancy
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/multitenancy-misconfigured.yaml
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
       description: |-
-        For more than 10 minutes the `user-authz-webhook` has quarantined at least one `ClusterAuthorizationRule`: its `limitNamespaces` pattern or `namespaceSelector` could not be compiled. The rule is kept and the rest of it still applies, but the broken filter is left out, so its subjects get a narrower scope than written and are denied where the filter was meant to allow.
+        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while `userAuthz.enableMultiTenancy` is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first 50 of them; this alert accounts for the rest.
 
-        Find the offending rule (an invalid regular expression in `limitNamespaces` or a malformed `namespaceSelector`):
+        None of those rules is partially applied: the subjects named in each of them hold its access level in **every** namespace of the cluster, the system ones included.
+
+        Check whether multi-tenancy was meant to be enabled, and list the affected rules:
+
+        ```bash
+        d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
+        d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limitNamespaces // [] | length > 0) or (.spec.namespaceSelector != null) or (.spec.allowAccessToSystemNamespaces == true)) | .metadata.name'
+        ```
+      summary: |
+        More ClusterAuthorizationRules ask for namespace limits than the per-rule alert names.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookDirectoryDiverged
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Instances of `user-authz-webhook` have been using different sets of `ClusterAuthorizationRules` for 10 minutes.
+
+        Each master node authorizes the requests that reach it, so the same request is answered differently depending on the node: a user can be inside their namespace limits on one node and outside them on another.
+
+        Find the instance that is behind and look at why:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100 | grep -i 'list/watch'
+        ```
+
+        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at rules that are no longer updated. Deleting the lagging Pod is the last resort: the DaemonSet recreates it, and on a cluster with a single master node every request in the cluster is denied while the Pod restarts.
+      summary: |
+        The masters disagree about the multi-tenancy rules.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookRulesQuarantined
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 10 minutes the `user-authz-webhook` has quarantined at least one `ClusterAuthorizationRule`: its `limitNamespaces` pattern or `namespaceSelector` does not compile, or the rule cannot be read at all.
+
+        A rule with a broken filter is applied without that filter, so its subjects get a narrower scope than written and are denied where the filter was meant to allow. A rule that cannot be read is not applied at all, and its subjects are denied every namespace.
+
+        Find the rule:
 
         ```bash
         d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,LIMIT:.spec.limitNamespaces,SELECTOR:.spec.namespaceSelector
@@ -3794,33 +3806,13 @@ alerts:
         A ClusterAuthorizationRule cannot be compiled by the webhook.
       severity: "7"
       markupFormat: markdown
-    - name: D8UserAuthzWebhookRulesStale
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
-      moduleUrl: 140-user-authz
-      module: user-authz
-      edition: ce
-      description: |-
-        The `user-authz-webhook` has not rebuilt its `ClusterAuthorizationRule` directory for more than 24 hours. That is normal in a cluster where nobody changes the rules, and expected where there are none.
-
-        It is worth a look only together with a change that should have arrived: if a rule was edited and this timestamp did not move, the webhook is serving a frozen directory and is enforcing the rules as they were.
-
-        Compare what the webhook holds with what the cluster has:
-
-        ```bash
-        d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,RV:.metadata.resourceVersion
-        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
-        ```
-      summary: |
-        The user-authz webhook has not rebuilt its rules directory for a day.
-      severity: "8"
-      markupFormat: markdown
     - name: D8UserAuthzWebhookRulesWatchErrors
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
       description: |-
-        For more than 15 minutes the `user-authz-webhook` rules informer has been failing to watch the `ClusterAuthorizationRules` (a non-zero rate of watch errors). New or changed rules may not be reaching the webhook, so multi-tenancy decisions can lag behind what users configure.
+        For more than 10 minutes the `user-authz-webhook` rules informer has been failing to watch the `ClusterAuthorizationRules` (a non-zero rate of watch errors). New or changed rules may not be reaching the webhook, so multi-tenancy decisions can lag behind what users configure.
 
         Check the webhook's access to the API and its logs:
 
@@ -3833,14 +3825,14 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8UserAuthzWebhookTargetDown
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
       description: |-
-        Prometheus cannot collect metrics from `user-authz-webhook` in the `d8-user-authz` namespace.
+        Prometheus cannot collect metrics from at least one instance of `user-authz-webhook` in the `d8-user-authz` namespace. One instance without metrics is enough for the alert to fire.
 
-        The webhook keeps authorizing requests, but while this alert is active the other webhook alerts cannot fire: a webhook that has not listed the `ClusterAuthorizationRules`, or that quarantined a rule, will go unnoticed.
+        If the instance is running and only its metrics are unreachable, it keeps answering authorization requests, but the other alerts of the module cannot see its state. If it is not running or has not read the rules yet, it answers `503` to every authorization request, and the API server denies the request, because the webhook is configured with `failurePolicy: Deny`.
 
         Check the DaemonSet, its metrics sidecar and the scrape target:
 

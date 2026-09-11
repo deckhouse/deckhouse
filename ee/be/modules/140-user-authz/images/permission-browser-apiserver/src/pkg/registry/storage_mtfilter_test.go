@@ -15,6 +15,8 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+
 	"permission-browser-apiserver/pkg/apis/authorization/v1alpha1"
 	"permission-browser-apiserver/pkg/authorizer/composite"
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
@@ -38,12 +40,15 @@ func (denyIndependent) AllowsIndependently(context.Context, authorizer.Attribute
 
 type staticResourceScope map[string]bool
 
-func (s staticResourceScope) Scope(group, resource string) (namespaced, known bool) {
-	namespaced, known = s[group+"/"+resource]
-	return namespaced, known
+// ScopeOf mirrors the production derivation, which now lives in the cache rather than in the
+// caller: a key present is an answer; a key absent is an answer only if there is a snapshot at all.
+// The fixture is a complete snapshot, so nothing here is missing because a group could not be read.
+func (s staticResourceScope) ScopeOf(group, resource string) rules.ResourceScope {
+	if namespaced, known := s[group+"/"+resource]; known {
+		return rules.ResourceScope{Known: true, Namespaced: namespaced}
+	}
+	return rules.ResourceScope{Absent: len(s) > 0}
 }
-
-func (s staticResourceScope) HasData() bool { return len(s) > 0 }
 
 func mustMTEngine(t *testing.T, config string) *multitenancy.Engine {
 	t.Helper()

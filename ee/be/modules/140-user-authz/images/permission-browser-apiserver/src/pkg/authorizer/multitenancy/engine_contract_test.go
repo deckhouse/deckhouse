@@ -252,7 +252,9 @@ func TestEngine_Authorize_ConsoleResourceMatrix(t *testing.T) {
 		{name: "create secrets outside CAR ns", req: req{verb: "create", resource: "secrets", ns: "ns-out"}, want: authorizer.DecisionDeny},
 		{name: "get pods in kube-system", req: req{verb: "get", resource: "pods", ns: "kube-system"}, want: authorizer.DecisionDeny},
 		{name: "get pods in d8-system", req: req{verb: "get", resource: "pods", ns: "d8-system"}, want: authorizer.DecisionDeny},
-		{name: "unknown GVR cluster-scoped", req: req{verb: "list", group: "example.com", resource: "newcrds"}, want: authorizer.DecisionDeny},
+		// Absent from a snapshot that read its group: it does not exist, so RBAC answers and the
+		// API server produces a 404 rather than a misleading 403.
+		{name: "unknown GVR cluster-scoped", req: req{verb: "list", group: "example.com", resource: "newcrds"}, want: authorizer.DecisionNoOpinion},
 	}
 
 	for _, tt := range filteredEditor {
@@ -305,7 +307,7 @@ func TestEngine_Authorize_LimitNamespacesEqualsLabelSelector(t *testing.T) {
 		{name: "get pods ns-in", verb: "get", resource: "pods", ns: "ns-in", want: authorizer.DecisionNoOpinion},
 		{name: "get pods ns-out", verb: "get", resource: "pods", ns: "ns-out", want: authorizer.DecisionDeny},
 		{name: "get pods kube-system", verb: "get", resource: "pods", ns: "kube-system", want: authorizer.DecisionDeny},
-		{name: "unknown GVR", verb: "list", group: "example.com", resource: "newcrds", want: authorizer.DecisionDeny},
+		{name: "unknown GVR", verb: "list", group: "example.com", resource: "newcrds", want: authorizer.DecisionNoOpinion},
 	}
 
 	for _, tt := range reqs {
@@ -401,7 +403,7 @@ func TestEngine_Authorize_CARCRBDoesNotSkipFilter(t *testing.T) {
 	assert.Equal(t, namespaceLimitedAccessReason, reason)
 }
 
-func TestEngine_GetNamespaceAccessType_PrivilegedDoesNotOverrideCAR(t *testing.T) {
+func TestEngine_GetNamespaceAccessType_ARuleFiltersWhateverGroupsTheSubjectCarries(t *testing.T) {
 	editor := engineWithConsoleScope(t, editorCARConfig)
 
 	access, filter := editor.GetNamespaceAccessType(&mockUserInfo{
@@ -413,11 +415,15 @@ func TestEngine_GetNamespaceAccessType_PrivilegedDoesNotOverrideCAR(t *testing.T
 	require.NotNil(t, filter)
 	assert.False(t, editor.IsNamespaceAllowedWithFilter("ns-out", filter))
 
+	// A subject no rule names, whatever groups they carry. There used to be a list of privileged
+	// groups here answering AllNamespaces for them; it changed nothing, because both production
+	// callers treat NoNamespacesAllowed identically to AllNamespacesAllowed - a subject without a
+	// rule is not multi-tenancy business and must not be zeroed out of a report.
 	access, filter = editor.GetNamespaceAccessType(&mockUserInfo{
 		name:   "nobody@example.io",
 		groups: []string{"system:masters"},
 	})
-	assert.Equal(t, AllNamespacesAllowed, access)
+	assert.Equal(t, NoNamespacesAllowed, access)
 	assert.Nil(t, filter)
 }
 

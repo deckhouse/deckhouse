@@ -27,7 +27,16 @@ spec:
       action: labeldrop
     - targetLabel: tier
       replacement: cluster
-    - sourceLabels: [__meta_kubernetes_pod_ready]
-      regex: "true"
-      action: keep
+{{- /*
+  Deliberately NOT dropping pods that are not ready.
+
+  Readiness of these two now means "the rules are listed and being tracked", so an instance whose
+  watch has broken reports itself unready - and that is exactly the instance the alerts below are
+  about. Keeping the usual pod_ready filter here would hide it from RulesNotSynced,
+  RulesWatchErrors, DirectoryDiverged and RulePropagationLag at the moment each of them became
+  true, leaving the whole set blind to the only failure it can see.
+
+  The metrics endpoint does not depend on readiness: the process serves it as soon as it is up, and
+  the sidecar in front of it is a separate container.
+*/}}
 {{- end }}

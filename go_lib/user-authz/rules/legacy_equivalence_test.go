@@ -28,7 +28,18 @@ package rules
 // used to decide" is a claim about a few thousand combinations, and a claim that size should be
 // checked by a machine on every run rather than argued once in a review.
 //
-// Two deliberate differences are asserted rather than hidden, at the bottom of the file.
+// What this file does NOT establish, stated so nobody reads more into it than it proves:
+//
+//   - The comparison is against the WEBHOOK's implementation. permission-browser had a second copy
+//     of the same decision, and it is not transcribed here. The two had drifted, which is why the
+//     library exists; only one side of that drift is pinned below.
+//   - The cases are a cross-product of a hand-picked list of rule shapes and namespace names. It is
+//     a few thousand comparisons, not a few thousand independent scenarios, and nothing is
+//     generated or fuzzed: a disagreement on a shape outside the list is unreachable from here.
+//
+// Deliberate differences are asserted rather than hidden, at the bottom of the file: the namespaced
+// ones in TestLegacyEquivalence_DeliberateDifferences, and the cluster-scoped one - the 403 that
+// should have been a 404 - in TestLegacyEquivalence_ClusterScoped.
 
 import (
 	"fmt"
@@ -294,6 +305,7 @@ func equivalenceRules(subject Subject) []Rule {
 
 // TestLegacyEquivalence_SingleRule compares every rule shape on its own.
 func TestLegacyEquivalence_SingleRule(t *testing.T) {
+	t.Parallel()
 	subject := Subject{Kind: "User", Name: "alice"}
 	compared := 0
 	for _, rule := range equivalenceRules(subject) {
@@ -319,6 +331,7 @@ func TestLegacyEquivalence_SingleRule(t *testing.T) {
 // TestLegacyEquivalence_RulePairs compares every ordered pair, which is where the union of entries
 // and the priority between limits, selectors and the system flag actually get exercised.
 func TestLegacyEquivalence_RulePairs(t *testing.T) {
+	t.Parallel()
 	subject := Subject{Kind: "User", Name: "alice"}
 	all := equivalenceRules(subject)
 	compared, mismatches := 0, 0
@@ -352,6 +365,7 @@ func TestLegacyEquivalence_RulePairs(t *testing.T) {
 // TestLegacyEquivalence_SubjectKinds checks that a subject is found by the same key in both: the
 // username for a User, the canonical name for a ServiceAccount, the group name for a Group.
 func TestLegacyEquivalence_SubjectKinds(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		subject Subject
 		user    string
@@ -390,6 +404,7 @@ func TestLegacyEquivalence_SubjectKinds(t *testing.T) {
 // TestLegacyEquivalence_DeliberateDifferences records where the library is meant to differ, so that
 // a change to either behaviour has to come here and say so.
 func TestLegacyEquivalence_DeliberateDifferences(t *testing.T) {
+	t.Parallel()
 	subject := Subject{Kind: "User", Name: "alice"}
 
 	// A rule with an uncompilable pattern made the old rebuild return early, leaving the previous
@@ -418,5 +433,141 @@ func TestLegacyEquivalence_DeliberateDifferences(t *testing.T) {
 	}
 	if !libraryDenied(dir, "alice", nil, "team-b", labels.Set{}) {
 		t.Error("and it must not open anything beyond itself")
+	}
+}
+
+// legacyClusterScopedDenied transcribes authorizeClusterScopedRequest from the same commit, in the
+// terms the library now uses. The original asked the discovery cache directly; what mattered was
+// which of its answers denied:
+//
+//   - a preferred-version lookup that failed             -> deny (internal error)
+//   - the core group, resource not in the core listing   -> no opinion, let RBAC answer
+//   - a Get that failed                                  -> deny (internal error)
+//   - namespaced, and the subject is limited             -> deny
+//   - cluster-scoped                                     -> no opinion
+//
+// coreGroup says whether the request named the core group, because that is the only place the old
+// code distinguished "does not exist" from "could not ask".
+func legacyClusterScopedDenied(scope ResourceScope, coreGroup bool) bool {
+	if scope.Known {
+		return scope.Namespaced
+	}
+	if coreGroup && scope.Absent {
+		// The core listing answered and does not carry the resource.
+		return false
+	}
+	// Anything else was a lookup error, and a lookup error denied.
+	return true
+}
+
+// TestLegacyEquivalence_AlternationAnchoring records the one namespaced difference: an alternation
+// in limitNamespaces is now anchored on both branches.
+//
+// The old code anchored by concatenation, so "team-.*|kube-system" became
+// (^team-.*)|(kube-system$) and opened every namespace whose name ended in "kube-system". The
+// cross-product above does not catch this because its fixture patterns contain no alternation -
+// which is exactly why it is written out here instead of being left to luck.
+//
+// This is a narrowing change. A rule written with an alternation stops covering names it was never
+// meant to cover; nothing gains access.
+func TestLegacyEquivalence_AlternationAnchoring(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		pattern string
+		covered []string
+		leaked  string
+	}{
+		{
+			pattern: "team-.*|kube-system",
+			covered: []string{"team-a", "kube-system"},
+			leaked:  "attacker-kube-system",
+		},
+		{
+			// The same leak reached through a POSIX class name. It is written out because the
+			// scanner that used to decide when to anchor an alternation ended the character class
+			// at the "]" of ":alpha:" and stopped seeing the "|" as top-level - so this pattern
+			// leaked for one revision longer than the one above.
+			pattern: "[[:alpha:](]|kube-system",
+			covered: []string{"a", "(", "kube-system"},
+			leaked:  "attacker-kube-system",
+		},
+	} {
+		legacy, err := regexp.Compile(legacyWrapRegex(tc.pattern))
+		if err != nil {
+			t.Fatalf("%q: %v", tc.pattern, err)
+		}
+		current, err := newCompileCache().compile(tc.pattern)
+		if err != nil {
+			t.Fatalf("%q: %v", tc.pattern, err)
+		}
+
+		// What both agree on: the branches as written.
+		for _, ns := range tc.covered {
+			if !legacy.MatchString(ns) || !current.Matches(ns) {
+				t.Errorf("%q: %q must be covered by both", tc.pattern, ns)
+			}
+		}
+
+		// And the difference.
+		if !legacy.MatchString(tc.leaked) {
+			t.Fatalf("%q: the reference implementation is supposed to match %q; if it no longer "+
+				"does, this difference has been resolved elsewhere and this test should say so",
+				tc.pattern, tc.leaked)
+		}
+		if current.Matches(tc.leaked) {
+			t.Errorf("%q: %q is still covered: the alternation is not anchored on both branches",
+				tc.pattern, tc.leaked)
+		}
+	}
+}
+
+// TestLegacyEquivalence_ClusterScoped compares the cluster-scoped half, which the rest of this file
+// does not cover - and which is where the two implementations had actually diverged.
+//
+// Three of the four outcomes are unchanged. The fourth is the fix: a resource in a NAMED group that
+// discovery says does not exist used to be a denial, because the old code could not tell that
+// answer from a failure to reach discovery, and the user saw Forbidden for something that was never
+// there. The library separates the two, so RBAC answers and the API server produces the 404 it owes.
+func TestLegacyEquivalence_ClusterScoped(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		scope     ResourceScope
+		coreGroup bool
+		// differs is set on the one cell where the library is meant to disagree.
+		differs bool
+	}{
+		{name: "a cluster-scoped resource", scope: ResourceScope{Known: true, Namespaced: false}},
+		{name: "a namespaced resource", scope: ResourceScope{Known: true, Namespaced: true}},
+		{name: "a lookup that did not happen", scope: ResourceScope{}},
+		{name: "a lookup that did not happen, core group", scope: ResourceScope{}, coreGroup: true},
+		{name: "the core group does not carry it", scope: ResourceScope{Absent: true}, coreGroup: true},
+		{
+			name:    "a named group does not carry it",
+			scope:   ResourceScope{Absent: true},
+			differs: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			legacy := legacyClusterScopedDenied(tc.scope, tc.coreGroup)
+			library := ClusterScopedDenied(tc.scope)
+
+			if tc.differs {
+				if legacy == library {
+					t.Fatalf("this cell is supposed to differ, both answered %v; if the behaviour was "+
+						"changed back, say so here", library)
+				}
+				if library {
+					t.Error("the library must NOT deny a resource discovery says does not exist: " +
+						"RBAC answers and the API server returns 404")
+				}
+				return
+			}
+			if legacy != library {
+				t.Errorf("legacy denied=%v, library denied=%v", legacy, library)
+			}
+		})
 	}
 }

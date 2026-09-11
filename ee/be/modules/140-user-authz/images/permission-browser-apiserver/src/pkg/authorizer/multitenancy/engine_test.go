@@ -12,12 +12,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
@@ -28,19 +31,18 @@ import (
 // Ensure mockUserInfo implements user.Info for namespace-access tests
 var _ user.Info = &mockUserInfo{}
 
-// nsAllowed mirrors how the namespace resolver consumes the engine:
-// classify the user via GetNamespaceAccessType, then apply the returned
-// filter. This is the only supported per-namespace check path.
+// nsAllowed mirrors resolver.isNamespaceAllowedByMultitenancy, which is the only production caller
+// of GetNamespaceAccessType. Mirroring it is the point: this helper used to map NoNamespacesAllowed
+// to "denied", which no caller does, so every case below asserted a deny-by-default policy that
+// nothing in the product applies. Only FilteredAccess - a subject a rule names AND limits -
+// restricts anything; a subject no rule names is not multi-tenancy's business, and the enforcement
+// webhook answers the same way for them.
 func nsAllowed(e *Engine, userInfo user.Info, namespace string) bool {
 	accessType, filter := e.GetNamespaceAccessType(userInfo)
-	switch accessType {
-	case AllNamespacesAllowed:
-		return true
-	case NoNamespacesAllowed:
-		return false
-	default:
+	if accessType == FilteredAccess {
 		return e.IsNamespaceAllowedWithFilter(namespace, filter)
 	}
+	return true
 }
 
 // swappableRules is a RulesProvider whose directory can be replaced while the engine serves, the
@@ -120,6 +122,76 @@ func (m *mockUserInfo) GetName() string               { return m.name }
 func (m *mockUserInfo) GetUID() string                { return "" }
 func (m *mockUserInfo) GetGroups() []string           { return m.groups }
 func (m *mockUserInfo) GetExtra() map[string][]string { return nil }
+
+// A namespaceSelector whose namespace cannot be read must deny, and the unsynced-cache guard is
+// part of that: a report built from an empty namespace cache would open every namespace the
+// selector matches vacuously.
+//
+// The selector matches a namespace with no labels (DoesNotExist), so swallowing the error and
+// using an empty label set shows up as a grant rather than hiding behind a selector that would not
+// have matched anyway.
+func TestEngine_Authorize_NamespaceLookupFailureDenies(t *testing.T) {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
+		},
+	}}
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	if err := indexer.Add(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "labelless"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	synced := true
+	e := &Engine{
+		rules: newSwappableRules(rules.Rule{
+			Name:              "by-selector",
+			Subjects:          []rules.Subject{{Kind: "User", Name: "selector-user"}},
+			NamespaceSelector: selector,
+		}),
+		bindings:      binding.NewIndex(),
+		nsLister:      corev1listers.NewNamespaceLister(indexer),
+		nsSynced:      func() bool { return synced },
+		resourceScope: coreResourceScope(),
+	}
+
+	attrsFor := func(ns string) *mockAttrs {
+		return &mockAttrs{
+			userInfo:   &mockUserInfo{name: "selector-user"},
+			namespace:  ns,
+			resource:   "pods",
+			verb:       "get",
+			isResource: true,
+		}
+	}
+
+	// The control: a namespace that exists and carries no labels is opened.
+	got, _, err := e.Authorize(context.Background(), attrsFor("labelless"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == authorizer.DecisionDeny {
+		t.Fatal("the selector matches a namespace with no labels, so it must be opened")
+	}
+
+	// A namespace the lister does not have is denied, not treated as label-less.
+	got, _, err = e.Authorize(context.Background(), attrsFor("missing"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != authorizer.DecisionDeny {
+		t.Error("a namespace the lister cannot resolve was not denied")
+	}
+
+	// And while the namespace cache is still filling, every selector lookup fails closed.
+	synced = false
+	got, _, err = e.Authorize(context.Background(), attrsFor("labelless"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != authorizer.DecisionDeny {
+		t.Error("a selector evaluated against an unsynced namespace cache was not denied")
+	}
+}
 
 func TestEngine_AuthorizeNamespacedRequest(t *testing.T) {
 	e := &Engine{
@@ -321,6 +393,67 @@ func TestEngine_GroupBasedRestrictions(t *testing.T) {
 	}
 }
 
+// The identities the API server never asks the webhook about are not limited here either.
+//
+// The rule below does not name them: it names system:authenticated, which every service account in
+// the cluster is in. That is how this arises in practice - not by somebody writing a rule about
+// kube-controller-manager, but by writing one about everybody. The API server excludes the control
+// plane's own identities from the webhook so a fail-closed authorizer cannot make a cluster
+// unrecoverable, so for them the rule's namespace limits are not enforced anywhere; reporting them
+// as limited would describe a cluster the operator does not have.
+func TestEngine_SubjectsTheWebhookIsNeverAskedAbout(t *testing.T) {
+	e := &Engine{
+		rules: mttest.Rules(
+			rules.Rule{
+				Name:            "everybody",
+				Subjects:        []rules.Subject{{Kind: "Group", Name: "system:authenticated"}},
+				LimitNamespaces: []string{"dev-.*"},
+			},
+		),
+		bindings: mttest.NoBindings(),
+	}
+
+	exempt := []string{
+		"system:kube-controller-manager",
+		"system:node:worker-1",
+		"system:serviceaccount:kube-system:coredns",
+		"system:serviceaccount:d8-system:deckhouse",
+	}
+	for _, username := range exempt {
+		t.Run(username, func(t *testing.T) {
+			userInfo := &mockUserInfo{name: username, groups: []string{"system:authenticated"}}
+
+			d, _, err := e.Authorize(context.Background(), &mockAttrs{
+				userInfo:   userInfo,
+				namespace:  "prod-backend",
+				resource:   "pods",
+				verb:       "get",
+				isResource: true,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, authorizer.DecisionNoOpinion, d, "the API server does not consult the webhook for this subject, so nothing here may deny it")
+
+			accessType, _ := e.GetNamespaceAccessType(userInfo)
+			assert.Equal(t, AllNamespacesAllowed, accessType, "reporting a limit that is not enforced")
+			assert.True(t, nsAllowed(e, userInfo, "prod-backend"))
+		})
+	}
+
+	// A subject the webhook IS asked about is still limited by the same rule.
+	limited := &mockUserInfo{name: "system:serviceaccount:default:app", groups: []string{"system:authenticated"}}
+	d, _, err := e.Authorize(context.Background(), &mockAttrs{
+		userInfo:   limited,
+		namespace:  "prod-backend",
+		resource:   "pods",
+		verb:       "get",
+		isResource: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, authorizer.DecisionDeny, d)
+	assert.False(t, nsAllowed(e, limited, "prod-backend"))
+	assert.True(t, nsAllowed(e, limited, "dev-frontend"))
+}
+
 func TestEngine_NonResourceRequest(t *testing.T) {
 	e := &Engine{
 		rules: mttest.Rules(
@@ -431,10 +564,10 @@ func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 			name:      "unknown user without CAR - denied (deny-by-default)",
 			userInfo:  &mockUserInfo{name: "unknown-user"},
 			namespace: "any-ns",
-			expected:  false,
+			expected:  true, // no rule names them, so multi-tenancy has no opinion
 		},
 		{
-			name:      "system:masters user without CAR - allowed (privileged bypass)",
+			name:      "system:masters user without CAR - allowed, like any subject no rule names",
 			userInfo:  &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
 			namespace: "any-ns",
 			expected:  true,
@@ -446,13 +579,13 @@ func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 			expected:  true,
 		},
 		{
-			name:      "kubeadm:cluster-admins user without CAR - allowed (privileged bypass)",
+			name:      "kubeadm:cluster-admins user without CAR - allowed, like any subject no rule names",
 			userInfo:  &mockUserInfo{name: "kubeadm-admin", groups: []string{"kubeadm:cluster-admins"}},
 			namespace: "any-ns",
 			expected:  true,
 		},
 		{
-			name:      "superadmins user without CAR - allowed (privileged bypass)",
+			name:      "superadmins user without CAR - allowed, like any subject no rule names",
 			userInfo:  &mockUserInfo{name: "super-admin", groups: []string{"superadmins"}},
 			namespace: "any-ns",
 			expected:  true,
@@ -461,7 +594,7 @@ func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 			name:      "regular authenticated user without CAR - denied",
 			userInfo:  &mockUserInfo{name: "random-user", groups: []string{"system:authenticated"}},
 			namespace: "any-ns",
-			expected:  false,
+			expected:  true, // likewise: being authenticated is not being named by a rule
 		},
 		{
 			name:      "group member - allowed namespace",
@@ -491,62 +624,6 @@ func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 			}
 			result := nsAllowed(e, userInfo, tt.namespace)
 			assert.Equal(t, tt.expected, result, "unexpected result for %s", tt.name)
-		})
-	}
-}
-
-func TestIsPrivilegedUser(t *testing.T) {
-	tests := []struct {
-		name     string
-		groups   []string
-		expected bool
-	}{
-		{
-			name:     "system:masters is privileged",
-			groups:   []string{"system:masters"},
-			expected: true,
-		},
-		{
-			name:     "kubeadm:cluster-admins is privileged",
-			groups:   []string{"kubeadm:cluster-admins"},
-			expected: true,
-		},
-		{
-			name:     "superadmins is privileged",
-			groups:   []string{"superadmins"},
-			expected: true,
-		},
-		{
-			name:     "system:authenticated is not privileged",
-			groups:   []string{"system:authenticated"},
-			expected: false,
-		},
-		{
-			name:     "random group is not privileged",
-			groups:   []string{"developers", "viewers"},
-			expected: false,
-		},
-		{
-			name:     "mixed groups with one privileged",
-			groups:   []string{"system:authenticated", "system:masters", "developers"},
-			expected: true,
-		},
-		{
-			name:     "empty groups",
-			groups:   []string{},
-			expected: false,
-		},
-		{
-			name:     "nil groups",
-			groups:   nil,
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isPrivilegedUser(tt.groups)
-			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
@@ -581,15 +658,19 @@ func TestEngine_GetNamespaceAccessType(t *testing.T) {
 			expectFilter:       false,
 		},
 		{
-			name:               "system:masters without CAR - all allowed (privileged bypass)",
+			name:               "system:masters without CAR is a subject no rule names",
 			userInfo:           &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
-			expectedAccessType: AllNamespacesAllowed,
+			expectedAccessType: NoNamespacesAllowed,
 			expectFilter:       false,
 		},
 		{
-			name:               "superadmins without CAR - all allowed (privileged bypass)",
+			// No rule names this subject, and being in a group that sounds privileged does not
+			// change that. There used to be a list of such groups here answering AllNamespaces
+			// for them; it changed nothing, because both callers treat NoNamespacesAllowed the
+			// same way, and a policy that is implied but never applied is worse than none.
+			name:               "a group that sounds privileged is still a subject no rule names",
 			userInfo:           &mockUserInfo{name: "super", groups: []string{"superadmins"}},
-			expectedAccessType: AllNamespacesAllowed,
+			expectedAccessType: NoNamespacesAllowed,
 			expectFilter:       false,
 		},
 		{

@@ -18,6 +18,7 @@ package rules
 
 import (
 	"fmt"
+	"maps"
 	"strconv"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -169,8 +170,16 @@ func (b *Builder) Build(rules []Rule) (*Directory, Stats) {
 		selectorApplied := rule.NamespaceSelector.Applied()
 		switch {
 		case rule.NamespaceSelector != nil:
-			// A namespaceSelector, even an empty one, wins over limitNamespaces and
-			// allowAccessToSystemNamespaces: the rule then opens exactly what the selector matches.
+			// A namespaceSelector wins over limitNamespaces and allowAccessToSystemNamespaces: the
+			// entry opens exactly the namespaces the selector matches, system ones included, and
+			// the patterns are dropped.
+			//
+			// An empty one - namespaceSelector: {} with no labelSelector - still displaces the
+			// patterns, and what that leaves depends on whether there were any. With patterns, the
+			// entry has a selector that matches nothing and no patterns left, so it opens no
+			// namespace at all. Without them, the entry has no filters either way and opens every
+			// non-system namespace, because an empty selector is then indistinguishable from an
+			// absent one. Both are pinned in TestBuild_NamespaceSelector.
 			sel := Selector{MatchAny: rule.NamespaceSelector.MatchAny}
 			if selectorApplied {
 				compiled, err := metav1.LabelSelectorAsSelector(rule.NamespaceSelector.LabelSelector)
@@ -188,7 +197,7 @@ func (b *Builder) Build(rules []Rule) (*Directory, Stats) {
 					broken = fmt.Errorf("limitNamespaces pattern %q: %w", pattern, err)
 					continue
 				}
-				inUse[m.pattern] = struct{}{}
+				inUse[m.entry] = struct{}{}
 				matchers = append(matchers, m)
 			}
 		}
@@ -228,9 +237,12 @@ func (b *Builder) Build(rules []Rule) (*Directory, Stats) {
 	b.cache.evict(inUse)
 
 	return d, Stats{
-		Rules:              len(rules),
-		Subjects:           len(d.users) + len(d.groups) + len(d.serviceAccounts),
-		Quarantined:        d.quarantined,
+		Rules:    len(rules),
+		Subjects: len(d.users) + len(d.groups) + len(d.serviceAccounts),
+		// A copy, for the same reason Quarantined() returns one: the directory is immutable
+		// once built, and Stats travels to observers and metric callbacks that must not be able
+		// to change what the running decision reads.
+		Quarantined:        maps.Clone(d.quarantined),
 		MaxResourceVersion: d.maxResourceVersion,
 	}
 }

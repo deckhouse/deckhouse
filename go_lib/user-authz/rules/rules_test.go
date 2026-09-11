@@ -18,6 +18,8 @@ package rules
 
 import (
 	"errors"
+	"regexp"
+	"strings"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,6 +57,7 @@ func entryOf(t *testing.T, d *Directory, username string, groups ...string) Entr
 }
 
 func TestMatcher_LiteralAndRegex(t *testing.T) {
+	t.Parallel()
 	c := newCompileCache()
 
 	literal, err := c.compile("team-a")
@@ -97,14 +100,178 @@ func TestMatcher_LiteralAndRegex(t *testing.T) {
 }
 
 func TestWrapRegex(t *testing.T) {
-	for in, want := range map[string]string{"a": "^a$", "^a": "^a$", "a$": "^a$", "^a$": "^a$", ".*": "^.*$"} {
+	t.Parallel()
+	for in, want := range map[string]string{
+		"a": "^(?:a)$", ".*": "^(?:.*)$",
+		// An entry that writes its own anchors keeps them inside the group, where they mean the
+		// same thing.
+		"^a": "^(?:^a)$", "a$": "^(?:a$)$", "^a$": "^(?:^a$)$",
+		// The alternation, which is why the group is there at all: written without one,
+		// "^team-.*|kube-system$" parses as (^team-.*)|(kube-system$).
+		"team-.*|kube-system":   "^(?:team-.*|kube-system)$",
+		"^team-.*|kube-system$": "^(?:^team-.*|kube-system$)$",
+		// And an entry that needs no group is wrapped all the same: deciding needed a scanner,
+		// and the scanner was the bug.
+		"(a|b)-ns":    "^(?:(a|b)-ns)$",
+		"[a|b]-ns":    "^(?:[a|b]-ns)$",
+		`a\|b`:        `^(?:a\|b)$`,
+		"team-[0-9]+": "^(?:team-[0-9]+)$",
+	} {
 		if got := WrapRegex(in); got != want {
 			t.Errorf("WrapRegex(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
 
+// The anchoring bug, stated as the access it granted: a rule limited to "team-.*|kube-system" used
+// to open every namespace whose name merely ended in "kube-system".
+func TestWrapRegex_AlternationDoesNotLeakASuffixMatch(t *testing.T) {
+	t.Parallel()
+	c := newCompileCache()
+	m, err := c.compile("team-.*|kube-system")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, ns := range []string{"team-a", "team-", "kube-system"} {
+		if !m.Matches(ns) {
+			t.Errorf("%q must be covered", ns)
+		}
+	}
+	for _, ns := range []string{"attacker-kube-system", "d8-kube-system", "other"} {
+		if m.Matches(ns) {
+			t.Errorf("%q must NOT be covered: only the two branches as written are", ns)
+		}
+	}
+}
+
+// The quoted-run hole, stated as the access it granted: a rule limited to `\Q(\E|x` used to open
+// every namespace whose name ended in "x".
+func TestWrapRegex_QuotedRunDoesNotHideAnAlternation(t *testing.T) {
+	t.Parallel()
+	c := newCompileCache()
+	m, err := c.compile(`\Q(\E|x`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ns := range []string{"(", "x"} {
+		if !m.Matches(ns) {
+			t.Errorf("%q must be covered: it is one of the branches as written", ns)
+		}
+	}
+	if m.Matches("attacker-x") {
+		t.Error(`"attacker-x" must NOT be covered: the alternation inside a quoted run is still an alternation`)
+	}
+}
+
+// A POSIX class name hid a top-level alternation from the scanner that used to decide whether to
+// wrap: "[" opened the class, the "]" of ":alpha:" closed it in the scanner's eyes, the "(" that
+// followed counted as a group, and the "|" was then seen as nested. The pattern stayed anchored by
+// concatenation and its second branch matched any name that merely ended in it.
+func TestWrapRegex_PosixClassDoesNotHideAnAlternation(t *testing.T) {
+	t.Parallel()
+	c := newCompileCache()
+	m, err := c.compile("[[:alpha:](]|kube-system")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ns := range []string{"a", "(", "kube-system"} {
+		if !m.Matches(ns) {
+			t.Errorf("%q must be covered: it is one of the branches as written", ns)
+		}
+	}
+	if m.Matches("attacker-kube-system") {
+		t.Error(`"attacker-kube-system" must NOT be covered`)
+	}
+}
+
+// Wrapping used to strip the entry's own anchors first, and it could not tell an anchor from an
+// escaped dollar: `a|b\$` became `^(?:a|b\)$`, which does not compile, so the rule was
+// quarantined and its subjects lost the scope the pattern granted.
+func TestWrapRegex_EscapedDollarIsNotAnAnchor(t *testing.T) {
+	t.Parallel()
+	c := newCompileCache()
+	m, err := c.compile(`a|b\$`)
+	if err != nil {
+		t.Fatalf("a pattern RE2 accepts must compile: %v", err)
+	}
+	for _, ns := range []string{"a", "b$"} {
+		if !m.Matches(ns) {
+			t.Errorf("%q must be covered", ns)
+		}
+	}
+	for _, ns := range []string{"b", "ab$", "b$x"} {
+		if m.Matches(ns) {
+			t.Errorf("%q must NOT be covered", ns)
+		}
+	}
+}
+
+// Why the scanner could go: wrapping every entry in a group accepts exactly the names the older
+// anchoring accepted, wherever that one compiled at all. The corpus carries every pattern the
+// scanner's own table listed, plus the two it got wrong.
+func TestWrapRegex_UnconditionalGroupMatchesTheOldAnchoring(t *testing.T) {
+	t.Parallel()
+
+	// oldAnchoring is what WrapRegex did before: a group only when the scanner saw a top-level
+	// alternation, concatenation otherwise.
+	oldAnchoring := func(pattern string, wrap bool) string {
+		if wrap {
+			return "^(?:" + strings.TrimSuffix(strings.TrimPrefix(pattern, "^"), "$") + ")$"
+		}
+		if !strings.HasPrefix(pattern, "^") {
+			pattern = "^" + pattern
+		}
+		if !strings.HasSuffix(pattern, "$") {
+			pattern += "$"
+		}
+		return pattern
+	}
+
+	// pattern -> whether the old scanner wrapped it.
+	corpus := map[string]bool{
+		"a": false, "team-a": false, "team-.*": false, ".*": false, ".+": false,
+		"^team-a$": false, "^team-a": false, "team-a$": false, "team-[0-9]+": false,
+		"a|b": true, "^a|b$": true, "(a|b)": false, "(a|b)|c": true, "[a|b]": false,
+		"[a|b]|c": true, "((a|b)|c)": false, ".*|foo": true, "kube-.*|d8-.*": true,
+		`\Q(\E|x`: true, `\Q|\E`: false, `\Qa|b\E`: false, `\Qa|b\E|c`: true,
+		`\Q[\E|x`: true, `\Q\E|x`: true, `a\Q(\Eb`: false, `a\|b`: false, `\[a|b`: true,
+		"[[:alpha:]]": false, "a{2,3}": false, `\d+`: false, "[^a]": false, "(?i)kube-.*": false,
+	}
+
+	// The two patterns the scanner got wrong are deliberately NOT here: for them the answer must
+	// change, and it does - TestWrapRegex_PosixClassDoesNotHideAnAlternation and
+	// TestWrapRegex_EscapedDollarIsNotAnAnchor state what it changes to.
+
+	names := []string{
+		"a", "b", "c", "x", "yx", "(", "team-a", "team-ab", "attacker-team-a",
+		"kube-system", "attacker-kube-system", "d8-system", "kube-dns", "KUBE-DNS",
+		"a|b", "alpha", "aa", "aaa", "12", "$", `b$`, "^", "foo", "",
+	}
+
+	for pattern, wrapped := range corpus {
+		old := oldAnchoring(pattern, wrapped)
+		oldRe, oldErr := regexp.Compile(old)
+		newRe, newErr := regexp.Compile(WrapRegex(pattern))
+		if newErr != nil {
+			t.Errorf("%q: the wrapped form must compile: %v", pattern, newErr)
+			continue
+		}
+		if oldErr != nil {
+			// `a|b\$` is the case: the old form did not compile, so there is nothing to compare
+			// and nothing to lose.
+			continue
+		}
+		for _, ns := range names {
+			if oldRe.MatchString(ns) != newRe.MatchString(ns) {
+				t.Errorf("%q: %q matched %v before and %v now", pattern, ns, oldRe.MatchString(ns), newRe.MatchString(ns))
+			}
+		}
+	}
+}
+
 func TestBuild_LimitNamespaces(t *testing.T) {
+	t.Parallel()
 	d, stats := build(t,
 		Rule{Name: "team-a", Subjects: []Subject{user("alice"), group("devs")}, LimitNamespaces: []string{"team-a", "team-a-.*"}},
 		Rule{Name: "ops", Subjects: []Subject{group("devs")}, LimitNamespaces: []string{"ops"}, AllowAccessToSystemNamespaces: true},
@@ -138,6 +305,7 @@ func TestBuild_LimitNamespaces(t *testing.T) {
 }
 
 func TestBuild_NoFilters(t *testing.T) {
+	t.Parallel()
 	d, _ := build(t, Rule{Name: "open", Subjects: []Subject{user("bob")}})
 	bob := entryOf(t, d, "bob")
 	if !bob.NamespaceFiltersAbsent || !bob.HasAnyFilters() {
@@ -162,6 +330,7 @@ func TestBuild_NoFilters(t *testing.T) {
 }
 
 func TestBuild_NamespaceSelector(t *testing.T) {
+	t.Parallel()
 	selector := &NamespaceSelector{LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"team": "a"}}}
 	d, _ := build(t,
 		// limitNamespaces and the system flag are ignored when a selector is present
@@ -197,9 +366,22 @@ func TestBuild_NamespaceSelector(t *testing.T) {
 	if got, _ := NamespaceAllowed(&carol, "team-a", ns); got || !carol.HasAnyFilters() {
 		t.Errorf("an empty namespaceSelector must override limitNamespaces: %+v", carol)
 	}
+
+	// ...and the other half of that corner: with nothing for it to override, an empty selector is
+	// indistinguishable from an absent one, so the rule has no filters and opens every non-system
+	// namespace. The two outcomes look contradictory next to each other, which is exactly why
+	// they are written down.
+	d, _ = build(t, Rule{Name: "empty-alone", Subjects: []Subject{user("carol")}, NamespaceSelector: &NamespaceSelector{}})
+	carol = entryOf(t, d, "carol")
+	for name, want := range map[string]bool{"team-a": true, "other": true, "kube-system": false} {
+		if got, _ := NamespaceAllowed(&carol, name, ns); got != want {
+			t.Errorf("an empty namespaceSelector with no patterns: %s = %v, want %v", name, got, want)
+		}
+	}
 }
 
 func TestBuild_Quarantine(t *testing.T) {
+	t.Parallel()
 	d, stats := build(t,
 		Rule{Name: "broken", Subjects: []Subject{user("dave")}, LimitNamespaces: []string{"team-(", "team-b"}},
 		Rule{Name: "fine", Subjects: []Subject{user("erin")}, LimitNamespaces: []string{"team-c"}},
@@ -234,6 +416,7 @@ func TestBuild_Quarantine(t *testing.T) {
 }
 
 func TestRestricted(t *testing.T) {
+	t.Parallel()
 	r := Restricted()
 	if !r.HasAnyFilters() {
 		t.Fatal("the restricted entry must have filters")
@@ -249,6 +432,7 @@ func TestRestricted(t *testing.T) {
 }
 
 func TestClusterScopedDenied(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name  string
 		scope ResourceScope
@@ -256,9 +440,9 @@ func TestClusterScopedDenied(t *testing.T) {
 	}{
 		{"cluster-scoped resource", ResourceScope{Known: true, Namespaced: false}, false},
 		{"namespaced resource", ResourceScope{Known: true, Namespaced: true}, true},
-		{"unknown resource of a group", ResourceScope{Known: false}, true},
-		{"unknown core resource, snapshot empty", ResourceScope{Known: false, Core: true}, true},
-		{"unknown core resource, snapshot populated: does not exist, RBAC answers", ResourceScope{Known: false, Core: true, CoreGroupPopulated: true}, false},
+		{"could not look the resource up: stay closed", ResourceScope{Known: false}, true},
+		{"discovery answered and the resource is absent: RBAC answers, the API server 404s", ResourceScope{Known: false, Absent: true}, false},
+		{"absent is only consulted when the resource is unknown", ResourceScope{Known: true, Namespaced: true, Absent: true}, true},
 	}
 	for _, tc := range cases {
 		if got := ClusterScopedDenied(tc.scope); got != tc.want {
@@ -268,6 +452,7 @@ func TestClusterScopedDenied(t *testing.T) {
 }
 
 func TestLookup_ServiceAccountsAndNil(t *testing.T) {
+	t.Parallel()
 	d, _ := build(t, Rule{Name: "sa", Subjects: []Subject{{Kind: "ServiceAccount", Name: "bot", Namespace: "ci"}}, LimitNamespaces: []string{"ci"}})
 	if len(d.Lookup("system:serviceaccount:ci:bot", nil)) != 1 {
 		t.Errorf("a service account is looked up by its username")
@@ -282,6 +467,7 @@ func TestLookup_ServiceAccountsAndNil(t *testing.T) {
 }
 
 func TestFromUnstructured_AndProject(t *testing.T) {
+	t.Parallel()
 	u := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1",
 		"kind":       "ClusterAuthorizationRule",
@@ -338,6 +524,7 @@ func TestFromUnstructured_AndProject(t *testing.T) {
 }
 
 func TestIsSystemNamespace(t *testing.T) {
+	t.Parallel()
 	for ns, want := range map[string]bool{"kube-system": true, "d8-monitoring": true, "default": true, "antiopa": true, "loghouse": true, "team-a": false, "kube": false, "d8": false, "defaults": false} {
 		if got := IsSystemNamespace(ns); got != want {
 			t.Errorf("IsSystemNamespace(%q) = %v, want %v", ns, got, want)
@@ -349,6 +536,7 @@ func TestIsSystemNamespace(t *testing.T) {
 // guard depends on this: a subject added to an existing rule keeps the rule's name, so a name-only
 // check would think the rule already accounted for it.
 func TestDirectoryRuleCovers(t *testing.T) {
+	t.Parallel()
 	dir, _ := NewBuilder().Build([]Rule{{
 		Name: "team-a",
 		Subjects: []Subject{

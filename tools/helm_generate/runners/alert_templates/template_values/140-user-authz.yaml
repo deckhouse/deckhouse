@@ -1,0 +1,8 @@
+# Multi-tenancy is enabled here so that the alerts guarded by it make it into the alerts reference.
+#
+# The authorization webhook and Permission Browser are rendered only when it is on, and their alert
+# rules are gated the same way — a cluster without multi-tenancy has no targets to scrape, and
+# shipping alerts about absent components fired TargetDown permanently. The documentation should
+# still describe them, so the generator renders with it on.
+userAuthz:
+  enableMultiTenancy: true

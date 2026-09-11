@@ -22,6 +22,125 @@ from deckhouse import hook, tests
 from dotmap import DotMap
 
 
+class TestLimitNamespacesPatternValidation(unittest.TestCase):
+    """A limitNamespaces pattern the authorization webhook cannot compile is rejected at admission.
+
+    Without this, such a rule is accepted and then quarantined at runtime: its subjects silently get
+    LESS access than the author wrote, and the only trace is a metric nobody is looking at while
+    they are typing kubectl apply.
+
+    The two directions of being wrong are not symmetric, and the tests are arranged around that.
+    Letting a bad pattern through costs a quarantine, which is the behaviour without this check at
+    all. Refusing a good one blocks an administrator from editing a rule that works. So the first
+    group below - patterns RE2 accepts and Python's own re does not - is the one that matters most.
+    """
+
+    def car(self, *patterns):
+        return DotMap({
+            "metadata": {"name": "team-a"},
+            "spec": {"limitNamespaces": list(patterns)},
+        })
+
+    def errors_for(self, *patterns):
+        errors, _ = multitenancy.validate_car_limit_namespaces_patterns(self.car(*patterns))
+        return errors
+
+    def test_patterns_valid_in_re2_but_not_in_python_are_accepted(self):
+        """These all raise re.error in Python and compile fine in Go.
+
+        Deciding validity by compiling with Python's re would refuse every one of them, and each
+        refusal is an administrator unable to save a rule the cluster is already running.
+        """
+        for pattern in [r"\z", r"\pL", r"\Q(\E", r"\Qa|b\E", r"\x{41}", "(?<name>a)", "(?U)a"]:
+            with self.subTest(pattern=pattern):
+                self.assertEqual([], self.errors_for(pattern), "must not be rejected: RE2 compiles it")
+
+    def test_escaped_quantifiers_and_octal_escapes_are_accepted(self):
+        """The same class of mistake as compiling with Python's re, from two other directions.
+
+        In `a\\?+` the "?" is an escaped literal and the "+" repeats it: RE2 compiles it, and a check
+        that reads the character before the "+" out of the raw string sees a possessive quantifier
+        that is not there. And `\\123` is an octal escape, not a backreference - RE2 reads a
+        backslash and two or three octal digits as one character.
+
+        Every pattern here was compiled with Go's regexp to confirm it is accepted.
+        """
+        for pattern in [r"a\?+", r"a\*+", r"a\++", r"a\}+", r"\123", r"\12", r"\777",
+                        r"\0", r"\000", r"[+]+", r"\Q+\E+"]:
+            with self.subTest(pattern=pattern):
+                self.assertEqual([], self.errors_for(pattern), "must not be rejected: RE2 compiles it")
+
+    def test_quantifiers_and_escapes_re2_refuses_are_still_rejected(self):
+        """The other half: what Go's regexp does refuse must keep being refused."""
+        for pattern, description in [
+            (r"a*+", "possessive quantifier"),
+            (r"a?+", "possessive quantifier"),
+            (r"a{2}+", "possessive quantifier"),
+            (r"(a)++", "possessive quantifier"),
+            (r"\1", "backreference"),
+            (r"\9", "backreference"),
+            (r"\18", "backreference"),
+            (r"\800", "backreference"),
+        ]:
+            with self.subTest(pattern=pattern):
+                errors = self.errors_for(pattern)
+                self.assertEqual(1, len(errors), errors)
+                self.assertIn(description, errors[0])
+
+    def test_ordinary_patterns_are_accepted(self):
+        for pattern in ["team-a", "team-.*", "team-[0-9]+", "team-.*|kube-system", "(a|b)-ns",
+                        ".*", "(?i)team", "(?is)team", "(?i:team)", "a{2,10}", "a{1000}"]:
+            with self.subTest(pattern=pattern):
+                self.assertEqual([], self.errors_for(pattern))
+
+    def test_structurally_broken_patterns_are_rejected(self):
+        for pattern, reason in [
+            ("team-(", "unclosed '('"),
+            ("team-[", "unclosed '['"),
+            ("team-a)", "unbalanced ')'"),
+        ]:
+            with self.subTest(pattern=pattern):
+                errors = self.errors_for(pattern)
+                self.assertEqual(1, len(errors), errors)
+                self.assertIn(reason, errors[0])
+                self.assertIn("team-a", errors[0])  # the rule is named
+
+    def test_constructs_re2_does_not_have_are_rejected(self):
+        """Python accepts every one of these, so compiling would not catch them."""
+        for pattern, description in [
+            ("team-(?=a)", "lookahead"),
+            ("team-(?!a)", "negative lookahead"),
+            ("(?<=team-)a", "lookbehind"),
+            ("(?<!team-)a", "negative lookbehind"),
+            ("(?>team)", "atomic group"),
+            ("(?#note)a", "inline comment"),
+            (r"(a)\1", "backreference"),
+            ("(?(1)a|b)", "conditional"),
+            ("a++", "possessive quantifier"),
+            ("(?x)team", "inline flag"),
+            ("(?a)team", "inline flag"),
+            ("a{1001}", "above RE2's limit"),
+        ]:
+            with self.subTest(pattern=pattern):
+                errors = self.errors_for(pattern)
+                self.assertEqual(1, len(errors), errors)
+                self.assertIn(description, errors[0])
+
+    def test_a_metacharacter_inside_a_class_or_a_quote_is_a_literal(self):
+        r"""A scan that does not understand [...] and \Q...\E reports imbalance that is not there."""
+        for pattern in [r"[(]", r"[)]", r"[[]", r"\Q(\E", r"\Q)\E", r"\Q[\E", r"a\(b", r"a\)b"]:
+            with self.subTest(pattern=pattern):
+                self.assertEqual([], self.errors_for(pattern))
+
+    def test_every_bad_pattern_is_named(self):
+        errors = self.errors_for("team-a", "team-(", "ops-[")
+        self.assertEqual(2, len(errors), errors)
+
+    def test_a_rule_without_limit_namespaces_is_not_examined(self):
+        obj = DotMap({"metadata": {"name": "team-a"}, "spec": {"accessLevel": "User"}})
+        self.assertEqual(([], []), multitenancy.validate_car_limit_namespaces_patterns(obj))
+
+
 class TestMultiTenancyValidationForCarsAndModuleConfig(unittest.TestCase):
 
     def run_hook(self, context_json: str):

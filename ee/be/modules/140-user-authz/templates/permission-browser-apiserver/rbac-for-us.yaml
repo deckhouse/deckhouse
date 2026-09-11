@@ -32,10 +32,10 @@ rules:
 - apiGroups: ["admissionregistration.k8s.io"]
   resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations", "validatingadmissionpolicies", "validatingadmissionpolicybindings"]
   verbs: ["get", "list", "watch"]
-# Access to API priority and fairness for generic apiserver
-- apiGroups: ["flowcontrol.apiserver.k8s.io"]
-  resources: ["prioritylevelconfigurations", "flowschemas"]
-  verbs: ["get", "list", "watch"]
+# No grant for flowcontrol.apiserver.k8s.io. The generic apiserver would watch
+# prioritylevelconfigurations and flowschemas for API priority and fairness, but this deployment
+# runs with --enable-priority-and-fairness=false, so those informers never start and the grant was
+# permission nothing used. Turning the flag on means putting it back.
 ---
 # ClusterRole for clients who can create BulkSubjectAccessReviews
 # This should be granted to UI service accounts or users who need bulk permission checks
