@@ -129,13 +129,27 @@ steps:
       echo "Building fuzz images:"
       echo "${FUZZ_IMAGES}"
 
+      # Statisctics added since werf 2.78.1
+      werf_major="$(werf version | cut -d. -f1)"
+      werf_minor="$(werf version | cut -d. -f2)"
+      werf_build_report_operations_arg=""
+      if (( werf_major >= 3 )); then
+        echo "Using build-report-operations, werf version >=3.0"
+        werf_build_report_operations_arg="--build-report-operations=true"
+      else
+        if (( werf_minor >= 78 )); then
+          echo "Using build-report-operations, werf version >=2.78"
+          werf_build_report_operations_arg="--build-report-operations=true"
+        fi
+      fi
+
       # shellcheck disable=SC2086
       werf build ${FUZZ_IMAGES} \
         --insecure-registry \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
-        --build-report-operations=true \
-        --build-report-path images_fuzz_tags_werf.json
+        --build-report-path images_fuzz_tags_werf.json \
+        ${werf_build_report_operations_arg}
 
 {!{- if not $isDev }!}
       command -v jq >/dev/null 2>&1 || {
