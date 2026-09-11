@@ -87,6 +87,33 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
 	})
 
+	Context("With enabledMultiTenancy and highAvailability", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus"]`)
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+			f.ValuesSet("global.highAvailability", true)
+			f.ValuesSet("userAuthz.enableMultiTenancy", true)
+			f.HelmRender()
+		})
+
+		// In HA the aggregated API server keeps two replicas and rolls them one at a time with no
+		// surge, as before; the existing budget (maxUnavailable 1) keeps one of them through
+		// voluntary disruptions.
+		It("Should keep two permission-browser replicas and one always available", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
+			Expect(deployment.Field("spec.strategy.rollingUpdate.maxSurge").Int()).To(BeEquivalentTo(0))
+			Expect(deployment.Field("spec.strategy.rollingUpdate.maxUnavailable").Int()).To(BeEquivalentTo(1))
+
+			pdb := f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "permission-browser-apiserver")
+			Expect(pdb.Exists()).To(BeTrue())
+			Expect(pdb.Field("spec.maxUnavailable").Int()).To(BeEquivalentTo(1))
+		})
+	})
+
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus"]`)
@@ -319,6 +346,24 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzWebhookRulesQuarantined"))
 			// Field().String() hands back JSON, so the selector's quotes arrive escaped.
 			Expect(rule.Field("spec.groups").String()).To(ContainSubstring(`job=\"user-authz-webhook\"`))
+		})
+
+		// A rollout of the single non-HA replica used to take the aggregated API down: the strategy
+		// was hardcoded to maxSurge 0 / maxUnavailable 1, so the only pod was removed before its
+		// replacement existed and the APIService had no endpoints for the whole restart (16 s
+		// measured). Without HA the Deployment now keeps the default strategy, which surges first.
+		It("Should roll permission-browser without taking its API down when there is one replica", func() {
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
+			Expect(deployment.Field("spec.strategy.rollingUpdate.maxSurge").Exists()).To(BeFalse(),
+				"no explicit maxSurge: the Deployment default surges a pod before removing the old one")
+
+			// The budget the chart already carries: with one replica it permits the eviction of
+			// that replica, which is the same as a minAvailable of zero.
+			pdb := f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "permission-browser-apiserver")
+			Expect(pdb.Exists()).To(BeTrue())
+			Expect(pdb.Field("spec.maxUnavailable").Int()).To(BeEquivalentTo(1))
 		})
 
 		It("Should expose the permission-browser metrics for Prometheus", func() {

@@ -60,13 +60,6 @@ spec:
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "userAuthnController") }}
         imagePullPolicy: 'IfNotPresent'
-        env:
-        - name: HA_MODE
-{{- if (include "helm_lib_ha_enabled" .) }}
-          value: "true"
-{{- else }}
-          value: "false"
-{{- end }}
         ports:
         - containerPort: 9090
           name: healthz

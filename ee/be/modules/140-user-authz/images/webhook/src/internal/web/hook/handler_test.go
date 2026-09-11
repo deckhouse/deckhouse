@@ -6,11 +6,16 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -1158,5 +1163,95 @@ func TestAuthorizeClusterScoped_UnfilteredSubjectIgnoresDiscovery(t *testing.T) 
 	})
 	if got.Status.Denied {
 		t.Errorf("denied with %q; the webhook has no opinion about a subject no rule names", got.Status.Reason)
+	}
+}
+
+// The full SubjectAccessReview - identity, groups, resource - used to be written for every decision
+// at the default verbosity: ~125 KB/min from a 5 rps probe on a stand, with no way to turn it off.
+// Denials are what an operator looks for; the rest is background and is opt-in.
+func TestDecisionLogMode(t *testing.T) {
+	for _, tc := range []struct {
+		env      string
+		want     decisionLogMode
+		warnings int
+	}{
+		{env: "", want: logDenied},
+		{env: "denied", want: logDenied},
+		{env: "all", want: logAll},
+		{env: "none", want: logNone},
+		{env: "ALL", want: logAll},
+		{env: "verbose", want: logDenied, warnings: 1},
+	} {
+		t.Run("env="+tc.env, func(t *testing.T) {
+			var buf bytes.Buffer
+			got := DecisionLogModeFrom(tc.env, log.New(&buf, "", 0))
+			if got != tc.want {
+				t.Errorf("mode = %v, want %v", got, tc.want)
+			}
+			if lines := strings.Count(buf.String(), "\n"); lines != tc.warnings {
+				t.Errorf("%d warning lines, want %d: %q", lines, tc.warnings, buf.String())
+			}
+		})
+	}
+
+	for _, tc := range []struct {
+		mode   decisionLogMode
+		denied bool
+		want   bool
+	}{
+		{logNone, false, false}, {logNone, true, false},
+		{logDenied, false, false}, {logDenied, true, true},
+		{logAll, false, true}, {logAll, true, true},
+	} {
+		if got := tc.mode.logs(tc.denied); got != tc.want {
+			t.Errorf("mode %v denied=%v: logs=%v, want %v", tc.mode, tc.denied, got, tc.want)
+		}
+	}
+}
+
+// ServeHTTP writes the review body only when the mode says so.
+func TestServeHTTPLogsDecisionsByMode(t *testing.T) {
+	// A cluster-wide list by a subject limited to selected namespaces is denied (see the table
+	// above); a subject no rule covers gets no opinion.
+	review := func(groups []string) *bytes.Reader {
+		body, _ := json.Marshal(WebhookRequest{Spec: WebhookResourceSpec{
+			User:               "test",
+			Group:              groups,
+			ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1"},
+		}})
+		return bytes.NewReader(body)
+	}
+	limited, nobody := []string{"limited-namespace-selector"}, []string(nil)
+	for _, tc := range []struct {
+		name    string
+		mode    decisionLogMode
+		groups  []string
+		wantLog bool
+	}{
+		{"denied is logged under the default", logDenied, limited, true},
+		{"no opinion is silent under the default", logDenied, nobody, false},
+		{"everything is logged under all", logAll, nobody, true},
+		{"nothing is logged under none", logNone, limited, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			handler := &Handler{
+				logger:       log.New(&buf, "", 0),
+				cache:        fixtureCache(),
+				rules:        fixtureRules(),
+				bindings:     binding.NewIndex(),
+				nsLister:     newFakeNamespaceLister(nil),
+				nsSynced:     func() bool { return true },
+				logDecisions: tc.mode,
+			}
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/", review(tc.groups)))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status %d", rec.Code)
+			}
+			if got := strings.Contains(buf.String(), "response body:"); got != tc.wantLog {
+				t.Errorf("logged=%v, want %v; log: %q", got, tc.wantLog, buf.String())
+			}
+		})
 	}
 }

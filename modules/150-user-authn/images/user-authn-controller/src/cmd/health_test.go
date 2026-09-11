@@ -18,11 +18,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type stubSyncCache struct {
@@ -43,5 +45,29 @@ func TestCacheSyncCheck(t *testing.T) {
 	}
 	if err := cacheSyncCheck(stubSyncCache{synced: false})(req); err == nil {
 		t.Fatal("unsynced cache: want error")
+	}
+}
+
+type stubReader struct {
+	client.Reader
+	err error
+}
+
+func (s stubReader) List(context.Context, client.ObjectList, ...client.ListOption) error {
+	return s.err
+}
+
+// Readiness has to say whether the controller can work now. A synced informer cache stays synced
+// after the controller loses its RBAC, so cache-sync alone left a powerless controller Ready.
+func TestAPIAccessCheck(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	if err := apiAccessCheck(stubReader{})(req); err != nil {
+		t.Fatalf("a reader that answers: %v", err)
+	}
+	forbidden := errors.New(`useraccounts.deckhouse.io is forbidden`)
+	if err := apiAccessCheck(stubReader{err: forbidden})(req); !errors.Is(err, forbidden) {
+		t.Fatalf("a reader that is forbidden: got %v, want the cause", err)
 	}
 }
