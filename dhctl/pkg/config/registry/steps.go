@@ -64,48 +64,34 @@ func WaitForRegistryReady(ctx context.Context, kubeClient client.KubeClient, con
 
 // isRegistryReady checks whether the registry the cluster was configured with has become usable.
 //
-// There are exactly two things this can wait on, and which one applies is decided from the
-// configuration rather than from what happens to be present in the cluster.
+// There are exactly two things this can wait on, and which applies is decided from the configuration
+// rather than from what happens to be present in the cluster: a store the module runs, answered by
+// its own RegistryStorage status, or the previous implementation's state machine, answered by its
+// `registry-state` secret.
 //
-//   - A store the module runs. Its own RegistryStorage status is the answer.
-//   - The previous implementation's state machine. Its `registry-state` secret is the answer.
+// The second is reachable only on a cluster that implementation still owns, which a cluster being
+// installed now never is — the current implementation takes over from the start and clears the values
+// that secret is written from, so waiting there waits for something nobody will write.
 //
-// The second one is reachable only on a cluster the previous implementation still owns, and that is
-// never a cluster being installed now: the current implementation takes over from the start, and it
-// clears the values that secret is written from. Waiting on it there is waiting for something nobody
-// will write — a hundred attempts, thirty-three minutes, and then a failed installation of a cluster
-// that was working.
-//
-// Everything else is not waited on at all, and that is a statement rather than a gap: a cluster that
-// pulls straight from a registry has nothing in it that reports on that registry, and the moment
-// Deckhouse is running is the moment its pull path is known to work.
-//
-// Parameters:
-//   - ctx: context for cancellation and timeouts
-//   - kubeClient: Kubernetes client for API operations
-//   - config: configuration with registry settings
-//
-// Returns:
-//   - err: error from the operation
+// Everything else is not waited on, and that is a statement rather than a gap: a cluster pulling
+// straight from a registry has nothing in it that reports on that registry, and the moment Deckhouse
+// is running is the moment its pull path is known to work.
 func isRegistryReady(ctx context.Context, kubeClient client.KubeClient, config Config) error {
 	logger := dhlog.FromContext(ctx)
 
 	if config.StoreExpected {
 		// The store is waited for only where it is the ONLY source of images, which is an
-		// installation from a bundle. With an upstream configured the cluster can already pull
-		// everything it needs — the agent falls back to the upstream for whatever the cache has not
-		// copied yet — so the cache filling is an optimisation that finishes on its own after the
-		// installation, not a precondition for it.
+		// installation from a bundle. With an upstream the agent falls back to it for whatever the
+		// cache has not copied yet, so the filling is an optimisation that finishes after the
+		// installation rather than a precondition for it.
 		//
-		// Waiting for it anyway is not merely slow, it fails installations. `Ready` is reported only
-		// once the LEADER IS FULL (see the phase switch in the controller's status builder), so this
-		// wait is a wait for the whole first sync: measured on a three-master cache cluster, twelve
-		// gigabytes over the operator's link, around fifteen minutes of a silent log — and the
-		// bootstrap watchdog killed the installation at exit=137 before the store ever reported Ready.
+		// Waiting anyway is not merely slow, it fails installations: `Ready` is reported only once
+		// the LEADER IS FULL, so the wait becomes a wait for the whole first sync — the entire image
+		// set over the operator's link — which the bootstrap watchdog cuts short.
 		//
-		// Without an upstream the opposite holds and nothing here may be relaxed: the cache is where
-		// every image comes from, and a store that is merely running answers "no such host" for
-		// anything it has not copied.
+		// Without an upstream nothing here may be relaxed: the cache is where every image comes
+		// from, and a store that is merely running answers "no such host" for what it has not
+		// copied.
 		if !config.BundleBootstrap {
 			logger.InfoContext(ctx,
 				"The cluster pulls through its upstream, so the cache may finish filling after the "+

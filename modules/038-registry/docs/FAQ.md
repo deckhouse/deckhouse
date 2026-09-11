@@ -142,10 +142,10 @@ handover of that address: no switch through `Unmanaged` is needed, and no compon
    d8 k get registrynode -o custom-columns='NODE:.metadata.name,READY:.status.reconciled,SERVING:.status.proxyListening'
    ```
 
-   For reference, timings measured on a test cluster: the handover was recorded about two
-   minutes after the new version started, the node agent appeared on the nodes about seven
-   minutes later, and the objects of the previous implementation were removed a minute after
-   that. Pulls worked at every point in between.
+   For reference, the order and rough scale to expect: the handover is recorded a couple of
+   minutes after the new version starts, the node agent appears on the nodes several minutes
+   later, and the objects of the previous implementation are removed shortly after that. Pulls
+   keep working at every point in between.
 
 ## How do I migrate from Proxy mode?
 
@@ -193,11 +193,11 @@ Before starting, make sure the control-plane nodes have free space for **four im
 Three copies exist at the peak — the `Local` store, the temporary registry, and the module's
 storage being filled — and the fourth set is headroom the node must not run out of.
 
-For reference, measured on a test migration: a 13 GiB image set (platform with modules) took
-21 GiB in the temporary registry (two releases: the one the cluster ran and the one it moved
-to) and grew the store from 13.0 to 21.4 GiB — in addition to the node's own image cache and
-the system. On a 100 GiB control-plane node the peak usage was 38 GiB; on a 50 GiB node the
-same migration ran into pod eviction.
+To get a sense of the scale, take a 13 GiB image set (platform with modules): it occupies
+about 21 GiB in the temporary registry (two releases — the one the cluster runs and the one it
+moves to) and grows the store from 13.0 to 21.4 GiB, on top of the node's own image cache and
+the system. A 100 GiB control-plane node peaks at around 38 GiB that way, while a 50 GiB node
+runs into pod eviction.
 
 The headroom is critical. When free disk space on a control-plane node runs low, kubelet
 starts evicting pods and deleting images it considers unused — and in a cluster whose registry

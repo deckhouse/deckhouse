@@ -266,23 +266,19 @@ func TestTheWriteEndpointRefusesToShareThePort(t *testing.T) {
 	assert.Contains(t, err.Error(), "two listeners in one process")
 }
 
-// TestTheAppCarriesEveryProviderTheRenderedConfigurationNames is the test that was missing when a
-// binary that passed every test here panicked on a cluster.
+// TestTheAppCarriesEveryProviderTheRenderedConfigurationNames is the test that lets a binary passing
+// every other test here still panic on startup.
 //
-// Upstream names its storage drivers and its access controllers by STRING in the configuration and
-// looks each up in a registry the provider fills from its own `init`. Nothing imports those for a
-// consumer of the library, so a process that reads a perfectly valid configuration panics on it —
-// `StorageDriver not registered: filesystem` at handlers.NewApp, and after that one is fixed,
-// `unable to configure authorization (token)` right behind it.
+// Upstream looks its storage drivers and access controllers up by STRING in a registry each provider
+// fills from its own `init`, and nothing imports those for a consumer of the library — so a process
+// reading a perfectly valid configuration panics on it: `StorageDriver not registered: filesystem`,
+// and once that is fixed `unable to configure authorization (token)` behind it. It hides because the
+// imports can live in this file rather than in the packages under test, and then every test builds a
+// binary the image does not have.
 //
-// It went unnoticed because the imports lived in this file rather than in the packages under test,
-// so every test here built a binary the image did not have. Measured on a cluster:
-// registry-storage-0 in CrashLoopBackOff with fourteen restarts, RegistryStorage `Failed`, the
-// syncer reporting `491 of 491 references could not be copied`.
-//
-// So this asks for both by the names the module's own template writes, and asks through a real
-// request: the store answers, and the answer is the challenge the cluster's token service is named
-// in. A missing provider cannot pass it.
+// So this asks for both by the names the module's own template writes, through a real request: the
+// answer is the challenge the cluster's token service is named in, which a missing provider cannot
+// produce.
 func TestTheAppCarriesEveryProviderTheRenderedConfigurationNames(t *testing.T) {
 	settings := storeConfiguration(t.TempDir())
 	settings.Auth = configuration.Auth{"token": configuration.Parameters{

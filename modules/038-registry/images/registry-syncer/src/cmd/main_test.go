@@ -30,8 +30,8 @@ import (
 // The default has to move off the loopback. The pod is host-networked, so the loopback belongs to
 // the node, and on a Managed cluster the registry AGENT is already listening there on the same
 // port. A syncer that keeps the default therefore talks to the agent instead of the registry in
-// its own pod and is rejected at the TLS handshake — measured on a cluster, where it left the
-// air-gap transition unable to count what the store held.
+// its own pod and is rejected at the TLS handshake, which leaves the air-gap transition unable to
+// count what the store holds.
 func TestResolveLocalAddress(t *testing.T) {
 	tests := []struct {
 		name          string

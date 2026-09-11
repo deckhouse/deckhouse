@@ -25,14 +25,15 @@ import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
-// TestAnInstallationThatNamesNoRegistryStillFindsItsImages is the failure this exists for, and it
-// was measured rather than imagined: installing a cluster whose only statement about a registry is
-// the registry module's own ModuleConfig died fourteen seconds in with
+// TestAnInstallationThatNamesNoRegistryStillFindsItsImages is the failure this exists for.
+//
+// When the only statement a cluster makes about its registry is the registry module's own
+// ModuleConfig, the legacy dockercfg is empty — and decoding it comes first, so the installation dies
+// with
 //
 //	Cannot download infrastructure util … unmarshaling dockerconfig JSON: unexpected end of JSON input
 //
-// The images were there the whole time — served by the bundle registry on the loopback address — and
-// nothing had gone looking for them: the legacy dockercfg was empty, and decoding it came first.
+// while the images are there the whole time, served by the bundle registry on the loopback address.
 func TestAnInstallationThatNamesNoRegistryStillFindsItsImages(t *testing.T) {
 	conf := &config.MetaConfig{}
 	conf.Registry.Settings.RemoteData = registryconfig.Data{

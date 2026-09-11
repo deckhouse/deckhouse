@@ -183,8 +183,7 @@ func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic, hasCluste
 			// The restriction belongs to the legacy modes, and it stays exactly as it was for them.
 			// An installation from a bundle is allowed in a cloud cluster: what serves the images
 			// during it is a static pod on the host network, which the cloud has no say in, and the
-			// cluster's own store serves everything afterwards — already measured on the air-gapped
-			// cloud variants of the test matrix.
+			// cluster's own store serves everything afterwards.
 			if !isStatic && !p.bundleBootstrap {
 				return Config{}, errNonStaticClusterMode(p.deckhouseSettings.Mode)
 			}

@@ -230,12 +230,11 @@ func (r *Registry) authorize(
 	// Bearer with no credentials is not a misconfiguration: it is how the community edition pulls.
 	//
 	// A token service issues a token to whoever asks, and what it grants depends on the scope
-	// rather than on who asked. Measured against the real registry on 4 September 2026 without any
-	// credentials at all: `registry.deckhouse.io/v2/` answers 401 with a Bearer challenge, the auth
-	// service issues a token for `repository:deckhouse/ce:pull`, and `deckhouse/ce:stable` comes
-	// back 200 with that token. Refusing here made the probe report the way a CE cluster pulls as an
+	// rather than on who asked: `registry.deckhouse.io/v2/` answers 401 with a Bearer challenge, the
+	// auth service issues a token for `repository:deckhouse/ce:pull` to an anonymous caller, and the
+	// image comes back 200 with it. Refusing here would report the way a CE cluster pulls as an
 	// authentication failure — `UpstreamValid=False` on a cluster whose upstream works, with no
-	// last-known-good to fall back to on a first configuration.
+	// last-known-good to fall back on for a first configuration.
 	//
 	// So the request goes out unauthenticated, and the answer decides: a token service that refuses
 	// an anonymous caller answers 401 or 403, and that is handled below exactly as a rejected

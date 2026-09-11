@@ -40,10 +40,9 @@ import (
 // the only one left is the Secret this module wrote itself.
 //
 // Without reading it back, the hold keeps the address and loses the ability to use it: every
-// node ends up with a fallback it cannot authenticate to. On the cluster this was measured on,
-// that turned a cache miss from something slower into a failure, and any image reference naming
-// the upstream by its own name into a relayed 401 — while every address, scheme and authority
-// in the layout was correct.
+// node ends up with a fallback it cannot authenticate to: a cache miss turns from something
+// slower into a failure, and any image reference naming the upstream by its own name into a
+// relayed 401 — while every address, scheme and authority in the layout is correct.
 func TestReconcileKeepsTheCredentialsOfAHeldUpstream(t *testing.T) {
 	// Air-gap requested: the configuration has no upstream, and so no credentials either.
 	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{

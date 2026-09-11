@@ -98,10 +98,9 @@ func newScheduler(t *testing.T, _ *recordingStore, lease Lease, collect func(con
 //
 // Applying it restarts the serving process — the registry cannot reload its configuration, so it is
 // signalled and the kubelet brings it back, which the kubelet counts as a crash. Around the whole
-// collection that happened twice every fifteen minutes whether or not anything was deletable:
-// measured on a cluster as seven restarts per replica, exponential backoff, and a store answering
-// `connection refused` for minutes. In that state followers could not replicate and the collection
-// failed on a read it had itself made impossible.
+// collection that happens twice per schedule, whether or not anything is deletable. The restarts
+// accumulate into kubelet backoff and the store answers `connection refused` for minutes at a time:
+// followers cannot replicate, and the collection fails on a read it made impossible itself.
 func TestCollectingDecidesWithoutQuietingTheStore(t *testing.T) {
 	store := &recordingStore{}
 	collected := false
@@ -183,10 +182,8 @@ func TestRunSkipsWhileDisabled(t *testing.T) {
 //
 // At startup the loop has not yet stored the desired state, so the plan is empty. An empty plan
 // used to be indistinguishable from a disabled collection, and the disabled branch waits an hour
-// before looking again — so a replica given `*/15 * * * *` collected nothing until the hour was up,
-// and there was no log line anywhere to say why. Measured on a cluster: forty-two minutes after the
-// pod started, with collection enabled and a fifteen-minute schedule, no collection had been
-// scheduled at all and the reclaim alert was about to fire.
+// before looking again — so a replica given `*/15 * * * *` collects nothing until the hour is up,
+// with no log line anywhere to say why, and the reclaim alert fires in the meantime.
 //
 // What is asserted is the DURATION of the wait, which is why the sleeping is injectable: the bug was
 // never that the scheduler waited, it was how long.

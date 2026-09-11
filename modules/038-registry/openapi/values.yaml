@@ -139,10 +139,9 @@ properties:
               that have not been re-rendered yet still name the in-cluster registry,
               so it keeps being served until they do.
 
-              Measured on the alternative, an immediate teardown: 84 seconds during
-              which the platform's own Deployment named a registry that no longer
-              existed, and 680 seconds during which workloads could not pull, 16 of
-              them at the peak. See `hooks/v2/drain.go`.
+              The alternative — tearing the registry down at once — leaves everything
+              that has not been re-rendered naming an address nobody serves, the
+              platform's own Deployment included. See `hooks/v2/drain.go`.
             properties:
               active:
                 type: boolean

@@ -457,12 +457,10 @@ func TestOnceIdleKeepsThePreviousCount(t *testing.T) {
 // TestOnceIdleKeepsTheDenominatorToo is the same guard for the other half of the fraction, and it is
 // here because the first version of the denominator did not have it.
 //
-// Measured on the static stand: the process restarted, its first pass was one that does not read the
-// store, so it published the counts it had carried over from the object — and the denominator, which
-// was carried nowhere, came out absent. The status then reported no progress at all on a complete
-// store, which is precisely the defect the denominator was added to fix, reappearing through a path
-// nobody had covered. Six places set the numerator; the denominator has to travel with it in all of
-// them, and a fresh process starts with nothing in memory, so the object is the only source.
+// A restarted process whose first pass does not read the store publishes the counts it carried over
+// from the object, while the denominator — carried nowhere — comes out absent, so a complete store
+// reports no progress at all. Six places set the numerator; the denominator has to travel with it in
+// all of them, and a fresh process starts with nothing in memory, so the object is the only source.
 func TestOnceIdleKeepsTheDenominatorToo(t *testing.T) {
 	local := startRegistry(t)
 
@@ -496,8 +494,8 @@ func TestOnceIdleKeepsTheDenominatorToo(t *testing.T) {
 // With an upstream, a cache and no air-gap declaration, a steady-state pass computes nobody's set: the
 // fill path knows only what it wrote, the survey that keeps the store's size up to date is asked
 // without a set deliberately, and a freshly started process has nothing in memory to fall back on.
-// Measured on the static stand: `totalDigests` climbing pass after pass, `declaredDigests` absent, and
-// therefore no `fill` in the status — the very thing this was supposed to fix, surviving two fixes.
+// `totalDigests` then climbs pass after pass with `declaredDigests` absent, so the status shows no
+// `fill` at all — the very thing this was supposed to fix, surviving two fixes.
 func TestTheDenominatorAppearsOnACachingClusterWithNothingToFill(t *testing.T) {
 	local := startRegistry(t)
 
@@ -784,17 +782,15 @@ func resolveTag(t *testing.T, address, repository, tag string) string {
 	return descriptor.Digest.String()
 }
 
-// heldOnDisk lays out manifest revisions the way distribution does, so a test can give a replica a
-// store to count. The layout is the product's contract with its own filesystem; writing it out here
-// is what makes the count testable without a registry that has one.
 // heldOnDisk puts images in the store the way a finished `d8 mirror push` leaves them: the revision
-// link, the manifest itself, and every blob the manifest names.
+// link, the manifest itself, and every blob the manifest names. The layout is the product's contract
+// with its own filesystem, and writing it out here is what makes the count testable without a
+// registry.
 //
 // All three, because held means servable. A revision link alone is what a pull-through cache writes
 // the moment it has SERVED a manifest, before fetching anything it points at — so a store built out
-// of links only is a store that can answer questions about images it cannot hand over. Measured on
-// `ly-mmc`: 332 manifests, 61 layer links, 333 MB, three replicas calling themselves full and
-// authorizing an air-gap in which no node could pull at all.
+// of links only can answer questions about images it cannot hand over, call itself full, and
+// authorize an air-gap in which no node can pull at all.
 func heldOnDisk(t *testing.T, root string, digests ...string) {
 	t.Helper()
 
@@ -836,16 +832,14 @@ func blobOnDisk(t *testing.T, root, digest string, content []byte) {
 
 // TestAFullSetThatCannotResolveTheReleaseIsNotComplete is the check the count alone did not make.
 //
-// Measured on a three-master cluster: the leader reported full, and its followers asking it for the
-// release got `MANIFEST_UNKNOWN` for `:pr21788` while the node agent got `NAME_UNKNOWN: repository name
-// not known to registry`. The transition had been authorized by a store that could not hand the release
-// to anybody — replication enumerates the set by reading the release BY TAG, so a set whose tag is
-// missing propagates to nothing, and neither does an update.
+// A store can hold the whole declared set by digest and still be unable to resolve the release by tag,
+// and it then authorizes a transition it cannot honour: a follower asking it for the release gets
+// `MANIFEST_UNKNOWN`, the node agent gets `NAME_UNKNOWN: repository name not known to registry`, and
+// replication — which enumerates the set by reading the release BY TAG — propagates nothing, an update
+// included.
 //
-// Whether that particular store was short a tag or short everything was never established (the cluster
-// was gone before its disk could be read, and the owner's reading is that the wrong bundle had been
-// poured in). This check does not depend on which: either way the store cannot resolve the release, and
-// either way it must not authorize dropping the upstream.
+// The check does not depend on how a store came to be in that state: either way it cannot resolve the
+// release, and either way it must not authorize dropping the upstream.
 func TestAFullSetThatCannotResolveTheReleaseIsNotComplete(t *testing.T) {
 	local := startRegistry(t)
 
@@ -945,15 +939,14 @@ func tagOnDisk(t *testing.T, root, tag, digest string) {
 }
 
 // TestOnceCountsAPushedBundleWhileTheUpstreamIsStillHeld is the transition window of
-// the air-gap story, and the shape of a defect measured on a live cluster.
+// the air-gap story, and the shape of the defect it guards against.
 //
 // Air-gap has been asked for, so the write endpoint is open and `d8 mirror push` has
 // put the whole set in the store. The upstream is still HELD, deliberately: the
-// cluster has to keep working until the leader is complete. Before this was fixed the
-// leader in exactly this state reported nothing at all — the count came from what the
-// fill copied, the fill could not even start, and the push it was pushed by went
-// unseen. The upstream was then held forever, which is the one outcome the transition
-// exists to avoid.
+// cluster has to keep working until the leader is complete. With the count taken from
+// what the fill copied, a leader in exactly this state reports nothing at all — the
+// fill cannot even start, and the push that filled the store goes unseen — so the
+// upstream is held forever, which is the one outcome the transition exists to avoid.
 //
 // The cluster here can name no version at all — neither a DeckhouseRelease nor a running
 // image with a tag — so the fill cannot start on any pass. Note that a cluster installed
@@ -1045,9 +1038,9 @@ func TestOnceWhilePublishingWithAnUnreadableStore(t *testing.T) {
 // while it is collected" is this process refraining — not the registry being made read-only.
 //
 // What it replaces mattered: read-only was applied by restarting the serving process, which the
-// kubelet counts as a crash, twice per collection whether or not anything was deletable. Measured on
-// a cluster: seven restarts per replica, exponential backoff, and a store answering `connection
-// refused` for minutes at a time. Serving images is not something housekeeping may interrupt.
+// kubelet counts as a crash, twice per collection whether or not anything was deletable. Those
+// restarts accumulate into kubelet backoff, and the store answers `connection refused` for minutes at
+// a time. Serving images is not something housekeeping may interrupt.
 func TestAFillWaitsForACollectionInsteadOfRacingIt(t *testing.T) {
 	local := startRegistry(t)
 	loop, _, _ := newLoop(t, true, storageWith(registryv1alpha1.RegistryStorageSpec{
@@ -1085,16 +1078,15 @@ func TestAFillWaitsForACollectionInsteadOfRacingIt(t *testing.T) {
 	}
 }
 
-// TestAnIdlePassDoesNotErasePreviousCompleteness is the cycle a live cluster ran for an hour, and the
-// reason it looked like flapping leader election.
+// TestAnIdlePassDoesNotErasePreviousCompleteness is the cycle that reads as flapping leader election.
 //
 // A leader fills the store and reports full. The controller sees the storage converged and clears
 // `needSync`. With nothing left to do the next pass goes idle — and it used to recompute fullness from
 // `expectedDigests`, which this configuration does not state, so the recomputation could only answer
 // "not full". The controller then saw a store that was not converged and asked for a fill again. Every
-// few seconds. And because eligibility to lead depends on being full, the lease travelled with it, which
-// is what made the symptom look like an election problem: three fixes to leadership could not have
-// cured a status that erased its own evidence.
+// few seconds. And because eligibility to lead depends on being full, the lease travels with it, which
+// is what makes the symptom look like an election problem — though no fix to leadership can cure a
+// status that erases its own evidence.
 func TestAnIdlePassDoesNotErasePreviousCompleteness(t *testing.T) {
 	local := startRegistry(t)
 
@@ -1134,8 +1126,8 @@ func TestAnIdlePassDoesNotErasePreviousCompleteness(t *testing.T) {
 // The fill and the replication decide completeness from their own copier's report, and a copier that
 // finds a manifest already present counts it as done. A pull-through cache writes that manifest the
 // moment it SERVES it and fetches the layers only when somebody asks, so "already present" can mean
-// a store holding nothing anybody can pull. Measured on `ly-mmc`: 333 MB, twenty manifests sampled
-// and twenty missing their layers, three replicas reporting `full` with `safeToDropUpstream: true`.
+// a store holding nothing anybody can pull — while every replica reports `full` with
+// `safeToDropUpstream: true`.
 //
 // So the store is asked instead, and a set whose images are not servable is not a complete set —
 // whatever the pass that ran before it thought.
@@ -1195,11 +1187,9 @@ func TestAStoreWithoutLayersIsNotComplete(t *testing.T) {
 // cache, and the write endpoint, which never proxies. Filling through the serving one fills nothing —
 // before uploading a layer the client asks whether the destination already has that blob, and a cache
 // answers yes by fetching it from the upstream on the spot. The upload is skipped, the manifest is
-// written, and the store ends up holding manifests naming blobs it does not have.
-//
-// Measured on `ly-mmc`: a fill of the whole set reporting `written=400, skipped=0` that left the store
-// at the same 333 MB and the same 450 blobs, with every layer of every sampled manifest absent from
-// disk while the registry answered 200 for it — because the upstream was still there to answer.
+// written, and the store ends up holding manifests naming blobs it does not have. Such a fill reports
+// the whole set written while the store gains nothing, and the registry answers 200 for layers that
+// are not on disk — because the upstream is still there to answer.
 func TestTheFillWritesToTheNonProxyingInstance(t *testing.T) {
 	upstream := startRegistry(t)
 	serving := startRegistry(t)

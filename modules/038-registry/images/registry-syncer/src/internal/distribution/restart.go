@@ -26,19 +26,6 @@ import (
 	"syscall"
 )
 
-// SignalRestarter makes the registry come back by signalling its process, which
-// the kubelet then restarts.
-//
-// The registry reads its configuration once at startup, so a change means the
-// process has to come back. Signalling the peer container rather than editing the
-// pod is deliberate: the pod object is never touched, which is what keeps a
-// credential change working while the Deckhouse operator is down. The pod shares a
-// process namespace for this, the same way the module's nginx reloader already
-// works.
-//
-// The cost is a brief gap on this replica. That is why the storage runs as several
-// replicas, and why a configuration change is applied to each independently rather
-// than to all at once.
 // ErrNoProcess reports that there was no registry process to signal.
 //
 // Its own error because the caller treats it differently from every other failure here: the
@@ -48,6 +35,16 @@ import (
 // container was restarting.
 var ErrNoProcess = errors.New("no registry process")
 
+// SignalRestarter makes the registry come back by signalling its process, which the kubelet then
+// restarts.
+//
+// The registry reads its configuration once at startup, so a change means the process has to come
+// back. Signalling the peer container rather than editing the pod is deliberate: the pod object is
+// never touched, which keeps a credential change working while the Deckhouse operator is down. The
+// pod shares a process namespace for this, as the module's nginx reloader already does.
+//
+// The cost is a brief gap on this replica, which is why the storage runs several and applies a
+// configuration change to each independently.
 type SignalRestarter struct {
 	// ProcessName is the executable to look for, matched on the base name of the
 	// command line.

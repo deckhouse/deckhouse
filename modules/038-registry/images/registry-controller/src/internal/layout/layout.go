@@ -88,8 +88,8 @@ type Inputs struct {
 	// worse than not holding it at all: every node keeps a fallback it cannot
 	// authenticate to, so a cache miss stops being slower and becomes a failure, and any
 	// image reference naming the upstream by its own name is answered with a 401 the
-	// agent has no credentials to avoid. Measured on a cluster that had asked for
-	// air-gap with an incomplete cache — which is exactly the state the hold exists for.
+	// agent has no credentials to avoid — in exactly the state the hold exists for, an
+	// air-gap asked for over an incomplete cache.
 	PersistedCredentials map[string]registryv1alpha1.Auth
 
 	// UpstreamProbeFailed reports that the configured upstream did not pass its
@@ -243,7 +243,7 @@ func compute(in Inputs) Desired {
 		//
 		// It is a SEPARATE distribution instance over the same data directory, not this one, and that
 		// is what makes it possible at all: one instance cannot both proxy an upstream and accept a
-		// push (measured: `POST /v2/.../blobs/uploads/` refused), so publishing through the serving
+		// push — a proxying instance refuses `POST /v2/.../blobs/uploads/` — so publishing through the serving
 		// instance would turn a cache into a plain registry.
 		Publish: true,
 

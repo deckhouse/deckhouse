@@ -88,11 +88,9 @@ func (sc *StateController) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// And the secret is required only when nothing else describes the registry.
 	//
 	// It used to be loaded unconditionally, which made its absence fatal here — and this controller is
-	// what produces a node's bootstrap data. Measured on a cluster where that secret was removed on
-	// purpose: no bootstrap data secret was produced at all, CAPI reported `Secret "worker-6a06716b"
-	// not found`, and no worker VM ever appeared; the installation ended on "waiting for a Ready worker
-	// node". Nothing in that path had needed the secret: the layout was there and is what the node is
-	// configured from.
+	// what produces a node's bootstrap data, so no bootstrap secret is written, CAPI waits on one that
+	// never appears and no node joins. Nothing in that path needs the secret: the layout is there, and
+	// it is what the node is configured from.
 	deckhouseRegistrySecret, err := sc.loadDeckhouseRegistrySecret(ctx)
 	if err != nil {
 		if bashibleCfgSecret == nil {

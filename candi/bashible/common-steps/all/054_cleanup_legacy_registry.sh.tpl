@@ -14,31 +14,22 @@
 
 # What the previous implementation leaves on a node, removed once the agent owns it.
 #
-# Its registry ran as one static pod configured out of `/etc/kubernetes/registry`, mounting four
-# directories from it: `pki`, `auth`, `distribution` and `mirrorer`. The pod itself goes away with the
-# manifest that implementation stops rendering, but these directories were written on the node and
-# have nobody to remove them, so they stay. Measured on a migrated cluster: still there after the
-# handover, with nothing reading them.
+# Its registry ran as a static pod configured out of `/etc/kubernetes/registry`, mounting `pki`,
+# `auth`, `distribution` and `mirrorer`. The pod goes with the manifest that implementation stops
+# rendering, but those directories were written on the node and have nobody to remove them — and
+# `pki` holds the authority's certificate and the auth, distribution and token PRIVATE KEYS, which
+# would stay for as long as the node lives.
 #
-# `pki` is the one that matters, and it used to be left here: the bootstrap step copies the
-# authority's certificate and the auth, distribution and token PRIVATE KEYS into it, and they stayed
-# on the node for as long as the node lived — long after the implementation that used them was gone.
-# The `rmdir` at the bottom could never succeed either, which was the visible half of the same
-# omission.
+# Paths spelled out rather than globbed, because this runs as root on every node and the failure
+# worth engineering against is a wildcard matching something else: `registry-agent` and
+# `registry-proxy` are siblings of these four.
 #
-# Paths spelled out rather than globbed or looped over. This runs as root on every node, and the one
-# failure mode worth engineering against is a wildcard that matches something else — `registry-agent`
-# and `registry-proxy` are siblings of these four and must be left alone.
+# Gated on the same condition as the agent's own step — while the agent is configured here, the other
+# implementation's files are dead — and not on its absence, because there is no way back to it.
 #
-# Gated on the same condition as the agent's own step, which is the honest gate: while the agent is
-# configured here, this implementation owns the node's registry, so that implementation's files are
-# dead. Not gated on its absence — there is no way back to it, so a file kept "in case" is kept
-# forever.
-#
-# Deliberately NOT removed: `/opt/deckhouse/images/registry-proxy.tar` and the package it comes from.
-# The previous implementation's modes remain the model of a bootstrap inside dhctl — `Local` is how an
-# installation from a bundle is expressed — so that image is needed before any of this runs, and on a
-# running node it is residue of a path that has to keep working.
+# Deliberately NOT removed: `/opt/deckhouse/images/registry-proxy.tar` and its package. The previous
+# implementation's modes are still the model of a bootstrap inside dhctl, so that image is needed
+# before any of this runs.
 
 {{- if .registry.agent }}
 

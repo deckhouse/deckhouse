@@ -24,27 +24,20 @@ import (
 // Fetching through the node agent, which is how anything on a node fetches once the registry module
 // manages the pull path.
 //
-// The cluster records `registry.d8-system.svc:5001` everywhere — image references, ModuleSources,
-// statuses — and that address is a KEY, not somewhere anybody dials. The agent listens on the
-// loopback of every node and decides per request whether the answer comes from the in-cluster store
-// or from an upstream. A container runtime is redirected into it by a drop-in file; a process has to
-// dial it deliberately, which is what this does.
+// The cluster records `registry.d8-system.svc:5001` everywhere, and that address is a KEY rather
+// than somewhere anybody dials: a container runtime is redirected into the agent by a drop-in file,
+// while a process has to dial it deliberately, which is what this does.
 //
-// Three things about the agent are not properties of any registry the cluster was told about:
+// Three things about the agent are not properties of any registry the cluster was told about: it
+// serves HTTPS whatever is behind it speaks; its authority is generated on the node, so it is
+// mounted from the host rather than carried by a cluster object; and nothing authenticates to it,
+// since it holds the credentials for whatever is behind it. The last is why credentials are CLEARED
+// rather than left unused — a docker config is looked up by host, so one with no entry for the host
+// being dialled makes building the client fail outright.
 //
-//   - it serves HTTPS whatever the registry behind it speaks;
-//   - its authority is generated on the node and never leaves it, so no cluster object can carry it —
-//     every node has a different one, which is why it is mounted from the host;
-//   - nothing authenticates to it. It holds the credentials for whatever is behind it and asks the
-//     client for none.
-//
-// The last one is why credentials are CLEARED rather than left to go unused: a docker config is
-// looked up by host, so one carrying no entry for the host being dialled makes building the client
-// fail outright, before a request is made.
-//
-// The same translation already exists for the Deckhouse controller, in
-// deckhouse-controller/pkg/controller/module-controllers/utils. It is repeated rather than imported
-// because this proxy is its own Go module; the constants below are pinned to their source by a test.
+// The same translation exists in deckhouse-controller/pkg/controller/module-controllers/utils,
+// repeated rather than imported because this proxy is its own Go module; the constants below are
+// pinned to their source by a test.
 const (
 	// storeHost and storePath are the in-cluster address, as recorded. Source of truth:
 	// `Host` and `Path` in go_lib/registry/const/registry.go.
@@ -94,9 +87,8 @@ func throughTheAgent(config *registry.ClientConfig, readCA func() ([]byte, error
 	// registry components, the agent among them, have to be pulled through the registry itself, and it
 	// is not up yet". The agent is a static pod installed by bashible, and the package it is installed
 	// FROM is fetched through this proxy. A proxy that dials the agent unconditionally therefore waits
-	// for what is waiting for it: measured on a fresh cluster as `rpp-get [registry-agent] attempt 14
-	// failed … HTTP 500: dial tcp 127.0.0.1:5001: connect: connection refused`, thirty times over,
-	// after which no node ever joined.
+	// for what is waiting for it — `dial tcp 127.0.0.1:5001: connect: connection refused`, until the
+	// bootstrap gives up — and no node can join.
 	//
 	// bashible writes this authority before the module has any PKI of its own, so its presence is the
 	// earliest honest signal that fetching through the agent is possible at all.

@@ -217,9 +217,7 @@ spec:
 	// The resource wins over the secret, and this is the whole point of reading it.
 	//
 	// The secret is written at bootstrap and afterwards only out of these very values, so on a cluster
-	// whose registry has moved it names where the registry used to be. Measured on a migrated cluster:
-	// the upstream had been moved to `dev-registry.deckhouse.io/sys/deckhouse-oss` while the contour
-	// still named the mirror the cluster came from, with that mirror's robot account.
+	// whose registry has moved it names where the registry used to be, with that registry's account.
 	Context("The registry module has a resolved configuration and the secret is stale", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + stateRegistryConfigResource))
@@ -242,8 +240,8 @@ spec:
 
 	// And without the secret at all, which is the case that used to deadlock a cluster: this hook runs
 	// at Operator-Startup, so refusing to run stopped the main queue before ConvergeModules — the very
-	// thing that would have removed the condition. Measured: nine tasks behind it and no way out but
-	// recreating the secret by hand.
+	// thing that would have removed the condition, leaving no way out but recreating the secret by
+	// hand.
 	Context("Only the resolved configuration exists", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateRegistryConfigResource))

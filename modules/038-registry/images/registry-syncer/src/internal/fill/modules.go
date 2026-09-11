@@ -50,22 +50,18 @@ type ModuleRef struct {
 
 // ModuleReferences enumerates what the modules a cluster keeps consist of.
 //
-// This exists because the platform's release does not account for them, and completeness that ignores
-// them is completeness in name only. A release declares the platform's images — 333 of them on a
-// measured cluster — while the modules the cluster actually runs (ingress-nginx, prometheus, upmeter
-// and the rest) are packaged separately and declared separately. A store judged complete on the
-// platform's set alone can be missing every one of them, and "complete" is precisely the answer that
-// authorizes cutting the cluster off from its upstream: measured on a bundle, 474 of 474 platform
-// manifests present and 34 module images the cluster was running absent.
+// A release declares the platform's images and nothing else, while the modules a cluster runs are
+// packaged and declared separately — so a store judged complete on the platform's set alone can be
+// missing every one of them, and "complete" is the answer that authorizes cutting the cluster off from
+// its upstream.
 //
 // Read out of each module's own package, for the same reason the platform's set is read out of the
-// image the cluster runs: it is an account the module gives of itself, so nothing has to be inferred
-// from what a registry happens to hold, and nothing has to be permitted beyond pulling what the
-// cluster already pulls.
+// image the cluster runs: it is an account the module gives of itself, so nothing is inferred from
+// what a registry happens to hold and nothing has to be permitted beyond pulling what the cluster
+// already pulls.
 //
-// A module whose package cannot be read is an error rather than a module quietly left out. Leaving it
-// out would lower the bar for completeness by exactly the images nobody could account for, which is
-// the failure this whole function exists to prevent.
+// A module whose package cannot be read is an error rather than a module quietly left out, which
+// would lower the bar for completeness by exactly the images nobody could account for.
 func ModuleReferences(
 	ctx context.Context, source Registry, puller *remote.Puller, modules []ModuleRef,
 ) ([]name.Reference, error) {
@@ -189,30 +185,16 @@ func readModuleDigests(content io.ReadCloser) ([]string, error) {
 //
 // This is how the platform learns what it can install: `GET /v2/<repository>/modules/tags/list`
 // returns the module names as tags, and `ModuleSource` reads exactly that. A pull-through cache never
-// holds it, because a tag listing is not a request that leaves anything behind — so an air-gapped
-// cluster whose store was filled by proxying answers `NAME_UNKNOWN` for the whole catalogue.
+// holds it, because a tag listing leaves nothing behind — so a store filled by proxying can pull
+// everything the cluster already runs while enumerating nothing. Copying the catalogue costs one OCI
+// manifest per module, and it belongs in the declared set so that a store missing it is not judged
+// complete.
 //
-// Measured on `ly-mmc` after a clean transition, every replica full and every node pulling:
-//
-//	modulesource/deckhouse: list: GET .../v2/system/deckhouse/modules/tags/list?n=1000:
-//	NAME_UNKNOWN: repository name not known to registry
-//
-// The store held `system/deckhouse/modules/<module>` for every image it had copied and nothing at the
-// `modules` prefix, so the cluster could pull everything it already ran and enumerate nothing. Copying
-// the catalogue costs almost nothing — 83 tags on that source, each an OCI manifest with a config and
-// no layers at all — and it belongs in the declared set rather than beside it, so that a store missing
-// the catalogue is not judged complete and the upstream is not dropped out from under it.
-//
-// This is a tag listing of ONE repository and not `_catalog`, which the fill deliberately avoids
-// (see the note where the fill's Discover is built): enumerating a registry's repositories is a
-// privilege of its own that a pull-scoped license is refused for, while `tags/list` is part of pulling
-// that repository. Verified against the live source with nothing but the license token — scope
-// `repository:sys/deckhouse-oss/modules:pull`, HTTP 200, 83 tags.
-//
-// A source that refuses to list is still NOT an error here. Some registries withhold even that, and
-// failing would stop such a cluster from ever completing a fill — a worse outcome than an air-gap
-// without a catalogue. The caller is told instead, so the reason can be logged where somebody will
-// read it.
+// A tag listing of ONE repository and not `_catalog`, which the fill deliberately avoids: enumerating
+// a registry's repositories is a privilege of its own that a pull-scoped license is refused for,
+// while `tags/list` is part of pulling that repository. A source that refuses even that is NOT an
+// error here — failing would stop such a cluster from ever completing a fill, which is worse than an
+// air-gap without a catalogue — so the caller is told and can log the reason.
 func ModuleCatalogue(
 	ctx context.Context, source Registry, unavailable func(error),
 ) ([]name.Reference, error) {

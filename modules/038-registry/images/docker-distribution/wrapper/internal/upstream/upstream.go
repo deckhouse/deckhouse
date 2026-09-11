@@ -16,22 +16,18 @@ limitations under the License.
 
 // Package upstream is the registry the pull-through cache believes it is talking to.
 //
-// It exists to keep one thing out of the cache: the upstream's own repository path. The cluster
-// refers to images by a fixed prefix — `system/deckhouse` — while an upstream serves them under
-// whatever it likes, `deckhouse/ee` or a mirror's own layout, and those two must be free to differ.
-// If the cache fetched by the upstream's name it would also STORE by it, and then changing the
-// upstream — a different edition, a different mirror — would re-lay the whole store on disk and
-// invalidate every image reference in the cluster.
+// It exists to keep one thing out of the cache: the upstream's own repository path. The cluster refers
+// to images by a fixed prefix while an upstream serves them under whatever it likes, and those two
+// must be free to differ — a cache that fetched by the upstream's name would also STORE by it, so
+// changing edition or mirror would re-lay the whole store on disk and invalidate every image
+// reference in the cluster.
 //
-// The previous implementation solved this by patching the registry: `localpathalias` and
-// `remotepathonly`, two options carried against upstream for years, in the middle of the proxy's own
-// name resolution. This does it from outside, in the one place where a path may be rewritten without
-// anybody's storage layout depending on it: a listener on the loopback, which the cache is
-// configured to treat as its upstream, and which rewrites the prefix on the way out and adds the
-// credentials and the certificate authority the real upstream needs.
-//
-// What the cache sees is therefore an upstream that already speaks the cluster's names, and the
-// registry stays the upstream project's, unmodified.
+// The previous implementation patched the registry for this (`localpathalias`, `remotepathonly`,
+// carried against upstream for years). This does it from outside, in the one place a path may be
+// rewritten without anybody's storage layout depending on it: a loopback listener the cache is
+// configured to treat as its upstream, which rewrites the prefix on the way out and adds the
+// credentials and authority the real upstream needs. The cache therefore sees an upstream that
+// already speaks the cluster's names, and the registry stays the upstream project's, unmodified.
 package upstream
 
 import (

@@ -113,22 +113,18 @@ type Report struct {
 
 // Complete reports whether the run put in place every image the cluster needs.
 //
-// The expectation is the size of the set this run enumerated, and NOTHING ELSE — by the owner's rule:
-// completeness is how full the store is of the images the cluster needs, and the total number of images
-// must not enter the decision. So `storage.source.expectedDigests` is not consulted here even as a
-// fallback: it is what an operator measured in a bundle, and a bundle holds more than any cluster needs
-// — other modules, other editions, attestations. Measured on an air-gapped cluster installed from one:
-// 333 declared digests held against a stated 556, so the store stayed `Filling` while serving
-// everything the cluster ran, and the installation failed waiting for a completeness unreachable by
-// construction.
+// The expectation is the size of the set this run enumerated and NOTHING ELSE, by the owner's rule
+// that completeness is how full the store is of the images the cluster needs. So
+// `storage.source.expectedDigests` is not consulted even as a fallback: it is what an operator counted
+// in a bundle, and a bundle holds more than any cluster needs — judged against it, a store holding
+// everything its cluster runs stays `Filling` for good.
 //
-// A run that enumerated nothing is therefore never complete, whatever an operator stated. That is the
-// safe direction: an empty set is not a full cache, and calling it one would authorize dropping the
-// upstream on no evidence at all.
+// A run that enumerated nothing is therefore never complete, whatever an operator stated: an empty set
+// is not a full cache, and calling it one would authorize dropping the upstream on no evidence.
 //
-// The same rule holds in applyCatalogue, and the two must not drift apart: a copying pass and a
-// counting pass that disagree about what "full" means is how a lease came to travel between three
-// replicas every twenty seconds.
+// The same rule holds in applyCatalogue, and the two must not drift apart — a copying pass and a
+// counting pass that disagree about "full" leave the lease travelling between replicas instead of a
+// fill finishing.
 func (r *Report) Complete() bool {
 	if r.Total <= 0 {
 		return false
@@ -157,10 +153,6 @@ type Copier struct {
 	// A pull-through cache writes exactly that: the manifest at the moment it SERVES it, the layers
 	// only when somebody asks. So a copy into such a store skips every image it was meant to fix,
 	// reports them all as already present, and the store stays unservable forever.
-	//
-	// Measured on `ly-mmc` after completeness started reading layers: the leader correctly said it
-	// held none of the set, began a fill, and copied nothing at all — 333 MB before, 333 MB after,
-	// zero writes to the registry — because every image "was already there".
 	//
 	// Empty disables the check, which is what a destination that is not a local directory gets.
 	StoreDir string
@@ -264,12 +256,8 @@ func (c *Copier) copyOne(
 	// destination whether it already holds the manifest and returns success the moment it does,
 	// WITHOUT writing the blobs the manifest names — see `repoWriter.writeManifest` in
 	// go-containerregistry: `manifestExists` short-circuits ahead of `writeDeps`. So an image whose
-	// manifest arrived on its own can never be repaired by pushing it again.
-	//
-	// Measured on `ly-mmc`: two followers sat at 398 and 397 of 403 for forty minutes, each pass
-	// reporting `written=403 failed=0` while the push instance logged 6625 GETs, 80 HEADs and not one
-	// PUT. The five images were missing exactly one blob each — the image config — and the same five
-	// were "copied" every thirty-five seconds without a byte moving.
+	// manifest arrived on its own can never be repaired by pushing it again: every pass reports it
+	// written while not a byte moves.
 	//
 	// So when the manifest is already there and the store cannot serve it, the blobs are uploaded
 	// directly and the manifest push that follows is left to be the no-op it will be.
@@ -359,8 +347,8 @@ func (c *Copier) uploadIndexDependencies(
 // uploadImageBlobs writes an image's layers and its config.
 //
 // The config is uploaded like any other blob and is named separately because it is not among
-// `Layers()` — and it was the blob actually missing on `ly-mmc`, on all five images: every layer
-// present, the config absent, and the image therefore unpullable.
+// `Layers()` — and an image whose config is absent is unpullable however many of its layers are
+// present.
 func (c *Copier) uploadImageBlobs(
 	ctx context.Context, pusher *remote.Pusher, repository name.Repository, image v1.Image,
 ) error {

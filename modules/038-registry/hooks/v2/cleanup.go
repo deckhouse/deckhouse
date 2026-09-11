@@ -17,34 +17,26 @@ limitations under the License.
 // What the previous implementation leaves in the cluster, removed once this one owns it.
 //
 // Most of it needs no hook and gets none: everything that implementation created through Helm stops
-// rendering the moment the handover happens, and Helm removes it on the same release. Measured on a
-// migrated cluster — `registry-state`, the node configuration secrets, its Service and its DaemonSet
-// were all already gone, with nothing asked of anyone.
+// rendering the moment the handover happens, and Helm removes it on the same release.
 //
-// The objects still serving the pull path at that moment are the exception, and they are deliberately
-// held back rather than removed on the same release: see the note on `registry-pki` below.
+// The objects still serving the pull path at that moment are the exception, held back deliberately:
+// see the note on `registry-pki` below. What remains for this hook is the handful nobody owns in the
+// Helm sense, written straight to the API by the installer and by bashible before any module ran —
+// no owner to remove them and no reader left.
 //
-// What remains is the handful of objects nobody owns in the Helm sense, written straight to the API by
-// the installer and by bashible before any module ran. They have no owner to remove them and no reader
-// left, so they stay until something says so. That is this hook.
+// One-shot in effect rather than in machinery: it deletes what is present and says nothing about what
+// is not, so every later reconcile costs one no-op API call and the only state it needs is the
+// cluster's own.
 //
-// One-shot in effect rather than in machinery. It deletes what is present and says nothing about what
-// is not, so running on every reconcile costs one no-op API call and the state it needs is the
-// cluster's own. Nothing is remembered, so nothing can be remembered wrongly.
+// Three names look like they belong on the list and do not:
 //
-// # What is spared, and why
-//
-// Three names look like they belong on this list and do not:
-//
-//   - `registry-bashible-config` — this implementation's own. Both wrote it, under one name, and it is
+//   - `registry-bashible-config` — this implementation's own. Both wrote it under one name, and it is
 //     how nodes are told about the registry right now.
-//   - `deckhouse-registry` — still load-bearing. It is the imagePullSecret of this module's own
-//     storage and controller, among others, so deleting it stops the very pods that serve the
-//     registry. Removing the contour it belongs to is a platform-level decision (design ADR 22), not
-//     something a module hook can do from inside.
-//   - `registry-config` — rendered by module 002 on every cluster, and read by dhctl to resolve the
-//     upstream when pushing a bundle. Deleting it from here would be a fight with the module that owns
-//     it, and it would lose.
+//   - `deckhouse-registry` — still the imagePullSecret of this module's own storage and controller,
+//     so deleting it stops the very pods that serve the registry. Retiring the contour it belongs to
+//     is a platform-level decision (design ADR 22), not a module hook's.
+//   - `registry-config` — rendered by module 002 on every cluster and read by dhctl to resolve the
+//     upstream when pushing a bundle. Deleting it here would be a fight with the module that owns it.
 //
 // The rule those three share: this hook removes what has no owner and no reader, and nothing else.
 package v2
@@ -119,21 +111,19 @@ var _ = sdk.RegisterFunc(
 
 // deletionJustified answers whether what the previous implementation left may be removed.
 //
-// Two conditions, and the second is the one that was missing. `active` is the decision this pass
-// took: the previous implementation has let go of the pull path, so these objects have no reader.
-// `recorded` is that handover being a fact about the cluster rather than an intention — the marker
-// secret exists, which means a release of this implementation has succeeded at least once.
+// Two conditions. `active` is the decision this pass took: the previous implementation has let go of
+// the pull path, so these objects have no reader. `recorded` is that handover being a fact rather
+// than an intention — the marker secret exists, so a release of this implementation has succeeded at
+// least once.
 //
 // Both, because the deletions are irreversible and run at OnBeforeHelm, before this pass has applied
-// anything at all — the marker included. Keyed on the decision alone, the state of the previous
-// implementation went out first and the release that was supposed to replace it could still fail:
-// this module has failed a render for want of cert-manager, and it controls neither quota nor
-// admission nor the apiserver. What went in that window included the gate's own input, the legacy
-// state secret it reads to decide.
+// anything, the marker included. Keyed on the decision alone, the previous implementation's state
+// goes out first while the release meant to replace it can still fail — for want of cert-manager, on
+// quota, on admission — and what goes in that window includes the gate's own input, the legacy state
+// secret it reads to decide.
 //
-// The cost of waiting is one reconciliation. On a cluster that never ran the previous implementation
-// the marker appears on the first successful release, so the installer's leftovers are removed on the
-// next pass instead of that one.
+// The cost of waiting is one reconciliation: the marker appears on the first successful release, so
+// the installer's leftovers are removed on the pass after it.
 func deletionJustified(active, recorded bool) bool {
 	return active && recorded
 }

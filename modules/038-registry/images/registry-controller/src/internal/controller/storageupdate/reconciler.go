@@ -16,33 +16,27 @@ limitations under the License.
 
 // Package storageupdate replaces the cache's replicas when their revision changes.
 //
-// The StatefulSet is told not to do this itself. Its own RollingUpdate replaces pods by ordinal,
-// highest first, and which ordinal holds the fill lease is not a property of the ordinal — so the
-// built-in order takes the leader down first about as often as not. What the design asks for is
-// followers first and the leader last, and no update strategy can express that: a StatefulSet
-// knows nothing about a lease.
+// The StatefulSet is told not to do this itself: its RollingUpdate replaces pods by ordinal, and
+// which ordinal holds the fill lease is not a property of the ordinal, so the built-in order takes
+// the leader down first about as often as not. The design asks for followers first and the leader
+// last, which no update strategy can express — a StatefulSet knows nothing about a lease.
 //
-// Two conditions guard every replacement, and both exist because the cache serves the images it is
-// made of:
+// Two conditions guard every replacement, both because the cache serves the images it is made of:
 //
-//   - something else must be able to serve images while the replica is gone. A replaced pod pulls
-//     its new image AFTER it is deleted, from a registry that pod was part of. Another serving
-//     replica covers that — they are mirrors of each other in every node layout — and so does an
-//     upstream, which every node keeps as a fallback. With one replica and no upstream there is
-//     nothing, and the replacement is REFUSED rather than attempted: the way into such a cluster
-//     is `d8 mirror pull` and `d8 mirror push`, and until the images are there the update has no
-//     business starting;
-//   - every other replica is serving. Taking down two at once turns "a slower pull" into "no
-//     pull", and on a two-master cluster it would leave nothing behind at all.
+//   - something else must be able to serve images while the replica is gone, since a replaced pod
+//     pulls its new image AFTER it is deleted, from a registry it was part of. Another serving
+//     replica covers that, and so does an upstream. With one replica and no upstream the
+//     replacement is REFUSED rather than attempted: the way into such a cluster is `d8 mirror
+//     push`, and until the images are there the update has no business starting;
+//   - every other replica is serving. Taking down two at once turns "a slower pull" into "no pull".
 //
-// An earlier attempt held the new images on the masters with a DaemonSet of `/pause` containers,
-// the way the previous implementation did. It does not generalise: `/pause` exists in the images
-// Deckhouse packages around third-party binaries and not in the distroless ones its own Go
-// components are built on, so half the holder containers could not start at all — and the gate
-// that waited for them would have stopped the cache from ever being updated.
+// Holding the new images on the masters beforehand, the way the previous implementation did with a
+// DaemonSet of `/pause` containers, does not generalise: `/pause` is absent from the distroless
+// images Deckhouse's own Go components are built on, so half the holders could not start — and a
+// gate waiting for them would stop the cache from ever being updated.
 //
-// The result is deliberately slow. An update of the thing that serves every image in the cluster
-// is the one place where being quick is worth nothing.
+// The result is deliberately slow. Updating the thing that serves every image in the cluster is the
+// one place where being quick is worth nothing.
 package storageupdate
 
 import (
@@ -184,8 +178,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// `UNSUPPORTED`, which reads as a misconfiguration rather than as "come back later". A
 	// cluster on its way to air-gap has no other way in, so an update landing mid-transfer
 	// would send the operator back to the beginning of it, every time, and could leave the
-	// platform partly updated towards images that never arrived. Measured on a cluster: a
-	// push aborted at image 350 of 474 by this very controller.
+	// platform partly updated towards images that never arrived.
 	//
 	// Deferred and not refused: the push finishes, the leader reads complete, and the
 	// update then proceeds by itself.

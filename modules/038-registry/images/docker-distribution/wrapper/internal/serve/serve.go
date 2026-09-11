@@ -16,39 +16,28 @@ limitations under the License.
 
 // Package serve runs the registry: one process, one store, and up to three listeners.
 //
-// The serving one is the upstream project's own — `registry.NewRegistry` and its `ListenAndServe`,
-// with TLS, the debug and metrics listener, tracing and the graceful drain exactly as upstream
-// wrote them. What this module adds is attached through upstream's own extension point,
-// `registry.RegisterHandler`: the token proxy and the decision about whose word on a client's
-// address is taken.
+// The serving one is the upstream project's own `registry.NewRegistry`, with TLS, the debug and
+// metrics listener, tracing and the graceful drain as upstream wrote them. What this module adds
+// hangs off upstream's own `registry.RegisterHandler`: the token proxy, and the decision about whose
+// word on a client's address is taken.
 //
-// The second is the write endpoint, and it exists because the first one is a pull-through cache.
-// Upstream's proxy stores answer every write with UNSUPPORTED — deliberately, and measured here —
-// while the store this module runs is filled BY writes for as long as it still has an upstream to
-// serve from. So a second app over the same directory, built from the same configuration with the
-// proxy section removed, serves the pushes. It is hand-built rather than a second
-// `registry.NewRegistry`, because health checks are registered in a process-global registry and a
+// The second is the write endpoint, and it exists because the first is a pull-through cache —
+// upstream's proxy stores answer every write with UNSUPPORTED, while this store is filled BY writes
+// for as long as it has an upstream to serve from. So a second app over the same directory, from the
+// same configuration with the proxy section removed, serves the pushes; hand-built rather than a
+// second `registry.NewRegistry`, because health checks live in a process-global registry and a
 // second registration panics.
 //
-// The third is the loopback rewriter, which the cache treats as its upstream — see the upstream
-// package. Nothing outside this process can reach it.
+// The third is the loopback rewriter, which the cache treats as its upstream. Nothing outside this
+// process can reach it.
 //
-// One thing this package must do that a library cannot do for it: import the providers the
-// configuration names. Upstream names its storage drivers and its access controllers by STRING and
-// looks each up in a registry the provider fills from its own `init`, so a process that never
-// imports one reads a perfectly valid configuration and then panics on it, before any listener
-// opens. Measured on a cluster: `panic: StorageDriver not registered: filesystem` at
-// handlers.NewApp, registry-storage-0 in CrashLoopBackOff with fourteen restarts, RegistryStorage
-// in `Failed` and the syncer reporting `491 of 491 references could not be copied` — with every
-// test in this package green, because the imports were in the _test.go files and so every test
-// built a binary the image did not have.
-//
-// Two of them, both in the import block above with no comment beside them, because goimports
-// rejects a comment attached to an import inside a group: `registry/auth/token` for the
-// `auth.token` section the module's template writes, and `storage/driver/filesystem` for its
-// storage. Upstream's own binary imports eight drivers and three access controllers; the rest are
-// names this module's configuration never writes, and an unused provider is code in the image for
-// nobody.
+// One thing this package must do that a library cannot: import the providers the configuration
+// names. Upstream looks those up by STRING in a registry each provider fills from its own `init`, so
+// a process importing none reads a valid configuration and panics before any listener opens — and
+// the tests cannot see it when the imports live in _test.go files, because then every test builds a
+// binary the image does not have. The two the module needs are in the import block above with no
+// comment beside them, because goimports rejects one there: `registry/auth/token` and
+// `storage/driver/filesystem`.
 package serve
 
 import (

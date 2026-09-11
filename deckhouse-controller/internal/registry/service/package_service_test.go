@@ -54,9 +54,9 @@ func agentAuthority(t *testing.T) string {
 // the registry the cluster was told about: nothing serves the name inside the cluster, and nothing
 // authenticates to the agent.
 //
-// Measured on a cluster where the module manages nodes without a cache: every package scan failed with
-// `"registry.d8-system.svc:5001/system/deckhouse/packages" credentials not found in the dockerCfg`,
-// and with credentials added by hand, with `lookup registry.d8-system.svc: no such host`.
+// So on a cluster whose registry module manages the nodes without a cache, every package scan fails
+// with `"registry.d8-system.svc:5001/system/deckhouse/packages" credentials not found in the
+// dockerCfg` — and once credentials are supplied, with `lookup registry.d8-system.svc: no such host`.
 func TestPackagesAreFetchedThroughTheAgent(t *testing.T) {
 	t.Cleanup(utils.WithAgentAuthority(agentAuthority(t)))
 

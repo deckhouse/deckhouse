@@ -87,25 +87,17 @@ type RegistryConfigStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// EffectiveUpstream is the upstream actually in effect, which is not
-	// necessarily the configured one.
+	// EffectiveUpstream is the upstream actually in effect, which is not necessarily
+	// the configured one: the controller records the last one that passed its
+	// preflight probe, so credentials that do not work leave the cluster on the
+	// previous working upstream while UpstreamValid reports why. It also holds the
+	// upstream through the air-gap transition, where the configuration already says
+	// "none" but the cache is not complete yet. Empty means none is in effect.
 	//
-	// This is the controller's own record of the last upstream that passed its
-	// preflight probe, and it is what makes a bad change survivable: entering
-	// credentials that do not work, or switching to a license that has no access,
-	// leaves this field — and the cluster — on the previous working upstream while
-	// UpstreamValid reports why.
-	//
-	// It also holds the upstream through the air-gap transition, where the
-	// configuration already says "none" but the cache is not complete yet.
-	//
-	// Empty means no upstream is in effect: either the cluster is air-gapped, or
-	// nothing has been configured yet.
-	// Carries no credentials. This is a record, and a record of a credential is one
-	// more place it can be read from — this resource is cluster-scoped, so that means
-	// anyone allowed to look at the module's own configuration. The credentials that
-	// belong to it are in the module's auth Secret, and EffectiveUpstreamAuthDigest is
-	// what tells them apart without revealing them.
+	// Carries no credentials: this resource is cluster-scoped, so a record of one here
+	// is one more place anyone who may read the module's configuration can read it
+	// from. They live in the module's auth Secret, and EffectiveUpstreamAuthDigest
+	// tells them apart without revealing them.
 	// +optional
 	EffectiveUpstream *Upstream `json:"effectiveUpstream,omitempty"`
 

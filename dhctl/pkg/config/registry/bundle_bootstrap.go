@@ -197,12 +197,11 @@ func BundleFactsFromModuleConfig(doc []byte) (BundleBootstrapInputs, error) {
 		*into = value
 	}
 
-	// The credentials live one level deeper, under `auth`, and reading them a level too shallow was a
-	// measured failure rather than a tidiness point: the fields came back empty, the installer sent an
-	// unauthenticated request, and the preflight refused the installation with
-	// "preflight check \"registry-credentials\" failed. reason: authentication failed" — naming the
-	// registry as the culprit for what was a misread of our own configuration. It went unnoticed while
-	// `InitConfiguration.deckhouse` still carried a registry, because then nothing needed this.
+	// The credentials live one level deeper, under `auth`, and reading them a level too shallow is not
+	// a tidiness point: the fields come back empty, the installer sends an unauthenticated request, and
+	// the preflight refuses the installation with "preflight check \"registry-credentials\" failed.
+	// reason: authentication failed" — naming the registry as the culprit for a misread of our own
+	// configuration.
 	for field, into := range map[string]*string{
 		"username": &upstream.Username,
 		"password": &upstream.Password,
@@ -240,19 +239,18 @@ const licenseUser = "license-token"
 // Resolve turns the facts read from the registry ModuleConfig into the arguments NewConfigProvider
 // needs: the registry settings to use, and the options that go with them.
 //
-// One function called from both places dhctl decides this, rather than the same three lines twice.
-// dhctl decides it twice because it reads the configuration twice — once over raw documents, to know
-// which registry to download candi and the provider plugins from, and once over the parsed
-// configuration, where the result becomes MetaConfig.Registry and from there the bashible context and
-// the node manifests. The two disagreeing is neither a compile error nor a visible failure: the
-// installer would fetch its own images from the bundle and then hand the nodes a configuration that
-// says the registry is unmanaged. That is not hypothetical — it is exactly how the first installation
-// from a bundle came up with an empty store and Deckhouse in ImagePullBackOff, because only the first
-// of the two places knew about the bundle.
+// One function for both places dhctl decides this, rather than the same three lines twice. It decides
+// twice because it reads the configuration twice: once over raw documents, to know which registry to
+// download candi and the provider plugins from, and once over the parsed configuration, where the
+// result becomes MetaConfig.Registry and from there the bashible context and the node manifests. The
+// two disagreeing is neither a compile error nor a visible failure — the installer fetches its own
+// images from the bundle and then hands the nodes a configuration saying the registry is unmanaged,
+// which leaves the store empty and the platform unable to pull.
 //
 // Returns deckhouseSettings unchanged, and no options, for every configuration that is not an
-// installation from a bundle. In particular the deckhouse ModuleConfig keeps the precedence documented
-// on IsLocal: this path only supplies a mode where the legacy configuration expressed none.
+// installation from a bundle. In particular the deckhouse ModuleConfig keeps the precedence
+// documented on IsLocal: this path only supplies a mode where the legacy configuration expressed
+// none.
 func (in BundleBootstrapInputs) Resolve(
 	deckhouseSettings *module_config.DeckhouseSettings,
 ) (*module_config.DeckhouseSettings, []ProviderOption) {

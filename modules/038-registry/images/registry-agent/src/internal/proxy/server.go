@@ -196,22 +196,18 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 			continue
 		}
 
-		// A target that refused credentials the agent supplied is a target that failed,
-		// and its refusal must not be handed to the client.
+		// A target that refused credentials the agent supplied is a target that failed, and
+		// its refusal must not be handed to the client.
 		//
-		// Which of the two it is turns on whose credentials were at stake, not on the
-		// status code. Where the agent has none for a target it adds none, and the client's
-		// own may still work — that is an unconfigured registry, and its challenge has to
-		// reach the client for a private pull to be possible at all. Where the agent does
-		// have them, they are the only ones that can work: the client has none for the
-		// in-cluster address and was never meant to.
+		// Which of the two it is turns on whose credentials were at stake, not on the status
+		// code. Where the agent holds none it adds none and the client's own may still work,
+		// so that challenge has to reach the client for a private pull to be possible at
+		// all. Where the agent does hold them, they are the only ones that can work.
 		//
-		// Relaying that second kind is worse than useless. The challenge names the
-		// backend's own token endpoint, so a client acting on it leaves the agent entirely
-		// and dials a host it has no reason to trust. What containerd reported was a
-		// certificate signed by an unknown authority, for an address it should never have
-		// contacted, with nothing in it about the authorization that actually failed —
-		// while the next backend, which would have served the image, was never asked.
+		// Relaying that second kind is worse than useless: the challenge names the backend's
+		// own token endpoint, so the client leaves the agent and dials a host it has no
+		// reason to trust — reporting an unknown certificate authority for an address it
+		// should never have contacted, while the next backend is never asked.
 		refusedOurs := !target.Auth.IsEmpty() &&
 			(response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden)
 		if refusedOurs {
@@ -321,20 +317,14 @@ func (s *Server) attempt(
 		// A target we hold no credentials for, reached with the client's own instead.
 		//
 		// Almost always a registry nobody configured. The credentials arrive here because
-		// the runtime offers them to whatever host it contacts: the kubelet leaves the
-		// server address unset, so containerd's host check is skipped and the agent is
-		// offered them like any registry would be. Relaying them is the only way a private
-		// third-party image can be pulled at all, and the alternative — an unconfigured
-		// registry that stops working the moment the agent is on the node — would break
-		// workloads that never asked to be involved.
+		// the runtime offers them to whatever host it contacts, and relaying them is the
+		// only way a private third-party image can be pulled at all — the alternative is an
+		// unconfigured registry that stops working the moment the agent is on the node.
 		//
-		// Keyed on whether WE have credentials rather than on the kind of decision,
-		// because that is the actual question. A registry the cluster was given
-		// credentials for gets ours whichever rule routed the request; one it was not
-		// gets the client's, if the client has any.
-		//
-		// The challenge travels back the same way, because response headers are relayed
-		// as they are: the client sees the target's own 401 and answers it.
+		// Keyed on whether WE have credentials rather than on the kind of decision: a
+		// registry the cluster was given credentials for gets ours whichever rule routed
+		// the request, one it was not gets the client's. The challenge travels back the same
+		// way, since response headers are relayed as they are.
 		for _, value := range original.Header.Values("Authorization") {
 			request.Header.Add("Authorization", value)
 		}
@@ -392,12 +382,9 @@ func (s *Server) relay(
 // on the way out and has to undo that on the way back, or the client follows the header straight to
 // a path this proxy does not serve.
 //
-// Measured on `ly-direct`: a tag listing of `system/deckhouse/modules/ingress-nginx` answered 200
-// with `link: </v2/sys/deckhouse-oss/modules/ingress-nginx/tags/list?last=...&n=100>`, the Deckhouse
-// controller followed it, and the agent answered `NAME_UNKNOWN` for
-// `sys/deckhouse-oss/sys/deckhouse-oss/modules/ingress-nginx` — the upstream prefix applied twice.
-// Five installed modules never got their release lists, the ModuleSource reported "Some errors
-// occurred", and the cluster did not converge. Anything that pages through a listing hits this.
+// Left alone, the header names the upstream's path, the client follows it as given, and the prefix is
+// applied a second time — `NAME_UNKNOWN` for a repository nobody asked about. Anything that pages
+// through a listing hits this, module release lists among them, so a cluster stops converging.
 //
 // Only the path is touched, and only when it is the one that was sent: the query carries the
 // upstream's own cursor, which is opaque and must survive untouched.

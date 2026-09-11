@@ -70,8 +70,8 @@ type Values struct {
 	// been re-rendered yet still name the in-cluster registry, so it keeps being served.
 	//
 	// While this is set the module manages the pull path from `Drain.Config` rather than from the
-	// ModuleConfig, which by then describes no registry at all. See `hooks/v2/drain.go` for what the
-	// alternative was measured to cost.
+	// ModuleConfig, which by then describes no registry at all. See `hooks/v2/drain.go` for why the
+	// alternative was rejected.
 	Drain *DrainState `json:"drain,omitempty"`
 
 	// ImageAddress is the address container image references may be rendered from,

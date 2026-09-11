@@ -39,46 +39,28 @@ import (
 // mirrorThroughNode makes the cluster's own registry reachable from the machine dhctl runs on, by
 // forwarding a local port to the store through the SSH connection that is already open.
 //
-// The problem it solves is that a cluster which manages its own registry has no address that means
-// anything outside it. `deckhouse-registry` names `registry.d8-system.svc:5001`, which is a Service
-// name; out of the cluster it does not resolve, and the fallback that reaches for it produced
+// A cluster that manages its own registry has no address meaning anything outside it, and an
+// air-gapped one has no reachable upstream to fall back on either. What makes the forward possible is
+// that the store runs on the masters' host network, so it is dialable from any master — and dhctl is
+// already connected to one, so this needs no new access, only a second channel.
 //
-//	dial tcp: lookup registry.d8-system.svc on 127.0.0.53:53: no such host
+// Three details decide whether it works, and all three hold already:
 //
-// on a cluster that was working perfectly. A reachable upstream is the usual way out of this and it is
-// tried first, but an air-gapped cluster has none — by definition, and permanently.
+//   - the far end is the STORE's own address, from the object that reports it, and not the loopback
+//     port a node's containerd pulls through: that one is the node's own proxy, whose authority never
+//     leaves the node, so a tunnel there fails verification while looking like the right address;
+//   - the store's certificate covers 127.0.0.1 (see the module's pki package), so verification
+//     against the cluster's own CA succeeds on this end. Any free local port will do;
+//   - the credentials are carried over already parsed, because a docker config is keyed by registry
+//     host and the entry for the Service name does not match a rewritten `127.0.0.1:<port>` —
+//     re-resolving would silently produce an anonymous pull and a 401 that reads as a permissions
+//     problem.
 //
-// What makes the forward possible is that the store runs on the masters' host network, so it has an
-// address that is dialable from any of them. dhctl is already connected to one — every call to the
-// Kubernetes API goes through this very SSH connection — so no new access is needed, only a second
-// channel on it.
+// The listener outlives the call that opened it, because the next consumer of the same resolved
+// registry — the lazy provider-plugin download, several steps later — would otherwise find its
+// connection reset on a port that had gone. dhctl is short-lived, so it lives until the process exits.
 //
-// Three details decide whether this works, and all three are already true rather than arranged here:
-//
-//   - the far end is the STORE's own address, taken from the object that reports it, and not the
-//     loopback port that a node's containerd pulls through. Measured on a master:
-//     `10.110.0.13:5001` is the store, while `127.0.0.1:5001` is the node's own proxy — whose
-//     authority is generated on the node and never published, so a tunnel to it fails verification
-//     with "certificate signed by unknown authority" while looking like the right address;
-//   - the store's certificate covers 127.0.0.1 (see the module's pki package, which adds "127.0.0.1"
-//     and "localhost" to the serving certificate), so verification against the cluster's own CA
-//     succeeds even though this end of the tunnel is a loopback address. The local port may be any
-//     free one: a certificate says nothing about ports;
-//   - the credentials are carried over already parsed, and not looked up again. A docker config is
-//     keyed by registry host, so the entry for `registry.d8-system.svc:5001` does not match a rewritten
-//     `127.0.0.1:<port>` address — re-resolving them would silently produce an anonymous pull and a 401
-//     that reads like a permissions problem.
-//
-// The tunnel outlives the call that opened it and is reused by later ones, which is not an optimisation:
-// bound to the caller's context it was torn down the moment that operation finished, and the next
-// consumer of the same resolved registry — the lazy provider-plugin download, several steps later — got
-// its connection accepted and then reset. Measured on a cluster: the cluster configuration was read and
-// the resources deleted through one tunnel, and the infrastructure util then failed with
-// "read: connection reset by peer" on a port that had already gone. dhctl is a short-lived process, so
-// the listener lives until it exits.
-//
-// Returns ok=false when there is no SSH connection to work with (in-cluster callers, tests), leaving the
-// caller's existing behaviour untouched.
+// Returns ok=false where there is no SSH connection to work with (in-cluster callers, tests).
 func mirrorThroughNode(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
@@ -134,8 +116,8 @@ func mirrorThroughNode(
 	// And a docker config for the address the tunnel answers on, because a docker config is keyed by
 	// registry host: the cluster's own is written for `registry.d8-system.svc:5001`, and a consumer
 	// looking up `127.0.0.1:<port>` in it finds nothing. That is not a silent fallback to anonymous
-	// either — measured on a cluster, the lazy provider-plugin download refuses outright with
-	// "docker config doesn't contain 127.0.0.1:41285/system/deckhouse registry credentials".
+	// either: the consumer refuses outright with "docker config doesn't contain
+	// 127.0.0.1:<port>/system/deckhouse registry credentials".
 	dockerCfg, err := helpers.DockerCfgFromCreds(store.username, store.password, local)
 	if err != nil {
 		return nil, "", false, fmt.Errorf("build a docker config for the tunnel: %w", err)
@@ -189,8 +171,8 @@ func tunnelTo(ctx context.Context, sshCl libcon.SSHClient, storeAddress string) 
 // One secret rather than three sources, and it is the store's own: what `deckhouse-registry` carries is
 // the BOOTSTRAP registry's authority (`CN = registry-ca`, generated by the installer), while the store
 // serves with its own (`CN = registry-storage-ca`). Trusting the first while talking to the second is
-// how a tunnel that reached exactly the right port still failed with "certificate signed by unknown
-// authority" — measured on a cluster. The accounts differ too: `ro` there, `registry-ro` here.
+// how a tunnel that reaches exactly the right port still fails with "certificate signed by unknown
+// authority". The accounts differ too: `ro` there, `registry-ro` here.
 const storeSecretName = "registry-storage-access"
 
 // schemeHTTPS is what the store serves, always: it presents a certificate, which is the whole reason
@@ -246,9 +228,9 @@ const storeSecretNamespace = "d8-system"
 
 // firstAddress takes one replica out of the list the store publishes.
 //
-// Any of them will do: every replica serves the same content, and this is a read. The list is separated
-// by whatever the module writes — measured as a single address on a one-master cluster — so every
-// plausible separator is accepted rather than one guessed at.
+// Any of them will do: every replica serves the same content, and this is a read. The list is
+// separated by whatever the module writes, so every plausible separator is accepted rather than one
+// guessed at.
 func firstAddress(addresses string) string {
 	for _, candidate := range strings.FieldsFunc(addresses, func(r rune) bool {
 		return r == ',' || r == ';' || r == '\n' || r == '\r' || r == '\t' || r == ' '

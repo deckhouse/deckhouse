@@ -282,13 +282,12 @@ func TestCatalogueIsStillUsedBetweenOurOwnReplicas(t *testing.T) {
 
 // TestReleaseReadsTheSetFromThePlatformImage is what removes a permission from the critical path.
 //
-// The set is declared in two places, and they are the same file: measured on a cluster,
-// `/deckhouse/modules/images_digests.json` in the running deckhouse image is byte for byte the
-// installer's `deckhouse/candi/images_digests.json` of that version — 38277 bytes in both. The
-// difference is what it costs to read. Installers live in a repository of their own, and a
-// credential scoped to the platform's repository is refused for it: on a live cluster the fill of
-// the running version failed with `401 Unauthorized` on `sys/deckhouse-oss/install`. The platform
-// image needs no permission the cluster does not already have — it is the image the cluster runs.
+// The set is declared in two places, and they are the same file: `/deckhouse/modules/images_digests.json`
+// in the running deckhouse image carries the same content as the installer's
+// `deckhouse/candi/images_digests.json` of that version. The difference is what it costs to read.
+// Installers live in a repository of their own, and a credential scoped to the platform's repository
+// is refused for it with `401 Unauthorized` on `<path>/install`. The platform image needs no
+// permission the cluster does not already have — it is the image the cluster runs.
 func TestReleaseReadsTheSetFromThePlatformImage(t *testing.T) {
 	source := startRegistry(t)
 	source.Repository = "deckhouse/ee"

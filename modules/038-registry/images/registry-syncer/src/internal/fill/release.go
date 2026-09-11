@@ -41,16 +41,16 @@ const (
 
 	// platformDigestsFile is the same account of the image set, inside the platform's own image.
 	//
-	// The same file: measured on a cluster, `/deckhouse/modules/images_digests.json` in the running
-	// deckhouse image is byte for byte the 38277-byte `deckhouse/candi/images_digests.json` of the
-	// installer of that version. It is also the authority rather than a copy of one — the
+	// The same file: `/deckhouse/modules/images_digests.json` in the running deckhouse image carries
+	// the same content as `deckhouse/candi/images_digests.json` in the installer of that version. It
+	// is also the authority rather than a copy of one — the
 	// controller decides which images to load by reading exactly this path
 	// (deckhouse-controller/internal/packages/loader, `embeddedDir = "modules"`).
 	//
 	// Preferred over the installer because of what it costs to read. The installers live in a
 	// repository of their own, `<path>/install`, and a credential scoped to the platform's
-	// repository is refused for it: measured on a cluster, the fill of the running version failed
-	// with `401 Unauthorized` on `sys/deckhouse-oss/install`. The platform image needs no
+	// repository is refused for it with `401 Unauthorized` on `<path>/install`. The platform image
+	// needs no
 	// permission the cluster does not already have — it is the image the cluster is running, pulled
 	// through this very store.
 	platformDigestsFile = "deckhouse/modules/images_digests.json"
@@ -63,21 +63,18 @@ const installerRepository = "install"
 // Release enumerates what a set of releases consists of, by reading it out of their
 // installers.
 //
-// This is how `d8 mirror pull` decides what to mirror, and the reason it does it this way is
-// the reason this does: a release declares its own images, so nothing has to be inferred from
-// what a registry happens to hold, and nothing has to be permitted beyond pulling the images
-// the cluster already pulls.
+// This is how `d8 mirror pull` decides what to mirror, for the same reason: a release declares its
+// own images, so nothing is inferred from what a registry happens to hold and nothing has to be
+// permitted beyond pulling what the cluster already pulls.
 //
-// It also makes completeness meaningful. "Everything in the upstream" is not a set a cache can
-// be complete with respect to — it changes without the cluster, and it includes versions the
-// cluster will never run. "Everything these releases declare" is a fixed, countable set, and
-// is exactly what has to be present before an air-gapped cluster can be cut off from the
-// upstream.
+// It also makes completeness meaningful. "Everything in the upstream" is not a set a cache can be
+// complete with respect to — it changes without the cluster and includes versions it will never run
+// — while "everything these releases declare" is fixed and countable, and is exactly what has to be
+// present before an air-gapped cluster can be cut off.
 //
-// Deliberately the deployed release and the one before it, the same pair the collector keeps:
-// the fill puts in what the collector would not throw away, so the two cannot disagree about
-// what the store is for. Keeping the previous one is what makes a rollback possible without a
-// download.
+// Deliberately the deployed release and the one before it, the same pair the collector keeps, so the
+// fill puts in what the collector would not throw away. The previous one is what makes a rollback
+// possible without a download.
 type Release struct {
 	// Versions are the release versions to enumerate, as they appear in the registry's
 	// tags. Empty is an error rather than "everything": a fill that silently copied
@@ -148,7 +145,7 @@ func (r Release) Discover(
 		//
 		// Keeping it used to be conditional, which is worse than either answer: the installers live in
 		// a repository of their own and a credential scoped to the platform's is refused for it
-		// (`401 Unauthorized` on `sys/deckhouse-oss/install`, measured), so on some clusters the set
+		// (`401 Unauthorized` on `<path>/install`), so on some clusters the set
 		// contained a reference that could never be copied — the fill never completed, the upstream was
 		// never dropped, and no follower ever replicated. On others it silently did contain it, which
 		// meant two clusters of the same version disagreed about what "the whole set" was.
@@ -173,7 +170,7 @@ func (r Release) Discover(
 
 	// And the catalogue of modules the source offers, which is what the platform reads to know what
 	// it CAN install — as opposed to what this cluster already runs. Without it an air-gapped cluster
-	// pulls everything it has and can enumerate nothing; see ModuleCatalogue for the measurement.
+	// pulls everything it has and can enumerate nothing; see ModuleCatalogue.
 	catalogue, err := ModuleCatalogue(ctx, source, r.CatalogueUnavailable)
 	if err != nil {
 		return nil, err

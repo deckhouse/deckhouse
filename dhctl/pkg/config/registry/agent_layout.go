@@ -21,7 +21,7 @@ package registry
 // A hand-written copy of RegistryNodeSpec rather than the type itself, and for a mechanical reason:
 // those types live in go_lib/registry/apis, which needs apimachinery v0.34, while dhctl is pinned to
 // client-go v0.33 — importing them builds a dhctl whose own Kubernetes client does not compile
-// ("undefined: metav1.InitialEventsListBlueprintAnnotationKey", measured). The same reason the
+// ("undefined: metav1.InitialEventsListBlueprintAnnotationKey"). The same reason the
 // `modeManaged` literal beside this file is a literal.
 //
 // The source of truth is RegistryNodeSpec in

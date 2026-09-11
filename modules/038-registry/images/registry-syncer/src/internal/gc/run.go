@@ -152,20 +152,14 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 
 	// What the tag pass may delete, and whether it may delete anything at all.
 	//
-	// Its rule is ordering — "older than what is deployed" — so it needs a deployed value that can
-	// be ordered. A cluster running a tag rather than a release version has none: measured on such a
-	// cluster, `the deployed version "pr21788" is not a version, so no tag can be judged older than
-	// it`, and the whole run stopped there.
+	// Its rule is ordering — "older than what is deployed" — which needs a version that can be
+	// ordered, and a cluster running a tag has none. Only that pass needs it, though: the manifest
+	// pass needs the set the version declares, which reads for a tag exactly as for a version. So an
+	// unorderable version disables the pass that cannot work and leaves the one that can, rather than
+	// leaving the store growing with nothing reclaimed.
 	//
-	// Stopping the whole run is the wrong response, and this is the difference between the two
-	// passes. Ordering is what the TAG pass needs; the manifest pass needs only the set that version
-	// declares, which is readable for a tag exactly as for a version. So an unorderable version
-	// disables the pass that cannot work and leaves the one that can — every tag is kept, and the
-	// digests are still judged against what the running version declares. Refusing both left the
-	// store growing with nothing ever reclaimed.
-	// Nothing known at all is still a refusal, and it has to stay one: with no version to compare
-	// against, neither pass has any justification for a deletion, and the run must do nothing rather
-	// than its best.
+	// Nothing known at all stays a refusal: with no version to compare against, neither pass has any
+	// justification for a deletion.
 	if strings.TrimSpace(c.Releases.Deployed) == "" {
 		return report, fmt.Errorf(
 			"cannot decide what to keep: the deployed version is unknown, so there is nothing to keep against")
@@ -196,11 +190,9 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 			// runs" and that rule owns exactly one version space: the platform's own releases, which
 			// carry their tags on the scope root. Everything beneath it is versioned by somebody
 			// else — a module package by the module, a node package by the software it carries — so
-			// comparing those numbers against the platform's compares nothing at all.
-			//
-			// Measured: with the platform at v1.76.6, a module package at v0.6.10 and a node package
-			// at v1.7.28 were both read as superseded and deleted. The manifest pass then asked for
-			// the same tags, got 404, and every run after that failed on it — and in an air-gapped
+			// comparing those numbers against the platform's compares nothing at all — a module package
+			// at v0.6.10 reads as superseded by a platform at v1.76.6 and is deleted. The manifest pass
+			// then asks for the same tags, gets 404 and fails every run after that, and in an air-gapped
 			// cluster a module package cannot be fetched again short of another `d8 mirror push`.
 			decision = Decision{Reason: ReasonForeignVersionSpace}
 		default:
@@ -239,20 +231,14 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 
 	// The manifests, which is where the store's weight actually is.
 	//
-	// Reached whatever the tag pass decided, and that is not a detail: the two passes answer
-	// different questions, and the tag pass finding nothing to delete is the ORDINARY case — a store
-	// holding only the current release has no old version tags at all, while every superseded
-	// digest is still in it. Returning early on "no tags to delete", which is what this did, is
-	// exactly how the growth stayed invisible.
+	// Reached whatever the tag pass decided, because the tag pass finding nothing is the ORDINARY
+	// case: the platform's images are written by digest, `<base>@sha256:…`, so a store filled by the
+	// syncer is almost entirely untagged. Judged by tags alone those manifests are never considered
+	// and never deleted, and distribution's own sweep cannot help — every manifest keeps its own
+	// blobs reachable — so the store grows by one release set per update, forever.
 	//
-	// Everything above judges tags, and the platform's own images have none: they are written by
-	// digest, `<base>@sha256:…`, so a store filled by the syncer is almost entirely untagged. Judged
-	// by tags alone, those manifests are invisible — they are never considered, never deleted, and
-	// distribution's own sweep cannot help either, because every manifest keeps its own blobs
-	// reachable. The store then grows by one release set per update, forever.
-	//
-	// The rule is the one the operator stated: keep what the current set needs, and what a set the
-	// cluster might switch to needs. Everything else is a release the cluster has moved past.
+	// The rule: keep what the current set needs and what a set the cluster might switch to needs.
+	// Everything else is a release the cluster has moved past.
 	if err := c.reclaimManifests(ctx, &report, survivors); err != nil {
 		return report, err
 	}

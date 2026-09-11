@@ -23,24 +23,17 @@ import (
 // Aggregate derives the cluster-wide view of the storage from the per-replica
 // reports its syncers write.
 //
-// Each syncer owns its own entry in status.replicas and reports what it actually
-// WROTE. That is the whole reason completeness is not probed through the serve
-// path: on a miss a pass-through cache fetches the image from the upstream and
-// answers 200, so a probe would report a full cache on an empty store and the
-// upstream would be dropped from under the cluster.
+// Each syncer owns its own entry in status.replicas and reports what it actually WROTE, which is
+// why completeness is not probed through the serve path: on a miss a pass-through cache fetches
+// the image and answers 200, so a probe would report a full cache on an empty store. The
+// aggregate fields are derived here rather than by any syncer, because no replica can know
+// whether the others are done.
 //
-// The aggregate fields are derived here rather than written by any syncer,
-// because no single replica can know whether the others are done.
-//
-// Which replica leads is decided by `leaseHolder` — the identity in the election lease — and
-// not by the Role a replica wrote about itself. A replica owns its entry and cannot update it
-// once its pod is gone, so the entry keeps whatever it last claimed: measured on a live
-// cluster, the lease moved to another node in eight seconds while the departed replica's
-// entry went on saying Leader for as long as the pod stayed away. Two entries then claimed
-// leadership, and reading them by array order made `status.Leader` name the replica that no
-// longer existed while `LeaderFull` answered from the other one — two fields describing two
-// different replicas, one of which was gone. Since LeaderFull is what authorizes dropping the
-// upstream, that is the one decision in this module that must never be made from a guess.
+// Which replica leads is decided by `leaseHolder`, the identity in the election lease, and not by
+// the Role a replica wrote about itself: an entry cannot be updated once its pod is gone, so it
+// keeps its last claim while the lease has moved on. Read by array order, two such claims can
+// make `status.Leader` name a replica that no longer exists while `LeaderFull` answers from the
+// other — and LeaderFull is what authorizes dropping the upstream.
 func Aggregate(
 	spec *registryv1alpha1.RegistryStorageSpec,
 	replicas []registryv1alpha1.StorageReplicaStatus,
@@ -161,10 +154,9 @@ func LeaderFull(replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder st
 // Mirrors sit in that same list, so the same rule applies to them, and a follower that is one image
 // behind answers 404 for an image the cluster does hold.
 //
-// Measured on `ly-mmc` in air-gap: the agent on master-0 was pointed at master-2, which held 402 of
-// 403 images; the missing one was on disk on two other replicas, `crictl pull` returned NotFound, and
-// eighteen pods could not start. The leader is the replica whose completeness authorized the air-gap
-// in the first place, so it is the one that has the set.
+// The leader is the replica whose completeness authorized the air-gap in the first place, so it is the
+// one that has the set — pointing an agent at a follower instead can leave a pod unable to start over
+// an image that two other replicas hold on disk.
 func LeaderAddress(replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder string) string {
 	leader := leaseHolderReport(replicas, leaseHolder)
 	if leader == nil {

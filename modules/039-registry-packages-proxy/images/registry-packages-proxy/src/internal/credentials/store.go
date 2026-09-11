@@ -32,27 +32,18 @@ const (
 
 // storeAuthority is how this proxy reaches the cluster's own store while the node has no agent.
 //
-// It exists because of a circle that is real and was measured rather than reasoned about. The node
-// agent is installed from a package fetched THROUGH this proxy — bashible step 034, `rpp-get
-// [registry-agent]` — so on a node whose agent does not exist yet, this process is what has to reach a
-// registry, and the agent cannot be the way it does so. Measured on `ly-cache` with no fallback at all:
+// It exists because of a circle: the node agent is installed from a package fetched THROUGH this
+// proxy (bashible step 034), so on a node whose agent does not exist yet this process is what has to
+// reach a registry, and the agent cannot be how it does so. With no fallback the bootstrap waits for
+// a worker that can never join.
 //
-//	[rpp-get] [registry-agent] attempt 8 failed: access to https://10.110.0.9:4219/package?digest=...
-//	proxy: get package "sha256:1255..." : Get "https://registry.d8-system.svc:5001/..."
-//	/etc/kubernetes/registry-agent/pki/ca.crt: No such file or directory
+// What it is NOT is a way to reach an upstream with credentials out of a secret: the address here is
+// the cluster's own store, the credentials are the store's read-only account, and nothing leaves the
+// cluster. Reaching an UPSTREAM stays the agent's business alone.
 //
-// The bootstrap then times out waiting for a worker that can never join, because joining needs
-// `rpp-get` and `rpp-get` needs this.
-//
-// What it is NOT: a way to reach an upstream with credentials out of a secret. That is the shape the
-// owner ruled out, and this is not it — the address here is the cluster's own store, the credentials
-// are the store's own read-only account, and nothing leaves the cluster. Reaching an UPSTREAM stays the
-// agent's business alone.
-//
-// Why the installer's `deckhouse-registry` secret cannot serve instead: after the handover that address
-// is served by the store, whose authority is `CN = registry-storage-ca` while the secret still describes
-// the installer's bootstrap PKI (`CN = registry-ca`) — measured as `x509: certificate signed by unknown
-// authority` on every fetch, which is the failure this whole path was first written for.
+// The installer's `deckhouse-registry` secret cannot serve instead, because after the handover that
+// address is served by the store under `CN = registry-storage-ca` while the secret still describes
+// the installer's bootstrap PKI — so every fetch fails on an unknown certificate authority.
 func storeAuthority(data map[string][]byte, repository string) *registry.ClientConfig {
 	authority := string(data["ca.crt"])
 	username := string(data["username"])

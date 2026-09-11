@@ -548,7 +548,6 @@ func TestCompletenessDoesNotDependOnBeingToldTheNumber(t *testing.T) {
 // through, part of that set is simply not there yet. Counted as failure — which is what it was — every
 // early replication looked broken, and followers were therefore kept from starting until the leader
 // was complete: idle for as long as a fill takes, and holding nothing if the leader died meanwhile.
-// Measured on a cluster as three replicas with 428, 337 and 333 digests, none full, none moving.
 func TestCopyingFromASourceStillFillingReportsWhatIsMissingAsPending(t *testing.T) {
 	source := startRegistry(t)
 	destination := startRegistry(t)
@@ -613,11 +612,10 @@ func imageManifest(config, layer string) []byte {
 // from its upstream, against the one thing that makes it wrong.
 //
 // A pull-through cache writes the revision link as soon as it has served a manifest and fetches the
-// layers only when somebody asks. Counting links therefore counts manifests the store cannot serve.
-// Measured on `ly-mmc`: three replicas reporting `full`, `safeToDropUpstream: true` and 400 verified
-// digests each, holding 333 MB — 332 manifests with 61 layer links between them. With the upstream
-// gone no node could pull anything, by tag or by digest, and the replicas answered each other's blob
-// requests with 404 because none of them had the data.
+// layers only when somebody asks. Counting links therefore counts manifests the store cannot serve:
+// every replica reports `full` and `safeToDropUpstream: true` over a fraction of the data, and once
+// the upstream is gone no node can pull anything by tag or by digest — nor can the replicas replicate
+// from each other, since none of them has the blobs.
 func TestTakeCountsOnlyImagesTheStoreCanServe(t *testing.T) {
 	const (
 		scope   = "system/deckhouse"
@@ -693,9 +691,8 @@ func TestTakeCountsOnlyImagesTheStoreCanServe(t *testing.T) {
 // The destination is asked whether it already holds a digest, and a registry answers yes for a
 // manifest it has without a single layer — exactly what a pull-through cache leaves behind. Skipping
 // on that answer means the fill reports everything as already present and copies nothing, so the
-// store stays unservable however often it runs. Measured on `ly-mmc` the moment completeness started
-// reading layers: the leader correctly reported holding none of the set, began a fill, and wrote
-// nothing at all — 333 MB before, 333 MB after, zero writes to the registry.
+// store stays unservable however often it runs: a leader that correctly reports holding none of the
+// set begins a fill and writes nothing at all.
 func TestACopyRepairsAManifestWithoutItsLayers(t *testing.T) {
 	source := startRegistry(t)
 	destination := startRegistry(t)
@@ -735,10 +732,8 @@ func TestACopyRepairsAManifestWithoutItsLayers(t *testing.T) {
 // what a fetch returns — depends on nothing at all. Pushing it puts the manifest in the destination
 // and leaves the layers where they were. The store then holds a complete-looking set of manifests
 // that only resolve while the upstream is still reachable, which is the one condition an air-gapped
-// cluster does not have.
-//
-// Measured on `ly-mmc`: a fill reporting `written=400, skipped=0` — the entire set, deliberately
-// re-copied — that left the store at the same 333 MB and the same 450 blobs it had before.
+// cluster does not have. A fill can then report the entire set written, deliberately re-copied, and
+// leave the store exactly as large as it was.
 func TestACopyBringsTheLayersWithIt(t *testing.T) {
 	source := startRegistry(t)
 	destination := startRegistry(t)
@@ -795,12 +790,12 @@ func (m manifestOnly) MediaType() (types.MediaType, error) { return m.mediaType,
 //
 // Deciding to re-copy is not the same as re-copying: `remote.Pusher.Push` asks the destination
 // whether it holds the manifest and returns success as soon as it does, without writing the blobs the
-// manifest names. So the fill reported writing an image every pass while the destination stayed
-// unpullable — measured on `ly-mmc` as two followers stuck at 398 and 397 of 403 for forty minutes,
-// each missing exactly one blob: the image config, with every layer already there.
+// manifest names. So the fill reports writing an image on every pass while the destination stays
+// unpullable, and an image short of a single blob — the config, with every layer already there —
+// never recovers.
 //
-// The assertion is deliberately about pulling and not about counters. The counter was right the whole
-// time this defect existed; the store was empty of what the counter claimed.
+// The assertion is deliberately about pulling and not about counters: the counter is right while this
+// defect holds, and the store is empty of what the counter claims.
 func TestACopyRepairsAnImageWhoseManifestArrivedAlone(t *testing.T) {
 	source := startRegistry(t)
 	destination := startRegistry(t)

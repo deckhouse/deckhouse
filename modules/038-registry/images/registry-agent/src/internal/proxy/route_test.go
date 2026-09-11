@@ -414,24 +414,18 @@ func TestTrimPrefixPathTellsThePrefixFromAName(t *testing.T) {
 	}
 }
 
-// TestResolveAuthenticatesAKnownRegistryAskedForByItsOwnAddress is the case a three-master
-// cluster failed on.
+// TestResolveAuthenticatesAKnownRegistryAskedForByItsOwnAddress covers a pull the agent must
+// authenticate because nothing else can.
 //
-// The static pod manifests of the control plane name the upstream directly, on purpose: etcd
-// and kube-apiserver must not depend on the in-cluster registry being up. But the agent owns
-// the runtime's entire registry configuration — one `_default` drop-in covers every registry —
-// so the per-registry credentials the runtime used to hold are gone, and a static pod has no
-// imagePullSecrets either. Treated as an unconfigured registry, that pull went out anonymously
-// and was refused: the two masters that joined after the agent took over could not pull etcd at
-// all, while the first one, whose images arrived during bootstrap, was fine.
+// The control plane's static pod manifests name the upstream directly, on purpose, and the agent
+// owns the runtime's entire registry configuration — so the per-registry credentials the runtime
+// used to hold are gone and a static pod has no imagePullSecrets either. Treated as unconfigured,
+// such a pull goes out anonymously and is refused, which is a master that cannot pull etcd.
 //
-// Nothing is disclosed by fixing it. The credentials go to the registry they belong to, which
-// is already in the layout; what changes is only that they stop being dropped.
-// Since the primary set now goes through the cache whichever address named it, this case is
-// covered by TestResolveSendsThePrimarySetThroughTheCacheEvenByItsUpstreamAddress below, which
-// keeps this test's own protection: credentials are supplied, and the upstream stays reachable.
-// What remains here is the narrower half — a registry the cluster holds credentials for that is
-// NOT the primary set, where the only thing to do is stop dropping them.
+// Nothing is disclosed by supplying them: they go to the registry they belong to, already in the
+// layout. The primary set is covered by
+// TestResolveSendsThePrimarySetThroughTheCacheEvenByItsUpstreamAddress below, so what remains here
+// is the narrower half — a registry the cluster holds credentials for that is NOT the primary set.
 func TestResolveAuthenticatesAKnownRegistryAskedForByItsOwnAddress(t *testing.T) {
 	spec := layout()
 	// The same host as an additional route's upstream, asked for by that host directly rather
@@ -456,8 +450,7 @@ func TestResolveAuthenticatesAKnownRegistryAskedForByItsOwnAddress(t *testing.T)
 // that an image pulled past the cache must still end up in it — met by not pulling past it.
 //
 // The store is a pass-through cache while an upstream is configured: what it does not hold it
-// fetches and keeps. Measured on a cluster — one manifest asked of the store left the manifest,
-// its tag link and its blob on disk, and nothing was scheduled for expiry. Sent straight to the
+// fetches and keeps, so a request routed through it settles by construction. Sent straight to the
 // upstream instead, as this used to be, the image reaches the node and the cache never sees it;
 // in an air-gapped cluster that is a delayed failure, because the upstream is dropped once the
 // cache is judged complete and these images were never part of what it holds.

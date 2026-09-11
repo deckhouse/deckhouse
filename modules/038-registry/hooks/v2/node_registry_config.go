@@ -16,31 +16,22 @@ limitations under the License.
 
 // Nodes carrying container runtime registry configuration this module did not write.
 //
-// The warning exists because of a delay, and the delay is the whole problem. On containerd v1 an
-// operator's registry configuration lives in `/etc/containerd/conf.d/*.toml`, which bashible merges into
-// `config.toml`. While this module manages the registry, step 032 refuses such a file outright —
-// "configure them in /etc/containerd/registry.d instead" — because two writers of a node's registry
+// The warning exists because of a delay. On containerd v1 an operator's registry configuration lives
+// in `/etc/containerd/conf.d/*.toml`, which bashible merges into `config.toml`, and while this module
+// manages the registry step 032 refuses such a file outright — two writers of a node's registry
 // configuration is the confusion this implementation exists to remove.
 //
-// What the refusal does NOT do is happen when the file appears. Measured on a v1 stand: the file was
-// planted, bashible said "Configuration is in sync, nothing to do", `config.toml` was left as it was, and
-// the configuration simply had no effect. Then the node's configuration checksum was removed — which is
-// what the periodic full run does by itself, within about four hours — and step 032 refused within
-// fifteen seconds, failing in a retry loop from then on.
+// But the refusal does not happen when the file appears: bashible finds the node's configuration
+// checksum unchanged and does nothing, so the file has no effect until the periodic full run drops
+// that checksum by itself, within about four hours. The node then fails in a retry loop, in a moment
+// unconnected to anything the operator did.
 //
-// So an operator who writes that file sees nothing happen, and hours later, in a moment unconnected to
-// anything they did, a node stops converging. An immediate refusal would be kinder, and where the file
-// predates the migration there is now one: the preflight reads the same label and blocks the handover
-// while any node holds such a file, so a cluster is not moved onto an implementation that will stop
-// those nodes. What that cannot cover is a file written afterwards, which is what this hook is for —
-// the refusal itself belongs to a bashible step that only runs when it runs, so the next best thing is
-// to say so out loud the moment the node reports carrying one.
-//
-// The signal is already there: step 091 labels every node with
-// `node.deckhouse.io/containerd-config-registry`, `custom` when a conf.d file carries registry fields and
-// `default` when none does. This hook turns that label into a metric while this module manages the
-// registry, and into nothing when it does not — on a cluster the module manages nothing on, the same file
-// is merged normally and there is nothing to warn about.
+// Where such a file predates the migration the preflight blocks the handover over it. What that cannot
+// cover is a file written afterwards, which is this hook: the refusal belongs to a step that runs when
+// it runs, so the next best thing is to say so the moment a node reports carrying one. Step 091
+// already labels every node with `node.deckhouse.io/containerd-config-registry`, and this turns that
+// label into a metric while the module manages the registry — and into nothing when it does not, since
+// then the same file is merged normally.
 package v2
 
 import (

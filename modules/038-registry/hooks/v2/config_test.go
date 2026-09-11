@@ -218,10 +218,9 @@ func TestBuildBootstrapLayoutCarriesMirrors(t *testing.T) {
 // through, and it has to be the upstream, with its credentials and the rewrite from the
 // in-cluster path.
 //
-// Measured on a cluster migrating from the legacy `Direct` mode, before this was true: the
-// in-cluster address was named as its own upstream with no credentials, the step turned it
-// into a 94-byte drop-in, and every pull on every node failed — including the ones the new
-// release needed in order to finish rolling out, so nothing could repair it.
+// Name the in-cluster address as its own upstream with no credentials and the step turns it
+// into a drop-in under which every pull on every node fails — including the pulls the new
+// release needs in order to finish rolling out, so nothing in the cluster can repair it.
 func TestBashibleHostsStayReadableByThePreviousRelease(t *testing.T) {
 	config := buildRegistryConfig(licensedSettings(t))
 

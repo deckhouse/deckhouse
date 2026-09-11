@@ -182,10 +182,7 @@ fi
 #
 # Without this the directory is 0700 and the file 0600, so that proxy cannot read it, and the failure
 # is silent by construction: an unreadable authority reads to it as "there is no agent here", and it
-# falls through to fetching from somewhere else entirely. Measured on `ly-direct` — the agent running,
-# answering 200 on its own port, and the proxy going straight out to the upstream on :443 for every
-# package a node asked for; after this chmod, and nothing else, the same request went to
-# 127.0.0.1:5001.
+# falls through to fetching from somewhere else entirely.
 #
 # Outside the branch above, so that it also repairs a node whose material was generated before this
 # existed. The private key keeps 0600 — nothing but the agent has any business with it — and so does
@@ -223,41 +220,23 @@ chmod 0600 "${bootstrap_layout}"
 
 # The agent's own kubeconfig, over the certificate the kubelet keeps for itself.
 #
-# The agent reads this node's layout with the kubelet's identity, so that nothing has to be
-# distributed to the node for it. What it read until now was `/etc/kubernetes/kubelet.conf`,
-# and that meant mounting the whole directory, because every narrower mount of that one file
-# had been tried and each failed:
+# The agent reads this node's layout with the kubelet's identity, so nothing has to be
+# distributed to the node for it. Using `/etc/kubernetes/kubelet.conf` directly would mean
+# mounting that whole directory — on a master it holds `pki/ca.key` and `admin.conf` — and
+# every narrower mount of that one file fails: `FileOrCreate` has the kubelet create an empty
+# file, after which step 061 skips the bootstrap kubeconfig; `File` leaves the pod pending
+# through the window in which nothing else can pull images; and mounting it once it exists
+# answers the question at the one moment the answer is "not yet".
 #
-#   - FileOrCreate on kubelet.conf has the kubelet create an empty one, and step 061 skips
-#     generating the bootstrap kubeconfig when that file exists, so the node never completes
-#     its TLS bootstrap;
-#   - File on kubelet.conf leaves the pod pending until it appears, which is exactly the
-#     window in which a node being bootstrapped has nothing else able to pull images;
-#   - mounting it only once it exists decides the question at the one moment the answer is
-#     "not yet" and never revisits it, because bashible skips a bundle it has already applied
-#     ("Configuration is in sync, nothing to do"). The agent on such a node stays without API
-#     access for the life of the node — pulling from the layout it was installed with,
-#     reporting success, and never applying anything the cluster configures.
+# So it is written here, in the directory the agent already has, on every pass. The identity
+# is still the kubelet's, by reference to the certificate the kubelet rotates for itself, so
+# nothing is copied and nothing goes stale; before the node's TLS bootstrap that certificate
+# does not exist and the agent pulls from the bootstrap layout instead.
 #
-# On a master that directory is also `pki/ca.key` and `admin.conf`, and this agent is the one
-# component of the module that parses what an external registry answers. Read-only or not,
-# code execution in it reached the cluster's certificate authority.
-#
-# So the file is written here instead, and none of the three failures applies to it: nothing
-# else creates it, this step writes it on every pass, and it lives in the directory the agent
-# already has. The identity is still the kubelet's, by reference to the certificate the
-# kubelet rotates for itself — the same reference `kubelet.conf` holds — so nothing is copied
-# and nothing goes stale. Until the node completes its TLS bootstrap that certificate does
-# not exist, the agent finds no credentials and pulls from the bootstrap layout, which is
-# what the layout is for.
-#
-# The authority is embedded rather than referenced, because neither copy of it is there the
-# whole time: step 098 clears `/var/lib/bashible/ca.crt` once bootstrap finishes, and
-# `/etc/kubernetes/pki/ca.crt` — the copy step 060 leaves on every node — does not exist yet
-# when this step first runs. Either file is the same certificate.
-#
-# Written only when one of them is readable. An absent kubeconfig is the "no credentials yet"
-# path the agent already handles; an empty or truncated one would be retried forever.
+# The authority is embedded rather than referenced, because neither copy is there the whole
+# time: step 098 clears `/var/lib/bashible/ca.crt` after bootstrap, and
+# `/etc/kubernetes/pki/ca.crt` does not exist yet on the first pass. Either file is the same
+# certificate, and the kubeconfig is written only when one of them is readable.
 agent_ca=""
 if [[ -s /var/lib/bashible/ca.crt ]]; then
   agent_ca="/var/lib/bashible/ca.crt"
@@ -311,27 +290,15 @@ VOLUME
 # starts.
 #
 # For containerd the image reference is a fixed local tag — the agent cannot be pulled through the
-# agent, so it is imported from a tar and named deckhouse.local/images:registry-agent (see step
-# 034). That tag never changes, so neither did this file: a new build reinstalled the package,
-# re-imported the tar and left kubelet with a manifest identical to the one it already ran, which
-# means the OLD container kept serving.
+# agent, so it is imported from a tar as deckhouse.local/images:registry-agent (step 034). That tag
+# never changes, so without the annotation neither does this file: a new build reinstalls the
+# package, re-imports the tar, and leaves kubelet with a manifest identical to the one it already
+# ran, so the OLD container keeps serving. The digest makes the file differ exactly when the image
+# does, and bb-sync-file rewriting it is what makes kubelet restart the pod.
 #
-# Measured on ly-direct: the bashible configuration on the node already named registryAgent
-# sha256:93a9f40d1688 while the running agent was the previous build, and restarting the platform,
-# the bashible apiserver and the container itself changed nothing — a fix shipped in the agent
-# could not reach an existing cluster at all.
-#
-# An annotation is what makes the file differ. bb-sync-file then rewrites it, kubelet sees a
-# changed static pod and restarts it onto the freshly imported image. The digest is the honest
-# value to put here: it changes exactly when the image does.
-#
-# This prose lives HERE and not inside the heredoc below, and neither does any backtick.
-# The delimiter cannot be quoted — the body needs ${drop_in_root} and the other paths expanded — so
-# everything in it is subject to command substitution, comments included. It was: the node's journal
-# carried `053_configure_registry_agent.sh: line 242: deckhouse.local/images:registry-agent: No such
-# file or directory` and `ly-direct: command not found` on every cluster where this step ran, because
-# the shell was executing the words of an explanation. Harmless as it happened — the output landed in
-# YAML comments — and one sentence away from running something that is not.
+# This prose lives HERE and not inside the heredoc below, and neither does any backtick: the
+# delimiter cannot be quoted — the body needs ${drop_in_root} expanded — so everything inside it is
+# subject to command substitution, comments included.
 bb-sync-file /etc/kubernetes/manifests/registry-agent.yaml - << EOF
 apiVersion: v1
 kind: Pod

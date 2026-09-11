@@ -16,36 +16,27 @@ limitations under the License.
 
 // Leaving the pull path without taking the address away from what still names it.
 //
-// `Managed` -> `Unmanaged` used to be immediate: the moment the mode changed, the storage and the node
-// agent went, and the in-cluster address stopped answering. But the address is named by rendered
-// manifests all over the cluster, and those move to the upstream registry only as the operator
-// re-renders each module's release — one release at a time. Measured on a two-node cloud cluster:
+// `Managed` -> `Unmanaged` used to be immediate: the mode changed, the storage and the node agent went,
+// and the in-cluster address stopped answering. But that address is named by rendered manifests all
+// over the cluster, and those move to the upstream registry only as the operator re-renders each
+// module's release, one at a time. Until then they name an address that answers nothing — the
+// platform's own included, so the one component able to rewrite those references is itself unable to
+// pull, and the cluster has no way back without hand-editing an image reference.
 //
-//	84s   the platform's own Deployment still named `registry.d8-system.svc:5001` after the storage
-//	      and its Service were gone. Nothing failed only because the operator pod happened not to
-//	      restart in that window; the one component able to rewrite that reference is the one that
-//	      could no longer pull. On an earlier stand it did restart, and the cluster needed the image
-//	      in its Deployment patched by hand to come back at all.
-//	680s  workloads across d8-monitoring, d8-ingress-nginx, d8-admission-policy-engine,
-//	      d8-snapshot-controller and kube-system could not pull, 16 of them at the peak, each still
-//	      naming an address that answered nothing.
+// So the two halves are separated. Withdrawing the ADDRESS is immediate: the ConfigMap goes at once,
+// every render from then on names the upstream registry, and the platform starts moving. Withdrawing
+// the SERVICE waits until nothing names the in-cluster address any more, and in between the module
+// keeps serving from the configuration in effect when the user asked to leave — which is what this
+// hook persists.
 //
-// So the two halves are separated here. Withdrawing the ADDRESS is immediate — the ConfigMap goes at
-// once, so every render from that moment on names the upstream registry and the platform starts moving.
-// Withdrawing the SERVICE waits until nothing names the in-cluster address any more. In between, the
-// module keeps serving from the configuration that was in effect when the user asked to leave, which is
-// what this hook persists.
+// The deliberate consequence is that `Unmanaged` is reached when the drain finishes rather than when
+// the ModuleConfig is written, so a cluster runs the module's components while its ModuleConfig says
+// `Unmanaged`. Hence the metric and the alert to say why. The alternative is a documented outage of
+// minutes on a routine configuration change.
 //
-// The consequence, and it is deliberate: `Unmanaged` is reached when the drain finishes, not when the
-// ModuleConfig is written. A cluster in this state runs the module's components while its ModuleConfig
-// says `Unmanaged`, which would be confusing without something saying why — hence the metric and the
-// alert. The alternative is a documented outage of minutes on a routine configuration change, and on a
-// production cluster that is the worse of the two.
-//
-// What is NOT covered: disabling the module outright (`enabled: false`) instead of asking for
-// `Unmanaged`. Then there is no release to render anything from and helm removes it all in one pass, so
-// the window is back. That path is for a cluster being taken off this module for good, and the way
-// through it is to reach `Unmanaged` first and let the drain finish.
+// NOT covered: disabling the module outright (`enabled: false`) instead of asking for `Unmanaged`.
+// Then there is no release to render from and helm removes everything in one pass, so the window is
+// back. The way through is to reach `Unmanaged` first and let the drain finish.
 package v2
 
 import (
@@ -129,9 +120,7 @@ type drainRecord struct {
 	// Without it the whole thing loops. The configuration a drain serves from is captured from the
 	// RegistryConfig resource, and that resource is rendered from the values this hook writes — so it
 	// outlives the decision by exactly one render. A hook pass landing in that gap sees `Unmanaged` plus
-	// a resource that says `Managed`, reads it as "still serving", and starts the drain over. Measured on
-	// the stand: zero references for seven minutes, the storage still up, and the record reappearing with
-	// a new `startedAt` every time.
+	// a resource that says `Managed`, reads it as "still serving", and starts the drain over.
 	Finished bool `json:"finished,omitempty"`
 
 	// LastZeroAt is when the last empty scan was counted, and it is what makes "two scans" mean time
@@ -144,8 +133,8 @@ type drainRecord struct {
 
 // quietGap is how far apart two empty scans have to be before they count as two.
 //
-// Half a minute: the gap being guarded against is one render of one module release, and on the stand the
-// whole platform moved in about eleven minutes across some forty of them.
+// Half a minute: the gap being guarded against is a single module release's render, which is shorter
+// than that, while the platform as a whole needs dozens of renders to move.
 const quietGap = 30 * time.Second
 
 var _ = sdk.RegisterFunc(
@@ -294,11 +283,10 @@ func handleDrain(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		// and a module restarts mid-drain routinely, since the platform moving its own image reference
 		// off the in-cluster registry is what restarts it.
 		//
-		// Measured on the stand without this: the record was rewritten eleven seconds into a drain and
-		// its `startedAt` jumped from 13:54:42 to 13:55:33. Nothing broke, because a fresh record still
-		// keeps the registry serving — but the clock the alert measures and the count of quiet scans
-		// both went back to zero, so a drain that never finishes could restart its way out of being
-		// reported.
+		// Without that confirmation the record is rewritten mid-drain. Nothing breaks, because a fresh
+		// record still keeps the registry serving — but the clock the alert measures from and the count
+		// of quiet scans both go back to zero, so a drain that never finishes could restart its way out
+		// of being reported.
 		record, err = existingDrainRecord(ctx, dc)
 		if err != nil {
 			return err
@@ -814,30 +802,19 @@ func theClusterRendersTheInClusterAddress(input *go_hook.HookInput) bool {
 
 // restoreRegistryIdentity points the cluster back at the registry the module was fetching from.
 //
-// This is what makes `Unmanaged` reachable at all on a cluster that was bootstrapped INTO this module.
-// There, the installer hands the pull path over and writes the in-cluster registry into
-// `deckhouse-registry` — address, path, credentials, all of it — and dhctl reaches such a cluster through
-// a tunnel on purpose. The upstream then exists in exactly one place: this module's own configuration,
-// which the user has to empty in order to ask for `Unmanaged`. Measured on a cluster installed that way:
-// 425 container specifications still naming the in-cluster registry twenty-five minutes after the
-// withdrawal was asked for, and no destination for a single one of them — because
-// `global.modulesImages.registry.address` WAS the in-cluster registry.
+// This is what makes `Unmanaged` reachable on a cluster bootstrapped INTO this module: there the
+// installer writes the in-cluster registry into `deckhouse-registry`, so the upstream exists only in
+// this module's configuration — which the user has to empty in order to ask for `Unmanaged`. So the
+// module restores what the installer overwrote, from the configuration it was serving, being the one
+// removing itself from the path and already holding the credentials. Written at the START of a drain,
+// because the platform re-renders from this and nothing can move off the in-cluster registry until it
+// points elsewhere.
 //
-// So the module restores what the installer overwrote, from the configuration it was serving, and it is
-// the right party to do it: it is the one removing itself from the path, and it already holds the
-// credentials the user gave it. Written at the START of a drain rather than at the end — the platform
-// re-renders from this, so nothing can move off the in-cluster registry until it points elsewhere.
-//
-// Kept idempotent by its own condition rather than by a flag: while the address still names the
-// in-cluster registry there is something to do, and once it does not, there is not. An operator who
-// edits the secret by hand afterwards is not overruled.
-//
-// That condition alone is not enough to say WHEN, though, and the caller adds the missing half. The
-// in-cluster address is also what the previous implementation writes, so on a cluster migrating from
-// it this reads as "there is something to do" while the nodes are still pulling through that
-// implementation's proxy and the agent is not installed. Moving the cluster to the upstream there
-// names a host the nodes have nothing for: measured on a `Direct` cluster, the etcd manifest was
-// rewritten to the upstream, could not be pulled, and the control plane went down behind it.
+// Idempotent by its own condition rather than by a flag, so an operator editing the secret by hand
+// afterwards is not overruled. That condition cannot say WHEN, though, and the caller adds the other
+// half: the in-cluster address is also what the previous implementation writes, so on a cluster
+// migrating from it this reads as "something to do" while the nodes still pull through that
+// implementation's proxy — where pointing them at the upstream names a host they have nothing for.
 func restoreRegistryIdentity(input *go_hook.HookInput, upstream *ConfigUpstream) error {
 	credentials, err := upstreamCredentials(upstream)
 	if err != nil {
@@ -849,8 +826,7 @@ func restoreRegistryIdentity(input *go_hook.HookInput, upstream *ConfigUpstream)
 		"path":    base64.StdEncoding.EncodeToString([]byte(upstream.Path)),
 		// Lower-cased, because the two spellings belong to different schemas: the module's own
 		// configuration says `HTTPS`, and the global values this lands in accept `http` or `https` only.
-		// Measured, while restoring a cluster by hand: `global.modulesImages.registry.scheme in body
-		// should be one of [http https]`, which failed a global hook and wedged the whole main queue.
+		// The wrong spelling fails the values schema of a global hook, which wedges the main queue.
 		"scheme": base64.StdEncoding.EncodeToString([]byte(strings.ToLower(schemeOrDefault(upstream.Scheme)))),
 		// The registry as anything outside the cluster sees it, which from here on is the upstream.
 		"imagesRegistry": base64.StdEncoding.EncodeToString([]byte(upstream.Host + upstream.Path)),
@@ -925,12 +901,10 @@ func schemeOrDefault(scheme string) string {
 // policy is `Always`, which is the one case where every start is a fetch. So what has to be waited on is
 // a container that names the address AND either has not started yet, or will fetch again when it does.
 //
-// This is the difference between a withdrawal that completes and one that hangs. Measured on the stand:
-// a `trickster` rollout had been stuck for two hours for reasons of its own — the new pod, already on
-// the upstream registry, never became ready, so the superseded ReplicaSet kept its old pod alive. That
-// pod named the in-cluster address, had long since pulled it, and served nothing; waiting on it would
-// have held the module on the pull path indefinitely, and any stuck rollout anywhere in the cluster
-// would do the same.
+// This is the difference between a withdrawal that completes and one that hangs. A rollout stuck for
+// reasons of its own keeps the superseded pod alive; that pod names the in-cluster address and pulled
+// it long ago, so waiting on it would hold the module on the pull path for as long as the rollout is
+// stuck — and any stuck rollout anywhere in the cluster would do the same.
 //
 // What is still waited on, deliberately: anything not yet started. A pod pulling right now is the case
 // the whole mechanism exists for.
@@ -989,7 +963,7 @@ func platformNamespace(namespace string) bool {
 // The storage and the controller of this module are excluded by their namespace being asked about
 // somewhere else — they pull from the upstream registry, not from themselves. Everything a pod can pull
 // is checked, including init containers: the platform's own Deployment names the in-cluster address in
-// one of those, and it was the reference that stranded a cluster on the stand.
+// one of those, which makes it the reference easiest to miss.
 func namesInClusterRegistry(spec *v1core.PodSpec) bool {
 	prefix := registry_const.Host + "/"
 

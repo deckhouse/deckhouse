@@ -147,16 +147,15 @@ func (a *Auth) Encoded() string {
 // BasicCredentials returns the credentials as a username and a password, whichever form they
 // arrived in.
 //
-// The canonical reader, and it is canonical for a reason measured on a cluster. Credentials reach
-// this type in two shapes — as the pair, or as the base64("username:password") that a dockercfg
-// carries — and for a while two consumers of the SAME upstream credential read them differently:
-// the pass-through cache decoded the combined form, the fill did not. Nodes therefore pulled images
-// through the cache perfectly well while every fill went out anonymous and came back
-// `401 Unauthorized: Auth failed` on every repository, including the platform's own. Nothing in the
-// status could say why, because from the fill's side the credential was simply absent.
+// The canonical reader. Credentials reach this type in two shapes — as the pair, or as the
+// base64("username:password") that a dockercfg carries — so two consumers of the SAME credential can
+// read it differently: decoding the combined form in one of them and not in the other leaves nodes
+// pulling through the cache perfectly well while every fill goes out anonymous and comes back
+// `401 Unauthorized: Auth failed` on every repository. Nothing in the status can say why, because from
+// the fill's side the credential is simply absent.
 //
-// Anything that authenticates with an Auth must go through this. A second reader is how the
-// asymmetry happened, and one function is the only thing that makes it impossible to happen again.
+// Anything that authenticates with an Auth must go through this: a second reader is how such an
+// asymmetry appears, and one function is what makes it impossible.
 func (a *Auth) BasicCredentials() (string, string) {
 	if a.IsEmpty() {
 		return "", ""

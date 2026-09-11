@@ -95,11 +95,10 @@ hosts:
 //
 // `loadFromInput` uses the module's layout when it exists and ignores the `deckhouse-registry` secret
 // entirely — but this controller used to LOAD that secret first and fail the whole reconciliation when
-// it was absent. This controller is what produces a node's bootstrap data, so that failure was not
-// cosmetic. Measured on a cluster where the secret had been removed on purpose: no bootstrap data
-// secret was produced, CAPI reported `Secret "worker-6a06716b" not found`, and no worker VM appeared at
-// all — the installation ended on "waiting for a Ready worker node", with the layout sitting there
-// unread.
+// it was absent. This controller is what produces a node's bootstrap data, so that failure is not
+// cosmetic: without the secret no bootstrap data secret is produced at all, CAPI reports the missing
+// secret, no worker VM appears, and the installation ends waiting for a Ready worker — with the
+// layout sitting there unread.
 func TestTheLayoutAloneIsEnough(t *testing.T) {
 	data, err := reconcileWith(t, bashibleLayoutSecret())
 

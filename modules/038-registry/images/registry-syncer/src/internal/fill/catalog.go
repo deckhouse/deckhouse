@@ -31,24 +31,18 @@ import (
 
 // CountHeld counts the distinct manifest digests the store holds on disk.
 //
-// Read from the filesystem and not through the registry API, which is the whole point. The API
-// answer is not an account of what is held: a pull-through cache proxies the tag listing to its
-// upstream, so asking it what it has returns what the UPSTREAM has. Measured on a cluster —
-// a follower whose store held one image reported 403545, which is the number of tags in the
-// development registry it proxies. That number then goes into `verifiedDigests`, and completeness
-// is `held >= expectedDigests`: a store holding nothing could report itself complete and authorize
-// dropping the upstream, which is exactly the failure the design forbids in as many words.
+// Read from the filesystem and not through the registry API, which is the whole point: a
+// pull-through cache proxies the tag listing to its upstream, so asking it what it has returns what
+// the UPSTREAM has. That number goes into `verifiedDigests`, and completeness is
+// `held >= expectedDigests` — so a store holding nothing could report itself complete and authorize
+// dropping the upstream.
 //
-// Digests and not tags for a second, independent reason. The field is called `verifiedDigests` and
-// is compared against `expectedDigests` — 556 distinct manifests, in the bundle this was measured
-// against — while tags are a different set entirely: almost every image of the platform is
-// addressed as `<base>@sha256:…` and carries no tag at all, and one digest may carry many. Counting
-// tags produced 628 against an expectation of 556 on a store that was in fact complete: the right
-// verdict by luck, from two numbers that do not measure the same thing.
+// Digests and not tags for a second reason: almost every image of the platform is addressed as
+// `<base>@sha256:…` and carries no tag at all, while one digest may carry many, so counting tags
+// compares two numbers that do not measure the same thing.
 //
-// What is counted is a manifest revision the store has a link for, under `scope`, deduplicated
-// across repositories: the same manifest referenced from two repositories is one digest held, and
-// `expectedDigests` counts it once.
+// What is counted is a manifest revision the store has a link for, under `scope`, deduplicated across
+// repositories — as `expectedDigests` counts it.
 func CountHeld(root, scope string) (int32, error) {
 	held, err := HeldManifests(root, scope)
 	if err != nil {
@@ -173,10 +167,9 @@ func HeldTags(root, scope string) ([]HeldTag, error) {
 // Survey is everything the loop needs to know about the store, read in ONE pass.
 //
 // Three separate readers used to answer these three questions — CountDeclaredHeld, CountHeld and
-// MissingTags — and each walked the whole tree. On a 12 GB store that is expensive, and the loop asked
-// every 30 seconds: measured on an air-gapped master, `registry-syncer` at 95% CPU with 102 minutes of
-// processor time behind it on a node that had been up for 154. The work was real, the answers were the
-// same three numbers, and nothing needed them recomputed that often.
+// MissingTags — and each walked the whole tree. On a store of any size that is expensive, and the loop
+// asked every 30 seconds, which is enough to keep the process at most of a CPU indefinitely. The work
+// was real, the answers were the same three numbers, and nothing needed them recomputed that often.
 //
 // One walk, then, and the caller decides how often to ask. What is counted is unchanged: manifests the
 // declared set names, manifests altogether, and whether the release can be resolved by tag.
@@ -249,7 +242,7 @@ func Take(root, scope string, declared map[string]struct{}, tags []string) (Surv
 //
 // Only the scope's own repository, not the ones beneath it: the installer lives in a repository of its
 // own, and a credential scoped to the platform is refused for it on some clusters (`401` on
-// `sys/deckhouse-oss/install`, measured). Requiring a tag that cannot be fetched there would make
+// `<path>/install`). Requiring a tag that cannot be fetched there would make
 // completeness unreachable in exactly the way the digest count used to be.
 func MissingTags(root, scope string, tags []string) ([]string, error) {
 	wanted := make(map[string]struct{}, len(tags))

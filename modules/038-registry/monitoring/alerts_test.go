@@ -17,20 +17,17 @@ limitations under the License.
 // Tests for the alerting rules of this module.
 //
 // What these DO check: that every alert is complete enough to be actionable, that its `for:` is the
-// duration it is meant to be, and — the one that matters most — that every metric an expression
-// names is a metric the code actually registers.
+// duration it is meant to be, and — most importantly — that every metric an expression names is one
+// the code actually registers.
 //
-// What they do NOT check: the PromQL itself. Evaluating an expression needs the Prometheus query
-// engine, which this repository does not depend on, and pulling it in for a test is a decision
-// bigger than a test. So the semantics of these rules are covered where they can be: on a cluster,
-// by scenario-alerts.sh, which breaks four things and waits for the ClusterAlert objects to appear.
+// What they do NOT check: the PromQL itself, which needs the Prometheus query engine this repository
+// does not depend on. Those semantics are covered on a cluster, by scenario-alerts.sh.
 //
-// The reason any of this exists: all nine alerts of this module were inert for the whole of its
-// life. Not because an expression was wrong — because the kube-rbac-proxy beside each component
-// could not create a TokenReview, so no `d8_registry_*` series ever reached Prometheus at all, and
-// every expression opens with `max(d8_registry_managed) > 0`. Nothing looked broken. The lesson
-// generalises: an alert that never fires is indistinguishable from a problem that never happened,
-// so the things it depends on need checking by something other than the absence of complaints.
+// Why it matters: an alert can be inert for reasons no expression review would catch — every
+// expression here opens with `max(d8_registry_managed) > 0`, so a component whose kube-rbac-proxy
+// cannot create a TokenReview publishes no series and nothing ever fires, with nothing looking
+// broken. An alert that never fires is indistinguishable from a problem that never happened, so what
+// it depends on needs checking by something other than the absence of complaints.
 package monitoring_test
 
 import (
@@ -175,14 +172,14 @@ func TestExpressionsNameMetricsThatExist(t *testing.T) {
 	}
 }
 
-// TestTheReclaimAlertKnowsHowLongTheReplicaHasBeenAble guards the one alert that has been observed
-// firing on a healthy cluster.
+// TestTheReclaimAlertKnowsHowLongTheReplicaHasBeenAble guards the alert most likely to fire on a
+// healthy cluster.
 //
 // `d8_registry_storage_last_collection_timestamp_seconds` is a registered gauge, so it is exposed as
 // 0 from the first scrape and stays 0 until a collection finishes. `time() - 0` is the whole Unix
-// epoch, which passes any staleness threshold — so a store that had never been collected yet looked
-// exactly like one that stopped a week ago, and the alert arrived an hour after boot on a cluster
-// whose schedule had not come round once. Measured on a stand, twice.
+// epoch, which passes any staleness threshold — so a store that has never been collected reads
+// exactly like one that stopped a week ago, and the alert fires before the schedule has come round
+// once.
 //
 // The fix is a term asking how long the replica has been able to collect. It is a single line and
 // deleting it would restore the false alarm silently, which is what this test is for.

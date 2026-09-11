@@ -154,9 +154,7 @@ spec:
       # Credentials for the registry this cluster pulls from live on the NODE, not in a pod spec: the
       # agent writes them into containerd's per-registry configuration, and before the agent exists
       # bashible writes them there from the module's own node configuration. A pod therefore needs no
-      # secret of its own to pull, and measured on an air-gapped cluster: a pod with an empty
-      # `imagePullSecrets` pulled `registry.d8-system.svc:5001/system/deckhouse` in 72 ms, from the
-      # cluster's own store, through the agent.
+      # secret of its own to pull.
       #
       # Removing it matters beyond tidiness. `deckhouse-registry` is the previous contour — written by
       # dhctl, rendered by module 002 — and this module's own components referencing it was the reason
@@ -178,8 +176,8 @@ spec:
         # modules writes to, and what this replica's own fill writes to.
         #
         # A second listener rather than a second container, which is how this was done before: a cache
-        # refuses every write (measured — `POST /v2/.../blobs/uploads/` answered UNSUPPORTED), so the
-        # writes need a non-proxying view of the store, and the registry now serves one itself. Two
+        # refuses every write, so the writes need a non-proxying view of the store, and the registry
+        # now serves one itself. Two
         # containers meant two rendered configurations that must not be swapped, and a store-wide flag
         # to stop each process from deleting the other's data on startup.
         #
@@ -331,9 +329,8 @@ spec:
         #
         # This client both reads and WRITES: it fills the store from an upstream and replicates it
         # from the leader. The node account cannot write — deliberately, since it is on every node —
-        # so a syncer holding it asked for `pull,push`, was issued `pull`, and had every reference
-        # refused with "insufficient scope". Measured on a three-master air-gapped cluster, where it
-        # left both followers holding nothing while reporting that they were replicating.
+        # so a syncer holding it would ask for `pull,push`, be issued `pull` and have every reference
+        # refused with "insufficient scope", while its status still reported that it was replicating.
         - name: REGISTRY_LOCAL_USER
           valueFrom:
             secretKeyRef:

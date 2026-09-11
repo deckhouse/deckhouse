@@ -43,8 +43,8 @@ const (
 	//
 	// Named after the registry catalogue for continuity — it is a metric label — but it
 	// deliberately no longer reads one. Asking a registry what it holds is unsound while
-	// pull-through is configured, because the answer is what it can FETCH: a follower
-	// once reported 403545 digests, the tag count of the upstream it proxies. Counting
+	// pull-through is configured, because the answer is what it can FETCH — a follower
+	// answers with the tag count of the upstream it proxies. Counting
 	// the store's own filesystem is sound in every arrangement, which is why this action
 	// is no longer confined to the ones where pull-through happens to be off.
 	ActionCountCatalogue Action = "CountCatalogue"
@@ -76,8 +76,7 @@ type Leader struct {
 	// a partial set would have to be redone — does not hold: the copier skips what is already
 	// present, so a later pass copies only the difference. What the condition did cost is what the
 	// design promises: followers fill AHEAD of time, and while the leader was still filling they
-	// did nothing at all, holding nothing if it died meanwhile. Measured on a cluster: three
-	// replicas with 428, 337 and 333 digests, none of them full, none of them moving.
+	// did nothing at all, holding nothing if it died meanwhile.
 	Full bool
 }
 
@@ -133,22 +132,17 @@ func Decide(spec *registryv1alpha1.RegistryStorageSpec, isLeader bool, leader *L
 // StoreIsAuthority reports whether completeness must be judged by reading the
 // store rather than by counting what a copy wrote.
 //
-// True for the leader inside the transition window of the air-gap story: air-gap has been asked for,
-// the upstream is still HELD so the cluster keeps working, and images arrive through `d8 mirror push` —
-// a write the syncer never sees and therefore cannot count. Without this the push contributes nothing,
-// the leader never reads as complete, and the upstream is held forever; measured on a cluster before it
-// was fixed.
+// True for the leader inside the air-gap transition window: air-gap has been asked for, the upstream
+// is still HELD so the cluster keeps working, and images arrive through `d8 mirror push` — a write the
+// syncer never sees and cannot count. Without this the push contributes nothing, the leader never
+// reads as complete, and the upstream is held forever.
 //
-// Reading the catalogue is honest ONLY there, and this is the condition that has to be got right: a
-// pass-through cache writes into its own store on every miss, so a catalogue read on a caching cluster
-// counts what the cluster happened to fetch rather than what it deliberately holds — completeness would
-// arrive on its own, and the air-gap gate is derived from completeness.
-//
-// It used to key off `spec.Publish`, which was sound while publication existed exactly in air-gap and
-// turned pull-through off. The write endpoint is now a separate instance published on every managed
-// cluster, so `Publish` no longer implies any of that, and the condition moved to the field that still
-// means it. Keying off the held upstream instead would be wrong in the other direction: inside the
-// window the upstream is still held, which is the point of the window.
+// Reading the catalogue is honest ONLY there, which is why the condition has to be exact: a
+// pass-through cache writes into its own store on every miss, so a catalogue read on a caching
+// cluster counts what it happened to fetch rather than what it holds on purpose, and completeness
+// would arrive on its own. The field replaced `spec.Publish`, which stopped implying the window once
+// the write endpoint was published on every managed cluster; the held upstream would be wrong in the
+// other direction, since inside the window it is held by design.
 //
 // A follower is excluded because its store is a copy, and what a copy holds authorizes nothing.
 func StoreIsAuthority(spec *registryv1alpha1.RegistryStorageSpec, isLeader bool) bool {

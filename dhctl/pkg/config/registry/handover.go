@@ -76,10 +76,8 @@ func HandOverBundleStore(ctx context.Context, kubeCl *client.KubernetesClient, c
 	//
 	// Both things this function does are commands on the first master, and a caller that cannot run
 	// them cannot hand the store over — so treating their absence as "nothing to do" reports success
-	// for work that did not happen. Measured: the handover finished in 18 milliseconds, the store's pod
-	// stayed Pending on the port the bootstrap registry still held, and the installation spent the next
-	// thirty-three minutes waiting for a store that could never start. The wait's own message —
-	// "the cluster store is Idle" — described the symptom and named nothing that caused it.
+	// for work that did not happen, and the installation then waits on a store that can never start,
+	// with only "the cluster store is Idle" to go on.
 	if kubeCl.NodeInterface == nil {
 		return ErrHandoverNeedsTheNode
 	}
@@ -157,19 +155,12 @@ func podImages(spec corev1.PodSpec) []string {
 
 // pullArgs is the pre-pull command, as a program and its arguments rather than as a line for a shell.
 //
-// It matters, and it was measured on a node: the command used to be built as `bash -c "<crictl> pull
-// <ref>"`, and the node interface wraps whatever it is given in a shell of its own. The inner bash then
-// received the pull and the reference as $0 and $1 instead of as arguments, so what ran was crictl with
-// no arguments at all — which prints its usage and exits 0.
-//
-//	# bash -c 'bash -c /opt/deckhouse/bin/crictl pull "<ref>"'; echo $?
-//	NAME:
-//	   crictl - client for CRI
-//	0
-//
-// So the handover reported four images pulled, pulled none of them, and the store's own syncer image
-// was then unobtainable: the bootstrap registry that would have served it had just been removed on the
-// strength of that success. Passing argv avoids the question entirely — there is no shell to quote for.
+// The node interface wraps whatever it is given in a shell of its own, so a command built as
+// `bash -c "<crictl> pull <ref>"` hands the inner bash the pull and the reference as $0 and $1 instead
+// of as arguments: what runs is crictl with no arguments at all, which prints its usage and exits 0.
+// The handover would then report images pulled, pull none of them, and leave the store's own syncer
+// image unobtainable — the bootstrap registry that would have served it is removed on the strength of
+// that success. Passing argv avoids the question entirely: there is no shell to quote for.
 func pullArgs(image string) []string {
 	return []string{crictlPath, "pull", image}
 }

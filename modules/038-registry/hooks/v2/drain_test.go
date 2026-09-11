@@ -50,8 +50,8 @@ func managedCapture() *RegistryConfig {
 //
 // The user asks for `Unmanaged`, and at that instant a scan can easily come back empty — the platform's
 // own references live in Deployments that are about to be re-rendered, and a scan landing between two
-// renders sees a clean cluster. Ending there is the old behaviour, which cost 84 seconds of the
-// platform naming a registry that no longer existed and 680 seconds of workloads unable to pull.
+// renders sees a clean cluster. Ending there is the old behaviour, which leaves the platform naming a
+// registry that no longer exists and workloads unable to pull.
 func TestADrainStartsEvenWhenTheFirstScanIsEmpty(t *testing.T) {
 	now := time.Now().UTC()
 
@@ -123,14 +123,13 @@ func TestNothingToDrainWhenTheModuleWasNotServing(t *testing.T) {
 	assert.Contains(t, done, "not serving")
 }
 
-// TestAFinishedDrainDoesNotStartItselfAgain is the loop the stand caught, and the reason the record
-// carries `Finished` at all.
+// TestAFinishedDrainDoesNotStartItselfAgain is the loop the record carries `Finished` for.
 //
 // The configuration a drain serves from is captured from the RegistryConfig resource, and that resource
 // is rendered from the values this hook writes — so it outlives the decision by exactly one render. A
 // pass landing in that gap sees `Unmanaged` plus a resource saying `Managed`. Read as "still serving",
-// it starts the drain over, and the module never leaves the pull path: measured with zero references for
-// seven minutes, the storage still up, and `startedAt` moving every minute.
+// it starts the drain over and the module never leaves the pull path — `startedAt` moving on every
+// pass while nothing in the cluster references the registry at all.
 func TestAFinishedDrainDoesNotStartItselfAgain(t *testing.T) {
 	now := time.Now().UTC()
 	withdrawn := &drainRecord{Config: *managedCapture(), StartedAt: now.Add(-5 * time.Minute), Finished: true}
@@ -165,9 +164,9 @@ func TestWhatCountsAsNamingTheInClusterRegistry(t *testing.T) {
 			names: true,
 		},
 		{
-			// The reference that stranded a cluster on the stand: the platform's Deployment names the
-			// in-cluster registry in `init-downloaded-modules`, and patching only the main container
-			// left the pod in Init:ImagePullBackOff.
+			// The reference easiest to miss: the platform's Deployment names the in-cluster registry
+			// in `init-downloaded-modules`, so patching only the main container leaves the pod in
+			// Init:ImagePullBackOff.
 			name:  "an init container",
 			spec:  v1core.PodSpec{InitContainers: []v1core.Container{{Image: inCluster}}},
 			names: true,
@@ -205,10 +204,9 @@ func TestWhatCountsAsNamingTheInClusterRegistry(t *testing.T) {
 // TestAPodThatHasAlreadyPulledDoesNotHoldTheWithdrawal is the rule that decides whether a withdrawal
 // can finish at all.
 //
-// Measured on the stand: a `trickster` rollout had been stuck for two hours for reasons of its own — the
-// new pod, already on the upstream registry, never became ready, so the superseded ReplicaSet kept its
-// old pod. That pod named the in-cluster address, had long since pulled it, and served nothing. Waiting
-// on it would have held the module on the pull path indefinitely, and any stuck rollout anywhere in the
+// A rollout stuck for reasons of its own keeps the superseded ReplicaSet's pod alive: it names the
+// in-cluster address, pulled it long ago and serves nothing. Waiting on such a pod would hold the
+// module on the pull path for as long as the rollout is stuck, and any stuck rollout anywhere in the
 // cluster would do the same.
 func TestAPodThatHasAlreadyPulledDoesNotHoldTheWithdrawal(t *testing.T) {
 	image := registry_const.Host + "/system/deckhouse@sha256:abc"
@@ -261,10 +259,9 @@ func TestAPodThatHasAlreadyPulledDoesNotHoldTheWithdrawal(t *testing.T) {
 //
 // A cluster bootstrapped INTO this module has the in-cluster registry written into
 // `deckhouse-registry` — address, path, credentials, all of it — and the upstream then lives in exactly
-// one place: this module's configuration, which has to be emptied to ask for `Unmanaged`. Measured on
-// such a cluster before this existed: 425 container specifications still naming the in-cluster registry
-// twenty-five minutes after the withdrawal was asked for, with nowhere for a single one of them to move,
-// because the platform's own registry address WAS the in-cluster one.
+// one place: this module's configuration, which has to be emptied to ask for `Unmanaged`. Without this,
+// every container specification in the cluster goes on naming the in-cluster registry with nowhere to
+// move to, because the platform's own registry address WAS the in-cluster one.
 func TestTheWithdrawalGivesTheClusterSomewhereToGo(t *testing.T) {
 	upstream := &ConfigUpstream{
 		Scheme: "HTTPS",
@@ -321,9 +318,9 @@ func TestAnUpstreamWithNoCredentialsIsStillADestination(t *testing.T) {
 	assert.Contains(t, string(credentials), "registry.example.com")
 }
 
-// TestTheSchemeIsWrittenAsTheGlobalValuesAcceptIt is a one-word test for a mistake already made once on
-// a live cluster: the module's configuration says `HTTPS`, the global values accept `http` or `https`,
-// and writing the first spelling failed a global hook and wedged the main queue for every module.
+// TestTheSchemeIsWrittenAsTheGlobalValuesAcceptIt is a one-word test for an easy mistake: the module's
+// configuration says `HTTPS`, the global values accept `http` or `https`, and writing the first
+// spelling fails a global hook and wedges the main queue for every module.
 func TestTheSchemeIsWrittenAsTheGlobalValuesAcceptIt(t *testing.T) {
 	assert.Equal(t, "https", strings.ToLower(schemeOrDefault("HTTPS")))
 	assert.Equal(t, "https", strings.ToLower(schemeOrDefault("")), "an unset scheme is HTTPS, not empty")
@@ -403,9 +400,8 @@ func TestTheScanFindsEveryKindThatCanRecreateAPod(t *testing.T) {
 //
 // A module restarts mid-drain routinely — the platform moving its own image reference off the in-cluster
 // registry is what restarts it — and for a moment after that the snapshot behind the record is empty.
-// Measured on the stand before this was closed: the record was rewritten eleven seconds in and its
-// `startedAt` jumped from 13:54:42 to 13:55:33, taking the alert clock and the quiet-scan counter back
-// to zero with it.
+// A pass landing there rewrites the record, taking the alert clock and the quiet-scan counter back to
+// zero with it.
 func TestARestartDoesNotRestartTheDrain(t *testing.T) {
 	ctx := context.Background()
 	dc := dependency.NewMockedContainer()
@@ -467,18 +463,18 @@ func TestTheScanIsEmptyOnceEverythingMoved(t *testing.T) {
 	assert.Zero(t, count)
 }
 
-// TestWhenTheClusterMayBePointedBackAtTheUpstream is the ordering that took a migrating cluster's
-// control plane down.
+// TestWhenTheClusterMayBePointedBackAtTheUpstream is the ordering a migrating cluster's control plane
+// depends on.
 //
 // Pointing the cluster at the upstream re-renders every image reference onto it, and the nodes can
 // only follow once the agent answers for a registry they hold no credentials or authority for. The
 // cluster's record of that is the published image address: while it is absent, this secret is what
 // renders resolve images through, and moving it moves the ground out from under the nodes.
 //
-// Measured on a cluster migrating from the legacy `Direct` mode, before the second half of the
-// condition existed: the legacy implementation had written the in-cluster address, this read as a
-// cluster ready to be given a destination, control-plane-manager rewrote the etcd manifest to the
-// upstream, the image could not be pulled, and the apiserver went down behind etcd.
+// Without the second half of the condition, a cluster migrating from the legacy `Direct` mode reads as
+// ready to be given a destination — the legacy implementation wrote the in-cluster address too — and
+// the etcd manifest is then rewritten to an upstream the nodes cannot pull from, taking the apiserver
+// down behind etcd.
 func TestWhenTheClusterMayBePointedBackAtTheUpstream(t *testing.T) {
 	inCluster := &registryIdentity{Address: registry_const.Host}
 	upstream := &ConfigUpstream{Host: "registry.deckhouse.io", Path: "/deckhouse/ee"}

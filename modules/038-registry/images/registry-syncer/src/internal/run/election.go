@@ -25,20 +25,15 @@ import (
 // Candidate stands in the storage leader election, but only while this replica ought to
 // hold the lease.
 //
-// The plain election underneath is untouched — this decides when to enter it, and when to
-// walk out of one already won. Both halves are needed:
+// The plain election underneath is untouched: this decides when to enter it and when to walk
+// out of one already won. Entering only when eligible keeps an empty replica from taking the
+// lease from a full one, which in air-gap would leave the leader unable to fill itself while
+// the followers replicate its emptiness. Walking out matters because completeness can appear
+// elsewhere — `d8 mirror push` lands on whichever replica the ingress chose — and without
+// stepping down the cluster sits with an empty leader beside a full follower.
 //
-//   - Entering only when eligible keeps an empty replica from winning the lease from a
-//     full one, which in air-gap would leave the leader unable to fill itself while the
-//     followers replicate its emptiness.
-//   - Walking out matters because completeness can appear elsewhere while this replica
-//     holds the lease: `d8 mirror push` arrives through the publication endpoint and lands
-//     on whichever replica the ingress chose, not necessarily the leader. Without stepping
-//     down, the cluster would sit with an empty leader and a full follower and recover on
-//     its own from neither.
-//
-// A leader that is genuinely full never becomes ineligible, so a healthy cluster
-// re-elects nothing.
+// A leader that is genuinely full never becomes ineligible, so a healthy cluster re-elects
+// nothing.
 type Candidate struct {
 	Log *slog.Logger
 

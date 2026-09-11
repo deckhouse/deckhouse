@@ -21,21 +21,15 @@ limitations under the License.
 // which credentials — is then entirely the agent's, decided per request from the
 // original registry name the runtime passes along.
 //
-// That is what makes the node configuration static. Adding or removing an additional
-// upstream changes nothing on any node, because the runtime already looks only at
-// the agent. A directory per configured registry would instead mean rewriting node
-// configuration on every change to a custom resource, and would put registry
-// credentials into the runtime's own configuration files.
+// That is what makes the node configuration static: adding or removing an additional
+// upstream changes nothing on any node, where a directory per configured registry would
+// mean rewriting node configuration on every change to a custom resource — and would put
+// registry credentials into the runtime's own configuration files.
 //
-// Two long-standing containerd mechanisms make it work:
-//
-//   - `_default` is consulted for any registry without a directory of its own
-//     (remotes/docker/config/config_unix.go, documented in docs/hosts.md). A directory
-//     an administrator created by hand still takes precedence, so hand-written
-//     configuration is not hijacked.
-//   - the original registry is passed as the `ns` query parameter whenever the
-//     endpoint differs from the requested registry (remotes/docker/resolver.go), which
-//     is always the case here.
+// Two long-standing containerd mechanisms make it work: `_default` is consulted for any
+// registry without a directory of its own (docs/hosts.md), while a directory an
+// administrator wrote by hand still takes precedence; and the original registry arrives as
+// the `ns` query parameter whenever the endpoint differs from the requested registry.
 package containerd
 
 import (

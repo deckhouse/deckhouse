@@ -177,10 +177,9 @@ func createRegistryConfigResource(t *testing.T, kubeCl *client.KubernetesClient,
 //
 // `registry-config` is rendered from the PREVIOUS implementation's settings in `mc/deckhouse`, and on a
 // migrated cluster nobody writes those any more — so it keeps describing whatever registry the cluster
-// was migrated from. Measured on such a cluster: the secret named `111.88.253.76.sslip.io/dh-dev-registry/...`
-// with that mirror's robot account while the cluster's upstream had been moved to
-// `dev-registry.deckhouse.io/sys/deckhouse-oss`, and this package preferred the secret. Absence falls
-// back and works; staleness dials the wrong registry with the wrong account.
+// was migrated from, with that registry's account, and this package used to prefer it over the
+// cluster's own configuration. Absence falls back and works; staleness dials the wrong registry with
+// the wrong account.
 func TestTheConfigResourceWinsOverTheLegacySecret(t *testing.T) {
 	const (
 		current = "dev-registry.deckhouse.io/sys/deckhouse-oss"

@@ -30,9 +30,8 @@ import (
 //
 // `safeToDropUpstream` and `allReplicasFull` are gates, and their whole purpose is to say no. With
 // `omitempty` on a bool, "no" is not a value — it is an absent key, indistinguishable from a field
-// the implementation does not have. That is not a hypothetical reading: on a live cluster the
-// status showed neither field, and the reasonable conclusion drawn from it was that the two gates
-// from the design were unimplemented, when in fact both were false.
+// the implementation does not have — a status showing neither field reads as an implementation
+// without the two gates the design asks for, when in fact both are false.
 //
 // So they are serialized always. A `false` an operator can see is a decision; an absence is a
 // question about the implementation.

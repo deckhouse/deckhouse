@@ -69,16 +69,6 @@ import (
 // as "no credentials yet".
 const DefaultKubeconfig = "/etc/kubernetes/registry-agent/kubeconfig"
 
-// buildScheme registers every kind this agent reads or writes.
-//
-// Core types included, because a layout names its credentials rather than carrying them and
-// resolving one means reading a Secret. Left out, the read fails with "no kind is registered
-// for the type v1.Secret" — and the agent treats a failed resolution as an unreachable API,
-// so it quietly falls back to the layout it was installed with and reports success. The node
-// keeps pulling, nothing looks broken, and the layout the cluster is actually trying to apply
-// never takes effect.
-//
-// A function so it can be asserted, because the failure above is invisible from the outside.
 // buildSource assembles where the agent gets its layout from.
 //
 // Lifted out of main so the wiring can be asserted. Every test of this package builds a Source
@@ -101,6 +91,13 @@ func buildSource(log *slog.Logger, kubeClient client.Client, opts options) *layo
 // moduleNamespace is where the Secret holding the resolved credentials lives.
 const moduleNamespace = "d8-system"
 
+// buildScheme registers every kind this agent reads or writes, core types included: a layout names
+// its credentials rather than carrying them, so resolving one means reading a Secret. Left out, that
+// read fails with "no kind is registered for the type v1.Secret" — which the agent treats as an
+// unreachable API, falling back to the layout it was installed with and reporting success. Nothing
+// looks broken, and what the cluster is trying to apply never takes effect.
+//
+// A function so it can be asserted, because that failure is invisible from the outside.
 func buildScheme() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 	if err := registryv1alpha1.AddToScheme(scheme); err != nil {

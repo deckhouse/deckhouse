@@ -132,8 +132,8 @@ type Options struct {
 
 // WriteEndpointPort is the second address of the same registry: the one that accepts a push.
 //
-// A pull-through cache refuses every write (`POST /v2/.../blobs/uploads/` answered `UNSUPPORTED`,
-// measured), and turning the cache off to accept one is not available either — the store is filled BY
+// A pull-through cache refuses every write (`POST /v2/.../blobs/uploads/` answers `UNSUPPORTED`), and
+// turning the cache off to accept one is not available either — the store is filled BY
 // pushes while it still has an upstream to serve the cluster from. So the writes get their own
 // listener, which the registry serves from the same process over the same storage with no proxy in
 // front of it.
@@ -234,8 +234,8 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 	//
 	// Nothing was lost with the `skipmodecleanup` flag that used to be set here either: it turned off
 	// a deletion the previous registry performed when it started in a mode other than the one that
-	// last wrote the store — a feature of the fork, measured deleting twelve gigabytes twice in one
-	// afternoon. Upstream has no such deletion, so there is nothing left to turn off.
+	// last wrote the store — a feature of the fork, and one that could empty a filled store on a
+	// restart. Upstream has no such deletion, so there is nothing left to turn off.
 
 	rendered, err := yaml.Marshal(config)
 	if err != nil {

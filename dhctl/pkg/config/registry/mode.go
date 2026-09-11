@@ -163,9 +163,7 @@ type ModeModel struct {
 	// It is what closes the deployment circle. The agent is a static pod whose image comes from a
 	// registry package, and every package a node fetches comes through registry-packages-proxy —
 	// which on a running cluster reaches the registry THROUGH the agent. A cluster whose first
-	// master has no agent therefore has no way to install one: measured on a cache-less cluster as
-	// `[registry-agent] attempt 6 failed` on the master and thirty failed `rpp-get` attempts on
-	// every worker after it, with no node ever joining.
+	// master has no agent therefore has no way to install one, and no node can join it.
 	//
 	// The installer is the one party outside that circle: its own proxy serves packages over the
 	// dhctl tunnel, from the upstream named in the configuration, needing nothing in the cluster.

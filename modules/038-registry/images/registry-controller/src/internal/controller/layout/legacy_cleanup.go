@@ -38,12 +38,9 @@ import (
 // handover, before this implementation's node agent has taken over the container runtime
 // configuration.
 //
-// Measured on a cluster, before the annotation existed: the objects went at 08:13, the node's
-// containerd was rewritten to the in-cluster name at 08:14 with no agent yet to answer it,
-// control-plane-manager moved etcd to a new digest at 08:16, and the pull failed with
-// `lookup registry.d8-system.svc: no such host`. etcd could not start, the API went with it, and
-// bashible — the thing that would have installed the agent — had no API to talk to. The cluster
-// could not repair itself.
+// A cluster in that state cannot repair itself: its nodes resolve the in-cluster name to nothing, the
+// next control-plane manifest re-rendered onto a new digest cannot be pulled, and with the API gone
+// bashible — the thing that would have installed the agent — has nothing to talk to.
 //
 // So the removal belongs here, where the state that decides it already lives: this controller owns
 // the RegistryNode objects and writes the very statuses the decision reads.

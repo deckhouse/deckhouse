@@ -253,10 +253,8 @@ func handle(_ context.Context, input *go_hook.HookInput) error {
 				// already set to `Managed` by the drain — every gate below and every
 				// template reads that one value, so nothing else here has to know.
 				//
-				// What the immediate withdrawal cost, measured: 84s during which the
-				// platform's own Deployment named a registry that no longer existed, and
-				// 680s during which workloads could not pull, 16 at the peak. See
-				// `hooks/v2/drain.go`.
+				// Why the alternative — withdrawing immediately — was rejected is
+				// written down in `hooks/v2/drain.go`.
 				config = *drain.Config
 			} else {
 				// Unmanaged means nothing, all the way down to the node. No agent, no node

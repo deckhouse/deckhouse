@@ -16,22 +16,19 @@ limitations under the License.
 
 // Package observe turns the state of the resources into metrics.
 //
-// A controller and not a module hook, and one exporter and not several. The resources are
-// where the state of this module lives — which upstream is in effect, whether the cache is
-// complete, what each node applied — and a controller already watches all of them. A hook
-// would poll the same objects on its own schedule and reach the same conclusions a beat
-// later, which is how two answers to one question appear.
+// A controller and not a module hook, because the resources are where this module's state lives
+// and a controller already watches all of them; a hook would poll the same objects on its own
+// schedule and reach the same conclusions a beat later, which is how two answers to one question
+// appear.
 //
-// It is also the only way some of this state can be reported at all. The node agent cannot
-// be scraped: it is a static pod that has to work when the API server does not, so it can
-// carry no kube-rbac-proxy — that sidecar authenticates against the very API server the
-// agent is designed to outlive. What the agent knows therefore reaches Prometheus by way
-// of the resource it already writes.
+// It is also the only way some of that state can be reported. The node agent cannot be scraped:
+// it is a static pod that has to work when the API server does not, so it can carry no
+// kube-rbac-proxy, which would authenticate against the very API server the agent outlives. What
+// the agent knows reaches Prometheus by way of the resource it already writes.
 //
-// This reconciler converges nothing. It runs on every replica rather than only on the one
-// holding the lease, so that the picture of the cluster does not depend on the health of a
-// single pod: the thing reporting a problem should not be the thing most likely to have
-// one. Duplicate series are the price, and the alerts aggregate over the pod label.
+// This reconciler converges nothing, and runs on every replica rather than only on the lease
+// holder: the thing reporting a problem should not be the thing most likely to have one.
+// Duplicate series are the price, and the alerts aggregate over the pod label.
 package observe
 
 import (

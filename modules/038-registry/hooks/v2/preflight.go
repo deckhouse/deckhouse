@@ -15,54 +15,33 @@ limitations under the License.
 */
 
 // The migration preflight: what has to be true before a cluster still on the previous
-// implementation is moved to this one.
+// implementation is moved to this one. Phase 1 of the migration ADR, whose rule is that the
+// migration does not begin without a green preflight. Every check is answered from the cluster:
 //
-// Phase 1 of the migration ADR, whose rule is stated there plainly — without a green preflight
-// the migration does not begin. Each check names a way the migration is known to go wrong, and
-// each is answered from the cluster rather than assumed:
+//   - the previous implementation's mode. Only Unmanaged is answerable here, because this build does
+//     not render that implementation's objects at all — a cluster arriving in Direct, Proxy or
+//     mid-transition has already lost them.
+//   - Local, whose registry IS the cluster: there is no pull path from outside, so it migrates
+//     through a temporary upstream of its own instead. See checkNotLocal.
+//   - an upstream that answers, because Unmanaged points every node straight at it and an
+//     unreachable one turns the documented degradation into an outage.
+//   - containerd v1 registry configuration written by the operator: the transition rewrites those
+//     files and the ADR carries them over by hand.
+//   - the same configuration already on a node, in a `conf.d` file. There the bashible step refuses
+//     to merge it and fails the pass, which ends that node's whole convergence — so this check turns
+//     a node that stops converging hours later into a list of node names before anything moves.
 //
-//   - the mode the previous implementation is in. In this build only Unmanaged is answerable: the
-//     previous implementation's objects do not render here at all, so a cluster that arrives still
-//     in Direct or Proxy has already lost them. Mid-transition counts too — its nodes are being
-//     reconfigured right now.
-//   - Local. The plan rests on the pull path being reachable from outside the cluster, and a
-//     cluster whose registry IS the cluster has no such path: it migrates through a temporary
-//     upstream of its own instead, which is a different procedure — see checkNotLocal.
-//   - an upstream that answers. Bringing the cluster to Unmanaged points every node straight at
-//     the upstream, so an unreachable one turns the documented degradation into an outage.
-//   - containerd v1 registry configuration written by the operator.
-//     The transition rewrites those files and the ADR says they are carried over by hand, so a
-//     cluster holding them must not be migrated silently.
-//   - the same configuration where it is already ON the nodes, in a containerd `conf.d` file. That
-//     one is not merely overwritten: under this implementation the bashible step refuses to merge it
-//     and fails, which ends the node's whole convergence — kubelet configuration, version upgrades,
-//     everything after that step. Refusing here turns a node that stops converging hours later into
-//     a list of node names before anything is moved.
+// Pre-staging the new components' images is deliberately not asked about: the one path runs through
+// Unmanaged, where every node pulls straight from a live upstream, so a reachable upstream is the
+// prerequisite for that state rather than one option among several.
 //
-// What is deliberately NOT asked is whether the new components' images are already on the nodes.
-// The ADR floated pre-staging them, and the previous implementation even had a DaemonSet that kept
-// images resident, so a check for it looks natural — but the migration has exactly one path, through
-// Unmanaged, and Unmanaged means every node pulls straight from a live upstream with nothing stored
-// locally. A reachable upstream is not one way of getting those images, it is the prerequisite for
-// being in that state at all; where it holds the images are simply pulled, and where it does not the
-// cluster cannot be in Unmanaged to begin with. So a pre-staging check could never pass and would
-// never need to: it would report a permanent warning about a mechanism the plan does not use.
+// `Blocking` marks the checks under which the migration must not begin. What enforces it is the
+// switch gate, which hands a cluster over only from Unmanaged; reachability is deliberately left
+// unenforced there, because by then the previous implementation has let go of the pull path and
+// refusing would leave the cluster with neither. It blocks the operator's decision one phase
+// earlier, which is the only place it can be acted on.
 //
-// Blocking marks the checks under which the migration must not begin at all, as against the ones
-// naming work to do first. What it does not mean is that this module will refuse: the refusal that
-// matters is the switch gate's, which enforces exactly the mode axis — it hands the cluster over
-// only from Unmanaged. The mode check here reports that same axis rather than a second opinion on
-// it, so an operator reads one answer in two places instead of two answers.
-//
-// Reachability deliberately gets no such enforcement. By the time the gate looks, the cluster is
-// Unmanaged and the previous implementation has already let go of the pull path; refusing the
-// takeover then would leave the cluster with neither implementation rather than with a reachable
-// registry. It is blocking for the operator's decision, which is made a phase earlier, and that is
-// the only place it can be acted on.
-//
-// The report is a metric per check plus a line in the log. Not a condition on an object, because
-// there is no object that belongs to this: the module's own status describes the module, and this
-// describes a cluster's readiness to stop being what it is.
+// Reported as a metric per check and a log line, since no object belongs to this question.
 package v2
 
 import (
@@ -351,23 +330,17 @@ func (p preflight) checkNodeContainerdConfig() preflightCheck {
 
 // checkMode answers whether the cluster arrived here in the one state this build serves.
 //
-// Which is the answer that depends on where this code runs, and it runs here. The migration ADR
-// asks this question a release earlier, on the build the cluster is leaving, and there Direct and
-// Proxy are ordinary starting points — "settled, you may begin". On THIS build they are not:
-// `registry_legacy_owns_the_cluster` is false, so none of the previous implementation's objects
-// render, and a cluster that arrives still in Proxy has had the pull path they served deleted from
-// under it. Only Unmanaged, where those objects served nothing to begin with, survives the trip.
+// The answer depends on where the question is asked. The migration ADR asks it a release earlier, on
+// the build the cluster is leaving, where Direct and Proxy are ordinary starting points. On THIS
+// build they are not: none of the previous implementation's objects render here, so a cluster
+// arriving in Proxy has had the pull path they served deleted from under it. Only Unmanaged, where
+// those objects served nothing to begin with, survives the trip. Mid-transition stops for the older
+// reason — its nodes are being reconfigured as the question is asked.
 //
-// So the check is not "is it standing still" but "is it standing where this build can serve it".
-// Mid-transition is a stop for the older reason: its nodes are being reconfigured as the question
-// is asked, so nothing else answered here describes the moment that matters.
-//
-// It is not going to the previous release, by decision: this branch merges into main, and the
-// clusters still on the previous implementation sit on release channels where backporting a checker
-// is expensive. So nobody runs this before upgrading, and the population that sees it is exactly
-// the one that arrived here without having been brought to Unmanaged. The advice therefore has to
-// be actionable from here, which means the image, not the mode: the discriminator has not flipped
-// while this is failing, so returning the previous release restores the objects this build removed.
+// Since the check does not run before the upgrade, the clusters that see it are exactly those that
+// arrived without being brought to Unmanaged. So the advice has to be actionable from here, which
+// means the image rather than the mode: the discriminator has not flipped while this is failing, so
+// returning the previous release restores the objects this build removed.
 func (p preflight) checkMode() preflightCheck {
 	unmanaged := string(registry_const.ModeUnmanaged)
 
@@ -398,12 +371,12 @@ func (p preflight) checkMode() preflightCheck {
 // upstream it does not have — the previous implementation does not even write node configuration in
 // Unmanaged without one — so the ordinary procedure cannot be applied to it as written.
 //
-// It does have a procedure, walked end to end on a test cluster and written down in the module's
-// FAQ: an OCI registry stood up in a namespace of the operator's own, loaded with the image set and
-// declared as the upstream for the length of the migration, then removed once the in-cluster
-// storage holds the set itself. The blobs already on the control-plane nodes are adopted rather than
-// downloaded again, because the new storage serves from the same host path the Local store used;
-// what the operator pays is a second copy of the set on disk while the temporary registry exists.
+// It does have a procedure, written down in the module's FAQ: an OCI registry stood up in a namespace
+// of the operator's own, loaded with the image set and declared as the upstream for the length of the
+// migration, then removed once the in-cluster storage holds the set itself. The blobs already on the
+// control-plane nodes are adopted rather than downloaded again, because the new storage serves from
+// the same host path the Local store used; the operator pays a second copy of the set on disk while
+// the temporary registry exists.
 //
 // Blocking all the same. Not because the cluster is stuck, but because the steps are different ones
 // and starting the ordinary procedure here takes the pull path down.

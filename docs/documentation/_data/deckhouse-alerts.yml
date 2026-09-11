@@ -3367,9 +3367,9 @@ alerts:
 
         **Right now nothing is broken, and that is the danger.** The refusal happens inside the
         bashible step that builds the container runtime configuration, and that step only runs when
-        something makes it run. Until then the file has no effect at all — measured on a test
-        cluster: the file was added, bashible reported "Configuration is in sync, nothing to do",
-        and the configuration was simply ignored.
+        something makes it run. Until then the file has no effect at all: bashible compares the
+        node's configuration checksum, finds it unchanged and reports "Configuration is in sync,
+        nothing to do".
 
         The step does run on its own, though: a node re-applies its whole configuration
         periodically (roughly every four hours), and also on any registry change, platform upgrade

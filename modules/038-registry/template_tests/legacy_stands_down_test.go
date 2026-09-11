@@ -28,11 +28,10 @@ import (
 // This is not a tidiness property. The two implementations both write
 // /etc/containerd/registry.d on every node and both create a Service named `registry`, so
 // "the old one is also deployed" means two writers racing over how the cluster pulls
-// images. It was measured on a fresh cluster with the cache configured: a
-// `registry-incluster-proxy` pod sat Pending beside a store that was already serving, and
-// what put it there was not a configuration anybody wrote — `d8-system/registry-config`
-// exists on every cluster, module 002 renders it unconditionally, and that secret was all
-// the legacy hook needed to start a state machine for a cluster it does not own.
+// images. The trigger is easy to hit and needs no configuration anybody wrote:
+// `d8-system/registry-config` exists on every cluster, module 002 renders it
+// unconditionally, and that secret alone is all the legacy hook needs to start a state
+// machine for a cluster it does not own.
 //
 // The hook that clears the legacy values is the mechanism; these conditions are the lock at
 // the layer that actually produces objects, and the only layer a test can see.

@@ -77,19 +77,14 @@ type ContextBootstrap struct {
 	// FromBundle marks a bootstrap whose images came from a bundle rather than from a registry the
 	// cluster can reach.
 	//
-	// The bootstrap steps this context feeds are the previous implementation's, and on this path they
-	// are borrowed for one job only: standing up a registry on the first master and filling it, so
-	// that a cluster with no upstream anywhere can start at all. Everything after that belongs to the
-	// current implementation, which is what the operator actually configured.
+	// The bootstrap steps this context feeds are the previous implementation's, borrowed on this path
+	// for one job: standing up a registry on the first master and filling it, so a cluster with no
+	// upstream anywhere can start at all. The field tells those steps apart — the ones bringing the
+	// registry up must still run, while the one that hands the cluster that implementation's state
+	// machine must not. Nothing in such a cluster would execute it, and the record it leaves reads as
+	// "the old implementation is mid-transition", which the current one refuses to take over from.
 	//
-	// So this field exists to tell those steps apart: the ones that bring the registry up on the node
-	// must still run, and the one that hands the cluster the previous implementation's state machine
-	// must not — there is nothing in such a cluster to execute that state machine, and the record of
-	// it left behind is read as "the old implementation is mid-transition", which is a state the
-	// current one refuses to take over from.
-	//
-	// Absent in every existing cluster, and the steps read it as "not from a bundle", which is what
-	// they did before it existed.
+	// Absent in every existing cluster, where the steps read it as "not from a bundle".
 	FromBundle bool `json:"fromBundle,omitempty" yaml:"fromBundle,omitempty"`
 }
 

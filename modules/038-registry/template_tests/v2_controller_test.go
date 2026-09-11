@@ -591,10 +591,9 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 
 		// One registry, two listeners: the address the cluster pulls through and the address a push
 		// lands on. It used to be two containers over one data directory, which needed two rendered
-		// configurations that must not be swapped — and the first attempt mounted the second one in the
-		// reader only, so that container crash-looped waiting for a file nobody could put there, eight
-		// restarts deep, while every other container in the pod reported ready. It took a bootstrap down
-		// with it on `ly-cache`.
+		// configurations that must not be swapped — mount the wrong one and that container crash-loops
+		// waiting for a file nobody can put there, while every other container in the pod reports
+		// ready.
 		It("serves the write endpoint from the same container as the cache", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
@@ -1142,12 +1141,10 @@ var _ = Describe("Module :: registry :: helm template :: v2 token service", func
 		// RFC 7638 JWK thumbprint (`GetJWKThumbprint` over the certificate in `rootcertbundle`) and
 		// looks a token's `kid` up in that map. docker_auth defaults to libtrust's legacy key ID —
 		// `7KJG:LEYJ:FHNV:...` — which is the SAME key by a name v3 cannot find, so every request is
-		// answered `token signed by untrusted key with ID` and 401.
-		//
-		// Measured on a cluster: RegistryStorage `Failed`, `491 of 491 references could not be
-		// copied`, containerd and the syncer both refused by a registry holding the very key that
-		// signed their tokens. The fork carries the switch for exactly this (`Add support for registry
-		// v3 key ID format`), and it is off by default.
+		// answered `token signed by untrusted key with ID` and 401 — containerd and the syncer both
+		// refused by a registry holding the very key that signed their tokens. The fork carries the
+		// switch for exactly this (`Add support for registry v3 key ID format`), and it is off by
+		// default.
 		Expect(config).To(ContainSubstring("disable_legacy_key_id: true"))
 
 		// The hashes, never the plaintext: this is the service that verifies a password,
@@ -1161,20 +1158,16 @@ var _ = Describe("Module :: registry :: helm template :: v2 token service", func
 		Expect(config).To(ContainSubstring(`actions: ["*"]`))
 	})
 
-	// Counting what the storage holds is a read of the catalogue, and the catalogue is a
-	// resource of its own that "pull" does not cover.
-	//
-	// In an air-gapped cluster it is the only accounting there is: the images arrive through
-	// `d8 mirror push`, which the syncer never sees, so nothing but the registry's own
-	// catalogue can say what is there. Measured before this rule existed — the push landed and
-	// the leader still reported 0 of 556, refused with "Name:catalog Type:registry".
 	// A replica writes into its own store, and needs an account that may.
 	//
-	// Measured on a three-master air-gapped cluster before this account existed: both followers
-	// asked their own registry for `pull,push` with the NODE account, were issued `pull`, and had
-	// all 629 references refused — "error authorizing context: insufficient scope" against 97
-	// uploads — while reporting only that they were replicating from the leader. The fill had the
-	// same hole and hid for longer, because it always failed earlier for want of a release.
+	// Neither of the other two fits: the node account is on every node and must never be able to
+	// change what a node pulls, and the publication one guards a path reachable from outside. Holding
+	// the node account, a follower asks its own registry for `pull,push`, is issued `pull` and has
+	// every reference refused with "insufficient scope", while reporting only that it is replicating.
+	//
+	// Counting what the store holds belongs to the same account: it is a read of the catalogue, a
+	// resource of its own that "pull" does not cover, and in an air-gapped cluster it is the only
+	// accounting there is — the images arrive through `d8 mirror push`, which the syncer never sees.
 	It("gives a replica a write account of its own, separate from the node and publication ones", func() {
 		secret := f.KubernetesResource("Secret", "d8-system", "registry-storage-auth-config")
 		config := secret.Field("stringData.auth_config\\.yaml").String()
@@ -1295,9 +1288,9 @@ var _ = Describe("Module :: registry :: helm template :: v2 garbage collection",
 	// and the collector nothing to justify a deletion by. The running image names its own installer,
 	// which declares the image set — so the syncer reads the Deployment.
 	//
-	// Measured on a cluster the moment this read was added without the permission: every replica
-	// reported `deployments.apps "deckhouse" is forbidden`, the store stayed unfilled and nothing was
-	// ever collected. A read a component cannot perform is not a fallback, it is a second failure.
+	// Without the permission every replica fails that read with `deployments.apps "deckhouse" is
+	// forbidden`, the store stays unfilled and nothing is ever collected. A read a component cannot
+	// perform is not a fallback, it is a second failure.
 	It("lets the syncer read the version the cluster is actually running", func() {
 		role := f.KubernetesResource("Role", "d8-system", "registry:storage")
 		Expect(role.Exists()).To(BeTrue())
@@ -1394,8 +1387,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 what gets deployed",
 // Two definitions of one object are not merged. Helm renders both, the object store here
 // keys by kind/namespace/name and so silently keeps the last, and nelm refuses the release
 // on install — which means a duplicate is invisible to every other spec in this file and
-// fatal in a cluster. That is how a leftover `Role/registry:storage` reached a test cluster
-// and left the module unable to start.
+// fatal in a cluster, where it leaves the module unable to start.
 var _ = Describe("Module :: registry :: helm template :: no duplicated objects", func() {
 	f := SetupHelmConfig(``)
 
@@ -1735,10 +1727,10 @@ var _ = Describe("Module :: registry :: helm template :: the published image add
 	})
 
 	Context("leaving the pull path while the cluster still names the in-cluster registry", func() {
-		// The whole decoupling, in one place. Measured on the alternative — withdrawing the
-		// service together with the address — 84 seconds during which the platform's own
-		// Deployment named a registry that no longer existed, and 680 seconds during which
-		// workloads could not pull, 16 of them at the peak.
+		// The whole decoupling, in one place. The alternative — withdrawing the service
+		// together with the address — leaves the platform's own Deployment naming a registry
+		// that no longer exists, and workloads unable to pull, until every release has been
+		// re-rendered one at a time.
 		//
 		// The address is empty because the hook clears it the moment a drain starts, which
 		// is what makes every render from then on name the upstream registry.
@@ -1830,8 +1822,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 metrics are scrapabl
 //
 // Credentials for the registry live on the node — the agent writes them into containerd's per-registry
 // configuration, and bashible writes them there before the agent exists — so a pod of this module needs
-// none of its own. Measured on an air-gapped cluster: a pod with an empty `imagePullSecrets` pulled
-// `registry.d8-system.svc:5001/system/deckhouse` in 72 ms, out of the cluster's own store.
+// none of its own, including on an air-gapped cluster pulling out of its own store.
 //
 // What the test protects is not the tidiness. `deckhouse-registry` is the contour design ADR decision 22
 // asks to retire — written by dhctl, rendered by module 002 — and this module referencing it is exactly

@@ -538,22 +538,15 @@ func (r *Reconciler) collectInputs(
 	return inputs, nil
 }
 
-// maintenanceWindows reads the disruption windows of the master node group.
-//
-// Read as unstructured, so that this controller does not take a dependency on the node
-// manager's Go types for four strings. Failures are swallowed on purpose: this only decides a
-// default hour, and a cluster where it cannot be read should collect at night rather than
-// never.
 // persistedCredentials reads back the credentials this module wrote last time.
 //
-// Best-effort, and nil on any failure. The one thing they are used for is giving a held
-// upstream back the credentials it was working with, and a hold arriving without them is the
-// state this repairs — not a reason to abandon the whole reconciliation. If the Secret is not
-// there yet, there is nothing to hold over anyway.
+// Best-effort, and nil on any failure: they exist to give a held upstream back the credentials
+// it was working with, and a hold arriving without them is the state this repairs rather than a
+// reason to abandon the reconciliation.
 //
-// A plain Get, which reaches the API rather than a cache: the manager excludes Secrets from
-// its cache precisely because the role granting this one is scoped by resourceNames, and a
-// rule with resourceNames cannot authorize the list an informer would need.
+// A plain Get, which reaches the API rather than a cache, because the manager excludes Secrets
+// from its cache: the role granting this one is scoped by resourceNames, and such a rule cannot
+// authorize the list an informer needs.
 func (r *Reconciler) persistedCredentials(ctx context.Context) map[string]registryv1alpha1.Auth {
 	secret := &corev1.Secret{}
 	key := types.NamespacedName{Namespace: Namespace, Name: constant.AuthSecretName}
@@ -590,6 +583,11 @@ func (r *Reconciler) storageLeaseHolder(ctx context.Context) string {
 	return *lease.Spec.HolderIdentity
 }
 
+// maintenanceWindows reads the disruption windows of the master node group.
+//
+// Read as unstructured, so this controller takes no dependency on the node manager's Go types for
+// four strings. Failures are swallowed on purpose: this only decides a default hour, and a cluster
+// where it cannot be read should collect at night rather than never.
 func (r *Reconciler) maintenanceWindows(ctx context.Context) []layout.MaintenanceWindow {
 	group := &unstructured.Unstructured{}
 	group.SetGroupVersionKind(schema.GroupVersionKind{
@@ -770,8 +768,8 @@ func (r *Reconciler) patchStorageStatus(
 	// Under an optimistic lock, because this write is a CONCLUSION drawn from what the replicas
 	// reported, and the replicas report into this same object while the controller reads it from a
 	// cache. Without the lock the conclusion could be written from a report the cluster had already
-	// replaced: measured as `safeToDropUpstream: true` beside a leader's own entry saying it did not
-	// hold the set — the one permission in this module that must never rest on a stale fact, since
+	// replaced — `safeToDropUpstream: true` beside a leader's own entry saying it does not hold the
+	// set — the one permission in this module that must never rest on a stale fact, since
 	// what it authorizes is cutting the cluster off from its upstream.
 	//
 	// A refused write is returned as the conflict it is. The reconciliation is requeued, reads what

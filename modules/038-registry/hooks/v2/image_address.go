@@ -148,8 +148,8 @@ func handleImageAddress(_ context.Context, input *go_hook.HookInput) error {
 // A drain answers first, and answers with nothing. It is the one case where the address is taken away
 // while the module is still serving it, and that is the point: from that moment every render names the
 // upstream registry, so the platform starts moving off an address that still answers. The service
-// outliving its advertisement is the opposite order from the one measured at 84s of the platform naming
-// a registry that was already gone and 680s of workloads unable to pull. See `hooks/v2/drain.go`.
+// outliving its advertisement is the deliberate order; the reverse leaves the platform naming a
+// registry that is already gone. See `hooks/v2/drain.go`.
 func publishedAddress(state imageAddressState, drain *DrainState) (string, string) {
 	if drain != nil && drain.Active {
 		return "", "the module is leaving the pull path and the cluster is still moving off it"
@@ -179,22 +179,18 @@ type imageAddressState struct {
 
 // switched answers whether image references may name the in-cluster registry.
 //
-// The address is rendered once for the whole cluster, and the name it uses resolves
-// nowhere except through the node agent — no DNS record answers it, and no pull secret
-// carries credentials for it. So it is safe exactly when every node's agent is applying
-// the layout the cluster gave it, and switching to it earlier would re-render every
-// workload in every module into an image reference nothing can pull yet. That is not a
-// theoretical window: on `Unmanaged` -> `Managed` the node configuration reaches nodes
-// through a bashible rollout that takes minutes, and a DaemonSet rolled inside it loses
-// its pod on every node until the rollout lands.
+// The address is rendered once for the whole cluster, and the name it uses resolves nowhere
+// except through the node agent. So it is safe exactly when every node's agent is applying the
+// layout the cluster gave it: switching earlier re-renders every workload into a reference
+// nothing can pull yet, and on `Unmanaged` -> `Managed` that window is the minutes a bashible
+// rollout takes.
 //
-// Sticky, and that is the more important half. Once the cluster is rendering the
-// in-cluster address, a single node whose agent falls behind must not take the address
-// away again: that would re-render every workload in the cluster back onto the upstream —
-// which, in an air-gapped cluster, is an address that answers nothing at all. So the
-// question is asked once, and the ConfigMap's own existence is the record that it has been
-// answered. It is the Helm release that withdraws it, when the module stops managing the
-// pull path or is disabled, and only then is the question asked again.
+// Sticky, which is the more important half: once the cluster renders the in-cluster address, one
+// node whose agent falls behind must not take it away again and re-render every workload back
+// onto the upstream — an address that answers nothing at all in an air-gapped cluster. So the
+// question is asked once and the ConfigMap's existence is the record of the answer; the Helm
+// release withdraws it when the module stops managing the pull path, and only then is it asked
+// again.
 func (s imageAddressState) switched() bool {
 	if s.AlreadyPublished {
 		return true

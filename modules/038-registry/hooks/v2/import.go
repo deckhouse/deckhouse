@@ -36,25 +36,20 @@ import (
 
 // The registry the cluster already pulls from, expressed in the new configuration.
 //
-// Published, never applied. The ModuleConfig belongs to whoever administers the cluster,
-// and a module that writes its own configuration takes away the only place an operator can
-// state intent. cni-cilium, facing the same problem, publishes a suggestion alongside and
-// creates the object only when none exists — but that part does not carry over here: the
-// module's default is to manage nothing, so creating a configuration would be the module
+// Published, never applied. The ModuleConfig belongs to whoever administers the cluster, and
+// a module that writes its own configuration takes away the only place an operator can state
+// intent. cni-cilium creates the object where none exists; that part does not carry over,
+// because this module's default is to manage nothing, so creating a configuration would be it
 // deciding to take over the pull path of a cluster nobody asked it to touch.
 //
-// What this saves is not typing but a transcription. The address, path, scheme,
-// certificate authority and credentials of the registry a running cluster pulls from are
-// spread across a secret and a docker configuration blob, and retyping them by hand is
-// where a truncated path or the wrong authority comes from — on the one setting that
-// decides whether the cluster can pull at all.
+// What this saves is not typing but a transcription: the address, path, scheme, authority and
+// credentials of the registry a running cluster pulls from are spread across a secret and a
+// docker configuration blob, and retyping them by hand is where a truncated path or the wrong
+// authority comes from — on the one setting that decides whether the cluster can pull at all.
 //
-// It is offered before anyone asks the module to manage anything, and that timing is the
-// whole design: the configuration schema refuses `mode: Managed` with no source of images,
-// so there is no state in which someone has turned the module on and left the upstream
-// blank for something to fill in later. By the time `mode: Managed` is expressible, the
-// upstream has to already be written — so it is written down in advance, where publishing
-// it changes nothing.
+// Offered before anyone asks the module to manage anything, which is the whole timing: the
+// schema refuses `mode: Managed` with no source of images, so by the time that mode is
+// expressible the upstream has to already be written.
 const (
 	// DeckhouseRegistrySecretName holds the resolved legacy configuration: what the
 	// cluster actually pulls with, rather than what any ModuleConfig asks for, which is

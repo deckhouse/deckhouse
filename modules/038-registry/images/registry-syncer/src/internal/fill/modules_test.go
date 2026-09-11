@@ -35,7 +35,7 @@ import (
 // A release declares the platform's images and nothing else. The modules a cluster keeps are packaged
 // and declared separately — so completeness judged on the release alone can be missing every one of
 // them, and completeness is exactly the answer that authorizes cutting an air-gapped cluster off from
-// its upstream. Measured on a bundle: 474 of 474 platform manifests present, 34 module images absent.
+// its upstream.
 func TestAModuleAccountsForItsOwnImages(t *testing.T) {
 	source := startRegistry(t)
 	// Modules live under the platform's own repository, which is what the store is scoped to.
@@ -121,10 +121,9 @@ func TestNoModulesIsNotAnEmptySet(t *testing.T) {
 // exist.
 //
 // The platform reads `GET /v2/<repository>/modules/tags/list` to enumerate what it can install, and a
-// pull-through cache never holds that: a tag listing leaves nothing behind. Measured on `ly-mmc` after
-// a clean transition — every replica full, every node pulling, and the whole catalogue answering
-// `NAME_UNKNOWN` — so the catalogue belongs in the declared set, where a store missing it is not
-// judged complete.
+// pull-through cache never holds that: a tag listing leaves nothing behind, so a store filled by
+// proxying answers `NAME_UNKNOWN` for the whole catalogue while every node pulls perfectly well. The
+// catalogue therefore belongs in the declared set, where a store missing it is not judged complete.
 func TestTheModuleCatalogueIsPartOfTheSet(t *testing.T) {
 	source := startRegistry(t)
 	source.Repository = "deckhouse/ee"

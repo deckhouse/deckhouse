@@ -41,9 +41,8 @@ type Plan struct {
 	// Separate from Enabled because the two were confused, and the confusion was expensive: a
 	// replica that has not yet read its instruction has an empty plan, an empty plan is
 	// indistinguishable from a disabled one, and the disabled path waits an hour before looking
-	// again. So a fresh replica collected nothing for its first hour no matter what schedule it
-	// had been given — measured on a cluster with `*/15 * * * *`, where the first collection
-	// could not happen before the hour was up — and nothing in the log said so.
+	// again. So a fresh replica collects nothing for its first hour no matter what schedule it was
+	// given, and nothing in the log says why.
 	Known bool
 
 	// Enabled is whether to collect at all.
@@ -75,9 +74,8 @@ const unknownPlanRetry = time.Minute
 // planRecheck bounds how long a scheduled wait goes without looking at the configuration again.
 //
 // The wait used to be one sleep to the next firing, so a schedule was only ever re-read after it
-// fired: an operator who corrected `15 0 * * *` to `*/15 * * * *` saw nothing happen until the
-// following midnight, and nothing said why. Measured on a cache cluster: the schedule was changed
-// at 16:31 and the replica stayed asleep on the plan it had read at 16:12, due at 00:15.
+// fired: an operator who corrects `15 0 * * *` to `*/15 * * * *` sees nothing happen until the
+// following midnight, because the replica stays asleep on the plan it read before the change.
 //
 // Five minutes rather than a tighter loop, because the cost is paid on every replica for the life
 // of the cluster while the benefit is bounded by how fast an operator expects a correction to take
@@ -346,8 +344,6 @@ func (s *Scheduler) fire(parent context.Context) {
 	s.Log.Error("the garbage collection failed", "error", err.Error())
 }
 
-// collect is the sequence that must not be interrupted halfway: refuse writes, collect,
-// accept writes again.
 // collect runs one collection.
 //
 // It no longer makes the registry read-only around the whole of it, and that is a fix rather than a
@@ -357,11 +353,10 @@ func (s *Scheduler) fire(parent context.Context) {
 // simply stops writing while it collects — see Loop.PauseWrites. Serving is never interrupted.
 //
 // What it cost to take it here: applying read-only means restarting the serving process, and the
-// kubelet counts that as the container crashing. Twice per collection, every fifteen minutes,
-// whether or not anything was deletable — measured on a cluster as seven restarts per replica,
-// exponential backoff, and a store that answered `connection refused` for minutes at a time. In that
-// state the followers could not replicate, the leader's own accounting could not read the store, and
-// the collection failed on the read it had itself made impossible.
+// kubelet counts that as the container crashing — twice per collection, on every schedule, whether or
+// not anything was deletable. The restarts accumulate into kubelet backoff, and a store in that state
+// answers `connection refused` for minutes at a time: the followers cannot replicate, the leader's own
+// accounting cannot read the store, and the collection fails on the read it made impossible itself.
 func (s *Scheduler) collect(ctx context.Context) error {
 	report, collectErr := s.Collect(ctx)
 	if s.Publish != nil {

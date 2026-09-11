@@ -16,20 +16,17 @@ nothing either.
 # cluster-scoped, so RBAC can only grant the verbs cluster-wide: every kubelet in
 # the cluster holds update on every node's RegistryNode status.
 #
-# That status is load-bearing for the whole cluster's pull path. The hook that
-# decides whether image references may name the in-cluster registry publishes the
-# address once every node reports the layout applied, and never takes it back —
-# so a single node reporting on behalf of the others moves every workload in the
-# cluster onto an address the other nodes have not been configured to resolve,
-# permanently. This policy is what makes a node's report a statement about
-# itself; node-manager narrows the same kind of grant the same way.
+# That status is load-bearing: the address is published once every node reports
+# the layout applied and is never taken back, so one node reporting on behalf of
+# the others moves every workload in the cluster onto an address the rest cannot
+# resolve, permanently. This policy is what makes a node's report a statement
+# about itself, the way node-manager narrows the same kind of grant.
 #
 # It covers every write surface of the resource rather than the verbs the agent's
-# ClusterRole happens to grant today: a verb added to that role later must not
-# open a door the policy never looked at. Reads are outside admission and are not
-# constrained here — a node may read its neighbours' objects, which is safe
-# because RegistryNode carries the same global configuration for every node and
-# names its credentials rather than holding them.
+# ClusterRole grants today, so a verb added later opens no door the policy never
+# looked at. Reads are outside admission: a node may read its neighbours' objects,
+# which is safe because RegistryNode carries the same global configuration for
+# every node and names its credentials rather than holding them.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:

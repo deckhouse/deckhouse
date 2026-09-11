@@ -74,14 +74,14 @@ func TestLeasesAreNotCached(t *testing.T) {
 
 // TestManagerElectsALeader guards the line whose absence made every replica act on its own.
 //
-// Nothing was electing anything, so each reconciler ran in every controller pod. Measured on a
-// three-master cluster: the storage update controller replaced TWO cache replicas at once, two
-// instances having each chosen "the next stale pod" seven milliseconds apart. The refusal to move
-// while a replica is missing or not yet serving is what keeps a replacement safe, and it holds only
-// within one process — so a second process undoes it and there is no error anywhere to say so.
+// Nothing was electing anything, so each reconciler ran in every controller pod: two instances of
+// the storage update controller each choose "the next stale pod" within milliseconds of each other
+// and replace TWO cache replicas at once. The refusal to move while a replica is missing or not yet
+// serving is what keeps a replacement safe, and it holds only within one process — so a second
+// process undoes it, with no error anywhere to say so.
 //
 // The symptom cannot appear on a single-master cluster, where there is one replica to begin with.
-// That is why this is pinned by a test rather than left to the next multimaster run to rediscover.
+// That is why this is pinned by a test rather than left to a multimaster run to rediscover.
 func TestManagerElectsALeader(t *testing.T) {
 	opts := managerOptions(":0", ":0")
 

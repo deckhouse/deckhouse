@@ -95,9 +95,9 @@ func TestPublishAddsTheOwnEntry(t *testing.T) {
 // different numbers reported in different fields.
 //
 // They were one number, and the reading it invited was wrong in the most expensive direction: an
-// air-gapped cluster showed `333/556` beside `full: true`, which looks like a transition authorised
-// while a third of the images are missing. It was not — 333 IS the whole set the cluster declares, and
-// 556 is what an operator measured in a bundle, which carries other modules, other editions and
+// air-gapped cluster reads as a fraction of a bundle beside `full: true`, which looks like a
+// transition authorised while images are missing. It is not: the numerator is the whole set the
+// cluster declares, while the bundle's own number carries other modules, other editions and
 // attestations. Only `verifiedDigests` may be compared with `full`; `totalDigests` decides nothing.
 func TestTheTwoCountsAreSeparate(t *testing.T) {
 	publisher, c := newPublisher(t, storageObject())
@@ -357,7 +357,7 @@ func TestMergeCollectionCreatesAnEntry(t *testing.T) {
 	require.NotNil(t, replicas[0].CollectedAt)
 }
 
-// TestOnlyOneReplicaCarriesTheLeaderRole is a status a live cluster produced: two entries claiming
+// TestOnlyOneReplicaCarriesTheLeaderRole is the status this guards against: two entries claiming
 // Leader at the same time.
 //
 // A replica writes only its own entry, so an entry outlives whatever it last said. One that led, lost
@@ -421,9 +421,9 @@ func TestDemotingAStaleLeaderCountsAsAChange(t *testing.T) {
 //
 // `safeToDropUpstream` is derived by the controller from the leader's report, and the air-gap
 // transition is gated on it — but the derivation and the report are written by different processes, so
-// the conclusion can outlive the fact. Measured on a cluster: `safeToDropUpstream: true` while the
-// leader's own entry, in the same object, said it did not hold the set. In that window the cluster
-// could be cut off from its upstream on evidence that no longer existed.
+// the conclusion can outlive the fact: `safeToDropUpstream: true` beside a leader entry, in the same
+// object, saying it does not hold the set. In that window the cluster could be cut off from its
+// upstream on evidence that no longer exists.
 func TestALeaderThatIsNotFullWithdrawsPermissionToDropTheUpstream(t *testing.T) {
 	storage := storageObject(registryv1alpha1.StorageReplicaStatus{
 		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 459,

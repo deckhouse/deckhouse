@@ -145,46 +145,36 @@ func Resolve(
 	}
 
 	// The primary image set, asked for by the upstream's own address rather than the
-	// in-cluster one. Routed through the cache, exactly as if it had been asked for by the
-	// in-cluster address.
+	// in-cluster one, and routed through the cache all the same.
 	//
 	// This is the requirement that an image pulled past the cache must still end up in it,
-	// and the cheapest way to meet it is not to pull past the cache in the first place. The
-	// store is a pass-through cache while an upstream is configured: a request it does not
-	// hold it fetches and keeps, so a request routed through it settles by construction —
-	// measured on a cluster, where one manifest asked of the store left the manifest, its
-	// tag link and its blob on disk. Sent straight to the upstream, as the branch below
-	// does, the same image reaches the node and the cache never sees it. In an air-gapped
-	// cluster that is a delayed failure: the upstream is dropped once the cache is judged
-	// complete, and these images were never part of what it holds.
+	// met by not pulling past it: the store is a pass-through cache while an upstream is
+	// configured, so what it does not hold it fetches and keeps. Sent straight to the
+	// upstream, as the branch below does, the image reaches the node and the cache never
+	// sees it — a delayed failure in an air-gapped cluster, where the upstream is dropped
+	// once the cache is judged complete.
 	//
-	// Restricted to the primary backends and their mirrors, and to repositories under the
-	// prefix those backends serve. Anything else keeps its own path: an additional upstream
-	// is transit by design, and a registry that merely happens to be reachable is not ours
-	// to cache.
+	// Restricted to the primary backends, their mirrors and the repositories under the
+	// prefix they serve: an additional upstream is transit by design, and a registry that
+	// merely happens to be reachable is not ours to cache.
 	if trimmed, ok := primaryByUpstreamAddress(spec, namespace, repository); ok {
 		return primaryTargets(spec, trimmed, remainder)
 	}
 
 	// A registry the cluster was given credentials for, named by its own address.
 	//
-	// This is what a control-plane image reference looks like: the static pod manifests of
-	// etcd and kube-apiserver name the upstream directly, on purpose, so that the control
-	// plane does not depend on the in-cluster registry being up. Deckhouse's own components
-	// do the same wherever a reference was rendered before the pull path moved.
+	// This is what a control-plane image reference looks like: etcd and kube-apiserver name
+	// the upstream directly, on purpose, so the control plane does not depend on the
+	// in-cluster registry being up.
 	//
-	// Those pulls have to be authenticated by the agent, because nothing else can. The
-	// agent owns the runtime's whole registry configuration — every registry arrives here
-	// through one `_default` drop-in — so the per-registry credentials the runtime used to
-	// hold are gone, and a static pod has no imagePullSecrets to fall back on. Treated as
-	// unconfigured, such a pull is forwarded anonymously and the registry refuses it: what
-	// that looked like was a three-master cluster where the two masters that joined after
-	// the agent took over could not pull etcd at all, while the first one, whose images
-	// arrived during bootstrap, was fine.
+	// Only the agent can authenticate those pulls. It owns the runtime's whole registry
+	// configuration — everything arrives through one `_default` drop-in — so the
+	// per-registry credentials the runtime used to hold are gone, and a static pod has no
+	// imagePullSecrets to fall back on. Treated as unconfigured, such a pull is forwarded
+	// anonymously and refused, which is a master that cannot pull etcd.
 	//
-	// The credentials go to the very registry they belong to, so nothing is disclosed to
-	// anyone: this adds no address, it only stops dropping the credentials for one already
-	// in the layout.
+	// The credentials go to the very registry they belong to, so nothing is disclosed: this
+	// adds no address, it only stops dropping the credentials for one already in the layout.
 	if endpoint := knownEndpoint(spec, namespace); endpoint != nil {
 		return Decision{
 			Kind: KindKnown,

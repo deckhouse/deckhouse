@@ -94,11 +94,9 @@ func FromCluster(ctx context.Context, c client.Client) (Releases, error) {
 		// A release object is not the only way a cluster can be running a version, and treating
 		// it as one leaves whole clusters with neither a fill nor a collection: on a cluster
 		// installed from a development or pull-request image no DeckhouseRelease is ever
-		// deployed, and this function returned an error on every pass. Measured on such a
-		// cluster: `RegistryStorage` in `phase: Failed` with `FillFailed`, all three replicas
-		// reporting "no release is deployed", the leader's store holding nothing and the
-		// followers holding nothing to replicate. The cache was empty by construction, on the
-		// one axis — a cache with an upstream — the module exists to serve.
+		// deployed, so this function would fail on every pass, the store would hold nothing
+		// and the followers would have nothing to replicate. The cache was empty by
+		// construction, on the one axis — a cache with an upstream — the module exists to serve.
 		//
 		// What is read instead is the image the cluster is actually running, and that is the
 		// same answer by a shorter route: the version is only ever used to find the installer

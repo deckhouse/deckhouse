@@ -391,10 +391,10 @@ func TestReconcileKeepsTheUpstreamWhenTheLeaderFails(t *testing.T) {
 // one thing that can lie to it.
 //
 // A replica owns its entry in the status and cannot touch it again once its pod is gone, so the
-// entry keeps whatever it last said. Measured on a three-master cluster: the lease moved to
-// another node in eight seconds, and the departed replica's entry went on saying Leader for as
-// long as the pod stayed away — two entries claiming leadership, indefinitely. Resolved by
-// array order, as it was, the stale entry could answer "full" and take the upstream away while
+// entry keeps whatever it last said: once the lease moves, the departed replica's entry goes on
+// saying Leader for as long as its pod stays away, so two entries claim leadership indefinitely.
+// Resolved by array order, as it was, the stale entry could answer "full" and take the upstream
+// away while
 // the replica that actually leads held a fraction of the images. There is no going back from
 // that: the upstream it dropped is, in an air-gapped cluster, an address that answers nothing.
 func TestReconcileIgnoresTheClaimOfAReplicaThatNoLongerLeads(t *testing.T) {
@@ -968,4 +968,3 @@ func TestTheControllerDoesNotConcludeFromASupersededReport(t *testing.T) {
 	require.Error(t, err, "the refused write is reported, which is what a requeue is for")
 	assert.True(t, apierrors.IsConflict(err), "and reported as the conflict it is: %v", err)
 }
-

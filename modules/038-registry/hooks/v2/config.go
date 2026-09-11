@@ -237,11 +237,9 @@ func resolveAuth(license, username, password string) *ConfigAuth {
 // the first minutes after the handover the node renders the PREVIOUS release's bundle
 // against this content. That bundle has no agent step and does not skip the step that
 // writes per-registry directories, so whatever `Hosts` says here is what the node ends up
-// pulling through. Measured on a cluster migrating from the legacy `Direct` mode: a
-// self-referential entry became a 94-byte drop-in naming the in-cluster address as its own
-// upstream with no credentials, every pull on every node failed, and because the pull path
-// is how the new release finishes rolling out, nothing could repair it — the control plane
-// went to ImagePullBackOff behind it.
+// pulling through. A self-referential entry becomes a drop-in naming the in-cluster address
+// as its own upstream, and since the pull path is how the new release finishes rolling out,
+// nothing in the cluster can repair that afterwards.
 func buildBashibleConfig(
 	config RegistryConfig, access registryv1alpha1.Auth, ca string, addresses []string,
 ) (*bashible_model.Config, error) {
@@ -282,24 +280,20 @@ func buildBashibleConfig(
 
 // legacyReadableHosts describes the pull path for a node that has not got the agent yet.
 //
-// Read by the previous release's bashible step, and by nothing else: once the node renders
-// with this release's bundle, the agent owns the runtime's registry directory and the step
-// that reads this is skipped. So this exists for one window, and in that window it is the
-// only thing the node has.
+// Read by the previous release's bashible step and by nothing else: once the node renders with
+// this release's bundle, the agent owns the runtime's registry directory and that step is
+// skipped. So this exists for one window, in which it is the only thing the node has.
 //
-// What it must produce is what the legacy implementation produced for the same address —
-// the upstream, its credentials, its authority, and the rewrite from the in-cluster path to
-// the upstream one. The shape is deliberately the same as `DirectModeParams.hostMirrors`,
-// which is what a `Direct` cluster was pulling through right up to the handover.
+// It must produce what the legacy implementation produced for the same address — the upstream,
+// its credentials, its authority, and the rewrite from the in-cluster path to the upstream one —
+// so the shape deliberately matches `DirectModeParams.hostMirrors`. Leaving `Hosts` empty is not
+// the safer option it looks like: the legacy step removes directories the configuration no
+// longer names, so an empty map takes the working directory away instead.
 //
-// Leaving `Hosts` empty instead is not the safer option it looks like: the legacy step
-// removes directories the configuration no longer names, so an empty map takes the working
-// directory away and fails the same way, one step later.
-//
-// An air-gapped cluster has no upstream to name, and the cache that replaces it is not up
-// while the previous bundle is still rendering. There is nothing truthful to write, so the
-// in-cluster address is named as its own — the state that costs nothing on a cluster that
-// was installed with this implementation, since no legacy step will ever read it.
+// An air-gapped cluster has no upstream to name and its cache is not up while the previous
+// bundle still renders, so there is nothing truthful to write: the in-cluster address is named
+// as its own, which costs nothing on a cluster installed with this implementation, where no
+// legacy step will ever read it.
 func legacyReadableHosts(config RegistryConfig) map[string]bashible_model.ConfigHosts {
 	upstream := config.Primary.Upstream
 	if upstream == nil {

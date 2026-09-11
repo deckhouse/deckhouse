@@ -133,9 +133,8 @@ type Loop struct {
 	lastTotalDigests atomic.Int32
 
 	// lastDeclaredDigests is the last measured SIZE OF THE SET, carried the same way and for the same
-	// reason. Measured on the static stand when it was not: the process restarted, published the counts
-	// it had carried over from the object, and the denominator — carried nowhere — came out absent, so
-	// the status showed no progress at all while the store was complete.
+	// reason: with the numerator carried over and the denominator carried nowhere, a restarted process
+	// publishes progress against an absent total, which reads as no progress at all.
 	lastDeclaredDigests atomic.Int32
 
 	// complete records whether this replica holds the whole expected set, as of its last pass.
@@ -193,9 +192,9 @@ func (l *Loop) surveyStore(declared map[string]struct{}, deployed string) (fill.
 // Read here rather than in each branch because every branch has to answer with the same set, and the
 // obvious source — whatever the branch's own copier enumerated — is NOT the same set. A follower
 // enumerates through the leader's store, and that store also serves the nodes as a pass-through
-// cache, so everything a node ever pulled through it joins the count. Measured on `ly-mmc`: the
-// leader reported 332 while its followers reported 400, of the same cluster, at the same moment, both
-// "full"; one sample read 398 verified out of 384 held, which is not a number anybody can act on.
+// cache, so everything a node ever pulled through it joins the count. Replicas of one cluster would
+// then report different sizes for the same set at the same moment, all of them "full", and a
+// numerator can exceed its own denominator — which is not a number anybody can act on.
 //
 // Cached because reading it is a handful of registry requests — the release image, the installer it
 // declares, and a HEAD per tag — and the loop runs every thirty seconds. Keyed on the deployed
@@ -235,27 +234,16 @@ func (l *Loop) declaredSet(ctx context.Context) (map[string]struct{}, string, er
 	return declared, releases.Deployed, nil
 }
 
-// reportHeld replaces a branch's own accounting with what this replica holds of the declared set.
-//
-// The branches count what their copier moved, which answers "what did this pass do" — a useful thing
-// to log and the wrong thing to publish. What the status is read for is how much of what the cluster
-// needs is here, and that has to mean the same in every role, or the three replicas of one cluster
-// cannot be compared with each other at all.
-//
-// A failure leaves the branch's numbers alone rather than zeroing them: a count that is a pass out of
-// date beats no count, and zero in these fields reads as an emptied store.
-// announceStart says that a fill or a replication has begun, so that the storage does not read
-// `Idle` while it is under way.
+// announceStart says that a fill or a replication has begun, so the storage does not read `Idle`
+// while it is under way.
 //
 // The report itself is published at the end of a pass, which is right — it reports what happened —
 // but it leaves the first fill of a store with no report at all, and a controller with no reports
-// calls the storage `Idle`. That is the state an operator sees right after enabling the cache, and it
-// is exactly when they most need to see that something started. Publisher.Announce is create-only, so
-// this cannot overwrite real numbers on any later pass.
+// calls the storage `Idle`: exactly when an operator most needs to see that something started.
+// Publisher.Announce is create-only, so this cannot overwrite real numbers on a later pass.
 //
-// The denominator is taken from the cheapest source that knows it, in order: what the spec declares,
-// what the previous pass counted, and — only if neither has an answer — the set itself, which costs an
-// API read. Announcing `0/0` beside gigabytes in flight would be its own kind of silence.
+// The denominator comes from the cheapest source that knows it, in order: what the spec declares,
+// what the previous pass counted, and only then the set itself, which costs an API read.
 func (l *Loop) announceStart(ctx context.Context, state report.State, stated int32) {
 	if l.Publisher == nil {
 		return
@@ -283,6 +271,14 @@ func (l *Loop) announceStart(ctx context.Context, state report.State, stated int
 	}
 }
 
+// reportHeld replaces a branch's own accounting with what this replica holds of the declared set.
+//
+// The branches count what their copier moved, which answers "what did this pass do" — worth logging
+// and wrong to publish. The status is read for how much of what the cluster needs is here, and that
+// has to mean the same in every role, or the replicas of one cluster cannot be compared at all.
+//
+// A failure leaves the branch's numbers alone rather than zeroing them: a count a pass out of date
+// beats no count, and zero in these fields reads as an emptied store.
 func (l *Loop) reportHeld(ctx context.Context, state *report.State) {
 	declared, deployed, err := l.declaredSet(ctx)
 	if err != nil {
@@ -313,10 +309,9 @@ func (l *Loop) reportHeld(ctx context.Context, state *report.State) {
 	// The branches decide it from their own copier's report — "everything I set out to copy is
 	// accounted for" — and that answer cannot see what the copier never looked at. A pull-through
 	// cache writes a manifest's revision link the moment it serves it, so a copier finds the manifest
-	// already present and counts it as done while not one of its layers is on disk. Measured on
-	// `ly-mmc`: 333 MB of store, twenty manifests sampled and twenty missing layers, three replicas
-	// reporting `full` and `safeToDropUpstream: true` — and an air-gap in which nothing could be
-	// pulled at all.
+	// already present and counts it as done while not one of its layers is on disk. Every replica can
+	// then report `full` and `safeToDropUpstream: true` over a store from which nothing can be pulled
+	// once the upstream is gone.
 	//
 	// The rule is the one applyCatalogue already used, now applied wherever the numbers come from:
 	// every declared digest servable from this store, and the deployed release resolvable by tag.
@@ -544,9 +539,8 @@ func (l *Loop) once(ctx context.Context) error {
 	// TotalDigests is NOT recomputed here, and that is the correction.
 	//
 	// It used to be, on every pass, so that a field filled in by one code path would not read as "the
-	// store emptied" on the others. The intent was right and the cost was never measured: counting it
-	// walks the whole store, the loop runs every 30 seconds, and on an air-gapped master that showed up
-	// as `registry-syncer` at 95% CPU with 102 minutes of processor time on a node up for 154.
+	// store emptied" on the others. The intent was right and the cost was not: counting walks the whole
+	// store, the loop runs every 30 seconds, and the process ends up spending most of a CPU on it.
 	//
 	// So it is answered where the store is already being read — see applyCatalogue — and carried over
 	// otherwise. Carrying over is what keeps the original concern addressed: the status keeps the last
@@ -555,11 +549,10 @@ func (l *Loop) once(ctx context.Context) error {
 		// Nothing measured it on this pass — the fill and replication paths do not read the store — so
 		// ask, at most once a minute, and fall back to the last number if even that is refused.
 		//
-		// Needed because moving the count into applyCatalogue alone emptied the field everywhere else:
-		// measured on a caching cluster right after the fix, `verified=396` beside `total: null`, which
-		// is precisely the "reads as an emptied store" the field was introduced to prevent. The survey
-		// is shared with the catalogue path and cached the same way, so this costs one walk a minute at
-		// worst, not one per pass.
+		// Needed because moving the count into applyCatalogue alone empties the field everywhere else,
+		// leaving a verified count beside an absent total — precisely the "reads as an emptied store"
+		// the field was introduced to prevent. The survey is shared with the catalogue path and cached
+		// the same way, so this costs one walk a minute at worst, not one per pass.
 		if survey, err := l.surveyStore(nil, ""); err == nil && survey.Total > 0 {
 			state.TotalDigests = survey.Total
 		} else {
@@ -573,9 +566,9 @@ func (l *Loop) once(ctx context.Context) error {
 	// And the denominator, which has the same shape of problem and one wrinkle of its own: memory is
 	// empty in a freshly started process, and on a cluster with an upstream and no air-gap declaration
 	// NOTHING on a steady-state pass computes the set — not the fill path, which knows only what it
-	// wrote, and not the survey above, which is asked without a set on purpose. Measured on the static
-	// stand after the first version of this fix: `totalDigests` climbing pass after pass while
-	// `declaredDigests` stayed absent, so the status still showed no progress at all.
+	// wrote, and not the survey above, which is asked without a set on purpose. Without this,
+	// `totalDigests` climbs pass after pass while `declaredDigests` stays absent, and the status still
+	// shows no progress at all.
 	//
 	// So it is asked for, and only while it is unknown: one API read on the passes before the first
 	// answer, and nothing afterwards. The store is not walked again for it — the size of the set comes
@@ -652,7 +645,7 @@ func (l *Loop) applyFill(
 		return
 	}
 
-	// `stated` is logged and nothing more. It is what an operator measured in a bundle, and by the
+	// `stated` is logged and nothing more. It is what an operator counted in a bundle, and by the
 	// owner's rule it may not enter the decision — the fill is judged against the set the run
 	// enumerates, which is what the cluster needs. Kept in the log because the two numbers differing is
 	// worth seeing when a store looks smaller than somebody expected.
@@ -836,11 +829,10 @@ func (l *Loop) dataDir() string {
 // cut off from that upstream. And it does not count everything on disk: a store legitimately holds more
 // than any release declares, because the cache settles whatever the cluster pulls through it.
 //
-// Both halves matter because this number has to mean the same thing as the one a copy reports. When it
-// did not, a replica said 333 after a copying pass and 348 after a counting one; `full` followed
-// whichever ran last and flapped; eligibility follows `full`, so the lease moved; and a fill restarts on
-// every move. Measured on a cluster: the lease travelling between three replicas every twenty seconds,
-// none of them ever finishing.
+// Both halves matter because this number has to mean the same thing as the one a copy reports. When the
+// two disagree, a replica answers one way after a copying pass and another after a counting one; `full`
+// follows whichever ran last and flaps; eligibility follows `full`, so the lease moves; and a fill
+// restarts on every move — the lease travels between replicas and no fill ever finishes.
 func (l *Loop) applyCatalogue(ctx context.Context, state *report.State) {
 	// The same set, from the same cache, as the fill and replication branches publish against — see
 	// declaredSet. Read separately here once, which is how the leader and its followers came to
@@ -853,11 +845,11 @@ func (l *Loop) applyCatalogue(ctx context.Context, state *report.State) {
 
 	// One walk of the store for all three answers — see fill.Take — and not on every pass.
 	//
-	// Three separate readers, every thirty seconds, cost 95% of a CPU on an air-gapped master. Merging
-	// them into one walk divides that by three; not repeating it while nothing can have changed removes
-	// what is left. The store only changes here through a push, so a survey at most once a minute is as
-	// current as anything downstream needs: what it gates is the air-gap transition, and delaying that
-	// by up to a minute is not a cost anybody can measure.
+	// Three separate readers, every thirty seconds, cost most of a CPU on a master. Merging them into
+	// one walk divides that by three; not repeating it while nothing can have changed removes what is
+	// left. The store only changes here through a push, so a survey at most once a minute is as current
+	// as anything downstream needs: what it gates is the air-gap transition, and delaying that by up to
+	// a minute costs nothing that matters.
 	//
 	// The previous survey is reused rather than the numbers being guessed at: a stale count is a count
 	// that was true a minute ago, while a guess is never true.
@@ -873,7 +865,7 @@ func (l *Loop) applyCatalogue(ctx context.Context, state *report.State) {
 
 	// The set, and nothing but the set: how full the store is of what the cluster needs. What an
 	// operator stated in `storage.source.expectedDigests` is not consulted, not even when the set comes
-	// out empty — see Report.Complete for the measurement that settled it. An empty set reads as
+	// out empty — see Report.Complete for the reasoning. An empty set reads as
 	// incomplete, which is the safe direction: it withholds the air-gap transition rather than
 	// authorising it on no evidence.
 	state.VerifiedDigests = held
@@ -881,10 +873,10 @@ func (l *Loop) applyCatalogue(ctx context.Context, state *report.State) {
 	// Counting is not enough, and this is the check that was missing.
 	//
 	// A count says how many manifests are on the disk; it does not say that the release can be RESOLVED
-	// from this store. Those come apart, and expensively: on a three-master cluster the leader reported
-	// full while its followers got `MANIFEST_UNKNOWN` for `:pr21788` from it, and the agent got
-	// `NAME_UNKNOWN: repository name not known to registry` — a store that authorized dropping the
-	// upstream and then could not hand the release to anybody. Replication enumerates the set by reading
+	// from this store. Those come apart, and expensively: a leader can report full while its followers
+	// get `MANIFEST_UNKNOWN` for the release tag from it and the agent gets `NAME_UNKNOWN: repository
+	// name not known to registry` — a store that authorizes dropping the upstream and then cannot hand
+	// the release to anybody. Replication enumerates the set by reading
 	// the release BY TAG, so a set without its tag does not propagate, and neither does an update.
 	//
 	// The deployed version only. The previous one is for a rollback, which is worth having and not worth
@@ -916,18 +908,15 @@ func versionsOf(releases gc.Releases) []string {
 // carryOverCount keeps this replica's last accounting when the pass did none, so an idle pass does not
 // look like the storage emptied.
 //
-// Carried verbatim — the count AND the verdict — because an idle pass learned nothing, and a pass that
-// learned nothing must not contradict the one that did. It used to recompute fullness from
-// `expectedDigests`, and where that is not stated the recomputation could only answer "not full": every
-// idle pass therefore erased a completeness that a fill had just established.
+// Carried verbatim — the count AND the verdict — because a pass that learned nothing must not
+// contradict the one that did. Recomputing fullness from `expectedDigests`, which most clusters do not
+// state, could only answer "not full", so every idle pass erased a completeness a fill had just
+// established.
 //
-// What that cost is worth writing down, because the symptom was nowhere near the cause. A leader filled
-// the store and reported full; the controller saw the storage converged and cleared `needSync`; with
-// nothing left to do the next pass went idle and erased the fullness; the controller saw a store that
-// was not converged and asked for a fill again. Every few seconds, for as long as the cluster ran. And
-// since a replica's eligibility to lead depends on being full, the lease travelled with it — which is
-// what made this look like flapping leader election, and what three earlier fixes to leadership could
-// not have cured.
+// The cycle that produces is worth knowing, because the symptom sits nowhere near the cause: the leader
+// reports full, the controller clears `needSync`, the next pass goes idle and erases the fullness, the
+// controller asks for a fill again — and since eligibility to lead depends on being full, the lease
+// travels with it and the whole thing reads as flapping leader election.
 func (l *Loop) carryOverCount(ctx context.Context, state *report.State) error {
 	storage := &registryv1alpha1.RegistryStorage{}
 	if err := l.Client.Get(ctx, types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage); err != nil {
@@ -1059,24 +1048,19 @@ func (l *Loop) localRegistry() (fill.Registry, error) {
 
 // writeRegistry is the same store, addressed through the listener that does NOT proxy.
 //
-// Filling through the serving instance does not fill anything, and the way it fails is silent. Before
-// uploading a layer the client asks the destination whether it already holds that blob; the serving
-// instance is a pull-through cache, so it fetches the blob from the upstream to answer and says yes.
-// The upload is skipped, the manifest is written, and the store ends up holding a complete set of
-// manifests naming blobs it does not have — servable only for as long as the upstream is reachable,
-// which is precisely the condition an air-gapped cluster does not have.
+// Filling through the serving instance does not fill anything, and fails silently: before uploading a
+// layer the client asks whether the destination already holds that blob, and a pull-through cache
+// fetches it from the upstream to answer and says yes. The upload is skipped, the manifest is
+// written, and the store holds a complete set of manifests naming blobs it does not have — servable
+// only while the upstream is reachable, which is exactly what an air-gapped cluster lacks. Every
+// manifest reports as written while the store gains nothing. `d8 mirror push` is unaffected, writing
+// to this endpoint from outside, which is why a bundle installation always had a real store while
+// self-filling did not.
 //
-// Measured on `ly-mmc`: a fill of the whole set reporting `written=400, skipped=0` that left the store
-// at the same 333 MB and the same 450 blobs; every layer of every sampled manifest absent from disk
-// while the registry answered 200 for it. `d8 mirror push` was never affected — it writes to this
-// endpoint from outside — which is why installations from a bundle always had a real store and
-// self-filling never did.
-//
-// The registry serves that listener itself, on WriteEndpointPort, from the same process and the same
-// storage with no proxy in front of it — it used to be a second container over the same data
-// directory. Its client certificate is about trusting the address a request claims to come from, not
-// about admission: it answers an unauthenticated request with 401, the same as the serving listener,
-// so the credentials this replica already holds are enough.
+// The registry serves that listener itself, on WriteEndpointPort, from the same process and storage
+// with no proxy in front of it. Its client certificate is about trusting the address a request claims
+// to come from, not about admission: it answers an unauthenticated request with 401 like the serving
+// listener, so the credentials this replica already holds are enough.
 func (l *Loop) writeRegistry() (fill.Registry, error) {
 	registry, err := l.localRegistry()
 	if err != nil {

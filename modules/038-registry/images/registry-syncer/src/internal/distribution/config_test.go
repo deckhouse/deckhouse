@@ -336,7 +336,7 @@ func TestTheTwoListenersDoNotShareAPort(t *testing.T) {
 // TestTheCacheKeepsProxyingWhileTheWriteEndpointExists is the circle this closes.
 //
 // A registry configured as a pull-through cache is read-only: docker distribution answers every write
-// with UNSUPPORTED. Measured on a cluster: `d8 mirror push` failed on POST /v2/.../blobs/uploads/.
+// with UNSUPPORTED, so `d8 mirror push` cannot get past `POST /v2/.../blobs/uploads/`.
 // Publication therefore used to turn the proxy off — which confined it to air-gap and made the cache
 // stop caching exactly when the cluster still depended on it.
 //
@@ -365,8 +365,7 @@ func TestTheCacheKeepsProxyingWhileTheWriteEndpointExists(t *testing.T) {
 
 	// Nothing here turns off a store-wiping mode change any more: the flag that used to do it
 	// belonged to this repository's fork of the registry, and upstream performs no such deletion.
-	// What it once cost is on the record — twelve gigabytes, twice in one afternoon, two seconds
-	// after a start.
+	// What that mode change could cost was the whole store, seconds after a start.
 	assert.NotContains(t, renderToMap(t, &registryv1alpha1.RegistryStorageSpec{Upstream: upstream}),
 		"proxy")
 }
@@ -389,9 +388,9 @@ func TestTheWriteListenerTrustsTheIngressAuthority(t *testing.T) {
 //
 // Filling through the serving address fills nothing, silently: before uploading a layer the client
 // asks whether the destination already holds it, the cache answers yes by fetching it from the
-// upstream, and the store is left with manifests naming blobs it does not have. Measured: 400 layers
-// reported written, the store unchanged at 333 MB. So the listener exists on every replica, whether or
-// not anything is published from outside.
+// upstream, and the store is left with manifests naming blobs it does not have — every layer reported
+// written while the store gains nothing. So the listener exists on every replica, whether or not
+// anything is published from outside.
 func TestTheWriteEndpointIsAlwaysConfigured(t *testing.T) {
 	for _, published := range []bool{false, true} {
 		config := renderWrapperToMap(t, &registryv1alpha1.RegistryStorageSpec{Publish: published})

@@ -61,9 +61,6 @@ const (
 	// Preferred over the secret below for the fields that describe WHICH registry this cluster belongs
 	// to. The secret is written once, at bootstrap, and then only by this module out of these very
 	// values — so on a cluster whose registry has moved since, it says where the registry used to be.
-	// Measured on a migrated cluster: the upstream had been moved to
-	// `dev-registry.deckhouse.io/sys/deckhouse-oss`, while the legacy contour still named the mirror the
-	// cluster came from, with that mirror's robot account.
 	registryConfigResourceName = "registry"
 )
 
@@ -195,9 +192,8 @@ func resolvedUpstream(ctx context.Context, dc dependency.Container) (*registryUp
 	result.Path, _ = upstream["path"].(string)
 	result.CA, _ = upstream["ca"].(string)
 
-	// Lower-cased: this resource says `HTTPS`, and the global values accept `http` or `https` only.
-	// Measured while repairing a cluster by hand — the other spelling fails the values schema and takes
-	// the whole main queue down with it.
+	// Lower-cased: this resource says `HTTPS`, and the global values accept `http` or `https` only. The
+	// other spelling fails the values schema and takes the whole main queue down with it.
 	result.Scheme = "https"
 	if scheme, _ := upstream["scheme"].(string); scheme != "" {
 		result.Scheme = strings.ToLower(scheme)
@@ -234,15 +230,12 @@ func discoveryDeckhouseRegistry(ctx context.Context, input *go_hook.HookInput, d
 	// The resource is preferred because it is the one kept current: the registry module resolves it from
 	// `mc/registry` on every change. The secret is written at bootstrap and afterwards only by this
 	// platform out of these very values, so on a cluster whose registry has moved it describes where the
-	// registry used to be. Measured on a migrated cluster: the upstream had been moved to
-	// `dev-registry.deckhouse.io/sys/deckhouse-oss` while the contour still named the mirror the cluster
-	// came from, with that mirror's robot account — and everything downstream believed the contour.
+	// registry used to be — and everything downstream believes whichever of the two is read first.
 	//
 	// And the secret is no longer REQUIRED, which is the other half. Refusing to run without it made
 	// this hook the thing that could deadlock a cluster: it runs at Operator-Startup, so a missing
-	// secret stopped the main queue before ConvergeModules, which is what would have removed the
-	// condition. Measured, on a cluster where that secret was deleted on purpose: nine tasks behind this
-	// one and no way out but recreating the secret by hand.
+	// secret stops the main queue before ConvergeModules — which is what would have removed the
+	// condition — leaving no way out but recreating the secret by hand.
 	registrySecretRaw, fromSecret := registrySecret{}, false
 	if len(registryConfSnap) > 0 {
 		registrySecretRaw, fromSecret = registryConfSnap[0], true

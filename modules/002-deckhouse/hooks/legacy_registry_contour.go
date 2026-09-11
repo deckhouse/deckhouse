@@ -17,41 +17,22 @@ limitations under the License.
 // Whether this cluster still runs the previous implementation of the registry module.
 //
 // One fact, published for the templates: the registry module records its handover in
-// `d8-system/registry-v2-switch`, and that record is sticky — once written, the previous
-// implementation is off for good and its hooks are gated out. So the record's presence answers "is the
-// legacy registry contour still read by anything", and the answer decides whether this module renders
-// it.
+// `d8-system/registry-v2-switch`, and that record is sticky, so its presence answers "is the legacy
+// registry contour still read by anything" — which decides whether this module renders it.
 //
-// # What the contour is and why it goes
+// The contour is `d8-system/registry-config`, rendered here out of `deckhouse.registry.*` — the
+// previous implementation's settings in `mc/deckhouse`. Design ADR decision 22 asks for it to go: the
+// configuration moves to `mc/registry` and the address becomes a constant. On a cluster that has
+// switched the secret is not merely redundant but WRONG, since nothing writes those settings any
+// more, and dhctl reads it to find the registry reachable from outside. Stale registry data preferred
+// by the tooling is worse than none: absence falls back to something that works, staleness dials the
+// wrong registry with the wrong account.
 //
-// `d8-system/registry-config` is rendered here out of `deckhouse.registry.*` — the previous
-// implementation's settings in `mc/deckhouse`, with its modes `Direct`/`Proxy`/`Unmanaged`. The design
-// ADR (decision 22) asks for that contour to go: the configuration moves to `mc/registry` and the
-// address becomes a constant.
+// The record and not the mode, because a cluster can run this implementation and manage nothing
+// (`Unmanaged`), where the contour is just as stale.
 //
-// On a cluster that has switched, the secret is not merely redundant — it is WRONG. Nothing writes
-// those settings any more, so it keeps describing whatever registry the cluster was migrated from.
-// Measured on a migrated cluster whose upstream had been moved to
-// `dev-registry.deckhouse.io/sys/deckhouse-oss`:
-//
-//	registry-config: imagesRepo=111.88.253.76.sslip.io/dh-dev-registry/sys/deckhouse-oss
-//	                 username=robot$dh-dev-registry+dev-registry
-//
-// and dhctl, which reads this secret to find the registry it can reach from outside, PREFERRED that
-// over everything else. Stale registry data preferred by the tooling is worse than none: absence falls
-// back to something that works, staleness dials the wrong registry with the wrong account.
-//
-// # Why the record and not the mode
-//
-// A cluster can run this implementation and manage nothing (`Unmanaged`), and the contour is just as
-// stale there. What decides is whether the PREVIOUS implementation is still the one configuring nodes,
-// and that is exactly what the switch record says.
-//
-// # Order this depends on
-//
-// dhctl reads the upstream from the `RegistryConfig` resource before falling back to this secret — that
-// came first on purpose. Removing the secret from under a dhctl that still preferred it would have left
-// the out-of-cluster path on the in-cluster address and the SSH tunnel: workable, but a step back.
+// Order this depends on: dhctl reads the upstream from the `RegistryConfig` resource before falling
+// back to this secret, and that came first on purpose.
 package hooks
 
 import (

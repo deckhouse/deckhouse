@@ -74,23 +74,16 @@ func WithAgentAuthority(path string) func() {
 // agentServesLocally reports whether the node agent is what stands behind the in-cluster
 // address on this node.
 //
-// The address alone does not say so. The previous implementation of the registry module
-// serves the very same name from an in-cluster proxy Service, and a cluster migrating from
-// it still names that address everywhere while nothing listens on the loopback one yet.
-// Reading the address as "the agent" there is a deadlock rather than a failed fetch: this
-// process dials a port with nothing behind it, cannot start, and so never gets to install
-// the agent that would have made the assumption true.
+// The address alone does not say so: the previous implementation serves the same name from an
+// in-cluster proxy, so a cluster migrating from it names that address everywhere while nothing
+// listens on the loopback yet — and reading the address as "the agent" there is a deadlock rather
+// than a failed fetch, since this process would dial a port with nothing behind it and never get
+// to install the agent.
 //
-// The authority is the one thing that separates the two, and it separates them on the axis
-// that matters. It is generated on the node in the same step that starts the agent, so it
-// exists exactly where the agent is the answer, and its absence is what a cluster that has
-// not had the handover looks like. Being node-local, it is also readable without asking the
-// cluster anything, which this has to be: it is consulted on the path that fetches the
-// modules this process needs in order to run at all.
-// Not cached, and an empty file counts as absent: bashible writes the authority on a node
-// that may still be coming up, so the file appears after this process starts, and it appears
-// by being created and then written to. The sibling translation in registry-packages-proxy
-// reads it the same way, for the same reasons.
+// The authority separates the two: it is generated on the node in the same step that starts the
+// agent, and being node-local it is readable without asking the cluster anything — which this has
+// to be, since it is consulted on the path that fetches the modules this process needs to run.
+// Not cached, and an empty file counts as absent, because bashible creates it and then writes.
 func agentServesLocally() bool {
 	info, err := os.Stat(agentCAFile)
 	return err == nil && info.Size() > 0
@@ -132,22 +125,15 @@ func Dial(repository string) string {
 // it — has to dial the agent to fetch through it. Three things about the agent are not
 // properties of the registry the cluster was told about, and cannot be:
 //
-//   - It serves HTTPS, whatever the upstream behind it speaks. An upstream reached over plain
-//     HTTP is perfectly ordinary, and taking the configured scheme here would send a plaintext
-//     request to a TLS listener.
-//   - Its authority is generated on the node at bootstrap and never leaves it, so no cluster
-//     object can carry it — every node has a different one. That is deliberate: a node's
-//     ability to pull must not wait for cluster-wide certificate material to arrive. It is why
-//     this pod mounts the authority from the host instead.
-//   - Nothing authenticates to it. The agent holds credentials of its own for the registry
-//     behind it, and asks the client for none.
+//   - it serves HTTPS whatever the upstream behind it speaks, so the configured scheme would send
+//     a plaintext request to a TLS listener;
+//   - its authority is generated on the node at bootstrap and never leaves it, because a node's
+//     ability to pull must not wait for cluster-wide certificate material — hence the host mount;
+//   - nothing authenticates to it: it holds credentials of its own for the registry behind it.
 //
-// The last of those is why the credentials are cleared rather than left to go unused. A docker
-// config is not a bag of credentials the client may ignore — it is looked up by host, and a
-// config with no entry for the host being dialled makes building the client fail outright,
-// before any request is made. Left in place, it took the whole pull path down the moment the
-// module took it over: the deckhouse ModuleSource sat on `"127.0.0.1:5001/system/deckhouse/
-// modules" credentials not found in the dockerCfg`, and no module could be fetched again.
+// The last is why the credentials are cleared rather than left unused: a docker config is looked
+// up by host, and one with no entry for the host being dialled makes building the client fail
+// outright, which takes the whole pull path down the moment the module takes it over.
 func (rc *RegistryConfig) ForRepository(repository string, logger *log.Logger) *RegistryConfig {
 	// Either spelling of the same agent: as recorded, or as dialled. The loopback one can
 	// only be the agent; the recorded one is the agent only once the agent serves it, and

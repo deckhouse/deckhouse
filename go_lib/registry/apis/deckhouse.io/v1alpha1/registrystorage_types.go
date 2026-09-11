@@ -54,17 +54,14 @@ type RegistryStorageSpec struct {
 	// AirGapRequested says the configuration asked to run without an upstream, whether or not the
 	// upstream has actually been dropped yet.
 	//
-	// Its own field because `Publish` used to carry this meaning as a side effect, and the two have
-	// come apart: the write endpoint is now a separate instance that exists on every managed cluster,
-	// while THIS is the transition window — air-gap asked for, the upstream still held so the cluster
-	// keeps working, images arriving through `d8 mirror push` that the syncer never sees and therefore
-	// cannot count.
+	// Its own field because `Publish` used to carry this meaning as a side effect and the two have
+	// come apart: the write endpoint now exists on every managed cluster, while THIS is the
+	// transition window — air-gap asked for, the upstream still held so the cluster keeps working,
+	// images arriving through `d8 mirror push` that the syncer never sees.
 	//
-	// What depends on it is how completeness is measured, and that is the whole reason to keep it
-	// separate: reading the catalogue is only honest while nothing can put images in the store by
-	// itself. A pass-through cache fills its own store on every miss, so a catalogue read there would
-	// count images the cluster fetched rather than images it holds on purpose — completeness would
-	// arrive by accident. See StoreIsAuthority in the syncer.
+	// What depends on it is how completeness is measured: reading the catalogue is honest only while
+	// nothing else can put images in the store, and a pass-through cache fills its own on every miss,
+	// so completeness would arrive by accident. See StoreIsAuthority in the syncer.
 	// +optional
 	AirGapRequested bool `json:"airGapRequested,omitempty"`
 
@@ -150,9 +147,9 @@ type RegistryStorageStatus struct {
 	// Serialized even when false, which is why it carries no `omitempty`: on a
 	// bool that option erases the answer instead of shortening it, and "no, it is
 	// not safe to drop the upstream" is the answer an operator most needs to see.
-	// Absent, it reads as a field the implementation does not have — which is how
-	// it was read on a live cluster — and the question "can this cluster go
-	// air-gap yet" then has no visible answer at all, only a missing one.
+	// Absent, it reads as a field the implementation does not have, and the
+	// question "can this cluster go air-gap yet" then has no visible answer at
+	// all, only a missing one.
 	SafeToDropUpstream bool `json:"safeToDropUpstream"`
 
 	// AllReplicasFull means every replica holds the expected set, so losing the
@@ -243,8 +240,8 @@ type StorageReplicaStatus struct {
 	// controller owns this object's status but has no way to count that set, so before this field
 	// existed the only denominator available to it was `spec.source.expectedDigests` — which an
 	// operator states when declaring air-gap and nobody states otherwise. A cluster with an upstream
-	// therefore reported `filled: 0, total: 0` through the whole of its longest phase, with gigabytes
-	// moving: measured on the static stand, 11.7 GiB copied against `0/0`.
+	// would therefore report `filled: 0, total: 0` through the whole of its longest phase, while the
+	// entire image set was moving.
 	//
 	// Reported, never decided from. Completeness stays `Full`, derived by the replica from the same
 	// reading, and the air-gap gate stays on `expectedDigests` — an operator's declaration is not

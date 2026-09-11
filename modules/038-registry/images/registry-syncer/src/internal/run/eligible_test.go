@@ -139,9 +139,9 @@ func TestAirGapCannotGetStuck(t *testing.T) {
 		"copying what a partial leader has is not the stall; leading with nothing is")
 }
 
-// TestTheFullestReplicaLeadsWhenNobodyIsComplete is the case a live cluster showed: the lease moved to
-// the replica holding 333 digests while another held 428, and every follower then waited on the one
-// with least to catch up — because a follower only replicates from a leader that is complete.
+// TestTheFullestReplicaLeadsWhenNobodyIsComplete is the case this rule exists for: the lease landing
+// on the emptiest replica while a fuller one stands by, after which every follower waits on the one
+// holding least to catch up — because a follower only replicates from a leader that is complete.
 //
 // Nobody being full is the ordinary state of a cluster that is still filling, so "somebody has to
 // lead" is right; which somebody is what this decides. The fullest replica is closest to becoming a
@@ -197,8 +197,8 @@ func TestSomebodyLeadsWhenThereIsNothingToCompare(t *testing.T) {
 //
 // A fill runs on the leader. Moving the lease to another incomplete replica abandons what the first
 // had done and starts again elsewhere — and under a "fullest leads" rule that is self-perpetuating,
-// because the fullest changes as they fill and the lease chases it. Measured on a cluster: the lease
-// moving between replicas holding 428, 337 and 333 digests, none of them ever completing.
+// because the fullest changes as they fill and the lease chases it between replicas, none of them
+// ever completing.
 func TestNoElectionHappensAmongIncompleteReplicas(t *testing.T) {
 	// Nobody is full, and master-1 currently leads — even though master-0 holds more.
 	replicas := []registryv1alpha1.StorageReplicaStatus{

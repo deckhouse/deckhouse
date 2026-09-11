@@ -202,9 +202,8 @@ func TestComputeAirGapWaitsForTheLeader(t *testing.T) {
 		//
 		// The upstream is private, so a backend without credentials turns a cache miss
 		// from something slower into a failure, and answers any reference naming the
-		// upstream by its own name with a 401. Measured on a cluster in exactly this
-		// state: asked for air-gap, cache incomplete, and every node holding an
-		// upstream it could not authenticate to.
+		// upstream by its own name with a 401 — in exactly the state the hold exists
+		// for: air-gap asked for over a cache that is not complete yet.
 		require.Contains(t, got.Credentials, constant.AuthKeyUpstream,
 			"the credentials of a held upstream must survive into the auth Secret")
 
@@ -713,10 +712,9 @@ func TestComputeLeavesNoCredentialInAnyResource(t *testing.T) {
 // and retrying it everywhere would turn every missing tag into a request to every backend. Mirrors
 // share that list and that rule, so a follower placed first answers 404 for images the cluster holds.
 //
-// Measured on `ly-mmc` in air-gap: the agent on master-0 was pointed at master-2, which held 402 of
-// 403 images; the missing one was on disk on two other replicas, `crictl pull` returned NotFound and
-// eighteen pods could not start. The leader is the replica whose completeness authorized dropping the
-// upstream, so it is the one that has the set.
+// The leader is the replica whose completeness authorized dropping the upstream, so it is the one
+// that has the set: point an agent at a follower instead and a pod can fail to start over an image
+// two other replicas hold on disk.
 func TestAgentsArePointedAtTheLeader(t *testing.T) {
 	access := testAccess()
 	access.Addresses = []string{"10.0.0.1:5001", "10.0.0.2:5001", "10.0.0.3:5001"}

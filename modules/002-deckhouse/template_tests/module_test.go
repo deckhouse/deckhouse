@@ -161,23 +161,12 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		})
 	})
 
-	// What the Deckhouse controller fetches over HTTP must name something its own client can
-	// dial, which is not the address image references point at.
-	//
-	// `base` is where image references point, and those are resolved by the container runtime,
-	// which the registry module hands a drop-in redirecting any registry to its node agent —
-	// so `base` may name a service nothing ever dials. A process has no such redirection.
-	// Reading `base` here worked only for as long as the two were always the same value, and
-	// taking them apart is what lets the pull path move without the release check and the
-	// module source moving with it.
-	//
-	// The fixture gives them different values on purpose, so this is observable at all.
 	// The previous implementation's registry contour, and the one fact that decides whether it exists.
 	//
-	// Measured on a migrated cluster: `registry-config` still named the registry the cluster had been
-	// migrated FROM, with that mirror's robot account, because nothing writes `deckhouse.registry.*`
-	// after the handover — and dhctl preferred it over the cluster's own configuration. So the object
-	// has to disappear exactly when the handover record appears, and come back if it ever does not.
+	// Nothing writes `deckhouse.registry.*` after the handover, so on a migrated cluster
+	// `registry-config` keeps naming the registry the cluster was migrated FROM, with that registry's
+	// account — and dhctl used to prefer it over the cluster's own configuration. So the object has to
+	// disappear exactly when the handover record appears, and come back if it ever does not.
 	Context("The legacy registry contour", func() {
 		legacyContourExists := func() bool {
 			return f.KubernetesResource("Secret", "d8-system", "registry-config").Exists()
@@ -205,6 +194,17 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		})
 	})
 
+	// What the Deckhouse controller fetches over HTTP must name something its own client can
+	// dial, which is not the address image references point at.
+	//
+	// `base` is where image references point, and those are resolved by the container runtime,
+	// which the registry module hands a drop-in redirecting any registry to its node agent —
+	// so `base` may name a service nothing ever dials. A process has no such redirection.
+	// Reading `base` here worked only for as long as the two were always the same value, and
+	// taking them apart is what lets the pull path move without the release check and the
+	// module source moving with it.
+	//
+	// The fixture gives them different values on purpose, so this is observable at all.
 	Context("What the controller fetches itself", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues+clusterIsBootstrapped)

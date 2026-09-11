@@ -72,19 +72,15 @@ const (
 	// UserSync is used by a replica writing into its OWN store — the fill from an upstream
 	// and the replication from the leader.
 	//
-	// A third identity rather than either of the two above, and neither would do. The node
-	// account cannot write at all, which is right: it is distributed everywhere. Reusing the
-	// publication account would put the password that can replace images through an
-	// internet-facing endpoint into the environment of every replica on every master, turning
-	// one exposed surface into as many as there are masters.
+	// A third identity, because neither of the two above would do. The node account cannot
+	// write at all, which is right for one distributed everywhere; the publication account
+	// guards an internet-facing endpoint, and putting it in every replica on every master
+	// would multiply that exposure by the number of masters. This one is never handed to a
+	// node and never reachable through the ingress.
 	//
-	// This one is never handed to a node and never reachable through the ingress: it exists
-	// inside the storage's own pods, where the registry it writes to is a container beside it.
-	//
-	// Its absence was a real defect, and an invisible one: replication was assigned the node
-	// account, so every follower in an air-gapped cluster asked for `pull,push`, was issued
-	// `pull`, and had all 629 references refused with "insufficient scope" — while its status
-	// said only that it was replicating from the leader.
+	// Its absence is a defect that hides: with the node account a follower asks for
+	// `pull,push`, is issued `pull` and has every reference refused with "insufficient
+	// scope", while its status says only that it is replicating from the leader.
 	UserSync = "registry-sync"
 )
 

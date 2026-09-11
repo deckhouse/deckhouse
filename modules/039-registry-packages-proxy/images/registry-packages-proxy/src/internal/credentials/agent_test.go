@@ -103,10 +103,9 @@ func TestTheAgentIsRecognisedByEitherSpelling(t *testing.T) {
 //
 // The agent is a static pod installed by bashible, and the package it is installed from is fetched
 // through this proxy. Dialling the agent before it exists makes the proxy wait for what is waiting
-// for it — measured on a fresh cluster as `rpp-get [registry-agent] attempt 14 failed … HTTP 500:
-// dial tcp 127.0.0.1:5001: connect: connection refused`, thirty times over, after which no node ever
-// joined. The design ADR names this circle explicitly as the hazard the whole rollout is built
-// around.
+// for it — `dial tcp 127.0.0.1:5001: connect: connection refused` until the bootstrap gives up, and
+// no node joins. The design ADR names this circle explicitly as the hazard the whole rollout is
+// built around.
 func TestWithoutAnAgentNothingIsRewritten(t *testing.T) {
 	recorded := &registry.ClientConfig{
 		Repository: "registry.d8-system.svc:5001/system/deckhouse",

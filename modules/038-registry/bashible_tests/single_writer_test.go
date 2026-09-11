@@ -308,7 +308,7 @@ func TestTheLegacyBootstrapPathStaysInert(t *testing.T) {
 // cluster DNS it depends on the very thing it exists to outlive, and on a joining node that
 // dependency is circular: kube-dns needs its image, the image needs this agent to resolve
 // the upstream, and the agent needs kube-dns. The node stays NotReady and is replaced
-// forever — which is exactly what a test cluster did, while every unit test passed.
+// forever, and nothing in a unit test of the agent would show it.
 func TestTheAgentResolvesThroughTheNode(t *testing.T) {
 	body := render(t, "all/053_configure_registry_agent.sh.tpl", agentRegistry())
 
@@ -425,11 +425,8 @@ func TestTheAgentAuthorityStaysReadable(t *testing.T) {
 // For containerd the image reference in the static pod is a fixed local tag: the agent cannot be pulled
 // through the agent, so it is imported from a tar as `deckhouse.local/images:registry-agent`. That tag
 // is the same in every build, so the manifest was byte-identical from one build to the next — a new
-// package was installed, a new tar imported, and kubelet went on running the container it already had.
-//
-// Measured on `ly-direct`: the node's bashible configuration named the new agent digest while the
-// running agent was the previous build, and restarting the platform, the bashible apiserver and the
-// container itself changed nothing. A fix shipped in the agent could not reach an existing cluster.
+// package was installed, a new tar imported, and kubelet went on running the container it already had
+// — so a fix shipped in the agent could not reach an existing cluster at all.
 //
 // The digest in an annotation is what makes the file differ, so `bb-sync-file` rewrites it and kubelet
 // restarts the pod onto the imported image.
@@ -546,4 +543,3 @@ func TestTheAgentIsGivenWhatTheClusterTrusts(t *testing.T) {
 	// sources all use public authorities has none of them.
 	require.Contains(t, body, "type: DirectoryOrCreate\n    name: trusted-authorities")
 }
-

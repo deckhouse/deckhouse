@@ -54,12 +54,9 @@ func GetRegistryDataPreferUpstream(ctx context.Context, kubeCl *client.Kubernete
 	//
 	// `registry-config` below is rendered from the PREVIOUS implementation's settings in
 	// `mc/deckhouse`, and on a migrated cluster nobody writes those any more — so it keeps describing
-	// whatever registry the cluster was migrated from. Measured on a cluster whose upstream had been
-	// moved to `dev-registry.deckhouse.io/sys/deckhouse-oss`: the secret still said
-	// `111.88.253.76.sslip.io/dh-dev-registry/sys/deckhouse-oss` with that mirror's robot credentials,
-	// and this function preferred it. Stale registry data, preferred by the tooling, is worse than no
-	// data at all: absence falls back and works, staleness dials the wrong registry with the wrong
-	// account.
+	// whatever registry the cluster was migrated from. Stale registry data, preferred by the tooling,
+	// is worse than no data at all: absence falls back and works, staleness dials the wrong registry
+	// with the wrong account.
 	if conf, dockerCfg, found, err := registryDataFromConfigResource(ctx, kubeCl); err != nil {
 		return nil, "", err
 	} else if found {
@@ -128,8 +125,8 @@ func registryDataFromConfigResource(
 	var object *unstructured.Unstructured
 	// Five attempts and not the forty-five the secret gets, because this is a PREFERENCE and not a
 	// requirement: what cannot be read quickly is not worth waiting for when two working fallbacks sit
-	// below it. Measured while writing this: with a long loop the absent-resource path added
-	// forty-five seconds to every call on a cluster that simply has no such kind.
+	// below it. With the long loop, the absent-resource path adds its full wait to every call on a
+	// cluster that simply has no such kind.
 	err := retry.NewLoop("Get registry configuration from cluster", 5, 1*time.Second).
 		BreakIf(apierrors.IsNotFound).
 		BreakIf(meta.IsNoMatchError).

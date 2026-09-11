@@ -60,21 +60,16 @@ func init() {
 
 // clientOptions keeps secrets out of the manager's cache.
 //
-// A cached read is served by an informer, and an informer must list and watch. RBAC cannot
-// restrict either to named objects — a list is not a request for a name, so a rule carrying
-// resourceNames never matches one. Caching secrets would therefore require read access to
-// every Secret in the namespace, which is the access the reference model exists to stop
-// needing; uncached, the two secrets this controller wants are fetched by name with `get`.
+// A cached read is served by an informer, and an informer must list and watch — which RBAC cannot
+// restrict to named objects, since a rule carrying resourceNames never matches a list. Caching
+// secrets would therefore require read access to every Secret in the namespace, the access the
+// reference model exists to stop needing; uncached, the two this controller wants are fetched by
+// name. Returned from a function so the decision is testable.
 //
-// Returned from a function so the decision is testable. It was already made once as
-// "confine the cache to one namespace", which is not the same thing and does not work.
-//
-// The election lease is here for a neighbouring reason. It is granted by a Role in one
-// namespace, while this cache is cluster-scoped, so its informer lists leases at the cluster
-// scope and is refused — and a refused informer never syncs, so the read that wanted it blocks
-// and the reconciliation that wanted the read never finishes. On a cluster with the cache
-// enabled that meant no RegistryNode objects at all: every node left without a layout, and the
-// only thing that said so was a `Failed to watch` line in this controller's log.
+// The election lease is excluded for a neighbouring reason: it is granted by a Role in one
+// namespace while this cache is cluster-scoped, so its informer lists leases cluster-wide and is
+// refused — and a refused informer never syncs, so the read blocks and the reconciliation never
+// finishes, leaving every node without a layout over a single `Failed to watch` line in the log.
 func clientOptions() client.Options {
 	return client.Options{
 		Cache: &client.CacheOptions{
@@ -100,17 +95,16 @@ const leaderElectionLease = "registry-controller-leader"
 // test can assert it stays on.
 //
 // It was off, and the effect was not subtle. Nothing was electing anything, so every reconciler ran
-// on every replica: on a three-master cluster the storage update controller replaced TWO cache
-// replicas at once, because two controller instances each chose "the next stale pod" seven
-// milliseconds apart and deleted it. The guard that makes replacement safe — refuse to move while any
-// replica is missing or not yet serving — is per-process, and nothing made one process the only one
-// deciding.
+// on every replica: two instances of the storage update controller each choose "the next stale pod"
+// within milliseconds of each other and replace TWO cache replicas at once. The guard that makes
+// replacement safe — refuse to move while any replica is missing or not yet serving — is per-process,
+// and nothing made one process the only one deciding.
 //
 // Everything around it was already in place, which is what made it invisible: the RBAC grants leases
 // under the comment "Leader election among the controller replicas", the client deliberately does not
 // cache leases, and reconcilers can already opt out of election with SkipLeaderElection. The one line
-// that gave any of it meaning was missing. On a single-master cluster there is one replica and no
-// symptom; it took the three-master variant to show it.
+// that gave any of it meaning was missing — and with one replica there is no symptom at all, so
+// nothing short of a multi-master cluster shows it.
 func managerOptions(metricsAddr, probeAddr string) ctrl.Options {
 	return ctrl.Options{
 		Scheme:                 scheme,

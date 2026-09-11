@@ -27,9 +27,8 @@ import (
 
 // The first master has to come out of the installation with the agent on it, because nothing else
 // can put one there afterwards: the agent's package is fetched through registry-packages-proxy, and
-// that proxy reaches the registry through the agent. Measured on a cache-less cluster before this
-// existed — `[registry-agent] attempt 6 failed` on the master, thirty failed `rpp-get` attempts on
-// the worker, and no node ever joining.
+// that proxy reaches the registry through the agent. Without it the master's own agent package
+// cannot be fetched, `rpp-get` fails on every worker after it, and no node ever joins.
 func TestTheFirstMasterIsToldAboutTheAgent(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
@@ -151,9 +150,8 @@ func TestEveryManagedInstallationAsksForTheAgent(t *testing.T) {
 			want: true,
 		},
 		{
-			// The bundle installation serves images from a registry on the node itself and is
-			// already measured working end to end. Its first master is left as it is until the
-			// same path is exercised there.
+			// The bundle installation serves images from a registry on the node itself, so its
+			// first master is left as it is until the same path is exercised there.
 			name:  "a bundle",
 			facts: BundleBootstrapInputs{CacheEnabled: true},
 			want:  false,

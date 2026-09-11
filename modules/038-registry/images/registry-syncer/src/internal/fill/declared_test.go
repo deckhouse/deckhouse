@@ -28,10 +28,10 @@ import (
 //
 // A store legitimately holds more than any release declares: the pass-through cache settles whatever the
 // cluster pulls through it. Counting all of that answered a different question, and mixing the two
-// answers into one field is what made completeness flap — a replica said 333 after a copying pass and
-// 348 after a counting one. `full` followed whichever ran last; eligibility follows `full`, so the lease
-// moved; and a fill restarts on every move. Measured on a cluster: the lease travelling between three
-// replicas every twenty seconds, none of them ever finishing.
+// answers into one field is what made completeness flap — a replica answers one way after a copying
+// pass and another after a counting one. `full` follows whichever ran last; eligibility follows `full`,
+// so the lease moves; and a fill restarts on every move, leaving the lease travelling between replicas
+// and no fill ever finishing.
 func TestCountDeclaredHeldIgnoresWhatNoReleaseDeclares(t *testing.T) {
 	root := store(t)
 

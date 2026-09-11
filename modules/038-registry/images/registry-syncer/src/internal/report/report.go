@@ -16,25 +16,17 @@ limitations under the License.
 
 // Package report publishes what one storage replica actually holds.
 //
-// Each replica owns exactly one entry in RegistryStorage.status.replicas and
-// touches no other, which is what lets several syncers write the same status
-// without a coordinator. The controller derives the cluster-wide summary from
-// these entries; no replica claims anything about the others, because no replica
-// can know.
+// Each replica owns exactly one entry in RegistryStorage.status.replicas and touches no other,
+// which is what lets several syncers write one status without a coordinator; the controller
+// derives the cluster-wide summary from those entries, because no replica can know about the
+// others.
 //
-// "Touches no other" is a property of the merge below, and it took a lock to make it a property of
-// the WRITE as well. The entries are one list, a merge patch of a list replaces the whole list, so
-// each replica sends every other replica's entry as it last read them — and a read taken a moment
-// before somebody else's write is indistinguishable from a fresh one. Two replicas reporting at the
-// same time then did not merge: the later write put back the earlier reader's picture, and what the
-// others published in between was gone. Measured in a test: a leader's `full: true` with 400 verified
-// digests reverted to `full: false` with none by a follower's ordinary progress report — which is
-// the fact the air-gap transition is gated on, in the direction that leaves it waiting forever, and
-// in the other direction cuts a cluster off from an upstream it still needs.
-//
-// So every write here is one read-modify-write under an optimistic lock: the patch carries the
-// resourceVersion it was built from, the API server refuses it if anything changed, and the whole
-// sequence is redone against the new state. See publish.
+// "Touches no other" took a lock to make true of the WRITE as well: the entries are one list, a
+// merge patch replaces the whole list, so each replica sends every other entry as it last read
+// them. Two replicas reporting at once then do not merge — the later write puts back the earlier
+// reader's picture, and the leader's `full` can go with it, which is what the air-gap transition
+// is gated on. So every write here is one read-modify-write under an optimistic lock, redone
+// against the new state when the API server refuses it. See publish.
 package report
 
 import (
@@ -167,10 +159,9 @@ func (p *Publisher) mergeReport(storage *registryv1alpha1.RegistryStorage, state
 	//
 	// `safeToDropUpstream` is the controller's: it derives it from the leader's report and the
 	// transition is gated on it. But the derivation and the report are written by different
-	// processes into one object, so the conclusion outlives the fact — measured on a cluster as
-	// `safeToDropUpstream: true` while the leader's own entry, in the same object, said it did not
-	// hold the set. Between those two the cluster could be cut off from its upstream on evidence
-	// that no longer existed.
+	// processes into one object, so the conclusion can outlive the fact: `safeToDropUpstream: true`
+	// beside a leader entry, in the same object, saying it does not hold the set. Between those two
+	// the cluster could be cut off from its upstream on evidence that no longer exists.
 	//
 	// So a leader that is not full withdraws the permission as it reports. Only ever withdraws:
 	// granting it stays the controller's, which is what keeps one decision in one place.
@@ -187,24 +178,16 @@ func (p *Publisher) mergeReport(storage *registryv1alpha1.RegistryStorage, state
 
 // Announce records that this replica has STARTED filling, before any of it is done.
 //
-// Without it the first fill of a store is invisible. A replica publishes at the END of a pass and the
-// fill runs inside that same pass, so while gigabytes are moving there is no replica report at all —
-// and the controller, seeing none, reports the storage as `Idle`. Measured on a store emptied and
-// refilled: nine minutes of `phase: Idle` beside a condition that said `FillInProgress`, more than
-// 1500 blobs written, and then a jump straight to `Ready`. The documented `Filling` phase never
-// appeared, so an operator watching the phase after enabling the cache could not tell "nothing is
-// happening" from "the cache is filling right now".
+// Without it the first fill of a store is invisible: a replica publishes at the END of a pass and the
+// fill runs inside that pass, so with no replica report the controller calls the storage `Idle` for
+// the whole of it and then jumps to `Ready`. The documented `Filling` phase never appears, and an
+// operator cannot tell "nothing is happening" from "the cache is filling right now".
 //
-// Two rules make this safe to write from here.
-//
-// It NEVER overwrites an existing report. A replica that has already published holds real numbers,
-// and an announcement carries none — replacing one with the other would report a full store as empty
-// and, on a leader, withdraw the permission the transition is gated on. So this is create-only: it
-// speaks exactly once per replica, on the pass where the alternative is silence.
-//
-// And it is never completeness: `Full` is forced false whatever the caller passed. An announcement is
-// a statement that work has begun, and the one field the cluster's safety depends on must be earned
-// by reading the store, not asserted before the work.
+// Two rules make it safe to write from here. It NEVER overwrites an existing report: a replica that
+// has published holds real numbers and an announcement carries none, so replacing one with the other
+// would report a full store as empty and, on a leader, withdraw the permission the transition is
+// gated on. And it is never completeness — `Full` is forced false whatever the caller passed, because
+// the one field the cluster's safety depends on must be earned by reading the store.
 func (p *Publisher) Announce(ctx context.Context, state State) error {
 	if state.Node == "" {
 		return fmt.Errorf("a replica announcement needs the node it came from")
@@ -273,9 +256,9 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 	//
 	// A replica writes only its own entry, so an entry outlives whatever it last said: a replica that
 	// led, lost the lease and then stopped publishing — because its pass fails, or its process is
-	// restarting — leaves `role: Leader` behind it forever. Measured on a cluster: two entries
-	// claiming Leader at once, one of them the actual lease-holder and one of them a memory of an
-	// earlier one. Which is worse than untidy, because everything downstream reads this status to
+	// restarting — leaves `role: Leader` behind it forever. Two entries then claim Leader at once,
+	// one the actual lease-holder and one a memory of an earlier one. Which is worse than untidy,
+	// because everything downstream reads this status to
 	// find the leader, including the followers deciding what to replicate from.
 	//
 	// Demoted rather than deleted: the stale entry still says truthfully how much that replica held,

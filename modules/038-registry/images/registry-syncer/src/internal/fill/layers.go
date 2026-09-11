@@ -32,13 +32,10 @@ import (
 // manifest it cannot serve. Counting revisions therefore counts intentions rather than images, and
 // that count is what authorizes dropping the upstream.
 //
-// Measured on `ly-mmc`, a three-master cluster reporting `allReplicasFull: true`,
-// `safeToDropUpstream: true` and 400 verified digests on every replica: 333 MB on disk against
-// gigabytes of platform, 332 manifests, and 61 layer links between them. With the upstream removed,
-// no node could pull anything at all — not by tag, not by digest — and the replicas could not even
-// replicate from each other: one master answered `404` to the blob requests of another, because
-// neither had the data. Putting the upstream back fixed every pull instantly, which is what had
-// been hiding it all along.
+// A store in that state reports every replica full and the upstream safe to drop while holding a
+// fraction of the data, and the shortfall is invisible for as long as the upstream is reachable:
+// remove it and nothing can be pulled at all — not by tag, not by digest, and not by another replica
+// trying to replicate, since neither of them has the blobs.
 //
 // So an image counts as held when the store has its manifest AND every blob that manifest names,
 // down through image indexes to the layers themselves.

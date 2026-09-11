@@ -74,9 +74,9 @@ func TestAggregate(t *testing.T) {
 		},
 		{
 			// The case the syncer's announcement exists for: a leader that has said "I have
-			// started, and I hold none of it yet". Before the announcement there was no report
-			// at all here and the phase read `Idle` for the whole of a first fill — nine
-			// minutes of it, measured, with more than 1500 blobs being written underneath.
+			// started, and I hold none of it yet". Without the announcement there is no report
+			// here at all, and the phase reads `Idle` for the whole of a first fill, with the
+			// entire image set being written underneath.
 			name: "the leader has announced a fill and holds nothing yet",
 			spec: passThroughSpec(),
 			replicas: []registryv1alpha1.StorageReplicaStatus{
@@ -205,9 +205,9 @@ func TestAggregate(t *testing.T) {
 			wantAllFull:    true,
 		},
 		{
-			// The case measured on a live cluster: the lease moved in eight seconds while
-			// the departed replica's entry went on saying Leader. Two entries claim it,
-			// and only the lease can say which claim is current.
+			// The case that matters: the lease has moved while the departed replica's entry
+			// goes on saying Leader. Two entries claim it, and only the lease can say which
+			// claim is current.
 			name: "a departed replica still claims the leadership it lost",
 			spec: passThroughSpec(),
 			replicas: []registryv1alpha1.StorageReplicaStatus{
@@ -274,9 +274,9 @@ func TestAggregateFillProgress(t *testing.T) {
 	assert.EqualValues(t, 459, got.Fill.Total)
 
 	// With an upstream and no air-gap declaration, the leader's own count of the set is the
-	// denominator. This is the ordinary cluster, and it used to report nothing at all: measured on the
-	// static stand, 11.7 GiB copied against `0/0`, because the only denominator the controller had was
-	// a number an operator states when declaring air-gap.
+	// denominator. This is the ordinary cluster, and it used to report nothing at all — the whole set
+	// moving against `0/0` — because the only denominator the controller had was a number an operator
+	// states when declaring air-gap.
 	fromLeader := Aggregate(
 		&registryv1alpha1.RegistryStorageSpec{Upstream: testUpstream("registry.deckhouse.io")},
 		[]registryv1alpha1.StorageReplicaStatus{withDeclared(leader("master-0", false, 312), 400)},

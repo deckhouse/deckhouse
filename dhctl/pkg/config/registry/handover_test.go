@@ -137,13 +137,12 @@ func TestTheHandoverOnlyHappensForABundleInstall(t *testing.T) {
 	require.NoError(t, HandOverBundleStore(t.Context(), nil, Config{LegacyMode: true}))
 }
 
-// TestAHandoverThatCannotReachTheNodeIsRefused is the failure this exists for, and it cost an
-// installation: both halves of the handover run commands on the first master, and both used to return
-// nil when there was no way to reach it. The caller built its client as
-// `&client.KubernetesClient{KubeClient: kubeCl}`, leaving NodeInterface nil, so the handover reported
-// success in 18 milliseconds having done nothing at all — the store's pod stayed Pending on the port
-// the bootstrap registry still held, and the installation then waited thirty-three minutes for a store
-// that could not start.
+// TestAHandoverThatCannotReachTheNodeIsRefused is the failure this exists for. Both halves of the
+// handover run commands on the first master, and both used to return nil when there was no way to
+// reach it: a caller building its client as `&client.KubernetesClient{KubeClient: kubeCl}` leaves
+// NodeInterface nil, so the handover reports success having done nothing at all — the store's pod
+// stays Pending on the port the bootstrap registry still holds, and the installation waits on a store
+// that cannot start.
 //
 // Refusing here is what makes that impossible to repeat quietly: the wait downstream can only report
 // that the store is Idle, which is true and says nothing about why.
@@ -165,8 +164,8 @@ func TestAHandoverThatCannotReachTheNodeIsRefused(t *testing.T) {
 // The node interface wraps what it is given in a shell, so a command built as a shell line arrives
 // nested — and `bash -c "<prog> pull <ref>"` passed through another `bash -c` turns pull and the
 // reference into $0 and $1. crictl with no arguments prints its usage and exits 0, which the caller
-// reads as four images pulled. Measured on a node; the store then crash-looped on an image that the
-// registry it would have come from had just been removed to make room for it.
+// reads as every image pulled — and the store then has to start on an image whose only source, the
+// bootstrap registry, was removed on the strength of that success.
 func TestThePullIsNotHandedToAShell(t *testing.T) {
 	const image = "registry.d8-system.svc:5001/system/deckhouse@sha256:abc"
 

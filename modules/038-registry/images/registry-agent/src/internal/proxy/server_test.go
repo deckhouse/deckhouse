@@ -767,10 +767,10 @@ func TestServeReportsWhenEveryRegistryRefusesUs(t *testing.T) {
 // target answers `insufficient_scope`: with valid credentials, for an image that is right
 // there.
 //
-// It went unnoticed for as long as that 401 was handed back to the container runtime, which
-// then authenticated itself with the pod's pull secret and succeeded. The agent's own
-// credentials were never what made a pull work, and the first pull that had to rely on them
-// failed on every node in the cluster.
+// The defect hides for as long as that 401 is handed back to the container runtime, which then
+// authenticates with the pod's pull secret and succeeds: the agent's own credentials are never
+// what makes a pull work until the first pull that has to rely on them, and that one fails on
+// every node at once.
 func TestServeAsksForATokenForTheRepositoryItIsGoingTo(t *testing.T) {
 	upstream := (&registryStub{
 		name: "upstream", challenge: "bearer", username: "license-token", password: "license-key",
@@ -824,10 +824,9 @@ func TestServeAsksForTheWholeRepositoryWhenThatIsTheImage(t *testing.T) {
 // name. This proxy rewrites the repository on the way out, so unless it rewrites it back on the way in,
 // the client's next request names the upstream repository — which the proxy then prefixes again.
 //
-// Measured on `ly-direct`: `system/deckhouse/modules/ingress-nginx` listed fine, the Link header named
-// `sys/deckhouse-oss/...`, the Deckhouse controller followed it, and the answer was `NAME_UNKNOWN` for
-// `sys/deckhouse-oss/sys/deckhouse-oss/modules/ingress-nginx`. Five installed modules never got their
-// release lists and the cluster would not converge.
+// The answer to such a request is `NAME_UNKNOWN` for a repository nobody asked about, with the
+// upstream prefix applied twice. Everything that pages through a listing hits it — module release
+// lists among them — so the cluster stops converging.
 func TestPaginationLeadsBackToThisProxy(t *testing.T) {
 	const (
 		requested = "/v2/system/deckhouse/modules/ingress-nginx/tags/list"

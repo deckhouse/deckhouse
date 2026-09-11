@@ -87,9 +87,9 @@ type Upstream struct {
 
 // WriteEndpoint is the listener that accepts a push.
 //
-// Its own listener because the serving one is a pull-through cache, and a cache refuses every write
-// — measured, and it is upstream's deliberate behaviour: the proxy stores answer a write with
-// UNSUPPORTED. A store that is filled BY writes while it still has an upstream to serve from
+// Its own listener because the serving one is a pull-through cache, and a cache refuses every write:
+// upstream's proxy stores answer a write with UNSUPPORTED, deliberately. A store that is filled BY
+// writes while it still has an upstream to serve from
 // therefore needs a listener with no cache in front of it, over the same directory.
 type WriteEndpoint struct {
 	// Address is where it listens, in the same form as the registry's own `http.addr`. Empty means

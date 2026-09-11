@@ -86,8 +86,7 @@ func RenderWrapper(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]
 		// endpoint as well. Filling through the serving address fills nothing and fails silently —
 		// before uploading a layer the client asks whether the destination already holds it, and a
 		// cache answers yes by fetching it from the upstream, so the upload is skipped and the store
-		// is left with manifests naming blobs it does not have (measured: 400 layers "written", the
-		// store unchanged at 333 MB).
+		// is left with manifests naming blobs it does not have, every one of them reported written.
 		WriteEndpoint: wrapperWriteEndpoint{
 			Address: fmt.Sprintf("%s:%d", opts.ListenAddress, WriteEndpointPort),
 			// The ingress's authority: this is the half an ingress fronts, and without it every

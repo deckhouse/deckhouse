@@ -64,24 +64,6 @@ import (
 // somebody can ask for on purpose, and only the untouched default is replaced.
 const loopbackRegistry = "127.0.0.1:5001"
 
-// resolveLocalAddress decides where this replica's own registry is to be found.
-//
-// It is the address the replica SERVES on, not the loopback, and the difference is not academic.
-// The pod runs with host networking, so the loopback it shares is the node's — and on every node
-// of a Managed cluster something else already answers there: the registry agent, on the very same
-// port. A syncer dialling 127.0.0.1:5001 therefore reaches the agent rather than the registry
-// beside it, is served a certificate from the agent's authority, and rejects it:
-//
-//	listing the repositories: Get "https://127.0.0.1:5001/v2/": tls: failed to verify
-//	certificate: x509: certificate signed by unknown authority
-//
-// Measured on a cluster. It stayed invisible for a reason worth remembering: while an upstream is
-// configured every node falls back to it, so a leader that can neither read nor write its own
-// store breaks nothing anybody would notice. The air-gap transition is where it surfaces, because
-// there the count of what the store holds is the only evidence there is.
-//
-// An address given explicitly is left alone, including the loopback itself: a deployment that is
-// not host-networked would rightly ask for it.
 // pushIdleWindow is how long an untouched upload still counts as a push in progress.
 //
 // Short, because it only has to cover the gap between two chunks of one upload; and non-zero, because
@@ -101,6 +83,20 @@ func writeEndpointAddress(listenAddress string) string {
 	return fmt.Sprintf("%s:%d", listenAddress, distribution.WriteEndpointPort)
 }
 
+// resolveLocalAddress decides where this replica's own registry is to be found: the address the
+// replica SERVES on, not the loopback.
+//
+// The pod runs with host networking, so the loopback it shares is the node's — where, on a Managed
+// cluster, the registry agent already answers on the very same port. A syncer dialling
+// 127.0.0.1:5001 therefore reaches the agent rather than the registry beside it and rejects the
+// certificate it is served, which comes from the agent's own authority.
+//
+// The failure is invisible while an upstream is configured, because every node falls back to it and
+// a leader that can neither read nor write its own store breaks nothing anybody notices. The air-gap
+// transition is where it surfaces: there the count of what the store holds is the only evidence.
+//
+// An address given explicitly is left alone, the loopback included: a deployment that is not
+// host-networked would rightly ask for it.
 func resolveLocalAddress(localAddress, listenAddress string) string {
 	if localAddress != loopbackRegistry || listenAddress == "" {
 		return localAddress

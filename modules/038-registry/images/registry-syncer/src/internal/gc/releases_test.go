@@ -139,9 +139,8 @@ func deployment(image string) *unstructured.Unstructured {
 //
 // A release object is not the only way to be running a version. On a cluster installed from a
 // development or pull-request image none is ever deployed, and this function used to fail on every
-// pass — measured on such a cluster: RegistryStorage in phase Failed with FillFailed, all three
-// replicas reporting "no release is deployed", and the store holding nothing at all. The cache was
-// empty by construction on the very axis the module exists for.
+// pass: every replica reported "no release is deployed" and the store held nothing at all. The cache
+// was empty by construction on the very axis the module exists for.
 //
 // The fallback answers with the same set by a shorter route: the version is only used to find the
 // installer image that declares the image set, the same file `d8 mirror pull` reads, and the running

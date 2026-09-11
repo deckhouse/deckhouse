@@ -24,8 +24,8 @@ import (
 
 const initSecretStep = "cluster-bootstrap/073_init_registry_secrets.sh.tpl"
 
-// TestThePKIReachesTheClusterOnEveryPath is the failure this test exists for, measured on a cluster:
-// an installation from a bundle filled its store, brought up the control plane, and then died with
+// TestThePKIReachesTheClusterOnEveryPath is the failure this test exists for: an installation from a
+// bundle fills its store, brings up the control plane, and then dies with
 //
 //	create Deckhouse manifests: create deckhouse registry secret data: get PKI:
 //	get secret 'd8-system/registry-init': secrets "registry-init" not found

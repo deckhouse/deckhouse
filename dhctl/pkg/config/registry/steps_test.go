@@ -180,8 +180,8 @@ func TestNothingWaitsOnAStateSecretThatIsNeverWritten(t *testing.T) {
 // A cache beside an upstream is an optimisation: the agent falls back to the upstream for anything not
 // copied yet, so the cluster pulls everything from the moment it exists. Waiting for the cache anyway
 // means waiting for the whole first sync, because the store reports `Ready` only once its leader is
-// FULL — measured on a three-master cache cluster as twelve gigabytes and about fifteen minutes of a
-// silent log, ended by the bootstrap watchdog killing the installation.
+// FULL — the whole image set over the operator's link, with nothing in the log meanwhile, and the
+// bootstrap watchdog ends it by killing the installation.
 //
 // Without an upstream the cache is the only source there is, and an installation that proceeds past a
 // half-filled one hands the cluster nodes that cannot pull.

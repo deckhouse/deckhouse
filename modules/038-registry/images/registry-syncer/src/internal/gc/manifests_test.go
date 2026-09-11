@@ -240,9 +240,9 @@ func TestRunSurvivesAManifestThatWillNotGo(t *testing.T) {
 	assert.True(t, holds(t, target, "system/deckhouse", current))
 }
 
-// TestRunCollectsOnAClusterRunningATag is the case a live cluster stopped on: `the deployed version
-// "pr21788" is not a version, so no tag can be judged older than it`, and with that the whole run
-// refused — nothing was ever reclaimed.
+// TestRunCollectsOnAClusterRunningATag is the case a run used to stop on: no tag can be judged older
+// than a deployed version that is not a version at all, and with that the whole run refused, so
+// nothing was ever reclaimed.
 //
 // The refusal belonged to one pass, not to both. Ordering is what the TAG pass needs, and a tag
 // cannot be ordered; the manifest pass needs only the set that version declares, which is readable

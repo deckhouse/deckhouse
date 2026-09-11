@@ -21,24 +21,20 @@ import registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/dec
 // MayLead reports whether this replica should stand in the election, given what every
 // replica has reported about itself.
 //
-// Plain leader election is not enough here, because leadership is not a symmetric role:
-// the leader is the replication source every follower copies from, and the one whose
-// completeness gates going air-gap. Handing it to an empty replica while a full one
-// exists is how a cluster gets stuck — most sharply in air-gap, where the leader has no
-// upstream to fill itself from:
+// Plain leader election is not enough, because leadership is not a symmetric role: the
+// leader is the replication source every follower copies from, and the one whose
+// completeness gates going air-gap. Handing it to an empty replica while a full one exists
+// is how a cluster gets stuck, most sharply in air-gap — `d8 mirror push` lands on whatever
+// replica the endpoint routes it to, and if the lease-holder is not that one it has no
+// upstream to fill from, the followers replicate its emptiness, and the replica that has
+// the images sits idle. Nothing recovers on its own.
 //
-//	`d8 mirror push` lands on some replica through the publication endpoint, and it need
-//	not be the one holding the lease. If the lease-holder is empty, it cannot fill (there
-//	is no upstream), the followers dutifully replicate its emptiness, and the replica that
-//	actually has the images sits idle. Nothing recovers on its own.
+// So a full replica leads and anything else follows — unless nobody is full, which is where
+// every cluster starts, and then someone has to lead in order to begin filling at all.
 //
-// So the rule is: a full replica leads. Anything else follows — unless nobody is full,
-// which is where every cluster starts, and then someone has to lead in order to begin
-// filling at all.
-//
-// A pure function of the reported state, because leadership decided wrongly is expensive
-// to notice: the cluster keeps serving images throughout and the damage shows up only as
-// a fill that never completes.
+// A pure function of the reported state, because leadership decided wrongly is expensive to
+// notice: the cluster keeps serving images throughout, and the damage shows up only as a
+// fill that never completes.
 func MayLead(self string, replicas []registryv1alpha1.StorageReplicaStatus) bool {
 	someoneIsFull := false
 	selfIsFull := false
@@ -68,9 +64,8 @@ func MayLead(self string, replicas []registryv1alpha1.StorageReplicaStatus) bool
 	// Leadership among incomplete replicas is worse than any particular choice of leader, because
 	// every change of it restarts the work: a fill runs on the leader, and moving the lease to
 	// another incomplete replica abandons what the first had done and begins again elsewhere. With
-	// the "fullest leads" rule that was self-perpetuating — the fullest changes as they fill, so the
-	// lease chased it, and nobody ever arrived. Measured on a cluster: the lease moving between three
-	// replicas holding 428, 337 and 333 digests, none of them ever completing.
+	// the "fullest leads" rule that is self-perpetuating: the fullest changes as they fill, so the
+	// lease chases it between replicas and nobody ever arrives.
 	//
 	// So while nobody is full, whoever leads keeps leading, and everyone else stands aside.
 	if incumbent != "" {

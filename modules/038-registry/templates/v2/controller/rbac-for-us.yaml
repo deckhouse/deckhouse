@@ -261,8 +261,7 @@ rules:
   #
   # A release accounts for the platform's images and for nothing else, so a store judged complete on
   # them alone can be missing every image the cluster's modules run — and "complete" is the answer that
-  # authorizes cutting an air-gapped cluster off from its upstream. Measured on a bundle: 474 of 474
-  # platform manifests present and 34 module images the cluster was running absent.
+  # authorizes cutting an air-gapped cluster off from its upstream.
   #
   # Read-only, like the releases above: this justifies what the store keeps and what the collector
   # spares, and nothing here has any business changing it.

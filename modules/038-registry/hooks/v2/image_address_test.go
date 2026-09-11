@@ -159,9 +159,9 @@ func TestRegistryNodeConvergenceFilter(t *testing.T) {
 // TestADrainTakesTheAddressAwayWhileItIsStillServed is the ordering the withdrawal depends on.
 //
 // The address has to go first and the service second. Reversed — which is what the module used to do —
-// the cluster names a registry that no longer exists: measured at 84 seconds for the platform's own
-// Deployment and 680 seconds of workloads unable to pull, 16 at the peak. The stickiness that normally
-// protects a published address must not protect it here, which is what the first case checks.
+// the cluster goes on naming a registry that no longer exists, the platform's own Deployment included,
+// until every release has been re-rendered. The stickiness that normally protects a published address
+// must not protect it here, which is what the first case checks.
 func TestADrainTakesTheAddressAwayWhileItIsStillServed(t *testing.T) {
 	draining := &DrainState{Active: true, References: 3}
 	settled := imageAddressState{Nodes: 2, Layouts: 2, Applied: 2}
