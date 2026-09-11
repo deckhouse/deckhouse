@@ -42,7 +42,7 @@ shell:
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go install golang.org/x/tools/cmd/goyacc@latest
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go install golang.org/x/tools/cmd/goyacc@v0.49.0
   - cp /patches/op_func.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_func.go
   - cp /patches/op_top.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_top.go
   - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/002-op-functions.patch
