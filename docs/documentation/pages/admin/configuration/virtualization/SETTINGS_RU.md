@@ -1,7 +1,7 @@
 ---
 title: "Параметры модуля виртуализации"
 permalink: ru/admin/configuration/virtualization/settings.html
-description: "Параметры ModuleConfig модуля virtualization: включение и выключение модуля, версия конфигурации и настройки Ingress для загрузки образов."
+description: "Параметры ModuleConfig модуля `virtualization`: включение и выключение модуля, версия конфигурации и настройки Ingress для загрузки образов."
 search: параметры модуля, ModuleConfig, настройки виртуализации, ingressClass
 lang: ru
 ---

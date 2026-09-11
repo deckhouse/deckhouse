@@ -5,7 +5,7 @@ description: "Internal virtual machine image storage (DVCR): volume size and sto
 search: DVCR, image storage, volume size, storage cleanup, garbage collection
 ---
 
-The module stores virtual machine images in an internal container image storage (DVCR) that resides on a persistent volume of the cluster. Images travel from there to virtual machine disks, so the size of the volume determines how many images fit into the cluster.
+DP stores virtual machine images in an internal container image storage (DVCR) that resides on a persistent volume of the cluster. Images travel from there to virtual machine disks, so the size of the volume determines how many images fit into the cluster.
 
 ## Size and storage class
 
@@ -17,7 +17,7 @@ After the volume is created, you can't reduce its size or change its storage cla
 
 ## Cleaning up image storage
 
-When images and disks are deleted from the cluster, their data remains in DVCR for some time. To keep the storage from filling up with stale data, the module runs garbage collection on a schedule.
+When images and disks are deleted from the cluster, their data remains in DVCR for some time. To keep the storage from filling up with stale data, DP runs garbage collection on a schedule.
 By default, it runs daily at 02:00. To set your own schedule, use the [`.spec.settings.dvcr.gc.schedule`](/modules/virtualization/configuration.html#parameters-dvcr-gc-schedule) parameter in the `virtualization` [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig):
 
 {% tabs dvcr-gc %}

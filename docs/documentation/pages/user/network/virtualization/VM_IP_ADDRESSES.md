@@ -43,7 +43,7 @@ The [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipad
 
 An address is assigned to a machine when the resource moves to the `Attached` phase. The other phases are described in the [`.status.phase`](/modules/virtualization/cr.html#virtualmachineipaddress-v1alpha2-status-phase) field.
 
-By default, the module assigns an address to the machine itself and keeps it assigned until the machine is deleted. To view the assigned address, run the following command:
+By default, DP assigns an address to the machine itself and keeps it assigned until the machine is deleted. To view the assigned address, run the following command:
 
 ```bash
 d8 k get vmip
@@ -62,7 +62,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 The algorithm for automatically assigning an IP address to a virtual machine looks like this:
 
 - The user creates a virtual machine named `<VM_NAME>`.
-- The module controller automatically creates a [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource named `<VM_NAME>-<HASH>` to request an IP address and bind it to the virtual machine.
+- DP automatically creates a [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource named `<VM_NAME>-<HASH>` to request an IP address and bind it to the virtual machine.
 - For this [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress), a [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) lease resource is created, which picks a random IP address from the shared pool.
 - As soon as the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource is created, the virtual machine gets the assigned IP address.
 
@@ -236,7 +236,7 @@ Machines that don't reference a [VirtualMachineIPAddress](/modules/virtualizatio
 
 A machine with the [`.spec.virtualMachineIPAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineipaddressname) parameter set keeps working through the deprecated mechanism, because the reference to the resource is set in its specification explicitly.
 
-For the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource listed in the machine specification, the module maintains an IPAddress resource with the same name and the same address. To switch the machine and keep its address, replace one parameter with the other:
+For the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource listed in the machine specification, DP maintains an IPAddress resource with the same name and the same address. To switch the machine and keep its address, replace one parameter with the other:
 
 ```yaml
 spec:

@@ -272,7 +272,7 @@ If the network limits the migration speed, you can do the following:
 
 ## Migrations started by the system
 
-The module starts some migrations itself, by creating a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `Evict` type. The prefix of the resource name shows what caused such a migration:
+DP starts some migrations itself, by creating a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `Evict` type. The prefix of the resource name shows what caused such a migration:
 
 | What caused the migration                                        | Resource name prefix    |
 |------------------------------------------------------------------|-------------------------|
@@ -324,7 +324,7 @@ To cancel a migration, delete the corresponding resource.
 
 ## Live VM migration on a placement parameter change
 
-When the placement rules of a running machine change, the module moves it to a suitable node with a live migration.
+When the placement rules of a running machine change, DP moves it to a suitable node with a live migration.
 
 {% alert level="warning" %}
 The feature is available in commercial DP editions.
@@ -350,7 +350,7 @@ spec:
     node.deckhouse.io/group: blue
 ```
 
-The current node from the `green` group no longer meets the new conditions. The module creates a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `Evict` type and starts a live migration of the VM to an available node of the `blue` group.
+The current node from the `green` group no longer meets the new conditions. DP creates a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `Evict` type and starts a live migration of the VM to an available node of the `blue` group.
 
 Example output:
 

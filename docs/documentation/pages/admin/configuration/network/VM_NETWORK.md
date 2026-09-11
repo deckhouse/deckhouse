@@ -5,7 +5,7 @@ description: "Subnets that virtual machines get IP addresses from, and the rules
 search: virtual machine networking, virtualMachineCIDRs, VM subnets, IP addresses
 ---
 
-The [`.spec.settings.virtualMachineCIDRs`](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) block lists the subnets in CIDR notation from which the module assigns IP addresses to virtual machines, either automatically or on request.
+The [`.spec.settings.virtualMachineCIDRs`](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) block lists the subnets in CIDR notation from which DP assigns IP addresses to virtual machines, either automatically or on request.
 Specify the subnet start address aligned to the mask, for example `192.168.1.192/27`, not an arbitrary address from the range.
 
 Example:

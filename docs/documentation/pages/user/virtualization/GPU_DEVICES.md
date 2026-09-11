@@ -9,7 +9,7 @@ search: GPU in a VM, GPU passthrough, GPUClass, graphics adapter
 GPU device passthrough is an experimental feature available in commercial DP editions.
 {% endalert %}
 
-The virtualization module attaches physical GPU devices to virtual machines using DRA (Dynamic Resource Allocation). A device is requested by a reference to a `GPUClass` in the [`.spec.gpus`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-gpus) block of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
+DP attaches physical GPU devices to virtual machines using DRA (Dynamic Resource Allocation). A device is requested by a reference to a `GPUClass` in the [`.spec.gpus`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-gpus) block of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
 An administrator prepares the `GPUClass` resources, so ask them which classes are available in the cluster.
 

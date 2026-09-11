@@ -5,7 +5,7 @@ description: "Rebalancing virtual machines across nodes, diagnosing slow VMs, an
 search: VM rebalancing, ColdStandby, fault tolerance, slow VM
 ---
 
-Node load changes over time, and nodes sometimes fail. The module balances machine placement across nodes and restarts machines from a failed node, while metrics help you find out why a machine runs slowly.
+Node load changes over time, and nodes sometimes fail. DP balances machine placement across nodes and restarts machines from a failed node, while metrics help you find out why a machine runs slowly.
 
 ## VM rebalancing
 
@@ -17,8 +17,8 @@ Over time, the distribution of virtual machines across nodes stops being even. T
 
 Rebalancing solves two tasks:
 
-- It evens out the load. The module tracks how much CPU is reserved on each node and, when a node reserves more than 80%, moves some VMs to less loaded nodes.
-- It restores correct placement. The module checks whether the current node meets the VM requirements and the rules of mutual VM placement. For example, if the rules forbid keeping certain VMs on the same node, the extra ones are moved.
+- It evens out the load. DP tracks how much CPU is reserved on each node and, when a node reserves more than 80%, moves some VMs to less loaded nodes.
+- It restores correct placement. DP checks whether the current node meets the VM requirements and the rules of mutual VM placement. For example, if the rules forbid keeping certain VMs on the same node, the extra ones are moved.
 
 {% endtab %}
 
@@ -42,11 +42,11 @@ Rebalancing covers only the VMs that can leave their node by live migration. A V
 
 A slowdown of a virtual machine has two different causes. The guest OS is either busy with its own computations, or waiting for the node to give it processor time. From the outside both cases look the same, as a loaded processor of the machine.
 
-The module metrics tell them apart, so you don't have to log in to the guest system. The "Virtualization VM Happiness" Grafana dashboard shows how long each machine waits for a processor and what it lacks, as well as which nodes are loaded more than the rest.
+DP metrics tell them apart, so you don't have to log in to the guest system. The "Virtualization VM Happiness" Grafana dashboard shows how long each machine waits for a processor and what it lacks, as well as which nodes are loaded more than the rest.
 
 What to do next depends on which of the causes is confirmed.
 
-- **The machine consumes its entire guaranteed processor share.** Moving it to another node doesn't help, because the same share is guaranteed there. Raise the core fraction [`.spec.cpu.coreFraction`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-corefraction) or reduce the number of virtual cores, so that the guest OS doesn't spread the load across the cores that get no processor time. With the `Auto` value, the module picks the share from actual consumption, so you can't change it manually and have to change the number of cores or set an explicit percentage.
+- **The machine consumes its entire guaranteed processor share.** Moving it to another node doesn't help, because the same share is guaranteed there. Raise the core fraction [`.spec.cpu.coreFraction`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-corefraction) or reduce the number of virtual cores, so that the guest OS doesn't spread the load across the cores that get no processor time. With the `Auto` value, DP picks the share from actual consumption, so you can't change it manually and have to change the number of cores or set an explicit percentage.
 - **The machine waits for processor time without consuming its guaranteed share.** The node doesn't deliver the declared guarantee, and moving the machine to a less loaded node eliminates the delays.
 
 The guarantee isn't absolute under [CPU oversubscription](../virtualization/cpu-oversubscription.html). Processor time is distributed between machines in proportion to their shares, so a machine with a few loaded cores among many competing ones can get less than it's guaranteed.
@@ -57,7 +57,7 @@ Before a move, [check whether migration is possible](../platform-scaling/node/vm
 
 Make sure as well that the cluster has a suitable node. The [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) limits the choice to the nodes whose processors match the class. If only the current node is left on that list, migration is impossible under any resource shortage, and what's left is freeing up the node itself by moving the other machines off it, or assigning the machine a class with a wider choice of nodes.
 
-The module measures storage and network latency by comparison with the rest of the cluster rather than against a fixed threshold, because the same disk latency is normal for a replicated volume and indicates a problem for a local one. If the storage is equally slow across the cluster, moving a machine doesn't eliminate the delays.
+DP measures storage and network latency by comparison with the rest of the cluster rather than against a fixed threshold, because the same disk latency is normal for a replicated volume and indicates a problem for a local one. If the storage is equally slow across the cluster, moving a machine doesn't eliminate the delays.
 
 ## ColdStandby
 

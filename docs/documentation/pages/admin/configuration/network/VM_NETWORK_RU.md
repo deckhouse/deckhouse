@@ -6,7 +6,7 @@ search: сеть виртуальных машин, virtualMachineCIDRs, под�
 lang: ru
 ---
 
-В блоке [`.spec.settings.virtualMachineCIDRs`](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) перечисляются подсети в формате CIDR, из которых модуль выдаёт IP-адреса виртуальным машинам автоматически или по запросу.
+В блоке [`.spec.settings.virtualMachineCIDRs`](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) перечисляются подсети в формате CIDR, из которых DP выдаёт IP-адреса виртуальным машинам автоматически или по запросу.
 Указывайте начальный адрес подсети, выровненный по маске, например `192.168.1.192/27`, а не произвольный адрес из диапазона.
 
 Пример:

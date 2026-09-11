@@ -17,7 +17,7 @@ Conditions can be hard or soft. A hard `requiredDuringSchedulingIgnoredDuringExe
 All rules, including [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-nodeselector) from the VM class, apply together. If at least one hard condition can't be met, the machine stays in the `Pending` phase. So set consistent rules, prefer combinations of labels over single hard restrictions, and keep spare nodes for critical workloads. Also consider the startup order: if one machine has to end up next to another, the second one has to start first. If the nodes you need have `taints`, add the matching `tolerations` to the machine.
 
 {% alert level="info" %}
-When you change the placement rules of a running machine and its current node no longer meets the new requirements, in commercial DP editions the module moves the machine by live migration, and in DP Open the changes apply only after a reboot. A machine that already meets the new requirements stays where it is.
+When you change the placement rules of a running machine and its current node no longer meets the new requirements, in commercial editions DP moves the machine by live migration, and in DP Open the changes apply only after a reboot. A machine that already meets the new requirements stays where it is.
 {% endalert %}
 
 To set the placement rules in the web interface:

@@ -26,7 +26,7 @@ Create a pool with the number of replicas you need and a virtual machine templat
 - `virtualDiskTemplates` describes each replica disk once, setting the `reclaim` policy, the size, and the data source.
 - The `blockDeviceRefs` of the template references these disks by name with `kind: VirtualDisk` and sets the device order, that is, the boot order, exactly as in a regular [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).
 
-Every `virtualDiskTemplates` entry has to appear in `blockDeviceRefs` exactly once, otherwise the module rejects the pool. Disk template names are unique.
+Every `virtualDiskTemplates` entry has to appear in `blockDeviceRefs` exactly once, otherwise DP rejects the pool. Disk template names are unique.
 
 Besides replica disks, `blockDeviceRefs` can list shared [VirtualImage](/modules/virtualization/cr.html#virtualimage) and [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) images, for example a single ISO or CD-ROM for all replicas. Such images are attached read-only, there's one of them for the whole pool, and they don't need an entry in `virtualDiskTemplates`.
 

@@ -14,7 +14,7 @@ For virtual machines that no longer meet the new requirements, the `SizingPolicy
 When defining policies, take the [CPU topology](../../../user/virtualization/vm-resources.html#cpu-topologies) of virtual machines into account.
 {% endalert %}
 
-A policy consists of a list of rules, each applying to its own range of cores. The range is set in the required `cores` block, and ranges of different rules must not overlap, otherwise the module rejects the class.
+A policy consists of a list of rules, each applying to its own range of cores. The range is set in the required `cores` block, and ranges of different rules must not overlap, otherwise DP rejects the class.
 
 A valid structure, where the ranges follow one another without overlapping:
 
@@ -40,7 +40,7 @@ An invalid structure, where the value `4` falls into two ranges at once:
     max: 8
 ```
 
-The module doesn't forbid gaps between ranges, but a virtual machine whose number of cores falls outside every range is left without a policy. For this reason, start each range with the value that follows the `max` of the previous one.
+DP doesn't forbid gaps between ranges, but a virtual machine whose number of cores falls outside every range is left without a policy. For this reason, start each range with the value that follows the `max` of the previous one.
 
 Within a range, you set the requirements for memory and for the core fraction:
 
@@ -65,9 +65,9 @@ spec:
 The `Auto` value is accepted only when both capabilities are available:
 
 - Vertical autoscaling of virtual machines, which is enabled automatically in commercial DP editions when the [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module is enabled.
-- Changing the number of cores and the amount of memory without a restart, which is enabled by the `HotplugCPUAndMemoryWithInPlaceResize` feature in the [`.spec.settings.featureGates`](/modules/virtualization/configuration.html#parameters-featuregates) parameter of the module.
+- Changing the number of cores and the amount of memory without a restart, which is enabled by the `HotplugCPUAndMemoryWithInPlaceResize` feature in the [`.spec.settings.featureGates`](/modules/virtualization/configuration.html#parameters-featuregates) parameter.
 
-If at least one of them is unavailable, the module rejects the creation of such a class.
+If at least one of them is unavailable, DP rejects the creation of such a class.
 
 A new default applies only to the virtual machines created after the change. An existing machine already carries the previous value in its specification, and the value stays there until the project owner sets another one.
 

@@ -138,7 +138,7 @@ A CPU instruction set is every command the processor can execute, from addition 
 
 Three classes suit such a cluster:
 
-- `universal`: VMs start on any node and migrate between all four. The module takes the instruction set common to both processors, so compatibility is maximal, while some capabilities of "CPU Y" stay unused.
+- `universal`: VMs start on any node and migrate between all four. DP takes the instruction set common to both processors, so compatibility is maximal, while some capabilities of "CPU Y" stay unused.
 - `cpuX`: VMs start only on nodes with "CPU X" and migrate between them, using all instructions of that processor.
 - `cpuY`: The same for nodes with "CPU Y".
 

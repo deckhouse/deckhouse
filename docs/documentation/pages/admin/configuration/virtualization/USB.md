@@ -15,7 +15,7 @@ USB device passthrough to virtual machines (VMs) is handled by the `virtualizati
 - `usbip_host`
 - `vhci_hcd`
 
-The module loads them on the nodes itself. A node where all three modules are available gets the `virtualization.deckhouse.io/usbip=true` label, and the `virtualization-dra` component runs only on such nodes. If the kernel modules stop being available, the label is removed and the component is deleted from the node.
+DP loads them on the nodes itself. A node where all three modules are available gets the `virtualization.deckhouse.io/usbip=true` label, and the `virtualization-dra` component runs only on such nodes. If the kernel modules stop being available, the label is removed and the component is deleted from the node.
 
 To see which nodes are ready for USB device passthrough, run the following command:
 
@@ -36,17 +36,17 @@ To verify that the component is actually running on these nodes, run the followi
 d8 k -n d8-virtualization get pods -l app=virtualization-dra -o wide
 ```
 
-A node missing from the output failed to load the kernel modules, and USB devices on that node aren't detected. Install the kernel modules yourself from your operating system package, or build them for the kernel in use. The module detects them on its own and assigns the label to the node within a few minutes.
+A node missing from the output failed to load the kernel modules, and USB devices on that node aren't detected. Install the kernel modules yourself from your operating system package, or build them for the kernel in use. DP detects them on its own and assigns the label to the node within a few minutes.
 
 ## Path of a USB device from a node to a VM
 
 A USB device travels from the node to a virtual machine in four steps:
 
-1. The DRA driver detects USB devices on the nodes and publishes information about them to the Kubernetes API as a [ResourceSlice](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/). The module controller creates [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resources from this data.
+1. The DRA driver detects USB devices on the nodes and publishes information about them to the Kubernetes API as a [ResourceSlice](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/). DP creates [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resources from this data.
 
 1. The administrator assigns a namespace to the [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource by setting the [`.spec.assignedNamespace`](/modules/virtualization/cr.html#nodeusbdevice-v1alpha2-spec-assignednamespace) parameter. This makes the device available in that namespace.
 
-1. Once the namespace is assigned, the module controller creates a [USBDevice](/modules/virtualization/cr.html#usbdevice) resource in it.
+1. Once the namespace is assigned, DP creates a [USBDevice](/modules/virtualization/cr.html#usbdevice) resource in it.
 
 1. The project owner attaches the [USBDevice](/modules/virtualization/cr.html#usbdevice) device to a virtual machine by adding it to the [`.spec.usbDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-usbdevices) parameter of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
@@ -152,7 +152,7 @@ When planning USB device passthrough, consider the following requirements and li
 
 - A node where USB devices must be detected has to carry the `virtualization.deckhouse.io/usbip=true` label and run containerd version 2, otherwise the `virtualization-dra` component doesn't start there.
 - A device is passed to a virtual machine over the network using USBIP, so the VM can run on a node other than the one the device is physically connected to.
-- Only a device that reports the USB 2.0 speed (480 Mbps) or a USB 3.x speed (5 Gbps and higher) can be passed through. The module doesn't let you attach a slower device to a VM, for example a mouse or a keyboard at 1.5 or 12 Mbps.
+- Only a device that reports the USB 2.0 speed (480 Mbps) or a USB 3.x speed (5 Gbps and higher) can be passed through. DP doesn't let you attach a slower device to a VM, for example a mouse or a keyboard at 1.5 or 12 Mbps.
 - A node connects no more than 16 devices, 8 per USB 2.0 hub and 8 per USB 3.0 hub.
 - The hub is selected by the device speed and can't be changed manually. A USB 2.0 device doesn't connect to a USB 3.0 hub, and vice versa.
 - A device can be attached to a running VM and detached from it without stopping the VM.

@@ -18,7 +18,7 @@ lang: ru
 
 1. Включите модули [`log-shipper`](/modules/log-shipper/) и [`runtime-audit-engine`](/modules/runtime-audit-engine/).
 1. Включите аудит API Kubernetes, задав [`.spec.settings.apiserver.auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в значение `true` в модуле [`control-plane-manager`](/modules/control-plane-manager/).
-1. Задайте [`.spec.settings.audit.enabled`](/modules/virtualization/configuration.html#parameters-audit-enabled) в значение `true` в модуле `virtualization`:
+1. Задайте [`.spec.settings.audit.enabled`](/modules/virtualization/configuration.html#parameters-audit-enabled) в значение `true` в настройках модуля:
 
    ```yaml
    spec:

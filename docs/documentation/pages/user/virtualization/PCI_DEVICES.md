@@ -62,7 +62,7 @@ The devices that the administrator has made available to your project appear in 
 
 To detach a device, remove it from the [`.spec.pciDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-pcidevices) parameter and restart the machine. Until then, the device stays occupied even if the machine is stopped, so you can't attach it to another one.
 
-If the device is removed from the node, the machine doesn't start and stays in the `Pending` phase. In the [`.status.pciDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-pcidevices) parameter, such a device stops being ready, but it stays with the machine as long as its specification lists it. The module doesn't stop a running machine in the meantime, including when the device becomes unavailable to the project.
+If the device is removed from the node, the machine doesn't start and stays in the `Pending` phase. In the [`.status.pciDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-pcidevices) parameter, such a device stops being ready, but it stays with the machine as long as its specification lists it. DP doesn't stop a running machine in the meantime, including when the device becomes unavailable to the project.
 
 ## Limitations
 
@@ -70,6 +70,6 @@ When attaching PCI devices, consider the following limitations:
 
 - A machine with a PCI device starts only on the node of that device and can't be moved by live migration, so it has to be stopped when the node is put into maintenance.
 - All PCI devices of a machine have to be on the same node, otherwise the specification is rejected.
-- A device is attached to one machine only. If another one already lists it, the module rejects your specification.
+- A device is attached to one machine only. If another one already lists it, DP rejects your specification.
 - A machine takes no more than eight PCI devices.
-- A network card that's passed through works around the cluster network subsystem. It doesn't appear in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) parameter, and the module neither assigns nor tracks its IP and MAC addresses.
+- A network card that's passed through works around the cluster network subsystem. It doesn't appear in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) parameter, and DP neither assigns nor tracks its IP and MAC addresses.

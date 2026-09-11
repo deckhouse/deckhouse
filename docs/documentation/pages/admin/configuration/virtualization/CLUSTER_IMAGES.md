@@ -10,7 +10,7 @@ An image holds the contents of a disk that project owners use to create virtual 
 An image appears in the cluster in three steps:
 
 1. The administrator creates a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource and specifies a data source in it.
-1. The module downloads the image from that source to the internal storage (DVCR).
+1. DP downloads the image from that source to the internal storage (DVCR).
 1. The downloaded image becomes available for creating disks.
 
 The image source can be an HTTP server hosting the image file, a container image registry, or a file on your computer that you upload from the command line. You can also create an image from another image, from a virtual machine disk, or from a disk snapshot.
@@ -41,7 +41,7 @@ Distribution vendors publish ready-made images with a preinstalled system. The f
 | [Rocky](https://rockylinux.org/download/)                                         | `rocky`      |
 | [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`     |
 
-The module accepts image files in the following formats:
+DP accepts image files in the following formats:
 
 - `qcow2`
 - `raw`
@@ -50,9 +50,9 @@ The module accepts image files in the following formats:
 - `vhd`
 - `vhdx`
 
-You can provide an image compressed with `gz`, `xz`, or `zst`. The module unpacks it during the upload.
+You can provide an image compressed with `gz`, `xz`, or `zst`. DP unpacks it during the upload.
 
-The module detects the image type and size on its own and records them in the resource status. There are two sizes, and both appear in the `d8 k get cvi -o wide` output:
+DP detects the image type and size on its own and records them in the resource status. There are two sizes, and both appear in the `d8 k get cvi -o wide` output:
 
 - `STOREDSIZE`: The space the image occupies in the storage. For an image uploaded in a compressed form, it's smaller than the unpacked size. Use this column to estimate how much space the images take in DVCR.
 - `UNPACKEDSIZE`: The size of the image after unpacking. It defines the minimum size of a disk that can be created from this image.
@@ -103,7 +103,7 @@ The simplest way to create an image is to provide a link to a file hosted on an 
    ubuntu-24-04   Ready   false   100%       23h
    ```
 
-To make the module verify the downloaded file against a checksum, add the [`checksum`](/modules/virtualization/cr.html#clustervirtualimage-v1alpha2-spec-datasource-http-checksum) block to the source. If the file doesn't match any of the specified checksums, the image moves to the `Failed` phase.
+To make DP verify the downloaded file against a checksum, add the [`checksum`](/modules/virtualization/cr.html#clustervirtualimage-v1alpha2-spec-datasource-http-checksum) block to the source. If the file doesn't match any of the specified checksums, the image moves to the `Failed` phase.
 
 {% endtab %}
 
@@ -122,7 +122,7 @@ To make the module verify the downloaded file against a checksum, add the [`chec
 
 ## Creating a cluster image from a container image registry
 
-The module can pull an image from an external container image registry, but the disk file must be located in the container image under the `/disk` path. The following steps show how to prepare such a container image and create a cluster image from it.
+DP can pull an image from an external container image registry, but the disk file must be located in the container image under the `/disk` path. The following steps show how to prepare such a container image and create a cluster image from it.
 
 {% tabs cvi-registry %}
 
@@ -171,7 +171,7 @@ The module can pull an image from an external container image registry, but the 
    EOF
    ```
 
-The module works only with registries that have TLS enabled. If the registry uses its own certificate authority, provide the certificate chain in the [`caBundle`](/modules/virtualization/cr.html#clustervirtualimage-v1alpha2-spec-datasource-containerimage-cabundle) parameter, and take the credentials for a private registry from the secret specified in the `imagePullSecret` parameter.
+DP works only with registries that have TLS enabled. If the registry uses its own certificate authority, provide the certificate chain in the [`caBundle`](/modules/virtualization/cr.html#clustervirtualimage-v1alpha2-spec-datasource-containerimage-cabundle) parameter, and take the credentials for a private registry from the secret specified in the `imagePullSecret` parameter.
 
 {% endtab %}
 
@@ -190,7 +190,7 @@ The module works only with registries that have TLS enabled. If the registry use
 
 ## Uploading a cluster image from the command line
 
-If the image file is on your computer, upload it directly. The module creates a temporary upload endpoint for this and waits for the data.
+If the image file is on your computer, upload it directly. DP creates a temporary upload endpoint for this and waits for the data.
 
 {% tabs cvi-upload %}
 

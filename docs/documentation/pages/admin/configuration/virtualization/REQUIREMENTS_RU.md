@@ -56,7 +56,7 @@ lang: ru
 
 Для операционных систем семейства Linux рекомендуется использовать образы гостевых ОС с поддержкой `cloud-init`, что позволяет выполнять инициализацию виртуальных машин после их создания.
 
-Для операционных систем семейства Windows платформа поддерживает инициализацию с помощью [autounattend](https://learn.microsoft.com/ru-ru/windows-hardware/manufacture/desktop/windows-setup-automation-overview) установки.
+Для операционных систем семейства Windows DP поддерживает инициализацию с помощью [autounattend](https://learn.microsoft.com/ru-ru/windows-hardware/manufacture/desktop/windows-setup-automation-overview) установки.
 
 ## Пределы конфигурации виртуальной машины
 

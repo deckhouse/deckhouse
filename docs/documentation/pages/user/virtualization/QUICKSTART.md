@@ -1,6 +1,6 @@
 ---
-title: "Virtual machines"
-permalink: en/user/virtualization/
+title: "Quick start"
+permalink: en/user/virtualization/quickstart.html
 description: "Quick start: creating a virtual machine from an image, attaching a disk, and logging in to the guest system over SSH."
 search: quick start, creating a VM, first virtual machine
 ---
