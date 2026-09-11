@@ -117,7 +117,7 @@ type syncer struct {
 // illegal object name, an unreadable module dir, broken or missing schema
 // files) is skipped with a warning; an API failure stops the sync. An embedded
 // module skipped here reconciles nowhere, since the Module reconciler resolves
-// the same version - see known-hazards.md.
+// the same version.
 func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, globalHooksDir string, logger *log.Logger) error {
 	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, globalHooksDir, logger).sync(ctx)
 }
@@ -147,9 +147,9 @@ func (s *syncer) sync(ctx context.Context) error {
 	return s.syncModulePackageVersions(ctx)
 }
 
-// RepositoryNameForSource maps a ModuleSource name to the name of the
+// PackageRepositoryNameForModuleSource maps a ModuleSource name to the name of the
 // PackageRepository serving the same registry path.
-func RepositoryNameForSource(sourceName string) string {
+func PackageRepositoryNameForModuleSource(sourceName string) string {
 	if sourceName == moduleSourceNameDeckhouse {
 		return repositoryNameDeckhouseModules
 	}

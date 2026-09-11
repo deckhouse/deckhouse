@@ -110,7 +110,7 @@ func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
 	}
 }
 
-func testRelease(module, source, version, phase string) *v1alpha1.ModuleRelease {
+func testModuleRelease(module, source, version, phase string) *v1alpha1.ModuleRelease {
 	return &v1alpha1.ModuleRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   module + "-v" + version,
@@ -121,7 +121,7 @@ func testRelease(module, source, version, phase string) *v1alpha1.ModuleRelease 
 	}
 }
 
-func listVersionNames(t *testing.T, cl client.Client) []string {
+func listModulePackageVersionNames(t *testing.T, cl client.Client) []string {
 	t.Helper()
 
 	list := new(v1alpha1.ModulePackageVersionList)
@@ -135,7 +135,7 @@ func listVersionNames(t *testing.T, cl client.Client) []string {
 	return names
 }
 
-func listPackageNames(t *testing.T, cl client.Client) []string {
+func listModulePackageNames(t *testing.T, cl client.Client) []string {
 	t.Helper()
 
 	list := new(v1alpha1.ModulePackageList)
@@ -149,28 +149,28 @@ func listPackageNames(t *testing.T, cl client.Client) []string {
 	return names
 }
 
-// listModuleVersionNames lists every version except the global module's, whose name carries
+// listModulePackageVersionNamesExceptGlobal lists every version except the global module's, whose name carries
 // the running Deckhouse version and so is matched by prefix. Every sync writes that one, so a
 // test about the embedded modules dir or the releases drops it to keep asserting only on its
-// own producer; TestSyncGlobalVersion covers it directly.
-func listModuleVersionNames(t *testing.T, cl client.Client) []string {
+// own producer; TestSyncGlobalModulePackageVersion covers it directly.
+func listModulePackageVersionNamesExceptGlobal(t *testing.T, cl client.Client) []string {
 	t.Helper()
 
-	return slices.DeleteFunc(listVersionNames(t, cl), func(name string) bool {
+	return slices.DeleteFunc(listModulePackageVersionNames(t, cl), func(name string) bool {
 		return strings.HasPrefix(name, repositoryNameEmbedded+"-"+packageNameGlobal+"-")
 	})
 }
 
-// listModulePackageNames is listModuleVersionNames for the catalog entries.
-func listModulePackageNames(t *testing.T, cl client.Client) []string {
+// listModulePackageNamesExceptGlobal is listModulePackageVersionNamesExceptGlobal for the catalog entries.
+func listModulePackageNamesExceptGlobal(t *testing.T, cl client.Client) []string {
 	t.Helper()
 
-	return slices.DeleteFunc(listPackageNames(t, cl), func(name string) bool {
+	return slices.DeleteFunc(listModulePackageNames(t, cl), func(name string) bool {
 		return name == packageNameGlobal
 	})
 }
 
-func getVersion(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePackageVersion {
+func getModulePackageVersion(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePackageVersion {
 	t.Helper()
 
 	mpv := new(v1alpha1.ModulePackageVersion)
@@ -179,7 +179,7 @@ func getVersion(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePac
 	return mpv
 }
 
-func getRepository(t *testing.T, cl client.Client, name string) *v1alpha1.PackageRepository {
+func getPackageRepository(t *testing.T, cl client.Client, name string) *v1alpha1.PackageRepository {
 	t.Helper()
 
 	repo := new(v1alpha1.PackageRepository)
@@ -188,7 +188,7 @@ func getRepository(t *testing.T, cl client.Client, name string) *v1alpha1.Packag
 	return repo
 }
 
-func listRepositoryNames(t *testing.T, cl client.Client) []string {
+func listPackageRepositoryNames(t *testing.T, cl client.Client) []string {
 	t.Helper()
 
 	list := new(v1alpha1.PackageRepositoryList)
@@ -202,7 +202,7 @@ func listRepositoryNames(t *testing.T, cl client.Client) []string {
 	return names
 }
 
-func TestRepositoryNameForSource(t *testing.T) {
+func TestPackageRepositoryNameForModuleSource(t *testing.T) {
 	cases := []struct {
 		source string
 		want   string
@@ -214,7 +214,7 @@ func TestRepositoryNameForSource(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		assert.Equal(t, c.want, RepositoryNameForSource(c.source), c.source)
+		assert.Equal(t, c.want, PackageRepositoryNameForModuleSource(c.source), c.source)
 	}
 }
 
@@ -226,24 +226,24 @@ func TestSyncIsIdempotent(t *testing.T) {
 
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
 		testModuleSource("external", "registry.example.io/external"),
-		testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
-		testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
+		testModuleRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
+		testModuleRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
 	)
 
 	require.NoError(t, s.sync(ctx))
 
 	versions := make(map[string]string)
-	for _, name := range listVersionNames(t, cl) {
-		versions[name] = getVersion(t, cl, name).ResourceVersion
+	for _, name := range listModulePackageVersionNames(t, cl) {
+		versions[name] = getModulePackageVersion(t, cl, name).ResourceVersion
 	}
 	require.Len(t, versions, 4, "two releases, one embedded module and the global one")
-	repositoryRV := getRepository(t, cl, "external").ResourceVersion
+	repositoryRV := getPackageRepository(t, cl, "external").ResourceVersion
 
 	require.NoError(t, s.sync(ctx))
 
-	assert.Len(t, listVersionNames(t, cl), 4)
+	assert.Len(t, listModulePackageVersionNames(t, cl), 4)
 	for name, rv := range versions {
-		assert.Equal(t, rv, getVersion(t, cl, name).ResourceVersion, name)
+		assert.Equal(t, rv, getModulePackageVersion(t, cl, name).ResourceVersion, name)
 	}
-	assert.Equal(t, repositoryRV, getRepository(t, cl, "external").ResourceVersion)
+	assert.Equal(t, repositoryRV, getPackageRepository(t, cl, "external").ResourceVersion)
 }

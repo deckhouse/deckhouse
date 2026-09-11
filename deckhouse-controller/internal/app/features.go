@@ -19,14 +19,21 @@ import "os"
 // Feature-gate environment variables. Each turns on a block of controllers in
 // pkg/controller when set to the literal "true".
 const (
-	EnvEnablePackageSystem  = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
-	EnvEnableModulePackages = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
+	EnvEnablePackageSystem     = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
+	EnvEnableModulePackageSync = "DECKHOUSE_ENABLE_MODULE_PACKAGE_SYNC"
+	EnvEnableModulePackages    = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
 )
 
 // PackageSystemEnabled reports whether the package-system controllers
 // (PackageRepository, Application, ApplicationPackageVersion) are enabled.
 func PackageSystemEnabled() bool { return os.Getenv(EnvEnablePackageSystem) == "true" }
 
-// ModulePackagesEnabled reports whether the module-package controllers
-// (ModulePackage, ModulePackageVersion, Module v2) are enabled.
+// ModulePackageSyncEnabled reports whether the module packages of the old
+// module stack are synced into the package system: the startup sync records
+// them as PackageRepository and ModulePackageVersion objects, and the
+// ModulePackageVersion controller completes the drafts it leaves.
+func ModulePackageSyncEnabled() bool { return os.Getenv(EnvEnableModulePackageSync) == "true" }
+
+// ModulePackagesEnabled reports whether the Module v2 controller is enabled.
+// It runs the module packages the sync above records.
 func ModulePackagesEnabled() bool { return os.Getenv(EnvEnableModulePackages) == "true" }
