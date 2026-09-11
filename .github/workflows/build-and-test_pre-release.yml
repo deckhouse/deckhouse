@@ -466,6 +466,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
+            --build-report-operations=true \
             --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
@@ -753,6 +754,7 @@ jobs:
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --final-images-only=true \
+            --build-report-operations=true \
             --build-report-path images_tags_werf.json
 
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
@@ -1188,6 +1190,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
+            --build-report-operations=true \
             --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
@@ -1597,6 +1600,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
+            --build-report-operations=true \
             --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
@@ -2006,6 +2010,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
+            --build-report-operations=true \
             --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
@@ -2415,6 +2420,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
+            --build-report-operations=true \
             --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
@@ -2824,6 +2830,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
+            --build-report-operations=true \
             --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
@@ -3233,6 +3240,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
+            --build-report-operations=true \
             --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
