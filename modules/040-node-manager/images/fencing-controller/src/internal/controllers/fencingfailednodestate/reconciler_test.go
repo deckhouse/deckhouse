@@ -93,7 +93,7 @@ func TestReconcileAdvancesThePhase(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			incident := failedState()
 			incident.Status.Phase = tc.phase
-			incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-tc.failedAgo))
+			incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-tc.failedAgo))
 
 			if tc.heartbeatAgo > 0 {
 				at := metav1.NewTime(observedAt.Add(-tc.heartbeatAgo))
@@ -136,7 +136,7 @@ func TestReconcileAdvancesThePhase(t *testing.T) {
 // moment, or they can disagree about whether that deadline has passed.
 func TestReconcileDecidesAgainstOneMoment(t *testing.T) {
 	incident := failedState()
-	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+	incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-2 * time.Second))
 
 	h := newHarness(t, incident)
 
@@ -156,7 +156,7 @@ func TestReconcileDecidesAgainstOneMoment(t *testing.T) {
 func TestReconcileArmsATimerWhileItWaits(t *testing.T) {
 	incident := failedState()
 	// medium delays evacuation by 6s, so the deadline lands on observedAt.
-	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-6 * time.Second))
+	incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-6 * time.Second))
 
 	h := newHarness(t, incident)
 	h.reconciler.now = func() time.Time {
@@ -184,7 +184,7 @@ func TestReconcileArmsATimerWhileItWaits(t *testing.T) {
 func TestReconcileRestoresTheMachineFromThePhase(t *testing.T) {
 	incident := failedState()
 	incident.Status.Phase = v1alpha1.PhaseReadyToEvict
-	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
+	incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-20 * time.Second))
 
 	h := newHarness(t, incident)
 
@@ -235,7 +235,7 @@ func TestReconcileReportsAnUnusableProfile(t *testing.T) {
 			incident := failedState()
 			incident.Status.Phase = phase
 			// Old enough that resolved timings would send it to ReadyToEvict.
-			incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
+			incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-20 * time.Second))
 
 			h := newHarness(t, incident)
 			h.profiles.err = missingProfile()
@@ -260,7 +260,7 @@ func TestReconcileReportsAnUnusableProfile(t *testing.T) {
 // outlive its cause.
 func TestReconcileClearsTheConditionOnceTheProfileIsBack(t *testing.T) {
 	incident := failedState()
-	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+	incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-2 * time.Second))
 
 	h := newHarness(t, incident)
 	h.profiles.err = missingProfile()
@@ -291,7 +291,7 @@ func TestReconcileClearsTheConditionOnceTheProfileIsBack(t *testing.T) {
 // that follow have nothing to add to it.
 func TestReconcileAnnouncesTheBlockerOnce(t *testing.T) {
 	incident := failedState()
-	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+	incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-2 * time.Second))
 
 	h := newHarness(t, incident)
 	h.profiles.err = missingProfile()
@@ -318,7 +318,7 @@ func TestReconcileAnnouncesTheBlockerOnce(t *testing.T) {
 
 func TestReconcileAnnouncesTheProfileIsBack(t *testing.T) {
 	incident := failedState()
-	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+	incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-2 * time.Second))
 
 	h := newHarness(t, incident)
 	h.profiles.err = missingProfile()
@@ -355,7 +355,7 @@ func TestReconcileAnnouncesTheProfileIsBack(t *testing.T) {
 // found by reading objects.
 func TestReconcileTracksTheConfigurationErrorMetric(t *testing.T) {
 	incident := failedState()
-	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+	incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-2 * time.Second))
 
 	h := newHarness(t, incident)
 	h.profiles.err = missingProfile()
@@ -415,7 +415,7 @@ func TestReconcileKeepsTransientProfileErrorsRetryable(t *testing.T) {
 // endless stream of identical status patches.
 func TestReconcileWritesNothingTwice(t *testing.T) {
 	incident := failedState()
-	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+	incident.Status.Failed.DetectedAt = metav1.NewMicroTime(observedAt.Add(-2 * time.Second))
 
 	h := newHarness(t, incident)
 
@@ -506,7 +506,7 @@ func TestFormatTime(t *testing.T) {
 	}{
 		"unset":      {in: nil, want: ""},
 		"zero value": {in: &metav1.Time{}, want: ""},
-		"set":        {in: &detectedAt, want: "2026-06-02T15:00:01Z"},
+		"set":        {in: &heartbeatAt, want: "2026-06-02T15:00:02Z"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := formatTime(tc.in); got != tc.want {
@@ -516,8 +516,25 @@ func TestFormatTime(t *testing.T) {
 	}
 }
 
+func TestFormatMicroTime(t *testing.T) {
+	for name, tc := range map[string]struct {
+		in   *metav1.MicroTime
+		want string
+	}{
+		"unset":      {in: nil, want: ""},
+		"zero value": {in: &metav1.MicroTime{}, want: ""},
+		"set":        {in: &detectedAt, want: "2026-06-02T15:00:01.250000Z"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := formatMicroTime(tc.in); got != tc.want {
+				t.Errorf("formatMicroTime = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 var (
-	detectedAt  = metav1.Date(2026, time.June, 2, 15, 0, 1, 0, time.UTC)
+	detectedAt  = metav1.NewMicroTime(time.Date(2026, time.June, 2, 15, 0, 1, 250000000, time.UTC))
 	heartbeatAt = metav1.Date(2026, time.June, 2, 15, 0, 2, 0, time.UTC)
 )
 

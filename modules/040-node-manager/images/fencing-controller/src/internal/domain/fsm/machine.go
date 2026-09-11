@@ -219,12 +219,20 @@ func detectedAt(failed *v1alpha1.FencingFailedNodeStateFailed) (time.Time, bool)
 		return time.Time{}, false
 	}
 
-	return timeOf(&failed.DetectedAt)
+	return microTimeOf(&failed.DetectedAt)
 }
 
 // timeOf treats an unset timestamp as no evidence: a writer that has not filled
 // it in yet must not look like a failure detected at the zero time.
 func timeOf(t *metav1.Time) (time.Time, bool) {
+	if t == nil || t.IsZero() {
+		return time.Time{}, false
+	}
+
+	return t.Time, true
+}
+
+func microTimeOf(t *metav1.MicroTime) (time.Time, bool) {
 	if t == nil || t.IsZero() {
 		return time.Time{}, false
 	}

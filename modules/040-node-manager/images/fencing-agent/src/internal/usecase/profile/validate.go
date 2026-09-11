@@ -19,6 +19,7 @@ package profile
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -35,6 +36,12 @@ func (v *validator) positive(field string, d metav1.Duration) {
 	// The CRD pattern admits "0ms", and zero timings would disable probing.
 	if d.Duration <= 0 {
 		v.errs = append(v.errs, fmt.Errorf("%s: must be positive, got %s", field, d.Duration))
+	}
+}
+
+func (v *validator) atLeast(field string, d metav1.Duration, floor time.Duration) {
+	if d.Duration < floor {
+		v.errs = append(v.errs, fmt.Errorf("%s: must be at least %s, got %s", field, floor, d.Duration))
 	}
 }
 
@@ -72,7 +79,7 @@ func Validate(profile *v1alpha1.FencingSLAProfile) error {
 	v.positive("memberlist.gossipInterval", spec.Memberlist.GossipInterval)
 	v.atLeastOne("memberlist.retransmitMult", spec.Memberlist.RetransmitMult)
 	v.positive("memberlist.gossipToTheDeadTime", spec.Memberlist.GossipToTheDeadTime)
-	v.positive("fallback.heartbeat", spec.Fallback.Heartbeat)
+	v.atLeast("fallback.heartbeat", spec.Fallback.Heartbeat, time.Millisecond)
 	v.positive("fallback.ttl", spec.Fallback.TTL)
 	v.positive("fallback.kubernetesAPITimeout", spec.Fallback.KubernetesAPITimeout)
 	v.positive("rejoin.interval", spec.Rejoin.Interval)

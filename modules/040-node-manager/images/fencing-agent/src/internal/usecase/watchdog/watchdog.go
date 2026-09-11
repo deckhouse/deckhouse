@@ -65,6 +65,7 @@ const (
 	reasonRefused         = "WatchdogRefused"
 	reasonStarvation      = "WatchdogStarvation"
 	reasonIdentityChanged = "NodeIdentityChanged"
+	reasonGateUndecided   = "WatchdogGateUndecided"
 )
 
 // Feeding states, used to log and event a transition exactly once.
@@ -72,6 +73,7 @@ const (
 	stateFeeding     = ""
 	stateMaintenance = "Maintenance"
 	stateRemoval     = "PlannedRemoval"
+	stateLeftGroup   = "LeftNodeGroup"
 	stateGateClosed  = "FeedGateClosed"
 )
 
@@ -84,6 +86,8 @@ const (
 	// livenessGrace floors the staleness window, so fast profiles do not fail
 	// /healthz on ordinary scheduler jitter.
 	livenessGrace = 5 * time.Second
+
+	verdictGrace = 5 * time.Second
 )
 
 // errFatal marks failures the agent must not survive: a watchdog that cannot be
@@ -101,13 +105,11 @@ type Deps struct {
 	Open func() (Device, error)
 	// Nowayout reports the kernel setting that makes Magic Close a no-op. It must
 	// not open the device.
-	Nowayout func() (bool, error)
-	State    StateSource
-	Events   EventRecorder
-	// ShouldFeed is the quorum and fallback gate of the ADR. It is always true for
-	// now: no local quorum view and no fallback path yet, so the watchdog only
-	// fences a Node whose agent died, hung or lost the device.
+	Nowayout   func() (bool, error)
+	State      StateSource
+	Events     EventRecorder
 	ShouldFeed func() (bool, string)
+	Now        func() time.Time
 }
 
 type Manager struct {
@@ -126,13 +128,21 @@ type Manager struct {
 	// does not advertise it, or a disarm already failed. It is sticky, and from
 	// then on planned operations keep feeding.
 	cannotDisarm bool
+	// undecidedSince is when the gate last went provisional, zero while it has a
+	// verdict.
+	undecidedSince time.Time
 
-	started  atomic.Bool
-	ready    atomic.Bool
-	lastTick atomic.Int64
+	started       atomic.Bool
+	ready         atomic.Bool
+	gateUndecided atomic.Bool
+	lastTick      atomic.Int64
 }
 
 func New(params Params, deps Deps, logger *log.Logger) *Manager {
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
+
 	return &Manager{params: params, deps: deps, logger: logger}
 }
 
@@ -203,11 +213,8 @@ func (m *Manager) Close() {
 	m.ready.Store(false)
 }
 
-// Ready reports that the policy is being carried out: armed and fed, or disarmed
-// on purpose for a planned operation. It answers "is this agent healthy", not
-// "is fencing armed", so maintenance does not flap pod readiness.
 func (m *Manager) Ready() bool {
-	return m.started.Load() && m.ready.Load()
+	return m.started.Load() && m.ready.Load() && !m.gateUndecided.Load()
 }
 
 // Alive reports that the feed loop is still ticking. Diagnostics only: the probe
@@ -224,7 +231,7 @@ func (m *Manager) Alive() bool {
 		return true
 	}
 
-	return time.Since(time.Unix(0, last)) < max(3*m.params.FeedInterval, livenessGrace)
+	return m.deps.Now().Sub(time.Unix(0, last)) < max(3*m.params.FeedInterval, livenessGrace)
 }
 
 func (m *Manager) validate() error {
@@ -276,12 +283,6 @@ func (m *Manager) tick() error {
 	snapshot := m.deps.State.Snapshot()
 
 	switch {
-	case snapshot.UIDMismatch:
-		// Recreated under the same name: the identity and profile read at startup no
-		// longer describe this machine, and only a restart refreshes them.
-		m.deps.Events.Warning(reasonIdentityChanged, "Node was recreated with a different uid, restarting the agent")
-
-		return fmt.Errorf("%w: own node was recreated with a different uid", errFatal)
 	case !snapshot.Observed:
 		// Arming before the own-Node cache is filled would hide maintenance
 		// annotations and let the agent fence through a planned operation.
@@ -290,11 +291,18 @@ func (m *Manager) tick() error {
 		return nil
 	case snapshot.PlannedRemoval:
 		return m.applyState(stateRemoval, snapshot.RemovalReason)
+	case snapshot.LeftNodeGroup:
+		return m.applyState(stateLeftGroup, leftGroupDetail(snapshot.NodeGroup))
 	case snapshot.Maintenance:
 		return m.applyState(stateMaintenance, strings.Join(snapshot.MaintenanceReasons, ","))
 	}
 
-	if feed, reason := m.deps.ShouldFeed(); !feed {
+	feed, reason := m.deps.ShouldFeed()
+
+	// A closed gate is a verdict too, so only an open gate can be provisional.
+	m.trackVerdict(feed && reason != "", reason)
+
+	if !feed {
 		m.starve(reason)
 
 		return nil
@@ -303,6 +311,52 @@ func (m *Manager) tick() error {
 	m.resumeFeeding()
 
 	return m.feed()
+}
+
+func (m *Manager) trackVerdict(provisional bool, reason string) {
+	if !provisional {
+		m.undecidedSince = time.Time{}
+
+		if m.gateUndecided.Swap(false) {
+			m.logger.Info("the feed gate reached a verdict")
+		}
+
+		return
+	}
+
+	now := m.deps.Now()
+
+	if m.undecidedSince.IsZero() {
+		m.undecidedSince = now
+
+		return
+	}
+
+	waited := now.Sub(m.undecidedSince)
+
+	if waited < max(4*m.params.FeedInterval, verdictGrace) || m.gateUndecided.Load() {
+		return
+	}
+
+	m.gateUndecided.Store(true)
+
+	m.logger.Error("the feed gate has no verdict, the watchdog keeps feeding on the start-up grace",
+		"reason", reason,
+		"waited", waited.String(),
+	)
+	m.deps.Events.Warning(reasonGateUndecided, fmt.Sprintf(
+		"Watchdog has been feeding without a fencing verdict for %s, this node cannot be fenced locally: %s",
+		waited.Truncate(time.Second), reason,
+	))
+}
+
+// leftGroupDetail names where the Node went, for the log line and the Event.
+func leftGroupDetail(nodeGroup string) string {
+	if nodeGroup == "" {
+		return "the node group label is gone"
+	}
+
+	return fmt.Sprintf("the node is labeled into node group %q now", nodeGroup)
 }
 
 // applyState disarms the watchdog on purpose: maintenance or a planned removal.
@@ -384,8 +438,7 @@ func (m *Manager) keepFeedingThrough(state, detail string, changed bool) error {
 }
 
 // starve stops the keepalive without disarming, so the Node resets when the
-// timeout expires. This is the ADR's quorum-loss path, unreachable while
-// ShouldFeed is always true. The caller holds mu.
+// timeout expires. The caller holds mu.
 func (m *Manager) starve(reason string) {
 	m.ready.Store(false)
 
@@ -542,7 +595,7 @@ func (m *Manager) recordFailure(err error) {
 }
 
 func (m *Manager) touch() {
-	m.lastTick.Store(time.Now().UnixNano())
+	m.lastTick.Store(m.deps.Now().UnixNano())
 }
 
 // wholeSeconds mirrors the rounding the device adapter applies, so the timeout

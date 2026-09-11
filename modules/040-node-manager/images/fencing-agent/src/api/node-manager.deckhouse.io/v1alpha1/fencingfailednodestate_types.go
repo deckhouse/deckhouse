@@ -82,9 +82,12 @@ type FencingFailedNodeStateSpec struct {
 
 // FencingFailedNodeStateFailed is written only by the designated writer.
 type FencingFailedNodeStateFailed struct {
-	DetectedAt metav1.Time  `json:"detectedAt"`
-	DetectedBy string       `json:"detectedBy"`
-	Reason     FailedReason `json:"reason"`
+	// Microsecond precision: the evacuation delay is counted from this moment,
+	// and the critical profile allows only 1.2s, so truncating to whole seconds
+	// would let the evacuation start almost a second early.
+	DetectedAt metav1.MicroTime `json:"detectedAt"`
+	DetectedBy string           `json:"detectedBy"`
+	Reason     FailedReason     `json:"reason"`
 	// +optional
 	MemberlistIncarnation int64 `json:"memberlistIncarnation,omitempty"`
 	// +optional
@@ -95,15 +98,14 @@ type FencingFailedNodeStateFailed struct {
 	QuorumSize int32 `json:"quorumSize"`
 }
 
-// FencingFailedNodeStateFallback is written only by the affected Node itself.
 type FencingFailedNodeStateFallback struct {
 	Active bool `json:"active"`
 	// +optional
-	LastHeartbeatAt *metav1.Time `json:"lastHeartbeatAt,omitempty"`
+	LastHeartbeatAt *metav1.MicroTime `json:"lastHeartbeatAt,omitempty"`
 	// +optional
-	QuorumLostAt *metav1.Time `json:"quorumLostAt,omitempty"`
-	// +kubebuilder:validation:Minimum=1
-	HeartbeatIntervalSeconds int32 `json:"heartbeatIntervalSeconds"`
+	QuorumLostAt      *metav1.Time    `json:"quorumLostAt,omitempty"`
+	APIReachable      bool            `json:"apiReachable"`
+	HeartbeatInterval metav1.Duration `json:"heartbeatInterval"`
 }
 
 // FencingFailedNodeStateStatus holds the incident state.
