@@ -18,81 +18,78 @@ package config
 
 import (
 	"errors"
+	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/ilyakaznacheev/cleanenv"
 
-	"fencing-agent/internal/adapters/kubeclient"
-	"fencing-agent/internal/adapters/memberlist"
-	"fencing-agent/internal/adapters/watchdog"
-	"fencing-agent/internal/controllers/grpc"
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 type Config struct {
-	FencingMode            string `env:"FENCING_MODE" env-required:"true"`
-	HealthProbeBindAddress string `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
-	NodeName               string `env:"NODE_NAME" env-required:"true"`
-	NodeGroup              string `env:"NODE_GROUP" env-required:"true"`
+	NodeName       string `env:"NODE_NAME" env-required:"true"`
+	NodeUID        string
+	NodeGroup      string `env:"NODE_GROUP" env-required:"true"`
+	ProfileRefName string `env:"PROFILE_REF_NAME" env-required:"true"`
+
+	MemberlistPort int `env:"MEMBERLIST_PORT" env-default:"8500"`
+
+	WatchdogDevice string `env:"WATCHDOG_DEVICE" env-default:"/dev/watchdog"`
+
+	APISocketPath          string `env:"API_SOCKET_PATH" env-default:"/var/run/fencing-agent/fencing-agent.sock"`
+	HealthProbeBindAddress string `env:"HEALTH_PROBE_BIND_ADDRESS" env-default:":8081"`
 	LogLevel               string `env:"LOG_LEVEL" env-default:"info"`
-
-	Watchdog watchdog.Config
-
-	KubeClient kubeclient.Config
-
-	Memberlist memberlist.Config
-
-	GRPC grpc.Config
 }
 
-func (c *Config) MustLoad() {
-	readErr := cleanenv.ReadEnv(c)
-	if readErr != nil {
-		panic(readErr)
+// Load reads and validates the environment. Fencing timings have no env vars on
+// purpose: they come only from the FencingSLAProfile named by PROFILE_REF_NAME.
+func (c *Config) Load() error {
+	if err := cleanenv.ReadEnv(c); err != nil {
+		return fmt.Errorf("read environment: %w", err)
 	}
 
-	valErr := c.validate()
-	if valErr != nil {
-		panic(valErr)
-	}
-}
-
-func (c *Config) validate() error {
-	validators := []func() error{
-		c.validateCommon,
-		c.KubeClient.Validate,
-		c.Watchdog.Validate,
-		c.Memberlist.Validate,
-		c.GRPC.Validate,
-	}
-
-	for _, validator := range validators {
-		if err := validator(); err != nil {
-			return err
-		}
+	if err := c.validate(); err != nil {
+		return fmt.Errorf("validate configuration: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Config) validateCommon() error {
+func (c *Config) validate() error {
 	if strings.TrimSpace(c.NodeName) == "" {
 		return errors.New("NODE_NAME is empty")
-	}
-
-	if strings.TrimSpace(c.FencingMode) == "" {
-		return errors.New("FENCING_MODE is empty")
 	}
 
 	if strings.TrimSpace(c.NodeGroup) == "" {
 		return errors.New("NODE_GROUP is empty")
 	}
 
-	if strings.TrimSpace(c.LogLevel) == "" {
-		return errors.New("LOG_LEVEL is empty")
+	if !slices.Contains(v1alpha1.ProfileNames(), v1alpha1.ProfileName(c.ProfileRefName)) {
+		return fmt.Errorf("PROFILE_REF_NAME=%q is invalid, must be one of %v", c.ProfileRefName, v1alpha1.ProfileNames())
+	}
+
+	if c.MemberlistPort < 1 || c.MemberlistPort > 65535 {
+		return fmt.Errorf("MEMBERLIST_PORT=%d is out of range 1-65535", c.MemberlistPort)
+	}
+
+	if strings.TrimSpace(c.WatchdogDevice) == "" {
+		return errors.New("WATCHDOG_DEVICE is empty")
+	}
+
+	if strings.TrimSpace(c.APISocketPath) == "" {
+		return errors.New("API_SOCKET_PATH is empty")
 	}
 
 	if strings.TrimSpace(c.HealthProbeBindAddress) == "" {
 		return errors.New("HEALTH_PROBE_BIND_ADDRESS is empty")
 	}
+
+	if _, err := log.ParseLevel(c.LogLevel); err != nil {
+		return fmt.Errorf("LOG_LEVEL=%q is invalid, must be one of trace/debug/info/warn/error/fatal", c.LogLevel)
+	}
+
 	return nil
 }

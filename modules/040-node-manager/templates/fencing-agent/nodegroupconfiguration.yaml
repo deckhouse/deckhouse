@@ -2,7 +2,6 @@
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- $mode := dig "fencing" "mode" "" $ng }}
   {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
-    {{- $timeout := dig "fencing" "watchdog" "timeout" 60 $ng }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -69,7 +68,7 @@ spec:
 
     start_wd() {
       if [ "${MODE}" = "Notify" ]; then
-        echo "[NOTIFY] Would run: modprobe softdog soft_margin={{ $timeout }} soft_panic=1"
+        echo "[NOTIFY] Would run: modprobe softdog soft_panic=1"
         return 0
       fi
 
@@ -87,7 +86,7 @@ spec:
         fi
       fi
 
-      modprobe softdog soft_margin={{ $timeout }} soft_panic=1
+      modprobe softdog soft_panic=1
 
       local retries=0
       while [ ! -e "${WD}" ] && [ "${retries}" -lt 10 ]; do

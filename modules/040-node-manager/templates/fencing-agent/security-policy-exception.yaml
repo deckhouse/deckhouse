@@ -50,11 +50,11 @@ spec:
         description: |
           Allow the fencing agent to reserve node-local memberlist ports
     hostPorts:
-      - port: 8500
+      - port: {{ include "fencing_agent_memberlist_port" $ | int }}
         protocol: TCP
         metadata:
           description: Memberlist TCP listener used by the fencing agent
-      - port: 8500
+      - port: {{ include "fencing_agent_memberlist_port" $ | int }}
         protocol: UDP
         metadata:
           description: Memberlist UDP listener used by the fencing agent
@@ -70,7 +70,7 @@ spec:
           readOnly: false
           metadata:
             description: Access to the hardware watchdog device for node fencing.
-        - path: /tmp
+        - path: /var/run/fencing-agent
           readOnly: false
           metadata:
             description: Shared host socket directory used by the fencing agent.

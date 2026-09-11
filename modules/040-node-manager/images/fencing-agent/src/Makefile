@@ -1,22 +1,32 @@
-NODE_NAME:=virtlab-pt-1
-tidy:
-	go mod tidy
-test:
-	go test ./...
-cover:
-	go test -coverprofile=coverage.out ./...
-cover-html: go-cover
-	go tool cover -html=coverage.out -o coverage.html && open coverage.html
-run:
-	go run ./cmd/main.go
-add_annotation:
-	kubectl annotate node ${NODE_NAME} node-manager.deckhouse.io/fencing-disable=""
-remove_annotation:
-	kubectl annotate node ${NODE_NAME} node-manager.deckhouse.io/fencing-disable-
-grpc_generate:
-	protoc --go_out=pkg/api/ \
-	--go_opt=paths=source_relative \
-  --go-grpc_out=pkg/api/v1 \
-  --go-grpc_opt=paths=source_relative \
-  --proto_path=api/v1 \
-  api/v1/fencing.proto
+BINARY_NAME ?= fencing-agent
+GOBIN ?= $(shell go env GOPATH)/bin
+CONTROLLER_GEN = $(GOBIN)/controller-gen
+CONTROLLER_GEN_VERSION ?= v0.19.0
+
+.PHONY: build
+build: ## Build the agent binary.
+	CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/$(BINARY_NAME) ./cmd/main.go
+
+.PHONY: generate
+generate: controller-gen ## Generate DeepCopy methods for API types.
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..."
+
+.PHONY: fmt
+fmt: ## Run go fmt against code.
+	go fmt ./...
+
+.PHONY: vet
+vet: ## Run go vet against code.
+	go vet ./...
+
+.PHONY: lint
+lint: ## Run golangci-lint against code.
+	golangci-lint run ./...
+
+.PHONY: test
+test: ## Run unit tests with the race detector.
+	go test -race ./...
+
+.PHONY: controller-gen
+controller-gen: ## Install controller-gen locally if necessary.
+	@test -f $(CONTROLLER_GEN) || GOBIN=$(GOBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)
