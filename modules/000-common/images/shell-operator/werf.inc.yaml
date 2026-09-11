@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "v1.15.3"}}
+{{- $shellOperatorVersion := "v1.19.2"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
