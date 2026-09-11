@@ -6,11 +6,11 @@ import:
   add: /kube-rbac-proxy
   to: /kube-rbac-proxy
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
   add: /coreutils/usr/bin/true
   to: /bin/true
   before: setup
-- image: common/pause
+- from: common/pause
   add: /pause
   to: /pause
   before: install

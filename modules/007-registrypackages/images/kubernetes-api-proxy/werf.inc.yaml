@@ -33,7 +33,7 @@ import:
   add: /usr/bin/jq
   before: setup
 dependencies:
-- image: node-manager/kubernetes-api-proxy
+- from: node-manager/kubernetes-api-proxy
   before: setup
   imports:
   - type: ImageDigest

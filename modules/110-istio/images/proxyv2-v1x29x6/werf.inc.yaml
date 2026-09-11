@@ -28,7 +28,7 @@ import:
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
   add: /src/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
   owner: 1337
@@ -40,35 +40,35 @@ import:
   owner: 1337
   group: 1337
   after: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libc.so.6
   to: /lib64/libc.so.6
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libm.so.6
   to: /lib64/libm.so.6
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/librt.so.1
   to: /lib64/librt.so.1
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libdl.so.2
   to: /lib64/libdl.so.2
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libpthread.so.0
   to: /lib64/libpthread.so.0
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libresolv.so.2
   to: /lib64/libresolv.so.2
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
@@ -110,7 +110,7 @@ import:
   add: /usr/bin/xargs
   to: /usr/bin/xargs
   before: setup
-- image: registrypackages/d8-curl-artifact-8-9-1
+- from: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
@@ -262,11 +262,11 @@ final: false
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
   add: /usr/local/go
   to: /usr/local/go
   before: install
-- image: common/alt-p11-artifact
+- from: common/alt-p11-artifact
   add: /root/.ssh
   to: /root/.ssh
   before: install

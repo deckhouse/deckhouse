@@ -7,7 +7,7 @@ import:
   add: /dvp-csi-driver
   to: /dvp-csi-driver
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /out
   to: /
   before: install

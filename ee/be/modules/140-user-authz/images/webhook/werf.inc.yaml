@@ -55,7 +55,7 @@ import:
     add: /src
     to: /src
     before: install
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-src-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-src-artifact
     add: /go_lib/user-authz
     to: /go_lib/user-authz
     before: install

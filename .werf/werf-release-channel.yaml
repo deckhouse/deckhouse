@@ -3,7 +3,7 @@ image: release-channel-version-prebuild
 from: {{ index $.Images "builder/alpine" }}
 final: false
 dependencies:
-- image: dev
+- from: dev
   before: setup
   imports:
   - type: ImageDigest

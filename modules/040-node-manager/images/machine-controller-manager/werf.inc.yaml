@@ -16,7 +16,7 @@ import:
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2026.07.21.1"
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 secrets:
 - id: SOURCE_REPO

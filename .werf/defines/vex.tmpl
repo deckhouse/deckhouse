@@ -80,7 +80,7 @@ git:
     install:
     - "**/*"
 dependencies:
-- image: {{ $imageName }}
+- from: {{ $imageName }}
   before: install
   imports:
   - type: ImageDigest

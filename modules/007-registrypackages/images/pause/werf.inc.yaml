@@ -33,7 +33,7 @@ import:
   add: /usr/bin/jq
   before: setup
 dependencies:
-- image: common/pause
+- from: common/pause
   before: setup
   imports:
   - type: ImageDigest
