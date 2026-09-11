@@ -42,5 +42,7 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: d8_source
+      replacement: dkp
   {{- end }}
 {{- end }}

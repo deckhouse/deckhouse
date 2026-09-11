@@ -48,44 +48,67 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
   - record: pod:container_memory_usage_bytes:sum
     expr: sum(container_memory_usage_bytes{container!="POD",pod!=""}) BY
       (pod)
+    labels:
+      d8_source: dkp
   - record: pod:container_spec_cpu_shares:sum
     expr: sum(container_spec_cpu_shares{container!="POD",pod!=""}) BY (pod)
+    labels:
+      d8_source: dkp
   - record: pod:container_cpu_usage:sum
     expr: sum(rate(container_cpu_usage_seconds_total{container!="POD",pod!=""}[5m]))
       BY (pod)
+    labels:
+      d8_source: dkp
   - record: pod:container_fs_usage_bytes:sum
     expr: sum(container_fs_usage_bytes{container!="POD",pod!=""}) BY (pod)
+    labels:
+      d8_source: dkp
   - record: namespace:container_memory_usage_bytes:sum
     expr: sum(container_memory_usage_bytes{container!=""}) BY (namespace)
+    labels:
+      d8_source: dkp
   - record: namespace:container_spec_cpu_shares:sum
     expr: sum(container_spec_cpu_shares{container!=""}) BY (namespace)
+    labels:
+      d8_source: dkp
   - record: namespace:container_cpu_usage:sum
     expr: sum(rate(container_cpu_usage_seconds_total{container!="POD"}[5m]))
       BY (namespace)
+    labels:
+      d8_source: dkp
   - record: cluster:memory_usage:ratio
     expr: sum(container_memory_usage_bytes{container!="POD",pod!=""}) BY
       (cluster) / sum(machine_memory_bytes) BY (cluster)
+    labels:
+      d8_source: dkp
   - record: cluster:container_spec_cpu_shares:ratio
     expr: sum(container_spec_cpu_shares{container!="POD",pod!=""}) / 1000
       / sum(machine_cpu_cores)
+    labels:
+      d8_source: dkp
   - record: cluster:container_cpu_usage:ratio
     expr: sum(rate(container_cpu_usage_seconds_total{container!="POD",pod!=""}[5m]))
       / sum(machine_cpu_cores)
+    labels:
+      d8_source: dkp
   - record: apiserver_latency_seconds:quantile
     expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket[5m])) /
       1e+06
     labels:
       quantile: "0.99"
+      d8_source: dkp
   - record: apiserver_latency:quantile_seconds
     expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket[5m])) /
       1e+06
     labels:
       quantile: "0.9"
+      d8_source: dkp
   - record: apiserver_latency_seconds:quantile
     expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket[5m])) /
       1e+06
     labels:
       quantile: "0.5"
+      d8_source: dkp
   - alert: K8SApiserverDown
     expr: absent(up{job="kube-apiserver"} == 1)
     for: 20m

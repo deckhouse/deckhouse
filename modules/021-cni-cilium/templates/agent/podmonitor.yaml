@@ -22,6 +22,8 @@ spec:
       replacement: cluster
     - targetLabel: job
       replacement: "cilium-agent"
+    - targetLabel: d8_source
+      replacement: dkp
   {{- if .Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled }}
   - port: https-metrics
     scheme: https
@@ -37,6 +39,8 @@ spec:
         replacement: cluster
       - targetLabel: job
         replacement: "cilium-agent-extended-metrics"
+      - targetLabel: d8_source
+        replacement: dkp
   {{- end }}
   selector:
     matchLabels:
