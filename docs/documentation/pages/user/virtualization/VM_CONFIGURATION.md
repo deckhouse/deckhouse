@@ -102,7 +102,7 @@ The following example changes the number of cores.
    2
    ```
 
-By default, you confirm the restart. To make the module apply the changes itself, set the [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) parameter to `Automatic`:
+By default, you confirm the restart. To make DP apply the changes itself, set the [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) parameter to `Automatic`:
 
 ```yaml
 spec:
@@ -117,7 +117,7 @@ spec:
 1. Go to the **Projects** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
-1. Make the changes on the **Configuration** tab. If the machine has to be restarted, the module shows a warning and the list of pending changes.
+1. Make the changes on the **Configuration** tab. If the machine has to be restarted, DP shows a warning and the list of pending changes.
 1. To make the changes apply without your confirmation, scroll down to the **Life cycle** section, enable the **Auto-apply changes** toggle, and click **Save**.
 
 {% endtab %}
@@ -128,7 +128,7 @@ spec:
 
 You can change the number of cores of a running machine without rebooting it, if the change is applicable through live migration. Within the current CPU topology, you can both add and remove cores.
 
-The feature is disabled by default. To enable it, an administrator adds `HotplugCPUWithLiveMigration` to the [`.spec.settings.featureGates`](../../admin/configuration/virtualization/settings.html) parameter of the module:
+The feature is disabled by default. To enable it, an administrator adds `HotplugCPUWithLiveMigration` to the [`.spec.settings.featureGates`](../../admin/configuration/virtualization/settings.html) parameter:
 
 ```yaml
 kind: ModuleConfig
@@ -140,9 +140,9 @@ spec:
       - HotplugCPUWithLiveMigration
 ```
 
-In the web interface, the same toggle is called **Change CPU without reboot** and is located in the **Experimental features** block on the **System** tab, in **Deckhouse** → **Modules** → `virtualization` → **Configuration**. Only a platform administrator has the rights for this.
+In the web interface, the same toggle is called **Change CPU without reboot** and is located in the **Experimental features** block on the **System** tab, in **Deckhouse** → **Modules** → `virtualization` → **Configuration**. Only a DP administrator has the rights for this.
 
-When the feature is enabled and the new [`.spec.cpu.cores`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-cores) value stays within the current topology, the module applies the change by live migration. If the change requires a different topology, the machine has to be rebooted. The topology calculation rules are described in [CPU topologies](vm-resources.html#cpu-topologies).
+When the feature is enabled and the new [`.spec.cpu.cores`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-cores) value stays within the current topology, DP applies the change by live migration. If the change requires a different topology, the machine has to be rebooted. The topology calculation rules are described in [CPU topologies](vm-resources.html#cpu-topologies).
 
 {% tabs vm-cpu-change %}
 
@@ -193,7 +193,7 @@ When you reduce the number of cores within the current topology, the distributio
 
 You can increase the amount of memory of a running machine without rebooting it. Reducing it requires a restart.
 
-The feature is disabled by default. To enable it, an administrator adds `HotplugMemoryWithLiveMigration` to the [`.spec.settings.featureGates`](../../admin/configuration/virtualization/settings.html) parameter of the module:
+The feature is disabled by default. To enable it, an administrator adds `HotplugMemoryWithLiveMigration` to the [`.spec.settings.featureGates`](../../admin/configuration/virtualization/settings.html) parameter:
 
 ```yaml
 kind: ModuleConfig
@@ -207,7 +207,7 @@ spec:
 
 In the web interface, the toggle is called **Change memory without reboot** and is located in the same place, in the **Experimental features** block of the module settings.
 
-When the feature is enabled, the new [`.spec.memory.size`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-memory-size) value is greater than the current one, and the machine allows migration, the module applies the change by live migration. A restart is required if the memory is reduced, if the original size is less than 1 GiB, or if the machine can't be migrated. Without a restart, memory grows up to 256 GiB, the ceiling built into the machine configuration at first start.
+When the feature is enabled, the new [`.spec.memory.size`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-memory-size) value is greater than the current one, and the machine allows migration, DP applies the change by live migration. A restart is required if the memory is reduced, if the original size is less than 1 GiB, or if the machine can't be migrated. Without a restart, memory grows up to 256 GiB, the ceiling built into the machine configuration at first start.
 
 {% tabs vm-memory-change %}
 

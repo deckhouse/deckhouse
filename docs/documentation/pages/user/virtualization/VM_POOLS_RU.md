@@ -27,7 +27,7 @@ lang: ru
 - `virtualDiskTemplates` описывает каждый диск реплики один раз, задавая политику `reclaim`, размер и источник данных;
 - `blockDeviceRefs` шаблона ссылается на эти диски по имени с `kind: VirtualDisk` и задаёт порядок устройств, то есть порядок загрузки, ровно как в обычной [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).
 
-Каждая запись `virtualDiskTemplates` должна встречаться в `blockDeviceRefs` ровно один раз, иначе модуль отклонит пул. Имена шаблонов дисков при этом уникальны.
+Каждая запись `virtualDiskTemplates` должна встречаться в `blockDeviceRefs` ровно один раз, иначе DP отклонит пул. Имена шаблонов дисков при этом уникальны.
 
 Помимо дисков реплики в `blockDeviceRefs` можно перечислить общие образы [VirtualImage](/modules/virtualization/cr.html#virtualimage) и [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage), например единый ISO или CD-ROM для всех реплик. Такие образы подключаются только на чтение, они одни на весь пул, и записи в `virtualDiskTemplates` им не нужны.
 

@@ -161,7 +161,7 @@ While a VM is in the `Pending` phase, it waits for its dependent resources to be
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type | test(".*Ready"))'
 ```
 
-In the `Starting` phase, the dependent resources are ready and the module starts the VM on one of the nodes. If the startup drags on, there's no suitable node, or the suitable nodes lack CPU or memory. The `Running` condition reports the reason:
+In the `Starting` phase, the dependent resources are ready and DP starts the VM on one of the nodes. If the startup drags on, there's no suitable node, or the suitable nodes lack CPU or memory. The `Running` condition reports the reason:
 
 ```bash
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type=="Running")'
@@ -190,7 +190,7 @@ For a running machine, a few conditions are worth watching:
 
 The `EvictionRequired` condition appears when the node with your VM is put into maintenance mode. If the node was only made unschedulable with the `d8 k cordon` command but maintenance hasn't started, the condition doesn't appear.
 
-The condition message tells you what will happen to the machine, namely a live migration without stopping the guest OS, a restart by the module with the cluster administrator's permission, or waiting until the machine is restarted. A machine that can be moved by live migration isn't restarted just to free the node. Until the eviction starts, the condition is only a warning, because maintenance can be canceled.
+The condition message tells you what will happen to the machine, namely a live migration without stopping the guest OS, a restart by DP with the cluster administrator's permission, or waiting until the machine is restarted. A machine that can be moved by live migration isn't restarted just to free the node. Until the eviction starts, the condition is only a warning, because maintenance can be canceled.
 
 After a restart, the machine starts on another suitable node. If there's no such node, it stays in the `Pending` phase, and the `Running` condition shows the reason from the scheduler. A node in maintenance mode doesn't accept new machines, so a VM pinned to it by placement rules or using a device passed through from it starts only after the node returns to service.
 

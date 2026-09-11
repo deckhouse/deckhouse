@@ -9,7 +9,7 @@ search: USB in a VM, USB passthrough, USBDevice, attaching a device
 USB device passthrough is available in commercial DP editions.
 {% endalert %}
 
-The virtualization module supports USB device passthrough to virtual machines using DRA (Dynamic Resource Allocation). The physical device is connected to a cluster node, and the virtual machine works with it as if the device were plugged into the machine itself.
+DP supports USB device passthrough to virtual machines using DRA (Dynamic Resource Allocation). The physical device is connected to a cluster node, and the virtual machine works with it as if the device were plugged into the machine itself.
 
 An administrator connects the device to a node and makes it available to your namespace. After that, a [USBDevice](/modules/virtualization/cr.html#usbdevice) resource appears in the namespace, and you attach it to a virtual machine. If the device you need isn't in the list, contact the administrator.
 

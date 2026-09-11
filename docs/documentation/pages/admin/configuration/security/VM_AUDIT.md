@@ -17,7 +17,7 @@ To enable the security event audit, follow these steps:
 
 1. Enable the [`log-shipper`](/modules/log-shipper/) and [`runtime-audit-engine`](/modules/runtime-audit-engine/) modules.
 1. Enable the Kubernetes API audit by setting [`.spec.settings.apiserver.auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) to `true` in the [`control-plane-manager`](/modules/control-plane-manager/) module.
-1. Set [`.spec.settings.audit.enabled`](/modules/virtualization/configuration.html#parameters-audit-enabled) to `true` in the `virtualization` module:
+1. Set [`.spec.settings.audit.enabled`](/modules/virtualization/configuration.html#parameters-audit-enabled) to `true` in the module settings:
 
    ```yaml
    spec:

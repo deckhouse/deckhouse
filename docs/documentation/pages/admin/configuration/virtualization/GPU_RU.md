@@ -10,14 +10,14 @@ lang: ru
 Проброс GPU-устройств — экспериментальная возможность, доступная в коммерческих редакциях DP.
 {% endalert %}
 
-Модуль подключает физические GPU-устройства к виртуальным машинам через DRA (Dynamic Resource Allocation). Владелец проекта запрашивает устройство по ссылке на `GPUClass` в блоке [`.spec.gpus`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-gpus) своей машины, а кластер к этому готовите вы.
+DP подключает физические GPU-устройства к виртуальным машинам через DRA (Dynamic Resource Allocation). Владелец проекта запрашивает устройство по ссылке на `GPUClass` в блоке [`.spec.gpus`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-gpus) своей машины, а кластер к этому готовите вы.
 
 Чтобы проброс заработал, обеспечьте следующее:
 
 - [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) версии не ниже 1.34 с feature gates DRA, которые нужны конфигурации вашего кластера.
-- Feature gate `GPU` в настройках модуля `virtualization`.
+- Feature gate `GPU` в настройках модуля.
 - Установленный в кластере DRA-провайдер GPU, который публикует устройства с атрибутами `gpu.deckhouse.io`.
-- Ресурс `GPUClass`, отбирающий устройства нужной модели. Модуль GPU создаёт по нему ресурс DeviceClass с таким же именем, через который устройство и выделяется машине.
+- Ресурс `GPUClass`, отбирающий устройства нужной модели. Модуль `gpu` создаёт по нему ресурс DeviceClass с таким же именем, через который устройство и выделяется машине.
 
 Чтобы включить feature gate, добавьте его в настройки модуля:
 

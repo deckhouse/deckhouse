@@ -10,7 +10,7 @@ A disk stores virtual machine data, including the operating system and applicati
 - [`persistentVolumeClaim`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim): Storage parameters, that is, the StorageClass and the size.
 - [`dataSource`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-datasource): The data source, which can be an image, another disk, or a snapshot.
 
-Without the `dataSource` block, an empty disk is created, and then you have to specify at least the size in `persistentVolumeClaim`. If a source is set, you can omit the `persistentVolumeClaim` block, and the module takes the size from the source and picks the storage class based on it too. When no class can be picked, the module uses the cluster-wide default StorageClass or the class set for disks in the [module settings](../../admin/configuration/virtualization/storage-classes.html).
+Without the `dataSource` block, an empty disk is created, and then you have to specify at least the size in `persistentVolumeClaim`. If a source is set, you can omit the `persistentVolumeClaim` block, and DP takes the size from the source and picks the storage class based on it too. When no class can be picked, DP uses the cluster-wide default StorageClass or the class set for disks in the [module settings](../../admin/configuration/virtualization/storage-classes.html).
 
 The `PHASE` column in the `d8 k get vd` output shows the progress of disk creation; for its values, see the [`.status.phase`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-phase) field. If a disk stays not ready for a long time, the [`.status.conditions`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-conditions) block tells you the reason.
 
@@ -24,7 +24,7 @@ You can't create a disk from an ISO image.
 
 Disk behavior depends on the storage behind the selected StorageClass. The differences show up in two properties.
 
-The volume type determines the format in which the module creates the disk. On file system volumes (`FileSystem`, for example NFS), the disk is created in the `qcow2` format, and on block devices (`Block`, for example iSCSI or Ceph RBD), data is written directly. Some storage types support both.
+The volume type determines the format in which DP creates the disk. On file system volumes (`FileSystem`, for example NFS), the disk is created in the `qcow2` format, and on block devices (`Block`, for example iSCSI or Ceph RBD), data is written directly. Some storage types support both.
 
 The volume binding mode determines when the disk is created:
 
@@ -36,7 +36,7 @@ The volume binding mode determines when the disk is created:
 
   ![VolumeBindingMode: WaitForFirstConsumer](../../images/virtualization/vd-wffc.png)
 
-The module determines the remaining parameters, including the disk format, on its own from the capabilities of the selected StorageClass.
+DP determines the remaining parameters, including the disk format, on its own from the capabilities of the selected StorageClass.
 
 To view the available storage types, run the following command:
 
@@ -122,7 +122,7 @@ You can skip this step and create the disk while creating the VM.
 
 You can fill a disk with data from an image created earlier, either a project [VirtualImage](/modules/virtualization/cr.html#virtualimage) or a cluster [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
 
-Specifying the disk size is optional. If you don't set it, the module creates the disk exactly at the unpacked size of the image, and if you do set it, the size must be no smaller than the unpacked one.
+Specifying the disk size is optional. If you don't set it, DP creates the disk exactly at the unpacked size of the image, and if you do set it, the size must be no smaller than the unpacked one.
 
 {% tabs vd-from-image %}
 
@@ -231,7 +231,7 @@ You can skip this step and create the disk while creating the VM.
 
 ## Uploading a disk from the command line
 
-If the image file is on your computer, upload it straight into a disk. The module creates a temporary upload endpoint for this and waits for the data.
+If the image file is on your computer, upload it straight into a disk. DP creates a temporary upload endpoint for this and waits for the data.
 
 {% tabs vd-upload %}
 

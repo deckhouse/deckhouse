@@ -190,13 +190,13 @@ To create a project network:
 
 ## IPAM for additional network interfaces
 
-The module can hand out addresses in an additional network itself, if an administrator has configured an address pool for that network.
+DP can hand out addresses in an additional network itself, if an administrator has configured an address pool for that network.
 
 {% tabs net-ipam %}
 
 {% tab "Using the CLI" %}
 
-If IPAM is configured for an additional network [in the `sdn` module](/modules/sdn/) (an IP address pool bound to the network through [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref)), the `virtualization` module can automatically allocate IP addresses for the additional VM interfaces and deliver them to the guest OS over DHCP.
+If IPAM is configured for an additional network [in the `sdn` module](/modules/sdn/) (an IP address pool bound to the network through [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref)), DP can automatically allocate IP addresses for the additional VM interfaces and deliver them to the guest OS over DHCP.
 
 Two modes are supported:
 

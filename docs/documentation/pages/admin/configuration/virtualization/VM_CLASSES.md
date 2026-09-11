@@ -12,7 +12,7 @@ On the initial installation, the module creates the `generic` class with the Neh
 {% alert level="info" %}
 The `generic` class matches a CPU with the smallest instruction set, so it isn't suitable for production workloads.
 
-Once all nodes are added to the cluster and configured, create at least one class with the `Discovery` CPU type. The module selects an instruction set available on all nodes at once, so virtual machines can make fuller use of the CPUs while still being able to migrate between nodes. The instruction set is fixed when the resource is created and doesn't change as nodes are added or removed.
+Once all nodes are added to the cluster and configured, create at least one class with the `Discovery` CPU type. DP selects an instruction set available on all nodes at once, so virtual machines can make fuller use of the CPUs while still being able to migrate between nodes. The instruction set is fixed when the resource is created and doesn't change as nodes are added or removed.
 
 For an example of such a class, see [vCPU Discovery configuration example](vm-classes-cpu.html#vcpu-discovery-configuration-example).
 {% endalert %}
@@ -46,7 +46,7 @@ spec:
 
 ## Default VirtualMachineClass
 
-You can designate one of the classes as the default. The module inserts its name into the [`.spec.virtualMachineClassName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineclassname) parameter if the project owner doesn't specify a class.
+You can designate one of the classes as the default. DP inserts its name into the [`.spec.virtualMachineClassName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineclassname) parameter if the project owner doesn't specify a class.
 
 The default class is marked with the `virtualmachineclass.virtualization.deckhouse.io/is-default-class` annotation set to `true`. A cluster can have only one such class, so to designate a new one, first remove the annotation from the current one.
 

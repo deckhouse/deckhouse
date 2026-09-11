@@ -1,7 +1,7 @@
 ---
 title: "Virtualization module parameters"
 permalink: en/admin/configuration/virtualization/settings.html
-description: "ModuleConfig parameters of the virtualization module: enabling and disabling the module, configuration version, and Ingress settings for image upload."
+description: "Parameters of the `virtualization` module ModuleConfig: enabling and disabling the module, configuration version, and Ingress settings for image upload."
 search: module parameters, ModuleConfig, virtualization settings, ingressClass
 ---
 

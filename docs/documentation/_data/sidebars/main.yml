@@ -1362,9 +1362,13 @@ entries:
             ru: Виртуальные машины
           folders:
             - title:
+                en: Overview
+                ru: Обзор
+              url: /user/virtualization/
+            - title:
                 en: Quick start
                 ru: Быстрый старт
-              url: /user/virtualization/
+              url: /user/virtualization/quickstart.html
             - title:
                 en: Virtual machine images
                 ru: Образы виртуальных машин

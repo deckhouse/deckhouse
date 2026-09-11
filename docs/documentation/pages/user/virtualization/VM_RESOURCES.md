@@ -32,13 +32,13 @@ The guaranteed share is taken into account when selecting a node, so a machine d
 
 ### Automatic coreFraction (Auto)
 
-The module can pick the CPU time share on its own, following how much the machine consumes.
+DP can pick the CPU time share on its own, following how much the machine consumes.
 
 {% alert level="warning" %}
 The feature is available in commercial DP editions and is in the Alpha stage. It requires the enabled [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module, which picks the core fraction, and the `HotplugCPUAndMemoryWithInPlaceResize` feature in the module settings.
 {% endalert %}
 
-Instead of a fixed percentage, you can set `coreFraction: Auto`. Then the module picks the fraction, raising it when the machine lacks CPU and lowering it when the machine is idle. The number of cores and the amount of memory stay unchanged, and the new fraction applies without a restart.
+Instead of a fixed percentage, you can set `coreFraction: Auto`. Then DP picks the fraction, raising it when the machine lacks CPU and lowering it when the machine is idle. The number of cores and the amount of memory stay unchanged, and the new fraction applies without a restart.
 
 ```yaml
 spec:
@@ -121,7 +121,7 @@ When there are several violations, all the reasons are listed in one message und
 
 ## CPU topologies
 
-The topology determines how the CPU cores of a machine are distributed across sockets, and compatibility with applications sensitive to the CPU configuration depends on it. You set only the total number of cores in the [`.spec.cpu.cores`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-cores) parameter, and the module calculates the number of sockets itself:
+The topology determines how the CPU cores of a machine are distributed across sockets, and compatibility with applications sensitive to the CPU configuration depends on it. You set only the total number of cores in the [`.spec.cpu.cores`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-cores) parameter, and DP calculates the number of sockets itself:
 
 ```yaml
 spec:
@@ -140,7 +140,7 @@ The more cores there are, the more sockets they're split across, and the larger 
 
 For example, 20 cores give two sockets of 10 cores, and 80 cores give eight sockets of 10. The maximum for one machine is 248 cores.
 
-The module publishes the calculated topology in the status:
+DP publishes the calculated topology in the status:
 
 ```yaml
 status:

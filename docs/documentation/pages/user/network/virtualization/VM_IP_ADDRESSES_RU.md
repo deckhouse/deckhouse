@@ -44,7 +44,7 @@ ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12
 
 Адрес закреплён за машиной, когда ресурс переходит в фазу `Attached`. Остальные фазы описаны в поле [`.status.phase`](/modules/virtualization/cr.html#virtualmachineipaddress-v1alpha2-status-phase).
 
-По умолчанию модуль назначает машине адрес сам и держит его закреплённым до удаления машины. Посмотреть назначенный адрес можно командой:
+По умолчанию DP назначает машине адрес сам и держит его закреплённым до удаления машины. Посмотреть назначенный адрес можно командой:
 
 ```bash
 d8 k get vmip
@@ -63,7 +63,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 Алгоритм автоматического присвоения IP-адреса виртуальной машине выглядит следующим образом:
 
 - Пользователь создаёт виртуальную машину с именем `<VM_NAME>`.
-- Контроллер модуля автоматически создаёт ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) с именем `<VM_NAME>-<HASH>`, чтобы запросить IP-адрес и связать его с виртуальной машиной.
+- DP автоматически создаёт ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) с именем `<VM_NAME>-<HASH>`, чтобы запросить IP-адрес и связать его с виртуальной машиной.
 - Для этого [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) создаётся ресурс аренды [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease), который выбирает случайный IP-адрес из общего пула.
 - Как только ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) создан, виртуальная машина получает назначенный IP-адрес.
 
@@ -237,7 +237,7 @@ d8 k get vm linux-vm -o jsonpath='{.status.networks[?(@.type=="Main")]}'
 
 Машина с заданным параметром [`.spec.virtualMachineIPAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineipaddressname) продолжает работать по устаревшему механизму, поскольку ссылка на ресурс задана в её спецификации явно.
 
-Для ресурса [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress), указанного в спецификации машины, модуль поддерживает ресурс IPAddress с тем же именем и тем же адресом. Чтобы перевести машину и сохранить её адрес, замените один параметр другим:
+Для ресурса [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress), указанного в спецификации машины, DP поддерживает ресурс IPAddress с тем же именем и тем же адресом. Чтобы перевести машину и сохранить её адрес, замените один параметр другим:
 
 ```yaml
 spec:

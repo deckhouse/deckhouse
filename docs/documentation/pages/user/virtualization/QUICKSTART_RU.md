@@ -1,6 +1,6 @@
 ---
-title: "Виртуальные машины"
-permalink: ru/user/virtualization/
+title: "Быстрый старт"
+permalink: ru/user/virtualization/quickstart.html
 description: "Быстрый старт: создание виртуальной машины из образа, подключение диска и вход в гостевую систему по SSH."
 search: быстрый старт, создание ВМ, первая виртуальная машина
 lang: ru

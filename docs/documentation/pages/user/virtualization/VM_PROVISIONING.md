@@ -5,7 +5,7 @@ description: "Initial guest system configuration through cloud-init and Sysprep,
 search: cloud-init, Sysprep, provisioning, guest OS agent, qemu-guest-agent
 ---
 
-On the first boot, the guest system is configured by an initialization script, and after that the module communicates with it through the guest OS agent.
+On the first boot, the guest system is configured by an initialization script, and after that DP communicates with it through the guest OS agent.
 
 ## VM initialization scripts
 
@@ -124,7 +124,7 @@ spec:
 1. Create a virtual machine or select an existing one and click its name.
 1. On the **Configuration** tab, scroll down to the **Cloud-init** toggle and enable it.
 1. Select the input mode:
-   - **Basic setup**: Fill in the **Username**, **Password**, and **Public SSH key** fields, and enable the **Unrestricted sudo access** toggle if required. The platform builds the cloud-init configuration itself.
+   - **Basic setup**: Fill in the **Username**, **Password**, and **Public SSH key** fields, and enable the **Unrestricted sudo access** toggle if required. DP builds the cloud-init configuration itself.
    - **Editing**: Enter the cloud-init configuration manually in the **Parameters** field. The used volume is shown below the field (no more than 2048 bytes). In the **Linked secret** field, you can select an existing initialization script, and its contents load into the field. If no secret is linked, the configuration is stored in the VM specification.
 1. Click the **Save** button that appears (or **Create** when creating the VM).
 
@@ -176,13 +176,13 @@ spec:
 
 ## Guest OS agent
 
-Install QEMU Guest Agent in the guest system so that the module can interact with the operating system inside the VM. The agent is needed for three things:
+Install QEMU Guest Agent in the guest system so that DP can interact with the operating system inside the VM. The agent is needed for three things:
 
 - it makes consistent disk and VM snapshots possible;
 - it reports information about the running system, and that information lands in the [`.status.guestOSInfo`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-guestosinfo) block;
 - it shows that the operating system has actually booted, rather than just the virtual machine having started.
 
-The module works with `qemu-guest-agent` version 5.2.0 and later. To check the installed version, run the following command:
+DP works with `qemu-guest-agent` version 5.2.0 and later. To check the installed version, run the following command:
 
 ```bash
 qemu-guest-agent --version

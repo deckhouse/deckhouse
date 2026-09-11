@@ -20,7 +20,7 @@ spec:
 {% alert level="warning" %}
 A change to the [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) block affects all virtual machines of the class at once. Those running on nodes that no longer match the new conditions have to be moved:
 
-- In commercial DP editions, the module migrates such VMs to suitable nodes.
+- In commercial editions, DP migrates such VMs to suitable nodes.
 - In DP Open, the VMs are restarted, and the restart time depends on the [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) parameter of the virtual machine, which defaults to `Manual` and requires the project owner's approval.
 {% endalert %}
 

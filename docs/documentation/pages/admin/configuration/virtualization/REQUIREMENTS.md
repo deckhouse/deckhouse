@@ -45,7 +45,7 @@ On Astra Linux nodes, **Astra Linux platform version 1.8.3 or higher** is requir
 
 ## Supported guest operating systems
 
-The virtualization platform supports operating systems running on `x86` and `x86_64` architectures as guest operating systems. For correct operation in paravirtualization mode, `VirtIO` drivers must be installed to ensure efficient interaction between the virtual machine and the hypervisor.
+The virtualization module supports operating systems running on `x86` and `x86_64` architectures as guest operating systems. For correct operation in paravirtualization mode, `VirtIO` drivers must be installed to ensure efficient interaction between the virtual machine and the hypervisor.
 
 Successful startup of the operating system is determined by the following criteria:
 
@@ -55,7 +55,7 @@ Successful startup of the operating system is determined by the following criter
 
 For Linux family operating systems, it is recommended to use guest OS images with `cloud-init` support, which allows initializing virtual machines after their creation.
 
-For Windows family operating systems, the platform supports initialization with [autounattend](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview) installation.
+For Windows family operating systems, DP supports initialization with [autounattend](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview) installation.
 
 ## Virtual machine configuration limits
 

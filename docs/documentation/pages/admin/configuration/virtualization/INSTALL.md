@@ -1,11 +1,11 @@
 ---
 title: "Installing and updating the virtualization module"
 permalink: en/admin/configuration/virtualization/install.html
-description: "How to enable the virtualization module, place its components on cluster nodes, and update the module through release channels."
+description: "How to enable the virtualization module, place its components on cluster nodes, and update it through release channels."
 search: install virtualization, enable module, component placement, module update
 ---
 
-The `virtualization` module is enabled with a ModuleConfig resource and deploys its components to the `d8-virtualization` namespace. The sections below cover how to enable it, how its components are placed on nodes, and how to update the module.
+Virtualization is enabled with a ModuleConfig resource and deploys its components to the `d8-virtualization` namespace. The sections below cover how to enable it, how its components are placed on nodes, and how to update it.
 
 ## Installation
 
@@ -32,7 +32,7 @@ The `virtualization` module is enabled with a ModuleConfig resource and deploys 
    To enable the `virtualization` module, create a `ModuleConfig` resource with the module settings.
 
    {% alert level="warning" %}
-   Before enabling the module, carefully review its settings in [Virtualization module parameters](settings.html).
+   Before enabling the module, carefully review its settings in [Virtualization parameters](settings.html).
    {% endalert %}
 
    Example of module configuration:
@@ -147,8 +147,8 @@ When considering updates, the module components can be divided into two categori
 
 Updating control plane components does not affect the operation of already running virtual machines, but may cause a brief interruption of established VNC/serial port connections while the control plane component is restarted.
 
-Updates to virtual machine firmware during a platform upgrade may require virtual machines to be migrated to the new "firmware" version.
-The module migrates a machine once, and if the migration fails, the machine owner has to move or reboot it themselves.
+Updates to virtual machine firmware during a DP upgrade may require virtual machines to be migrated to the new "firmware" version.
+DP migrates a machine once, and if the migration fails, the machine owner has to move or reboot it themselves.
 {% endalert %}
 
 For information on versions available at the update channels, see the [release channels site](https://releases.deckhouse.io/).

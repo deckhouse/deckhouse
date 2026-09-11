@@ -16,7 +16,7 @@ A virtual machine accesses an attached image in read-only mode.
 An image appears in a project in three steps:
 
 1. You create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource and specify a data source in it.
-1. The module downloads the image from that source to the storage, which is either DVCR or a PVC, depending on the selected type.
+1. DP downloads the image from that source to the storage, which is either DVCR or a PVC, depending on the selected type.
 1. The downloaded image becomes available for creating disks.
 
 ## Sources and storage options
@@ -101,7 +101,7 @@ The simplest way to create an image is to provide a link to a file hosted on an 
 
 ### Verifying the integrity of a downloaded image
 
-The [`checksum`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-datasource-http-checksum) block makes the module verify what it downloaded from the HTTP server. The image reaches the `Ready` phase only if the downloaded file matches every specified checksum, otherwise the resource ends up in the `Failed` phase:
+The [`checksum`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-datasource-http-checksum) block makes DP verify what it downloaded from the HTTP server. The image reaches the `Ready` phase only if the downloaded file matches every specified checksum, otherwise the resource ends up in the `Failed` phase:
 
 ```bash
 d8 k apply -f - <<EOF
@@ -141,7 +141,7 @@ The same block is available for the `Upload` source in the [`dataSource.upload.c
 
 ### Storing an image in a PVC
 
-To create disks from an image faster, store it in a PVC. The module can then clone the volume instead of unpacking the image again.
+To create disks from an image faster, store it in a PVC. DP can then clone the volume instead of unpacking the image again.
 
 {% tabs vi-pvc %}
 
@@ -169,7 +169,7 @@ To create disks from an image faster, store it in a PVC. The module can then clo
    EOF
    ```
 
-   If the [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) parameter isn't set, the module uses the cluster-wide default StorageClass or the class set for images in the [module settings](../../admin/configuration/virtualization/storage-classes.html).
+   If the [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) parameter isn't set, DP uses the cluster-wide default StorageClass or the class set for images in the [module settings](../../admin/configuration/virtualization/storage-classes.html).
 
 1. Verify that the image is created:
 
@@ -208,7 +208,7 @@ To create disks from an image faster, store it in a PVC. The module can then clo
 
 ## Creating an image from a container image registry
 
-The module can pull an image from an external container image registry, but the disk file must be located in the container image under the `/disk` path. The following steps show how to prepare such a container image and create a project image from it.
+DP can pull an image from an external container image registry, but the disk file must be located in the container image under the `/disk` path. The following steps show how to prepare such a container image and create a project image from it.
 
 {% tabs vi-registry %}
 
@@ -258,7 +258,7 @@ The module can pull an image from an external container image registry, but the 
    EOF
    ```
 
-The module works only with registries that have TLS enabled. If the registry uses its own certificate authority, provide the certificate chain in the [`caBundle`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-datasource-containerimage-cabundle) parameter, and take the credentials for a private registry from the secret specified in the `imagePullSecret` parameter.
+DP works only with registries that have TLS enabled. If the registry uses its own certificate authority, provide the certificate chain in the [`caBundle`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-datasource-containerimage-cabundle) parameter, and take the credentials for a private registry from the secret specified in the `imagePullSecret` parameter.
 
 {% endtab %}
 
@@ -280,7 +280,7 @@ The module works only with registries that have TLS enabled. If the registry use
 
 ## Uploading an image from the command line
 
-If the image file is on your computer, upload it directly. The module creates a temporary upload endpoint for this and waits for the data.
+If the image file is on your computer, upload it directly. DP creates a temporary upload endpoint for this and waits for the data.
 
 {% tabs vi-upload %}
 

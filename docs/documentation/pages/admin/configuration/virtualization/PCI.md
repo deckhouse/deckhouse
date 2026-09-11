@@ -9,15 +9,15 @@ search: PCI devices, PCI passthrough, NodePCIDevice, PCIDevice, vfio-pci, IOMMU
 PCI device passthrough is available in commercial DP editions.
 {% endalert %}
 
-PCI device passthrough lets you attach a physical device of a node to a virtual machine (VM), for example an industrial controller, a hardware security module, a capture card, an FPGA, or an entire network card. In the guest operating system, such a device works under its own driver, so a VM can use the hardware the module doesn't support directly.
+PCI device passthrough lets you attach a physical device of a node to a virtual machine (VM), for example an industrial controller, a hardware security module, a capture card, an FPGA, or an entire network card. In the guest operating system, such a device works under its own driver, so a VM can use the hardware DP doesn't support directly.
 
 A device reaches a machine in two steps. First you assign it to a project namespace, and then the project owner lists the device in the specification of their machine. The device is granted for exclusive use, so it's available in one namespace and to one machine only.
 
-The module switches the device drivers itself, and you don't need to configure them on the node manually. When a machine starts, the module unbinds the device from the regular kernel driver and binds it to the `vfio-pci` driver, and once the machine is stopped, it returns the device to the regular driver. While the machine is running, the node doesn't use the device.
+DP switches the device drivers itself, and you don't need to configure them on the node manually. When a machine starts, DP unbinds the device from the regular kernel driver and binds it to the `vfio-pci` driver, and once the machine is stopped, it returns the device to the regular driver. While the machine is running, the node doesn't use the device.
 
 ## Node requirements
 
-PCI device passthrough is handled by the `virtualization-dra-pci` system component. It runs only on nodes with containerd version 2 and hardware I/O virtualization enabled. The module checks the nodes itself and assigns the `virtualization.deckhouse.io/vfio=true` label to the suitable ones.
+PCI device passthrough is handled by the `virtualization-dra-pci` system component. It runs only on nodes with containerd version 2 and hardware I/O virtualization enabled. DP checks the nodes itself and assigns the `virtualization.deckhouse.io/vfio=true` label to the suitable ones.
 
 To enable hardware I/O virtualization, turn on `VT-d` on Intel or `AMD-Vi` on AMD in the node BIOS and add the `intel_iommu=on` or `amd_iommu=on` kernel parameter.
 
@@ -44,7 +44,7 @@ d8 k -n d8-virtualization get pods -l app=virtualization-dra-pci -o wide
 
 ## Assigning a namespace to a PCI device
 
-The module detects the devices on the suitable nodes and creates a [NodePCIDevice](/modules/virtualization/cr.html#nodepcidevice) resource for each of them. The component scans the PCI bus at startup and then every five minutes, so a newly installed device appears in the list within a few minutes.
+DP detects the devices on the suitable nodes and creates a [NodePCIDevice](/modules/virtualization/cr.html#nodepcidevice) resource for each of them. The component scans the PCI bus at startup and then every five minutes, so a newly installed device appears in the list within a few minutes.
 
 To make a device available to a project, follow these steps.
 
@@ -97,8 +97,8 @@ While the device is listed in a machine specification, the [PCIDevice](/modules/
 When planning PCI device passthrough, consider the following requirements and limitations:
 
 - Passthrough works in a cluster with [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) 1.34 or higher and containerd version 2 on the nodes, and the `DRAResourceClaimDeviceStatus`, `DRADeviceBindingConditions`, and `DRAConsumableCapacity` feature gates have to be enabled in kube-apiserver.
-- The module doesn't detect every device of a node, because the hardware the node itself depends on stays at its disposal. The following devices never appear in the list:
-  - Display adapters, which are handled by the GPU module.
+- DP doesn't detect every device of a node, because the hardware the node itself depends on stays at its disposal. The following devices never appear in the list:
+  - Display adapters, which are handled by the `gpu` module.
   - Devices integrated into the chipset, bridges, memory controllers, and system peripherals.
   - Network controllers with active interfaces.
   - Storage controllers whose disks are used by the node.
@@ -107,4 +107,4 @@ When planning PCI device passthrough, consider the following requirements and li
 - A VM with a PCI device can't be moved by live migration, and the `Migratable` condition gets the `VirtualMachineHostDevicesNotMigratable` reason, so such machines have to be stopped before the node is put into maintenance.
 - Devices are attached when the VM starts, so a change to the [`.spec.pciDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-pcidevices) parameter requires its restart.
 - A single device is attached to one VM only, and a VM takes no more than eight devices.
-- A network card that's passed through works around the cluster network subsystem. It doesn't appear in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) parameter, and the module neither assigns nor tracks its IP and MAC addresses.
+- A network card that's passed through works around the cluster network subsystem. It doesn't appear in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) parameter, and DP neither assigns nor tracks its IP and MAC addresses.

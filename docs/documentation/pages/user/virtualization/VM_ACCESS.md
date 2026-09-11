@@ -118,10 +118,10 @@ SPICE reserves memory whether a client is connected or not. This memory is part 
 
 ## Startup policy and VM state management
 
-The startup policy determines how the module maintains the machine state. It's set by the [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) parameter:
+The startup policy determines how DP maintains the machine state. It's set by the [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) parameter:
 
 - `AlwaysOnUnlessStoppedManually`: The default option. The machine always runs, and you can stop it only manually.
-- `AlwaysOn`: The machine always runs, and even after a shutdown from the guest OS the module starts it again.
+- `AlwaysOn`: The machine always runs, and even after a shutdown from the guest OS DP starts it again.
 - `Manual`: You manage the machine state yourself.
 - `AlwaysOff`: The machine is always off, and you can't start it.
 
