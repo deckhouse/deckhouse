@@ -75,17 +75,29 @@ Plan for the release that performs the migration: it processes every existing bi
 | Up to 5000 | The release runs longer than usual and completes on its own |
 | More than 5000 | The release can exceed the 20-minute module timeout and fail |
 
-Count the bindings before you update:
+Count the bindings before you update. To get the number of cluster role bindings, use the following command:
 
 ```bash
 d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+```
+
+To get the number of namespaced bindings, use the following command:
+
+```bash
 d8 k get rolebindings -A -l heritage=deckhouse,module=user-authz --no-headers | wc -l
 ```
 
 If there are more than 5000, raise the release timeout or switch to the previous release engine for the duration of the update, and revert the setting afterwards:
 
+To increase the release timeout, use the following command:
+
 ```bash
 d8 k -n d8-system set env deploy/deckhouse HELM_TIMEOUT=60m
+```
+
+To switch back to the previous engine, use the following command:
+
+```bash
 d8 k -n d8-system set env deploy/deckhouse USE_NELM=false
 ```
 
@@ -268,10 +280,17 @@ Two metrics report the situation:
 
 The `D8UserAuthzRuleNeedsMultiTenancy` alert names an individual rule, and `D8UserAuthzRulesNeedMultiTenancy` fires when there are more affected rules than the first alert names. Both belong to the `D8UserAuthzMisconfigured` group.
 
-To resolve the situation, either enable multi-tenancy, or remove the options from the rules:
+To resolve the situation, either enable multi-tenancy, or remove the options from the rules.
+
+To check whether multi-tenancy is enabled, use the following command:
 
 ```bash
 d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
+```
+
+To retrieve the names of ClusterAuthorizationRules that restrict access by namespace or allow access to system namespaces, use the following command:
+
+```bash
 d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limitNamespaces // [] | length > 0) or (.spec.namespaceSelector != null) or (.spec.allowAccessToSystemNamespaces == true)) | .metadata.name'
 ```
 
