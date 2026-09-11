@@ -1,0 +1,87 @@
+include:
+  - '.gitlab/notify.yml'
+  - '.gitlab/helpers.yml'
+  - '.gitlab/build.yml'
+
+timing-report:
+  stage: validate
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/python-3.12.12:${CI_IMAGES_TAG}
+  variables:
+    WINDOW_DAYS: 7
+    TARGET_JOB_NAME: "build-fe:reproducibility"
+    DOTENV_FILE: timing_report.env
+    TIMING_REPORT_SHELL_FILE: timing_report.shell.env
+  secrets:
+    PRIVATE_TOKEN:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN/foxtoken@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  extends:
+    - .rules:on_schedule_reprobucibility_timing_report
+    - .notify-timing-report
+  script:
+    - python3 .gitlab/scripts/reproducibility_timing_report.py
+  artifacts:
+    reports:
+      dotenv: timing_report.env
+
+resolve-target:
+  stage: validate
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  secrets:
+    GITLAB_TOKEN:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN/foxtoken@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  extends:
+    - .rules:on_schedule_reprobucibility
+    - .notify-failure
+  script:
+    - bash .gitlab/scripts/reproducibility_resolve_target.sh
+  artifacts:
+    reports:
+      dotenv: reproducibility.env
+
+build-fe:reproducibility:
+  needs:
+    - job: resolve-target
+      artifacts: true
+  tags:
+    - deckhouse
+  extends:
+    - .rules:on_schedule_reprobucibility
+    - .build_fe
+  before_script:
+    - !reference [.build_base, before_script]
+    - git checkout --detach "${RESOLVED_SHA}"
+  after_script:
+    - |
+      # after_script runs in a fresh shell; restore values resolved in before_script.
+      if [[ -f reproducibility.env ]]; then
+        set -a
+        source reproducibility.env
+        set +a
+      fi
+      touch build.env
+      {
+        echo "BUILD_MAIN_RESULT=${CI_JOB_STATUS:-}"
+        echo "BASELINE_PIPELINE_ID=${BASELINE_PIPELINE_ID:-}"
+        echo "BASELINE_PIPELINE_URL=${BASELINE_PIPELINE_URL:-}"
+        echo "BASELINE_KIND=${BASELINE_KIND:-}"
+        echo "RESOLVED_SHA=${RESOLVED_SHA:-}"
+      } >> build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+
+compare-digests:
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/python-3.12.12:${CI_IMAGES_TAG}
+  extends:
+    - .rules:on_schedule_reprobucibility
+    - .notify-reproducibility
+  needs:
+    - job: build-fe:reproducibility
+      artifacts: true
+  script:
+    - bash .gitlab/scripts/reproducibility_get_reports.sh
+    - bash .gitlab/scripts/reproducibility_measure_job.sh

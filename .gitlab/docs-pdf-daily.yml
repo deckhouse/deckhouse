@@ -1,5 +1,5 @@
 include:
-  - '.gitlab/notify-failure.yml'
+  - '.gitlab/notify.yml'
   - '.gitlab/helpers.yml'
 
 # variables for generating docs
@@ -18,7 +18,7 @@ docs-pdf-daily:
   extends:
     - .docs-pdf-daily-variables
     - .rules:on_schedule_docs_pdf
-    - .notify
+    - .notify-failure
   interruptible: true
   cache: []
   dependencies: []

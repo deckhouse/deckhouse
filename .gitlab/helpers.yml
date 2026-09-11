@@ -14,9 +14,12 @@
     echo "${ISOLATE_SSH_PRIVATE_KEY}" | tr -d '\r' | ssh-add -
 
   docker_config_isolation: |
+    REGCTL_CONFIG=$(mktemp -u --suffix=-${CI_JOB_ID}-.regctl.json)
     DOCKER_CONFIG="$(mktemp -d)"
     export DOCKER_CONFIG
+    export REGCTL_CONFIG
     trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
+    trap 'rm -rf "${REGCTL_CONFIG}"' EXIT
 
   read_werf_version: |
     WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
@@ -61,12 +64,16 @@
     if [[ -n "${DECKHOUSE_DEV_REGISTRY_HOST:-}" ]]; then
       echo "${DECKHOUSE_DEV_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_DEV_REGISTRY_HOST}" \
         --username "${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin
+      echo "${DECKHOUSE_DEV_REGISTRY_PASSWORD}" | regctl registry login "${DECKHOUSE_DEV_REGISTRY_HOST}" \
+        --user "${DECKHOUSE_DEV_REGISTRY_USER}" --pass-stdin
     fi
 
   login_stage_registry: |
     if [[ -n "${DECKHOUSE_REGISTRY_STAGE_HOST:-}" ]]; then
       echo "${DECKHOUSE_REGISTRY_STAGE_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_STAGE_HOST}" \
         --username "${DECKHOUSE_REGISTRY_STAGE_USER}" --password-stdin
+      echo "${DECKHOUSE_REGISTRY_STAGE_PASSWORD}" | regctl registry login "${DECKHOUSE_REGISTRY_STAGE_HOST}" \
+        --user "${DECKHOUSE_REGISTRY_STAGE_USER}" --pass-stdin
     fi
   
   login_write_registry: |
