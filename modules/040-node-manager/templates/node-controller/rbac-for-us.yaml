@@ -162,6 +162,25 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
+  - deckhouseclusters
+  - dynamixclusters
+  - huaweicloudclusters
+  - openstackclusters
+  - staticclusters
+  - vcdclusters
+  - yandexclusters
+  - zvirtclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
   - deckhousecontrolplanes
   verbs:
   - get
