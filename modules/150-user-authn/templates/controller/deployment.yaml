@@ -60,13 +60,6 @@ spec:
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "userAuthnController") }}
         imagePullPolicy: 'IfNotPresent'
-        env:
-        - name: HA_MODE
-{{- if (include "helm_lib_ha_enabled" .) }}
-          value: "true"
-{{- else }}
-          value: "false"
-{{- end }}
         ports:
         - containerPort: 9090
           name: healthz
@@ -88,12 +81,16 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
+        # readyz runs two checks in sequence, cache-sync and api-access, each with a 2 s budget of
+        # its own, and the handler does not stop at the first failure. The probe has to outlast
+        # both, or a cold start against an unreachable API server times out before the body says
+        # which check failed.
         readinessProbe:
           httpGet:
             path: /readyz
             port: 9090
           periodSeconds: 5
-          timeoutSeconds: 3
+          timeoutSeconds: 5
           failureThreshold: 3
         resources:
           requests:
