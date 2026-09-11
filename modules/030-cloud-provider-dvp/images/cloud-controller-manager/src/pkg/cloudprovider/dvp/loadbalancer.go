@@ -59,6 +59,10 @@ func (c *Cloud) EnsureLoadBalancer(
 	service *corev1.Service,
 	nodes []*corev1.Node,
 ) (*corev1.LoadBalancerStatus, error) {
+	if !wantsDefaultLoadBalancer(service) {
+		return nil, nil
+	}
+
 	return c.ensureLB(ctx, service, nodes)
 }
 
@@ -68,6 +72,10 @@ func (c *Cloud) UpdateLoadBalancer(
 	service *corev1.Service,
 	nodes []*corev1.Node,
 ) error {
+	if !wantsDefaultLoadBalancer(service) {
+		return nil
+	}
+
 	_, err := c.ensureLB(ctx, service, nodes)
 	return err
 }
@@ -80,6 +88,12 @@ func (c *Cloud) EnsureLoadBalancerDeleted(
 	name := defaultLoadBalancerName(service)
 
 	return c.dvpService.LoadBalancerService.DeleteLoadBalancerByName(ctx, name)
+}
+
+func wantsDefaultLoadBalancer(service *corev1.Service) bool {
+	return service != nil &&
+		service.Spec.Type == corev1.ServiceTypeLoadBalancer &&
+		service.Spec.LoadBalancerClass == nil
 }
 
 func defaultLoadBalancerName(service *corev1.Service) string {
