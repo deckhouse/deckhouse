@@ -452,13 +452,13 @@ func TestEnsureModuleAnnotations(t *testing.T) {
 	t.Run("an annotation of another writer survives", func(t *testing.T) {
 		l := newEnsureLoader(t, annotated(map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}))
 
-		require.NoError(t, l.ensureModule(context.Background(), def("описание", "description"), true))
+		require.NoError(t, l.ensureModule(context.Background(), def("ru description", "en description"), true))
 
 		module := getModule(t, l, "ingress-nginx")
 		assert.Equal(t, map[string]string{
 			v1alpha2.ModuleAnnotationEmbedded:      "true",
-			v1alpha1.ModuleAnnotationDescriptionRu: "описание",
-			v1alpha1.ModuleAnnotationDescriptionEn: "description",
+			v1alpha1.ModuleAnnotationDescriptionRu: "ru description",
+			v1alpha1.ModuleAnnotationDescriptionEn: "en description",
 		}, module.GetAnnotations())
 	})
 

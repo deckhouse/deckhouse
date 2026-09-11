@@ -61,7 +61,7 @@ func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
 		return fmt.Errorf("glob %q: %w", crdsGlob, err)
 	}
 
-	// Replace module CRD with v1alpha2 (served and stored) 
+	// Replace module CRD with v1alpha2 (served and stored)
 	if app.ModulePackageSyncEnabled() {
 		index := slices.IndexFunc(crds, func(path string) bool {
 			return filepath.Base(path) == moduleCRDFileName
