@@ -187,6 +187,121 @@ func TestSyncModulesFromModuleReleases(t *testing.T) {
 	})
 }
 
+func TestSyncModulesFromModulePullOverrides(t *testing.T) {
+	ctx := context.Background()
+
+	readyPullOverride := func(moduleName, imageTag string) *v1alpha2.ModulePullOverride {
+		return &v1alpha2.ModulePullOverride{
+			ObjectMeta: metav1.ObjectMeta{Name: moduleName},
+			Spec:       v1alpha2.ModulePullOverrideSpec{ImageTag: imageTag},
+			Status:     v1alpha2.ModulePullOverrideStatus{Message: v1alpha2.ModulePullOverrideMessageReady},
+		}
+	}
+
+	moduleSourceOffering := func(sourceName string, moduleNames ...string) *v1alpha1.ModuleSource {
+		moduleSource := testModuleSource(sourceName, "registry.example.com/modules")
+		for _, moduleName := range moduleNames {
+			moduleSource.Status.AvailableModules = append(moduleSource.Status.AvailableModules,
+				v1alpha1.AvailableModule{Name: moduleName})
+		}
+
+		return moduleSource
+	}
+
+	t.Run("takes the version from the image tag and marks the module dev", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
+			readyPullOverride("echo", "pr-1234"),
+			moduleSourceOffering("example", "echo"))
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		assert.Equal(t, "pr-1234", module.Spec.PackageVersion)
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
+		assert.True(t, module.IsDev())
+	})
+
+	t.Run("outranks a deployed release", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
+			readyPullOverride("echo", "pr-1234"),
+			moduleSourceOffering("example", "echo"),
+			testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, "pr-1234", getModule(t, cl, "echo").Spec.PackageVersion)
+	})
+
+	t.Run("loses to the embedded copy", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir,
+			readyPullOverride("echo", "pr-1234"),
+			moduleSourceOffering("example", "echo"))
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		assert.Equal(t, "v1.80.0", module.Spec.PackageVersion)
+		assert.True(t, module.IsEmbedded())
+		assert.False(t, module.IsDev())
+	})
+
+	t.Run("an override that is not ready places nothing", func(t *testing.T) {
+		pullOverride := readyPullOverride("echo", "pr-1234")
+		pullOverride.Status.Message = v1alpha2.ModulePullOverrideMessageModuleNotFound
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), pullOverride, moduleSourceOffering("example", "echo"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, listModuleNames(t, cl))
+	})
+
+	t.Run("the repository comes from the module object when it carries one", func(t *testing.T) {
+		existing := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "other", PackageVersion: "v1.2.3"},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing,
+			readyPullOverride("echo", "pr-1234"),
+			moduleSourceOffering("example", "echo"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, "other", getModule(t, cl, "echo").Spec.PackageRepositoryName)
+	})
+
+	t.Run("the repository comes from the module config source", func(t *testing.T) {
+		moduleConfig := testModuleConfig("echo")
+		moduleConfig.Spec.Source = "deckhouse"
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), moduleConfig,
+			readyPullOverride("echo", "pr-1234"),
+			moduleSourceOffering("example", "echo"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, "deckhouse-modules", getModule(t, cl, "echo").Spec.PackageRepositoryName)
+	})
+
+	t.Run("several sources offer the module and none is deckhouse", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
+			readyPullOverride("echo", "pr-1234"),
+			moduleSourceOffering("example", "echo"),
+			moduleSourceOffering("other", "echo"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, listModuleNames(t, cl), "the sync cannot tell which repository the module belongs to")
+	})
+
+	t.Run("several sources offer the module and deckhouse is one of them", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
+			readyPullOverride("echo", "pr-1234"),
+			moduleSourceOffering("example", "echo"),
+			moduleSourceOffering("deckhouse", "echo"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, "deckhouse-modules", getModule(t, cl, "echo").Spec.PackageRepositoryName)
+	})
+}
+
 func TestSyncModulesFromModuleConfig(t *testing.T) {
 	ctx := context.Background()
 
