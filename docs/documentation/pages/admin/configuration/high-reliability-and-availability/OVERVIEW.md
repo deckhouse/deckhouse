@@ -27,3 +27,5 @@ based on the Service Mesh mode of the [`istio`](/modules/istio/) module.
 In this mode, federation is configured between multiple clusters.
 In case of failures in one cluster, the load is automatically redistributed to others.
 For configuration details, refer to [Federation](../network/alliance/federation.html).
+
+Virtual machines also survive node failures and overload. Rebalancing moves them off loaded nodes by live migration, and the ColdStandby mechanism brings machines back into operation after a node fails. For details, refer to [Virtual machine fault tolerance and balancing](./vm-reliability.html).
