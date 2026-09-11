@@ -180,11 +180,19 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 
 	// Leader election is always on: even a single-replica Deployment has two pods during a rolling
 	// update, and two writers of the same bindings would fight over them.
+	//
+	// The lease is renewed against the API server, and controller-runtime exits the process when a
+	// renewal misses RenewDeadline. With the defaults (15 s lease, 10 s renew) every short API-server
+	// absence restarted the pod and threw away a warm cache; these give it a minute to come back.
+	lease, renew, retry := leaseDuration, renewDeadline, retryPeriod
 	opts := manager.Options{
 		LeaderElection:                true,
 		LeaderElectionID:              controllerName,
 		LeaderElectionNamespace:       leaderElectionNamespace,
 		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 &lease,
+		RenewDeadline:                 &renew,
+		RetryPeriod:                   &retry,
 		Scheme:                        scheme,
 		GracefulShutdownTimeout:       &timeout,
 		HealthProbeBindAddress:        ":9090",
@@ -230,6 +238,10 @@ func envInt(logger logr.Logger, name string, def int) int {
 }
 
 const (
+	leaseDuration = 60 * time.Second
+	renewDeadline = 40 * time.Second
+	retryPeriod   = 8 * time.Second
+
 	cacheSyncCheckTimeout = 2 * time.Second
 	// apiAccessCheckTimeout keeps the readiness check inside the probe's own budget (3 s).
 	apiAccessCheckTimeout = 2 * time.Second

@@ -115,6 +115,16 @@ func TestManagerOptionsAlwaysElectALeader(t *testing.T) {
 	if opts.Cache.DefaultTransform == nil {
 		t.Error("cached objects must be stripped of managedFields")
 	}
+	// Losing the lease exits the process, so the lease has to outlive a short API-server absence.
+	if opts.LeaseDuration == nil || *opts.LeaseDuration < 30*time.Second {
+		t.Errorf("LeaseDuration = %v, want at least 30s", opts.LeaseDuration)
+	}
+	if opts.RenewDeadline == nil || *opts.RenewDeadline >= *opts.LeaseDuration {
+		t.Errorf("RenewDeadline = %v must be shorter than LeaseDuration = %v", opts.RenewDeadline, opts.LeaseDuration)
+	}
+	if opts.RetryPeriod == nil || *opts.RetryPeriod*2 > *opts.RenewDeadline {
+		t.Errorf("RetryPeriod = %v must leave several tries within RenewDeadline = %v", opts.RetryPeriod, opts.RenewDeadline)
+	}
 }
 
 // stubReader is a client.Reader whose List answers with a fixed error.

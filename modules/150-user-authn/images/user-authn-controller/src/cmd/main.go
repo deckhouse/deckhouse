@@ -46,9 +46,17 @@ import (
 )
 
 const (
-	haModeEnv               = "HA_MODE"
 	controllerName          = "user-authn-controller"
 	leaderElectionNamespace = "d8-user-authn"
+
+	// The lease is renewed against the API server, and controller-runtime exits the process when a
+	// renewal misses RenewDeadline (the manager's OnStoppedLeading returns an error from Start). The
+	// defaults - 15 s lease, 10 s renew - turn every short API-server absence into a restart of the
+	// one non-HA pod, which throws away a warm cache for nothing. These give it a minute to come
+	// back; a longer outage still restarts the pod, and readiness has reported it long before.
+	leaseDuration = 60 * time.Second
+	renewDeadline = 40 * time.Second
+	retryPeriod   = 8 * time.Second
 )
 
 func main() {
@@ -122,11 +130,15 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 	// Leader election is always on. It used to follow HA_MODE, but two pods of this Deployment
 	// exist outside HA too: the non-HA rolling update surges the new pod before the old one is
 	// gone, and both reconcile and write UserAccounts and DexProviderChecks for that window.
+	lease, renew, retry := leaseDuration, renewDeadline, retryPeriod
 	opts := manager.Options{
 		LeaderElection:                true,
 		LeaderElectionID:              controllerName,
 		LeaderElectionNamespace:       leaderElectionNamespace,
 		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 &lease,
+		RenewDeadline:                 &renew,
+		RetryPeriod:                   &retry,
 		Scheme:                        scheme,
 		GracefulShutdownTimeout:       &timeout,
 		HealthProbeBindAddress:        ":9090",

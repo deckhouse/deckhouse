@@ -173,6 +173,8 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
 			Expect(deployment.Field("spec.template.metadata.labels.app").String()).To(Equal("user-authz-controller"))
 			Expect(deployment.Field("spec.template.spec.containers.0.env").String()).ToNot(ContainSubstring("HA_MODE"))
+			// readyz runs cache-sync and api-access in sequence, 2 s each; the probe must outlast both.
+			Expect(deployment.Field("spec.template.spec.containers.0.readinessProbe.timeoutSeconds").Int()).To(BeNumerically(">=", 5))
 
 			role := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:controller")
 			Expect(role.Exists()).To(BeTrue())
@@ -356,8 +358,8 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
 			Expect(deployment.Exists()).To(BeTrue())
 			Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
-			Expect(deployment.Field("spec.strategy.rollingUpdate.maxSurge").Exists()).To(BeFalse(),
-				"no explicit maxSurge: the Deployment default surges a pod before removing the old one")
+			Expect(deployment.Field("spec.strategy").Exists()).To(BeFalse(),
+				"no strategy at all: the Deployment default surges a pod before removing the old one; an explicit Recreate would take the API down harder")
 
 			// The budget the chart already carries: with one replica it permits the eviction of
 			// that replica, which is the same as a minAvailable of zero.
