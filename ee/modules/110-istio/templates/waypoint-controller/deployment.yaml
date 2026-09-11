@@ -53,7 +53,7 @@ spec:
         - name: ISTIO_CLOUD_PLATFORM
           value: {{ include "istioCloudPlatform" . }}
         - name: ISTIO_CLUSTER_ID
-          value: {{ .Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum .Values.global.discovery.clusterUUID }}
+          value: {{ include "istioClusterID" . }}
         - name: VPA_ENABLED
           value: {{ if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}"true"{{ else }}"false"{{ end }}
         ports:

@@ -322,6 +322,129 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
+	Context("Local cluster identity", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.HelmRender()
+		})
+
+		It("derives one cluster ID and uses it everywhere the cluster names itself", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			const clusterID = "my-domain-199688871"
+
+			istiod := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27")
+			Expect(istiod.Exists()).To(BeTrue())
+			env := istiod.Field("spec.template.spec.containers.0.env").Array()
+			var clusterIDEnv string
+			for _, e := range env {
+				if e.Get("name").String() == "CLUSTER_ID" {
+					clusterIDEnv = e.Get("value").String()
+				}
+			}
+			Expect(clusterIDEnv).To(Equal(clusterID))
+
+			injectValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.values").String()
+			Expect(injectValues).To(ContainSubstring(`"clusterName": "` + clusterID + `"`))
+			Expect(injectValues).To(ContainSubstring(`"network": "network-` + clusterID + `"`))
+		})
+	})
+
+	Context("meshNetworks registry keying for an operator-free control plane", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.ValuesSet("istio.multicluster.enabled", true)
+			f.ValuesSet("istio.internal.multiclustersNeedIngressGateway", true)
+		})
+
+		It("renders both the cluster ID and the CR name while the transitional entry stands", func() {
+			f.ValuesSetFromYaml("istio.internal.multiclusters", `
+- name: neighbour-renamed
+  apiHost: remote.api.example.com
+  apiJWT: aAaA.bBbB.CcCc
+  enableIngressGateway: true
+  insecureSkipVerify: false
+  ingressGateways:
+  - address: 1.1.1.1
+    port: 123
+  networkName: network-neigh-cluster-id
+  clusterID: neigh-cluster-id
+  metadataExporterCA: ""
+  rootCA: ---ROOT CA---
+  spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
+`)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			meshNetworks := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Field("data.meshNetworks").String()
+			Expect(meshNetworks).To(MatchYAML(`
+networks:
+  network-neigh-cluster-id:
+    endpoints:
+    - fromRegistry: neigh-cluster-id
+    - fromRegistry: neighbour-renamed
+    gateways:
+    - address: 1.1.1.1
+      port: 123
+`))
+		})
+
+		It("renders a single endpoint when the CR name already equals the cluster ID", func() {
+			f.ValuesSetFromYaml("istio.internal.multiclusters", `
+- name: neigh-cluster-id
+  apiHost: remote.api.example.com
+  apiJWT: aAaA.bBbB.CcCc
+  enableIngressGateway: true
+  insecureSkipVerify: false
+  ingressGateways:
+  - address: 1.1.1.1
+    port: 123
+  networkName: network-neigh-cluster-id
+  clusterID: neigh-cluster-id
+  metadataExporterCA: ""
+  rootCA: ---ROOT CA---
+  spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
+`)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			meshNetworks := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Field("data.meshNetworks").String()
+			Expect(meshNetworks).To(MatchYAML(`
+networks:
+  network-neigh-cluster-id:
+    endpoints:
+    - fromRegistry: neigh-cluster-id
+    gateways:
+    - address: 1.1.1.1
+      port: 123
+`))
+		})
+	})
+
 	Context("Telemetry mesh defaults for operator-free control plane 1.27", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
@@ -1130,7 +1253,8 @@ cluster-b:
     ejEkdtt+SM9ao/txR3M/3t/IiAyY9lGT+N3VePEo6UNyfSRdSCT3c4Y/NUs4yXHS
     tQ==
     -----END CERTIFICATE-----
-  networkName: a-b-c-1-2-3
+  networkName: network-neigh-0-cluster-id
+  clusterID: neigh-0-cluster-id
   rootCA: ---ROOT CA---
   spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
 `)
@@ -1151,8 +1275,10 @@ neighbour-0:
 
 			kubeconfigSecret := f.KubernetesResource("Secret", "d8-istio", "istio-remote-secret-neighbour-0")
 			Expect(kubeconfigSecret.Exists()).To(BeTrue())
-			Expect(kubeconfigSecret.Field("data.neighbour-0").Exists()).To(BeTrue())
-			renderedKubeconfig, _ := base64.StdEncoding.DecodeString(kubeconfigSecret.Field("data.neighbour-0").String())
+			Expect(kubeconfigSecret.Field(`metadata.annotations.networking\.istio\.io/cluster`).String()).To(Equal("neigh-0-cluster-id"))
+			Expect(kubeconfigSecret.Field("data.neigh-0-cluster-id").Exists()).To(BeTrue())
+			Expect(kubeconfigSecret.Field("data.neighbour-0").Exists()).To(BeFalse())
+			renderedKubeconfig, _ := base64.StdEncoding.DecodeString(kubeconfigSecret.Field("data.neigh-0-cluster-id").String())
 			Expect(renderedKubeconfig).To(MatchYAML(`
 apiVersion: v1
 kind: Config
@@ -1161,16 +1287,16 @@ clusters:
     server: https://remote.api.example.com
     insecure-skip-tls-verify: false
     certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZEVENDQXZXZ0F3SUJBZ0lVUmIrTDRkSDVxdjUzWlNEL3RCUlNkcTM3R280d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xZM1Z6ZEc5dExYSnZiM1F3SGhjTk1qUXhNVEkxTVRVeU56TXdXaGNOTXpReApNVEl6TVRVeU56TXdXakFXTVJRd0VnWURWUVFEREF0amRYTjBiMjB0Y205dmREQ0NBaUl3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dJUEFEQ0NBZ29DZ2dJQkFKNEJOeDRFNWU5RUh6VklyejM3M0FPYW5Rc09NR0J3L1N4emZpUGUKOVBsTnR2RzlZWE10WWxqc29uYlpJNDIwYjhFOHlXQ0UrRXpSajBYdXQ4eXBuMXVCNytQdlZVZ2IyVENoSG5Xdgo2Q3ZFaGl5Q0JxdU9HS2Eybkt2TWxvdjVTR3Njai9DVXlqK3hEeHZvVHZQV28xVXhXdmpqaEM3elRHNUJHaUJ4Cmx0QkpiMm9Lc2dnM3pERzc0WDRodEJOVy9RTXV4WXBzOW1UTnV3STY5NzBlcUVaODF4NDMrNjZoR1dTbnlkM1kKM2Z6OFMvRXFLejNFdlBGVU40NG9NaVZSTlZKcTZxM3IwMXRRam1HUStoenRwUVpNNFRaU1pVQXpxS2ZScVh1egpHdHhoWXpRRFB0Mi9hUFdMVTJ5S0RpZzlibmV1NGxNQ2hERG5vd2sxWEhrT09aSzRRNWVRMkFjTTB0T2wzN0YyCnIzNFZtRUdEYlo4OW8zMTRFUGZVOGs5dk5jR2lTSUN4a25XMExEZFFYeEYvazhGWG1yVElnY0VRc0ZUa1ZyUEsKSDZVcFNVdkpaZlU0TFY2TGkzL1h6YStRVU5HVGxtcThSckUxdHpFZEZKZlhiZEh5YmhvZklxakRjdEEwdGx0NwpGcFBqRmU5Q1RCMlNkcXRtSk83WnNzSUoxSklUeFRsOUw3WjJCUHlqRnBYM3p3UlJBMG1KSDI3anJXNk14M01tCnVIdk9ncnFwOUQ4NUlaSTlRV3NZdXRhL2tLdWZTSGhIWWJlcldaUHQzR3JMQWRRbTF4Q3BUZ3U5Y0lRbVVpMHkKb1Q0R1BLNTR3bUVYeVVjMEhpZHhKQUd6SUJsdWpVR3JPbjA1bXB3NlZRcE9mZWpUejV4cWJ2WkFGaFVHMFFxdgpnQ2VIQWdNQkFBR2pVekJSTUIwR0ExVWREZ1FXQkJTOC9zVStNSTFUODBsbm5SWTduVnJaS0oxK1dUQWZCZ05WCkhTTUVHREFXZ0JTOC9zVStNSTFUODBsbm5SWTduVnJaS0oxK1dUQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01BMEcKQ1NxR1NJYjNEUUVCQ3dVQUE0SUNBUUE4VmU4SjFDOUhNWnc2NklObVlhbnlDU2dZbDVJZUM3UXg3b3QyYXg0WQpveHJCSDFoVjVwRURvOFBRVU1PTlFpRVV1MEhMK1FPNnlaRVgxRHFiYjJsSXZHa1p2WkRPdVpuUUx1eVd2U0V0Ck51QWJKclFNeUZWcHhmdEt0OWFWTDBJL05LRFlrSnZDV2JJL1BhZVhkNDlIeVU3NTlIUzdudXJYdTR1R1NqR2EKWUJkcjBIWUFzZVQya0VZNWZQZzlqMDlvV0xZRkVnakJ5V1ZHY0xJd1paMXoxNEQ2OG9tZk1hL2trc0JPdFduUApTSklEbUZaSCtCODV5WSt3NnlLYjkvUmZDN0Q3TFlDRVRnK2dJSW11RXlJcXpMazVENHpHRXZWL0k5OVl3SlNJCm1rektJSi80Z2tBVk5xR1RVWjZNQnU3bENPY0JMZVFrY3JWaUpFREw2Wk1rbUV5ZVQwenJ2bitNY1NsNXF3L3gKVU5BVzUvalFoeU0vVjR0QWNHcUpqQnhJOWNRYlQ0K0ZiRHd3ZDlqUTV1NFlRcGxFUDVKTEtQVUcxaEtDS2RrNgpoTkJBRXdjSVB6M2lIK2hFS1pBdlZuYmxmWkt4cElNSGVMdHhtZjhLLzJKdkpWVEpuSG1ZeHZLMzRBK1hoRXJkCjhBeUlWcGRTWXdWMU5zU1RnTUhQZFBlUFpBK0gzbVJRT3RUdDFhZDhsRWcyTGFreHR1bjdrUU82MUs1eVRYY04KL1FQN3crR012ZHNxUW04RW9xRFhQejhDZm5vK2l0OTQyUmViMnptREdyR2ZoKy9pbm9NLzhBQ3ZoTkF6NFF5YwplakVrZHR0K1NNOWFvL3R4UjNNLzN0L0lpQXlZOWxHVCtOM1ZlUEVvNlVOeWZTUmRTQ1QzYzRZL05VczR5WEhTCnRRPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-  name: neighbour-0
+  name: neigh-0-cluster-id
 contexts:
 - context:
-    cluster: neighbour-0
-    user: neighbour-0
-  name: neighbour-0
-current-context: neighbour-0
+    cluster: neigh-0-cluster-id
+    user: neigh-0-cluster-id
+  name: neigh-0-cluster-id
+current-context: neigh-0-cluster-id
 preferences: {}
 users:
-- name: neighbour-0
+- name: neigh-0-cluster-id
   user:
     token: aAaA.bBbB.CcCc
 `))
@@ -1215,8 +1341,9 @@ users:
   - my.domain
 `))
 			Expect(istio.Field("spec.values.global.meshNetworks").String()).To(MatchYAML(`
-a-b-c-1-2-3:
+network-neigh-0-cluster-id:
   endpoints:
+  - fromRegistry: neigh-0-cluster-id
   - fromRegistry: neighbour-0
   gateways:
   - address: 1.1.1.1

@@ -79,6 +79,8 @@ spec:
           value: {{ include "helm_lib_module_public_domain" (list . "istio-api-proxy") }}
         - name: MULTICLUSTER_NETWORK_NAME
           value: {{ include "istioNetworkName" . | quote}}
+        - name: MULTICLUSTER_CLUSTER_ID
+          value: {{ include "istioClusterID" . | quote }}
   {{- end }}
   {{- if .Values.global.modules.publicDomainTemplate }}
         - name: ISTIO_METADATA_OLD_PUBLIC_HOST
