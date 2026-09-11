@@ -154,10 +154,35 @@ The authorization webhook and Permission Browser read the multi-tenancy options 
 
 **Health.** The webhook reports the state of its rules informer:
 
+To check that the webhook Pods are running, run:
+
 ```bash
 d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+```
+
+Example output (one Pod per master, on the host network; both containers must be ready):
+
+```console
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE       NOMINATED NODE   READINESS GATES
+user-authz-webhook-qrm2n   2/2     Running   0          2d    10.0.0.11    master-0   <none>           <none>
+user-authz-webhook-h6jbh   2/2     Running   0          2d    10.0.0.12    master-1   <none>           <none>
+user-authz-webhook-97fvs   2/2     Running   0          2d    10.0.0.13    master-2   <none>           <none>
+```
+
+To see the last 100 log lines of the webhook container of every such Pod, run:
+
+```bash
 d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
 ```
+
+Example output:
+
+```console
+2026/09/11 10:00:00 server is starting to listen on  127.0.0.1:40443 ...
+2026/09/11 10:00:01 rules source: directory rebuilt from 12 rules (18 subjects, 0 quarantined) in 4.2ms
+```
+
+The `rules source: directory rebuilt from N rules` line shows the informer has listed the rules and how many it holds; `quarantined` counts the rules whose `limitNamespaces` patterns did not compile.
 
 **Metrics.** The webhook serves them on `127.0.0.1` inside its Pod; the `kube-rbac-proxy` sidecar exposes them on the node and the `PodMonitor` `user-authz-webhook` collects them (the `operator-prometheus` module must be enabled). There is one series per master.
 
