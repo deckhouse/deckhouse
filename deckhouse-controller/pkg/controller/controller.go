@@ -484,7 +484,17 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	// controller runs; the sync reads through the API reader, so it does not
 	// need the manager cache
 	if app.ModulePackageSyncEnabled() {
-		if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.GlobalHooksDir, c.log.Named("pkgsync")); err != nil {
+		if err := pkgsync.Sync(
+			ctx,
+			c.runtimeManager.GetAPIReader(),
+			c.runtimeManager.GetClient(),
+			c.dc,
+			app.Version,
+			c.defaultReleaseChannel,
+			app.EmbeddedModulesDir,
+			app.GlobalHooksDir,
+			c.log.Named("pkgsync"),
+		); err != nil {
 			return fmt.Errorf("sync package objects: %w", err)
 		}
 	}

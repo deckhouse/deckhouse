@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -480,6 +481,32 @@ func (l *Loader) syncModuleVersions(modules []v1alpha1.Module) {
 	}
 }
 
+// moduleAnnotations builds the annotations to write on the module object.
+//
+// The loader owns the two description keys and nothing else. It fills them from
+// the module files and clears them once the files stop declaring them.
+//
+// Every other key is carried over, because the module has a second writer: the
+// package sync marks embedded and dev modules with annotations of its own.
+//
+// An empty result comes back as nil, the shape the API returns for an object
+// without annotations, so the caller does not take it for a change.
+func moduleAnnotations(current, declared map[string]string) map[string]string {
+	annotations := make(map[string]string, len(current)+len(declared))
+	maps.Copy(annotations, current)
+
+	delete(annotations, v1alpha1.ModuleAnnotationDescriptionRu)
+	delete(annotations, v1alpha1.ModuleAnnotationDescriptionEn)
+
+	maps.Copy(annotations, declared)
+
+	if len(annotations) == 0 {
+		return nil
+	}
+
+	return annotations
+}
+
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
 	module := new(v1alpha1.Module)
 	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
@@ -529,7 +556,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Critical = def.Critical
 			module.Properties.Accessibility = def.Accessibility.ToV1Alpha1()
 
-			module.SetAnnotations(def.Annotations())
+			module.SetAnnotations(moduleAnnotations(module.GetAnnotations(), def.Annotations()))
 			module.SetLabels(def.Labels())
 
 			if embedded {
