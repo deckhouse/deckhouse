@@ -154,10 +154,35 @@ d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
 
 **Состояние.** Вебхук сообщает состояние своего informer'а правил.
 
+Чтобы проверить, что поды вебхука запущены, выполните команду:
+
 ```bash
 d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+```
+
+Пример вывода (по одному поду на каждый master, в сети узла; готовы должны быть оба контейнера):
+
+```console
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE       NOMINATED NODE   READINESS GATES
+user-authz-webhook-qrm2n   2/2     Running   0          2d    10.0.0.11    master-0   <none>           <none>
+user-authz-webhook-h6jbh   2/2     Running   0          2d    10.0.0.12    master-1   <none>           <none>
+user-authz-webhook-97fvs   2/2     Running   0          2d    10.0.0.13    master-2   <none>           <none>
+```
+
+Чтобы вывести последние 100 строк логов контейнера вебхука из всех таких подов, выполните команду:
+
+```bash
 d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
 ```
+
+Пример вывода:
+
+```console
+2026/09/11 10:00:00 server is starting to listen on  127.0.0.1:40443 ...
+2026/09/11 10:00:01 rules source: directory rebuilt from 12 rules (18 subjects, 0 quarantined) in 4.2ms
+```
+
+Строка `rules source: directory rebuilt from N rules` показывает, что informer получил список правил, и сколько их в каталоге; `quarantined` — число правил, у которых не скомпилировались шаблоны `limitNamespaces`.
 
 **Метрики.** Webhook отдаёт их по адресу `127.0.0.1` внутри своего пода; сайдкар `kube-rbac-proxy` публикует их на узле, а собирает `PodMonitor` `user-authz-webhook` (должен быть включён модуль `operator-prometheus`). На каждый master приходится один набор серий.
 
@@ -178,7 +203,7 @@ Permission Browser отдаёт тот же набор с префиксом `us
 
 - `D8UserAuthzWebhookTargetDown` — webhook не скрейпится 5 минут (пока алерт активен, остальные сработать не могут);
 - `D8UserAuthzWebhookRulesNotSynced` — экземпляр 10 минут не получил список правил;
--  `D8UserAuthzWebhookRulesQuarantined` — правило 10 минут не компилируется;
+- `D8UserAuthzWebhookRulesQuarantined` — правило 10 минут не компилируется;
 - `D8UserAuthzWebhookRulesWatchErrors` — устойчивые ошибки watch в течение 15 минут;
 - `D8UserAuthzWebhookRulesStale` — каталог не пересобирался сутки (норма для кластера, где правила не меняются).
 
