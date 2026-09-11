@@ -366,8 +366,15 @@ func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app, oldApp *v
 // extractOldApplication decodes the stored object the admission request replaces.
 // Returns nil on CREATE, where there is nothing an immutable field could deviate from.
 func extractOldApplication(review *kwhmodel.AdmissionReview) (*v1alpha1.Application, error) {
-	if review == nil || review.Operation != kwhmodel.OperationUpdate || len(review.OldObjectRaw) == 0 {
+	if review == nil || review.Operation != kwhmodel.OperationUpdate {
 		return nil, nil
+	}
+
+	// An UPDATE always carries the object it replaces. Failing the request is the same
+	// safe direction the decode error below takes: admitting an update whose old object
+	// never arrived would pass every immutable field unchecked.
+	if len(review.OldObjectRaw) == 0 {
+		return nil, errors.New("update review carries no old Application")
 	}
 
 	oldApp := new(v1alpha1.Application)
@@ -387,14 +394,19 @@ func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.A
 		return nil
 	}
 
+	oldSettings, err := effectiveSettings(oldApp)
+	if err != nil {
+		return err
+	}
+
 	// Defaults go on both sides so that a key left out of the manifest compares equal
 	// to the value the application actually runs with — otherwise dropping the key
 	// would read as "never set" and slip past the check. ApplyDefaults mutates in
-	// place, which is safe here because GetMap decodes a fresh map on every call.
-	oldSettings := oldApp.Spec.Settings.GetMap()
+	// place, which is safe here because both maps are freshly decoded.
 	newSettings := app.Spec.Settings.GetMap()
 	validation.ApplyDefaults(oldSettings, settingsSchema)
 	validation.ApplyDefaults(newSettings, settingsSchema)
+	dropUnsetGrants(settingsSchema, oldSettings, newSettings)
 
 	errs := packageschema.CheckImmutable(settingsSchema, oldSettings, newSettings)
 	if len(errs) == 0 {
@@ -407,6 +419,78 @@ func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.A
 	}
 
 	return errors.New(strings.Join(msgs, "; "))
+}
+
+// effectiveSettings returns the settings the application actually runs with, which is
+// what an immutable field is frozen at: status.lastAppliedConfiguration, written by the
+// controller after every successful apply with the schema defaults and the project's
+// grant defaults already merged in. spec.settings is the fallback for installs that have
+// not been applied since that field was introduced; it is the weaker side, because
+// values the controller resolves never appear there.
+func effectiveSettings(app *v1alpha1.Application) (map[string]any, error) {
+	raw := app.Status.LastAppliedConfiguration.Raw
+	if len(raw) == 0 {
+		return app.Spec.Settings.GetMap(), nil
+	}
+
+	settings := make(map[string]any)
+	if err := json.Unmarshal(raw, &settings); err != nil {
+		// Same direction as a failed decode of the old object: this is the value
+		// immutability is measured against, so guessing at it is not an option.
+		return nil, fmt.Errorf("unmarshal last applied configuration: %w", err)
+	}
+
+	return settings, nil
+}
+
+// dropUnsetGrants removes from oldSettings every grantable field the new manifest leaves
+// empty. The controller fills those from the project, so the effective old side holds a
+// value the manifest never spelled out: compared as-is, an edit to an unrelated field
+// would read as a change to a field nobody touched. An explicit value still compares.
+//
+// ponytail: grants are the only controller-resolved settings today. Another source of
+// them would need the same exclusion here.
+func dropUnsetGrants(settingsSchema *spec.Schema, oldSettings, newSettings map[string]any) {
+	refs, err := packageschema.CollectGrantRefs(settingsSchema)
+	if err != nil {
+		return
+	}
+
+	for _, ref := range refs {
+		// Absent and empty are one case: the grant transformer fills both.
+		if value := valueAtPath(newSettings, ref.Path); value == nil || value == "" {
+			deleteAtPath(oldSettings, ref.Path)
+		}
+	}
+}
+
+// valueAtPath returns the value at a property path, or nil when any segment is missing.
+func valueAtPath(settings map[string]any, path []string) any {
+	var value any = settings
+	for _, segment := range path {
+		parent, ok := value.(map[string]any)
+		if !ok {
+			return nil
+		}
+
+		value = parent[segment]
+	}
+
+	return value
+}
+
+// deleteAtPath removes the key at a property path, leaving the objects above it in place.
+func deleteAtPath(settings map[string]any, path []string) {
+	if len(path) == 0 {
+		return
+	}
+
+	parent, ok := valueAtPath(settings, path[:len(path)-1]).(map[string]any)
+	if !ok {
+		return
+	}
+
+	delete(parent, path[len(path)-1])
 }
 
 // parsePackageConstraint parses the optional semver expression on a PackageConstraint,
