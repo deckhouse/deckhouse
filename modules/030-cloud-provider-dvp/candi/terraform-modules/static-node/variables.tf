@@ -108,6 +108,15 @@ variable "bootloader" {
   default = "BIOS"
 }
 
+# GPU devices attached to the VM. Each element references a GPUClass by name;
+# repeating a name attaches several devices of that class.
+variable "gpus" {
+  default = []
+  type = list(object({
+    gpuClassName = string
+  }))
+}
+
 variable "ipv4_address" {
   default = null
   type = object({

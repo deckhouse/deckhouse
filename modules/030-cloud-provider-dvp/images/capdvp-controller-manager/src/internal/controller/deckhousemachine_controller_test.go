@@ -315,3 +315,49 @@ func TestDataSecretNameChanged(t *testing.T) {
 		})
 	}
 }
+
+// A machine without GPUs must leave the field absent from the VM manifest rather
+// than send an empty list: DVP rejects `gpus: []` on a VM, and a machine that
+// never asked for a GPU would stop being creatable.
+func TestBuildGPUs(t *testing.T) {
+	machine := func(gpus ...string) *infrastructurev1alpha1.DeckhouseMachine {
+		m := &infrastructurev1alpha1.DeckhouseMachine{}
+		for _, name := range gpus {
+			m.Spec.GPUs = append(m.Spec.GPUs, infrastructurev1alpha1.GPUDevice{GPUClassName: name})
+		}
+		return m
+	}
+
+	tests := []struct {
+		name string
+		in   *infrastructurev1alpha1.DeckhouseMachine
+		want []v1alpha2.GPUDeviceSpec
+	}{
+		{
+			name: "no gpus requested",
+			in:   machine(),
+			want: nil,
+		},
+		{
+			name: "single gpu",
+			in:   machine("nvidia-h100"),
+			want: []v1alpha2.GPUDeviceSpec{{GPUClassName: "nvidia-h100"}},
+		},
+		{
+			name: "several devices of the same class",
+			in:   machine("nvidia-h100", "nvidia-h100"),
+			want: []v1alpha2.GPUDeviceSpec{{GPUClassName: "nvidia-h100"}, {GPUClassName: "nvidia-h100"}},
+		},
+		{
+			name: "devices of different classes keep their order",
+			in:   machine("nvidia-h100", "nvidia-a100"),
+			want: []v1alpha2.GPUDeviceSpec{{GPUClassName: "nvidia-h100"}, {GPUClassName: "nvidia-a100"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, buildGPUs(tt.in))
+		})
+	}
+}

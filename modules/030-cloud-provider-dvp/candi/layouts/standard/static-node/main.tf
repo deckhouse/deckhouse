@@ -123,6 +123,7 @@ module "static-node" {
   memory_size                = local.memory_size
   virtual_machine_class_name = local.virtual_machine_class_name
   bootloader                 = local.bootloader
+  gpus                       = local.gpus
   live_migration_policy      = local.live_migration_policy
   run_policy                 = local.run_policy
   cpu                        = local.cpu

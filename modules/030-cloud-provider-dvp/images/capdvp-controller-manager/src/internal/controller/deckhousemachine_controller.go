@@ -765,7 +765,8 @@ func (r *DeckhouseMachineReconciler) ensureVM(
 			OsType:                   v1alpha2.GenericOs,
 			Bootloader:               v1alpha2.BootloaderType(dvpMachine.Spec.Bootloader),
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,
-			EnableParavirtualization: true,
+			EnableParavirtualization: ptr.To(true),
+			GPUs:                     buildGPUs(dvpMachine),
 			Provisioning: &v1alpha2.Provisioning{
 				Type: v1alpha2.ProvisioningTypeUserDataRef,
 				UserDataRef: &v1alpha2.UserDataRef{
@@ -791,6 +792,23 @@ func (r *DeckhouseMachineReconciler) ensureVM(
 	}
 
 	return vm, nil
+}
+
+// buildGPUs maps the GPU devices requested by the machine to the DVP VM spec.
+// Each entry references a GPUClass by name; repeating a name attaches several
+// devices of that class. Returns nil when no GPU is requested, so that the field
+// stays absent in the manifest for machines without GPUs.
+func buildGPUs(dvpMachine *infrastructurev1a1.DeckhouseMachine) []v1alpha2.GPUDeviceSpec {
+	if len(dvpMachine.Spec.GPUs) == 0 {
+		return nil
+	}
+
+	gpus := make([]v1alpha2.GPUDeviceSpec, 0, len(dvpMachine.Spec.GPUs))
+	for _, gpu := range dvpMachine.Spec.GPUs {
+		gpus = append(gpus, v1alpha2.GPUDeviceSpec{GPUClassName: gpu.GPUClassName})
+	}
+
+	return gpus
 }
 
 func (r *DeckhouseMachineReconciler) buildBlockDeviceRefs(dvpMachine *infrastructurev1a1.DeckhouseMachine) []v1alpha2.BlockDeviceSpecRef {

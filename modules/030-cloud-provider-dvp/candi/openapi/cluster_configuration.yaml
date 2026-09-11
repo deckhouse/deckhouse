@@ -210,6 +210,30 @@ apiVersions:
                         * `BIOS`: Use BIOS.
                         * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
                         * `EFIWithSecureBoot`: Use UEFI/EFI with Secure Boot support.
+                    gpus:
+                      type: array
+                      maxItems: 16
+                      description: |
+                        List of GPU devices to attach to the virtual machine.
+
+                        Each entry references a `GPUClass` by name; list order is not significant. To attach several devices of the same class, repeat the entry.
+
+                        Requires the `GPU` feature gate to be enabled in the `virtualization` module of the cluster hosting the virtual machines. A virtual machine with an attached GPU cannot be live migrated.
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required: [gpuClassName]
+                        properties:
+                          gpuClassName:
+                            type: string
+                            minLength: 1
+                            maxLength: 253
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            description: |
+                              Name of the `GPUClass` that selects the GPU to attach, for example `nvidia-h100`.
+
+                              The `GPUClass` must already exist in the cluster hosting the virtual machines.
+                            example: nvidia-h100
                     runPolicy:
                       type: string
                       enum:

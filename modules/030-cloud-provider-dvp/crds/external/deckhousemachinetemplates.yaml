@@ -167,6 +167,26 @@ spec:
                           type: string
                         description: AdditionalVMLabels holds extra labels to apply to the VirtualMachine object in the parent DVP cluster.
                         type: object
+                      gpus:
+                        description: |-
+                          GPUs holds the GPU devices to attach to this VM. Each entry references a GPUClass
+                          by name; repeating a name attaches several devices of that class. Requires the GPU
+                          feature gate enabled in the DVP cluster. A VM with an attached GPU is not live migratable.
+                        items:
+                          description: GPUDevice references a GPUClass whose device is attached to the VM.
+                          properties:
+                            gpuClassName:
+                              description: |-
+                                GPUClassName is the name of the GPUClass that selects the GPU to attach,
+                                for example nvidia-h100. The GPUClass must already exist in the DVP cluster.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                            - gpuClassName
+                          type: object
+                        maxItems: 16
+                        type: array
                       liveMigrationPolicy:
                         description: |-
                           LiveMigrationPolicy specifies the live migration policy for the virtual machine.
