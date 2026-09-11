@@ -1,11 +1,11 @@
 ---
-title: "Virtual processor and VM placement"
+title: "Virtual processor of virtual machines"
 permalink: en/admin/configuration/virtualization/vm-classes-cpu.html
-description: "Virtual processor types in VirtualMachineClass, automatic instruction selection through vCPU Discovery, and node placement rules for machines of the class."
-search: virtual processor, vCPU Discovery, CPU type, node placement
+description: "Virtual processor types in VirtualMachineClass and automatic instruction set selection through vCPU Discovery."
+search: virtual processor, vCPU Discovery, CPU type, instruction set
 ---
 
-A virtual machine class defines which processor the guest system sees and which nodes a machine of that class runs on.
+A virtual machine class defines which processor and which instruction set the guest system sees.
 
 ## Virtual processor
 
@@ -184,31 +184,3 @@ spec:
             values: ["green"]
     type: Discovery
 ```
-
-## Placement across nodes
-
-The optional [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) block limits the set of nodes where virtual machines of this class run. Nodes are selected by labels:
-
-```yaml
-spec:
-  nodeSelector:
-    matchExpressions:
-      - key: node.deckhouse.io/group
-        operator: In
-        values:
-          - green
-```
-
-{% alert level="warning" %}
-A change to the [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) block affects all virtual machines of the class at once. Those running on nodes that no longer match the new conditions have to be moved:
-
-- In commercial DP editions, the module migrates such VMs to suitable nodes.
-- In DP Open, the VMs are restarted, and the restart time depends on the [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) parameter of the virtual machine, which defaults to `Manual` and requires the project owner's approval.
-{% endalert %}
-
-To do the same in the web interface, in the [VM class creation form](vm-classes.html#virtualmachineclass-settings):
-
-1. Click **Add** in the **Conditions for scheduling VMs on nodes** → **Labels and expressions** block.
-1. Set **Key**, **Operator**, and **Value**. They correspond to the [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) parameter.
-1. Press **Enter** to confirm the key parameters.
-1. Click **Create**.

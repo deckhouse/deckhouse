@@ -67,7 +67,7 @@ logitech-webcam   node-2   True    True       True       my-project   15m
 ```
 {: .nowrap-default }
 
-The conditions in the [`.status.conditions`](/modules/virtualization/cr.html#nodeusbdevice-v1alpha2-status-conditions) block reflect the readiness of the device and its state. The `Ready` and `Attached` conditions match the [USBDevice conditions](../../../user/virtualization/vm-devices.html#usbdevice-conditions), and the `Assigned` condition shows whether a namespace is assigned to the device:
+The conditions in the [`.status.conditions`](/modules/virtualization/cr.html#nodeusbdevice-v1alpha2-status-conditions) block reflect the readiness of the device and its state. The `Ready` and `Attached` conditions match the [USBDevice conditions](../../../user/virtualization/usb-devices.html#usbdevice-conditions), and the `Assigned` condition shows whether a namespace is assigned to the device:
 
 - `Available`: No namespace is assigned.
 - `InProgress`: A namespace is assigned and the [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is being created.

@@ -1,6 +1,6 @@
 ---
 title: "Диски виртуальных машин"
-permalink: ru/user/storage/vm-disks.html
+permalink: ru/user/virtualization/disks.html
 description: "Диски виртуальных машин: влияние хранилища на поведение диска, создание пустого диска, создание из образа и загрузка из командной строки."
 search: диски ВМ, VirtualDisk, создание диска, загрузка диска, WaitForFirstConsumer
 lang: ru
@@ -11,7 +11,7 @@ lang: ru
 - [`persistentVolumeClaim`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim) — параметры хранения, то есть StorageClass и размер;
 - [`dataSource`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-datasource) — источник данных, которым может быть образ, другой диск или снимок.
 
-Без блока `dataSource` создаётся пустой диск, и тогда в `persistentVolumeClaim` нужно указать хотя бы размер. Если источник задан, блок `persistentVolumeClaim` можно опустить, тогда размер модуль возьмёт из источника, а класс хранения подберёт по нему же. Когда подобрать класс не удаётся, модуль использует StorageClass по умолчанию на уровне кластера либо класс, заданный для дисков в [настройках модуля](../../admin/configuration/storage/vm-storage-classes.html).
+Без блока `dataSource` создаётся пустой диск, и тогда в `persistentVolumeClaim` нужно указать хотя бы размер. Если источник задан, блок `persistentVolumeClaim` можно опустить, тогда размер модуль возьмёт из источника, а класс хранения подберёт по нему же. Когда подобрать класс не удаётся, модуль использует StorageClass по умолчанию на уровне кластера либо класс, заданный для дисков в [настройках модуля](../../admin/configuration/virtualization/storage-classes.html).
 
 Ход создания диска показывает колонка `PHASE` в выводе `d8 k get vd`, её значения описаны в поле [`.status.phase`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-phase). Если диск надолго остаётся не готов, причину подскажет блок [`.status.conditions`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-conditions).
 

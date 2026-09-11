@@ -1,11 +1,11 @@
 ---
 title: "Snapshots of disks and virtual machines"
-permalink: en/user/storage/vm-snapshots.html
+permalink: en/user/virtualization/snapshots.html
 description: "Snapshots of disks and virtual machines: data consistency, creating snapshots, and restoring from them."
 search: snapshots, VirtualDiskSnapshot, VirtualMachineSnapshot, restore
 ---
 
-Snapshots let you capture the current state of a resource for later recovery or [cloning](../virtualization/vm-cloning.html). A disk snapshot saves only the data of the selected disk, while a virtual machine snapshot includes the VM parameters and the state of all its disks.
+Snapshots let you capture the current state of a resource for later recovery or [cloning](vm-cloning.html). A disk snapshot saves only the data of the selected disk, while a virtual machine snapshot includes the VM parameters and the state of all its disks.
 
 ## Consistent snapshots
 
@@ -15,12 +15,12 @@ A consistent snapshot captures a coherent and integral state of the disk data. Y
 
 - the disk isn't attached to any virtual machine, and then the snapshot is always consistent;
 - the virtual machine is powered off;
-- [`qemu-guest-agent`](../virtualization/vm-provisioning.html#guest-os-agent) is installed and running in the guest OS. When the snapshot is created, it temporarily pauses ("freezes") the file system to keep the data coherent.
+- [`qemu-guest-agent`](vm-provisioning.html#guest-os-agent) is installed and running in the guest OS. When the snapshot is created, it temporarily pauses ("freezes") the file system to keep the data coherent.
 
 An inconsistent snapshot may not reflect a coherent state of the virtual machine disks and its components. Such a snapshot is created if the VM is running and `qemu-guest-agent` isn't installed or isn't running in the guest OS.
 If the snapshot manifest explicitly specifies `requiredConsistency: false` but `qemu-guest-agent` is running, an attempt to freeze the file system is still made so that the snapshot comes out consistent.
 
-QEMU Guest Agent supports hook scripts that prepare applications for a snapshot without stopping services, keeping the state coherent at the application level. Configuring hook scripts is described in [Guest OS agent](../virtualization/vm-provisioning.html#guest-os-agent).
+QEMU Guest Agent supports hook scripts that prepare applications for a snapshot without stopping services, keeping the state coherent at the application level. Configuring hook scripts is described in [Guest OS agent](vm-provisioning.html#guest-os-agent).
 
 {% alert level="warning" %}
 When recovering from such a snapshot, file system integrity problems are possible, because the data state may be incoherent.

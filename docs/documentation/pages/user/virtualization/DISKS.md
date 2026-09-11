@@ -1,6 +1,6 @@
 ---
 title: "Virtual machine disks"
-permalink: en/user/storage/vm-disks.html
+permalink: en/user/virtualization/disks.html
 description: "Virtual machine disks: how storage affects disk behavior, creating an empty disk, creating one from an image, and uploading from the command line."
 search: VM disks, VirtualDisk, creating a disk, disk upload, WaitForFirstConsumer
 ---
@@ -10,7 +10,7 @@ A disk stores virtual machine data, including the operating system and applicati
 - [`persistentVolumeClaim`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim): Storage parameters, that is, the StorageClass and the size.
 - [`dataSource`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-datasource): The data source, which can be an image, another disk, or a snapshot.
 
-Without the `dataSource` block, an empty disk is created, and then you have to specify at least the size in `persistentVolumeClaim`. If a source is set, you can omit the `persistentVolumeClaim` block, and the module takes the size from the source and picks the storage class based on it too. When no class can be picked, the module uses the cluster-wide default StorageClass or the class set for disks in the [module settings](../../admin/configuration/storage/vm-storage-classes.html).
+Without the `dataSource` block, an empty disk is created, and then you have to specify at least the size in `persistentVolumeClaim`. If a source is set, you can omit the `persistentVolumeClaim` block, and the module takes the size from the source and picks the storage class based on it too. When no class can be picked, the module uses the cluster-wide default StorageClass or the class set for disks in the [module settings](../../admin/configuration/virtualization/storage-classes.html).
 
 The `PHASE` column in the `d8 k get vd` output shows the progress of disk creation; for its values, see the [`.status.phase`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-phase) field. If a disk stays not ready for a long time, the [`.status.conditions`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-conditions) block tells you the reason.
 

@@ -1,6 +1,6 @@
 ---
 title: "Изменение размера и миграция дисков виртуальных машин"
-permalink: ru/user/storage/vm-disk-operations.html
+permalink: ru/user/virtualization/disk-operations.html
 description: "Изменение размера диска виртуальной машины и перенос диска в другое хранилище сменой класса хранения."
 search: изменение размера диска, миграция диска, storageClassName, расширение диска
 lang: ru

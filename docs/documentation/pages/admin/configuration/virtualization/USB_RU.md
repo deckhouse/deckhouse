@@ -68,7 +68,7 @@ logitech-webcam   node-2   True    True       True       my-project   15m
 ```
 {: .nowrap-default }
 
-Готовность устройства и его состояние отражают условия в блоке [`.status.conditions`](/modules/virtualization/cr.html#nodeusbdevice-v1alpha2-status-conditions). Условия `Ready` и `Attached` совпадают с [условиями USBDevice](../../../user/virtualization/vm-devices.html#условия-usbdevice), а условие `Assigned` показывает, назначен ли устройству неймспейс:
+Готовность устройства и его состояние отражают условия в блоке [`.status.conditions`](/modules/virtualization/cr.html#nodeusbdevice-v1alpha2-status-conditions). Условия `Ready` и `Attached` совпадают с [условиями USBDevice](../../../user/virtualization/usb-devices.html#условия-usbdevice), а условие `Assigned` показывает, назначен ли устройству неймспейс:
 
 - `Available` — неймспейс не назначен;
 - `InProgress` — неймспейс назначен, и ресурс [USBDevice](/modules/virtualization/cr.html#usbdevice) создаётся;
