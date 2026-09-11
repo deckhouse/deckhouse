@@ -29,11 +29,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-const (
-	scaleDownDisabledAnnotation = "cluster-autoscaler.kubernetes.io/scale-down-disabled"
-	nodeTypeLabel               = "node.deckhouse.io/type"
-)
-
 // createNodeGroup creates a NodeGroup with the given node type and optional template. For
 // CloudEphemeral groups the CRD's oneOf schema requires spec.cloudInstances, so a minimal valid
 // block is added in that case.
@@ -77,8 +72,27 @@ func getNodeFromAPI(name string) *corev1.Node {
 	return node
 }
 
+func setTemplateTaints(ngName string, taints []corev1.Taint) {
+	Eventually(func(g Gomega) {
+		ng := &v1.NodeGroup{}
+		g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		ng.Spec.NodeTemplate = &v1.NodeTemplate{Taints: taints}
+		g.Expect(k8sClient.Update(suiteCtx, ng)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+func waitAdopted(nodeName string) {
+	Eventually(func(g Gomega) {
+		g.Expect(getNodeFromAPI(nodeName).Annotations).To(HaveKey(lastAppliedNodeTemplateAnnotation))
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
 func uninitializedTaint() corev1.Taint {
 	return corev1.Taint{Key: nodeUninitializedTaintKey, Effect: corev1.TaintEffectNoSchedule}
+}
+
+func ccmUninitializedTaint() corev1.Taint {
+	return corev1.Taint{Key: "node.cloudprovider.kubernetes.io/uninitialized", Value: "true", Effect: corev1.TaintEffectNoSchedule}
 }
 
 var _ = AfterEach(func() {
@@ -136,6 +150,24 @@ var _ = Describe("NodeTemplate controller applies the NodeGroup template to its 
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// CCM sets providerID only while its own uninitialized taint is present.
+	It("keeps foreign taints on the first reconcile of a node in a group without template taints", func() {
+		ngName := testenv.UniqueName("frontend")
+		createNodeGroup(ngName, v1.NodeTypeCloudPermanent, nil)
+
+		ccmTaint := ccmUninitializedTaint()
+		bashibleTaint := corev1.Taint{Key: "node.deckhouse.io/bashible-uninitialized", Effect: corev1.TaintEffectNoSchedule}
+		nodeName := testenv.UniqueName("frontend-node")
+		createNode(nodeName, ngName, nil, nil, []corev1.Taint{ccmTaint, bashibleTaint, uninitializedTaint()})
+
+		Eventually(func(g Gomega) {
+			node := getNodeFromAPI(nodeName)
+			g.Expect(node.Annotations).To(HaveKey(lastAppliedNodeTemplateAnnotation))
+			g.Expect(node.Spec.Taints).To(ContainElements(ccmTaint, bashibleTaint))
+			g.Expect(taintSliceHasKey(node.Spec.Taints, nodeUninitializedTaintKey)).To(BeFalse())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	It("applies master role labels and removes the legacy master taint not present in the template", func() {
 		createNodeGroup("master", v1.NodeTypeCloudPermanent, nil)
 
@@ -150,6 +182,68 @@ var _ = Describe("NodeTemplate controller applies the NodeGroup template to its 
 			g.Expect(node.Labels).To(HaveKey(masterNodeRoleKey))
 			g.Expect(node.Labels).To(HaveKeyWithValue(nodeTypeLabel, string(v1.NodeTypeCloudPermanent)))
 			g.Expect(taintSliceHasKey(node.Spec.Taints, masterNodeRoleKey)).To(BeFalse())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// Bootstrap taints the first master with control-plane before any template exists.
+	It("drops the bootstrap control-plane taint on a master whose template has no taints and keeps foreign taints", func() {
+		createNodeGroup("master", v1.NodeTypeCloudPermanent, nil)
+
+		ccmTaint := ccmUninitializedTaint()
+		nodeName := testenv.UniqueName("master-node")
+		createNode(nodeName, "master", nil, nil, []corev1.Taint{
+			{Key: controlPlaneTaintKey, Effect: corev1.TaintEffectNoSchedule},
+			ccmTaint,
+			uninitializedTaint(),
+		})
+
+		Eventually(func(g Gomega) {
+			node := getNodeFromAPI(nodeName)
+			g.Expect(node.Annotations).To(HaveKey(lastAppliedNodeTemplateAnnotation))
+			g.Expect(node.Spec.Taints).To(ContainElements(ccmTaint))
+			g.Expect(taintSliceHasKey(node.Spec.Taints, controlPlaneTaintKey)).To(BeFalse())
+			g.Expect(taintSliceHasKey(node.Spec.Taints, nodeUninitializedTaintKey)).To(BeFalse())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	It("keeps a taint added by hand after the node was adopted", func() {
+		ngName := testenv.UniqueName("adopted")
+		createNodeGroup(ngName, v1.NodeTypeStatic, nil)
+		nodeName := testenv.UniqueName("adopted-node")
+		createNode(nodeName, ngName, nil, nil, []corev1.Taint{uninitializedTaint()})
+		waitAdopted(nodeName)
+
+		byHand := corev1.Taint{Key: "by-hand", Effect: corev1.TaintEffectNoSchedule}
+		Eventually(func(g Gomega) {
+			node := getNodeFromAPI(nodeName)
+			node.Spec.Taints = append(node.Spec.Taints, byHand)
+			g.Expect(k8sClient.Update(suiteCtx, node)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Consistently(func(g Gomega) {
+			g.Expect(getNodeFromAPI(nodeName).Spec.Taints).To(ContainElements(byHand))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	It("follows template taint changes on an adopted node and keeps foreign taints", func() {
+		ngName := testenv.UniqueName("templated")
+		createNodeGroup(ngName, v1.NodeTypeStatic, nil)
+		foreign := corev1.Taint{Key: "foreign", Effect: corev1.TaintEffectNoSchedule}
+		nodeName := testenv.UniqueName("templated-node")
+		createNode(nodeName, ngName, nil, nil, []corev1.Taint{foreign, uninitializedTaint()})
+		waitAdopted(nodeName)
+
+		dedicated := corev1.Taint{Key: "dedicated", Value: "workload", Effect: corev1.TaintEffectNoSchedule}
+		setTemplateTaints(ngName, []corev1.Taint{dedicated})
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeFromAPI(nodeName).Spec.Taints).To(ContainElements(dedicated, foreign))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		setTemplateTaints(ngName, nil)
+		Eventually(func(g Gomega) {
+			node := getNodeFromAPI(nodeName)
+			g.Expect(taintSliceHasKey(node.Spec.Taints, "dedicated")).To(BeFalse())
+			g.Expect(node.Spec.Taints).To(ContainElements(foreign))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
