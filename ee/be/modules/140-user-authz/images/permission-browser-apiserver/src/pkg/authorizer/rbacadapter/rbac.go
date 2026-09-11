@@ -16,6 +16,8 @@ import (
 	"k8s.io/client-go/informers"
 	rbaclisters "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/klog/v2"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
 )
 
 // RBACAuthorizer implements RBAC authorization using informers
@@ -26,12 +28,6 @@ type RBACAuthorizer struct {
 	clusterRoleBindingLister rbaclisters.ClusterRoleBindingLister
 }
 
-// carManagedCRBPrefix is the name prefix of ClusterRoleBindings rendered from
-// ClusterAuthorizationRules by the user-authz module (see
-// modules/140-user-authz/templates/cluster-role-bindings.yaml:
-// "user-authz:<car-name>:<postfix>").
-const carManagedCRBPrefix = "user-authz:"
-
 // IsCARManagedClusterRoleBinding reports whether the ClusterRoleBinding was
 // generated from a ClusterAuthorizationRule by the user-authz module.
 //
@@ -39,12 +35,13 @@ const carManagedCRBPrefix = "user-authz:"
 // limited by the CAR's multi-tenancy options (limitNamespaces etc.). They must
 // therefore be excluded when we check whether the user has access to a
 // namespace *independently* of any CAR.
-func IsCARManagedClusterRoleBinding(binding *rbacv1.ClusterRoleBinding) bool {
-	if !strings.HasPrefix(binding.Name, carManagedCRBPrefix) {
-		return false
-	}
-	labels := binding.GetLabels()
-	return labels["heritage"] == "deckhouse" && labels["module"] == "user-authz"
+//
+// The naming contract itself lives in go_lib/user-authz/binding, shared with the controller that
+// writes those bindings and with the authorization webhook that reads them: a binding this
+// apiserver classified differently from the webhook would make the reported access diverge from
+// the enforced one.
+func IsCARManagedClusterRoleBinding(crb *rbacv1.ClusterRoleBinding) bool {
+	return binding.IsRuleBinding(crb.Name, crb.GetLabels())
 }
 
 // NewRBACAuthorizer creates a new RBAC authorizer from informers

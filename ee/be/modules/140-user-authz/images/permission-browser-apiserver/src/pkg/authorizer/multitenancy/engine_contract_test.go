@@ -18,6 +18,8 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
+
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 )
 
 // consoleResourceScope is the GVR set the console BulkSAR payload actually
@@ -136,7 +138,7 @@ func authorizeAs(t *testing.T, e *Engine, u user.Info, verb, group, resource, na
 
 func engineWithConsoleScope(t *testing.T, config string) *Engine {
 	t.Helper()
-	e, err := NewEngine(writeConfigJSON(t, config), nil, nil, consoleResourceScope())
+	e, err := NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), nil, nil, consoleResourceScope())
 	require.NoError(t, err)
 	return e
 }
@@ -166,7 +168,7 @@ func engineWithNamespaces(t *testing.T, config string, objs ...runtime.Object) *
 		require.True(t, ok, "informer %v failed to sync", typ)
 	}
 
-	e, err := NewEngine(writeConfigJSON(t, config), lister, func() bool { return true }, consoleResourceScope())
+	e, err := NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), lister, func() bool { return true }, consoleResourceScope())
 	require.NoError(t, err)
 	return e
 }

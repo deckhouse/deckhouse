@@ -7,18 +7,22 @@ package multitenancy
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"regexp"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 )
 
 // Ensure mockUserInfo implements user.Info for namespace-access tests
@@ -39,152 +43,40 @@ func nsAllowed(e *Engine, userInfo user.Info, namespace string) bool {
 	}
 }
 
-func TestHasAnyFilters(t *testing.T) {
-	tests := []struct {
-		name     string
-		entry    *DirectoryEntry
-		expected bool
-	}{
-		{
-			name: "no filters at all",
-			entry: &DirectoryEntry{
-				NamespaceFiltersAbsent:        true,
-				AllowAccessToSystemNamespaces: true,
-			},
-			expected: false,
-		},
-		{
-			name: "no filters but system namespaces restricted",
-			entry: &DirectoryEntry{
-				NamespaceFiltersAbsent:        true,
-				AllowAccessToSystemNamespaces: false,
-			},
-			expected: true,
-		},
-		{
-			name: "has limit namespaces",
-			entry: &DirectoryEntry{
-				LimitNamespaces: []*regexp.Regexp{
-					regexp.MustCompile("^myapp-.*$"),
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "wildcard pattern allows all",
-			entry: &DirectoryEntry{
-				LimitNamespaces: []*regexp.Regexp{
-					regexp.MustCompile("^.*$"),
-				},
-				AllowAccessToSystemNamespaces: true,
-			},
-			expected: false,
-		},
-		{
-			name: "matchAny selector allows all",
-			entry: &DirectoryEntry{
-				NamespaceSelectors: []*NamespaceSelector{
-					{MatchAny: true},
-				},
-			},
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := hasAnyFilters(tt.entry)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+// swappableRules is a RulesProvider whose directory can be replaced while the engine serves, the
+// way the informer-backed source replaces it on every ClusterAuthorizationRule change. A nil
+// directory stands for a source that has not listed the rules yet.
+type swappableRules struct {
+	dir atomic.Pointer[rules.Directory]
 }
 
-func TestWrapRegex(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"myapp", "^myapp$"},
-		{"^myapp", "^myapp$"},
-		{"myapp$", "^myapp$"},
-		{"^myapp$", "^myapp$"},
-		{"myapp-.*", "^myapp-.*$"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			result := wrapRegex(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+func newSwappableRules(rs ...rules.Rule) *swappableRules {
+	s := &swappableRules{}
+	s.Set(rs...)
+	return s
 }
 
-func TestCombineDirEntries(t *testing.T) {
-	e := &Engine{}
-
-	entries := []DirectoryEntry{
-		{
-			AllowAccessToSystemNamespaces: false,
-			LimitNamespaces: []*regexp.Regexp{
-				regexp.MustCompile("^ns1$"),
-			},
-			NamespaceFiltersAbsent: false,
-		},
-		{
-			AllowAccessToSystemNamespaces: true,
-			LimitNamespaces: []*regexp.Regexp{
-				regexp.MustCompile("^ns2$"),
-			},
-			NamespaceFiltersAbsent: true,
-		},
-	}
-
-	combined := e.combineDirEntries(entries)
-
-	assert.True(t, combined.AllowAccessToSystemNamespaces)
-	assert.True(t, combined.NamespaceFiltersAbsent)
-	assert.Len(t, combined.LimitNamespaces, 2)
+// Set replaces the directory with one built from the rules.
+func (s *swappableRules) Set(rs ...rules.Rule) {
+	s.dir.Store(mttest.Rules(rs...).Directory())
 }
 
-func TestIsLabelSelectorApplied(t *testing.T) {
-	tests := []struct {
-		name     string
-		selector *NamespaceSelector
-		expected bool
-	}{
-		{
-			name:     "nil selector",
-			selector: nil,
-			expected: false,
-		},
-		{
-			name:     "nil label selector",
-			selector: &NamespaceSelector{LabelSelector: nil},
-			expected: false,
-		},
-		{
-			name: "has label selector",
-			selector: &NamespaceSelector{
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"app": "test"},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "has empty label selector",
-			selector: &NamespaceSelector{
-				LabelSelector: &metav1.LabelSelector{},
-			},
-			expected: true,
-		},
-	}
+func (s *swappableRules) Directory() *rules.Directory { return s.dir.Load() }
+func (s *swappableRules) HasSynced() bool             { return s.dir.Load() != nil }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isLabelSelectorApplied(tt.selector)
-			assert.Equal(t, tt.expected, result)
-		})
+// ruleBinding is a ClusterRoleBinding as user-authz-controller creates it for a rule: the
+// user-authz:<rule>:<postfix> name and the module labels make it a rule binding.
+func ruleBinding(name string, subjects ...rbacv1.Subject) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				binding.LabelHeritage:  binding.HeritageValue,
+				binding.LabelModule:    binding.ModuleName,
+				binding.LabelManagedBy: binding.ManagedByValue,
+			},
+		},
+		Subjects: subjects,
 	}
 }
 
@@ -231,24 +123,19 @@ func (m *mockUserInfo) GetExtra() map[string][]string { return nil }
 
 func TestEngine_AuthorizeNamespacedRequest(t *testing.T) {
 	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"restricted-user": {
-					LimitNamespaces: []*regexp.Regexp{
-						regexp.MustCompile("^allowed-ns$"),
-						regexp.MustCompile("^app-.*$"),
-					},
-					AllowAccessToSystemNamespaces: false,
-					NamespaceFiltersAbsent:        false,
-				},
-				"system-user": {
-					AllowAccessToSystemNamespaces: true,
-					NamespaceFiltersAbsent:        true,
-				},
+		rules: mttest.Rules(
+			rules.Rule{
+				Name:            "restricted-user",
+				Subjects:        []rules.Subject{{Kind: "User", Name: "restricted-user"}},
+				LimitNamespaces: []string{"allowed-ns", "app-.*"},
 			},
-			"Group":          {},
-			"ServiceAccount": {},
-		},
+			rules.Rule{
+				Name:                          "system-user",
+				Subjects:                      []rules.Subject{{Kind: "User", Name: "system-user"}},
+				AllowAccessToSystemNamespaces: true,
+			},
+		),
+		bindings: mttest.NoBindings(),
 	}
 
 	tests := []struct {
@@ -316,20 +203,18 @@ func TestEngine_AuthorizeNamespacedRequest(t *testing.T) {
 
 func TestEngine_SystemNamespaceRestriction(t *testing.T) {
 	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"no-system-access": {
-					AllowAccessToSystemNamespaces: false,
-					NamespaceFiltersAbsent:        true,
-				},
-				"with-system-access": {
-					AllowAccessToSystemNamespaces: true,
-					NamespaceFiltersAbsent:        true,
-				},
+		rules: mttest.Rules(
+			rules.Rule{
+				Name:     "no-system-access",
+				Subjects: []rules.Subject{{Kind: "User", Name: "no-system-access"}},
 			},
-			"Group":          {},
-			"ServiceAccount": {},
-		},
+			rules.Rule{
+				Name:                          "with-system-access",
+				Subjects:                      []rules.Subject{{Kind: "User", Name: "with-system-access"}},
+				AllowAccessToSystemNamespaces: true,
+			},
+		),
+		bindings: mttest.NoBindings(),
 	}
 
 	tests := []struct {
@@ -383,18 +268,14 @@ func TestEngine_SystemNamespaceRestriction(t *testing.T) {
 
 func TestEngine_GroupBasedRestrictions(t *testing.T) {
 	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {},
-			"Group": {
-				"developers": {
-					LimitNamespaces: []*regexp.Regexp{
-						regexp.MustCompile("^dev-.*$"),
-					},
-					NamespaceFiltersAbsent: false,
-				},
+		rules: mttest.Rules(
+			rules.Rule{
+				Name:            "developers",
+				Subjects:        []rules.Subject{{Kind: "Group", Name: "developers"}},
+				LimitNamespaces: []string{"dev-.*"},
 			},
-			"ServiceAccount": {},
-		},
+		),
+		bindings: mttest.NoBindings(),
 	}
 
 	tests := []struct {
@@ -442,16 +323,14 @@ func TestEngine_GroupBasedRestrictions(t *testing.T) {
 
 func TestEngine_NonResourceRequest(t *testing.T) {
 	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"restricted-user": {
-					LimitNamespaces:        []*regexp.Regexp{regexp.MustCompile("^allowed$")},
-					NamespaceFiltersAbsent: false,
-				},
+		rules: mttest.Rules(
+			rules.Rule{
+				Name:            "restricted-user",
+				Subjects:        []rules.Subject{{Kind: "User", Name: "restricted-user"}},
+				LimitNamespaces: []string{"allowed"},
 			},
-			"Group":          {},
-			"ServiceAccount": {},
-		},
+		),
+		bindings: mttest.NoBindings(),
 	}
 
 	attrs := &mockAttrs{
@@ -468,38 +347,30 @@ func TestEngine_NonResourceRequest(t *testing.T) {
 
 func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"restricted-user": {
-					LimitNamespaces: []*regexp.Regexp{
-						regexp.MustCompile("^allowed-ns$"),
-						regexp.MustCompile("^app-.*$"),
-					},
-					AllowAccessToSystemNamespaces: false,
-					NamespaceFiltersAbsent:        false,
-				},
-				"system-user": {
-					AllowAccessToSystemNamespaces: true,
-					NamespaceFiltersAbsent:        true,
-				},
-				"unrestricted-user": {
-					AllowAccessToSystemNamespaces: true,
-					LimitNamespaces: []*regexp.Regexp{
-						regexp.MustCompile("^.*$"),
-					},
-					NamespaceFiltersAbsent: false,
-				},
+		rules: mttest.Rules(
+			rules.Rule{
+				Name:            "restricted-user",
+				Subjects:        []rules.Subject{{Kind: "User", Name: "restricted-user"}},
+				LimitNamespaces: []string{"allowed-ns", "app-.*"},
 			},
-			"Group": {
-				"developers": {
-					LimitNamespaces: []*regexp.Regexp{
-						regexp.MustCompile("^dev-.*$"),
-					},
-					NamespaceFiltersAbsent: false,
-				},
+			rules.Rule{
+				Name:                          "system-user",
+				Subjects:                      []rules.Subject{{Kind: "User", Name: "system-user"}},
+				AllowAccessToSystemNamespaces: true,
 			},
-			"ServiceAccount": {},
-		},
+			rules.Rule{
+				Name:                          "unrestricted-user",
+				Subjects:                      []rules.Subject{{Kind: "User", Name: "unrestricted-user"}},
+				LimitNamespaces:               []string{".*"},
+				AllowAccessToSystemNamespaces: true,
+			},
+			rules.Rule{
+				Name:            "developers",
+				Subjects:        []rules.Subject{{Kind: "Group", Name: "developers"}},
+				LimitNamespaces: []string{"dev-.*"},
+			},
+		),
+		bindings: mttest.NoBindings(),
 	}
 
 	tests := []struct {
@@ -682,22 +553,19 @@ func TestIsPrivilegedUser(t *testing.T) {
 
 func TestEngine_GetNamespaceAccessType(t *testing.T) {
 	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"restricted-user": {
-					LimitNamespaces: []*regexp.Regexp{
-						regexp.MustCompile("^allowed-ns$"),
-					},
-					NamespaceFiltersAbsent: false,
-				},
-				"unrestricted-user": {
-					AllowAccessToSystemNamespaces: true,
-					NamespaceFiltersAbsent:        true,
-				},
+		rules: mttest.Rules(
+			rules.Rule{
+				Name:            "restricted-user",
+				Subjects:        []rules.Subject{{Kind: "User", Name: "restricted-user"}},
+				LimitNamespaces: []string{"allowed-ns"},
 			},
-			"Group":          {},
-			"ServiceAccount": {},
-		},
+			rules.Rule{
+				Name:                          "unrestricted-user",
+				Subjects:                      []rules.Subject{{Kind: "User", Name: "unrestricted-user"}},
+				AllowAccessToSystemNamespaces: true,
+			},
+		),
+		bindings: mttest.NoBindings(),
 	}
 
 	tests := []struct {
@@ -761,81 +629,65 @@ func TestEngine_GetNamespaceAccessType(t *testing.T) {
 	}
 }
 
-// writeConfigJSON is a small helper for tests that exercise renewDirectories
-// with hand-crafted JSON: it writes the supplied raw JSON into a temp file
-// and returns the path. We do not reuse coverage_test.go's writeConfig because
-// that helper requires a fully-typed UserAuthzConfig, which is awkward for
-// table-driven cases that mix CARs and ARs.
-func writeConfigJSON(t *testing.T, body string) string {
-	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config.json")
-	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
-	return path
-}
-
-func TestEngine_RenewDirectories_RetriesSameFileAfterInvalidJSON(t *testing.T) {
-	path := writeConfigJSON(t, `{`)
-	e := &Engine{
-		configPath: path,
-		directory:  map[string]map[string]DirectoryEntry{},
-	}
-
-	e.renewDirectories()
-
-	valid := `{
-		"crds": [{
-			"name": "car0",
-			"spec": {
-				"limitNamespaces": ["team-a"],
-				"subjects": [{"kind": "User", "name": "alice"}]
-			}
-		}]
-	}`
-	require.NoError(t, os.WriteFile(path, []byte(valid), 0o600))
-
-	e.renewDirectories()
-
-	require.Len(t, e.affectedDirs("alice", nil), 1)
-}
-
-func TestEngine_RenewDirectories_InvalidRegexPreservesPreviousDirectory(t *testing.T) {
-	path := writeConfigJSON(t, `{
-		"crds": [{
-			"name": "broken",
-			"spec": {
-				"limitNamespaces": ["["],
-				"subjects": [{"kind": "User", "name": "bob"}]
-			}
-		}]
-	}`)
-	e := &Engine{
-		configPath: path,
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"alice": {
-					LimitNamespaces:        []*regexp.Regexp{regexp.MustCompile("^team-a$")},
-					NamespaceFiltersAbsent: false,
-				},
+// TestEngine_InvalidRegexQuarantinesOnlyItsRule locks that a limitNamespaces
+// pattern that does not compile costs only the rule that carries it: the
+// sibling rule keeps its scope, and the subject of the broken rule gets a
+// maximally restricted entry rather than no entry (which would hand it to
+// RBAC unfiltered) or a wider one.
+func TestEngine_InvalidRegexQuarantinesOnlyItsRule(t *testing.T) {
+	e, err := NewEngine(mttest.LegacyJSON(t, `{
+		"crds": [
+			{
+				"name": "broken",
+				"spec": {
+					"limitNamespaces": ["["],
+					"subjects": [{"kind": "User", "name": "bob"}]
+				}
 			},
-			"Group":          {},
-			"ServiceAccount": {},
-		},
+			{
+				"name": "healthy",
+				"spec": {
+					"limitNamespaces": ["team-a"],
+					"subjects": [{"kind": "User", "name": "alice"}]
+				}
+			}
+		]
+	}`), mttest.NoBindings(), nil, nil, nil)
+	require.NoError(t, err)
+
+	assert.Len(t, e.affectedEntries("alice", nil), 1, "a healthy CAR must survive a broken sibling")
+
+	entries := e.affectedEntries("bob", nil)
+	require.Len(t, entries, 1, "the subject of the broken CAR still gets an entry")
+	assert.True(t, entries[0].Quarantined)
+	assert.Empty(t, entries[0].LimitNamespaces, "the broken pattern is left out, not widened")
+	assert.False(t, entries[0].NamespaceFiltersAbsent)
+
+	for _, ns := range []string{"team-a", "any-ns"} {
+		decision, reason, err := e.Authorize(context.Background(), &mockAttrs{
+			userInfo:   &mockUserInfo{name: "bob"},
+			verb:       "get",
+			resource:   "pods",
+			namespace:  ns,
+			isResource: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, authorizer.DecisionDeny, decision, "bob must be denied in %s", ns)
+		assert.Equal(t, noNamespaceAccessReason, reason)
 	}
 
-	e.renewDirectories()
-
-	assert.Len(t, e.affectedDirs("alice", nil), 1)
-	assert.Empty(t, e.affectedDirs("bob", nil))
+	accessType, filter := e.GetNamespaceAccessType(&mockUserInfo{name: "bob"})
+	assert.Equal(t, FilteredAccess, accessType)
+	require.NotNil(t, filter)
+	assert.False(t, e.IsNamespaceAllowedWithFilter("team-a", filter), "a quarantined rule opens no namespace")
 }
 
-// TestEngine_RenewDirectories_MalformedSelectorStaysLocal locks that an
-// uncompilable namespaceSelector costs only the rule that carries it.
-// Precompiling selectors must not turn one bad CAR into a cluster-wide loss
-// of multi-tenancy: an aborted reload leaves the directory empty, and an
-// empty directory means Authorize returns NoOpinion for everyone.
-func TestEngine_RenewDirectories_MalformedSelectorStaysLocal(t *testing.T) {
-	path := writeConfigJSON(t, `{
+// TestEngine_MalformedSelectorStaysLocal locks that an uncompilable
+// namespaceSelector costs only the rule that carries it. One bad CAR must not
+// turn into a cluster-wide loss of multi-tenancy: the library quarantines the
+// rule and keeps serving the others.
+func TestEngine_MalformedSelectorStaysLocal(t *testing.T) {
+	e, err := NewEngine(mttest.LegacyJSON(t, `{
 		"crds": [
 			{
 				"name": "broken",
@@ -852,28 +704,25 @@ func TestEngine_RenewDirectories_MalformedSelectorStaysLocal(t *testing.T) {
 				}
 			}
 		]
-	}`)
-	e := &Engine{
-		configPath: path,
-		directory:  map[string]map[string]DirectoryEntry{},
-	}
+	}`), mttest.NoBindings(), nil, nil, nil)
+	require.NoError(t, err)
 
-	e.renewDirectories()
+	require.Len(t, e.affectedEntries("alice", nil), 1, "a healthy CAR must survive a broken sibling")
 
-	require.Len(t, e.affectedDirs("alice", nil), 1, "a healthy CAR must survive a broken sibling")
-
-	entries := e.affectedDirs("bob", nil)
+	entries := e.affectedEntries("bob", nil)
 	require.Len(t, entries, 1)
+	assert.True(t, entries[0].Quarantined)
 	require.Len(t, entries[0].NamespaceSelectors, 1)
-	assert.Nil(t, entries[0].compiledSelectors[0],
-		"the malformed selector is left uncompiled and index-aligned, not dropped")
+	assert.Nil(t, entries[0].NamespaceSelectors[0].Labels,
+		"the malformed selector is left uncompiled, not dropped")
+	assert.False(t, entries[0].NamespaceSelectors[0].MatchAny)
 }
 
 // TestEngine_Authorize_MalformedSelectorDeniesOnlyItsSubject is the Authorize
 // view of the same config: alice keeps her filter and bob, whose only rule
 // cannot be evaluated, is denied rather than waved through.
 func TestEngine_Authorize_MalformedSelectorDeniesOnlyItsSubject(t *testing.T) {
-	e, err := NewEngine(writeConfigJSON(t, `{
+	e, err := NewEngine(mttest.LegacyJSON(t, `{
 		"crds": [
 			{
 				"name": "broken",
@@ -890,7 +739,7 @@ func TestEngine_Authorize_MalformedSelectorDeniesOnlyItsSubject(t *testing.T) {
 				}
 			}
 		]
-	}`), nil, nil, nil)
+	}`), mttest.NoBindings(), nil, nil, nil)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -962,12 +811,9 @@ func TestEngine_Authorize_IndependentRBACWithCAR(t *testing.T) {
 		]
 	}`
 
-	e := &Engine{
-		configPath: writeConfigJSON(t, config),
-		directory:  map[string]map[string]DirectoryEntry{},
-	}
+	e, err := NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), nil, nil, nil)
+	require.NoError(t, err)
 	e.SetIndependentRBACChecker(newFakeIndependentChecker("ns-b"))
-	e.renewDirectories()
 
 	tests := []struct {
 		name             string
@@ -1007,11 +853,11 @@ func TestEngine_Authorize_IndependentRBACWithCAR(t *testing.T) {
 	}
 }
 
-// TestEngine_RenewDirectories_IgnoresAuthorizationRules verifies that the engine
-// builds its directory from ClusterAuthorizationRules (CARs) ONLY and ignores
-// namespaced AuthorizationRules ("ars") entirely, mirroring the real
-// kube-apiserver user-authz webhook authorizer (images/webhook), whose config
-// parses "crds" and never "ars".
+// TestEngine_IgnoresAuthorizationRules verifies that the engine builds its
+// directory from ClusterAuthorizationRules (CARs) ONLY and ignores namespaced
+// AuthorizationRules ("ars") entirely, mirroring the real kube-apiserver
+// user-authz webhook authorizer (images/webhook), whose config parses "crds"
+// and never "ars".
 //
 // Because the engine is deny-only, ignoring ARs means an AR-only user:
 //   - gets NO directory entry (so the engine never treats the AR as a deny-filter),
@@ -1019,7 +865,7 @@ func TestEngine_Authorize_IndependentRBACWithCAR(t *testing.T) {
 //     RoleBinding each AR creates),
 //   - is classified NoNamespacesAllowed for discovery filtering (no CAR), so the
 //     AccessibleNamespaces list comes from the RBAC candidate path, not the engine.
-func TestEngine_RenewDirectories_IgnoresAuthorizationRules(t *testing.T) {
+func TestEngine_IgnoresAuthorizationRules(t *testing.T) {
 	tests := []struct {
 		name      string
 		config    string
@@ -1090,14 +936,11 @@ func TestEngine_RenewDirectories_IgnoresAuthorizationRules(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &Engine{
-				configPath: writeConfigJSON(t, tt.config),
-				directory:  map[string]map[string]DirectoryEntry{},
-			}
-			e.renewDirectories()
+			e, err := NewEngine(mttest.LegacyJSON(t, tt.config), mttest.NoBindings(), nil, nil, nil)
+			require.NoError(t, err)
 
 			// The AR must not create any directory entry for the subject.
-			assert.Empty(t, e.affectedDirs(tt.userInfo.GetName(), tt.userInfo.GetGroups()),
+			assert.Empty(t, e.affectedEntries(tt.userInfo.GetName(), tt.userInfo.GetGroups()),
 				"AR must not produce a directory entry (CAR-only directory)")
 
 			// Authorize must defer to RBAC (NoOpinion), not treat the AR as a deny-filter.
@@ -1125,15 +968,16 @@ func TestEngine_RenewDirectories_IgnoresAuthorizationRules(t *testing.T) {
 	}
 }
 
-// TestEngine_RenewDirectories_CARSystemGateIgnoresARs verifies the directory is
-// CAR-only: a CAR with a wildcard limitNamespaces keeps gating system namespaces,
-// and a co-located AR for the same subject changes nothing. Previously the AR was
-// translated into a literal LimitNamespaces grant that punched a hole in the system
-// gate for its own namespace; the engine now ignores it, matching the webhook.
+// TestEngine_CARSystemGateIgnoresARs verifies the directory is CAR-only: a CAR
+// with a wildcard limitNamespaces keeps gating system namespaces, and a
+// co-located AR for the same subject changes nothing. Previously the AR was
+// translated into a literal LimitNamespaces grant that punched a hole in the
+// system gate for its own namespace; the engine now ignores it, matching the
+// webhook.
 //
 // CAR: limitNamespaces = ["d8-.*", "team-.*"], allowAccessToSystemNamespaces = false
 // AR:  namespace       = "d8-monitoring" (ignored)
-func TestEngine_RenewDirectories_CARSystemGateIgnoresARs(t *testing.T) {
+func TestEngine_CARSystemGateIgnoresARs(t *testing.T) {
 	config := `{
 		"crds": [
 			{
@@ -1153,11 +997,8 @@ func TestEngine_RenewDirectories_CARSystemGateIgnoresARs(t *testing.T) {
 		]
 	}`
 
-	e := &Engine{
-		configPath: writeConfigJSON(t, config),
-		directory:  map[string]map[string]DirectoryEntry{},
-	}
-	e.renewDirectories()
+	e, err := NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), nil, nil, nil)
+	require.NoError(t, err)
 
 	userInfo := &mockUserInfo{name: "alice", groups: []string{"developers"}}
 
@@ -1181,11 +1022,11 @@ func TestEngine_RenewDirectories_CARSystemGateIgnoresARs(t *testing.T) {
 		"namespaces outside CAR scope must be denied")
 }
 
-// TestEngine_RenewDirectories_CAROnlyUser_ResolverScenario covers the resolver's
-// path for the accessiblenamespaces API: a user with a CAR that limits namespaces
-// is classified FilteredAccess, and the returned filter honors only the CAR's
+// TestEngine_CAROnlyUser_ResolverScenario covers the resolver's path for the
+// accessiblenamespaces API: a user with a CAR that limits namespaces is
+// classified FilteredAccess, and the returned filter honors only the CAR's
 // namespaces (ARs are ignored).
-func TestEngine_RenewDirectories_CAROnlyUser_ResolverScenario(t *testing.T) {
+func TestEngine_CAROnlyUser_ResolverScenario(t *testing.T) {
 	config := `{
 		"crds": [
 			{
@@ -1205,11 +1046,8 @@ func TestEngine_RenewDirectories_CAROnlyUser_ResolverScenario(t *testing.T) {
 		]
 	}`
 
-	e := &Engine{
-		configPath: writeConfigJSON(t, config),
-		directory:  map[string]map[string]DirectoryEntry{},
-	}
-	e.renewDirectories()
+	e, err := NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), nil, nil, nil)
+	require.NoError(t, err)
 
 	userInfo := &mockUserInfo{name: "alice", groups: []string{"developers"}}
 
@@ -1221,4 +1059,148 @@ func TestEngine_RenewDirectories_CAROnlyUser_ResolverScenario(t *testing.T) {
 	assert.True(t, e.IsNamespaceAllowedWithFilter("team-bar", filter), "second CAR namespace must be allowed")
 	assert.False(t, e.IsNamespaceAllowedWithFilter("team-baz", filter),
 		"AR-only namespace must NOT be in the engine filter; the engine ignores ARs")
+}
+
+// TestEngine_OrderingGuard_BindingBeforeRule locks the ordering guard:
+// user-authz-controller creates the ClusterRoleBindings of a rule seconds after
+// the rule, and the two reach this apiserver over independent watches. A
+// subject bound by a rule binding whose rule the directory does not know yet is
+// treated as maximally restricted, so the report never shows more than the
+// webhook will allow. Once the rule arrives, its own scope applies, and a
+// subject nobody binds is never touched by the guard.
+func TestEngine_OrderingGuard_BindingBeforeRule(t *testing.T) {
+	bindings := binding.NewIndex()
+	bindings.Upsert(ruleBinding("user-authz:late:admin",
+		rbacv1.Subject{Kind: rbacv1.UserKind, Name: "late-user"}))
+
+	lateUser := &mockUserInfo{name: "late-user"}
+	nobody := &mockUserInfo{name: "nobody"}
+
+	assertRestricted := func(t *testing.T, e *Engine) {
+		t.Helper()
+		decision, reason, err := e.Authorize(context.Background(), &mockAttrs{
+			userInfo:   lateUser,
+			verb:       "get",
+			resource:   "pods",
+			namespace:  "team-a",
+			isResource: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, authorizer.DecisionDeny, decision, "a namespaced request is denied until the rule arrives")
+		assert.Equal(t, rules.NoNamespaceAccessReason, reason)
+
+		decision, reason, err = e.Authorize(context.Background(), &mockAttrs{
+			userInfo:   lateUser,
+			verb:       "list",
+			resource:   "pods",
+			isResource: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, authorizer.DecisionDeny, decision, "a cluster-scoped request is denied until the rule arrives")
+		assert.Equal(t, rules.NamespaceLimitedAccessReason, reason)
+
+		accessType, filter := e.GetNamespaceAccessType(lateUser)
+		assert.Equal(t, FilteredAccess, accessType)
+		require.NotNil(t, filter)
+		for _, ns := range []string{"team-a", "team-b", "kube-system"} {
+			assert.False(t, e.IsNamespaceAllowedWithFilter(ns, filter), "the restricted entry opens no namespace (%s)", ns)
+		}
+
+		decision, _, err = e.Authorize(context.Background(), &mockAttrs{
+			userInfo:   nobody,
+			verb:       "get",
+			resource:   "pods",
+			namespace:  "team-a",
+			isResource: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, authorizer.DecisionNoOpinion, decision, "a subject without bindings is left to RBAC")
+	}
+
+	t.Run("rules synced but the rule is not in the directory yet", func(t *testing.T) {
+		provider := newSwappableRules()
+		e := &Engine{rules: provider, bindings: bindings, resourceScope: coreResourceScope()}
+		require.True(t, provider.HasSynced())
+
+		assertRestricted(t, e)
+
+		// The rule arrives: its own scope applies from now on.
+		provider.Set(rules.Rule{
+			Name:            "late",
+			Subjects:        []rules.Subject{{Kind: "User", Name: "late-user"}},
+			LimitNamespaces: []string{"team-a"},
+		})
+
+		decision, _, err := e.Authorize(context.Background(), &mockAttrs{
+			userInfo:   lateUser,
+			verb:       "get",
+			resource:   "pods",
+			namespace:  "team-a",
+			isResource: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, authorizer.DecisionNoOpinion, decision, "inside limitNamespaces once the rule is known")
+
+		decision, reason, err := e.Authorize(context.Background(), &mockAttrs{
+			userInfo:   lateUser,
+			verb:       "get",
+			resource:   "pods",
+			namespace:  "team-b",
+			isResource: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, authorizer.DecisionDeny, decision, "outside limitNamespaces once the rule is known")
+		assert.Equal(t, noNamespaceAccessReason, reason)
+
+		decision, _, err = e.Authorize(context.Background(), &mockAttrs{
+			userInfo:   lateUser,
+			verb:       "list",
+			resource:   "nodes",
+			isResource: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, authorizer.DecisionNoOpinion, decision, "a cluster-scoped resource is not limited by namespaces")
+
+		accessType, filter := e.GetNamespaceAccessType(lateUser)
+		assert.Equal(t, FilteredAccess, accessType)
+		require.NotNil(t, filter)
+		assert.True(t, e.IsNamespaceAllowedWithFilter("team-a", filter))
+		assert.False(t, e.IsNamespaceAllowedWithFilter("team-b", filter))
+	})
+
+	t.Run("rules not listed yet", func(t *testing.T) {
+		e := &Engine{rules: mttest.Unsynced(), bindings: bindings, resourceScope: coreResourceScope()}
+		require.False(t, e.rules.HasSynced())
+
+		assertRestricted(t, e)
+
+		accessType, filter := e.GetNamespaceAccessType(nobody)
+		assert.Equal(t, NoNamespacesAllowed, accessType, "no CAR and not privileged: deny-by-default for discovery")
+		assert.Nil(t, filter)
+	})
+
+	t.Run("a binding whose rule the directory knows adds nothing", func(t *testing.T) {
+		e := &Engine{
+			rules: mttest.Rules(rules.Rule{
+				Name:              "late",
+				Subjects:          []rules.Subject{{Kind: "User", Name: "late-user"}},
+				NamespaceSelector: &rules.NamespaceSelector{MatchAny: true},
+			}),
+			bindings:      bindings,
+			resourceScope: coreResourceScope(),
+		}
+
+		decision, _, err := e.Authorize(context.Background(), &mockAttrs{
+			userInfo:   lateUser,
+			verb:       "list",
+			resource:   "pods",
+			isResource: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, authorizer.DecisionNoOpinion, decision, "matchAny leaves the cluster-scoped list to RBAC")
+
+		accessType, filter := e.GetNamespaceAccessType(lateUser)
+		assert.Equal(t, AllNamespacesAllowed, accessType)
+		assert.Nil(t, filter)
+	})
 }

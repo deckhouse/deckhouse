@@ -237,6 +237,11 @@ groups:
     description:
       en: "`csi-hpe` CSI node healthcheck"
       ru: "Healthcheck CSI-агентов модуля `csi-hpe`"
+  - ports: "4233"
+    protocol: TCP
+    description:
+      en: "`user-authz` authorization webhook metrics"
+      ru: "Метрики webhook авторизации модуля `user-authz`"
   - ports: "4235"
     protocol: TCP
     description:
@@ -277,6 +282,11 @@ groups:
     description:
       en: CNI Cilium operator metrics
       ru: Метрики оператора CNI Cilium
+  - ports: "4243"
+    protocol: TCP
+    description:
+      en: "`user-authz` authorization webhook metrics, node-local (127.0.0.1) upstream of kube-rbac-proxy"
+      ru: "Метрики webhook авторизации модуля `user-authz`, локальный для узла (127.0.0.1) upstream для kube-rbac-proxy"
   - ports: "4244"
     protocol: TCP
     description:
@@ -437,6 +447,11 @@ groups:
     description:
       en: "`sdn` agent healthcheck"
       ru: "Healthcheck компонента agent модуля `sdn`"
+  - ports: "4276"
+    protocol: TCP
+    description:
+      en: "`user-authz` Permission Browser API server metrics"
+      ru: "Метрики API-сервера Permission Browser модуля `user-authz`"
   - ports: "4135-4199"
     protocol: TCP
     description:

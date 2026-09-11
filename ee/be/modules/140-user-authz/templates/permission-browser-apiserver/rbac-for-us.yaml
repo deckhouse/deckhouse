@@ -21,6 +21,10 @@ rules:
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
   verbs: ["get", "list", "watch"]
+# The multi-tenancy rules are read from the ClusterAuthorizationRules themselves
+- apiGroups: ["deckhouse.io"]
+  resources: ["clusterauthorizationrules"]
+  verbs: ["get", "list", "watch"]
 # Access to discovery API for checking if resources are namespaced
 - nonResourceURLs: ["/version", "/api", "/api/*", "/apis", "/apis/*"]
   verbs: ["get"]
@@ -114,7 +118,9 @@ subjects:
   name: permission-browser-apiserver
   namespace: d8-{{ .Chart.Name }}
 ---
-# Role for delegated authentication
+# Role for delegated authentication. It also covers the kube-rbac-proxy sidecar that fronts the
+# metrics: system:auth-delegator already grants the TokenReviews and SubjectAccessReviews it needs
+# to authorize a scraper, which is exactly what d8:rbac-proxy grants elsewhere.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

@@ -25,6 +25,7 @@ import (
 	"permission-browser-apiserver/pkg/apis/authorization/v1alpha1"
 	"permission-browser-apiserver/pkg/authorizer/composite"
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 	"permission-browser-apiserver/pkg/authorizer/rbacadapter"
 	"permission-browser-apiserver/pkg/authorizer/scopefilter"
 )
@@ -227,7 +228,7 @@ func newContractStackWithRegistry(t *testing.T, mtConfig string, objs []runtime.
 		require.True(t, ok, "informer %v failed to sync", typ)
 	}
 
-	engine, err := multitenancy.NewEngine(writeMTConfig(t, mtConfig), nsLister, func() bool { return true }, scope)
+	engine, err := multitenancy.NewEngine(mttest.LegacyJSON(t, mtConfig), mttest.NoBindings(), nsLister, func() bool { return true }, scope)
 	require.NoError(t, err)
 	engine.SetIndependentRBACChecker(rbac)
 
