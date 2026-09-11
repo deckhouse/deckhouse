@@ -72,9 +72,7 @@ func (c CidrIntersectionStaticCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-// Resolved rather than read straight from ClusterConfiguration: on a cluster whose subnets live in
-// ModuleConfig the deprecated fields are absent, and a preflight that silently checked "" against the
-// host networks would pass while the real subnets overlap.
+// Subnet CIDRs are set via network.go, which determines if values are set in mc control-plane-manager or deprecated cluster-configuration.
 func getCIDRs(meta *config.MetaConfig) (string, string, error) {
 	network := meta.Network()
 
