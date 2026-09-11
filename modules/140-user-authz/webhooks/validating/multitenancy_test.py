@@ -127,7 +127,7 @@ class TestLimitNamespacesPatternValidation(unittest.TestCase):
                 self.assertIn(description, errors[0])
 
     def test_a_metacharacter_inside_a_class_or_a_quote_is_a_literal(self):
-        """A scan that does not understand [...] and \Q...\E reports imbalance that is not there."""
+        r"""A scan that does not understand [...] and \Q...\E reports imbalance that is not there."""
         for pattern in [r"[(]", r"[)]", r"[[]", r"\Q(\E", r"\Q)\E", r"\Q[\E", r"a\(b", r"a\)b"]:
             with self.subTest(pattern=pattern):
                 self.assertEqual([], self.errors_for(pattern))

@@ -295,6 +295,12 @@ func (c *NamespacedDiscoveryCache) renewCacheOnce(apiGroup string, req *http.Req
 // the resource name comes out of the request path - so a subject a rule covers could name a new one
 // on every request and drive a listing each time. It is the group that is cached and not the
 // question, so a new resource name in a group already listed costs nothing.
+//
+// Both outcomes are remembered, not only the successes. A group the API server 404s produces no
+// list to cache, so without a negative the repeated identical question - the same unknown group and
+// the same resource name - paid for a round trip every time, while the varying one was already
+// bounded. The failures go in the same bounded negative map Get uses, keyed by the listing's own
+// request path, because a listing of the group is a different question from any of its versions.
 func (c *NamespacedDiscoveryCache) groupVersions(apiGroup string) ([]string, error) {
 	c.muGroups.Lock()
 	if entry, ok := c.groupVersionLists[apiGroup]; ok && !c.isEntryExpired(entry.cacheEntry) {
@@ -304,10 +310,23 @@ func (c *NamespacedDiscoveryCache) groupVersions(apiGroup string) ([]string, err
 	}
 	c.muGroups.Unlock()
 
+	// What a recent listing of the group itself concluded, answered without another round trip.
+	// The two conclusions differ the way they do in Get: a group the API server says it does not
+	// serve is an answer, and lets RBAC reply; a listing that failed is not, and denies.
+	if absent, known := c.recentNegative(groupListingKey(apiGroup)); known {
+		if absent {
+			return nil, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrNotFound)
+		}
+		return nil, fmt.Errorf("api group %s could not be listed recently", apiGroup)
+	}
+
 	versions, err := c.availableAPIGroupVersionsInDescendingOrder(apiGroup)
 	if err != nil {
+		c.noteNegative(groupListingKey(apiGroup), errors.Is(err, ErrNotFound))
 		return nil, err
 	}
+
+	c.clearNegative(groupListingKey(apiGroup))
 
 	c.muGroups.Lock()
 	if c.groupVersionLists == nil {
@@ -320,6 +339,17 @@ func (c *NamespacedDiscoveryCache) groupVersions(apiGroup string) ([]string, err
 	c.muGroups.Unlock()
 
 	return versions, nil
+}
+
+// groupListingKey is how a listing of the group itself is keyed in the negative map it shares with
+// the group/version listings Get records.
+//
+// A group name carries no slash, so it can never be read as a group/version - but it can be read as
+// a bare version, which is how the core group is keyed ("v1"), and a group name is a DNS subdomain,
+// so one may legitimately be spelled that way. The listing's own request path is the unambiguous
+// name for this question, so that is the key.
+func groupListingKey(apiGroup string) string {
+	return "/apis/" + apiGroup
 }
 
 func (c *NamespacedDiscoveryCache) availableAPIGroupVersionsInDescendingOrder(apiGroup string) ([]string, error) {

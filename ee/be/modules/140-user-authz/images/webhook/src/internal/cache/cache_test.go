@@ -380,6 +380,90 @@ func TestCachePreferredVersionDoesNotEvictTheGroupNegatives(t *testing.T) {
 	}
 }
 
+// A group nobody serves has to be remembered by the version-less path too.
+//
+// Routing the resolution through Get bounded the varying question - a new resource name in a group
+// already walked costs nothing - but the group listing itself cached only its successes. A group
+// the API server 404s produces no list, so the repeated IDENTICAL question paid for a round trip
+// every time, which is the one case that used to be held.
+func TestCachePreferredVersionRemembersAnUnservedGroup(t *testing.T) {
+	var requests int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&requests, 1)
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte{})
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+		negative:             make(map[string]negativeEntry),
+		inflight:             make(map[string]chan struct{}),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	for i := 0; i < 20; i++ {
+		if _, err := cache.GetPreferredVersion("nobody.serves.this", "things"); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("lookup %d: got %v, want ErrNotFound", i, err)
+		}
+	}
+	if got := atomic.LoadInt32(&requests); got != 1 {
+		t.Errorf("20 identical lookups of an unserved group cost %d requests, want 1", got)
+	}
+
+	// The memory expires like every other negative, so a group that appears is picked up.
+	now = now.Add(negativeRenewInterval)
+	if _, err := cache.GetPreferredVersion("nobody.serves.this", "things"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("after the interval: got %v, want ErrNotFound", err)
+	}
+	if got := atomic.LoadInt32(&requests); got != 2 {
+		t.Errorf("the group was asked about %d times in total, want 2", got)
+	}
+}
+
+// The same for a listing that could not be made at all, which is a different answer: it denies
+// rather than letting RBAC reply, and it must not be re-attempted on every request either.
+func TestCachePreferredVersionRemembersAFailedGroupListing(t *testing.T) {
+	var requests int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&requests, 1)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte{})
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+		negative:             make(map[string]negativeEntry),
+		inflight:             make(map[string]chan struct{}),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	for i := 0; i < 20; i++ {
+		_, err := cache.GetPreferredVersion("acme.cert-manager.io", "challenges")
+		if err == nil {
+			t.Fatalf("lookup %d resolved against a server that answers 500", i)
+		}
+		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrResourceAbsent) {
+			t.Fatalf("lookup %d: a failure to ask came back as an answer: %v", i, err)
+		}
+	}
+	if got := atomic.LoadInt32(&requests); got != 1 {
+		t.Errorf("20 lookups against a failing server cost %d requests, want 1", got)
+	}
+}
+
 // A listing that FAILS must be remembered too, not only one that answered.
 //
 // The rate limit used to key on the cache entry, which a failed listing never creates - so a group

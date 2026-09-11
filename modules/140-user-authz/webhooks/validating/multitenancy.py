@@ -356,7 +356,7 @@ def re2_unsupported_construct(pattern: str) -> str:
 
 
 def _is_octal_escape(pattern: str, backslash: int) -> bool:
-    """Reports whether pattern[backslash:] is \ plus two or three octal digits, which RE2 reads as
+    r"""Reports whether pattern[backslash:] is \ plus two or three octal digits, which RE2 reads as
     a character. A single \1 is not, and neither is \18: the 8 is not an octal digit."""
     digits = 0
     for ch in pattern[backslash + 1:backslash + 4]:
