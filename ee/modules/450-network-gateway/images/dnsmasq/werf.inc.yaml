@@ -32,7 +32,7 @@ import:
   add: /out
   to: /
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
   before: install

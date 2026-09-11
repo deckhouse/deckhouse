@@ -39,7 +39,7 @@
 {{- end }}
 {{- $fuzzSrcAdd := .FuzzSrcAdd | default "/src" }}
 image: {{ $fuzzImage }}
-fromImage: {{ $fuzzSrcImage }}
+from: {{ $fuzzSrcImage }}
 final: false
 imageSpec:
   config:
@@ -57,7 +57,7 @@ git:
       install:
         - Taskfile.fuzz.yml
 import:
-  - image: {{ $fuzzSrcImage }}
+  - from: {{ $fuzzSrcImage }}
     add: {{ $fuzzSrcAdd }}
     to: {{ $fuzzSrcAdd }}
     before: install

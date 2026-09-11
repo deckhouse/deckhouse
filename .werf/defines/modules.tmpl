@@ -21,11 +21,11 @@ args:
   SVACE_ANALYZE_SSH_USER: {{ .SVACE_ANALYZE_SSH_USER }}
     {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
 dependencies:
-- image: common/distroless
+- from: common/distroless
   imports:
   - type: ImageName
     targetBuildArg: BASE_DISTROLESS
-- image: common/iptables-wrapper
+- from: common/iptables-wrapper
   imports:
   - type: ImageName
     targetBuildArg: BASE_IPTABLES_WRAPPER
@@ -50,7 +50,7 @@ dependencies:
   {{- if not (hasSuffix "artifact" $imageDigest) }}
   {{- $ModuleNameCamel := $imageDigest | splitList "/" | first | camelcase | untitle }}
   {{- $ImageDigestCamel  := $imageDigest | splitList "/" | last  | camelcase | untitle }}
-- image: {{ $imageDigest }}
+- from: {{ $imageDigest }}
   before: setup
   imports:
   - type: ImageDigest

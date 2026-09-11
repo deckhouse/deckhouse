@@ -46,7 +46,7 @@ import:
   add: /out
   to: /
   before: install
-- image: istio/istioctl-v1x25x2-build-artifact
+- from: istio/istioctl-v1x25x2-build-artifact
   add: /src/istio/out/istioctl
   to: /usr/bin/istioctl-1.25
   before: install
@@ -55,7 +55,7 @@ import:
   add: /src/istio/out/istioctl
   to: /usr/bin/istioctl-1.27
   before: install
-- image: istio/istioctl-v1x29x6-build-artifact
+- from: istio/istioctl-v1x29x6-build-artifact
   add: /src/istio/out/istioctl
   to: /usr/bin/istioctl-1.29
   before: install
