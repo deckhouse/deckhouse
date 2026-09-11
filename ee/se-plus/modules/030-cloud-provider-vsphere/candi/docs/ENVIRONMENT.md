@@ -30,319 +30,165 @@ The following prerequisites must be met for Deckhouse Kubernetes Platform to wor
      - All ESXi hosts in use must be added to the Cluster.
      - A tag from the category specified in the [`zoneTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-zonetagcategory) parameter must be assigned to the Cluster (default: `k8s-zone`). This tag defines the zone.
   1. Folder for the virtual machines being created:
-     - This parameter is optional.
-     - By default, the root virtual machine folder is used.
+     - You do not need to create the folder in advance. The installer creates it at the path from the [`vmFolderPath`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-vmfolderpath) parameter.
+     - If the folder already exists, set [`vmFolderExists: true`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-vmfolderexists), otherwise the installation fails with the `The name '<FOLDER>' already exists` error.
+     - More than one cluster cannot be placed in the same folder.
   1. Role:
      - The role must include the required [set of privileges](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges).
   1. User:
      - The user must be assigned the role specified in the previous item.
 - A tag from the category specified in the [`regionTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-regiontagcategory) parameter must be assigned to the created Datacenter (default: `k8s-region`). This tag defines the region.
 
-## List of required vSphere resources
-
-* **User** with required [set of privileges](#list-of-required-privileges).
-* **Network** with DHCP server and access to the Internet.
-* **Datacenter** with a tag in [`k8s-region`](#creating-tags-and-tag-categories) category.
-* **Cluster** with a tag in [`k8s-zone`](#creating-tags-and-tag-categories) category.
-* **Datastore** with required [tags](#datastore-configuration).
-* **Template** — [prepared](#preparing-a-virtual-machine-image) VM image.
-
 ## List of required privileges
 
-> Read the [Configuration via vSphere Client](#configuration-via-vsphere-client) and [Configuration via govc](#configuration-via-govc) sections for details on how to create and assign a role to a user.
+The role for the platform account includes the privileges listed below. They are grouped by the operations that the platform performs in vSphere.
 
-A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
+To create the role and assign it to a user, refer to [Creating and assigning a role in vSphere Client](#creating-and-assigning-a-role-in-vsphere-client) and [Creating and assigning a role with govc](#creating-and-assigning-a-role-with-govc).
 
-<table>
-  <thead>
-    <tr>
-      <th>Privilege category in UI</th>
-      <th>Privileges in UI</th>
-      <th>Privileges in API</th>
-      <th>Purpose in Deckhouse</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>—</td>
-      <td>— (assigned by default when creating a role)</td>
-      <td>
-        <code>System.Anonymous</code><br/>
-        <code>System.Read</code><br/>
-        <code>System.View</code>
-      </td>
-      <td>Basic access to vSphere Inventory objects required for all Deckhouse vSphere integration components.</td>
-    </tr>
-    <tr>
-      <td>Cns</td>
-      <td>Searchable</td>
-      <td><code>Cns.Searchable</code></td>
-      <td>Search and mapping of Container Native Storage objects when the CSI driver works with Kubernetes volumes.</td>
-    </tr>
-    <tr>
-      <td>Datastore</td>
-      <td>
-        Allocate space,<br/>
-        Browse datastore,<br/>
-        Low level file operations
-      </td>
-      <td>
-        <code>Datastore.AllocateSpace</code><br/>
-        <code>Datastore.Browse</code><br/>
-        <code>Datastore.FileManagement</code>
-      </td>
-      <td>Disk provisioning when creating virtual machines and ordering <code>PersistentVolumes</code> in the cluster.</td>
-    </tr>
-    <tr>
-      <td>Folder</td>
-      <td>
-        Create folder,<br/>
-        Delete folder,<br/>
-        Move folder,<br/>
-        Rename folder
-      </td>
-      <td>
-        <code>Folder.Create</code><br/>
-        <code>Folder.Delete</code><br/>
-        <code>Folder.Move</code><br/>
-        <code>Folder.Rename</code>
-      </td>
-      <td>Grouping a Deckhouse Kubernetes Platform cluster in a single <code>Folder</code> in vSphere Inventory.</td>
-    </tr>
-    <tr>
-      <td>Global</td>
-      <td>
-        Global tag,<br/>
-        System tag
-      </td>
-      <td>
-        <code>Global.GlobalTag</code><br/>
-        <code>Global.SystemTag</code>
-      </td>
-      <td>Access to global and system tags used by Deckhouse Kubernetes Platform when working with vSphere objects.</td>
-    </tr>
-    <tr>
-      <td>vSphere Tagging</td>
-      <td>
-        Assign or Unassign vSphere Tag,<br/>
-        Assign or Unassign vSphere Tag on Object,<br/>
-        Create vSphere Tag,<br/>
-        Create vSphere Tag Category,<br/>
-        Delete vSphere Tag,<br/>
-        Delete vSphere Tag Category,<br/>
-        Edit vSphere Tag,<br/>
-        Edit vSphere Tag Category,<br/>
-        Modify UsedBy Field for Category,<br/>
-        Modify UsedBy Field for Tag
-      </td>
-      <td>
-        <code>InventoryService.Tagging.AttachTag</code><br/>
-        <code>InventoryService.Tagging.ObjectAttachable</code><br/>
-        <code>InventoryService.Tagging.CreateTag</code><br/>
-        <code>InventoryService.Tagging.CreateCategory</code><br/>
-        <code>InventoryService.Tagging.DeleteTag</code><br/>
-        <code>InventoryService.Tagging.DeleteCategory</code><br/>
-        <code>InventoryService.Tagging.EditTag</code><br/>
-        <code>InventoryService.Tagging.EditCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForTag</code>
-      </td>
-      <td>Deckhouse Kubernetes Platform uses tags to identify the <code>Datacenter</code>, <code>Cluster</code>, and <code>Datastore</code> objects available to it, as well as to identify the virtual machines under its control.</td>
-    </tr>
-    <tr>
-      <td>Network</td>
-      <td>Assign network</td>
-      <td><code>Network.Assign</code></td>
-      <td>Connecting networks and port groups to Deckhouse Kubernetes Platform cluster virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Resource</td>
-      <td>
-        Assign virtual machine to resource pool,<br/>
-        Create resource pool,<br/>
-        Modify resource pool,<br/>
-        Remove resource pool,<br/>
-        Rename resource pool
-      </td>
-      <td>
-        <code>Resource.AssignVMToPool</code><br/>
-        <code>Resource.CreatePool</code><br/>
-        <code>Resource.DeletePool</code><br/>
-        <code>Resource.EditPool</code><br/>
-        <code>Resource.RenamePool</code>
-      </td>
-      <td>Placement of Deckhouse Kubernetes Platform cluster virtual machines into the target resource pool and management of this pool.</td>
-    </tr>
-    <tr>
-      <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> in vSphere 7)</td>
-      <td>View VM storage policies (<em>Profile-driven storage view</em> in vSphere 7)</td>
-      <td><code>StorageProfile.View</code></td>
-      <td>Viewing storage policies used when creating virtual machines and dynamically provisioning volumes in the cluster.</td>
-    </tr>
-    <tr>
-      <td>vApp</td>
-      <td>
-        Add virtual machine,<br/>
-        Assign resource pool,<br/>
-        Create,<br/>
-        Delete,<br/>
-        Import,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        View OVF Environment,<br/>
-        vApp application configuration,<br/>
-        vApp instance configuration,<br/>
-        vApp resource configuration
-      </td>
-      <td>
-        <code>VApp.ApplicationConfig</code><br/>
-        <code>VApp.AssignResourcePool</code><br/>
-        <code>VApp.AssignVM</code><br/>
-        <code>VApp.Create</code><br/>
-        <code>VApp.Delete</code><br/>
-        <code>VApp.ExtractOvfEnvironment</code><br/>
-        <code>VApp.Import</code><br/>
-        <code>VApp.InstanceConfig</code><br/>
-        <code>VApp.PowerOff</code><br/>
-        <code>VApp.PowerOn</code><br/>
-        <code>VApp.ResourceConfig</code>
-      </td>
-      <td>Managing operations related to deployment and configuration of vApp and OVF templates used when creating virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Change Configuration</td>
-      <td>
-        Add existing disk,<br/>
-        Add new disk,<br/>
-        Add or remove device,<br/>
-        Advanced configuration,<br/>
-        Set annotation,<br/>
-        Change CPU count,<br/>
-        Toggle disk change tracking,<br/>
-        Extend virtual disk,<br/>
-        Acquire disk lease,<br/>
-        Modify device settings,<br/>
-        Configure managedBy,<br/>
-        Change Memory,<br/>
-        Query unowned files,<br/>
-        Configure Raw device,<br/>
-        Reload from path,<br/>
-        Remove disk,<br/>
-        Rename,<br/>
-        Reset guest information,<br/>
-        Change resource,<br/>
-        Change Settings,<br/>
-        Change Swapfile placement,<br/>
-        Upgrade virtual machine compatibility
-      </td>
-      <td>
-        <code>VirtualMachine.Config.AddExistingDisk</code><br/>
-        <code>VirtualMachine.Config.AddNewDisk</code><br/>
-        <code>VirtualMachine.Config.AddRemoveDevice</code><br/>
-        <code>VirtualMachine.Config.AdvancedConfig</code><br/>
-        <code>VirtualMachine.Config.Annotation</code><br/>
-        <code>VirtualMachine.Config.CPUCount</code><br/>
-        <code>VirtualMachine.Config.ChangeTracking</code><br/>
-        <code>VirtualMachine.Config.DiskExtend</code><br/>
-        <code>VirtualMachine.Config.DiskLease</code><br/>
-        <code>VirtualMachine.Config.EditDevice</code><br/>
-        <code>VirtualMachine.Config.ManagedBy</code><br/>
-        <code>VirtualMachine.Config.Memory</code><br/>
-        <code>VirtualMachine.Config.QueryUnownedFiles</code><br/>
-        <code>VirtualMachine.Config.RawDevice</code><br/>
-        <code>VirtualMachine.Config.ReloadFromPath</code><br/>
-        <code>VirtualMachine.Config.RemoveDisk</code><br/>
-        <code>VirtualMachine.Config.Rename</code><br/>
-        <code>VirtualMachine.Config.ResetGuestInfo</code><br/>
-        <code>VirtualMachine.Config.Resource</code><br/>
-        <code>VirtualMachine.Config.Settings</code><br/>
-        <code>VirtualMachine.Config.SwapPlacement</code><br/>
-        <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
-      </td>
-      <td>Managing the lifecycle of Deckhouse Kubernetes Platform cluster virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Edit Inventory</td>
-      <td>
-        Create new,<br/>
-        Create from existing,<br/>
-        Remove,<br/>
-        Move
-      </td>
-      <td>
-        <code>VirtualMachine.Inventory.Create</code><br/>
-        <code>VirtualMachine.Inventory.CreateFromExisting</code><br/>
-        <code>VirtualMachine.Inventory.Delete</code><br/>
-        <code>VirtualMachine.Inventory.Move</code>
-      </td>
-      <td>Creating, deleting, and moving Deckhouse Kubernetes Platform cluster virtual machines in vSphere Inventory.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Guest Operations</td>
-      <td>Guest Operation Queries</td>
-      <td><code>VirtualMachine.GuestOperations.Query</code></td>
-      <td>Retrieving information from the guest operating system of virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Interaction</td>
-      <td>
-        Answer question,<br/>
-        Device connection,<br/>
-        Guest operating system management by VIX API,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        Reset,<br/>
-        Configure CD media,<br/>
-        Install VMware Tools
-      </td>
-      <td>
-        <code>VirtualMachine.Interact.AnswerQuestion</code><br/>
-        <code>VirtualMachine.Interact.DeviceConnection</code><br/>
-        <code>VirtualMachine.Interact.GuestControl</code><br/>
-        <code>VirtualMachine.Interact.PowerOff</code><br/>
-        <code>VirtualMachine.Interact.PowerOn</code><br/>
-        <code>VirtualMachine.Interact.Reset</code><br/>
-        <code>VirtualMachine.Interact.SetCDMedia</code><br/>
-        <code>VirtualMachine.Interact.ToolsInstall</code>
-      </td>
-      <td>Managing virtual machine power state, device connections, and interaction with the guest operating system.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Provisioning</td>
-      <td>
-        Clone virtual machine,<br/>
-        Customize guest,<br/>
-        Deploy template,<br/>
-        Allow virtual machine download,<br/>
-        Allow virtual machine files upload,<br/>
-        Read customization specifications
-      </td>
-      <td>
-        <code>VirtualMachine.Provisioning.Clone</code><br/>
-        <code>VirtualMachine.Provisioning.Customize</code><br/>
-        <code>VirtualMachine.Provisioning.DeployTemplate</code><br/>
-        <code>VirtualMachine.Provisioning.GetVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
-      </td>
-      <td>Cloning virtual machine templates, customizing them, and deploying them when creating Deckhouse Kubernetes Platform cluster nodes.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Snapshot Management</td>
-      <td>
-        Create snapshot,<br/>
-        Remove Snapshot,<br/>
-        Rename Snapshot
-      </td>
-      <td>
-        <code>VirtualMachine.State.CreateSnapshot</code><br/>
-        <code>VirtualMachine.State.RemoveSnapshot</code><br/>
-        <code>VirtualMachine.State.RenameSnapshot</code>
-      </td>
-      <td>Managing snapshots of virtual machines and volumes in scenarios where this functionality is used by platform components.</td>
-    </tr>
-  </tbody>
-</table>
+### Basic access
+
+vSphere assigns these privileges automatically when any role is created. They give the platform components read access to vSphere Inventory objects.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| — | `System.Anonymous` | Calling vCenter methods that require no authorization |
+| — | `System.Read` | Reading the state and settings of objects |
+| — | `System.View` | Viewing inventory objects |
+
+### Region and zone tags
+
+The platform uses tags to identify the Datacenter, Cluster, and Datastore objects available to it, and to mark the virtual machines it manages.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Global tag | `Global.GlobalTag` | Working with vCenter global tags |
+| System tag | `Global.SystemTag` | Working with vCenter system tags |
+| Assign or Unassign vSphere Tag | `InventoryService.Tagging.AttachTag` | Reading region and zone tags and tagging the cluster virtual machines |
+| Assign or Unassign vSphere Tag on Object | `InventoryService.Tagging.ObjectAttachable` | Assigning a tag to a particular inventory object |
+| Create vSphere Tag | `InventoryService.Tagging.CreateTag` | Creating the tags that mark the cluster virtual machines |
+| Create vSphere Tag Category | `InventoryService.Tagging.CreateCategory` | Creating the `deckhouse-cluster-name` and `deckhouse-node-role` categories for those tags |
+| Delete vSphere Tag | `InventoryService.Tagging.DeleteTag` | Deleting the tags created by the platform |
+| Delete vSphere Tag Category | `InventoryService.Tagging.DeleteCategory` | Deleting the categories created by the platform |
+| Edit vSphere Tag | `InventoryService.Tagging.EditTag` | Editing the tags created by the platform |
+| Edit vSphere Tag Category | `InventoryService.Tagging.EditCategory` | Editing the categories created by the platform |
+| Modify UsedBy Field for Category | `InventoryService.Tagging.ModifyUsedByForCategory` | Changing the internal UsedBy field of a category |
+| Modify UsedBy Field for Tag | `InventoryService.Tagging.ModifyUsedByForTag` | Changing the internal UsedBy field of a tag |
+
+### Storage
+
+These privileges are required to place virtual machine disks, provision PersistentVolumes dynamically, and read SPBM storage policies.
+
+{% alert level="info" %}
+In vSphere 7, the `StorageProfile.View` privilege is located in the "Profile-driven storage" section of the interface.
+{% endalert %}
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Searchable | `Cns.Searchable` | Searching for CNS disks across the whole vCenter during resource discovery |
+| Allocate space | `Datastore.AllocateSpace` | Allocating space for node disks and PersistentVolume volumes |
+| Browse datastore | `Datastore.Browse` | Browsing files on a Datastore |
+| Low level file operations | `Datastore.FileManagement` | Operations with disk files on a Datastore |
+| View VM storage policies | `StorageProfile.View` | Reading SPBM storage policies to create StorageClasses |
+
+### Virtual machine placement
+
+The platform groups the cluster virtual machines in a dedicated directory, places them in a resource pool, and connects them to networks.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Create folder | `Folder.Create` | Creating the folder at the path from the [`vmFolderPath`](cluster_configuration.html#vsphereclusterconfiguration-vmfolderpath) parameter |
+| Delete folder | `Folder.Delete` | Deleting that folder together with the cluster |
+| Move folder | `Folder.Move` | Moving the folder when the path changes |
+| Rename folder | `Folder.Rename` | Renaming the folder when the path changes |
+| Assign virtual machine to resource pool | `Resource.AssignVMToPool` | Placing virtual machines in a resource pool |
+| Create resource pool | `Resource.CreatePool` | Creating a nested resource pool in every zone |
+| Modify resource pool | `Resource.EditPool` | Changing the settings of that pool |
+| Remove resource pool | `Resource.DeletePool` | Deleting the pool together with the cluster |
+| Rename resource pool | `Resource.RenamePool` | Renaming the pool |
+| Assign network | `Network.Assign` | Connecting virtual machines to the networks from the [`mainNetwork`](cr.html#vsphereinstanceclass-v1-spec-mainnetwork) and [`additionalNetworks`](cr.html#vsphereinstanceclass-v1-spec-additionalnetworks) parameters |
+
+### Creating virtual machines
+
+Virtual machines are created by cloning a prepared template and are registered in the vSphere inventory.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Clone virtual machine | `VirtualMachine.Provisioning.Clone` | Cloning the template from the [`template`](cr.html#vsphereinstanceclass-v1-spec-template) parameter |
+| Deploy template | `VirtualMachine.Provisioning.DeployTemplate` | Deploying a virtual machine from a template |
+| Customize guest | `VirtualMachine.Provisioning.Customize` | Customizing the guest operating system during cloning |
+| Read customization specifications | `VirtualMachine.Provisioning.ReadCustSpecs` | Reading guest operating system customization specifications |
+| Allow virtual machine download | `VirtualMachine.Provisioning.GetVmFiles` | Reading virtual machine files |
+| Allow virtual machine files upload | `VirtualMachine.Provisioning.PutVmFiles` | Writing virtual machine files |
+| Create new | `VirtualMachine.Inventory.Create` | Creating a virtual machine in the inventory |
+| Create from existing | `VirtualMachine.Inventory.CreateFromExisting` | Creating a virtual machine from an existing one |
+| Remove | `VirtualMachine.Inventory.Delete` | Deleting a virtual machine when the number of nodes is reduced |
+| Move | `VirtualMachine.Inventory.Move` | Moving a virtual machine to the cluster folder |
+
+### Configuring virtual machines
+
+The platform sets the virtual machine parameters at creation time and changes them when a node group or an instance class is modified.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Add new disk | `VirtualMachine.Config.AddNewDisk` | Creating the root disk of a virtual machine |
+| Add existing disk | `VirtualMachine.Config.AddExistingDisk` | Attaching an existing disk |
+| Remove disk | `VirtualMachine.Config.RemoveDisk` | Detaching a disk |
+| Extend virtual disk | `VirtualMachine.Config.DiskExtend` | Growing the disk to the size from the [`rootDiskSize`](cr.html#vsphereinstanceclass-v1-spec-rootdisksize) parameter and expanding volumes |
+| Acquire disk lease | `VirtualMachine.Config.DiskLease` | Acquiring a disk lease for the duration of operations with it |
+| Toggle disk change tracking | `VirtualMachine.Config.ChangeTracking` | Managing changed block tracking for a disk |
+| Configure Raw device | `VirtualMachine.Config.RawDevice` | Configuring raw device mappings (RDM) |
+| Change CPU count | `VirtualMachine.Config.CPUCount` | Setting the number of vCPUs from the [`numCPUs`](cr.html#vsphereinstanceclass-v1-spec-numcpus) parameter |
+| Change Memory | `VirtualMachine.Config.Memory` | Setting the memory size from the [`memory`](cr.html#vsphereinstanceclass-v1-spec-memory) parameter |
+| Change resource | `VirtualMachine.Config.Resource` | Reserving memory from the [`memoryReservation`](cr.html#vsphereinstanceclass-v1-spec-runtimeoptions-memoryreservation) parameter and limiting resources |
+| Change Swapfile placement | `VirtualMachine.Config.SwapPlacement` | Choosing the swap file location |
+| Add or remove device | `VirtualMachine.Config.AddRemoveDevice` | Adding and removing devices, including network adapters |
+| Modify device settings | `VirtualMachine.Config.EditDevice` | Changing device settings |
+| Change Settings | `VirtualMachine.Config.Settings` | Changing general virtual machine settings |
+| Advanced configuration | `VirtualMachine.Config.AdvancedConfig` | Passing the `cloud-init` configuration through `guestinfo` |
+| Set annotation | `VirtualMachine.Config.Annotation` | Writing notes for a virtual machine |
+| Rename | `VirtualMachine.Config.Rename` | Renaming a virtual machine |
+| Configure managedBy | `VirtualMachine.Config.ManagedBy` | Marking a virtual machine as managed by the platform |
+| Reset guest information | `VirtualMachine.Config.ResetGuestInfo` | Resetting the information received from the guest operating system |
+| Query unowned files | `VirtualMachine.Config.QueryUnownedFiles` | Checking files that do not belong to the virtual machine |
+| Reload from path | `VirtualMachine.Config.ReloadFromPath` | Reloading the virtual machine configuration from a file |
+| Upgrade virtual machine compatibility | `VirtualMachine.Config.UpgradeVirtualHardware` | Upgrading the virtual machine hardware version |
+
+### Managing virtual machine state
+
+These privileges are required to power virtual machines on and off, connect devices, read information from the guest operating system, and work with snapshots. Snapshots are ordered if the [`snapshot-controller`](/modules/snapshot-controller/) module is enabled in the cluster.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Power On | `VirtualMachine.Interact.PowerOn` | Powering on a virtual machine |
+| Power Off | `VirtualMachine.Interact.PowerOff` | Powering off a virtual machine |
+| Reset | `VirtualMachine.Interact.Reset` | Resetting a virtual machine |
+| Answer question | `VirtualMachine.Interact.AnswerQuestion` | Answering vSphere questions that block the machine |
+| Device connection | `VirtualMachine.Interact.DeviceConnection` | Connecting and disconnecting devices of a running machine |
+| Configure CD media | `VirtualMachine.Interact.SetCDMedia` | Attaching an image to the CD/DVD drive |
+| Install VMware Tools | `VirtualMachine.Interact.ToolsInstall` | Installing VMware Tools |
+| Guest operating system management by VIX API | `VirtualMachine.Interact.GuestControl` | Managing the guest operating system through the VIX API |
+| Guest Operation Queries | `VirtualMachine.GuestOperations.Query` | Reading the state of the guest operating system |
+| Create snapshot | `VirtualMachine.State.CreateSnapshot` | Creating a snapshot |
+| Remove Snapshot | `VirtualMachine.State.RemoveSnapshot` | Removing a snapshot |
+| Rename Snapshot | `VirtualMachine.State.RenameSnapshot` | Renaming a snapshot |
+
+### vApp
+
+Operations with vApp and OVF templates. Required if the virtual machine templates or the machines themselves belong to a vApp.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Create | `VApp.Create` | Creating a vApp |
+| Delete | `VApp.Delete` | Deleting a vApp |
+| Import | `VApp.Import` | Importing an OVF or OVA into a vApp |
+| Add virtual machine | `VApp.AssignVM` | Adding a virtual machine to a vApp |
+| Assign resource pool | `VApp.AssignResourcePool` | Assigning a resource pool to a vApp |
+| Power On | `VApp.PowerOn` | Powering on a vApp |
+| Power Off | `VApp.PowerOff` | Powering off a vApp |
+| vApp application configuration | `VApp.ApplicationConfig` | Changing vApp application settings |
+| vApp instance configuration | `VApp.InstanceConfig` | Changing vApp instance settings |
+| vApp resource configuration | `VApp.ResourceConfig` | Changing vApp resource settings |
+| View OVF Environment | `VApp.ExtractOvfEnvironment` | Reading the OVF environment of a virtual machine |
 
 ## vSphere configuration
 
@@ -354,25 +200,25 @@ VMware vSphere does not have built-in concepts of a "region" or a "zone". In vSp
 
 1. Open vSphere Client and go to "Menu" → "Tags & Custom Attributes" → "Tags".
 
-   ![Creating tags and tag categories, step 1](images/tags-categories-setup/Screenshot-1.png)
+   ![Creating tags and tag categories, step 1](images/tags-categories-setup/menu-tags-and-custom-attributes.png)
 
 1. Open the "Categories" tab and click "NEW". Create a category for regions (for example, `k8s-region`): set "Tags Per Object" to "One tag" and specify the applicable object types, including Datacenter.
 
-   ![Creating tags and tag categories, step 2](images/tags-categories-setup/Screenshot-2.png)
+   ![Creating tags and tag categories, step 2](images/tags-categories-setup/create-category-region.png)
 
 1. Create a second category for zones (for example, `k8s-zone`) with the object types Host, Cluster, and Datastore.
 
-   ![Creating tags and tag categories, step 3](images/tags-categories-setup/Screenshot-3.png)
+   ![Creating tags and tag categories, step 3](images/tags-categories-setup/create-category-zone.png)
 
 1. Go to the "Tags" tab and create at least one tag in the region category and one tag in the zone category (for example, `test-region`, `test-zone-1`).
 
-   ![Creating tags and tag categories, step 4](images/tags-categories-setup/Screenshot-4.png)
+   ![Creating tags and tag categories, step 4](images/tags-categories-setup/tags-list.png)
 
 1. In the "Inventory" tab, select the target Datacenter, open the "Summary" panel, then choose "Actions" → "Tags & Custom Attributes" → "Assign Tag" and assign the region tag.
    Repeat this step for each Cluster that will host nodes, assigning the appropriate zone tags.
 
-   ![Creating tags and tag categories, step 5.1](images/tags-categories-setup/Screenshot-5-1.png)
-   ![Creating tags and tag categories, step 5.2](images/tags-categories-setup/Screenshot-5-2.png)
+   ![Creating tags and tag categories, step 5.1](images/tags-categories-setup/datacenter-actions-assign-tag.png)
+   ![Creating tags and tag categories, step 5.2](images/tags-categories-setup/assign-tag-to-datacenter.png)
 
 #### Configuring Datastore in vSphere Client
 
@@ -382,21 +228,43 @@ For dynamic provisioning of PersistentVolume, the Datastore must be available on
 
 In the "Inventory" tab, select the Datastore, open the "Summary" panel, then choose "Actions" → "Tags & Custom Attributes" → "Assign Tag". Assign the Datastore the same region tag as the corresponding Datacenter, and the same zone tag as the corresponding Cluster.
 
-![Creating tags and tag categories, step 6](images/tags-categories-setup/Screenshot-6.png)
+![Creating tags and tag categories, step 6](images/tags-categories-setup/assign-tags-to-datastore.png)
+
+To make sure the Datastore is connected to every ESXi host in the zone, open "Menu" → "Inventory" → "Storage", select the Datastore, and go to the "Hosts" tab. The list shows the hosts that have access to the Datastore.
+
+![Checking Datastore availability](images/datastore-setup/datastore-hosts.png)
+
+#### Creating a virtual machine folder in vSphere Client
+
+The installer creates the virtual machine folder at the path from the [`vmFolderPath`](cluster_configuration.html#vsphereclusterconfiguration-vmfolderpath) parameter. If the folder already exists, set [`vmFolderExists: true`](cluster_configuration.html#vsphereclusterconfiguration-vmfolderexists).
+
+To create the folder in advance, open "Menu" → "Inventory" → "Hosts and Clusters", select a Datacenter object in the list, then open "ACTIONS" → "New Folder" → "New VM and Template Folder..." and enter the name.
+
+![Creating a virtual machine folder](images/vm-folder-setup/new-vm-and-template-folder.png)
+
+#### Creating a resource pool in vSphere Client
+
+In every zone, the installer creates a resource pool named after the [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of the ClusterConfiguration resource. If the [`baseResourcePool`](cluster_configuration.html#vsphereclusterconfiguration-baseresourcepool) parameter is set, the pool is created inside the pool it points to. The parent pool must exist, the installer does not create it. The same applies to the pool from the [`resourcePool`](cluster_configuration.html#vsphereclusterconfiguration-nodegroups-instanceclass-resourcepool) parameter of a node group.
+
+To create a pool, open "Menu" → "Inventory" → "Hosts and Clusters", select a Cluster object in the list, then open "ACTIONS" → "New Resource Pool..." and enter the name.
+
+![Creating a resource pool](images/resource-pool-setup/new-resource-pool.png)
+
+With [`useNestedResourcePool: false`](cluster_configuration.html#vsphereclusterconfiguration-usenestedresourcepool), the installer does not create a nested pool. Virtual machines are placed in the pool from the `resourcePool` parameter. If that parameter is not set, the machines are placed in the root pool of the Cluster.
 
 #### Creating and assigning a role in vSphere Client
 
-1. Go to "Menu" → "Administration" → "Access Control" → "Roles".
+1. Open "Menu" → "Administration". A separate vCenter management page opens, where the "Roles" item is in the left pane under "Access Control".
 
-   ![Creating and assigning a role, step 1](images/role-setup/Screenshot-1.png)
+   ![Creating and assigning a role, step 1](images/role-setup/access-control-roles.png)
 
 1. Click "NEW", enter a role name (for example, `deckhouse`), and add the privileges from the [list](#list-of-required-privileges).
 
-   ![Creating and assigning a role, step 2](images/role-setup/Screenshot-2.png)
+   ![Creating and assigning a role, step 2](images/role-setup/new-role-privileges.png)
 
 1. Assign the role to the Deckhouse service account: go to "Menu" → "Administration" → "Access Control" → "Global Permissions", click "ADD", and select the user and the `deckhouse` role.
 
-   ![Creating and assigning a role, step 3](images/role-setup/Screenshot-3.png)
+   ![Creating and assigning a role, step 3](images/role-setup/add-global-permission.png)
 
 ### Configuration via govc
 
@@ -412,8 +280,8 @@ Make sure to specify the username together with the domain, for example: `userna
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
@@ -439,14 +307,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Attach the "region" tag to Datacenter:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Attach "zone" tags to the Cluster objects:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Datastore configuration with govc
@@ -458,11 +326,11 @@ For dynamic PersistentVolume provisioning, a Datastore must be available on **ea
 Assign the "region" and "zone" tags to the Datastore objects to automatically create a StorageClass in the Kubernetes cluster:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 #### Creating and assigning a role with govc
@@ -518,21 +386,98 @@ Make sure to specify the username together with the domain, for example: `userna
 {% endalert %}
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
-For more detailed permission configuration, refer to [the official documentation](https://pkg.go.dev/github.com/vmware/govmomi).
+For a description of vSphere privileges, refer to the [VMware documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-security/defined-privileges.html).
+{% endalert %}
+
+#### Role assignment scope
+
+The role is assigned on the vCenter root object rather than on the directory with the cluster virtual machines. The platform components access objects outside that directory:
+
+- The CSI driver determines volume topology by the ESXi hosts attached to a Datastore, so it accesses Cluster and Host objects.
+- The resource discovery component searches for CNS disks across the whole vCenter, and it needs the `Cns.Searchable` privilege from the [Storage](#storage) group for that.
+- The installer creates a resource pool in the Cluster object and a directory in the Datacenter, which needs the privileges from the [Virtual machine placement](#virtual-machine-placement) group.
+
+If you limit the role to the virtual machine directory, these operations fail.
+
+#### Checking privileges
+
+The CSI driver checks the account privileges on each Datastore and excludes those where the privileges are insufficient. Such a Datastore does not appear in the list of available ones, and ordering a PersistentVolume through the corresponding StorageClass fails.
+
+If a tagged Datastore does not produce a working StorageClass, check the account privileges on that object:
+
+```shell
+govc permissions.ls /<DATACENTER_NAME>/datastore/<DATASTORE_NAME>
+```
+
+Account privileges on an object can also be viewed in vSphere Client. Select the object, open the "Permissions" tab, and find the account in the list. The "Defined In" column shows the object the permission is defined on. The "Global Permission" value means the permission is assigned globally.
+
+![Viewing permissions on an object](images/permissions-check/datastore-permissions.png)
+
+### vCenter TLS certificate verification
+
+DKP connects to vCenter over TLS and verifies its certificate. If the vCenter certificate is issued by a custom or enterprise certificate authority, pass the certificate chain of that authority in the [`caBundle`](cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle) parameter. Certificate verification stays enabled in this case.
+
+Specify the chain in PEM format. It is the same setting, but its path depends on where the vCenter connection is described:
+
+- When installing a cluster, the connection is described in the [`provider`](cluster_configuration.html#vsphereclusterconfiguration-provider) section of the [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration) resource next to the [`provider.server`](cluster_configuration.html#vsphereclusterconfiguration-provider-server) parameter, so the chain is set in [`provider.caBundle`](cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle).
+- In a running cluster, the connection is described at the top level of the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module settings next to the [`host`](configuration.html#parameters-host) parameter, so the chain is set in [`caBundle`](configuration.html#parameters-cabundle).
+
+Example for a cluster being installed:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    <CA_CERTIFICATE_CHAIN_IN_PEM_FORMAT>
+    -----END CERTIFICATE-----
+```
+
+Example for a running cluster:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-vsphere
+spec:
+  version: 2
+  enabled: true
+  settings:
+    host: "<VCENTER_FQDN>"
+    username: "<USERNAME@DOMAIN.LOCAL>"
+    password: "<PASSWORD>"
+    caBundle: |
+      -----BEGIN CERTIFICATE-----
+      <CA_CERTIFICATE_CHAIN_IN_PEM_FORMAT>
+      -----END CERTIFICATE-----
+```
+
+The [`insecure: true`](cluster_configuration.html#vsphereclusterconfiguration-provider-insecure) parameter disables vCenter certificate verification completely. In the settings of a running cluster, the same parameter is named [`insecure`](configuration.html#parameters-insecure). Set either `caBundle` or `insecure: true`. If both parameters are set, DKP rejects the configuration.
+
+For the NSX-T connection, the certificate chain is set by the separate [`nsxt.caBundle`](cluster_configuration.html#vsphereclusterconfiguration-nsxt-cabundle) parameter. In the settings of a running cluster, these are the [`nsxt.caBundle`](configuration.html#parameters-nsxt-cabundle) and [`nsxt.insecureFlag`](configuration.html#parameters-nsxt-insecureflag) parameters. Set either `nsxt.caBundle` or [`nsxt.insecureFlag: true`](cluster_configuration.html#vsphereclusterconfiguration-nsxt-insecureflag), otherwise DKP rejects the configuration.
+
+{% alert level="warning" %}
+The [`csi-vsphere`](/modules/csi-vsphere/) module does not support the `caBundle` parameter and connects to vCenter either with certificate verification against the system certificate authorities or with the [`insecure`](/modules/csi-vsphere/configuration.html#parameters-insecure) parameter.
 {% endalert %}
 
 ### VM image requirements
 
 To create a VM template (`Template`), it is recommended to use a ready-made cloud image/OVA file provided by the OS vendor:
 
-* [**Ubuntu**](https://cloud-images.ubuntu.com/)
-* [**Debian**](https://cloud.debian.org/images/cloud/)
-* [**CentOS**](https://cloud.centos.org/)
-* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (section *Generic Cloud / OpenStack*)
+- [**Ubuntu**](https://cloud-images.ubuntu.com/)
+- [**Debian**](https://cloud.debian.org/images/cloud/)
+- [**CentOS**](https://cloud.centos.org/)
+- [**Rocky Linux**](https://rockylinux.org/alternative-images/) (section *Generic Cloud / OpenStack*)
 
 {% alert level="warning" %}
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
@@ -541,7 +486,7 @@ The provider supports working with only one disk in the virtual machine template
 #### Preparing the virtual machine image
 
 {% alert level="warning" %}
-Disable VMware Guest OS Customization (and any vApp/OS customization mechanisms, if applicable in your setup) for the template and the cluster virtual machines. DKP performs the initial node configuration via `cloud-init` (VMware GuestInfo datasource). Enabled customization can conflict with `cloud-init` and lead to incorrect node initialization.
+Disable VMware Guest OS Customization (and any vApp/OS customization mechanisms, if applicable in your setup) for the template and the cluster virtual machines in vSphere. DKP performs the initial node configuration via `cloud-init` (VMware GuestInfo datasource). Enabled customization can conflict with `cloud-init` and lead to incorrect node initialization.
 {% endalert %}
 
 1. Install the required packages:
@@ -611,7 +556,7 @@ enabled
 {% endalert %}
 
 {% alert %}
-DKP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
+DKP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.
 For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
 {% endalert %}
 
@@ -619,27 +564,262 @@ For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vm
 DKP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
+#### Preparing the template in vSphere Client
+
+Once the image is ready, do the following in vSphere Client:
+
+1. Import the operating system image. Select a Datacenter or a Cluster, open "ACTIONS" → "Deploy OVF Template..." and specify the OVA file provided by the OS vendor.
+
+   ![Preparing the template, step 1](images/vm-template-setup/deploy-ovf-template.png)
+
+1. Check the parameters of the resulting virtual machine. On the "Summary" tab, the "Compatibility" row of the "VM Hardware" panel shows the hardware version, and the device list shows the attached disks. Hardware version 15 or later and a single disk are required.
+
+   ![Preparing the template, step 2](images/vm-template-setup/vm-hardware-compatibility.png)
+
+1. If the hardware version is lower than 15, upgrade it. Power off the virtual machine and open "ACTIONS" → "Compatibility" → "Upgrade VM Compatibility...". The item is unavailable for a running machine. To schedule the upgrade for the next power off, use "Schedule VM Compatibility Upgrade...".
+
+   ![Preparing the template, step 3](images/vm-template-setup/upgrade-vm-compatibility.png)
+
+1. Convert the virtual machine to a template. Open "ACTIONS" → "Template" → "Convert to Template". The `template` parameter accepts both a template and a powered off virtual machine.
+
+   ![Preparing the template, step 4](images/vm-template-setup/convert-to-template.png)
+
 ## Infrastructure
+
+### Connecting to vCenter
+
+Where the connection settings come from depends on where the cluster control plane runs. If the control plane runs in the cloud, the vCenter address and credentials are set in the [`provider`](cluster_configuration.html#vsphereclusterconfiguration-provider) section of the VsphereClusterConfiguration resource. If the control plane runs on virtual machines or bare metal, the same data is set in the [`host`](configuration.html#parameters-host), [`username`](configuration.html#parameters-username), and [`password`](configuration.html#parameters-password) parameters of the module.
+
+The platform connects to vCenter over TLS and verifies the certificate. Passing the certificate authority chain is covered in the [vCenter TLS certificate verification](#vcenter-tls-certificate-verification) section.
 
 ### Networking
 
-A VLAN with DHCP and Internet access is required for the running cluster:
+Cluster nodes connect to the network whose path is set in the [`mainNetwork`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-mainnetwork) parameter. Through this network, nodes reach vCenter, the container image registry, and each other.
 
-* If the VLAN is public (public addresses), then you have to create a second network to deploy cluster nodes (DHCP is not needed in this network).
-* If the VLAN is private (private addresses), then this network can be used for cluster nodes.
+The network must meet the following requirements:
 
-### Inbound traffic
+- It is available on every ESXi host where virtual machines are created.
+- It provides DHCP unless node addresses are set statically.
+- vCenter and the container image registry are reachable from it.
 
-* You can use an internal load balancer (if present) and direct traffic directly to the front nodes of the cluster.
-* If there is no load balancer, you can use MetalLB in BGP mode to organize fault-tolerant load balancers (recommended). In this case, front nodes of the cluster will have two interfaces. For this, you will need:
-  * A dedicated VLAN for traffic exchange between BGP routers and MetalLB. This VLAN must have DHCP and Internet access.
-  * IP addresses of BGP routers.
-  * ASN — the AS number on the BGP router.
-  * ASN — the AS number in the cluster.
-  * A range to announce addresses from.
+#### Node addressing
+
+By default, nodes get their addresses over DHCP. For nodes created by the installer, addresses are set statically in the [`mainNetworkIPAddresses`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-mainnetworkipaddresses) parameter. Static addressing is not supported for the nodes ordered through the [VsphereInstanceClass](cr.html#vsphereinstanceclass) resource, such nodes get their addresses over DHCP.
+
+Addresses are assigned to the nodes of a group in order, so provide as many addresses as there are nodes in the group. If there are fewer addresses, the list is reused and the same address goes to several nodes.
+
+An example of static addressing for three master nodes:
+
+```yaml
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: lun_1
+    mainNetwork: k8s-msk-178
+    mainNetworkIPAddresses:
+    - address: 10.1.14.20/24
+      gateway: 10.1.14.254
+      nameservers:
+        addresses:
+        - 8.8.8.8
+        - 8.8.4.4
+    - address: 10.1.14.21/24
+      gateway: 10.1.14.254
+      nameservers:
+        addresses:
+        - 8.8.8.8
+        - 8.8.4.4
+    - address: 10.1.14.22/24
+      gateway: 10.1.14.254
+      nameservers:
+        addresses:
+        - 8.8.8.8
+        - 8.8.4.4
+```
+
+#### Multiple networks
+
+Secondary interfaces of virtual machines connect to the networks listed in the [`additionalNetworks`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-additionalnetworks) parameter. For example, an additional interface is used to connect the network for BGP traffic.
+
+When there are several networks, specify which of them the platform treats as internal and which as external. Based on the network names from the [`internalNetworkNames`](cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) and [`externalNetworkNames`](cluster_configuration.html#vsphereclusterconfiguration-externalnetworknames) parameters, the `vsphere-cloud-controller-manager` component sets the InternalIP and ExternalIP addresses in the Node object. These parameters take the name of the network, not its path.
+
+The [`internalNetworkCIDR`](cluster_configuration.html#vsphereclusterconfiguration-internalnetworkcidr) parameter sets the subnet that master nodes get their addresses from in the internal network. Addresses are allocated starting with the tenth one. The parameter is required if the configuration contains the [`nodeGroups`](cluster_configuration.html#vsphereclusterconfiguration-nodegroups) section.
+
+An example of a configuration with two networks:
+
+```yaml
+externalNetworkNames:
+- net3-k8s
+internalNetworkNames:
+- K8S_3
+internalNetworkCIDR: 172.16.2.0/24
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: lun_1
+    mainNetwork: net3-k8s
+    additionalNetworks:
+    - K8S_3
+```
+
+### Load balancing
+
+Inbound traffic is balanced in one of three ways.
+
+1. **Through an external load balancer.** A load balancer that already exists in the infrastructure directs traffic to the cluster frontend nodes. All that is required from vSphere is a network in which the frontend nodes are reachable by the load balancer. In the cluster, the traffic is accepted by the Ingress controller of the [`ingress-nginx`](/modules/ingress-nginx/) module.
+
+1. **Through MetalLB.** This way suits an environment without an external load balancer. MetalLB assigns addresses to services of the LoadBalancer type and works in the L2 and BGP modes. The network requirements, the editions the modes are available in, and the configuration are covered in the [`metallb` module documentation](/modules/metallb/). On the vSphere side, the BGP mode requires the following:
+
+   - A dedicated network in which the frontend nodes exchange traffic with the BGP routers.
+   - A second network interface on the frontend nodes, connected to that network by the [`additionalNetworks`](cluster_configuration.html#vsphereclusterconfiguration-nodegroups-instanceclass-additionalnetworks) parameter.
+   - DHCP in that network. The platform sets an address on the additional interface only for master nodes, from the [`internalNetworkCIDR`](cluster_configuration.html#vsphereclusterconfiguration-internalnetworkcidr) subnet starting with the tenth address. For the nodes of a node group, the platform does not assign an address in that network.
+   - IP addresses of the BGP routers, the autonomous system number (ASN) of the routers and the ASN of the cluster, and the range of addresses that the cluster announces.
+
+1. **Through NSX-T.** If NSX-T is deployed in the infrastructure, `cloud-controller-manager` orders a load balancer in it for every service of the LoadBalancer type. The address pool name, the Tier-1 gateway path, and the credentials are set in the [`nsxt`](configuration.html#parameters-nsxt) section.
 
 ### Using the datastore
 
-Various types of storage can be used in the cluster; for the minimum configuration, you will need:
-* Datastore for provisioning PersistentVolumes to the Kubernetes cluster.
-* Datastore for provisioning root disks for the VMs (it can be the same Datastore as for PersistentVolume).
+The cluster uses a Datastore for two purposes:
+
+- Placing the root disks of virtual machines.
+- Placing PersistentVolume volumes.
+
+A single Datastore can serve both purposes. When planning the free space, take both the node disks and the volumes into account.
+
+A Datastore must meet the following requirements:
+
+- It is connected to every ESXi host of the zone.
+- It is tagged with the region tag and the zone tag.
+- It is available to the platform account. The CSI driver checks the privileges on every Datastore and excludes those where the privileges are insufficient.
+
+#### Node disks
+
+The Datastore for root disks is set in the [`datastore`](cr.html#vsphereinstanceclass-v1-spec-datastore) parameter of a node group, with the path relative to the Datacenter. The disk size is set in the [`rootDiskSize`](cr.html#vsphereinstanceclass-v1-spec-rootdisksize) parameter. For nodes created by the installer, the default size is 50 GiB. For nodes ordered through the [VsphereInstanceClass](cr.html#vsphereinstanceclass) resource, it is 20 GiB. A value smaller than the template disk size makes cloning fail.
+
+An example of a node group with a separate Datastore and a larger root disk:
+
+```yaml
+nodeGroups:
+- name: worker
+  replicas: 2
+  zones:
+  - test-zone-1
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    mainNetwork: k8s-msk-178
+    datastore: lun_1
+    rootDiskSize: 50
+```
+
+The SPBM storage policy for node disks is set in the [`storagePolicyID`](cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid) parameter, which takes the policy ID.
+
+The ID can be viewed in vSphere Client. Open "Menu" → "Policies and Profiles" → "VM Storage Policies" and select the policy by name. In the browser address bar, find the `lvSelectedItemId` parameter. The ID is placed between `PbmRequirementStorageProfile:` and the first `%` character.
+
+![List of storage policies](images/storage-policy-setup/vm-storage-policies.png)
+
+The `govc` command also prints the policy ID:
+
+```shell
+govc storage.policy.ls "<POLICY_NAME>"
+```
+
+Replace `<POLICY_NAME>` with the policy name as shown in the "VM Storage Policies" list, for example `vSAN Default Storage Policy`.
+
+#### PersistentVolume volumes
+
+For every Datastore tagged with a zone tag, the platform creates a StorageClass. If SPBM storage policies are configured in vSphere, a StorageClass is additionally created for each combination of a Datastore and a policy. For a DatastoreCluster, StorageClasses are created only in the legacy mode, which is enabled by the [`compatibilityFlag`](configuration.html#parameters-storageclass-compatibilityflag) parameter.
+
+The name of a StorageClass with a policy combines the Datastore name and the policy name. The platform converts it to lowercase, replaces spaces with hyphens, and removes the remaining characters except hyphens and dots. For example, the `lun_1` Datastore and the `Gold Policy` policy produce the `lun1-gold-policy` StorageClass.
+
+For the platform to discover the policies, the vSphere account needs the `StorageProfile.View` privilege from the [list of required privileges](#list-of-required-privileges). The StorageClass set is generated automatically, so a policy is not set for an individual StorageClass manually.
+
+To keep StorageClasses from being created for some of the Datastores, list them in the [`exclude`](configuration.html#parameters-storageclass-exclude) parameter:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-vsphere
+spec:
+  version: 2
+  enabled: true
+  settings:
+    storageClass:
+      exclude:
+      - ".*-lun101-.*"
+      - slow-lun103
+```
+
+The parameter takes names and regular expressions, each of which must match the Datastore name in full. A partial match is not taken into account. For example, for the `vsanDatastore` Datastore, the `vsan` expression excludes no StorageClass, while `vsan.*` excludes all of them. An exclusion removes both the base StorageClass and the StorageClasses with policies for that Datastore. The parameter does not exclude an individual StorageClass with a policy by its own name.
+
+To set the default StorageClass, use the global [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter.
+
+#### CSI operation mode
+
+By default, the storage subsystem uses CNS disks that support resizing without detaching the volume from the node (online resize). The legacy mode with FCD disks is also supported, in which resizing without detaching the volume is unavailable. The mode is selected by the [`compatibilityFlag`](configuration.html#parameters-storageclass-compatibilityflag) parameter.
+
+#### Expanding a PersistentVolumeClaim
+
+The platform supports resizing a PersistentVolume without detaching it from the node (online resize), starting with vSphere 7.0U2.
+
+To expand a volume, change the requested size in the PersistentVolumeClaim:
+
+```shell
+d8 k -n <NAMESPACE> patch pvc <PVC_NAME> -p '{"spec":{"resources":{"requests":{"storage":"2Gi"}}}}'
+```
+
+No further action is required. The platform expands the volume in vSphere, then kubelet expands the file system on the node the volume is attached to. The workload is not restarted.
+
+While the expansion is in progress, the PersistentVolumeClaim status contains the `Resizing` and `FileSystemResizePending` conditions. Once kubelet has expanded the file system, both conditions are removed and the `status.capacity` field contains the new size. The command below prints the current volume size and the list of conditions:
+
+```shell
+d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
+  -o jsonpath='{.status.capacity.storage}{"\n"}{range .status.conditions[*]}{.type}={.status} {end}'
+```
+
+An example of the output for a volume whose expansion has finished. The first line is the size, and the second line is empty because no conditions are left in the status:
+
+```console
+2Gi
+
+```
+
+If the `Resizing` condition remains in the status, expanding without detaching the volume is unavailable in this configuration, for example in the legacy mode with FCD volumes. The limitation is described in an [external-resizer issue](https://github.com/kubernetes-csi/external-resizer/issues/44). To expand such a volume, detach it from the node:
+
+1. Prevent new workloads from being scheduled on the node the volume is attached to:
+
+   ```shell
+   d8 k cordon <NODE_NAME>
+   ```
+
+   Replace `<NODE_NAME>` with the name of the node that runs the workload using the PersistentVolumeClaim.
+
+1. Delete the workload that uses the PersistentVolumeClaim so that the volume is detached from the node.
+
+1. Wait until the `Resizing` condition is removed from the PersistentVolumeClaim status.
+
+1. Allow scheduling on the node again:
+
+   ```shell
+   d8 k uncordon <NODE_NAME>
+   ```
+
+#### Viewing volumes in vSphere Client
+
+Volumes provisioned through CSI are shown in vSphere Client. Open "Menu" → "Inventory" → "Hosts and Clusters", select a Cluster object, go to the "Monitor" tab, and choose "Container Volumes" under "Cloud Native Storage". For every volume, the list shows the name, labels, Datastore, storage policy compliance ("Compliance Status"), availability ("Health Status"), and size.
+
+![List of CNS volumes](images/cns-volumes/container-volumes.png)
+
+The volume name in vSphere matches the PersistentVolume name in the cluster.
+
+The icon to the left of the volume name opens the details panel. The "Kubernetes objects" tab shows the namespace, the PersistentVolumeClaim name and labels, and the workload that uses the volume.
+
+![CNS volume details](images/cns-volumes/container-volume-details.png)

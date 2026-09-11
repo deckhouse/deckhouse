@@ -28,6 +28,8 @@ spec:
                 rootDiskSize:
                   description: |
                     Размер (в гигабайтах) корневого диска в виртуальной машине. Если в template диск меньше, автоматически произойдет его расширение.
+
+                    Значение меньше размера диска в template задать нельзя, клонирование завершится ошибкой `disk name disk0 must be at least the same size of source when cloning`.
                 template:
                   description: |
                     Путь до VirtualMachine template, который будет склонирован для создания новой виртуальной машины.
@@ -60,7 +62,7 @@ spec:
                   properties:
                     nestedHardwareVirtualization:
                       description: |
-                        Включение [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html) на созданных виртуальных машинах.
+                        Включение [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevsphere-vm-admin/configure-virtual-machine-cpu-resourcesvsphere-vm-admin/expose-hardware-assisted-virtualizationvsphere-vm-admin.html) на созданных виртуальных машинах.
                     cpuShares:
                       description: |
                         Относительная величина CPU Shares для создаваемых виртуальных машин.

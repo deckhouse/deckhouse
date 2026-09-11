@@ -358,8 +358,8 @@ entries:
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/virtualization/vsphere/layout.html
                         - title:
-                            en: Storage and load balancing
-                            ru: Хранилище и балансировка
+                            en: Networking, storage, and load balancing
+                            ru: Сети, хранилище и балансировка
                           url: /admin/integrations/virtualization/vsphere/storage.html
                         - title:
                             en: Integration with VMware vSphere services

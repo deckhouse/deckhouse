@@ -51,7 +51,7 @@ description: Архитектура модуля cloud-provider-vsphere в Deckh
 
 1. **CSI-драйвер (vsphere)** — реализация CSI-драйвера для VMware vSphere. С архитектурой CSI-драйвера, используемого в модуле `cloud-provider-vsphere` DKP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver-vsphere.html).
 
-   CSI-драйвер (vsphere) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
+   CSI-драйвер (vsphere) поддерживает работу со снимками томов, поэтому в поде `csi-controller` присутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)). Чтобы заказывать снимки, включите модуль [`snapshot-controller`](/modules/snapshot-controller/). Он добавляет в кластер ресурсы VolumeSnapshot, а модуль `cloud-provider-vsphere` создаёт для них VolumeSnapshotClass с именем `vsphere`.
 
 ## Взаимодействия модуля
 
