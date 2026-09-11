@@ -73,6 +73,18 @@ workflow:
   rules:
     - *skip_e2e_run
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_SVACE_ANALYZE_ENABLE == "true"
+
+.rules:on_schedule_reprobucibility:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_REPRODUCIBILITY == "true"
+
+.rules:on_schedule_reprobucibility_timing_report:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_REPRODUCIBILITY_TIMING_REPORT == "true"
+
+.rules:on_schedule_svace_analyze:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_SVACE_ANALYZE_ENABLE == "true"
 .rules:on_schedule_k8s_autoupdate:
   rules:
     - *skip_e2e_run

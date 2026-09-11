@@ -1,5 +1,5 @@
 include:
-  - '.gitlab/notify-failure.yml'
+  - '.gitlab/notify.yml'
   - '.gitlab/helpers.yml'
   - '.gitlab/build.yml'
 
@@ -104,4 +104,4 @@ analyze-deckhouse:
     - .svace_analyze_base
     - .svace_analyze
     - .svace_secrets
-    - .notify
+    - .notify-failure

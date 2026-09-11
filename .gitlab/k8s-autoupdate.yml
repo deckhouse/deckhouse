@@ -1,14 +1,14 @@
 # K8S autoupdate
 
 include:
-  - '.gitlab/notify-failure.yml'
+  - '.gitlab/notify.yml'
   - '.gitlab/helpers.yml'
 
 k8s-autoupdate:
   stage: test
   extends:
     - .rules:on_schedule_k8s_autoupdate
-    - .notify
+    - .notify-failure
   image:
     name: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
   variables:
