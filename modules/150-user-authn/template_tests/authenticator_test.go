@@ -115,6 +115,28 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
   allowAccessToKubernetes: true
   spec:
     keepUsersLoggedInFor: "2h20m4s"
+- name: test-tenant
+  encodedName: justForTestTenant
+  namespace: my-app
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    applications:
+    - domain: tenant.example.com
+      ingressClassName: test
+      ingressSecretName: test
+- name: test-kube
+  encodedName: justForTestKube
+  namespace: kube-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    applications:
+    - domain: kube.example.com
+      ingressClassName: test
+      ingressSecretName: test
 `)
 			hec.ValuesSet("userAuthn.idTokenTTL", "2h20m4s")
 
@@ -166,6 +188,30 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
       name: "test-05f0e90e-dex-authenticator"
       truncated: false
       hash: ""
+"test-tenant@my-app":
+  name: "test-tenant-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-tenant"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-tenant-dex-authenticator"
+      truncated: false
+      hash: ""
+"test-kube@kube-test":
+  name: "test-kube-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-kube"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-kube-dex-authenticator"
+      truncated: false
+      hash: ""
 `)
 			hec.HelmRender()
 		})
@@ -177,7 +223,9 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			Expect(hec.KubernetesResource("PodDisruptionBudget", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Secret", "d8-test", "registry-dex-authenticator").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Secret", "d8-test", "registry-dex-authenticator").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Secret", "my-app", "registry-dex-authenticator").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Secret", "kube-test", "registry-dex-authenticator").Exists()).To(BeFalse())
 
 			secret := hec.KubernetesResource("Secret", "d8-test", "dex-authenticator-test")
 			Expect(secret.Exists()).To(BeTrue())
@@ -218,6 +266,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			deploymentTest := hec.KubernetesResource("Deployment", "d8-test", "test-dex-authenticator")
 			Expect(deploymentTest.Exists()).To(BeTrue())
+			Expect(deploymentTest.Field("spec.template.spec.imagePullSecrets").String()).To(MatchJSON(`[{"name":"deckhouse-registry"}]`))
 			Expect(deploymentTest.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"testnode": ""}`))
 			Expect(deploymentTest.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: foo
@@ -274,6 +323,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			deploymentTest2 := hec.KubernetesResource("Deployment", "d8-test", "test-2-dex-authenticator")
 			Expect(deploymentTest2.Exists()).To(BeTrue())
+			Expect(deploymentTest2.Field("spec.template.spec.imagePullSecrets").String()).To(MatchJSON(`[{"name":"deckhouse-registry"}]`))
 			Expect(deploymentTest2.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(deploymentTest2.Field("spec.template.spec.tolerations").Exists()).To(BeTrue()) // default taints
 
@@ -309,6 +359,16 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			}
 			Expect(oauth2proxyArgTest4).Should(ContainElement("--cookie-expire=2h20m5s"))
 			Expect(oauth2proxyArgTest4).Should(ContainElement("--cookie-refresh=2h20m4s"))
+
+			Expect(hec.KubernetesResource("Secret", "my-app", "dex-authenticator-test-tenant").Exists()).To(BeTrue())
+			deploymentTenant := hec.KubernetesResource("Deployment", "my-app", "test-tenant-dex-authenticator")
+			Expect(deploymentTenant.Exists()).To(BeTrue())
+			Expect(deploymentTenant.Field("spec.template.spec.imagePullSecrets").Exists()).To(BeFalse())
+
+			Expect(hec.KubernetesResource("Secret", "kube-test", "dex-authenticator-test-kube").Exists()).To(BeTrue())
+			deploymentKube := hec.KubernetesResource("Deployment", "kube-test", "test-kube-dex-authenticator")
+			Expect(deploymentKube.Exists()).To(BeTrue())
+			Expect(deploymentKube.Field("spec.template.spec.imagePullSecrets").String()).To(MatchJSON(`[{"name":"deckhouse-registry"}]`))
 		})
 	})
 
