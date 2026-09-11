@@ -19,8 +19,10 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"net"
 	"strconv"
 	"text/template"
+	"unicode/utf8"
 )
 
 //go:embed templates
@@ -34,7 +36,8 @@ func renderTemplate(name string, data interface{}) ([]byte, error) {
 	}
 
 	funcMap := template.FuncMap{
-		"quote": strconv.Quote,
+		"quote":    yamlQuote,
+		"hostPort": hostPort,
 	}
 
 	tmpl, err := template.New("template").Funcs(funcMap).Parse(string(content))
@@ -48,6 +51,33 @@ func renderTemplate(name string, data interface{}) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// yamlQuote renders a value as a YAML double-quoted scalar.
+//
+// Every value substituted into a template must go through this function. The
+// rendered files are read back by kubelet, distribution, docker_auth and
+// mirrorer; a value able to close its scalar and open a new mapping key changes
+// the meaning of the file rather than a field in it, and the static pod manifest
+// in particular is executed as root on a control plane node.
+//
+// strconv.Quote produces a Go string literal, which is a valid YAML
+// double-quoted scalar for every input but one: Go writes invalid UTF-8 as
+// \xNN, while YAML reads \xNN as the code point U+00NN. Such a value has no YAML
+// representation at all, so it is rejected instead of being silently changed --
+// an account name that renders as a different name would leave the auth
+// configuration and the distributed credentials disagreeing.
+func yamlQuote(value string) (string, error) {
+	if !utf8.ValidString(value) {
+		return "", fmt.Errorf("value is not valid UTF-8 and has no YAML representation: %q", value)
+	}
+	return strconv.Quote(value), nil
+}
+
+// hostPort joins a host and a port for use in a configuration value. It brackets
+// IPv6 addresses, which plain concatenation would render ambiguous.
+func hostPort(host string, port int) string {
+	return net.JoinHostPort(host, strconv.Itoa(port))
 }
 
 type templateRenderer interface {

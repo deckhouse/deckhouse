@@ -68,6 +68,15 @@ EOF
 {{- end }}
 
 # Create hosts.toml files for registries
+#
+# The heredoc is deliberately unquoted: in Local and Proxy mode a mirror host is
+# ${discovered_node_ip}:5001, and the shell resolving it here is what makes the
+# bootstrap mirror reachable. Quoting the delimiter would leave the placeholder
+# in hosts.toml verbatim. Because the body is expanded, the values in it are
+# subject to parameter and command substitution as root -- what keeps that safe
+# is helpers.MirrorHost in go_lib/registry/helpers/validate.go, which admits a
+# registry host and that one placeholder and nothing else. The CA heredoc above
+# stays quoted: a certificate needs no expansion.
 bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
 [host]
 {{- range $mirror := $host_values.mirrors }}
