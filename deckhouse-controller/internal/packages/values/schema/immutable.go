@@ -17,6 +17,7 @@ package schema
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 
 	"github.com/go-openapi/spec"
 )
@@ -33,13 +34,32 @@ func CheckImmutable(s *spec.Schema, oldValues, newValues map[string]any) []error
 	}
 
 	var errs []error
-	walkImmutable(s, oldValues, newValues, nil, &errs)
+	walkImmutable(s, s, oldValues, newValues, nil, &errs)
 
 	return errs
 }
 
-// walkImmutable descends the schema and both value trees in lockstep.
-func walkImmutable(s *spec.Schema, oldValue, newValue any, path []string, errs *[]error) {
+// walkImmutable descends the schema and both value trees in lockstep. root is the schema
+// the walk started from, the only place a $ref can be looked up.
+func walkImmutable(root, s *spec.Schema, oldValue, newValue any, path []string, errs *[]error) {
+	// Two absent values cannot differ anywhere below. This is also what ends the descent
+	// when a recursive $ref keeps handing back the same schema.
+	if oldValue == nil && newValue == nil {
+		return
+	}
+
+	// Loaders expand $ref in place, but a recursive definition is deliberately left
+	// unexpanded: resolve it here or everything below it goes unchecked. Resolution is a
+	// JSON pointer lookup inside root, so it never fetches a remote document.
+	if s.Ref.String() != "" {
+		resolved, err := spec.ResolveRef(root, &s.Ref)
+		if err != nil || resolved == nil {
+			return
+		}
+
+		s = resolved
+	}
+
 	if immutable, ok := s.Extensions.GetBool(XImmutable); ok && immutable {
 		if err := compareImmutable(path, oldValue, newValue); err != nil {
 			*errs = append(*errs, err)
@@ -48,12 +68,7 @@ func walkImmutable(s *spec.Schema, oldValue, newValue any, path []string, errs *
 		return
 	}
 
-	// allOf / anyOf / oneOf branches constrain the same value at the same path, so they add no path segment.
-	for _, branches := range [][]spec.Schema{s.AllOf, s.AnyOf, s.OneOf} {
-		for i := range branches {
-			walkImmutable(&branches[i], oldValue, newValue, path, errs)
-		}
-	}
+	walkSubschemas(root, s, oldValue, newValue, path, errs)
 
 	oldMap, oldIsMap := oldValue.(map[string]any)
 	newMap, newIsMap := newValue.(map[string]any)
@@ -62,31 +77,121 @@ func walkImmutable(s *spec.Schema, oldValue, newValue any, path []string, errs *
 			prop := s.Properties[name]
 			// Indexing a nil map is fine: a key missing on one side yields nil there,
 			// which is exactly what compareImmutable needs to see.
-			walkImmutable(&prop, oldMap[name], newMap[name], childPath(path, name), errs)
+			walkImmutable(root, &prop, oldMap[name], newMap[name], childPath(path, name), errs)
 		}
 
-		// additionalProperties entries sit under keys the schema does not name, so only
-		// keys present on both sides can be compared.
-		if ap := s.AdditionalProperties; ap != nil && ap.Schema != nil {
-			for key := range oldMap {
-				if _, ok := newMap[key]; !ok {
-					continue
-				}
+		// Keys the schema does not name are governed by patternProperties, or by
+		// additionalProperties when no pattern claims them.
+		for _, key := range unionKeys(oldMap, newMap) {
+			if _, named := s.Properties[key]; named {
+				continue
+			}
 
-				walkImmutable(ap.Schema, oldMap[key], newMap[key], childPath(path, key), errs)
+			if sub := unnamedSchema(s, key); sub != nil {
+				walkImmutable(root, sub, oldMap[key], newMap[key], childPath(path, key), errs)
 			}
 		}
 	}
 
-	// Only list validation is supported, the same subset defaults.Apply handles.
-	if s.Items != nil && s.Items.Schema != nil {
-		oldList, _ := oldValue.([]any)
-		newList, _ := newValue.([]any)
-
-		for i := 0; i < len(oldList) && i < len(newList); i++ {
-			walkImmutable(s.Items.Schema, oldList[i], newList[i], childPath(path, fmt.Sprintf("[%d]", i)), errs)
+	oldList, oldIsList := oldValue.([]any)
+	newList, newIsList := newValue.([]any)
+	if oldIsList || newIsList {
+		// Elements pair up by index, and the walk runs to the longer side so that a
+		// truncated list compares its dropped tail instead of leaving it unchecked.
+		for i := 0; i < max(len(oldList), len(newList)); i++ {
+			if sub := itemSchema(s, i); sub != nil {
+				walkImmutable(root, sub, itemValue(oldList, i), itemValue(newList, i), childPath(path, fmt.Sprintf("[%d]", i)), errs)
+			}
 		}
 	}
+}
+
+// walkSubschemas descends the keywords that constrain the same value at the same path, so
+// they add no path segment: a mark inside one of them applies to the field it wraps.
+func walkSubschemas(root, s *spec.Schema, oldValue, newValue any, path []string, errs *[]error) {
+	for _, branches := range [][]spec.Schema{s.AllOf, s.AnyOf, s.OneOf} {
+		for i := range branches {
+			walkImmutable(root, &branches[i], oldValue, newValue, path, errs)
+		}
+	}
+
+	if s.Not != nil {
+		walkImmutable(root, s.Not, oldValue, newValue, path, errs)
+	}
+
+	for name := range s.Dependencies {
+		if dep := s.Dependencies[name].Schema; dep != nil {
+			walkImmutable(root, dep, oldValue, newValue, path, errs)
+		}
+	}
+}
+
+// unionKeys lists every key present on either side, old ones first.
+func unionKeys(oldMap, newMap map[string]any) []string {
+	keys := make([]string, 0, len(oldMap)+len(newMap))
+	for key := range oldMap {
+		keys = append(keys, key)
+	}
+
+	for key := range newMap {
+		if _, ok := oldMap[key]; !ok {
+			keys = append(keys, key)
+		}
+	}
+
+	return keys
+}
+
+// unnamedSchema returns the schema governing a key that properties does not list: the
+// first patternProperties entry whose regexp matches it, otherwise additionalProperties.
+func unnamedSchema(s *spec.Schema, key string) *spec.Schema {
+	for pattern := range s.PatternProperties {
+		re, err := regexp.Compile(pattern)
+		if err != nil || !re.MatchString(key) {
+			continue
+		}
+
+		sub := s.PatternProperties[pattern]
+
+		return &sub
+	}
+
+	if s.AdditionalProperties != nil {
+		return s.AdditionalProperties.Schema
+	}
+
+	return nil
+}
+
+// itemSchema returns the schema for the element at index i: the single list-validation
+// schema, or the tuple entry at that position with additionalItems covering the rest.
+func itemSchema(s *spec.Schema, i int) *spec.Schema {
+	if s.Items == nil {
+		return nil
+	}
+
+	if s.Items.Schema != nil {
+		return s.Items.Schema
+	}
+
+	if i < len(s.Items.Schemas) {
+		return &s.Items.Schemas[i]
+	}
+
+	if s.AdditionalItems != nil {
+		return s.AdditionalItems.Schema
+	}
+
+	return nil
+}
+
+// itemValue returns the element at index i, or nil when the list is shorter than that.
+func itemValue(list []any, i int) any {
+	if i >= len(list) {
+		return nil
+	}
+
+	return list[i]
 }
 
 // childPath appends a segment to path on a fresh slice. Reusing the backing array
