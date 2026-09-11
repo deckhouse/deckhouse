@@ -30,4 +30,8 @@ const (
 	heartbeatAnnotationKey            = "kubevirt.internal.virtualization.deckhouse.io/heartbeat"
 	metalLBmemberLabelKey             = "l2-load-balancer.network.deckhouse.io/member"
 	controlPlaneTaintKey              = "node-role.kubernetes.io/control-plane"
+	masterNodeGroupName               = "master"
+	nodeRoleLabelPrefix               = "node-role.kubernetes.io/"
+	nodeTypeLabel                     = "node.deckhouse.io/type"
+	scaleDownDisabledAnnotation       = "cluster-autoscaler.kubernetes.io/scale-down-disabled"
 )
