@@ -617,13 +617,12 @@ func TestReconcileDropsLegacyChildServiceCondition(t *testing.T) {
 func TestReconcileRequestsClusterIPFromSpecOnCreate(t *testing.T) {
 	swh := newTestSWH(nil, nil)
 	swh.Spec.ClusterIP = "10.96.0.42"
-	swh.Spec.ClusterIPs = []string{"10.96.0.42"}
 
 	fakeClient := reconcileWith(t, swh)
 
 	service := getChildService(t, fakeClient)
-	if service.Spec.ClusterIP != "10.96.0.42" || !slices.Equal(service.Spec.ClusterIPs, []string{"10.96.0.42"}) {
-		t.Errorf("expected the requested address to reach the child Service, got %q %v", service.Spec.ClusterIP, service.Spec.ClusterIPs)
+	if service.Spec.ClusterIP != "10.96.0.42" {
+		t.Errorf("expected the requested address to reach the child Service, got %q", service.Spec.ClusterIP)
 	}
 	if got := getSWH(t, fakeClient).Status.ClusterIP; got != "10.96.0.42" {
 		t.Errorf("status.clusterIP = %q, want %q", got, "10.96.0.42")
@@ -742,5 +741,52 @@ func TestReconcileKeepsAllocatedNodePort(t *testing.T) {
 	}
 	if service.Spec.Ports[0].NodePort != 31234 {
 		t.Errorf("expected the allocated nodePort to be kept, got %d", service.Spec.Ports[0].NodePort)
+	}
+}
+
+// ServicePort.AppProtocol is a pointer, so a struct comparison looks at its address: two ports
+// carrying the same appProtocol come from different decodes and would never compare equal.
+func TestReconcileLeavesSettledServiceWithAppProtocolUntouched(t *testing.T) {
+	fromParent, fromService := "http", "http"
+
+	swh := newTestSWH(nil, nil)
+	swh.Spec.Ports = []corev1.ServicePort{{Name: "http", Port: 80, AppProtocol: &fromParent}}
+
+	settled := ownedChildService("10.96.0.7")
+	settled.Spec.Ports[0].AppProtocol = &fromService
+
+	fakeClient := reconcileWith(t, swh, settled)
+
+	service := getChildService(t, fakeClient)
+	if service.ResourceVersion != settled.ResourceVersion {
+		t.Errorf("the Service was rewritten although only the appProtocol pointer differed: %q -> %q",
+			settled.ResourceVersion, service.ResourceVersion)
+	}
+	if !IsSpecForServiceEqual(*settled, swh) {
+		t.Error("expected the appProtocol to be compared by value")
+	}
+}
+
+// Only a controller reference means the object belongs to somebody else. A plain owner reference
+// is an extra garbage collection link that anything may add, and it must not cost the module
+// control over its own Service.
+func TestReconcileAdoptsServiceWithPlainOwnerReference(t *testing.T) {
+	swh := newTestSWH(nil, nil)
+	adopted := ownedChildService("10.96.0.7")
+	adopted.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "v1",
+		Kind:       "ConfigMap",
+		Name:       "some-bookkeeping",
+		UID:        types.UID("4a5b6c7d-8e9f-4a0b-9c1d-2e3f4a5b6c7d"),
+	}}
+
+	fakeClient := reconcileWith(t, swh, adopted)
+
+	service := getChildService(t, fakeClient)
+	if !metav1.IsControlledBy(service, swh) {
+		t.Errorf("expected the Service to be adopted, got %+v", service.OwnerReferences)
+	}
+	if condition := childServiceCondition(t, fakeClient); condition.Status != metav1.ConditionTrue {
+		t.Errorf("expected no conflict, got %s/%s: %s", condition.Status, condition.Reason, condition.Message)
 	}
 }

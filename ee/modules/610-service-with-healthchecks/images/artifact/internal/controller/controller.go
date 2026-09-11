@@ -9,11 +9,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -143,9 +143,12 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 
 			// The address can only be requested while the Service is being created: it is
 			// immutable afterwards, and an existing Service always carries one already.
+			//
+			// Only spec.clusterIP is propagated. spec.clusterIPs is absent from the CRD schema,
+			// so the API server prunes it and it is always empty here; carrying it over would
+			// also require spec.ipFamilyPolicy and spec.ipFamilies to reach the child Service.
 			if childService.Spec.ClusterIP == "" {
 				childService.Spec.ClusterIP = serviceWithHC.Spec.ClusterIP
-				childService.Spec.ClusterIPs = serviceWithHC.Spec.ClusterIPs
 			}
 
 			childService.Spec.Selector = map[string]string{}
@@ -193,7 +196,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	originalServiceWithHC := serviceWithHC.DeepCopy()
 	patch := client.MergeFrom(originalServiceWithHC)
 
-	if serviceWithHC.Spec.Type == corev1.ServiceTypeLoadBalancer {
+	if desiredServiceType(serviceWithHC) == corev1.ServiceTypeLoadBalancer {
 		r.Logger.Debug("update status for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 		serviceWithHC.Status.LoadBalancer = childService.Status.LoadBalancer
 	} else {
@@ -278,19 +281,23 @@ func clusterIPMismatch(service *corev1.Service, shc *networkv1alpha1.ServiceWith
 	}
 }
 
-// foreignOwnerReference returns the first owner reference that does not point to the
-// ServiceWithHealthchecks the child Service is built for. The UID is not compared: a reference to
-// the same name is ours even when the parent was recreated and got a new one.
+// foreignOwnerReference returns the controller reference of the Service when it points to
+// something other than the ServiceWithHealthchecks the child Service is built for. Only a
+// controller reference means ownership; a plain owner reference is an extra garbage collection
+// link that anything may add, and refusing to manage our own Service because of one would be
+// worse than the clash it is meant to catch. The UID is not compared: a reference to the same
+// name is ours even when the parent was recreated and got a new one.
 func foreignOwnerReference(service *corev1.Service, name string) *metav1.OwnerReference {
-	for i := range service.OwnerReferences {
-		ref := &service.OwnerReferences[i]
-		gv, err := schema.ParseGroupVersion(ref.APIVersion)
-		if err != nil ||
-			gv.Group != networkv1alpha1.GroupVersion.Group ||
-			ref.Kind != serviceWithHealthchecksKind ||
-			ref.Name != name {
-			return ref
-		}
+	ref := metav1.GetControllerOf(service)
+	if ref == nil {
+		return nil
+	}
+	gv, err := schema.ParseGroupVersion(ref.APIVersion)
+	if err != nil ||
+		gv.Group != networkv1alpha1.GroupVersion.Group ||
+		ref.Kind != serviceWithHealthchecksKind ||
+		ref.Name != name {
+		return ref
 	}
 	return nil
 }
@@ -332,7 +339,10 @@ func IsSpecForServiceEqual(service corev1.Service, shc *networkv1alpha1.ServiceW
 	if len(service.Spec.Selector) != 0 {
 		return false
 	}
-	if !slices.Equal(service.Spec.Ports, desiredPorts(service, shc)) {
+	// Semantic comparison rather than slices.Equal: ServicePort.AppProtocol is a pointer, and ==
+	// on a struct compares it by address, so two ports carrying the same appProtocol would never
+	// look equal and the Service would be rewritten on every reconciliation.
+	if !equality.Semantic.DeepEqual(service.Spec.Ports, desiredPorts(service, shc)) {
 		return false
 	}
 	if service.Spec.PublishNotReadyAddresses != shc.Spec.PublishNotReadyAddresses {
