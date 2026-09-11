@@ -96,6 +96,13 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 				return fmt.Errorf("update: %w", err)
 			}
 
+			// ModuleConfig is a deprecated resource: any existing config means the
+			// deprecated API is still in use. Reuse the obsolete-version metric group
+			// so the gauge is expired automatically on reconcile and on config deletion.
+			r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.DeprecatedModuleConfigIsUsed, 1.0, map[string]string{
+				"name": moduleConfig.Name,
+			})
+
 			// skip firing alert for global module
 			if moduleConfig.Name != "global" {
 				// update metrics
