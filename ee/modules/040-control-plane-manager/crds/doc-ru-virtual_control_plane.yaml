@@ -13,12 +13,46 @@ spec:
             description: |
               Желаемое состояние виртуального control plane.
             properties:
+              highAvailability:
+                description: |
+                  Режим повышенной доступности control plane тенанта.
+
+                  При `true`: два ControlPlaneNode на разных узлах управляющего кластера,
+                  PodDisruptionBudget на каждый компонент и Postgres из трёх инстансов
+                  с синхронной репликацией.
+
+                  Стоит сетевого round trip на каждый commit. При переключении primary последние
+                  транзакции могут быть потеряны: гарантируется получение WAL репликой, но не сброс
+                  его на диск.
+
+                  Внимание! Переключение на работающем тенанте вызывает перерыв в обслуживании:
+                  StatefulSet'ы компонентов пересоздаются, датастор меняет размер.
+
+                  Не влияет на датастор, если задан `datastoreRef`. Количество ControlPlaneNode
+                  при этом всё равно следует параметру.
               kubernetesVersion:
                 description: |
                   Желаемая версия Kubernetes для control plane тенанта.
-              replicas:
+
+                  Допустимы только версии, для которых в текущей поставке DKP собраны образы
+                  компонентов control plane. `Default` и `Automatic` среди них нет: у виртуального
+                  control plane нет механизма выбора версии по умолчанию.
+              nodeSelector:
                 description: |
-                  Желаемое количество реплик control plane.
+                  Метки узлов для подов виртуального control plane в управляющем кластере: компонентов
+                  control plane, `cilium-operator`, `bashible-apiserver`, `deckhouse` тенанта.
+                  На поды внутри кластера тенанта не влияет.
+
+                  Выделенный пул узлов обычно помечен и меткой, и taint'ом, поэтому `nodeSelector`
+                  без соответствующих `tolerations` оставит все поды в состоянии Pending.
+
+                  Внимание! Изменение параметра пересоздаёт StatefulSet'ы компонентов, то есть
+                  перезапускает control plane тенанта.
+              tolerations:
+                description: |
+                  Toleration'ы для тех же подов, что и `nodeSelector`.
+
+                  Внимание! Изменение параметра перезапускает control plane тенанта.
               networking:
                 description: |
                   Сетевая конфигурация control plane тенанта (CIDR сервисов и подов, домен кластера).

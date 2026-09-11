@@ -16,7 +16,10 @@ limitations under the License.
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 type VirtualControlPlaneDatastoreRef struct {
 	// Name is the datastore configuration name used by the tenant control plane.
@@ -122,12 +125,26 @@ type VirtualControlPlaneNetworking struct {
 
 type VirtualControlPlaneSpec struct {
 	// KubernetesVersion is the desired Kubernetes version for the tenant control plane.
+	//
+	// Only versions this release ships control plane images for. No "Default": there is no version
+	// resolver here, resolveImages needs an exact key in images.versioned. The enum tracks the
+	// ClusterConfiguration pins; TestKubernetesVersionEnumValidation asserts that.
+	// +kubebuilder:validation:Enum="1.32";"1.33";"1.34";"1.35";"1.36"
 	KubernetesVersion string `json:"kubernetesVersion"`
 
-	// Replicas is the desired number of control plane replicas.
-	// +kubebuilder:default=1
+	// HighAvailability survives the loss of one management-cluster node: two ControlPlaneNodes on
+	// separate nodes, a PodDisruptionBudget per component, a three-instance synchronous Postgres.
+	//
+	// Costs a network round trip per commit. A failover can still lose the last transactions: the WAL
+	// is guaranteed to reach a standby, not to be flushed.
+	//
+	// Warning: switching it on a running tenant interrupts service - StatefulSets are recreated and
+	// the datastore is resized.
+	//
+	// Ignored for the datastore when DatastoreRef is set. The ControlPlaneNode count still follows it.
+	// +kubebuilder:default=false
 	// +optional
-	Replicas int32 `json:"replicas,omitempty"`
+	HighAvailability bool `json:"highAvailability,omitempty"`
 
 	// Networking is the tenant cluster's network configuration (Service/Pod CIDRs, cluster
 	// domain). Required so that the "clusterDomain" default always materialises and its
@@ -154,6 +171,21 @@ type VirtualControlPlaneSpec struct {
 	// Expose describes how the tenant Kubernetes API should be published.
 	// +optional
 	Expose *VirtualControlPlaneExpose `json:"expose,omitempty"`
+
+	// NodeSelector for the VirtualControlPlane pods in the management cluster: the control plane
+	// components, cilium-operator, bashible-apiserver, the tenant's deckhouse. Tenant-side pods are
+	// not affected.
+	//
+	// Warning: changing it recreates the component StatefulSets, restarting the tenant control plane.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Tolerations for the same pods as NodeSelector. A dedicated node pool is usually tainted as well
+	// as labelled, so a NodeSelector without them leaves every pod Pending.
+	//
+	// Warning: changing it restarts the tenant control plane, same as NodeSelector.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 type VirtualControlPlaneStatus struct {
@@ -180,7 +212,7 @@ type VirtualControlPlaneStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,shortName=vcp
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.kubernetesVersion",description="Desired Kubernetes version"
-// +kubebuilder:printcolumn:name="Replicas",type="integer",JSONPath=".spec.replicas",description="Desired number of control plane replicas"
+// +kubebuilder:printcolumn:name="HA",type="boolean",JSONPath=".spec.highAvailability",description="High availability mode"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="Virtual control plane readiness"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type VirtualControlPlane struct {

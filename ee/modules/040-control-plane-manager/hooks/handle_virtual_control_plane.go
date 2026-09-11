@@ -25,10 +25,14 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// The EE overlay merges this file into the CE module's hooks package, which already declares
+// moduleQueue in common.go - hence the distinct name. Same value, same addon-operator queue.
+const vcpModuleQueue = "/modules/control-plane-manager"
+
 const hasVirtualControlPlanePath = "controlPlaneManager.internal.hasVirtualControlPlane"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        moduleQueue,
+	Queue:        vcpModuleQueue,
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{

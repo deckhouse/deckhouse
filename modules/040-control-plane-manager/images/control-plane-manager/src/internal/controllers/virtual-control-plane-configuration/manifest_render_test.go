@@ -72,7 +72,6 @@ func testVCP(networking controlplanev1alpha1.VirtualControlPlaneNetworking) *con
 		ObjectMeta: metav1.ObjectMeta{Name: "acme", Namespace: "vcp-acme"},
 		Spec: controlplanev1alpha1.VirtualControlPlaneSpec{
 			KubernetesVersion: "1.31",
-			Replicas:          1,
 			Networking:        networking,
 		},
 	}

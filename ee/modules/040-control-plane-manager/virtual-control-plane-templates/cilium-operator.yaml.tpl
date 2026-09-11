@@ -385,19 +385,10 @@ spec:
               matchLabels:
                 io.cilium/app: operator
             topologyKey: kubernetes.io/hostname
-      nodeSelector:
-        kubernetes.io/os: linux
-      tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-        - key: node.kubernetes.io/not-ready
-          operator: Exists
-        - key: node.cloudprovider.kubernetes.io/uninitialized
-          operator: Exists
-        - key: node.cilium.io/agent-not-ready
-          operator: Exists
+      # Upstream cilium tolerates not-ready/uninitialized because there the operator bootstraps its
+      # own cluster's CNI. This one runs in the parent, where no CNI means no pods at all.
+      nodeSelector: ${VCP_NODE_SELECTOR}
+      tolerations: ${VCP_TOLERATIONS}
 
       volumes:
         # To read the configuration from the config map

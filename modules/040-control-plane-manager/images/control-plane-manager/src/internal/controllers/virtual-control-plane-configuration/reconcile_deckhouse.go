@@ -655,6 +655,8 @@ func buildTargetDeckhouseDeployment(
 		deployment.Spec.Template.Annotations["control-plane.deckhouse.io/parent-image-digest"] = parentImageDigest
 	}
 
+	applyVCPPlacement(&deployment.Spec.Template.Spec, vcp)
+
 	renameImagePullSecret(deployment, deckhouseRegistrySecretName, constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name))
 
 	return deployment, nil

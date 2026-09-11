@@ -22,10 +22,10 @@ spec:
       jsonPath: .spec.kubernetesVersion
       name: Version
       type: string
-    - description: Desired number of control plane replicas.
-      jsonPath: .spec.replicas
-      name: Replicas
-      type: integer
+    - description: High availability mode.
+      jsonPath: .spec.highAvailability
+      name: HA
+      type: boolean
     - description: Published Kubernetes API endpoint.
       jsonPath: .status.endpoint
       name: Endpoint
@@ -84,10 +84,37 @@ spec:
                     - LoadBalancer
                     type: string
                 type: object
+              highAvailability:
+                default: false
+                description: |-
+                  High availability mode for the tenant control plane.
+
+                  When `true`: two ControlPlaneNodes on different management-cluster nodes,
+                  a PodDisruptionBudget per component, and a Postgres of three instances with
+                  synchronous replication.
+
+                  Costs a network round trip per commit. A failover can still lose the last
+                  transactions: the WAL is guaranteed to reach a standby, not to be flushed to disk.
+
+                  Warning! Switching this on a running tenant interrupts service: the component
+                  StatefulSets are recreated and the datastore is resized.
+
+                  Ignored for the datastore when `datastoreRef` is set. The ControlPlaneNode count
+                  still follows this parameter.
+                type: boolean
               kubernetesVersion:
-                description: Desired Kubernetes version for the tenant control plane.
-                minLength: 1
-                pattern: ^[0-9]+\.[0-9]+(\.[0-9]+)?$
+                description: |-
+                  Desired Kubernetes version for the tenant control plane.
+
+                  Only versions the current DKP release ships control plane images for are accepted.
+                  `Default` and `Automatic` are not among them: a virtual control plane has no
+                  mechanism for picking a version on its own.
+                enum:
+                - "1.32"
+                - "1.33"
+                - "1.34"
+                - "1.35"
+                - "1.36"
                 type: string
               networking:
                 description: |-
@@ -180,11 +207,45 @@ spec:
                   rule: int(self.podSubnetNodeCIDRPrefix) > cidr(self.podSubnetCIDR).prefixLength()
                 - message: "podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
                   rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
-              replicas:
-                default: 1
-                description: Desired number of control plane replicas.
-                minimum: 1
-                type: integer
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Node labels for the virtual control plane pods in the management cluster: the control
+                  plane components, `cilium-operator`, `bashible-apiserver`, the tenant's `deckhouse`.
+                  Pods inside the tenant cluster are not affected.
+
+                  A dedicated node pool is usually tainted as well as labelled, so a `nodeSelector`
+                  without matching `tolerations` leaves every pod Pending.
+
+                  Warning! Changing this parameter recreates the component StatefulSets, restarting
+                  the tenant control plane.
+                type: object
+              tolerations:
+                description: |-
+                  Tolerations for the same pods as `nodeSelector`.
+
+                  Warning! Changing this parameter restarts the tenant control plane.
+                items:
+                  properties:
+                    effect:
+                      description: Taint effect to match. Empty matches all effects.
+                      type: string
+                    key:
+                      description: Taint key the toleration applies to. Empty matches all keys.
+                      type: string
+                    operator:
+                      description: Key's relationship to the value. `Exists` or `Equal` (default).
+                      type: string
+                    tolerationSeconds:
+                      description: How long the pod tolerates a `NoExecute` taint. Unset means forever.
+                      format: int64
+                      type: integer
+                    value:
+                      description: Taint value the toleration matches. Empty when the operator is `Exists`.
+                      type: string
+                  type: object
+                type: array
             required:
             - kubernetesVersion
             - networking

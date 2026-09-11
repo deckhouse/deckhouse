@@ -399,6 +399,16 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/040-control-plane-manager/hooks/handle_virtual_control_plane.go
+  to: /deckhouse/modules/040-control-plane-manager/hooks/handle_virtual_control_plane.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/hooks/handle_virtual_control_plane_test.go
+  to: /deckhouse/modules/040-control-plane-manager/hooks/handle_virtual_control_plane_test.go
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
   excludePaths:

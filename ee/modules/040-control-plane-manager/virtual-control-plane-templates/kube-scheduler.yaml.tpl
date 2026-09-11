@@ -24,6 +24,18 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+      # Replicas live in separate single-replica StatefulSets, one per ControlPlaneNode, so spreading
+      # them keys off the VCP-wide label. With a single ControlPlaneNode only one pod matches.
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: kube-scheduler
+                control-plane.deckhouse.io/vcp: ${VCP_NAME}
+            topologyKey: kubernetes.io/hostname
+      nodeSelector: ${VCP_NODE_SELECTOR}
+      tolerations: ${VCP_TOLERATIONS}
       containers:
       - name: kube-scheduler
         image: ${IMAGE_KUBE_SCHEDULER}
@@ -33,6 +45,8 @@ spec:
         - --authentication-kubeconfig=/kubeconfig/scheduler.conf
         - --authorization-kubeconfig=/kubeconfig/scheduler.conf
         - --leader-elect=true
+        ports:
+        - {containerPort: 10259, name: https-metrics, protocol: TCP}
         volumeMounts:
         - {name: pki, mountPath: /pki, readOnly: true}
         - {name: kubeconfig, mountPath: /kubeconfig, readOnly: true}

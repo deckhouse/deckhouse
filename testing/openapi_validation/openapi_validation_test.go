@@ -143,6 +143,9 @@ var kubernetesVersionEditions = []struct {
 	versionMap           string
 	clusterConfiguration string
 	moduleConfigs        []string
+	// crds are CRD files carrying a spec.kubernetesVersion enum that must match this edition's
+	// pins. The VirtualControlPlane CRD ships in EE and FE only, so cse lists none.
+	crds []string
 }{
 	{
 		name:                 "default",
@@ -151,6 +154,9 @@ var kubernetesVersionEditions = []struct {
 		moduleConfigs: []string{
 			"modules/040-control-plane-manager/openapi/config-values.yaml",
 			"ee/modules/040-control-plane-manager/openapi/config-values.yaml",
+		},
+		crds: []string{
+			"ee/modules/040-control-plane-manager/crds/virtual_control_plane.yaml",
 		},
 	},
 	{
@@ -181,6 +187,25 @@ type moduleConfigValuesSchema struct {
 	Properties struct {
 		KubernetesVersion kubernetesVersionEnum `yaml:"kubernetesVersion"`
 	} `yaml:"properties"`
+}
+
+// crdSchema reaches spec.properties.kubernetesVersion inside a CustomResourceDefinition file.
+type crdSchema struct {
+	Spec struct {
+		Versions []struct {
+			Schema struct {
+				OpenAPIV3Schema struct {
+					Properties struct {
+						Spec struct {
+							Properties struct {
+								KubernetesVersion kubernetesVersionEnum `yaml:"kubernetesVersion"`
+							} `yaml:"properties"`
+						} `yaml:"spec"`
+					} `yaml:"properties"`
+				} `yaml:"openAPIV3Schema"`
+			} `yaml:"schema"`
+		} `yaml:"versions"`
+	} `yaml:"spec"`
 }
 
 type k8sVersionMap struct {
@@ -263,6 +288,22 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 			require.Positive(t, checked,
 				"edition %q: none of its ModuleConfig schemas are present, so the enum guard checked nothing",
 				edition.name)
+
+			for _, crdPath := range edition.crds {
+				var crd crdSchema
+				if !readYAML(t, crdPath, &crd) {
+					continue
+				}
+				require.NotEmpty(t, crd.Spec.Versions, "%s has no spec.versions", crdPath)
+
+				crdEnum := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties.Spec.Properties.KubernetesVersion.Enum
+				require.NotEmpty(t, crdEnum, "%s: spec.kubernetesVersion has no enum", crdPath)
+				// A VirtualControlPlane has no version resolver, so neither sentinel belongs here.
+				require.NotContains(t, crdEnum, "Default", "%s must not offer Default", crdPath)
+				require.NotContains(t, crdEnum, "Automatic", "%s must not offer Automatic", crdPath)
+				assert.Equal(t, ccPins, crdEnum,
+					"kubernetesVersion enum in %s differs from %s", crdPath, edition.clusterConfiguration)
+			}
 
 			var vm k8sVersionMap
 			if readYAML(t, edition.versionMap, &vm) {
