@@ -134,6 +134,7 @@ steps:
         --insecure-registry \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
+        --build-report-operations=true \
         --build-report-path images_fuzz_tags_werf.json
 
 {!{- if not $isDev }!}
