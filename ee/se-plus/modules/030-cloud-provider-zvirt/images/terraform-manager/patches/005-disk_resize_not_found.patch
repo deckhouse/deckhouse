@@ -1,0 +1,29 @@
+Subject: [PATCH] Let go of a disk that no longer exists
+
+diskResizeRead returned a hard error when the disk it was told to read had been
+removed, so a VM replacement left the resource pointing at a disk that is gone and
+every refresh from then on failed. The plan could not be computed at all, which
+blocks apply and destroy along with it, and nothing short of editing the state by
+hand gets out of it.
+
+Every other resource in this provider answers a not-found by clearing the id, and
+resizeDisk in this very file already does. Do the same here, so the next plan
+creates the resource against the disk that exists now.
+
+---
+diff --git a/internal/ovirt/resource_ovirt_disk_resize.go b/internal/ovirt/resource_ovirt_disk_resize.go
+index 1827519..6a26ae2 100644
+--- a/internal/ovirt/resource_ovirt_disk_resize.go
++++ b/internal/ovirt/resource_ovirt_disk_resize.go
+@@ -53,6 +53,11 @@ func (p *provider) diskResizeRead(ctx context.Context, data *schema.ResourceData
+ 	diskID := data.Get("disk_id").(string)
+ 	disk, err := client.GetDisk(ovirtclient.DiskID(diskID))
+ 	if err != nil {
++		if isNotFound(err) {
++			data.SetId("")
++			return nil
++		}
++
+ 		return diag.Diagnostics{
+ 			diag.Diagnostic{
+ 				Severity: diag.Error,
