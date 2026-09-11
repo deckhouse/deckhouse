@@ -87,6 +87,7 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%       7h50m
@@ -98,6 +99,7 @@ lang: ru
    virtualmachine.virtualization.deckhouse.io/linux-vm  Running   7h30m    virtlab-pt-2   10.66.10.2   7h46m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Подключитесь к ВМ по консоли:
 
@@ -107,6 +109,7 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    Successfully connected to linux-vm console. The escape sequence is ^]
 
@@ -116,6 +119,7 @@ lang: ru
    cloud@linux-vm:~$
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Чтобы выйти из консоли, нажмите `Ctrl+]`.
 

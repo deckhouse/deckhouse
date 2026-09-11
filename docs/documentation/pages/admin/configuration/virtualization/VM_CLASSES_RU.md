@@ -61,12 +61,14 @@ spec:
 
    Пример вывода, в котором класса по умолчанию нет:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                      PHASE   ISDEFAULT   AGE
    generic                   Ready               1d
    host-passthrough-custom   Ready               1d
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Назначьте класс по умолчанию:
 
@@ -82,12 +84,14 @@ spec:
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                      PHASE   ISDEFAULT   AGE
    generic                   Ready               1d
    host-passthrough-custom   Ready   true        1d
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 Теперь виртуальные машины, созданные без указания класса, получат класс `host-passthrough-custom`.
 
@@ -98,6 +102,8 @@ spec:
 {% tabs vmclass-create %}
 
 {% tab "В командной строке" %}
+
+Опишите класс в ресурсе VirtualMachineClass:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2

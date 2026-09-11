@@ -24,12 +24,14 @@ d8 v console linux-vm
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 Successfully connected to linux-vm console. The escape sequence is ^]
 linux-vm login: cloud
 Password: cloud
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Чтобы выйти из консоли, нажмите `Ctrl+]`.
 
@@ -69,6 +71,7 @@ d8 v ssh cloud@linux-vm
 
 Перед подключением `d8 v console` и `d8 v vnc` сообщают, кто занял поток и с какого времени, и предлагают выбор:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 The serial console of linux-vm is in use:
   user       serviceaccount default/alice
@@ -77,6 +80,7 @@ The serial console of linux-vm is in use:
 Connect and disconnect them? [y] yes  [N] no  [w] wait until free:
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Ответ `w` означает дождаться, пока другой пользователь отключится, и подключиться автоматически. Нажатие Enter отменяет подключение, потому что по умолчанию выбран безопасный вариант. Флаг `--force` подключает без вопроса, и он же нужен при неинтерактивном запуске в скрипте.
 {% endalert %}
@@ -131,6 +135,8 @@ SPICE резервирует память независимо от того, п
 | `d8 v restart` | `Restart`    | Перезапустить ВМ              |
 | `d8 v evict`   | `Evict`      | Вытеснить ВМ на другой узел   |
 | `d8 v migrate` | `Migrate`    | Мигрировать ВМ на другой узел |
+
+Ниже показано, как выполнить операцию над виртуальной машиной:
 
 {% tabs vm-operations %}
 

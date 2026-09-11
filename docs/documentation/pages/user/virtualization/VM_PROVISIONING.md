@@ -72,6 +72,8 @@ Here are the typical scenarios.
      - systemctl enable --now qemu-guest-agent.service
    ```
 
+The following example shows how to pass the script to a virtual machine:
+
 {% tabs cloud-init-usage %}
 
 {% tab "Using the CLI" %}
@@ -209,11 +211,13 @@ d8 k get vm -o wide
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME     PHASE     UPTIME   CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
 fedora   Running   5d21h    6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Install the agent with the command for your distribution and start the service:
 

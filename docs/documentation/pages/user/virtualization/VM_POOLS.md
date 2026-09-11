@@ -15,6 +15,8 @@ The [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) res
 The `Legacy` OS type isn't supported in a pool, because replicas are differentiated by initialization, which these operating systems don't have, so every replica would be a byte-for-byte copy of one disk, and for Windows guest operating systems that also means the same SID on the network. A pool template with `osType: Legacy` is rejected. Create such virtual machines individually.
 {% endalert %}
 
+The following example shows how to create a virtual machine pool:
+
 {% tabs pool-create %}
 
 {% tab "Using the CLI" %}

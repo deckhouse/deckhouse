@@ -15,6 +15,8 @@ Besides the main cluster network, a machine can connect to additional networks, 
 To work with additional networks, the `sdn` module has to be enabled.
 {% endalert %}
 
+The following example shows how to connect a virtual machine to an additional network:
+
 {% tabs vm-networks %}
 
 {% tab "Using the CLI" %}
@@ -37,7 +39,7 @@ Specifics and important points of working with additional network interfaces:
 - the network parameters (IP addresses, gateways, DNS, and so on) for additional networks are configured manually from inside the guest OS (for example, with Cloud-Init), unless IPAM is configured for the network (for details, see [IPAM for additional network interfaces](#ipam-for-additional-network-interfaces)).
 
 > When configuring network interfaces in the guest OS, use stable identifiers (predictable `enpXsY` names or binding by MAC address) instead of `ethX` names, as described in [Network interface naming in the guest OS](../../virtualization/vm-block-devices.html#network-interface-naming-in-the-guest-os).
-
+>
 > On a Linux guest system with several interfaces in the same subnet, the ARP flux problem can occur, where the kernel answers ARP requests through an arbitrary interface rather than the one the request arrived on, which leads to an unstable connection and packet loss because of an incorrect MAC address in the router caches.
 >
 > To fix this, set the parameters that make the system answer requests strictly through the interface with the target IP and use the correct source address:
@@ -123,6 +125,7 @@ d8 k get vmmacl
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                    VIRTUALMACHINEMACADDRESS                      STATUS   AGE
 mac-5e-e6-19-22-0f-d8   {"name":"vm-01-fz9cr","namespace":"pr-sdn"}   Bound    45s
@@ -130,6 +133,7 @@ mac-5e-e6-19-29-89-cf   {"name":"vm-01-99qj6","namespace":"pr-sdn"}   Bound    4
 mac-5e-e6-19-54-f9-be   {"name":"vm-01-5jqxg","namespace":"pr-sdn"}   Bound    45s
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The [VirtualMachineMACAddress](/modules/virtualization/cr.html#virtualmachinemacaddress) (`vmmac`) resource is a project resource responsible for reserving leased MAC addresses and binding them to virtual machines.
 
@@ -143,6 +147,7 @@ d8 k get vmmac
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          ADDRESS             STATUS     VM      AGE
 vm-01-5jqxg   5e:e6:19:54:f9:be   Attached   vm-01   5m42s
@@ -150,6 +155,7 @@ vm-01-99qj6   5e:e6:19:29:89:cf   Attached   vm-01   5m42s
 vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 When a network is removed from the VM configuration:
 
@@ -255,7 +261,7 @@ status:
 ```
 
 > **Important:** If an IPAM pool is configured for an additional network, don't configure a static IP address on the additional interface in the guest OS manually (through Cloud-Init). Use the automatic (DHCP) or static (`ipAddressName`) mode to avoid address conflicts.
-
+>
 > If an additional network has an IPAM pool but the IPAddress resource isn't allocated yet or is in the `Pending` state (for example, because the address pool is exhausted), the interface is temporarily skipped, the VM starts without it, and the `NetworkReady` condition reports the error. Once an IP address becomes available, the interface is attached automatically on the fly.
 
 {% endtab %}

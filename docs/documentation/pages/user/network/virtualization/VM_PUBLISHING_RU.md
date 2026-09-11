@@ -27,6 +27,8 @@ lang: ru
 
 {% tab "В командной строке" %}
 
+Проставьте лейбл командой `d8 k label`:
+
 ```bash
 d8 k label vm linux-vm app=nginx
 ```
@@ -60,6 +62,8 @@ Headless-сервис не выделяет собственный IP-адрес
 {% tabs svc-headless %}
 
 {% tab "В командной строке" %}
+
+Создайте сервис с `clusterIP: None`:
 
 ```bash
 d8 k apply -f - <<EOF
@@ -166,7 +170,7 @@ spec:
 EOF
 ```
 
-![](/images/virtualization/lb-nodeport.ru.png)
+![Схема доступа к приложению машины через сервис типа NodePort](../../../images/virtualization/lb-nodeport.ru.png)
 
 В данном примере будет создан сервис с типом `NodePort`, который открывает внешний порт 31880 на всех узлах вашего кластера. Этот порт будет направлять входящий трафик на внутренний порт 80 виртуальной машины, где запущено приложение Nginx.
 
@@ -217,7 +221,7 @@ spec:
 EOF
 ```
 
-![](/images/virtualization/lb-loadbalancer.ru.png)
+![Схема доступа к приложению машины через сервис типа LoadBalancer](../../../images/virtualization/lb-loadbalancer.ru.png)
 
 {% endtab %}
 
@@ -291,7 +295,7 @@ spec:
 EOF
 ```
 
-![](/images/virtualization/lb-ingress.ru.png)
+![Схема доступа к приложению машины через Ingress](../../../images/virtualization/lb-ingress.ru.png)
 
 {% endtab %}
 

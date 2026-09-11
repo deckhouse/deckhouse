@@ -30,11 +30,11 @@ The volume binding mode determines when the disk is created:
 
 - `Immediate`: The disk is created right away, independently of virtual machines, and you can attach it to a machine on any cluster node.
 
-  ![VolumeBindingMode: Immediate](/images/virtualization/vd-immediate.png)
+  ![VolumeBindingMode: Immediate](../../images/virtualization/vd-immediate.png)
 
 - `WaitForFirstConsumer`: The disk is created only after it's attached to a virtual machine, and it's placed on the node where that machine starts.
 
-  ![VolumeBindingMode: WaitForFirstConsumer](/images/virtualization/vd-wffc.png)
+  ![VolumeBindingMode: WaitForFirstConsumer](../../images/virtualization/vd-wffc.png)
 
 The module determines the remaining parameters, including the disk format, on its own from the capabilities of the selected StorageClass.
 
@@ -46,6 +46,7 @@ d8 k get storageclass
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 rv-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
@@ -53,6 +54,7 @@ rv-thin-r2             replicated.csi.storage.deckhouse.io   Delete          Imm
 nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 In the web interface, the same list is available on the **System** tab, in **Storage** → **Storage classes**.
 
@@ -89,11 +91,13 @@ An empty disk is what you need to install an operating system on it or to store 
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME         PHASE   CAPACITY   VIRTUALMACHINE   AGE
    blank-disk   Ready   100Mi                       1m2s
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 {% endtab %}
 
@@ -132,11 +136,13 @@ Specifying the disk size is optional. If you don't set it, the module creates th
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                              TARGETPVC   AGE
    ubuntu-24-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/vi/default/ubuntu-24-04:eac95605-7e0b-4a32-bb50-cc7284fd89d0               122m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Create a disk with a size larger than the unpacked one:
 
@@ -192,12 +198,14 @@ Specifying the disk size is optional. If you don't set it, the module creates th
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME              PHASE   CAPACITY   VIRTUALMACHINE   AGE
    linux-vm-root     Ready   10Gi                        7m52s
    linux-vm-root-2   Ready   2590Mi                      7m15s
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    The first disk got the specified 10 GiB, and the second one got the unpacked image size.
 
@@ -253,6 +261,7 @@ If the image file is on your computer, upload it straight into a disk. The modul
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    {
      "external": "https://virtualization.example.com/upload/<SECRET_URL>",
@@ -260,6 +269,7 @@ If the image file is on your computer, upload it straight into a disk. The modul
    }
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Use the `inCluster` address if you upload the file from one of the cluster nodes, and `external` in all other cases.
 
@@ -279,11 +289,13 @@ If the image file is on your computer, upload it straight into a disk. The modul
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME            PHASE   CAPACITY   VIRTUALMACHINE   AGE
    uploaded-disk   Ready   3Gi                         7d23h
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 {% endtab %}
 

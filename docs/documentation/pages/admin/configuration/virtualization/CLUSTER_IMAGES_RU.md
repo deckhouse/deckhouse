@@ -222,6 +222,7 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    {
      "external":"https://virtualization.example.com/upload/<SECRET_URL>",
@@ -229,6 +230,7 @@ lang: ru
    }
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Адрес `inCluster` используйте, если загружаете файл с одного из узлов кластера, а `external` — во всех остальных случаях.
 

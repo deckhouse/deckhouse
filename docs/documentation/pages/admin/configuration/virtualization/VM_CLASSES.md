@@ -60,12 +60,14 @@ Don't add the annotation to the `generic` class, because a module update can rem
 
    Example output with no default class:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                      PHASE   ISDEFAULT   AGE
    generic                   Ready               1d
    host-passthrough-custom   Ready               1d
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Designate the default class:
 
@@ -81,12 +83,14 @@ Don't add the annotation to the `generic` class, because a module update can rem
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                      PHASE   ISDEFAULT   AGE
    generic                   Ready               1d
    host-passthrough-custom   Ready   true        1d
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 From now on, virtual machines created without a class get the `host-passthrough-custom` class.
 
@@ -97,6 +101,8 @@ A class consists of three blocks, each responsible for its own group of settings
 {% tabs vmclass-create %}
 
 {% tab "Using the CLI" %}
+
+Describe the class in a VirtualMachineClass resource:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2

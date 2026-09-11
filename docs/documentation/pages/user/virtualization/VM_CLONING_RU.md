@@ -18,6 +18,7 @@ lang: ru
 ```bash
 d8 k label vm <VM_NAME> label-name=label-value
 ```
+
 {% endalert %}
 
 Клонирование создаёт копию ВМ, поэтому ресурсы новой ВМ должны иметь уникальные имена. Для этого используются параметры `nameReplacements` и/или `customization`:

@@ -26,6 +26,8 @@ A machine gets into a service by labels. Assign the machine the label that the s
 
 {% tab "Using the CLI" %}
 
+Assign the label with the `d8 k label` command:
+
 ```bash
 d8 k label vm linux-vm app=nginx
 ```
@@ -59,6 +61,8 @@ A headless service doesn't allocate an IP address of its own, but returns the ad
 {% tabs svc-headless %}
 
 {% tab "Using the CLI" %}
+
+Create a service with `clusterIP: None`:
 
 ```bash
 d8 k apply -f - <<EOF
@@ -165,7 +169,7 @@ spec:
 EOF
 ```
 
-![](/images/virtualization/lb-nodeport.png)
+![Diagram of accessing a machine application through a NodePort service](../../../images/virtualization/lb-nodeport.png)
 
 In this example, a service of the `NodePort` type is created, which opens external port 31880 on all nodes of your cluster. This port routes incoming traffic to internal port 80 of the virtual machine where the Nginx application runs.
 
@@ -216,7 +220,7 @@ spec:
 EOF
 ```
 
-![](/images/virtualization/lb-loadbalancer.png)
+![Diagram of accessing a machine application through a LoadBalancer service](../../../images/virtualization/lb-loadbalancer.png)
 
 {% endtab %}
 
@@ -290,7 +294,7 @@ spec:
 EOF
 ```
 
-![](/images/virtualization/lb-ingress.png)
+![Diagram of accessing a machine application through an Ingress](../../../images/virtualization/lb-ingress.png)
 
 {% endtab %}
 

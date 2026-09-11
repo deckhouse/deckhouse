@@ -31,11 +31,11 @@ lang: ru
 
 - `Immediate` — диск создаётся сразу, независимо от виртуальных машин, и подключить его можно к машине на любом узле кластера.
 
-  ![VolumeBindingMode: Immediate](/images/virtualization/vd-immediate.ru.png)
+  ![VolumeBindingMode: Immediate](../../images/virtualization/vd-immediate.ru.png)
 
 - `WaitForFirstConsumer` — диск создаётся только после того, как его подключат к виртуальной машине, и размещается на узле, где эта машина запускается.
 
-  ![VolumeBindingMode: WaitForFirstConsumer](/images/virtualization/vd-wffc.ru.png)
+  ![VolumeBindingMode: WaitForFirstConsumer](../../images/virtualization/vd-wffc.ru.png)
 
 Остальные параметры, включая формат диска, модуль определяет сам по возможностям выбранного StorageClass.
 
@@ -47,6 +47,7 @@ d8 k get storageclass
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 rv-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
@@ -54,6 +55,7 @@ rv-thin-r2             replicated.csi.storage.deckhouse.io   Delete          Imm
 nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 В веб-интерфейсе тот же список доступен на вкладке «Система» в разделе «Хранилище» → «Классы хранилищ».
 
@@ -90,11 +92,13 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME         PHASE   CAPACITY   VIRTUALMACHINE   AGE
    blank-disk   Ready   100Mi                       1m2s
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 {% endtab %}
 
@@ -133,11 +137,13 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                              TARGETPVC   AGE
    ubuntu-24-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/vi/default/ubuntu-24-04:eac95605-7e0b-4a32-bb50-cc7284fd89d0               122m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Создайте диск, задав размер больше распакованного:
 
@@ -193,12 +199,14 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME              PHASE   CAPACITY   VIRTUALMACHINE   AGE
    linux-vm-root     Ready   10Gi                        7m52s
    linux-vm-root-2   Ready   2590Mi                      7m15s
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Первый диск получил заданные 10 ГиБ, второй — распакованный размер образа.
 
@@ -254,6 +262,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    {
      "external": "https://virtualization.example.com/upload/<SECRET_URL>",
@@ -261,6 +270,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
    }
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Адрес `inCluster` используйте, если загружаете файл с одного из узлов кластера, а `external` — во всех остальных случаях.
 
@@ -280,11 +290,13 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME            PHASE   CAPACITY   VIRTUALMACHINE   AGE
    uploaded-disk   Ready   3Gi                         7d23h
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 {% endtab %}
 

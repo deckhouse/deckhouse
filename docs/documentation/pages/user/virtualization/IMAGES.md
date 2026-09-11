@@ -179,11 +179,13 @@ To create disks from an image faster, store it in a PVC. The module can then clo
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               PHASE   CDROM   PROGRESS   AGE
    ubuntu-24-04-pvc   Ready   false   100%       23h
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 {% endtab %}
 
@@ -311,6 +313,7 @@ If the image file is on your computer, upload it directly. The module creates a 
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    {
      "external": "https://virtualization.example.com/upload/<SECRET_URL>",
@@ -318,6 +321,7 @@ If the image file is on your computer, upload it directly. The module creates a 
    }
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Use the `inCluster` address if you upload the file from one of the cluster nodes, and `external` in all other cases.
 
@@ -370,6 +374,8 @@ You can create an image from a [disk](disks.html) if the disk isn't attached to 
 
 {% tab "Using the CLI" %}
 
+Create an image using the required disk as the source:
+
 ```bash
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -411,6 +417,8 @@ You can create an image from a [disk snapshot](snapshots.html#creating-disk-snap
 {% tabs vi-from-snapshot %}
 
 {% tab "Using the CLI" %}
+
+Create an image using the disk snapshot as the source:
 
 ```bash
 d8 k apply -f - <<EOF

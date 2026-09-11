@@ -12,6 +12,8 @@ lang: ru
 
 {% tab "В командной строке" %}
 
+Примените манифест с нужными параметрами:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

@@ -40,11 +40,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       PHASE     UPTIME   NODE           IPADDRESS     AGE
    linux-vm   Running   79m      virtlab-pt-1   10.66.10.14   79m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    ВМ запущена на узле `virtlab-pt-1`.
 
@@ -72,6 +74,7 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       PHASE       UPTIME   NODE           IPADDRESS     AGE
    linux-vm   Running     79m      virtlab-pt-1   10.66.10.14   79m
@@ -80,6 +83,7 @@ lang: ru
    linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    IP-адрес ВМ при переезде сохраняется, меняется только узел в колонке `NODE`.
 
@@ -178,7 +182,7 @@ d8 k drain <NODE_NAME> --pod-selector vm.kubevirt.internal.virtualization.deckho
 d8 k uncordon <NODE_NAME>
 ```
 
-![Схема миграции виртуальных машин на другой узел](/images/virtualization/drain.ru.png)
+![Схема миграции виртуальных машин на другой узел](../../../../images/virtualization/drain.ru.png)
 
 {% endtab %}
 

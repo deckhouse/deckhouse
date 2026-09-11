@@ -31,7 +31,7 @@ lang: ru
 
 До момента переключения ВМ на новый узел (шаг 5) ВМ на исходном узле продолжает работать в обычном режиме и предоставлять сервис пользователям.
 
-![Миграция](/images/virtualization/migration.ru.png)
+![Миграция](../../images/virtualization/migration.ru.png)
 
 ## Требования и ограничения
 
@@ -39,7 +39,9 @@ lang: ru
 
 **Доступность дисков.** Все подключённые к ВМ диски должны быть доступны на целевом узле. У сетевых хранилищ вроде NFS или Ceph это требование выполняется само, потому что диски видны со всех узлов кластера. Локальному хранилищу нужна возможность создать новый локальный том на целевом узле, а если такое хранилище есть только на исходном узле, миграция не выполнится.
 
+<!-- markdownlint-disable MD013 -->
 **Подключение и отключение дисков.** Пока миграция готовит целевой узел, диски нельзя ни подключить к машине ресурсом [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment), ни отключить, удалив такой ресурс. Подключаемый ресурс остаётся в фазе `Pending` с причиной `BlockedByMigration` в условии `Attached`, а удаляемый в фазе `Terminating`, пока миграция не завершится. Пока миграция стоит в очереди и целевой узел ещё не готовится, например когда она ждёт освобождения квоты проекта, подключение и отключение работают как обычно. Верно и обратное, уже отправленный запрос на подключение или отключение миграция дожидается, и всё это время ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) остаётся в фазе `Pending` с причиной `WaitingForBlockDeviceAttachment`. Если запрос не завершится за 5 минут, операция завершается ошибкой.
+<!-- markdownlint-enable MD013 -->
 
 **Пропускная способность сети.** Чем медленнее сеть, тем больше итераций синхронизации памяти проходит миграция и тем дольше простой ВМ на финальном этапе, а в худшем случае миграция не укладывается в таймаут. Ходом миграции управляет политика [`.spec.liveMigrationPolicy`](#настройка-политики-миграции), а с медленной сетью помогает механизм [AutoConverge](#миграции-при-недостаточной-пропускной-способности-сети).
 
@@ -113,11 +115,13 @@ d8 k get vm
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE     UPTIME   NODE           IPADDRESS     AGE
 linux-vm   Running   79m      virtlab-pt-1   10.66.10.14   79m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 На этот момент она запущена на узле `virtlab-pt-1`.
 
@@ -164,7 +168,7 @@ EOF
 ```
 
 > Чтобы предотвратить невозможность планирования виртуальной машины, селектор узла не должен конфликтовать с другими правилами размещения, такими как affinity виртуальной машины, селекторы узлов и правила селектора узлов класса виртуальной машины.
-
+>
 > Целевая миграция на конкретный узел доступна в коммерческих редакциях DP.
 >
 > Если вам не нужно указывать параметры целевого узла, вы можете опустить поле `migrate` или вытеснить виртуальную машину на другой подходящий узел, используя команду `d8 v evict` или создав ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) типа `Evict`.
@@ -177,6 +181,7 @@ d8 k get vm -w
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE       UPTIME   NODE           IPADDRESS     AGE
 linux-vm   Running     79m      virtlab-pt-1   10.66.10.14   79m
@@ -185,6 +190,7 @@ linux-vm   Migrating   79m      virtlab-pt-1   10.66.10.14   79m
 linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Прервать любую живую миграцию, пока она находится в фазе `Pending` или `InProgress`, можно, удалив соответствующий ресурс VirtualMachineOperations.
 
@@ -247,11 +253,11 @@ linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
 
 Пример ситуации, когда миграция не может быть завершена из-за недостаточной пропускной способности сети. Внутри виртуальной машины непрерывно меняется память при помощи stress-ng.
 
-![](/images/virtualization/livemigration-example.ru.png)
+![График метрик памяти при миграции, которая не может завершиться](../../images/virtualization/livemigration-example.ru.png)
 
 Пример выполнения миграции той же виртуальной машины с использованием флага `--force` команды `d8 v migrate` (который включает механизм AutoConverge). Здесь хорошо видно, что частота процессора снижается поэтапно, чтобы уменьшить скорость изменения содержимого памяти.
 
-![](/images/virtualization/livemigration-example-autoconverge.ru.png)
+![График метрик памяти при миграции с механизмом AutoConverge](../../images/virtualization/livemigration-example-autoconverge.ru.png)
 
 Если сеть ограничивает скорость миграции, можно:
 
@@ -278,6 +284,8 @@ linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
 | Изменение числа ядер или объёма памяти без перезапуска        | `hotplug-resources-`    |
 | Перенос дисков в другое хранилище                             | `volume-migration-`     |
 
+Ниже показано, как посмотреть список таких операций:
+
 {% tabs vmop-list %}
 
 {% tab "В командной строке" %}
@@ -292,11 +300,13 @@ d8 k get vmop
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                    PHASE       PROGRESS   TYPE    VIRTUALMACHINE   AGE
 firmware-update-fnbk2   Completed   100%       Evict   linux-vm         1m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Для отмены миграции удалите соответствующий ресурс.
 
@@ -345,8 +355,10 @@ spec:
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                         PHASE       PROGRESS   TYPE    VIRTUALMACHINE   AGE
 nodeplacement-update-dabk4   Completed   100%       Evict   linux-vm         1m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->

@@ -23,11 +23,13 @@ You can grow a disk even while it's attached to a running virtual machine. You c
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME            PHASE   CAPACITY   VIRTUALMACHINE   AGE
    linux-vm-root   Ready   10Gi       linux-vm         10m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Set the new size in the [`.spec.persistentVolumeClaim.size`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-size) parameter:
 
@@ -46,11 +48,13 @@ You can grow a disk even while it's attached to a running virtual machine. You c
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME            PHASE   CAPACITY   VIRTUALMACHINE   AGE
    linux-vm-root   Ready   11Gi       linux-vm         12m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 {% endtab %}
 

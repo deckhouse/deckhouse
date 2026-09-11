@@ -11,6 +11,8 @@ If a machine doesn't behave as expected, collect its state and the state of the 
 The `collect-debug-info` command requires `d8` v0.27.0 or later.
 {% endalert %}
 
+The following example shows how to collect such an archive:
+
 {% tabs vm-debug %}
 
 {% tab "Using the CLI" %}

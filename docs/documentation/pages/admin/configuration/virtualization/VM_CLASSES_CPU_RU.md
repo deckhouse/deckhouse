@@ -129,7 +129,7 @@ lang: ru
 
 Ниже показано, как подобрать типы процессора в кластере с разнородными узлами.
 
-![Пример конфигурации VirtualMachineClass](/images/virtualization/vmclass-examples.ru.png)
+![Пример конфигурации VirtualMachineClass](../../../images/virtualization/vmclass-examples.ru.png)
 
 Ниже разобран кластер из четырёх узлов. Два узла с лейблом `group=blue` оснащены процессором «CPU X» с тремя наборами инструкций, два других с лейблом `group=green` — более новым процессором «CPU Y» с четырьмя наборами.
 

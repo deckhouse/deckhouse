@@ -24,6 +24,8 @@ By default, it runs daily at 02:00. To set your own schedule, use the [`.spec.se
 
 {% tab "Using the CLI" %}
 
+Example configuration with a custom schedule:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -48,6 +50,7 @@ d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 Found 2 cvi, 5 vi, 1 vd manifests in registry
 Found 1 cvi, 5 vi, 11 vd resources in cluster
@@ -60,6 +63,7 @@ VirtualDisk            default              debian-10-root
 VirtualImage           default              ubuntu-2404
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 {% endtab %}
 

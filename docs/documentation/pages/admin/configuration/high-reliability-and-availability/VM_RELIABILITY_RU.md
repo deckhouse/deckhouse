@@ -78,4 +78,4 @@ lang: ru
 1. Контроллер удаляет `workerA` из кластера.
 1. ВМ `linux-vm` запускается на другом подходящем узле, в примере это `workerB`.
 
-![Схема работы механизма ColdStandBy](/images/virtualization/coldstandby.ru.png)
+![Схема работы механизма ColdStandBy](../../../images/virtualization/coldstandby.ru.png)

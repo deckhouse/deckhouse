@@ -88,11 +88,13 @@ The following steps show how to start an Ubuntu 24.04 virtual machine on the dis
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       PHASE     UPTIME   NODE           IPADDRESS     AGE
    linux-vm   Running   11m      virtlab-pt-2   10.66.10.12   11m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    The machine gets an IP address automatically from the range that the administrator sets in the [module settings](../../admin/configuration/network/vm-network.html).
 
@@ -141,7 +143,7 @@ The following steps show how to start an Ubuntu 24.04 virtual machine on the dis
 
 From creation to deletion, a virtual machine goes through several phases. The current one is shown by the [`.status.phase`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-phase) field, and the details of what's happening to the machine are in the [`.status.conditions`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-conditions) block.
 
-![](/images/virtualization/vm-lifecycle.png)
+![Diagram of virtual machine phase transitions](../../images/virtualization/vm-lifecycle.png)
 
 The conditions in the [`.status.conditions`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-conditions) block answer the question of why the machine is in its current phase. To view the ones that have a message, run the following command:
 

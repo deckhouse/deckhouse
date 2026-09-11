@@ -60,12 +60,14 @@ d8 k get nodeusbdevice
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              NODE     READY   ASSIGNED   ATTACHED   NAMESPACE    AGE
 usb-flash-drive   node-1   True    False      False                   10m
 logitech-webcam   node-2   True    True       True       my-project   15m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The conditions in the [`.status.conditions`](/modules/virtualization/cr.html#nodeusbdevice-v1alpha2-status-conditions) block reflect the readiness of the device and its state. The `Ready` and `Attached` conditions match the [USBDevice conditions](../../../user/virtualization/usb-devices.html#usbdevice-conditions), and the `Assigned` condition shows whether a namespace is assigned to the device:
 

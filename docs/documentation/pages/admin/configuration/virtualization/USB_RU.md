@@ -61,12 +61,14 @@ d8 k get nodeusbdevice
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              NODE     READY   ASSIGNED   ATTACHED   NAMESPACE    AGE
 usb-flash-drive   node-1   True    False      False                   10m
 logitech-webcam   node-2   True    True       True       my-project   15m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Готовность устройства и его состояние отражают условия в блоке [`.status.conditions`](/modules/virtualization/cr.html#nodeusbdevice-v1alpha2-status-conditions). Условия `Ready` и `Attached` совпадают с [условиями USBDevice](../../../user/virtualization/usb-devices.html#условия-usbdevice), а условие `Assigned` показывает, назначен ли устройству неймспейс:
 
