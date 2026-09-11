@@ -22,10 +22,7 @@ import (
 )
 
 // XImmutable is the OpenAPI extension key that freezes a settings field once the
-// application is created: the value may be chosen at install time and never changed
-// afterwards. The web console renders such a field read-only when editing an
-// installed application; this package makes that guarantee real on the API side,
-// where nothing stops a client from sending a new value.
+// application is created: the value may be chosen at install time and never changed afterwards.
 const XImmutable = "x-deckhouse-immutable"
 
 // CheckImmutable compares the stored settings against the incoming ones and returns
@@ -41,10 +38,7 @@ func CheckImmutable(s *spec.Schema, oldValues, newValues map[string]any) []error
 	return errs
 }
 
-// walkImmutable descends the schema and both value trees in lockstep. A marked node
-// is compared as a whole and its subtree is left alone: the mark on an object freezes
-// every field below it, mirroring the way the console inherits the read-only flag
-// down the form tree.
+// walkImmutable descends the schema and both value trees in lockstep.
 func walkImmutable(s *spec.Schema, oldValue, newValue any, path []string, errs *[]error) {
 	if immutable, ok := s.Extensions.GetBool(XImmutable); ok && immutable {
 		if err := compareImmutable(path, oldValue, newValue); err != nil {
@@ -54,9 +48,7 @@ func walkImmutable(s *spec.Schema, oldValue, newValue any, path []string, errs *
 		return
 	}
 
-	// allOf / anyOf / oneOf branches constrain the same value at the same path, so
-	// they add no path segment. A mark inside a branch that the value does not match
-	// is harmless: the comparison only fires when the value actually changed.
+	// allOf / anyOf / oneOf branches constrain the same value at the same path, so they add no path segment.
 	for _, branches := range [][]spec.Schema{s.AllOf, s.AnyOf, s.OneOf} {
 		for i := range branches {
 			walkImmutable(&branches[i], oldValue, newValue, path, errs)
@@ -74,9 +66,7 @@ func walkImmutable(s *spec.Schema, oldValue, newValue any, path []string, errs *
 		}
 
 		// additionalProperties entries sit under keys the schema does not name, so only
-		// keys present on both sides can be compared. A newly added entry has no
-		// previous counterpart to be frozen against, and a removed one is a deleted
-		// entry rather than an edited field.
+		// keys present on both sides can be compared.
 		if ap := s.AdditionalProperties; ap != nil && ap.Schema != nil {
 			for key := range oldMap {
 				if _, ok := newMap[key]; !ok {
@@ -89,8 +79,6 @@ func walkImmutable(s *spec.Schema, oldValue, newValue any, path []string, errs *
 	}
 
 	// Only list validation is supported, the same subset defaults.Apply handles.
-	// Elements are paired by index, so a grown or shrunk array compares the overlap
-	// and nothing else.
 	if s.Items != nil && s.Items.Schema != nil {
 		oldList, _ := oldValue.([]any)
 		newList, _ := newValue.([]any)
