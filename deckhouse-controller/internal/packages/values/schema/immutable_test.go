@@ -143,6 +143,62 @@ properties:
     type: integer
 `
 
+	const patterned = `
+type: object
+properties:
+  instances:
+    type: object
+    patternProperties:
+      "^[a-z]+$":
+        type: object
+        properties:
+          storageClass:
+            type: string
+            x-deckhouse-immutable: true
+`
+
+	const tupleItems = `
+type: object
+properties:
+  pair:
+    type: array
+    items:
+      - type: object
+        properties:
+          storageClass:
+            type: string
+            x-deckhouse-immutable: true
+      - type: object
+        properties:
+          storageClass:
+            type: string
+`
+
+	const recursive = `
+type: object
+definitions:
+  node:
+    type: object
+    properties:
+      storageClass:
+        type: string
+        x-deckhouse-immutable: true
+      child:
+        $ref: '#/definitions/node'
+properties:
+  root:
+    $ref: '#/definitions/node'
+`
+
+	const negated = `
+type: object
+not:
+  properties:
+    storageClass:
+      type: string
+      x-deckhouse-immutable: true
+`
+
 	tests := []struct {
 		name       string
 		schema     string
@@ -271,6 +327,77 @@ properties:
 		{
 			name:      "mark declared in an allOf branch is honoured",
 			schema:    composed,
+			oldValues: map[string]any{"storageClass": "fast"},
+			newValues: map[string]any{"storageClass": "slow"},
+			wantPaths: []string{"storageClass"},
+		},
+		{
+			name:   "map entry renamed by the update is compared",
+			schema: mapEntries,
+			oldValues: map[string]any{"instances": map[string]any{
+				"a": map[string]any{"storageClass": "fast"},
+			}},
+			newValues: map[string]any{"instances": map[string]any{
+				"b": map[string]any{"storageClass": "slow"},
+			}},
+			wantPaths: []string{"instances.a.storageClass"},
+		},
+		{
+			name:   "map entry dropped by the update is compared",
+			schema: mapEntries,
+			oldValues: map[string]any{"instances": map[string]any{
+				"a": map[string]any{"storageClass": "fast"},
+			}},
+			newValues: map[string]any{"instances": map[string]any{}},
+			wantPaths: []string{"instances.a.storageClass"},
+		},
+		{
+			name:      "list truncated by the update is compared",
+			schema:    listItems,
+			oldValues: map[string]any{"nodes": []any{map[string]any{"storageClass": "fast"}}},
+			newValues: map[string]any{"nodes": []any{}},
+			wantPaths: []string{"nodes[0].storageClass"},
+		},
+		{
+			name:   "marked field under patternProperties changed",
+			schema: patterned,
+			oldValues: map[string]any{"instances": map[string]any{
+				"a": map[string]any{"storageClass": "fast"},
+			}},
+			newValues: map[string]any{"instances": map[string]any{
+				"a": map[string]any{"storageClass": "slow"},
+			}},
+			wantPaths: []string{"instances.a.storageClass"},
+		},
+		{
+			name:   "marked field in a tuple position changed",
+			schema: tupleItems,
+			oldValues: map[string]any{"pair": []any{
+				map[string]any{"storageClass": "fast"},
+				map[string]any{"storageClass": "fast"},
+			}},
+			newValues: map[string]any{"pair": []any{
+				map[string]any{"storageClass": "slow"},
+				map[string]any{"storageClass": "slow"},
+			}},
+			wantPaths: []string{"pair[0].storageClass"},
+		},
+		{
+			name:   "marked field behind a recursive $ref changed",
+			schema: recursive,
+			oldValues: map[string]any{"root": map[string]any{
+				"storageClass": "fast",
+				"child":        map[string]any{"storageClass": "fast"},
+			}},
+			newValues: map[string]any{"root": map[string]any{
+				"storageClass": "fast",
+				"child":        map[string]any{"storageClass": "slow"},
+			}},
+			wantPaths: []string{"root.child.storageClass"},
+		},
+		{
+			name:      "mark declared inside not is honoured",
+			schema:    negated,
 			oldValues: map[string]any{"storageClass": "fast"},
 			newValues: map[string]any{"storageClass": "slow"},
 			wantPaths: []string{"storageClass"},
