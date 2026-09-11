@@ -149,6 +149,16 @@ properties:
                 - required: ["value"]
             evictLocalStoragePods:
               type: boolean
+            protectedStorageClasses:
+              type: array
+              description: A list of StorageClass names whose Pods must not be evicted.
+              items:
+                type: string
+                description: A StorageClass name.
+                minLength: 1
+                maxLength: 253
+              minItems: 1
+              uniqueItems: true
             strategies:
               type: object
               default: {}

@@ -42,7 +42,9 @@ type DeschedulerSpec struct {
 	NamespaceLabelSelector *metav1.LabelSelector   `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`
 	PriorityClassThreshold *PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
 	EvictLocalStoragePods  *EvictLocalStoragePods  `json:"evictLocalStoragePods,omitempty" yaml:"evictLocalStoragePods,omitempty"`
-	Strategies             Strategies              `json:"strategies" yaml:"strategies"`
+	// ProtectedStorageClasses lists StorageClass names whose Pods must not be evicted.
+	ProtectedStorageClasses []string   `json:"protectedStorageClasses,omitempty" yaml:"protectedStorageClasses,omitempty"`
+	Strategies              Strategies `json:"strategies" yaml:"strategies"`
 }
 
 type PriorityClassThreshold struct {
