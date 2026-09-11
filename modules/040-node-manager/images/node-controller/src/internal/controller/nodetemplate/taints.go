@@ -17,6 +17,8 @@ limitations under the License.
 package nodetemplate
 
 import (
+	"cmp"
+	"maps"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +26,8 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
+// fixMasterTaints removes the legacy node-role.kubernetes.io/master taint from a master node when the
+// NodeGroup template does not declare it and the node carries no control-plane taint yet.
 func fixMasterTaints(nodeTaints, ngTaints []corev1.Taint) []corev1.Taint {
 	if len(nodeTaints) == 0 {
 		return nodeTaints
@@ -55,6 +59,8 @@ func fixMasterTaints(nodeTaints, ngTaints []corev1.Taint) []corev1.Taint {
 	return nodeTaints
 }
 
+// fixCloudNodeTaints clears the uninitialized taint on a CloudEphemeral node once its taints already
+// include the template taints, which the machine controller sets. Until then the node is left alone.
 func fixCloudNodeTaints(nodeObj *corev1.Node, nodeGroup *v1.NodeGroup) {
 	newTaints := mergeTaints(nodeObj.Spec.Taints, getTemplateTaints(nodeGroup))
 	if !taintSliceEqual(newTaints, nodeObj.Spec.Taints) {
@@ -141,59 +147,31 @@ func ownedTaints(lastApplied *v1.NodeTemplate, nodeGroup *v1.NodeGroup) []corev1
 	if lastApplied != nil {
 		return lastApplied.Taints
 	}
-	if nodeGroup.Name == "master" {
+	if nodeGroup.Name == masterNodeGroupName {
 		return []corev1.Taint{{Key: controlPlaneTaintKey, Effect: corev1.TaintEffectNoSchedule}}
 	}
 	return nil
 }
 
-// applyTemplateTaints merges template taints into the node taints. An owned taint that left the
-// template is dropped. Every other taint on the node (CCM, CSI, bashible, set by hand) is kept as is.
+// applyTemplateTaints merges template taints into the node taints, one taint per key. An owned taint
+// that left the template is dropped. Every other taint on the node (CCM, CSI, bashible, set by hand)
+// is kept as is.
 func applyTemplateTaints(actual, template, owned []corev1.Taint) ([]corev1.Taint, bool) {
 	changed := false
-
-	// Build set of template keys
-	templateKeys := make(map[string]struct{}, len(template))
-	for _, t := range template {
-		templateKeys[t.Key] = struct{}{}
-	}
-
-	staleOwnedKeys := make(map[string]struct{})
-	for _, t := range owned {
-		if _, found := templateKeys[t.Key]; !found {
-			staleOwnedKeys[t.Key] = struct{}{}
-		}
-	}
-
-	// Build result map keyed by taint.Key (one taint per key, like original)
-	newTaints := make(map[string]corev1.Taint, len(actual)+len(template))
+	byKey := make(map[string]corev1.Taint, len(actual)+len(template))
 	for _, t := range actual {
-		if _, stale := staleOwnedKeys[t.Key]; stale {
+		if taintSliceHasKey(owned, t.Key) && !taintSliceHasKey(template, t.Key) {
 			changed = true
 			continue
 		}
-		newTaints[t.Key] = t
+		byKey[t.Key] = t
 	}
-
 	for _, t := range template {
-		oldTaint, ok := newTaints[t.Key]
-		if !ok || taintToString(oldTaint) != taintToString(t) {
+		if old, ok := byKey[t.Key]; !ok || taintToString(old) != taintToString(t) {
 			changed = true
 		}
-		newTaints[t.Key] = t
+		byKey[t.Key] = t
 	}
-
-	// Sort by key and return as slice
-	keys := make([]string, 0, len(newTaints))
-	for k := range newTaints {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-
-	result := make([]corev1.Taint, 0, len(newTaints))
-	for _, k := range keys {
-		result = append(result, newTaints[k])
-	}
-
-	return result, changed
+	sorted := slices.SortedFunc(maps.Values(byKey), func(a, b corev1.Taint) int { return cmp.Compare(a.Key, b.Key) })
+	return sorted, changed
 }

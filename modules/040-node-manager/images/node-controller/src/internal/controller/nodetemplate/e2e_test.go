@@ -29,11 +29,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-const (
-	scaleDownDisabledAnnotation = "cluster-autoscaler.kubernetes.io/scale-down-disabled"
-	nodeTypeLabel               = "node.deckhouse.io/type"
-)
-
 // createNodeGroup creates a NodeGroup with the given node type and optional template. For
 // CloudEphemeral groups the CRD's oneOf schema requires spec.cloudInstances, so a minimal valid
 // block is added in that case.
