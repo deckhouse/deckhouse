@@ -1,0 +1,17 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://deckhouse.io/vex/cloud-provider-vsphere/vsphere-csi-plugin",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": { "name": "CVE-2025-13281" },
+      "products": [ { "@id": "pkg:golang/k8s.io/kubernetes" } ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Затрагивает только сборку для Kubernetes 1.32 (csi-vsphere v3.6.4), где k8s.io/kubernetes остаётся на версии v1.34.0. Исправленная версия v1.34.2 не подтягивается: vsphere-csi-driver v3.6.x фиксирует весь набор staging-модулей k8s.io/* на 0.34.0 через replace, и go mod tidy возвращает v1.34.0 обратно. Обновление потребовало бы поднять всю линию k8s.io/*, что несовместимо с этой версией CSI-драйвера. Пакет k8s.io/kubernetes используется здесь только для импорта типов, уязвимый код не входит в исполняемый путь драйвера. В сборках для Kubernetes 1.33-1.36 (csi-vsphere v3.7.3) уязвимость отсутствует.",
+      "timestamp": "2026-09-04T14:12:53.000000Z"
+    }
+  ],
+  "timestamp": "2026-09-04T14:12:53.000000Z"
+}
