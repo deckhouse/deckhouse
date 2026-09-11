@@ -113,6 +113,18 @@ Svace `DEREF_OF_NULL` finding in this build (see `SvaceBuildOptions` in
 Test `~/src/kind/d8-1.20-tests/018-icmp-nil-type/` (unit test; its negative
 control runs the same test against a pristine v1.20.1 worktree, where it panics)
 
+## 009-wireguard-port.patch
+
+Move the WireGuard listen port from upstream's `51871` to `4287`, inside the
+range Deckhouse reserves for platform components.
+
+One constant in 1.20: the datapath reads it through `CONFIG(wg_port)`, and the
+iptables rules and the device derive from it too, so the 1.17 patch's
+`bpf/node_config.h` hunk is gone. The `.github/actions/bpftrace` hunk is dropped
+as CI-only.
+
+Test `~/src/kind/d8-1.20-tests/009-wireguard-port/`
+
 ## Dropped
 
 Patches from the 1.17 stack that are not carried on 1.20, with the evidence:
