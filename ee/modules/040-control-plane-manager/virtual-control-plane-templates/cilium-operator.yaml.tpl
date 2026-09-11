@@ -385,9 +385,8 @@ spec:
               matchLabels:
                 io.cilium/app: operator
             topologyKey: kubernetes.io/hostname
-      # The upstream cilium chart tolerates not-ready/uninitialized/agent-not-ready because there the
-      # operator bootstraps its own cluster's CNI. Here it runs in the parent cluster and manages the
-      # tenant's agents: a parent node without CNI runs no pods at all, this one included.
+      # Upstream cilium tolerates not-ready/uninitialized because there the operator bootstraps its
+      # own cluster's CNI. This one runs in the parent, where no CNI means no pods at all.
       nodeSelector: ${VCP_NODE_SELECTOR}
       tolerations: ${VCP_TOLERATIONS}
 

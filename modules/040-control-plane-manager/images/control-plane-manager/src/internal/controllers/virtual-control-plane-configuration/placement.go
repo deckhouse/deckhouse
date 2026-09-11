@@ -27,10 +27,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Manifests are rendered by a plain strings.Replacer, so a placement value has to survive
-// substitution at an arbitrary indentation. YAML flow style is single-line and therefore
-// indentation-neutral; block style is not. JSON is valid YAML flow, and encoding/json sorts map
-// keys, which keeps the rendered config Secret byte-stable across reconciles.
+// Manifests go through a plain strings.Replacer, so a placement value must survive substitution at
+// any indentation: YAML flow is single-line, and encoding/json sorts map keys for a stable render.
 
 func renderNodeSelector(vcp *controlplanev1alpha1.VirtualControlPlane) (string, error) {
 	if len(vcp.Spec.NodeSelector) == 0 {
@@ -54,7 +52,7 @@ func renderTolerations(vcp *controlplanev1alpha1.VirtualControlPlane) (string, e
 	return string(raw), nil
 }
 
-// applyVCPPlacement is the Go-side equivalent for Deployments built from embedded YAML instead of
+// applyVCPPlacement is the Go-side path for Deployments built from embedded YAML rather than from
 // the config Secret templates.
 func applyVCPPlacement(spec *corev1.PodSpec, vcp *controlplanev1alpha1.VirtualControlPlane) {
 	spec.NodeSelector = maps.Clone(vcp.Spec.NodeSelector)

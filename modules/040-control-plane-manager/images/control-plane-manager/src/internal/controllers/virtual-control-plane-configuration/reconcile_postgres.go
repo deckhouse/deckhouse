@@ -94,9 +94,8 @@ func postgres() *unstructured.Unstructured {
 	return obj
 }
 
-// datastoreManifestKeyFor picks the datastore shape. Two templates rather than one parameterised
-// one because spec.cluster has to appear and disappear as a whole - the operator's CEL forbids it
-// on a Standalone - and the Replacer cannot do conditional blocks.
+// datastoreManifestKeyFor picks the datastore template. Two of them, because the operator's CEL
+// forbids spec.cluster on a Standalone and the Replacer has no conditionals.
 func datastoreManifestKeyFor(vcp *controlplanev1alpha1.VirtualControlPlane) string {
 	if vcp.Spec.HighAvailability {
 		return datastoreHAManifestKey
@@ -120,11 +119,9 @@ func buildTargetPostgres(configSecret *corev1.Secret, vcp *controlplanev1alpha1.
 	return obj, nil
 }
 
-// syncPostgresShape brings only the fields this module owns to the desired state.
-//
-// A whole-spec comparison would fight the operator's mutating webhook: it generates
-// spec.users[].password for users with storeCredsToSecret, so the live spec always carries a field
-// the rendered manifest does not. Every reconcile would patch it away and trigger a fresh password.
+// syncPostgresShape reconciles spec.type and spec.cluster, and nothing else: the operator's webhook
+// generates spec.users[].password, so comparing the whole spec would patch it away every reconcile
+// and rotate the datastore credentials.
 func syncPostgresShape(current, target *unstructured.Unstructured) (bool, error) {
 	targetType, _, err := unstructured.NestedString(target.Object, "spec", "type")
 	if err != nil {
@@ -153,8 +150,7 @@ func syncPostgresShape(current, target *unstructured.Unstructured) (bool, error)
 	if err := unstructured.SetNestedField(current.Object, targetType, "spec", "type"); err != nil {
 		return false, fmt.Errorf("set spec.type: %w", err)
 	}
-	// The operator's CEL forbids spec.cluster on a Standalone, so going back removes the block
-	// rather than blanking it.
+	// The operator's CEL forbids spec.cluster on a Standalone, so the block is removed, not blanked.
 	if targetHasCluster {
 		if err := unstructured.SetNestedMap(current.Object, targetCluster, "spec", "cluster"); err != nil {
 			return false, fmt.Errorf("set spec.cluster: %w", err)

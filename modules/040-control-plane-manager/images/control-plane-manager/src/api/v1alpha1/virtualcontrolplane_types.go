@@ -126,26 +126,22 @@ type VirtualControlPlaneNetworking struct {
 type VirtualControlPlaneSpec struct {
 	// KubernetesVersion is the desired Kubernetes version for the tenant control plane.
 	//
-	// The enum must stay in sync with the EE ClusterConfiguration/ModuleConfig pins and with
-	// candi/version_map.yml; TestKubernetesVersionEnumValidation guards that. There is no
-	// "Default" here: a VCP has no version resolver, resolveImages needs an exact key in
-	// images.versioned.
+	// Only versions this release ships control plane images for. No "Default": there is no version
+	// resolver here, resolveImages needs an exact key in images.versioned. The enum tracks the
+	// ClusterConfiguration pins; TestKubernetesVersionEnumValidation asserts that.
 	// +kubebuilder:validation:Enum="1.32";"1.33";"1.34";"1.35";"1.36"
 	KubernetesVersion string `json:"kubernetesVersion"`
 
-	// HighAvailability makes the tenant control plane survive the loss of one management-cluster
-	// node: two ControlPlaneNodes on separate nodes, a PodDisruptionBudget per component, and a
-	// two-instance Postgres with asynchronous replication.
+	// HighAvailability survives the loss of one management-cluster node: two ControlPlaneNodes on
+	// separate nodes, a PodDisruptionBudget per component, a three-instance synchronous Postgres.
 	//
-	// It costs roughly twice the resources. Asynchronous replication means a primary failover can
-	// lose the last transactions (RPO > 0); synchronous was rejected because with two instances
-	// losing the replica would block writes entirely.
+	// Costs a network round trip per commit. A failover can still lose the last transactions: the WAL
+	// is guaranteed to reach a standby, not to be flushed.
 	//
-	// Switching this on a running tenant is allowed but interrupts service: the component
-	// StatefulSets are recreated and the datastore is resized.
+	// Warning: switching it on a running tenant interrupts service - StatefulSets are recreated and
+	// the datastore is resized.
 	//
-	// Ignored for the datastore when datastoreRef is set: the availability of a shared datastore is
-	// not a property of one VirtualControlPlane. The ControlPlaneNode count still follows it.
+	// Ignored for the datastore when DatastoreRef is set. The ControlPlaneNode count still follows it.
 	// +kubebuilder:default=false
 	// +optional
 	HighAvailability bool `json:"highAvailability,omitempty"`
@@ -176,21 +172,18 @@ type VirtualControlPlaneSpec struct {
 	// +optional
 	Expose *VirtualControlPlaneExpose `json:"expose,omitempty"`
 
-	// NodeSelector constrains every VirtualControlPlane pod that runs in the management cluster
-	// (the three control plane components, cilium-operator, bashible-apiserver and the tenant's
-	// deckhouse) to a subset of its nodes. Tenant-side pods are unaffected.
+	// NodeSelector for the VirtualControlPlane pods in the management cluster: the control plane
+	// components, cilium-operator, bashible-apiserver, the tenant's deckhouse. Tenant-side pods are
+	// not affected.
 	//
-	// Warning: changing this rewrites the rendered component manifests, which changes their config
-	// checksum and makes the module recreate the component StatefulSets. The tenant control plane
-	// restarts.
+	// Warning: changing it recreates the component StatefulSets, restarting the tenant control plane.
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
-	// Tolerations are applied to the same pods as NodeSelector. A dedicated node pool is normally
-	// both labelled and tainted, so without matching tolerations a nodeSelector pointing at it
-	// leaves every pod Pending.
+	// Tolerations for the same pods as NodeSelector. A dedicated node pool is usually tainted as well
+	// as labelled, so a NodeSelector without them leaves every pod Pending.
 	//
-	// Warning: changing this restarts the tenant control plane, same as NodeSelector.
+	// Warning: changing it restarts the tenant control plane, same as NodeSelector.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }

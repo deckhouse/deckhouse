@@ -705,6 +705,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/datastore-ha.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/datastore-ha.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/datastore.yaml.tpl
   to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/datastore.yaml.tpl
   stageDependencies:
@@ -727,6 +732,16 @@
         - '**/*'
 - add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/kube-scheduler.yaml.tpl
   to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/kube-scheduler.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/monitoring.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/monitoring.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/pdb.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/pdb.yaml.tpl
   stageDependencies:
     install:
         - '**/*'

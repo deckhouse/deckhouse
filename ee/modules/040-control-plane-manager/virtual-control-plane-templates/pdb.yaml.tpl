@@ -1,4 +1,5 @@
-# Applied only in HA mode: over a single replica maxUnavailable 1 is meaningless and minAvailable would block every node drain.
+# Rendered for HA only. A PodDisruptionBudget over a single replica blocks node drains instead of
+# protecting anything.
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:

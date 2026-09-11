@@ -308,9 +308,8 @@ func writeSections(settings writeSettings) {
 			return
 		}
 
-		// Virtual Control Plane is EE+FE only, nothing of it may reach CSE. The hooks are listed here
-		// too: hooksPathRegex below only filters the modules-with-exclude include, so without this
-		// they would still land in modules-tests.
+		// Virtual Control Plane is EE+FE only. Hooks are listed too: hooksPathRegex below filters
+		// only the modules-with-exclude include, so otherwise they would land in modules-tests.
 		if settings.Edition == "CSE" &&
 			(strings.Contains(file, "/ee/modules/040-control-plane-manager/crds") ||
 				strings.Contains(file, "/ee/modules/040-control-plane-manager/hooks") ||

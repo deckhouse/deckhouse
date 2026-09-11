@@ -33,13 +33,8 @@ import (
 const (
 	monitoringManifestKey = "monitoring.yaml.tpl"
 
-	// monitorWatcherLabelKey gates whether Deckhouse Prometheus looks at monitors in a namespace at
-	// all (podMonitorNamespaceSelector). Without it they are ignored silently - no error, no event.
-	//
-	// Setting it is the user's job, documented alongside every other PodMonitor in Deckhouse; modules
-	// only ever put it on namespaces their own chart creates. This one belongs to whoever created the
-	// VirtualControlPlane and may well be reconciled by Argo CD or Flux, which would strip the label
-	// straight back and leave the application permanently OutOfSync. So: observe and report, never patch.
+	// Gates whether Prometheus looks at monitors in a namespace at all; without it they are ignored
+	// silently. The namespace is the user's and often GitOps-managed, so it is read, never written.
 	monitorWatcherLabelKey = "prometheus.deckhouse.io/monitor-watcher-enabled"
 )
 
@@ -60,8 +55,8 @@ func (r *reconciler) reconcileMonitoring(
 		return reconcile.Result{}, err
 	}
 	if !available {
-		// The controller deliberately does not Own() these kinds: a watch on an absent CRD fails at
-		// manager start, and operator-prometheus is optional. The requeue interval picks them up.
+		// These kinds are not Own()ed: a watch on an absent CRD fails at manager start, and
+		// operator-prometheus is optional. The requeue interval picks them up once installed.
 		log.FromContext(ctx).V(1).Info("monitoring CRDs are absent, skipping VCP monitors")
 		return reconcile.Result{}, nil
 	}
@@ -89,11 +84,9 @@ func (r *reconciler) monitorKindsAvailable() (bool, error) {
 	return true, nil
 }
 
-// warnOnMissingMonitorWatcherLabel turns a silent misconfiguration into a log line naming the fix:
-// without the label Prometheus ignores the monitors and nothing anywhere reports why.
+// warnOnMissingMonitorWatcherLabel turns a silent misconfiguration into a log line naming the fix.
 func (r *reconciler) warnOnMissingMonitorWatcherLabel(ctx context.Context, namespace string) error {
-	// Namespace is on the client's cache DisableFor list, so this is a live read: one extra GET per
-	// VCP per requeue interval, and no informer on a cluster-scoped kind.
+	// Namespace is on the cache DisableFor list: a live GET, no informer on a cluster-scoped kind.
 	ns := &corev1.Namespace{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
 		return fmt.Errorf("get namespace %s: %w", namespace, err)

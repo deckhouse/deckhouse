@@ -90,26 +90,24 @@ spec:
                   High availability mode for the tenant control plane.
 
                   When `true`: two ControlPlaneNodes on different management-cluster nodes,
-                  a PodDisruptionBudget per component, and a Postgres of two instances with
-                  asynchronous replication.
+                  a PodDisruptionBudget per component, and a Postgres of three instances with
+                  synchronous replication.
 
-                  Costs roughly twice the resources. Asynchronous replication means the last
-                  transactions can be lost on a primary failover. Synchronous replication is not
-                  used: with two instances the loss of the replica would block writes entirely.
+                  Costs a network round trip per commit. A failover can still lose the last
+                  transactions: the WAL is guaranteed to reach a standby, not to be flushed to disk.
 
                   Warning! Switching this on a running tenant interrupts service: the component
                   StatefulSets are recreated and the datastore is resized.
 
-                  Has no effect on the datastore when `datastoreRef` is set: the availability of a
-                  shared datastore is not a property of a single VirtualControlPlane. The
-                  ControlPlaneNode count still follows this parameter.
+                  Ignored for the datastore when `datastoreRef` is set. The ControlPlaneNode count
+                  still follows this parameter.
                 type: boolean
               kubernetesVersion:
                 description: |-
                   Desired Kubernetes version for the tenant control plane.
 
                   Only versions the current DKP release ships control plane images for are accepted.
-                  `Default` and `Automatic` are not supported: a virtual control plane has no
+                  `Default` and `Automatic` are not among them: a virtual control plane has no
                   mechanism for picking a version on its own.
                 enum:
                 - "1.32"
@@ -213,15 +211,15 @@ spec:
                 additionalProperties:
                   type: string
                 description: |-
-                  Node labels that constrain where the virtual control plane pods run in the management
-                  cluster: the three control plane components, `cilium-operator`, `bashible-apiserver`
-                  and the tenant's `deckhouse`. Pods inside the tenant cluster are not affected.
+                  Node labels for the virtual control plane pods in the management cluster: the control
+                  plane components, `cilium-operator`, `bashible-apiserver`, the tenant's `deckhouse`.
+                  Pods inside the tenant cluster are not affected.
 
-                  Warning! Changing this parameter recreates the component StatefulSets, which means
-                  the tenant control plane restarts.
-
-                  A dedicated node pool is almost always both labelled and tainted, so a `nodeSelector`
+                  A dedicated node pool is usually tainted as well as labelled, so a `nodeSelector`
                   without matching `tolerations` leaves every pod Pending.
+
+                  Warning! Changing this parameter recreates the component StatefulSets, restarting
+                  the tenant control plane.
                 type: object
               tolerations:
                 description: |-

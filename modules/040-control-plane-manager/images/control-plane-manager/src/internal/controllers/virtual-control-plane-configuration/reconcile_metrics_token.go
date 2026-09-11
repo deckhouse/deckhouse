@@ -42,11 +42,8 @@ func metricsTokenSecretName(vcpName string) string {
 	return constants.VirtualResourceName(constants.VirtualMetricsTokenSecretName, vcpName)
 }
 
-// reconcileMetricsToken keeps a scrape token for the tenant control plane in the parent namespace.
-//
-// The Secret is deliberately Opaque rather than kubernetes.io/service-account-token:
-// prometheus-operator runs with --secret-field-selector excluding that type, so a classic SA Secret
-// would be invisible to it and the scrape config would silently never be generated.
+// reconcileMetricsToken keeps a scrape token in the parent namespace. Opaque, not
+// kubernetes.io/service-account-token: prometheus-operator's --secret-field-selector excludes that.
 func (r *reconciler) reconcileMetricsToken(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) error {
 	name := metricsTokenSecretName(vcp.Name)
 

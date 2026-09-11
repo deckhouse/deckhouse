@@ -10,13 +10,11 @@ spec:
   postgresClassName: default
   type: Cluster
   cluster:
-    # Ignored, not Zonal/TransZonal: those constrain the PostgresClass zone list, while a
-    # two-instance datastore only needs to sit on two different nodes.
+    # Zonal and TransZonal constrain the PostgresClass zone list; node-level spread is enough here.
     topology: Ignored
-    # Availability, not Consistency: with two instances Consistency sets a synchronous standby, and
-    # losing it blocks writes - the opposite of what HA is for. kine writes on every tenant object
-    # change, so a synchronous round-trip would also sit on the hot path.
-    replication: Availability
+    # Gives three instances. The synchronous standby is ANY 1 of them, so a second standby keeps
+    # writes flowing while one is down; the cost is a round trip on every commit.
+    replication: ConsistencyAndAvailability
   users:
   - name: kine
     role: rw

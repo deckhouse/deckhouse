@@ -31,8 +31,8 @@ import (
 
 const pdbManifestKey = "pdb.yaml.tpl"
 
-// reconcilePDB applies the per-component PodDisruptionBudgets in HA mode and removes them when HA is
-// switched off - a stale maxUnavailable 1 PDB over a single replica blocks every node drain.
+// reconcilePDB keeps the per-component PodDisruptionBudgets in step with HA: a PDB over a single
+// replica blocks node drains instead of protecting anything.
 func (r *reconciler) reconcilePDB(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
@@ -42,6 +42,7 @@ func (r *reconciler) reconcilePDB(
 		return reconcile.Result{}, r.applyParentManifests(ctx, vcp, configSecret, pdbManifestKey)
 	}
 
+	// One collection delete by label for a single request per reconcile
 	err := r.client.DeleteAllOf(ctx, &policyv1.PodDisruptionBudget{},
 		client.InNamespace(vcp.Namespace),
 		client.MatchingLabels{constants.VirtualControlPlaneScopeLabelKey: vcp.Name},

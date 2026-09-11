@@ -1,7 +1,5 @@
 # Applied only when the PodMonitor/ServiceMonitor CRDs exist in the parent cluster.
-# insecureSkipVerify: kube-controller-manager and kube-scheduler generate a self-signed serving
-# certificate at start (no --tls-cert-file), the same reason the module's own podmonitor.yaml skips
-# verification.
+# insecureSkipVerify: kcm and kube-scheduler serve metrics under a self-signed cert made at start.
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -100,9 +98,8 @@ spec:
       targetLabel: job
       replacement: vcp-kube-scheduler
 ---
-# kine and konnectivity-server are sidecars of the apiserver pod: same selector, different ports,
-# plain HTTP and no token. kine latency is the only observability of the datastore - the apiserver
-# probes deliberately exclude the etcd check, so a degrading datastore is otherwise invisible.
+# kine and konnectivity-server are apiserver sidecars: same selector, other ports, plain HTTP.
+# kine latency is the only datastore signal - the apiserver probes exclude the etcd check.
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:

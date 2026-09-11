@@ -31,9 +31,8 @@ spec:
         fsGroup: 64535
         seccompProfile:
           type: RuntimeDefault
-      # Each ControlPlaneNode owns a separate single-replica StatefulSet, so spreading replicas is a
-      # cross-StatefulSet concern and has to key off the VCP-wide label. Unconditional: outside HA
-      # only one pod matches, so the rule is a no-op.
+      # Replicas live in separate single-replica StatefulSets, one per ControlPlaneNode, so spreading
+      # them keys off the VCP-wide label. With a single ControlPlaneNode only one pod matches.
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
