@@ -72,8 +72,8 @@ Plan for the release that performs the migration: it processes every existing bi
 
 | Bindings in the release | What to expect |
 |---|---|
-| Up to 5000 | The release runs longer than usual and completes on its own. |
-| More than 5000 | The release can exceed the 20-minute module timeout and fail. |
+| Up to 5000 | The release runs longer than usual and completes on its own |
+| More than 5000 | The release can exceed the 20-minute module timeout and fail |
 
 Count the bindings before you update:
 
@@ -228,12 +228,12 @@ The module ships the following alerts for both components:
 
 | Alert | Fires when |
 |---|---|
-| `D8UserAuthzWebhookTargetDown` | Prometheus has not scraped at least one webhook instance for 5 minutes. |
-| `D8UserAuthzWebhookRulesQuarantined` | A rule has not compiled for 10 minutes. |
-| `D8UserAuthzWebhookRulesWatchErrors` | The rules informer has been failing to watch the rules for 10 minutes. |
-| `D8UserAuthzWebhookDirectoryDiverged` | Instances have been using different sets of rules for 10 minutes, so the same request is answered differently depending on the master node that receives it. |
-| `D8UserAuthzRulePropagationLag` | One instance has not updated its rules for an hour while another one has. |
-| `D8UserAuthzPermissionBrowserUnavailable` | Permission Browser has unavailable replicas. |
+| `D8UserAuthzWebhookTargetDown` | Prometheus has not scraped at least one webhook instance for 5 minutes |
+| `D8UserAuthzWebhookRulesQuarantined` | A rule has not compiled for 10 minutes |
+| `D8UserAuthzWebhookRulesWatchErrors` | The rules informer has been failing to watch the rules for 10 minutes |
+| `D8UserAuthzWebhookDirectoryDiverged` | Instances have been using different sets of rules for 10 minutes, so the same request is answered differently depending on the master node that receives it |
+| `D8UserAuthzRulePropagationLag` | One instance has not updated its rules for an hour while another one has |
+| `D8UserAuthzPermissionBrowserUnavailable` | Permission Browser has unavailable replicas |
 
 ## Why does a change to a ClusterAuthorizationRule take up to 30 seconds to take effect?
 
@@ -263,8 +263,8 @@ Two metrics report the situation:
 
 | Metric | Description |
 |---|---|
-| `d8_user_authz_rule_needs_multitenancy{name,options}` | One series per affected rule, up to 50, with the options that will not take effect. |
-| `d8_user_authz_rules_needing_multitenancy` | Total number of affected rules, including those past the first 50. |
+| `d8_user_authz_rule_needs_multitenancy{name,options}` | One series per affected rule, up to 50, with the options that will not take effect |
+| `d8_user_authz_rules_needing_multitenancy` | Total number of affected rules, including those past the first 50 |
 
 The `D8UserAuthzRuleNeedsMultiTenancy` alert names an individual rule, and `D8UserAuthzRulesNeedMultiTenancy` fires when there are more affected rules than the first alert names. Both belong to the `D8UserAuthzMisconfigured` group.
 
