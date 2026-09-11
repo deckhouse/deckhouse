@@ -17,18 +17,10 @@ package checks
 import (
 	"context"
 	"fmt"
-	"strings"
-
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	cfgregistry "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
 
 type DhctlEditionCheck struct {
@@ -37,20 +29,6 @@ type DhctlEditionCheck struct {
 	BuildInfo  options.BuildInfo
 
 	descriptor imageDescriptorProvider
-}
-
-type imageDescriptorProvider interface {
-	ConfigFile(ref name.Reference, opts ...remote.Option) (*v1.ConfigFile, error)
-}
-
-type remoteDescriptorProvider struct{}
-
-func (remoteDescriptorProvider) ConfigFile(ref name.Reference, opts ...remote.Option) (*v1.ConfigFile, error) {
-	image, err := remote.Image(ref, opts...)
-	if err != nil {
-		return &v1.ConfigFile{}, err
-	}
-	return image.ConfigFile()
 }
 
 const DhctlEditionCheckName preflight.CheckName = "dhctl-edition"
@@ -72,7 +50,12 @@ func (c DhctlEditionCheck) Run(ctx context.Context) error {
 		return fmt.Errorf("metaConfig and installConfig are required")
 	}
 
-	imageConfig, err := c.deckhouseImageConfig(ctx)
+	imageConfig, err := deckhouseImageConfig(
+		ctx,
+		c.MetaConfig,
+		c.Installer,
+		c.descriptor,
+	)
 	if err != nil {
 		return fmt.Errorf("cannot fetch deckhouse image config: %w", err)
 	}
@@ -89,63 +72,17 @@ func (c DhctlEditionCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func (c DhctlEditionCheck) deckhouseImageConfig(ctx context.Context) (*v1.ConfigFile, error) {
-	registry := c.MetaConfig.Registry.Settings.RemoteData
-	image, err := c.Installer.GetRemoteImage(ctx, true)
-	if err != nil {
-		return nil, err
-	}
-
-	ref, err := c.parseReference(image, string(registry.Scheme))
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := registryutil.NewRegistryClient(ctx, string(registry.Scheme), registry.CA)
-	if err != nil {
-		return nil, err
-	}
-
-	creds := registryAuth(registry)
-
-	return c.provider().ConfigFile(
-		ref,
-		remote.WithContext(ctx),
-		remote.WithAuth(creds),
-		remote.WithTransport(client.Transport),
-	)
-}
-
-func (DhctlEditionCheck) parseReference(image, scheme string) (name.Reference, error) {
-	if strings.ToLower(scheme) == "http" {
-		return name.ParseReference(image, name.Insecure)
-	}
-	return name.ParseReference(image)
-}
-
-func registryAuth(registry cfgregistry.Data) authn.Authenticator {
-	if registry.Username != "" && registry.Password != "" {
-		return authn.FromConfig(authn.AuthConfig{
-			Username: registry.Username,
-			Password: registry.Password,
-		})
-	}
-	return authn.Anonymous
-}
-
-func (c DhctlEditionCheck) provider() imageDescriptorProvider {
-	if c.descriptor != nil {
-		return c.descriptor
-	}
-	return remoteDescriptorProvider{}
-}
-
-func DhctlEdition(meta *config.MetaConfig, cfg *config.DeckhouseInstaller, buildInfo options.BuildInfo) preflight.Check {
+func DhctlEdition(
+	meta *config.MetaConfig,
+	cfg *config.DeckhouseInstaller,
+	buildInfo options.BuildInfo,
+) preflight.Check {
 	check := DhctlEditionCheck{
 		MetaConfig: meta,
 		Installer:  cfg,
 		BuildInfo:  buildInfo,
 	}
+
 	preflightCheck := preflight.Check{
 		Name:        DhctlEditionCheckName,
 		Description: check.Description(),
@@ -153,8 +90,10 @@ func DhctlEdition(meta *config.MetaConfig, cfg *config.DeckhouseInstaller, build
 		Retry:       check.RetryPolicy(),
 		Run:         check.Run,
 	}
+
 	if buildInfo.AppVersion == "local" || buildInfo.AppEdition == "local" {
 		preflightCheck.Disable()
 	}
+
 	return preflightCheck
 }

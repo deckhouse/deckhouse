@@ -24,7 +24,6 @@ var generatedPreflightChecks = []string{
 	"public-domain-template",
 	"python-modules",
 	"registry-access-through-proxy",
-	"registry-auth",
 	"registry-credentials",
 	"resolve-localhost",
 	"static-cidr-intersection",
