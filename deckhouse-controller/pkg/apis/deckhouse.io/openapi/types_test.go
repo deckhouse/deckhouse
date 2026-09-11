@@ -183,6 +183,7 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 				Type:        StringOrArray{"integer"},
 				Default:     jsonPtr("1"),
 				XUIAdvanced: true,
+				XUIGroup:    "toggles",
 				XUIOrder:    int64Ptr(2),
 			},
 			"secretName": {
@@ -237,6 +238,9 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if rep.XUIOrder == nil || *rep.XUIOrder != 2 {
 		t.Errorf("x-deckhouse-ui-order mismatch")
+	}
+	if rep.XUIGroup != "toggles" {
+		t.Errorf("x-deckhouse-ui-group: got %q, want toggles", rep.XUIGroup)
 	}
 	if len(restored.XValidations) != 1 || restored.XValidations[0].Expression != "self.storageClass != ''" {
 		t.Errorf("x-deckhouse-validations: got %+v", restored.XValidations)
