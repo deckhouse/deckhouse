@@ -130,11 +130,13 @@ d8 k get vmbda attach-blank-disk
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                PHASE      VIRTUALMACHINE   AGE
 attach-blank-disk   Attached   linux-vm         3m7s
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Подключитесь к виртуальной машине и удостоверитесь, что диск подключён:
 
@@ -144,6 +146,7 @@ d8 v ssh cloud@linux-vm --command "lsblk"
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
 sda       8:0    0   10G  0 disk <--- статично подключенный диск linux-vm-root
@@ -154,6 +157,7 @@ sdb       8:16   0    1M  0 disk <--- cloudinit
 sdc       8:32   0 95.9M  0 disk <--- динамически подключенный диск blank-disk
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Для отключения диска от виртуальной машины удалите ранее созданный ресурс:
 
@@ -209,21 +213,25 @@ EOF
 
 После первой загрузки ВМ:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ lsscsi
 [0:0:0:1]  disk    QEMU     QEMU HARDDISK   /dev/sda
 [0:0:0:2]  disk    QEMU     QEMU HARDDISK   /dev/sdb
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 После перезагрузки ВМ:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ lsscsi
 [0:0:0:1]  disk    QEMU     QEMU HARDDISK   /dev/sdb
 [0:0:0:2]  disk    QEMU     QEMU HARDDISK   /dev/sda
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 SCSI-адреса (`0:0:0:1`, `0:0:0:2`) остаются неизменными, но имена устройств (`/dev/sda`, `/dev/sdb`) меняются местами.
 
@@ -249,6 +257,7 @@ SCSI-адреса (`0:0:0:1`, `0:0:0:2`) остаются неизменными
 
 Изначально ВМ имеет два интерфейса:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ ip link show
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536
@@ -256,9 +265,11 @@ $ ip link show
 3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 После добавления нового интерфейса в начало списка [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) и перезагрузки ВМ:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ ip link show
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536
@@ -267,6 +278,7 @@ $ ip link show
 4: eth2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # Старый eth1
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 MAC-адреса остаются неизменными, но имена интерфейсов (`eth0`, `eth1`) сдвигаются, что может привести к назначению IP-адресов не тем интерфейсам.
 

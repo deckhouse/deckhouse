@@ -77,11 +77,13 @@ d8 k get vdsnapshot
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   PHASE     CONSISTENT   AGE
 linux-vm-root-snapshot Ready     true         3m2s
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The `CONSISTENT` field with the `true` value means that the snapshot is consistent (`false`). The value is determined automatically from the snapshot creation conditions and can't be changed.
 
@@ -171,6 +173,8 @@ A virtual machine snapshot is the saved state of a virtual machine at a certain 
 {% alert level="warning" %}
 Detach all images ([VirtualImage](/modules/virtualization/cr.html#virtualimage)/ClusterVirtualImage) from a virtual machine before taking its snapshot. Disk images aren't saved along with the VM snapshot, and their absence in the cluster during recovery can leave the virtual machine unable to start, in the Pending state, waiting for the image to become available.
 {% endalert %}
+
+The following example shows how to create a virtual machine snapshot:
 
 {% tabs snap-vm-create %}
 
@@ -291,7 +295,7 @@ d8 k get vmop <VMOP_NAME> -o json | jq '.status.resources'
 ```
 
 > **Important:** Don't cancel a recovery operation from a snapshot, that is, don't delete the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource in the `InProgress` phase, because this can leave the virtual machine being recovered in an inconsistent state.
-
+>
 > When a VM is recovered from a snapshot, the disks related to it are also recovered from the corresponding snapshots, so the disk specification contains the `dataSource` parameter with a reference to the disk snapshot needed.
 
 {% endtab %}

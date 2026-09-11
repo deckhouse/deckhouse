@@ -128,7 +128,7 @@ The following examples cover each CPU type.
 
 The following example shows how to choose the processor types in a cluster with heterogeneous nodes.
 
-![VirtualMachineClass configuration example](/images/virtualization/vmclass-examples.png)
+![VirtualMachineClass configuration example](../../../images/virtualization/vmclass-examples.png)
 
 The example below uses a cluster of four nodes. Two nodes labeled `group=blue` are equipped with the "CPU X" processor with three instruction sets, and the other two labeled `group=green` have the newer "CPU Y" processor with four sets.
 

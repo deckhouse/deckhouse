@@ -73,7 +73,7 @@ spec:
     disktype: ssd
 ```
 
-![](/images/virtualization/placement-nodeselector.ru.png)
+![Схема выбора узлов по nodeSelector](../../images/virtualization/placement-nodeselector.ru.png)
 
 В этом примере в кластере три узла, два из них с быстрыми дисками (`disktype=ssd`) и один с медленными (`disktype=hdd`). Виртуальная машина будет размещена только на узлах, которые имеют метку `disktype` со значением `ssd`.
 
@@ -106,7 +106,7 @@ spec:
                   - ssd
 ```
 
-![](/images/virtualization/placement-node-affinity.ru.png)
+![Схема выбора узлов по nodeAffinity](../../images/virtualization/placement-node-affinity.ru.png)
 
 В этом примере в кластере три узла, два из них с быстрыми дисками (`disktype=ssd`) и один с медленными (`disktype=hdd`). Виртуальная машина будет размещена только на узлах, которые имеют метку `disktype` со значением `ssd`.
 
@@ -129,7 +129,7 @@ spec:
             topologyKey: "kubernetes.io/hostname"
 ```
 
-![](/images/virtualization/placement-vm-affinity.ru.png)
+![Схема размещения машины рядом с машиной, выбранной по лейблам](../../images/virtualization/placement-vm-affinity.ru.png)
 
 В этом примере виртуальная машина размещается только на узлах, где уже работает виртуальная машина с лейблом `server: database`. Правило мягкое (`preferred`), поэтому при отсутствии таких узлов машина запустится на любом подходящем.
 
@@ -166,7 +166,7 @@ spec:
           topologyKey: "kubernetes.io/hostname"
 ```
 
-![](/images/virtualization/placement-vm-antiaffinity.ru.png)
+![Схема размещения машины отдельно от машины, выбранной по лейблам](../../images/virtualization/placement-vm-antiaffinity.ru.png)
 
 В данном примере создаваемая виртуальная машина не будет размещена на одном узле с виртуальной машиной с меткой `server: database`.
 

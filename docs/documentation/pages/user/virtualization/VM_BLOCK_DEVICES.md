@@ -129,11 +129,13 @@ d8 k get vmbda attach-blank-disk
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                PHASE      VIRTUALMACHINE   AGE
 attach-blank-disk   Attached   linux-vm         3m7s
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Connect to the virtual machine and make sure the disk is attached:
 
@@ -143,6 +145,7 @@ d8 v ssh cloud@linux-vm --command "lsblk"
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
 sda       8:0    0   10G  0 disk <--- statically attached linux-vm-root disk
@@ -153,6 +156,7 @@ sdb       8:16   0    1M  0 disk <--- cloudinit
 sdc       8:32   0 95.9M  0 disk <--- dynamically attached blank-disk disk
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To detach the disk from the virtual machine, delete the resource you created earlier:
 
@@ -208,21 +212,25 @@ If you use `/dev/sdX` in configuration files (for example, `/etc/fstab`) or in s
 
 After the first VM boot:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ lsscsi
 [0:0:0:1]  disk    QEMU     QEMU HARDDISK   /dev/sda
 [0:0:0:2]  disk    QEMU     QEMU HARDDISK   /dev/sdb
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 After a VM reboot:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ lsscsi
 [0:0:0:1]  disk    QEMU     QEMU HARDDISK   /dev/sdb
 [0:0:0:2]  disk    QEMU     QEMU HARDDISK   /dev/sda
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The SCSI addresses (`0:0:0:1`, `0:0:0:2`) stay the same, but the device names (`/dev/sda`, `/dev/sdb`) swap places.
 
@@ -248,6 +256,7 @@ An example for systems without predictable naming:
 
 Initially, the VM has two interfaces:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ ip link show
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536
@@ -255,9 +264,11 @@ $ ip link show
 3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 After adding a new interface at the beginning of the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) list and rebooting the VM:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ ip link show
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536
@@ -266,6 +277,7 @@ $ ip link show
 4: eth2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # Former eth1
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The MAC addresses stay the same, but the interface names (`eth0`, `eth1`) shift, which can lead to IP addresses being assigned to the wrong interfaces.
 

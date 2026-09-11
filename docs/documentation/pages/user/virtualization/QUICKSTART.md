@@ -86,6 +86,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%       7h50m
@@ -97,6 +98,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
    virtualmachine.virtualization.deckhouse.io/linux-vm  Running   7h30m    virtlab-pt-2   10.66.10.2   7h46m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Connect to the VM over the console:
 
@@ -106,6 +108,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    Successfully connected to linux-vm console. The escape sequence is ^]
 
@@ -115,6 +118,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
    cloud@linux-vm:~$
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    To exit the console, press `Ctrl+]`.
 

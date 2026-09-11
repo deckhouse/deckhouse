@@ -89,11 +89,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       PHASE     UPTIME   NODE           IPADDRESS     AGE
    linux-vm   Running   11m      virtlab-pt-2   10.66.10.12   11m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    IP-адрес машина получает автоматически из диапазона, заданного администратором в [настройках модуля](../../admin/configuration/network/vm-network.html).
 
@@ -142,7 +144,7 @@ lang: ru
 
 От создания до удаления виртуальная машина проходит через несколько фаз. Текущую показывает поле [`.status.phase`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-phase), а подробности о том, что с машиной происходит, содержит блок [`.status.conditions`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-conditions).
 
-![](/images/virtualization/vm-lifecycle.ru.png)
+![Схема смены фаз виртуальной машины](../../images/virtualization/vm-lifecycle.ru.png)
 
 Условия в блоке [`.status.conditions`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-conditions) отвечают на вопрос, почему машина находится в текущей фазе. Посмотреть те из них, где есть сообщение, можно так:
 

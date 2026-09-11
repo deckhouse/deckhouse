@@ -221,6 +221,7 @@ If the image file is on your computer, upload it directly. The module creates a 
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    {
      "external":"https://virtualization.example.com/upload/<SECRET_URL>",
@@ -228,6 +229,7 @@ If the image file is on your computer, upload it directly. The module creates a 
    }
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Use the `inCluster` address if you upload the file from one of the cluster nodes, and `external` in all other cases.
 

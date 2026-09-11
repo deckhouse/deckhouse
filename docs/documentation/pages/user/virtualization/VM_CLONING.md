@@ -17,6 +17,7 @@ Labels aren't copied from the source VM to the clone. This prevents Service traf
 ```bash
 d8 k label vm <VM_NAME> label-name=label-value
 ```
+
 {% endalert %}
 
 Cloning creates a copy of a VM, so the resources of the new VM have to have unique names. The `nameReplacements` and `customization` parameters are used for this:

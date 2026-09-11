@@ -28,7 +28,7 @@ An administrator can restrict the set of allowed `coreFraction` values in the si
 
 The guaranteed share is taken into account when selecting a node, so a machine doesn't start where the node can't provide the guarantees to all machines placed on it. The figure shows two machines with one core each, the first with `coreFraction: 20%` and the second with `coreFraction: 80%`.
 
-![](/images/virtualization/vm-corefraction.png)
+![Diagram of how coreFraction affects the guaranteed share of CPU time](../../images/virtualization/vm-corefraction.png)
 
 ### Automatic coreFraction (Auto)
 

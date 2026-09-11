@@ -77,4 +77,4 @@ Here's the recovery sequence, using a cluster of three nodes, `master`, `workerA
 1. The controller removes `workerA` from the cluster.
 1. The `linux-vm` VM starts on another suitable node, `workerB` in this example.
 
-![ColdStandBy mechanism diagram](/images/virtualization/coldstandby.png)
+![ColdStandBy mechanism diagram](../../../images/virtualization/coldstandby.png)

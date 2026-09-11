@@ -25,11 +25,13 @@ The devices that the administrator has made available to your project appear in 
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                            NODE     ADDRESS        ATTACHED   AGE
    pci-4f2c0b1e8d9a3c5b7e1f0a2d4c6b8e0f1a3c5d7e    node-1   0000:3b:00.0   False      10m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    If the list is empty, contact the administrator so that they assign a device to your namespace.
 

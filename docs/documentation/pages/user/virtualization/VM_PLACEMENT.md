@@ -72,7 +72,7 @@ spec:
     disktype: ssd
 ```
 
-![](/images/virtualization/placement-nodeselector.png)
+![Diagram of node selection with nodeSelector](../../images/virtualization/placement-nodeselector.png)
 
 In this example, the cluster has three nodes, two of them with fast disks (`disktype=ssd`) and one with slow ones (`disktype=hdd`). The virtual machine is placed only on nodes that have the `disktype` label with the `ssd` value.
 
@@ -105,7 +105,7 @@ spec:
                   - ssd
 ```
 
-![](/images/virtualization/placement-node-affinity.png)
+![Diagram of node selection with nodeAffinity](../../images/virtualization/placement-node-affinity.png)
 
 In this example, the cluster has three nodes, two of them with fast disks (`disktype=ssd`) and one with slow ones (`disktype=hdd`). The virtual machine is placed only on nodes that have the `disktype` label with the `ssd` value.
 
@@ -128,7 +128,7 @@ spec:
             topologyKey: "kubernetes.io/hostname"
 ```
 
-![](/images/virtualization/placement-vm-affinity.png)
+![Diagram of placing a machine next to a machine selected by labels](../../images/virtualization/placement-vm-affinity.png)
 
 In this example, the virtual machine is placed only on nodes that already run a virtual machine with the `server: database` label. The rule is soft (`preferred`), so if there are no such nodes, the machine starts on any suitable one.
 
@@ -165,7 +165,7 @@ spec:
           topologyKey: "kubernetes.io/hostname"
 ```
 
-![](/images/virtualization/placement-vm-antiaffinity.png)
+![Diagram of placing a machine away from a machine selected by labels](../../images/virtualization/placement-vm-antiaffinity.png)
 
 In this example, the virtual machine being created isn't placed on the same node as a virtual machine with the `server: database` label.
 

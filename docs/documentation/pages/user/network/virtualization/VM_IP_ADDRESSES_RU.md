@@ -32,11 +32,13 @@ d8 k get vmipl
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) — проектный ресурс, который отвечает за резервирование арендованных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по явному запросу.
 
@@ -50,11 +52,13 @@ d8 k get vmip
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             ADDRESS       STATUS     VM         AGE
 linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Алгоритм автоматического присвоения IP-адреса виртуальной машине выглядит следующим образом:
 
@@ -220,10 +224,12 @@ d8 k get vm linux-vm -o jsonpath='{.status.networks[?(@.type=="Main")]}'
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```txt
 {"id":1,"ipAddress":"10.66.10.14","ipAddressName":"linux-vm-4bkqr","type":"Main"}
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Перевод машины на общий IPAM
 

@@ -11,6 +11,8 @@ You configure the `virtualization` module in the [ModuleConfig](/products/kubern
 
 {% tab "Using the CLI" %}
 
+Apply the manifest with the required parameters:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

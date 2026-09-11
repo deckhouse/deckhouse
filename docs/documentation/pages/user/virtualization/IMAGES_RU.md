@@ -180,11 +180,13 @@ EOF
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               PHASE   CDROM   PROGRESS   AGE
    ubuntu-24-04-pvc   Ready   false   100%       23h
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 {% endtab %}
 
@@ -312,6 +314,7 @@ EOF
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    {
      "external": "https://virtualization.example.com/upload/<SECRET_URL>",
@@ -319,6 +322,7 @@ EOF
    }
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Адрес `inCluster` используйте, если загружаете файл с одного из узлов кластера, а `external` — во всех остальных случаях.
 
@@ -371,6 +375,8 @@ EOF
 
 {% tab "В командной строке" %}
 
+Создайте образ, указав источником нужный диск:
+
 ```bash
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -412,6 +418,8 @@ EOF
 {% tabs vi-from-snapshot %}
 
 {% tab "В командной строке" %}
+
+Создайте образ, указав источником снимок диска:
 
 ```bash
 d8 k apply -f - <<EOF

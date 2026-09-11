@@ -31,11 +31,13 @@ d8 k get vmipl
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) resource is a project resource responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or on explicit request.
 
@@ -49,11 +51,13 @@ d8 k get vmip
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             ADDRESS       STATUS     VM         AGE
 linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The algorithm for automatically assigning an IP address to a virtual machine looks like this:
 
@@ -219,10 +223,12 @@ d8 k get vm linux-vm -o jsonpath='{.status.networks[?(@.type=="Main")]}'
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```txt
 {"id":1,"ipAddress":"10.66.10.14","ipAddressName":"linux-vm-4bkqr","type":"Main"}
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Switching a machine to the shared IPAM
 

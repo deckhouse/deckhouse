@@ -20,6 +20,8 @@ You can change the machine configuration at any time after creation. On a powere
 | [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks)                                               | Adding and removing networks applies on a running VM if the guest OS supports attaching interfaces on the fly                                                                                |
 | Other `.spec` fields                                                                                            | A restart is required                                                                                                                                                                        |
 
+The following example shows how to change the configuration of a virtual machine:
+
 {% tabs vm-config %}
 
 {% tab "Using the CLI" %}
@@ -74,11 +76,13 @@ The following example changes the number of cores.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       PHASE     UPTIME   CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
    linux-vm   Running   5m16s    2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Restart the machine:
 
@@ -144,6 +148,8 @@ When the feature is enabled and the new [`.spec.cpu.cores`](/modules/virtualizat
 
 {% tab "Using the CLI" %}
 
+Set the new number of cores:
+
 ```bash
 d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":4}}}'
 ```
@@ -170,12 +176,14 @@ echo 1 > /sys/devices/system/cpu/cpu1/online
 
 To make this happen automatically, add a `udev` rule:
 
+<!-- markdownlint-disable MD031 -->
 ```bash
 cat <<'EOF' > /etc/udev/rules.d/99-hotplug-cpu.rules
 SUBSYSTEM=="cpu",ACTION=="add",RUN+="/bin/sh -c '[ ! -e /sys$devpath/online ] || echo 1 > /sys$devpath/online'"
 EOF
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The cores brought into service appear in the output of `nproc`, `cat /proc/cpuinfo`, and `top`.
 
@@ -205,6 +213,8 @@ When the feature is enabled, the new [`.spec.memory.size`](/modules/virtualizati
 
 {% tab "Using the CLI" %}
 
+Set the new memory size:
+
 ```bash
 d8 k patch vm linux-vm --type merge -p '{"spec":{"memory":{"size":"4Gi"}}}'
 ```
@@ -231,9 +241,11 @@ echo 1 > /sys/bus/memory/devices/memoryXXX/online
 
 To make this happen automatically, add a `udev` rule:
 
+<!-- markdownlint-disable MD031 -->
 ```bash
 cat <<'EOF' > /etc/udev/rules.d/99-hotplug-memory.rules
 SUBSYSTEM=="memory",ACTION=="add",DEVPATH=="/devices/system/memory/memory[0-9]*", TEST=="state", ATTR{state}!="online", ATTR{state}="online"
 EOF
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->

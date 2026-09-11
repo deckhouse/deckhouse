@@ -57,12 +57,14 @@ d8 k -n d8-virtualization get pods -l app=virtualization-dra-pci -o wide
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                            NODE     ADDRESS        READY   ASSIGNED   ATTACHED   NAMESPACE    AGE
    pci-4f2c0b1e8d9a3c5b7e1f0a2d4c6b8e0f1a3c5d7e    node-1   0000:3b:00.0   True    False      False                   10m
    pci-9a1b3c5d7e9f0a2b4c6d8e0f1a3b5c7d9e1f0a2b    node-2   0000:65:00.0   True    True       False      my-project   15m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Имя ресурса формируется как хеш от параметров устройства и имени узла, поэтому ищите нужное устройство по колонкам `NODE` и `ADDRESS`. Проверить выбор помогает блок [`.status.attributes`](/modules/virtualization/cr.html#nodepcidevice-v1alpha2-status-attributes), где указаны адрес на шине PCI и идентификаторы производителя и модели. По ним то же устройство находится в выводе команды `lspci -nn` на узле.
 

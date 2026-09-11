@@ -21,6 +21,8 @@ lang: ru
 | [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks)                                               | Добавление и удаление сетей применяется на работающей ВМ, если гостевая ОС поддерживает подключение интерфейсов на ходу                                          |
 | Остальные поля `.spec`                                                                                          | Нужен перезапуск                                                                                                                                                 |
 
+Ниже показано, как изменить конфигурацию виртуальной машины:
+
 {% tabs vm-config %}
 
 {% tab "В командной строке" %}
@@ -75,11 +77,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       PHASE     UPTIME   CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
    linux-vm   Running   5m16s    2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Перезапустите машину:
 
@@ -145,6 +149,8 @@ spec:
 
 {% tab "В командной строке" %}
 
+Задайте новое число ядер:
+
 ```bash
 d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":4}}}'
 ```
@@ -171,12 +177,14 @@ echo 1 > /sys/devices/system/cpu/cpu1/online
 
 Чтобы это происходило автоматически, добавьте правило `udev`:
 
+<!-- markdownlint-disable MD031 -->
 ```bash
 cat <<'EOF' > /etc/udev/rules.d/99-hotplug-cpu.rules
 SUBSYSTEM=="cpu",ACTION=="add",RUN+="/bin/sh -c '[ ! -e /sys$devpath/online ] || echo 1 > /sys$devpath/online'"
 EOF
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Введённые в работу ядра появляются в выводе `nproc`, `cat /proc/cpuinfo` и `top`.
 
@@ -206,6 +214,8 @@ spec:
 
 {% tab "В командной строке" %}
 
+Задайте новый объём памяти:
+
 ```bash
 d8 k patch vm linux-vm --type merge -p '{"spec":{"memory":{"size":"4Gi"}}}'
 ```
@@ -232,9 +242,11 @@ echo 1 > /sys/bus/memory/devices/memoryXXX/online
 
 Чтобы это происходило автоматически, добавьте правило `udev`:
 
+<!-- markdownlint-disable MD031 -->
 ```bash
 cat <<'EOF' > /etc/udev/rules.d/99-hotplug-memory.rules
 SUBSYSTEM=="memory",ACTION=="add",DEVPATH=="/devices/system/memory/memory[0-9]*", TEST=="state", ATTR{state}!="online", ATTR{state}="online"
 EOF
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->

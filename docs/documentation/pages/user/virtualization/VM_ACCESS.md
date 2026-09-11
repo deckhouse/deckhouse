@@ -23,12 +23,14 @@ d8 v console linux-vm
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 Successfully connected to linux-vm console. The escape sequence is ^]
 linux-vm login: cloud
 Password: cloud
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To exit the console, press `Ctrl+]`.
 
@@ -68,6 +70,7 @@ The serial console and VNC are exclusive, only one user works in them, and a new
 
 Before connecting, `d8 v console` and `d8 v vnc` report who took the stream and since when, and offer a choice:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 The serial console of linux-vm is in use:
   user       serviceaccount default/alice
@@ -76,6 +79,7 @@ The serial console of linux-vm is in use:
 Connect and disconnect them? [y] yes  [N] no  [w] wait until free:
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The `w` answer means waiting until the other user disconnects and connecting automatically. Pressing Enter cancels the connection, because the safe option is selected by default. The `--force` flag connects without asking, and it's also what you need for a non-interactive run in a script.
 {% endalert %}
@@ -130,6 +134,8 @@ You can manage the machine state in two ways, by creating a [VirtualMachineOpera
 | `d8 v restart` | `Restart`      | Restart the VM               |
 | `d8 v evict`   | `Evict`        | Evict the VM to another node |
 | `d8 v migrate` | `Migrate`      | Migrate the VM to another node |
+
+The following example shows how to perform an operation on a virtual machine:
 
 {% tabs vm-operations %}
 

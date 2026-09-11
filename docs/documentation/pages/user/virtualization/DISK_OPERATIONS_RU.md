@@ -24,11 +24,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME            PHASE   CAPACITY   VIRTUALMACHINE   AGE
    linux-vm-root   Ready   10Gi       linux-vm         10m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Задайте новый размер в параметре [`.spec.persistentVolumeClaim.size`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-size):
 
@@ -47,11 +49,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME            PHASE   CAPACITY   VIRTUALMACHINE   AGE
    linux-vm-root   Ready   11Gi       linux-vm         12m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 {% endtab %}
 

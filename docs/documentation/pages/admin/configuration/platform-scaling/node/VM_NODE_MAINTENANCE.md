@@ -39,11 +39,13 @@ The following steps show how to move a selected VM to another node.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       PHASE     UPTIME   NODE           IPADDRESS     AGE
    linux-vm   Running   79m      virtlab-pt-1   10.66.10.14   79m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    The VM runs on the `virtlab-pt-1` node.
 
@@ -71,6 +73,7 @@ The following steps show how to move a selected VM to another node.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       PHASE       UPTIME   NODE           IPADDRESS     AGE
    linux-vm   Running     79m      virtlab-pt-1   10.66.10.14   79m
@@ -79,6 +82,7 @@ The following steps show how to move a selected VM to another node.
    linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
    ```
    {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    The VM keeps its IP address during the move; only the node in the `NODE` column changes.
 
@@ -177,7 +181,7 @@ To return the node to service, stop the `drain` command with `Ctrl+C`, and then 
 d8 k uncordon <NODE_NAME>
 ```
 
-![Diagram of virtual machine migration to another node](/images/virtualization/drain.png)
+![Diagram of virtual machine migration to another node](../../../../images/virtualization/drain.png)
 
 {% endtab %}
 

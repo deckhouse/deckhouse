@@ -30,7 +30,7 @@ The live migration process consists of several stages:
 
 Until the VM switches to the new node (step 5), the VM on the source node keeps running as usual and serving users.
 
-![Migration](/images/virtualization/migration.png)
+![Migration](../../images/virtualization/migration.png)
 
 ## Requirements and limitations
 
@@ -38,7 +38,9 @@ A live migration doesn't always succeed. The following is what has to match on t
 
 **Disk availability.** All disks attached to the VM have to be available on the target node. With network storage such as NFS or Ceph, this requirement is met on its own, because the disks are visible from all cluster nodes. Local storage needs to be able to create a new local volume on the target node, and if such storage exists only on the source node, the migration doesn't run.
 
+<!-- markdownlint-disable MD013 -->
 **Attaching and detaching disks.** While a migration is preparing the target node, disks can be neither attached to the machine with a [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource nor detached by deleting one. An attachment stays in the `Pending` phase with the `BlockedByMigration` reason in the `Attached` condition, and a deleted one stays in the `Terminating` phase, until the migration completes. While the migration is still queued and the target node isn't being prepared yet, for example when it waits for the project quota to free up, attaching and detaching work as usual. The reverse is also true, a migration waits for an attach or detach request that has already been sent, and all that time the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource stays in the `Pending` phase with the `WaitingForBlockDeviceAttachment` reason. If the request doesn't complete within 5 minutes, the operation fails.
+<!-- markdownlint-enable MD013 -->
 
 **Network bandwidth.** The slower the network, the more memory synchronization iterations the migration goes through and the longer the VM downtime at the final stage, and in the worst case the migration doesn't fit into the timeout. The [`.spec.liveMigrationPolicy`](#configuring-the-migration-policy) policy controls how the migration runs, and the [AutoConverge](#migrations-with-insufficient-network-bandwidth) mechanism helps with a slow network.
 
@@ -112,11 +114,13 @@ d8 k get vm
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE     UPTIME   NODE           IPADDRESS     AGE
 linux-vm   Running   79m      virtlab-pt-1   10.66.10.14   79m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 At this moment it runs on the `virtlab-pt-1` node.
 
@@ -163,7 +167,7 @@ EOF
 ```
 
 > To prevent the virtual machine from becoming unschedulable, the node selector must not conflict with other placement rules, such as the virtual machine affinity, node selectors, and the node selector rules of the virtual machine class.
-
+>
 > Targeted migration to a specific node is available in commercial DP editions.
 >
 > If you don't need to specify target node parameters, you can omit the `migrate` field or evict the virtual machine to another suitable node using the `d8 v evict` command or by creating a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `Evict` type.
@@ -176,6 +180,7 @@ d8 k get vm -w
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE       UPTIME   NODE           IPADDRESS     AGE
 linux-vm   Running     79m      virtlab-pt-1   10.66.10.14   79m
@@ -184,6 +189,7 @@ linux-vm   Migrating   79m      virtlab-pt-1   10.66.10.14   79m
 linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 You can interrupt any live migration while it's in the `Pending` or `InProgress` phase by deleting the corresponding VirtualMachineOperations resource.
 
@@ -246,11 +252,11 @@ This means the network has become the bottleneck for the migration.
 
 Here is an example of a situation where the migration can't complete because of insufficient network bandwidth. Inside the virtual machine, memory changes continuously with stress-ng.
 
-![](/images/virtualization/livemigration-example.png)
+![Memory metrics chart of a migration that cannot complete](../../images/virtualization/livemigration-example.png)
 
 Here is an example of migrating the same virtual machine with the `--force` flag of the `d8 v migrate` command (which enables the AutoConverge mechanism). You can clearly see that the CPU frequency is lowered in stages to reduce the rate of memory content changes.
 
-![](/images/virtualization/livemigration-example-autoconverge.png)
+![Memory metrics chart of a migration with the AutoConverge mechanism](../../images/virtualization/livemigration-example-autoconverge.png)
 
 If the network limits the migration speed, you can do the following:
 
@@ -277,6 +283,8 @@ The module starts some migrations itself, by creating a [VirtualMachineOperation
 | A change of the core count or memory size without a restart      | `hotplug-resources-`    |
 | Moving disks to another storage                                  | `volume-migration-`     |
 
+The following example shows how to view the list of such operations:
+
 {% tabs vmop-list %}
 
 {% tab "Using the CLI" %}
@@ -291,11 +299,13 @@ d8 k get vmop
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                    PHASE       PROGRESS   TYPE    VIRTUALMACHINE   AGE
 firmware-update-fnbk2   Completed   100%       Evict   linux-vm         1m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To cancel a migration, delete the corresponding resource.
 
@@ -344,8 +354,10 @@ The current node from the `green` group no longer meets the new conditions. The 
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                         PHASE       PROGRESS   TYPE    VIRTUALMACHINE   AGE
 nodeplacement-update-dabk4   Completed   100%       Evict   linux-vm         1m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->

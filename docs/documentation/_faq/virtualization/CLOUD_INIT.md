@@ -128,6 +128,8 @@ If additional networks are connected to a virtual machine, configure them manual
 
 For more information on connecting additional networks to a virtual machine, see [Additional network interfaces](user/network/virtualization/vm-additional-interfaces.html#additional-network-interfaces).
 
+The following examples cover common ways to configure networking in the guest OS:
+
 {% tabs cloudinit-net %}
 
 {% tab "systemd-networkd" %}

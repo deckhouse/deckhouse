@@ -27,11 +27,13 @@ d8 k get usbdevice -n my-project
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              NODE     MANUFACTURER   PRODUCT       ATTACHED   AGE
 logitech-webcam   node-2   Logitech       Webcam C920   False      10m
 ```
 {: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The resource keeps the vendor and product identifiers, the bus, the device number, the serial number, the speed, and the rest of the device details in the [`.status.attributes`](/modules/virtualization/cr.html#usbdevice-v1alpha2-status-attributes) block.
 
@@ -78,7 +80,7 @@ EOF
 After the VM is created or updated, the USB device is attached to the specified virtual machine.
 
 > The USB device is automatically passed through over the network (USBIP) to the node where the virtual machine runs. You don't have to place the VM manually on the same node as the device.
-
+>
 > **Important:** During a VM migration, the USB device briefly disconnects and reconnects on the new node at the moment the VM switches over. If the migration fails, the device stays on the old node.
 
 You can attach a USB device to a running VM and detach it without stopping the machine.
