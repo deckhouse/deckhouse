@@ -70,10 +70,52 @@ spec:
 
 **Статус объекта.** У каждого правила есть условие `Ready` и число его биндингов:
 
+Чтобы получить список всех ClusterAuthorizationRule в кластере, выполните команду:
+
 ```bash
 d8 k get clusterauthorizationrules
+```
+
+Пример вывода:
+
+```console
+NAME        ACCESS LEVEL   READY   BINDINGS   AGE
+my-rule     Admin          True    3          5d
+```
+
+Чтобы получить список всех AuthorizationRule во всех пространствах имён кластера, выполните команду:
+
+```bash
 d8 k get authorizationrules -A
+```
+
+Пример вывода:
+
+```console
+NAMESPACE   NAME       ACCESS LEVEL   READY   BINDINGS   AGE
+default     app-rule   Editor         True    2          3d
+team-a      dev-rule   User           False   0          1h
+```
+
+Чтобы получить только массив conditions указанного ClusterAuthorizationRule, выполните команду:
+
+```bash
 d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
+```
+
+Пример вывода:
+
+```json
+[
+  {
+    "lastTransitionTime": "2026-09-11T10:00:00Z",
+    "message": "3 bindings applied",
+    "observedGeneration": 1,
+    "reason": "BindingsApplied",
+    "status": "True",
+    "type": "Ready"
+  }
+]
 ```
 
 `Ready=True` с причиной `BindingsApplied` означает, что биндинги соответствуют правилу. `Ready=False` называет проблему: `InvalidSpec` (правило нельзя превратить в биндинги, в сообщении сказано почему) или `ApplyError` (API-сервер отклонил запись; в сообщении указаны биндинг и ошибка). На правиле записываются события с теми же причинами.
