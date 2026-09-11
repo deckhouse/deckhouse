@@ -1,7 +1,7 @@
 ---
 title: "Доставка приложений с помощью Argo CD"
 permalink: ru/admin/configuration/delivery/argocd/
-description: "Доставка приложений с помощью Argo CD в Deckhouse Kubernetes Platform."
+description: "Доставка приложений с помощью Argo CD в Deckhouse Platform."
 lang: ru
 relatedLinks:
   - title: "Официальный сайт Argo CD"
@@ -10,7 +10,7 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-В этом разделе описана доставка приложений с помощью Argo CD в Deckhouse Kubernetes Platform (DKP).
+В этом разделе описана доставка приложений с помощью Argo CD в Deckhouse Platform (DP).
 
 [Argo CD](https://argo-cd.readthedocs.io/en/stable/) — это Open Source-инструмент для непрерывной доставки приложений в Kubernetes, реализующий подход GitOps.
 Git-репозиторий выступает источником истины для описания приложений, их конфигурации и целевых окружений.
@@ -28,13 +28,13 @@ Argo CD отслеживает изменения, показывает расх
 - откат к ранее зафиксированной конфигурации и аудит действий;
 - работа через веб-интерфейс, CLI и API, включая интеграцию с Git-вебхуками и внешними системами автоматизации.
 
-В DKP Argo CD запускается с помощью модуля [operator-argo](/modules/operator-argo/), основанного на проекте [Argo CD Operator](https://argocd-operator.readthedocs.io).
-Модуль позволяет декларативно развернуть и обслуживать один или несколько экземпляров Argo CD в кластере DKP без ручной установки и сопровождения компонентов.
+В DP Argo CD запускается с помощью модуля [operator-argo](/modules/operator-argo/), основанного на проекте [Argo CD Operator](https://argocd-operator.readthedocs.io).
+Модуль позволяет декларативно развернуть и обслуживать один или несколько экземпляров Argo CD в кластере DP без ручной установки и сопровождения компонентов.
 
 Дополнительно модуль обеспечивает:
 
 - поддержку единого входа (SSO);
-- интеграцию с мониторингом в составе DKP;
+- интеграцию с мониторингом в составе DP;
 - режим высокой доступности;
 - поддержку автоматического обновления образов через Argo CD Image Updater;
 - контроль доступа к кластерным ресурсам.

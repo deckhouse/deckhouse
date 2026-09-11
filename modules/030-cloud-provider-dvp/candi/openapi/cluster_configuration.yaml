@@ -556,17 +556,17 @@ apiVersions:
         provider:
           type: object
           description: |
-            Contains settings to connect to the Deckhouse Kubernetes Platform API.
+            Contains settings to connect to the Deckhouse Platform API.
           additionalProperties: false
           properties:
             kubeconfigDataBase64:
               description: |
-                Kubeconfig to connect to Deckhouse Kubernetes Platform API, Base64-encoded.
+                Kubeconfig to connect to Deckhouse Platform API, Base64-encoded.
               type: string
               pattern: "^[A-Za-z0-9+/]+[=]{0,2}$"
             namespace:
               description: |
-                Namespace in which DKP cluster resources will be created.
+                Namespace in which DP cluster resources will be created.
 
                 > If not explicitly specified, the default namespace for kubeconfig will be used.
               type: string

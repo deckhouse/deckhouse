@@ -3,7 +3,7 @@ title: Модуль cloud-provider-zvirt
 permalink: ru/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-zvirt.html
 lang: ru
 search: cloud-provider-zvirt, cloud provider zvirt
-description: Архитектура модуля cloud-provider-zvirt в Deckhouse Kubernetes Platform.
+description: Архитектура модуля cloud-provider-zvirt в Deckhouse Platform.
 ---
 
 Модуль `cloud-provider-zvirt` управляет взаимодействием с облачными ресурсами [zVirt](https://www.orionsoft.ru/zvirt). Он позволяет модулю [`node-manager`](/modules/node-manager/) использовать ресурсы zVirt при заказе узлов для описанной [группы узлов](/modules/node-manager/cr.html#nodegroup).
@@ -19,7 +19,7 @@ description: Архитектура модуля cloud-provider-zvirt в Deckhou
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля cloud-provider-zvirt](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-zvirt.ru.png)
 
@@ -59,7 +59,7 @@ description: Архитектура модуля cloud-provider-zvirt в Deckhou
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-4. **CSI-драйвер (zvirt)** — реализация CSI-драйвера для zVirt. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
+4. **CSI-драйвер (zvirt)** — реализация CSI-драйвера для zVirt. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
 
    CSI-драйвер (zvirt) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

@@ -62,7 +62,7 @@ This guide focuses on deploying a Kubernetes cluster using Deckhouse in a privat
 Installation in a private environment is generally similar to installation on [bare metal](../bm/step2.html). The only difference is in some additional settings.
 
 {% alert level="info" %}
-For more details on installing and updating DKP in an air-gapped environment, see the [“Installing DKP in an air-gapped environment”](/products/kubernetes-platform/guides/private-environment.html) and [“Updating DKP in an air-gapped environment”](/products/kubernetes-platform/guides/airgapped-update.html) guides.
+For more details on installing and updating DP in an air-gapped environment, see the [“Installing DP in an air-gapped environment”](/products/kubernetes-platform/guides/private-environment.html) and [“Updating DP in an air-gapped environment”](/products/kubernetes-platform/guides/airgapped-update.html) guides.
 {% endalert %}
 
 Scheme of Deckhouse installation in a private environment:<br />
@@ -140,7 +140,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    {% offtopic title="Requirements..." %}
 
    {% alert level="info" %}
-   Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+   Starting with version 1.74, the Deckhouse Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
    {% endalert %}
 
    {% alert level="warning" %}
@@ -152,7 +152,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - `erofs` kernel module support
    - Linux kernel version not in the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS)
 
-   Some distributions do not meet these requirements, and the OS on the nodes must be brought into compliance before installing Deckhouse Kubernetes Platform. For more information, see the [documentation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+   Some distributions do not meet these requirements, and the OS on the nodes must be brought into compliance before installing Deckhouse Platform. For more information, see the [documentation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
    {% endalert %}
 
    - at least 4 CPU cores (_8 CPU cores recommended_)
@@ -166,7 +166,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images;
    - when using private image storage, you must first [upload images](/products/kubernetes-platform/documentation/v1/admin/configuration/security/scanning.html)
-     of the Deckhouse Kubernetes Platform, vulnerability scanner database, and Deckhouse modules to the private storage;
+     of the Deckhouse Platform, vulnerability scanner database, and Deckhouse modules to the private storage;
    - access to the default OS package repositories (via a proxy server or an internal package repository server);
    {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry

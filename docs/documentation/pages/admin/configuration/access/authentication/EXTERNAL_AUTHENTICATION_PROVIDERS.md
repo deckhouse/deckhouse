@@ -1,12 +1,12 @@
 ---
 title: "Integration with external authentication providers"
 permalink: en/admin/configuration/access/authentication/external-authentication-providers.html
-description: "Integrate Deckhouse Kubernetes Platform with external authentication providers including LDAP, OIDC, GitHub, GitLab, Atlassian Crowd, and Bitbucket. Step-by-step configuration guide."
+description: "Integrate Deckhouse Platform with external authentication providers including LDAP, OIDC, GitHub, GitLab, Atlassian Crowd, and Bitbucket. Step-by-step configuration guide."
 ---
 
 Connecting an external authentication provider allows you to use a single set of credentials to access multiple clusters and simultaneously work with multiple providers.
 
-DKP supports integration with the following external authentication providers and protocols:
+DP supports integration with the following external authentication providers and protocols:
 
 - [LDAP (for example, Active Directory)](#ldap-integration);
 - [OIDC (for example, Okta, Keycloak, Gluu, Blitz Identity Provider)](#oidc-openid-connect-integration);
@@ -168,7 +168,7 @@ If email verification is not enabled in Keycloak, to properly use it as an ident
     - "Claim value": `true`
     - "Claim JSON Type": `boolean`
 
-  After that, in the client registered for the DKP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
+  After that, in the client registered for the DP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
 
   In the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
   

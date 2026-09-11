@@ -98,7 +98,7 @@ spec:
       memory: 500Mi
 ```
 
-The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests.
+The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Platform (DP) distributes this budget between control plane static pods when rendering their manifests.
 
 If CPU or memory requests are not explicitly specified, the module automatically calculates requests for the corresponding resource for each control plane component once a day based on the average usage over the previous seven days. Explicitly specifying the total amount of CPU or memory disables automatic request calculation for that resource for all control plane components. The specified amount is distributed among the components in fixed proportions.
 
@@ -108,9 +108,9 @@ These settings do not apply if the cluster control plane is managed by a cloud p
 
 ## Version control
 
-**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the DKP version updates. You can't manage patch version upgrades.
+**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the DP version updates. You can't manage patch version upgrades.
 
-Upgrading **minor versions** of control plane components (e.g. from `1.32.*` to `1.33.*`) can be managed using the [`kubernetesVersion`](configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` ModuleConfig. It specifies tracking the DKP default (if set to `Default`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Default`) as well as a list of supported Kubernetes versions can be found in [the "Supported Kubernetes and OS versions"](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html) section.
+Upgrading **minor versions** of control plane components (e.g. from `1.32.*` to `1.33.*`) can be managed using the [`kubernetesVersion`](configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` ModuleConfig. It specifies tracking the DP default (if set to `Default`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Default`) as well as a list of supported Kubernetes versions can be found in [the "Supported Kubernetes and OS versions"](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html) section.
 
 The cluster Kubernetes version is resolved in one order: `kubernetesVersion` in the `control-plane-manager` ModuleConfig, then the deprecated [`ClusterConfiguration.kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), then the version the current Deckhouse release defaults to. The ModuleConfig setting wins whenever it is set, `Default` included; while it is unset, the deprecated field still decides. Deckhouse raises the `D8ObsoleteKubernetesVersionFieldInClusterConfiguration` alert for as long as the deprecated field is present at all — including when ModuleConfig already owns the version — and it clears once the field is removed from `ClusterConfiguration`.
 
@@ -183,7 +183,7 @@ By default, a special CA certificate will be generated and the kubeconfig genera
 
 Kubernetes [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) can help you if you need to keep track of operations in your Namespaces or troubleshoot the cluster. You can configure it by setting the appropriate [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy). As the result you will have the log file `/var/log/kube-audit/audit.log` containing audit events according to the configured Policy.
 
-By default, in a cluster with DKP, a basic policy is created for logging events:
+By default, in a cluster with DP, a basic policy is created for logging events:
 
 - related to the creation, deletion, and changing of resources;
 - committed from the names of ServiceAccounts from the "system" Namespace `kube-system`, `d8-*`;
@@ -209,7 +209,7 @@ The module organizes secure metrics collection and provides a basic set of monit
 
 ## Admission plugins enabled by default
 
-When installing the Deckhouse Kubernetes Platform, in addition to the standard admission plugins enabled by Kubernetes, the module enables several additional ones. For more information about admission plugins, see the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook).
+When installing the Deckhouse Platform, in addition to the standard admission plugins enabled by Kubernetes, the module enables several additional ones. For more information about admission plugins, see the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook).
 
 ### Standard admission plugins enabled by Kubernetes
 

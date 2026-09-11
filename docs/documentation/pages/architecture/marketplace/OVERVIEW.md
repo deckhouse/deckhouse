@@ -1,12 +1,12 @@
 ---
 title: Marketplace
 permalink: en/architecture/marketplace/
-description: "Architecture of the Deckhouse Kubernetes Platform Marketplace system. Package abstraction, delivery unit types, resource model, and subsystem overview."
+description: "Architecture of the Deckhouse Platform Marketplace system. Package abstraction, delivery unit types, resource model, and subsystem overview."
 ---
 
-Marketplace is the subsystem in Deckhouse Kubernetes Platform (DKP) that manages the lifecycle of delivery units called **Packages**. A Package can be either an **Application** (a user workload deployed into a namespace) or a **Module** (a cluster capability extension). Currently, only Applications are supported; Module support is planned for a future version.
+Marketplace is the subsystem in Deckhouse Platform (DP) that manages the lifecycle of delivery units called **Packages**. A Package can be either an **Application** (a user workload deployed into a namespace) or a **Module** (a cluster capability extension). Currently, only Applications are supported; Module support is planned for a future version.
 
-Marketplace is available starting from DKP version 1.76.
+Marketplace is available starting from DP version 1.76.
 
 ## Sections
 

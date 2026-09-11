@@ -9,7 +9,7 @@ permalink: en/admin/integrations/private/huaweicloud/authorization.html
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
-To ensure proper operation of Deckhouse Kubernetes Platform (DKP) with Huawei Cloud, make sure of the following:
+To ensure proper operation of Deckhouse Platform (DP) with Huawei Cloud, make sure of the following:
 
 - The `cloud-init` package is installed on the virtual machines.
 - After the VMs start, the following services must be active:
@@ -19,7 +19,7 @@ To ensure proper operation of Deckhouse Kubernetes Platform (DKP) with Huawei Cl
 
 ## Accessing the Huawei Cloud API
 
-DKP uses the Huawei Cloud API to manage resources.
+DP uses the Huawei Cloud API to manage resources.
 To configure access, you need to create an IAM user and assign the necessary permissions.
 
 ### Creating a user group

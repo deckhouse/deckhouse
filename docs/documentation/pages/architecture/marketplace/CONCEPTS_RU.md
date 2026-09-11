@@ -21,7 +21,7 @@ search: package types, application constraints, CRD model, типы пакето
 
 ## Модель ресурсов
 
-Marketplace Deckhouse Kubernetes Platform (DKP) использует пять custom resources:
+Marketplace Deckhouse Platform (DP) использует пять кастомных ресурсов:
 
 <script src="/assets/js/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true });</script>
@@ -49,7 +49,7 @@ flowchart TD
 - `status.packageMetadata.description` — локализованное описание пакета (`en`/`ru`)
 - `status.packageMetadata.category` — категория в каталоге
 - `status.packageMetadata.stage` — стадия зрелости (`Preview`, `General Availability` и т. д.)
-- `status.packageMetadata.requirements` — ограничения на версии DKP и Kubernetes; зависимости от модулей (`mandatory`, `conditional`, `anyOf`, `noneOf`)
+- `status.packageMetadata.requirements` — ограничения на версии DP и Kubernetes; зависимости от модулей (`mandatory`, `conditional`, `anyOf`, `noneOf`)
 - `status.packageMetadata.versionCompatibilityRules` — правила совместимости для обновлений и даунгрейдов
 - `status.packageSchemas.settingsSchema` — OpenAPI v3 схема для валидации `Application.spec.settings`
 - `status.packageSchemas.valuesSchema` — OpenAPI v3 схема для effective values, передаваемых в хуки и шаблоны
@@ -57,10 +57,10 @@ flowchart TD
 ## Жизненный цикл от сканирования до деплоя
 
 1. Администратор создаёт [PackageRepository](../../reference/api/cr.html#packagerepository).
-2. DKP автоматически создаёт [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation) (первое сканирование при создании, затем каждые `scanInterval`).
+2. DP автоматически создаёт [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation) (первое сканирование при создании, затем каждые `scanInterval`).
 3. Операция сканирует реестр и создаёт объекты [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии.
 4. Пользователь создаёт [Application](../../reference/api/cr.html#application) в своём неймспейсе, указывая `packageName`, `packageVersion` и опционально `packageRepositoryName`.
-5. DKP проверяет `spec.settings` по `settingsSchema` из соответствующего ApplicationPackageVersion.
+5. DP проверяет `spec.settings` по `settingsSchema` из соответствующего ApplicationPackageVersion.
 6. Nelm разворачивает Helm-шаблоны из bundle пакета.
 7. Условия (conditions) ресурса Application отражают прогресс деплоя: `Installed` → `ConfigurationApplied` → `Scaled` → `Ready`.
 

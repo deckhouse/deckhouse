@@ -3,7 +3,7 @@ title: Virtualization API
 permalink: ru/architecture/virtualization/api.html
 lang: ru
 search: virtualization controller, virtualization api
-description: Архитектура компонента Virtualization API модуля virtualization в Deckhouse Kubernetes Platform.
+description: Архитектура компонента Virtualization API модуля virtualization в Deckhouse Platform.
 ---
 
 Компонент Virtualization API модуля [`virtualization`](/modules/virtualization/) управляет кастомными ресурсами следующих API-групп:
@@ -54,7 +54,7 @@ description: Архитектура компонента Virtualization API мо
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура компонента Virtualization API модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура компонента Virtualization API модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура компонента Virtualization API модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-api.ru.png)
 

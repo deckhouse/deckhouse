@@ -3,7 +3,7 @@ title: DNS modules
 permalink: en/architecture/network/dns-modules.html
 lang: en
 search: dns, coredns, domain names
-description: Architecture of the kube-dns and node-local-dns modules in Deckhouse Kubernetes Platform.
+description: Architecture of the kube-dns and node-local-dns modules in Deckhouse Platform.
 relatedLinks:
   - title: "kube-dns module configuration"
     url: /modules/kube-dns/configuration.html
@@ -13,7 +13,7 @@ relatedLinks:
     url: /products/kubernetes-platform/documentation/v1/architecture/network/dns-caching.html
 ---
 
-The [`kube-dns`](/modules/kube-dns/) module provides domain name resolution based on [CoreDNS](https://coredns.io/) in Deckhouse Kubernetes Platform (DKP).
+The [`kube-dns`](/modules/kube-dns/) module provides domain name resolution based on [CoreDNS](https://coredns.io/) in Deckhouse Platform (DP).
 
 For more details about module configuration and usage examples, refer to [the corresponding documentation section](/modules/kube-dns/configuration.html).
 
@@ -28,7 +28,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`kube-dns`](/modules/kube-dns/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`kube-dns`](/modules/kube-dns/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![kube-dns module architecture](../../images/architecture/network/c4-l2-kube-dns.png)
 
@@ -89,7 +89,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`node-local-dns`](/modules/node-local-dns/) module when using Cilium as the CNI plugin and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`node-local-dns`](/modules/node-local-dns/) module when using Cilium as the CNI plugin and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![node-local-dns module architecture](../../images/architecture/network/c4-l2-node-local-dns.png)
 
@@ -145,7 +145,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`node-local-dns`](/modules/node-local-dns/) module when using the [`cni-flannel`](/modules/cni-flannel/) or [`cni-simple-bridge`](/modules/cni-simple-bridge/) CNI plugin and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`node-local-dns`](/modules/node-local-dns/) module when using the [`cni-flannel`](/modules/cni-flannel/) or [`cni-simple-bridge`](/modules/cni-simple-bridge/) CNI plugin and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![node-local-dns module architecture](../../images/architecture/network/c4-l2-node-local-dns-without-cilium.png)
 

@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/access/authentication/resource-configuration.h
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform можно задать значения лимитов запросов и ресурсов для всех компонентов. По умолчанию используются следующие параметры:
+В Deckhouse Platform можно задать значения лимитов запросов и ресурсов для всех компонентов. По умолчанию используются следующие параметры:
 
 - **Dex OIDC провайдер** — 10m CPU / 25Mi памяти (запросы), 100m CPU / 100Mi памяти (лимиты);
 - **Генератор kubeconfig** — 10m CPU / 25Mi памяти (запросы), 100m CPU / 100Mi памяти (лимиты);

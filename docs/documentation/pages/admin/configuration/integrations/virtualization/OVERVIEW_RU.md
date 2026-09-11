@@ -1,12 +1,12 @@
 ---
 title: Системы виртуализации
 permalink: ru/admin/integrations/virtualization/overview.html
-description: "Развертывание платформы Deckhouse Kubernetes Platform на системах виртуализации включая VMware vSphere, VMware Cloud Director и zVirt."
+description: "Развертывание платформы Deckhouse Platform на системах виртуализации включая VMware vSphere, VMware Cloud Director и zVirt."
 lang: ru
 search: virtualization integration, virtualization systems, hypervisor integration, интеграция с виртуализацией
 ---
 
-В Deckhouse Kubernetes Platform (DKP) поддерживаются следующие системы виртуализации:
+В Deckhouse Platform (DP) поддерживаются следующие системы виртуализации:
 
 * [Deckhouse Virtualization Platform (DVP)](./dvp/services.html);
 * [VMware Cloud Director](./vcd/connection-and-authorization.html);

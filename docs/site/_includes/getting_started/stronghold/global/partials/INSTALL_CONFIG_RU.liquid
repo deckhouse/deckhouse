@@ -6,7 +6,7 @@
 {% endif %}
 
 <div markdown="1">
-Ниже сгенерированы рекомендованные настройки для установки Deckhouse Kubernetes Platform {{ site.data.i18n[revision] }}:
+Ниже сгенерированы рекомендованные настройки для установки Deckhouse Platform {{ site.data.i18n[revision] }}:
 - `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера{% endif %} и начальные параметры кластера.
 {% if page.platform_type == 'cloud' %}- `resources.yml` — описание ресурсов для создания после установки (настройки узлов и Ingress-контроллера).{% endif %}
 
@@ -15,7 +15,7 @@
 - <span class="mightChange">Так выделены параметры</span>, которые вы возможно захотите изменить.
 - Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемых YAML-файлов конфигурации UTF-8 (либо удалите примечания на русском языке).
 {% if page.platform_code == 'yandex' %}
-- Если Deckhouse Stronghold разворачивается на базе Deckhouse Kubernetes Platform 1.76 и выше, то использовании CentOS 8 необходимо явно включить модуль `cni-simple-bridge` в файле `config.yml`.
+- Если Deckhouse Stronghold разворачивается на базе Deckhouse Platform 1.76 и выше, то использовании CentOS 8 необходимо явно включить модуль `cni-simple-bridge` в файле `config.yml`.
 
   {% offtopic title="Пример конфигурации CNI для CentOS 8 в Yandex Cloud..." %}
   ```yaml

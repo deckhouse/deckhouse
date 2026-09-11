@@ -3,10 +3,10 @@ title: Архитектура событий безопасности
 permalink: ru/architecture/security/security-events.html
 lang: ru
 search: события безопасности, security events, security-events-manager, сбор событий, доставка событий
-description: Архитектура сбора, обработки и доставки событий безопасности в Deckhouse Kubernetes Platform.
+description: Архитектура сбора, обработки и доставки событий безопасности в Deckhouse Platform.
 ---
 
-Модуль [`security-events-manager`](/modules/security-events-manager/) в составе в Deckhouse Kubernetes Platform (DKP) выполняет декларативный сбор, обработку,
+Модуль [`security-events-manager`](/modules/security-events-manager/) в составе в Deckhouse Platform (DP) выполняет декларативный сбор, обработку,
 нормализацию и доставку событий безопасности, извлекаемых из логов приложений
 и инфраструктурных компонентов Kubernetes.
 

@@ -3,7 +3,7 @@ title: Модуль cloud-provider-dynamix
 permalink: ru/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dynamix.html
 lang: ru
 search: cloud-provider-dynamix, cloud provider dynamix
-description: Архитектура модуля cloud-provider-dynamix в Deckhouse Kubernetes Platform.
+description: Архитектура модуля cloud-provider-dynamix в Deckhouse Platform.
 ---
 
 Модуль `cloud-provider-dynamix` управляет взаимодействием с облачными ресурсами [Basis Dynamix](https://basis.ru/products/dynamix). Он позволяет модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Basis Dynamix при заказе узлов для описанной [группы узлов](/modules/node-manager/cr.html#nodegroup).
@@ -19,7 +19,7 @@ description: Архитектура модуля cloud-provider-dynamix в Deckh
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`cloud-provider-dynamix`](/modules/cloud-provider-dynamix/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`cloud-provider-dynamix`](/modules/cloud-provider-dynamix/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля cloud-provider-dynamix](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dynamix.ru.png)
 
@@ -59,7 +59,7 @@ description: Архитектура модуля cloud-provider-dynamix в Deckh
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-4. **CSI-драйвер (dynamix)** — реализация CSI-драйвера для Basis Dynamix. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
+4. **CSI-драйвер (dynamix)** — реализация CSI-драйвера для Basis Dynamix. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
 
    CSI-драйвер (dynamix) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

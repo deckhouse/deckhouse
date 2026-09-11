@@ -1,7 +1,7 @@
 ---
 title: Подготовка к production
 permalink: ru/guides/production.html
-description: Рекомендации по подготовке кластера Deckhouse Kubernetes Platform для работы в продуктивной среде.
+description: Рекомендации по подготовке кластера Deckhouse Platform для работы в продуктивной среде.
 lang: ru
 layout: sidebar-guides
 ---
@@ -148,7 +148,7 @@ Frontend-узлы балансируют входящий трафик. На н�
 
 С помощью custom resource [CustomAlertmanager](/modules/prometheus/cr.html#customalertmanager) можно настроить отправку уведомлений на [электронную почту](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), в [Slack](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), в [Telegram](/modules/prometheus/usage.html#отправка-алертов-в-telegram), через [webhook](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), а также другими способами.
 
-Список всех доступных алертов системы мониторинга Deckhouse Kubernetes Platform приведён на [отдельной странице документации](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
+Список всех доступных алертов системы мониторинга Deckhouse Platform приведён на [отдельной странице документации](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
 
 ## Сбор логов
 

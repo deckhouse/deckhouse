@@ -29,7 +29,7 @@ ai_export:
   root: true
   llmsFileName: llms.txt
   corpusFileName: corpus.json
-  title: Deckhouse Kubernetes Platform
+  title: Deckhouse Platform
   # summaryI18nKey names an i18n.common entry (_data/i18n.yml) used as the llms.txt
   # summary; it falls back to site_description if unset or empty.
   summaryI18nKey: aiLlmsSummary

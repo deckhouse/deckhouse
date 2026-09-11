@@ -1,6 +1,6 @@
 ---
 title: "Publishing applications using the Kubernetes Gateway API"
-description: "Publish applications with Kubernetes Gateway API in Deckhouse Kubernetes Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, HTTPRoute annotations, and WAF."
+description: "Publish applications with Kubernetes Gateway API in Deckhouse Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, HTTPRoute annotations, and WAF."
 permalink: en/user/network/ingress/alb/gateway-api.html
 extractedLinksMax: 0
 relatedLinks:
@@ -581,7 +581,7 @@ GeoIP and OpenTelemetry tracing are configured by the administrator on ClusterAL
 
 ### Supported HTTPRoute annotations {#supported-httproute-annotations}
 
-Because the current Gateway API specification does not yet cover all features required for a Deckhouse Kubernetes Platform (DKP) cluster, the module provides HTTPRoute annotations for the missing options. The controller reads these keys from `HTTPRoute.metadata.annotations`.
+Because the current Gateway API specification does not yet cover all features required for a Deckhouse Platform (DP) cluster, the module provides HTTPRoute annotations for the missing options. The controller reads these keys from `HTTPRoute.metadata.annotations`.
 
 | Annotation | Description |
 | :--- | :--- |

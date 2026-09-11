@@ -1,10 +1,10 @@
 ---
 title: Scanning
 permalink: en/admin/configuration/marketplace/scanning.html
-description: "Monitor and manage package repository scanning operations in Deckhouse Kubernetes Platform Marketplace. View scan history, check progress, and trigger manual scans with PackageRepositoryOperation."
+description: "Monitor and manage package repository scanning operations in Deckhouse Platform Marketplace. View scan history, check progress, and trigger manual scans with PackageRepositoryOperation."
 ---
 
-Deckhouse Kubernetes Platform (DKP) uses [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) to scan package registries. Each scan operation discovers new package versions and creates or updates [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects. Operations are created automatically on a schedule or can be created manually when needed.
+Deckhouse Platform (DP) uses [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) to scan package registries. Each scan operation discovers new package versions and creates or updates [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects. Operations are created automatically on a schedule or can be created manually when needed.
 
 ## Viewing scan operations
 

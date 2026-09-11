@@ -1,6 +1,6 @@
 ---
 title: "Публикация приложений средствами Kubernetes Gateway API"
-description: "Публикация приложений с Kubernetes Gateway API в Deckhouse Kubernetes Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, аннотации HTTPRoute и WAF."
+description: "Публикация приложений с Kubernetes Gateway API в Deckhouse Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, аннотации HTTPRoute и WAF."
 permalink: ru/user/network/ingress/alb/gateway-api.html
 lang: ru
 extractedLinksMax: 0
@@ -582,7 +582,7 @@ GeoIP и трассировку OpenTelemetry настраивает админ�
 
 ### Поддерживаемые аннотации HTTPRoute {#поддерживаемые-аннотации-httproute}
 
-Так как текущая спецификация Gateway API пока не покрывает все возможности, нужные для работы кластера Deckhouse Kubernetes Platform (DKP), модуль предоставляет аннотации HTTPRoute для недостающих параметров. Контроллер читает эти ключи из `HTTPRoute.metadata.annotations`.
+Так как текущая спецификация Gateway API пока не покрывает все возможности, нужные для работы кластера Deckhouse Platform (DP), модуль предоставляет аннотации HTTPRoute для недостающих параметров. Контроллер читает эти ключи из `HTTPRoute.metadata.annotations`.
 
 | Аннотация | Описание |
 | :--- | :--- |

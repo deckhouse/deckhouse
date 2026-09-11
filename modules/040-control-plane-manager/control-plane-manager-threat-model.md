@@ -1,6 +1,6 @@
 # Модель угроз безопасности информации модуля control-plane-manager
 
-**Объект моделирования:** модуль Deckhouse Kubernetes Platform `control-plane-manager` (`deckhouse/modules/040-control-plane-manager`).
+**Объект моделирования:** модуль Deckhouse Platform `control-plane-manager` (`deckhouse/modules/040-control-plane-manager`).
 
 **Основание:** «Методика моделирования угроз и поверхности атаки» (`5.7-threat-modeling.md`), перечень угроз БДУ ФСТЭК России (новый раздел, `threats.csv`), термины (`abbr.md`).
 

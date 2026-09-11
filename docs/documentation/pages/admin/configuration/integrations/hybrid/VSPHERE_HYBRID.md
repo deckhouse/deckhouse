@@ -2,17 +2,17 @@
 title: Hybrid cluster with vSphere
 permalink: en/admin/integrations/hybrid/vsphere-hybrid.html
 search: hybrid with vSphere
-description: Preparation for hybrid integration with VMware vSphere in Deckhouse Kubernetes Platform.
+description: Preparation for hybrid integration with VMware vSphere in Deckhouse Platform.
 ---
 
-The following describes the process of adding nodes from vSphere to an existing static Deckhouse Kubernetes Platform (DKP) cluster.
+The following describes the process of adding nodes from vSphere to an existing static Deckhouse Platform (DP) cluster.
 
-Integration with vSphere uses the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module. It provides interaction between DKP and vCenter, retrieval of information about virtual machines, work with placement parameters, and integration with vSphere infrastructure capabilities.
+Integration with vSphere uses the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module. It provides interaction between DP and vCenter, retrieval of information about virtual machines, work with placement parameters, and integration with vSphere infrastructure capabilities.
 
 This section describes two ways to add nodes:
 
-- **Automatic node creation in vSphere**. DKP creates virtual machines through the vSphere API. VM parameters are defined by the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resource, and the required number of nodes and placement zones are defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
-- **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DKP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
+- **Automatic node creation in vSphere**. DP creates virtual machines through the vSphere API. VM parameters are defined by the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resource, and the required number of nodes and placement zones are defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
+- **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
 
 ## Prerequisites for vSphere
 
@@ -123,7 +123,7 @@ An example configuration and description of the available parameters are provide
    Where:
 
    - [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) describes the parameters of the virtual machine that will be created in vSphere.
-   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) describes the node group that DKP must maintain in the cluster.
+   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) describes the node group that DP must maintain in the cluster.
    - `nodeType: CloudEphemeral` means that nodes will be created automatically through the cloud provider.
    - `cloudInstances.classReference` points to VsphereInstanceClass.
    - `cloudInstances.zones` must contain zones from the `zones` list in ModuleConfig.
@@ -134,7 +134,7 @@ An example configuration and description of the available parameters are provide
    d8 k apply -f vsphere-instance.yaml
    ```
 
-   After the manifest is applied, DKP will start creating a virtual machine in vSphere. After the VM boots, kubelet will connect to the Kubernetes API, and the new node will appear in the cluster.
+   After the manifest is applied, DP will start creating a virtual machine in vSphere. After the VM boots, kubelet will connect to the Kubernetes API, and the new node will appear in the cluster.
 
 1. Check the node status:
 

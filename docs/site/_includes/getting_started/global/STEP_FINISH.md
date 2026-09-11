@@ -7,7 +7,7 @@
 <div markdown="1">
 ## Everything is installed, configured, and working!
 
-Now that you have installed and properly configured Deckhouse Kubernetes Platform, let's look at what you can do with it.
+Now that you have installed and properly configured Deckhouse Platform, let's look at what you can do with it.
 
 By default, the [Dex](https://dexidp.io/) is used for accessing all the components.
 
@@ -17,7 +17,7 @@ Here are credentials **generated** in the previous steps:
 - Username — `admin@deckhouse.io`
 - Password — `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `config.yml` file)
 
-Use them to access the web interface of the Deckhouse Kubernetes Platform components.
+Use them to access the web interface of the Deckhouse Platform components.
 {% endunless %}
 </div>
 
@@ -51,7 +51,7 @@ Open the cluster web interface by clicking the "Connect and open" button in the 
 <img src="/images/gs/installer/zvirt-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
 {%- endif %}
 
-The web interface for managing the installed DKP cluster will open in the same window.
+The web interface for managing the installed DP cluster will open in the same window.
 
 <img src="/images/gs/installer/console.png" alt="What the web interface looks like..." style="width: 100%;">
 

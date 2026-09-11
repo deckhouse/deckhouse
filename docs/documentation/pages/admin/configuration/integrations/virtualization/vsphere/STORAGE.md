@@ -10,7 +10,7 @@ The following storage types are used in VMware vSphere for Kubernetes cluster da
 - **Datastores**: Used to store the root disks of virtual machines;
 - **CNS disks (Container Native Storage)**: Used for automatic creation of PersistentVolumes via CSI.
 
-Deckhouse Kubernetes Platform (DKP) automatically creates a StorageClass for each Datastore and DatastoreCluster
+Deckhouse Platform (DP) automatically creates a StorageClass for each Datastore and DatastoreCluster
 that is tagged as a `zone`.
 
 You can specify:
@@ -39,7 +39,7 @@ spec:
 
 ### Resizing a volume (PVCs)
 
-DKP supports Online Resize PersistentVolume starting with vSphere 7.0U2.
+DP supports Online Resize PersistentVolume starting with vSphere 7.0U2.
 However, due to CSI and vSphere API specifics, additional steps are required after resizing a PVC:
 
 1. Run `d8 k cordon <node_name>`.

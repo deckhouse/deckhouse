@@ -1,6 +1,6 @@
 ---
 title: "The cilium-hubble module"
-description: "Visualization of the Deckhouse Kubernetes Platform cluster network stack using Cilium Hubble."
+description: "Visualization of the Deckhouse Platform cluster network stack using Cilium Hubble."
 webIfaces:
 - name: hubble
 ---

@@ -7,7 +7,7 @@ force_searchable: true
 
 ## Список необходимых сервисов VMware Cloud Director
 
-Для работы Deckhouse Kubernetes Platform должен быть доступен следующий сервис VMware Cloud Director:
+Для работы Deckhouse Platform должен быть доступен следующий сервис VMware Cloud Director:
 
 | Сервис                    | Версия API    |
 | :------------------------ | :--------:    |

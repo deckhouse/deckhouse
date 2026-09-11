@@ -2,17 +2,17 @@
 title: Hybrid cluster with VCD
 permalink: en/admin/integrations/hybrid/vcd-hybrid.html
 search: hybrid with VCD
-description: Preparation for hybrid integration with VMware Cloud Director in Deckhouse Kubernetes Platform.
+description: Preparation for hybrid integration with VMware Cloud Director in Deckhouse Platform.
 ---
 
-The following describes the process of adding nodes from VMware Cloud Director (VCD) to an existing static Deckhouse Kubernetes Platform (DKP) cluster.
+The following describes the process of adding nodes from VMware Cloud Director (VCD) to an existing static Deckhouse Platform (DP) cluster.
 
-Integration with VCD uses the [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module. It provides interaction between DKP and VMware Cloud Director, creation and deletion of virtual machines, retrieval of information about the VCD infrastructure, and integration with StorageClass and other provider capabilities.
+Integration with VCD uses the [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module. It provides interaction between DP and VMware Cloud Director, creation and deletion of virtual machines, retrieval of information about the VCD infrastructure, and integration with StorageClass and other provider capabilities.
 
 This section describes two ways to add nodes:
 
-- **Automatic node creation in VCD**. DKP creates virtual machines through the VCD API. VM parameters are defined by the [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) resource, and the required number of nodes is defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
-- **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DKP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
+- **Automatic node creation in VCD**. DP creates virtual machines through the VCD API. VM parameters are defined by the [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) resource, and the required number of nodes is defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
+- **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
 
 ## Prerequisites for VCD
 
@@ -128,7 +128,7 @@ Before you begin, make sure that the following conditions are met:
    d8 k apply -f vcd-instanceclass-nodegroup.yaml
    ```
 
-   After the manifest is applied, DKP will start creating virtual machines in VCD managed by the `node-manager` module.
+   After the manifest is applied, DP will start creating virtual machines in VCD managed by the `node-manager` module.
 
 1. Make sure that the required number of nodes has appeared in the cluster:
 

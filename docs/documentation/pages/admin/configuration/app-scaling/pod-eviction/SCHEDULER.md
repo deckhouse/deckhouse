@@ -1,7 +1,7 @@
 ---
 title: "Scheduler"
 permalink: en/admin/configuration/app-scaling/pod-eviction/scheduler.html
-description: "Configure Kubernetes scheduler in Deckhouse Kubernetes Platform. Pod scheduling policies, node selection, resource allocation, and cluster workload distribution optimization."
+description: "Configure Kubernetes scheduler in Deckhouse Platform. Pod scheduling policies, node selection, resource allocation, and cluster workload distribution optimization."
 ---
 
 ## Pod scheduling
@@ -32,11 +32,11 @@ For the complete list of plugins, refer to the [Kubernetes documentation](https:
 
 ### Pod scheduling phases
 
-The process of assigning pods to nodes in DKP involves several key phases. The scheduler analyzes available nodes, applies various filtering and scoring criteria, and then selects the most suitable node to run the pod.
+The process of assigning pods to nodes in DP involves several key phases. The scheduler analyzes available nodes, applies various filtering and scoring criteria, and then selects the most suitable node to run the pod.
 
 In the Filtering phase, filtering plugins are activated. These plugins evaluate all available nodes and select only those that meet certain conditions (e.g., taints, nodePorts, nodeName, unschedulable, and others).
 
-If the nodes are distributed across different availability zones, DKP alternates between zones during selection to avoid placing all pods in a single zone. For example, if the nodes are distributed like this:
+If the nodes are distributed across different availability zones, DP alternates between zones during selection to avoid placing all pods in a single zone. For example, if the nodes are distributed like this:
 
 ```console
 Zone 1: Node 1, Node 2, Node 3, Node 4
@@ -73,7 +73,7 @@ If multiple nodes receive the same highest score, the selection is made randomly
 
 ### How to modify or extend scheduler logic
 
-The scheduler in DKP can be flexibly configured and extended using custom plugins. This allows its behavior to be adapted to specific cluster requirements, such as considering custom metrics, special workload distribution rules, or node prioritization.
+The scheduler in DP can be flexibly configured and extended using custom plugins. This allows its behavior to be adapted to specific cluster requirements, such as considering custom metrics, special workload distribution rules, or node prioritization.
 
 Each such plugin is implemented as a webhook and must meet the following requirements:
 
@@ -116,7 +116,7 @@ If the `failurePolicy: Fail` parameter is used, any failure in the webhook will 
 
 ### Additional pod placement mechanisms
 
-Deckhouse Kubernetes Platform provides flexible mechanisms for managing pod placement within a cluster. These mechanisms help optimize load balancing, improve fault tolerance, and separate system and user workloads.
+Deckhouse Platform provides flexible mechanisms for managing pod placement within a cluster. These mechanisms help optimize load balancing, improve fault tolerance, and separate system and user workloads.
 
 Main placement configuration options:
 
@@ -200,17 +200,17 @@ spec:
 
 ## Pod redistribution
 
-DKP analyzes the state of the cluster every 15 minutes and evicts pods that match the conditions described in active scheduling strategies. Evicted pods go through the standard scheduling process again, taking the current cluster state into account. This mechanism allows workloads to be redistributed based on the selected strategy and frees up resources on certain nodes when necessary.
+DP analyzes the state of the cluster every 15 minutes and evicts pods that match the conditions described in active scheduling strategies. Evicted pods go through the standard scheduling process again, taking the current cluster state into account. This mechanism allows workloads to be redistributed based on the selected strategy and frees up resources on certain nodes when necessary.
 
 ### Considering pod Priority Classes
 
-DKP defines a set of priority classes that determine the importance of pods and the order in which they are evicted during workload redistribution.
+DP defines a set of priority classes that determine the importance of pods and the order in which they are evicted during workload redistribution.
 
 If the cluster lacks resources, lower-priority pods may be evicted in favor of higher-priority ones. This ensures that critical services remain operational even when nodes are overloaded.
 
-### How DKP considers pod priority
+### How DP considers pod priority
 
-Deckhouse Kubernetes Platform uses the pod priority mechanism to determine which pods should be evicted when resources are insufficient. The higher the pod’s priority, the lower the chance it will be evicted during redistribution.
+Deckhouse Platform uses the pod priority mechanism to determine which pods should be evicted when resources are insufficient. The higher the pod’s priority, the lower the chance it will be evicted during redistribution.
 
 This mechanism is controlled by the [`descheduler`](/modules/descheduler/) module, where you can define a priority threshold using the `spec.priorityClassThreshold` parameter. This threshold limits eviction to only those pods with a priority below the specified value.
 
@@ -233,7 +233,7 @@ spec:
 
 ### Which pods are not evicted
 
-- DKP does not evict a pod in the following cases:
+- DP does not evict a pod in the following cases:
 
   - The pod is in the `d8-*` or `kube-system` namespace;
   - The pod has the `priorityClassName` set to `system-cluster-critical` or `system-node-critical`;
@@ -242,13 +242,13 @@ spec:
   - Evicting the pod would violate a [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/);
   - There are no available nodes to reschedule the evicted pod.
 
-If multiple pods match the eviction criteria, DKP applies additional logic:
+If multiple pods match the eviction criteria, DP applies additional logic:
 
 1. Pods with the lowest priority (`BestEffort`) are evicted first;
 1. Then `Burstable` pods are considered;
 1. `Guaranteed` pods are evicted last, and only if absolutely necessary.
 
-DKP provides fine-grained control over which pods and nodes are subject to eviction:
+DP provides fine-grained control over which pods and nodes are subject to eviction:
 
 - `spec.podLabelSelector` — limits evicted pods by label;
 - `spec.namespaceLabelSelector` — filters namespaces whose pods can be considered for eviction;
@@ -293,7 +293,7 @@ The module does not require mandatory configuration. You can enable it without a
 
 The [`spec.strategies`](/modules/descheduler/cr.html#descheduler-v1alpha2-spec-strategies) parameter lists the strategies you want to enable or configure. Each strategy has an `enabled` flag (default is `false`).
 
-Below is a list of the main strategies available in DKP.
+Below is a list of the main strategies available in DP.
 
 **HighNodeUtilization** — concentrates workloads on fewer nodes by evicting pods from underutilized nodes so they can be rescheduled elsewhere. Requirements:
 
@@ -302,7 +302,7 @@ Below is a list of the main strategies available in DKP.
 
 This strategy is enabled using the `spec.strategies.highNodeUtilization.enabled` parameter.
 
-The `thresholds` parameter defines the resource usage levels below which a node is considered underutilized. If usage (CPU, memory, etc.) falls below *all* threshold values, the node is deemed underutilized, and DKP will attempt to evict pods from it.
+The `thresholds` parameter defines the resource usage levels below which a node is considered underutilized. If usage (CPU, memory, etc.) falls below *all* threshold values, the node is deemed underutilized, and DP will attempt to evict pods from it.
 
 Example:
 
@@ -407,11 +407,11 @@ spec:
 
 1. `requiredDuringSchedulingIgnoredDuringExecution`:
    - A pod with this rule must be scheduled only on a node that satisfies the specified conditions (e.g., a specific label).
-   - If the node later no longer satisfies the condition (e.g., the label is removed), and there is another suitable node in the cluster, DKP will evict the pod so it can be rescheduled on a valid node.
+   - If the node later no longer satisfies the condition (e.g., the label is removed), and there is another suitable node in the cluster, DP will evict the pod so it can be rescheduled on a valid node.
 
 1. `preferredDuringSchedulingIgnoredDuringExecution`:
    - A pod with this preference may run on a node that doesn't fully match the affinity, if no better option is available.
-   - If a more suitable node appears later in the cluster, DKP may evict the pod so it can be restarted under better placement conditions.
+   - If a more suitable node appears later in the cluster, DP may evict the pod so it can be restarted under better placement conditions.
 
 This strategy helps ensure pods continue to align with their node affinity rules and do not remain in suboptimal locations when better options become available.
 

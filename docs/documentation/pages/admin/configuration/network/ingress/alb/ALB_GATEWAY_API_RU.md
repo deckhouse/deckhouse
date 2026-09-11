@@ -63,7 +63,7 @@ Gateway API разделяет ответственность между адм�
 | | ClusterALBInstance | ALBInstance |
 | :--- | :--- | :--- |
 | Назначение | Развёртывание общекластерного Gateway | Развёртывание Gateway в неймспейсе |
-| Сценарии использования | - Общая точка входа (общекластерный шлюз).<br> - Системный шлюз для публикации веб-интерфейсов служебных компонентов Deckhouse Kubernetes Platform (DKP) и других модулей (может требоваться [«Действия перед включением и настройкой ALB в кластере»](#действия-перед-включением-и-настройкой-alb-в-кластере)).<br> - Платформенный шлюз | Отдельный шлюз для приложения или команды в выделенном неймспейсе |
+| Сценарии использования | - Общая точка входа (общекластерный шлюз).<br> - Системный шлюз для публикации веб-интерфейсов служебных компонентов Deckhouse Platform (DP) и других модулей (может требоваться [«Действия перед включением и настройкой ALB в кластере»](#действия-перед-включением-и-настройкой-alb-в-кластере)).<br> - Платформенный шлюз | Отдельный шлюз для приложения или команды в выделенном неймспейсе |
 | Поддерживаемые типы инлета | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-loadbalancer), [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) |
 | Реализация прокси | Envoy Proxy | Envoy Proxy |
 | Тип развёртывания | DaemonSet | Deployment |
@@ -214,10 +214,10 @@ spec:
 ## Публикация служебных доменов {#публикация-служебных-доменов}
 
 {% alert level="warning" %}
-Если нужно публиковать служебные домены, укажите глобальный параметр [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — без него системные объекты HTTPRoute/Gateway/ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы служебных компонентов DKP и других модулей не будут опубликованы. Если публикация служебных доменов не нужна, параметр можно не указывать.
+Если нужно публиковать служебные домены, укажите глобальный параметр [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — без него системные объекты HTTPRoute/Gateway/ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы служебных компонентов DP и других модулей не будут опубликованы. Если публикация служебных доменов не нужна, параметр можно не указывать.
 {% endalert %}
 
-Для предоставления доступа к служебным доменам кластера DKP укажите шлюз по умолчанию. Создайте ClusterALBInstance с нужным типом инлета и [настройками](/modules/alb/cr.html#clusteralbinstance) и установите для него параметр [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway).
+Для предоставления доступа к служебным доменам кластера DP укажите шлюз по умолчанию. Создайте ClusterALBInstance с нужным типом инлета и [настройками](/modules/alb/cr.html#clusteralbinstance) и установите для него параметр [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway).
 
 Пример манифеста ClusterALBInstance с параметром `spec.defaultDeckhouseGateway: true`:
 
@@ -261,18 +261,18 @@ d8 k get httproutes -A -l heritage=deckhouse -o json \
   | column -t -s $'\t'
 ```
 
-### Выбор шлюза DKP по умолчанию при использовании нескольких ClusterALBInstance
+### Выбор шлюза DP по умолчанию при использовании нескольких ClusterALBInstance
 
 В кластере может быть одновременно несколько общекластерных Gateway, помеченных как шлюз по умолчанию (флаг [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) в параметрах соответствующих ClusterALBInstance). В этом случае шлюзом по умолчанию становится Gateway, созданный объектом ClusterALBInstance с наиболее ранним `creationTimestamp` (то есть созданный раньше остальных).
 
-Если ни один объект ClusterALBInstance не отмечен как шлюз по умолчанию, DKP допускает использование объекта Gateway, созданного модулем `alb` для инстанса ClusterALBInstance с именем `main`.
+Если ни один объект ClusterALBInstance не отмечен как шлюз по умолчанию, DP допускает использование объекта Gateway, созданного модулем `alb` для инстанса ClusterALBInstance с именем `main`.
 
-### Смена шлюза DKP по умолчанию
+### Смена шлюза DP по умолчанию
 
-Если системные домены DKP необходимо перевести на обслуживание другим объектом Gateway, выполните следующие шаги:
+Если системные домены DP необходимо перевести на обслуживание другим объектом Gateway, выполните следующие шаги:
 
 1. Создайте новый объект ClusterALBInstance, описывающий необходимые настройки, и задайте в нём параметр [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway).
-1. В текущем объекте ClusterALBInstance, который предоставляет шлюз DKP по умолчанию, задайте `spec.defaultDeckhouseGateway: false`.
+1. В текущем объекте ClusterALBInstance, который предоставляет шлюз DP по умолчанию, задайте `spec.defaultDeckhouseGateway: false`.
 1. Проверьте, что все системные объекты ListenerSet теперь ссылаются на новый объект Gateway в `spec.parentRef`.
 
 ## Примеры для разных окружений {#infrastructure-examples}

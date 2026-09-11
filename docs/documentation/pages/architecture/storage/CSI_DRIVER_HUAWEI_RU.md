@@ -3,10 +3,10 @@ title: CSI-драйвер Huawei
 permalink: ru/architecture/storage/csi-drivers/csi-driver-huawei.html
 lang: ru
 search: csi-huawei, csi driver
-description: Архитектура CSI-драйвера csi-huawei в Deckhouse Kubernetes Platform.
+description: Архитектура CSI-драйвера csi-huawei в Deckhouse Platform.
 ---
 
-CSI-драйвер `csi-huawei` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД Huawei в Deckhouse Kubernetes Platform (DKP).
+CSI-драйвер `csi-huawei` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД Huawei в Deckhouse Platform (DP).
 
 ## Архитектура драйвера
 
@@ -17,7 +17,7 @@ CSI-драйвер `csi-huawei` — это реализация стандарт
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура CSI-драйвера `csi-huawei` на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура CSI-драйвера `csi-huawei` на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура CSI-драйвера `csi-huawei`](../../../images/architecture/storage/c4-l2-csi-driver-huawei.ru.png)
 
@@ -33,7 +33,7 @@ CSI-драйвер `csi-huawei` состоит из следующих комп�
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
-     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
+     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
 
      Внешние контроллеры взаимодействуют c контейнером controller по gRPC через Unix-сокеты.
 

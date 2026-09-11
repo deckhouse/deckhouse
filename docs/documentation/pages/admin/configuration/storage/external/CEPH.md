@@ -1,10 +1,10 @@
 ---
 title: "Distributed Ceph storage"
 permalink: en/admin/configuration/storage/external/ceph.html
-description: "Configure Ceph distributed storage integration in Deckhouse Kubernetes Platform. RBD and CephFS setup, authentication configuration, and high availability storage management."
+description: "Configure Ceph distributed storage integration in Deckhouse Platform. RBD and CephFS setup, authentication configuration, and high availability storage management."
 ---
 
-Ceph is a scalable distributed storage system that ensures high availability and fault tolerance of data. Deckhouse Kubernetes Platform (DKP) provides Ceph cluster integration using the `csi-ceph` module. This enables dynamic storage management and the use of StorageClass based on RADOS Block Device (RBD) or CephFS.
+Ceph is a scalable distributed storage system that ensures high availability and fault tolerance of data. Deckhouse Platform (DP) provides Ceph cluster integration using the `csi-ceph` module. This enables dynamic storage management and the use of StorageClass based on RADOS Block Device (RBD) or CephFS.
 
 {% alert level="info" %}
 The [snapshot-controller](/modules/snapshot-controller/) module is required for working with snapshots.

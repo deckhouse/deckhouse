@@ -6,10 +6,10 @@ lang: en
 layout: sidebar-guides
 ---
 
-This document describes the procedure for changing the network plugin (CNI) in a Deckhouse Kubernetes Platform cluster. The tool used in Deckhouse allows performing the automated migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
+This document describes the procedure for changing the network plugin (CNI) in a Deckhouse Platform cluster. The tool used in Deckhouse allows performing the automated migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
 
 {% alert level="danger" %}
-* This guide is applicable for DKP version 1.76 and above. For DKP version 1.75 and earlier, use the [Switching CNI from Flannel or Simple bridge to Cilium](/products/kubernetes-platform/documentation/v1/admin/configuration/network/internal/flannel-simple-to-cilium.html) guide.
+* This guide is applicable for DP version 1.76 and above. For DP version 1.75 and earlier, use the [Switching CNI from Flannel or Simple bridge to Cilium](/products/kubernetes-platform/documentation/v1/admin/configuration/network/internal/flannel-simple-to-cilium.html) guide.
 * The tool is not intended for switching to any (third-party) CNI.
 * During the migration process, the target CNI module (`ModuleConfig.spec.enabled: true`) will be automatically enabled, which must be pre-configured by the cluster administrator.
 {% endalert %}
@@ -30,7 +30,7 @@ Supported CNI switching modes:
 | cilium (native)  |      🟩       |        🟩        |       🟩        |       🟫        |       🟨       |
 | cilium (vxlan)   |      🟩       |        🟩        |       🟩        |       🟨        |       🟫       |
 
-There are several methods to switch CNI in a DKP cluster.
+There are several methods to switch CNI in a DP cluster.
 
 ## Method 1: Using the d8 network cni-migration command group of the d8 utility (automated switching)
 
@@ -44,7 +44,7 @@ To start the process, execute the `switch` command, specifying the target CNI (e
 d8 network cni-migration switch --to-cni cilium
 ```
 
-This command will create the necessary resource in the cluster and start the migration controller. DKP will automatically deploy the necessary components: Manager and Agents in the `d8-system` namespace.
+This command will create the necessary resource in the cluster and start the migration controller. DP will automatically deploy the necessary components: Manager and Agents in the `d8-system` namespace.
 
 ### Monitoring progress
 

@@ -268,14 +268,14 @@ apiVersions:
             > Чтобы установить требуемый лейбл для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         provider:
           description: |
-            Содержит настройки для подключения к API Deckhouse Kubernetes Platform.
+            Содержит настройки для подключения к API Deckhouse Platform.
           properties:
             kubeconfigDataBase64:
               description: |
-                Kubeconfig для подключения к Deckhouse Kubernetes Platform API в кодировке Base64.
+                Kubeconfig для подключения к Deckhouse Platform API в кодировке Base64.
             namespace:
               description: |
-                Пространство имён, в котором будут созданы ресурсы кластера DKP.
+                Пространство имён, в котором будут созданы ресурсы кластера DP.
 
                 > Если не указано явно, будет использоваться пространство имён по умолчанию для kubeconfig.
             networkPolicy:

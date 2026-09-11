@@ -1,12 +1,12 @@
 ---
-title: "How to run and verify a module in the DKP cluster"
+title: "How to run and verify a module in the DP cluster"
 permalink: en/architecture/module-development/run/
-description: How to run a module in a Deckhouse Kubernetes Platform cluster using ModuleSource, ModuleUpdatePolicy, and ModuleConfig, and how to verify module operation.
+description: How to run a module in a Deckhouse Platform cluster using ModuleSource, ModuleUpdatePolicy, and ModuleConfig, and how to verify module operation.
 ---
 
-This section describes the process of running a module in a Deckhouse Kubernetes Platform (DKP) cluster, as well as connecting Deckhouse Module Tools for setting up validation and metrics collection.
+This section describes the process of running a module in a Deckhouse Platform (DP) cluster, as well as connecting Deckhouse Module Tools for setting up validation and metrics collection.
 
-## Run the module in the DKP cluster
+## Run the module in the DP cluster
 
 Follow these steps to run the module in a cluster:
 
@@ -16,10 +16,10 @@ Follow these steps to run the module in a cluster:
   
 ### Module source
 
-Deckhouse Kubernetes Platform (DKP) can work with the following types of modules:
+Deckhouse Platform (DP) can work with the following types of modules:
 
-- Built-in modules. These are included in DKP. Their release cycle is tied to the DKP release cycle.
-- Modules from [module source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source). The release cycle for these modules is not tied to the DKP release cycle.
+- Built-in modules. These are included in DP. Their release cycle is tied to the DP release cycle.
+- Modules from [module source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source). The release cycle for these modules is not tied to the DP release cycle.
 
 Create a [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource to set the source to fetch module information from. This resource will contain the address of the container registry to pull modules from, authentication parameters, and other settings.
 
@@ -36,7 +36,7 @@ spec:
     dockerCfg: <base64 encoded credentials>
 ```
 
-After the ModuleSource resource is created, DKP will start to perform periodic (every three minutes) data synchronization with the module source (fetching information about the modules available in the source).
+After the ModuleSource resource is created, DP will start to perform periodic (every three minutes) data synchronization with the module source (fetching information about the modules available in the source).
 
 Use the following command to check the synchronization status:
 
@@ -90,7 +90,7 @@ The complete list of modules available from all module sources created in the cl
 d8 k get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-After creating the ModuleSource resource and successful synchronization, _modules_ — [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module) resources should start appearing in the cluster (DKP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
+After creating the ModuleSource resource and successful synchronization, _modules_ — [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module) resources should start appearing in the cluster (DP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
 
 ```shell
 d8 k get module
@@ -155,7 +155,7 @@ Next, you need to enable the module. To do this, you need to create a ModuleConf
 
 The parameter `enabled` in ModuleConfig is responsible for enabling the module. If the module is available from multiple sources (resource ModuleSource), the required source can be specified in the `source` parameter.
 
-The update policy (the name of the ModuleUpdatePolicy) can be specified in the `updatePolicy` parameter. It is not necessary to specify the update policy; in this case, it will be inherited from the Deckhouse Kubernetes Platform update parameters ([releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) and [update](/modules/deckhouse/configuration.html#parameters-update) of the ModuleConfig `deckhouse`).
+The update policy (the name of the ModuleUpdatePolicy) can be specified in the `updatePolicy` parameter. It is not necessary to specify the update policy; in this case, it will be inherited from the Deckhouse Platform update parameters ([releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) and [update](/modules/deckhouse/configuration.html#parameters-update) of the ModuleConfig `deckhouse`).
 
 Example of ModuleConfig for enabling the module `module-one` from the source `example`:
 
@@ -335,12 +335,12 @@ Follow these steps to deploy a module from a different module source:
 
 ### Module update policy
 
-The module update policy refers to the rules that DKP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
+The module update policy refers to the rules that DP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
 - module update mode (automatic, manual, updates are disabled);
 - the release channel to use for updates;
 - time windows for automatic updates during which the module update is permitted.
 
-You do not have to create the ModuleUpdatePolicy resource. If the update policy for a module is not defined (there is no corresponding ModuleUpdatePolicy resource), the update settings match the update settings of DKP (the [update](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module).
+You do not have to create the ModuleUpdatePolicy resource. If the update policy for a module is not defined (there is no corresponding ModuleUpdatePolicy resource), the update settings match the update settings of DP (the [update](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module).
 
 Example of the ModuleUpdatePolicy resource, whose update policy allows automatic module updates on Mondays and Wednesdays from 13:30 to 14:00 UTC:
 
@@ -365,7 +365,7 @@ The update policy is specified in the `updatePolicy` field in ModuleConfig.
 
 ### Enabling the module
 
-Before enabling the module, make sure that it can be enabled. Run the following command to list all the available DKP modules:
+Before enabling the module, make sure that it can be enabled. Run the following command to list all the available DP modules:
 
 ```shell
 d8 k get modules
@@ -389,9 +389,9 @@ module-two                   Available   False     False
 
 It shows that the `module-one` module can be enabled.
 
-If the module is not in the list, check that [module source](#module-source) is defined and the module is listed in the module source. Also check the [update policy](#module-update-policy) of the module (if defined). If the module update policy is not defined, it matches the DKP update policy (the [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter and the [update](/modules/deckhouse/configuration.html#parameters-update) section of the `deckhouse` module parameters).
+If the module is not in the list, check that [module source](#module-source) is defined and the module is listed in the module source. Also check the [update policy](#module-update-policy) of the module (if defined). If the module update policy is not defined, it matches the DP update policy (the [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter and the [update](/modules/deckhouse/configuration.html#parameters-update) section of the `deckhouse` module parameters).
 
-You can enable the module similarly to built-in DKP modules using any of the following methods:
+You can enable the module similarly to built-in DP modules using any of the following methods:
 - Run the command below (specify the name of the module):
 
   ```shell
@@ -455,7 +455,7 @@ If there were errors while enabling a module in the cluster, you can learn about
   {: .nowrap-default }
   <!-- markdownlint-enable MD031 -->
 
-Similar to [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
+Similar to [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (a DP release resource), modules have a [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) resource. DP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
 
 ```shell
 d8 k get mr

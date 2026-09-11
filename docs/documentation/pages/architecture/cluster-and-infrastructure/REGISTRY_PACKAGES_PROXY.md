@@ -2,11 +2,11 @@
 title: Registry-packages-proxy module
 permalink: en/architecture/cluster-and-infrastructure/infrastructure/registry-packages-proxy.html
 search: registry, proxy, bootstrap
-description: Architecture of the registry-packages-proxy module in Deckhouse Kubernetes Platform.
+description: Architecture of the registry-packages-proxy module in Deckhouse Platform.
 ---
 
 The [`registry-packages-proxy`](/modules/registry-packages-proxy/) module provides an in-cluster HTTP proxy service for accessing
-[packages](../../marketplace/concepts.html) from container registries in the Deckhouse Kubernetes Platform (DKP).
+[packages](../../marketplace/concepts.html) from container registries in the Deckhouse Platform (DP).
 It acts as an intermediary between cluster components and external or internal registries,
 offering caching capabilities to optimize bandwidth usage and improve package retrieval performance.
 
@@ -37,7 +37,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`registry-packages-proxy`](/modules/registry-packages-proxy/) module and its interactions with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`registry-packages-proxy`](/modules/registry-packages-proxy/) module and its interactions with other DP components are shown in the following diagram:
 
 ![Registry-packages-proxy module architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-registry-packages-proxy.svg)
 

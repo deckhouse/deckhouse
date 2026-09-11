@@ -1,10 +1,10 @@
 ---
 title: "Granting permissions to users and service accounts"
 permalink: en/admin/configuration/access/authorization/granting.html
-description: "Grant RBAC permissions to users and service accounts in Deckhouse Kubernetes Platform. Role and ClusterRole binding configuration for secure access control."
+description: "Grant RBAC permissions to users and service accounts in Deckhouse Platform. Role and ClusterRole binding configuration for secure access control."
 ---
 
-To grant permissions in Deckhouse Kubernetes Platform (DKP), you need to define a [`subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects) block in custom resources.
+To grant permissions in Deckhouse Platform (DP), you need to define a [`subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects) block in custom resources.
 
 For users, it should be specified in the following format:
 
@@ -38,7 +38,7 @@ subjects:
 
 ## Granting permissions using AuthorizationRule and ClusterAuthorizationRule (current role model)
 
-When using the current role model in DKP,
+When using the current role model in DP,
 you can grant permissions to users via the [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) and [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resources.
 
 ### Granting permissions to a user within a single namespace
@@ -95,7 +95,7 @@ spec:
 
 ## Granting permissions using ClusterRoleBinding and RoleBinding (experimental role model)
 
-When using the experimental role model in DKP,
+When using the experimental role model in DP,
 you can grant permissions to users via the [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) and [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources.
 
 ### Assigning cluster administrator permissions (experimental role model)
@@ -124,7 +124,7 @@ The user’s permissions will be limited to namespaces starting with `d8-` or `k
 
 The user will have the following permissions:
 
-- View, modify, delete, and create Kubernetes resources and DKP module resources.
+- View, modify, delete, and create Kubernetes resources and DP module resources.
 - Modify module configurations (view, edit, delete, and create ModuleConfig resources).
 - Run the following commands on pods and services:
   - `kubectl attach`
@@ -157,7 +157,7 @@ roleRef:
 ```
 
 {% offtopic title="Permissions the user will obtain" %}
-The user’s permissions will be limited to the following DKP module namespaces from the networking subsystem
+The user’s permissions will be limited to the following DP module namespaces from the networking subsystem
 (the actual list depends on the modules enabled in the cluster):
 
 - `d8-cni-cilium`
@@ -208,7 +208,7 @@ The user will have the following permissions:
   - VerticalPodAutoscaler
   - VolumeSnapshot
 
-- View, modify, create, and delete resources in DKP module namespaces from the `networking` subsystem.
+- View, modify, create, and delete resources in DP module namespaces from the `networking` subsystem.
 
   Resources the user will be able to manage:
 
@@ -257,7 +257,7 @@ The user will have the following permissions:
 To assign or restrict user permissions to specific namespaces,
 apply a [use role](rbac-experimental.html#use-roles) with the corresponding access level in a [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resource.
 
-For example, to allow a user to manage application resources in a namespace (without giving them access to DKP module configurations), use the `d8:use:role:admin` role in a [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resource for the corresponding namespace.
+For example, to allow a user to manage application resources in a namespace (without giving them access to DP module configurations), use the `d8:use:role:admin` role in a [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resource for the corresponding namespace.
 
 Example of granting application developer `app-developer` permissions within the `myapp` namespace:
 
@@ -313,7 +313,7 @@ The user’s permissions will be limited to the following within the `myapp` nam
   - VerticalPodAutoscaler
   - VolumeSnapshot
 
-- View, modify, create, and delete the following DKP module resources:
+- View, modify, create, and delete the following DP module resources:
 
   - DexAuthenticator
   - DexClient

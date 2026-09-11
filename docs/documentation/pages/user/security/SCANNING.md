@@ -1,17 +1,17 @@
 ---
 title: "Configuration of container image vulnerability scanning"
-description: "Container image vulnerability scanning in Deckhouse Kubernetes Platform using Trivy. CIS Kubernetes Benchmark checks, viewing reports in Grafana, vulnerability filtering."
+description: "Container image vulnerability scanning in Deckhouse Platform using Trivy. CIS Kubernetes Benchmark checks, viewing reports in Grafana, vulnerability filtering."
 permalink: en/user/security/scanning.html
 ---
 
-Deckhouse Kubernetes Platform (DKP) follows the [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes) recommendations,
+Deckhouse Platform (DP) follows the [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes) recommendations,
 ensuring security both at the component level and across the platform as a whole.
 
-To continuously monitor CIS compliance, DKP automatically runs checks in every cluster.
+To continuously monitor CIS compliance, DP automatically runs checks in every cluster.
 The results of these checks are presented in reports
 and available in Grafana on the `Security / CIS Kubernetes Benchmark` dashboard.
 
-DKP provides a built-in tool for automated container image vulnerability scanning based on [Trivy](https://github.com/aquasecurity/trivy).
+DP provides a built-in tool for automated container image vulnerability scanning based on [Trivy](https://github.com/aquasecurity/trivy).
 
 Below are commands for viewing and filtering reports from vulnerability scans
 and CIS compliance checks performed in the cluster.
@@ -79,7 +79,7 @@ In the cluster:
   - [ConfigAuditReport](#configauditreport): Misconfigurations in Kubernetes objects.
   - [ExposedSecretReport](#exposedsecretreport): Exposed secrets in containers.
 
-DKP uses a set of custom resources developed by the [Aqua Security Trivy Operator](https://aquasecurity.github.io/trivy-operator/) project
+DP uses a set of custom resources developed by the [Aqua Security Trivy Operator](https://aquasecurity.github.io/trivy-operator/) project
 to represent vulnerability scan results, configuration analysis, and cluster compliance checks.
 
 Below is a description of the key CRDs created by [operator-trivy](/modules/operator-trivy/), with examples and links to official documentation.

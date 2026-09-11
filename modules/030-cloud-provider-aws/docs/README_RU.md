@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — AWS"
-description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Amazon AWS."
+description: "Управление облачными ресурсами в Deckhouse Platform с помощью Amazon AWS."
 ---
 
-Модуль `cloud-provider-aws` обеспечивает интеграцию Deckhouse Kubernetes Platform с [Amazon AWS](https://aws.amazon.com/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы AWS при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-aws` обеспечивает интеграцию Deckhouse Platform с [Amazon AWS](https://aws.amazon.com/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы AWS при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Функции модуля `cloud-provider-aws`:
 

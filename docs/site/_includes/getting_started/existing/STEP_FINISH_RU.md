@@ -8,7 +8,7 @@
 <div markdown="1">
 ## Все установлено, настроено и работает!
 
-Рассмотрим дальнейшие возможности Deckhouse Kubernetes Platform, открывающиеся сразу после установки.
+Рассмотрим дальнейшие возможности Deckhouse Platform, открывающиеся сразу после установки.
 
 Для доступа к внутрикластерной документации выделен домен `deckhouse` в соответствии с установленным [шаблоном DNS-имен](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate). Например, для шаблона DNS-имен `%s.1.2.3.4.sslip.io`, веб-интерфейс документации будет доступен по адресу `https://deckhouse.1.2.3.4.sslip.io`.
 

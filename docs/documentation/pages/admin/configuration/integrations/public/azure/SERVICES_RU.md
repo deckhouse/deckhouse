@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/azure/services.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) использует возможности облака Azure для полноценной интеграции с Kubernetes. При работе с кластером в Azure автоматически:
+Deckhouse Platform (DP) использует возможности облака Azure для полноценной интеграции с Kubernetes. При работе с кластером в Azure автоматически:
 
 - Создаются сетевые маршруты для сети PodNetwork;
 - Настраиваются внешние балансировщики нагрузки (LoadBalancer) для сервисов Kubernetes;

@@ -2,7 +2,7 @@
 title: "Пример адаптации существующего чарта"
 permalink: ru/architecture/module-development/example/
 lang: ru
-description: Пошаговый пример создания модуля Deckhouse Kubernetes Platform на основе адаптации существующего Helm-чарта и его публикации через CI/CD-пайплайн.
+description: Пошаговый пример создания модуля Deckhouse Platform на основе адаптации существующего Helm-чарта и его публикации через CI/CD-пайплайн.
 ---
 
 {% raw %}
@@ -80,7 +80,7 @@ description: Пошаговый пример создания модуля Deckh
    echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/helloworld/Dockerfile
    ```
 
-1. Замените образ в манифесте Deployment на хелпер библиотеки Deckhouse Kubernetes Platform. Это позволит использовать актуальный content-based-тэг образа.
+1. Замените образ в манифесте Deployment на хелпер библиотеки Deckhouse Platform. Это позволит использовать актуальный content-based-тэг образа.
 
    ```shell
    sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloworld") }}/g' templates/deployment.yaml
@@ -134,11 +134,11 @@ description: Пошаговый пример создания модуля Deckh
 
 1. Убедитесь, что workflow публикации модуля выполнился успешно.
 
-Модуль стал доступным для подключения в кластере Deckhouse Kubernetes Platform.
+Модуль стал доступным для подключения в кластере Deckhouse Platform.
 
 ## Подключение модуля в кластере
 
-Пример подключения модуля `helloworld` в кластере Deckhouse Kubernetes Platform.
+Пример подключения модуля `helloworld` в кластере Deckhouse Platform.
 
 1. Создайте токен доступа в репозитории GitHub с правами для работы с GitHub Packages.
 1. Сгенерируйте строку аутентификации для доступа к хранилищу образов контейнеров GitHub Packages в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials), указав имя пользователя (или организации) GitHub и токен доступа:
@@ -241,7 +241,7 @@ description: Пошаговый пример создания модуля Deckh
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-1. В случае успешной установки релизов дождитесь перезапуска пода Deckhouse Kubernetes Platform.
+1. В случае успешной установки релизов дождитесь перезапуска пода Deckhouse Platform.
 
    ```shell
    d8 k -n d8-system get pod -l app=deckhouse
@@ -249,13 +249,13 @@ description: Пошаговый пример создания модуля Deckh
 
    Через некоторое время объекты модуля появятся в кластере.
 
-   Если при запуске модуля возникли ошибки, посмотрите журнал DKP:
+   Если при запуске модуля возникли ошибки, посмотрите журнал DP:
 
    ```shell
    d8 k -n d8-system logs deploy/deckhouse -f | jq -rc '.msg'
    ```
 
-   или проверьте состояние очереди DKP:
+   или проверьте состояние очереди DP:
 
    ```shell
    d8 system queue list

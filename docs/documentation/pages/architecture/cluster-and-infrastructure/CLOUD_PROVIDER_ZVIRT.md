@@ -2,7 +2,7 @@
 title: Cloud-provider-zvirt module
 permalink: en/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-zvirt.html
 search: cloud-provider-zvirt, cloud provider zvirt
-description: Architecture of the cloud-provider-zvirt module in Deckhouse Kubernetes Platform.
+description: Architecture of the cloud-provider-zvirt module in Deckhouse Platform.
 ---
 
 The `cloud-provider-zvirt` module is responsible for interacting with the [zVirt](https://www.orionsoft.ru/zvirt) cloud resources. It allows the [`node-manager`](/modules/node-manager/) module to use zVirt resources for provisioning nodes for the specified [node group](/modules/node-manager/cr.html#nodegroup).
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Cloud-provider-zvirt architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-zvirt.png)
 

@@ -1,10 +1,10 @@
 ---
 title: Package repositories
 permalink: en/admin/configuration/marketplace/package-repository.html
-description: "Connect a package registry to Deckhouse Kubernetes Platform Marketplace using PackageRepository. Configure authentication, scan intervals, and monitor repository status."
+description: "Connect a package registry to Deckhouse Platform Marketplace using PackageRepository. Configure authentication, scan intervals, and monitor repository status."
 ---
 
-Connecting the Deckhouse Kubernetes Platform (DKP) to a container registry containing application packages is done using the [PackageRepository](../../../reference/api/cr.html#packagerepository). Once connected, DKP automatically scans the registry and creates [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects for each discovered package version.
+Connecting the Deckhouse Platform (DP) to a container registry containing application packages is done using the [PackageRepository](../../../reference/api/cr.html#packagerepository). Once connected, DP automatically scans the registry and creates [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects for each discovered package version.
 
 Example of a PackageRepository manifest:
 
@@ -54,7 +54,7 @@ spec:
 
 ### Scan interval
 
-By default, DKP rescans the registry every **6 hours**. The interval can be overridden using the `scanInterval` parameter:
+By default, DP rescans the registry every **6 hours**. The interval can be overridden using the `scanInterval` parameter:
 
 ```yaml
 spec:

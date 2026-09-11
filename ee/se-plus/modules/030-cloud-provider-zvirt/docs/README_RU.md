@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — zVirt"
-description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью zVirt."
+description: "Управление облачными ресурсами в Deckhouse Platform с помощью zVirt."
 ---
 
-Модуль `cloud-provider-zvirt` обеспечивает интеграцию Deckhouse Kubernetes Platform с [zVirt](https://www.zvirt.ru/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы zVirt при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-zvirt` обеспечивает интеграцию Deckhouse Platform с [zVirt](https://www.zvirt.ru/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы zVirt при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Функции модуля `cloud-provider-zvirt`:
 

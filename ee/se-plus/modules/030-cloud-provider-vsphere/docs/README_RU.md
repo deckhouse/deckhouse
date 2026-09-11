@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — VMware vSphere"
-description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform на базе VMware vSphere."
+description: "Управление облачными ресурсами в Deckhouse Platform на базе VMware vSphere."
 ---
 
-Модуль `cloud-provider-vsphere` обеспечивает интеграцию Deckhouse Kubernetes Platform с [VMware vSphere](https://www.vmware.com/products/vsphere.html). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы vSphere при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-vsphere` обеспечивает интеграцию Deckhouse Platform с [VMware vSphere](https://www.vmware.com/products/vsphere.html). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы vSphere при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Функции модуля `cloud-provider-vsphere`:
 

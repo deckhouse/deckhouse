@@ -4,9 +4,9 @@ permalink: en/admin/configuration/network/internal/flannel-simple-to-cilium.html
 ---
 
 {% alert level="info" %}
-This guide is applicable to Deckhouse Kubernetes Platform version 1.75 and earlier.
+This guide is applicable to Deckhouse Platform version 1.75 and earlier.
 
-For DKP version 1.76 and later, use the [Switching CNI in the cluster](/products/kubernetes-platform/guides/cni-migration.html) guide.
+For DP version 1.76 and later, use the [Switching CNI in the cluster](/products/kubernetes-platform/guides/cni-migration.html) guide.
 {% endalert %}
 
 {% alert level="warning" %}

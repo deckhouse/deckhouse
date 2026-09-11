@@ -142,12 +142,12 @@ properties:
     properties:
       parameters:
         additionalProperties: false
-        description: Contains settings to connect to the Deckhouse Kubernetes Platform
+        description: Contains settings to connect to the Deckhouse Platform
           API.
         properties:
           namespace:
             description: |-
-              Namespace in which DKP cluster resources will be created.
+              Namespace in which DP cluster resources will be created.
 
               > If not explicitly specified, the default namespace for kubeconfig will be used.
             type: string

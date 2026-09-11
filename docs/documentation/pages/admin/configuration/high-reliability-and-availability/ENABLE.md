@@ -12,7 +12,7 @@ and when increasing the number of master nodes from one to three.
 
 ## Enabling HA mode globally
 
-You can enable HA mode globally for DKP in one of the following ways.
+You can enable HA mode globally for DP in one of the following ways.
 
 ### Using ModuleConfig/global custom resource
 
@@ -53,7 +53,7 @@ and switch the **HA mode** toggle to **Yes**.
 
 ## Configuring HA mode with two master nodes and an arbiter node
 
-Deckhouse Kubernetes Platform allows you to configure HA mode with two master nodes and an arbiter node. This approach allows you to meet HA requirements in conditions of limited resources.
+Deckhouse Platform allows you to configure HA mode with two master nodes and an arbiter node. This approach allows you to meet HA requirements in conditions of limited resources.
 
 Only etcd is placed on the arbiter node, without the other control plane components. This node is used to ensure the etcd quorum.
 
@@ -83,13 +83,13 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Create a [backup of etcd](../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (for example, to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
-1. Make sure the DKP queue is empty:
+1. Make sure the DP queue is empty:
 
    ```shell
    d8 system queue list
    ```
 
-1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
+1. On the **local machine**, run the DP installer container for the corresponding edition and version (change the container registry address if needed):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -184,7 +184,7 @@ To configure HA mode with two master nodes and an arbiter node in a static clust
 
 ## Enabling HA mode for individual components
 
-Some DKP modules may have their own HA mode settings.
+Some DP modules may have their own HA mode settings.
 To enable HA mode in a specific module, set the `settings.highAvailability` parameter in its configuration.
 The HA mode operation in individual modules is independent of the global HA mode.
 

@@ -1,7 +1,7 @@
 ---
 title: "Application delivery with Argo CD"
 permalink: en/admin/configuration/delivery/argocd/
-description: "Application delivery with Argo CD in Deckhouse Kubernetes Platform."
+description: "Application delivery with Argo CD in Deckhouse Platform."
 lang: en
 relatedLinks:
   - title: "Official Argo CD website"
@@ -10,7 +10,7 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-This section describes application delivery with Argo CD in Deckhouse Kubernetes Platform (DKP).
+This section describes application delivery with Argo CD in Deckhouse Platform (DP).
 
 [Argo CD](https://argo-cd.readthedocs.io/en/stable/) is an Open Source tool for continuous delivery of applications to Kubernetes that implements the GitOps approach.
 A Git repository is the source of truth for describing applications, their configuration, and target environments.
@@ -28,13 +28,13 @@ Main Argo CD capabilities:
 - rollback to a previously recorded configuration and action audit;
 - working through the web interface, CLI, and API, including integration with Git webhooks and external automation systems.
 
-In DKP, Argo CD is run with the [operator-argo](/modules/operator-argo/) module, based on the [Argo CD Operator](https://argocd-operator.readthedocs.io) project.
-The module lets you declaratively deploy and maintain one or more Argo CD instances in a DKP cluster without manually installing and maintaining components.
+In DP, Argo CD is run with the [operator-argo](/modules/operator-argo/) module, based on the [Argo CD Operator](https://argocd-operator.readthedocs.io) project.
+The module lets you declaratively deploy and maintain one or more Argo CD instances in a DP cluster without manually installing and maintaining components.
 
 Additionally, the module provides:
 
 - single sign-on (SSO) support;
-- integration with monitoring in DKP;
+- integration with monitoring in DP;
 - high availability mode;
 - support for automatic image updates via Argo CD Image Updater;
 - access control for cluster resources.

@@ -1,11 +1,11 @@
 ---
 title: Kubernetes conformance test results
 permalink: en/reference/kubernetes-conformance.html
-description: "CNCF Kubernetes conformance e2e test results for Kubernetes versions supported by Deckhouse Kubernetes Platform"
+description: "CNCF Kubernetes conformance e2e test results for Kubernetes versions supported by Deckhouse Platform"
 search: kubernetes conformance, cncf conformance, sonobuoy, e2e tests, junit
 ---
 
-Deckhouse Kubernetes Platform is tested against the Kubernetes conformance suite of the CNCF Certified Kubernetes Conformance Program. The tests are run with Sonobuoy in `certified-conformance` mode for each Kubernetes minor version listed below.
+Deckhouse Platform is tested against the Kubernetes conformance suite of the CNCF Certified Kubernetes Conformance Program. The tests are run with Sonobuoy in `certified-conformance` mode for each Kubernetes minor version listed below.
 
 ## Test results
 

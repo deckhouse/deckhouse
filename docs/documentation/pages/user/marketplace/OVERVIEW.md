@@ -1,15 +1,15 @@
 ---
 title: Marketplace
 permalink: en/user/marketplace/
-description: "Using Marketplace in Deckhouse Kubernetes Platform. Browse available application packages, install them into your namespace, and manage their lifecycle."
+description: "Using Marketplace in Deckhouse Platform. Browse available application packages, install them into your namespace, and manage their lifecycle."
 ---
 
-This section describes the ways to use Marketplace in the Deckhouse Kubernetes Platform (DKP).
+This section describes the ways to use Marketplace in the Deckhouse Platform (DP).
 
 Marketplace lets you install ready-made applications into your namespace from registries connected by the cluster administrator. Each application is installed as an [Application](../../reference/api/cr.html#application) resource and can exist in multiple independent instances — for example, separate Redis instances for caching and sessions in the same namespace.
 
 {% alert level="info" %}
-Marketplace are available starting from DKP version 1.76.
+Marketplace are available starting from DP version 1.76.
 {% endalert %}
 
 ## Prerequisites

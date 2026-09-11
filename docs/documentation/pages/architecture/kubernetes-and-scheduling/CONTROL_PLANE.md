@@ -2,10 +2,10 @@
 title: Cluster control plane
 permalink: en/architecture/kubernetes-and-scheduling/control-plane.html
 search: control plane architecture
-description: Architecture of the cluster control plane in Deckhouse Kubernetes Platform.
+description: Architecture of the cluster control plane in Deckhouse Platform.
 ---
 
-Deckhouse Kubernetes Platform (DKP) uses a standard ("vanilla") Kubernetes cluster. The cluster control plane includes the following core components:
+Deckhouse Platform (DP) uses a standard ("vanilla") Kubernetes cluster. The cluster control plane includes the following core components:
 
 1. **kube-apiserver**: Kubernetes API server. It processes REST requests, provides access to the overall cluster state through which all other components interact, validates Kubernetes API resources, and stores them in **etcd** storage. It includes the following containers:
 

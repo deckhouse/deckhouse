@@ -2,7 +2,7 @@
 title: "CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy"
 permalink: en/admin/configuration/network/policy/cilium_networkpolicy.html
 description: |
-  Cilium extensions for network policies in Deckhouse Kubernetes Platform: entities, L7 rules, FQDN rules, deny rules, and policyAuditMode.
+  Cilium extensions for network policies in Deckhouse Platform: entities, L7 rules, FQDN rules, deny rules, and policyAuditMode.
 relatedLinks:
   - title: "Network Policy — Cilium documentation"
     url: https://docs.cilium.io/en/v1.17/network/kubernetes/policy/
@@ -316,7 +316,7 @@ spec:
 ```
 
 {% alert level="info" %}
-The DNS egress rule uses `toEntities: cluster` rather than a label selector targeting `kube-dns` pods. DKP deploys a `node-local-dns` DaemonSet alongside the main DNS service, so the actual DNS path from a pod may go through a `node-local-dns` instance. Using `toEntities: cluster` matches any cluster-internal DNS endpoint reliably.
+The DNS egress rule uses `toEntities: cluster` rather than a label selector targeting `kube-dns` pods. DP deploys a `node-local-dns` DaemonSet alongside the main DNS service, so the actual DNS path from a pod may go through a `node-local-dns` instance. Using `toEntities: cluster` matches any cluster-internal DNS endpoint reliably.
 {% endalert %}
 
 ## Deny rules
@@ -377,7 +377,7 @@ spec:
 ```
 
 {% alert level="info" %}
-The DNS egress rule uses `toEntities: cluster` rather than a label selector targeting `kube-dns` pods. DKP deploys a `node-local-dns` DaemonSet alongside the main DNS service, so the actual DNS path from a pod may go through a `node-local-dns` instance. Using `toEntities: cluster` matches any cluster-internal DNS endpoint reliably.
+The DNS egress rule uses `toEntities: cluster` rather than a label selector targeting `kube-dns` pods. DP deploys a `node-local-dns` DaemonSet alongside the main DNS service, so the actual DNS path from a pod may go through a `node-local-dns` instance. Using `toEntities: cluster` matches any cluster-internal DNS endpoint reliably.
 {% endalert %}
 
 ## Audit mode (`policyAuditMode`)

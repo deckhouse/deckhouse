@@ -3,7 +3,7 @@ title: Модуль local-path-provisioner
 permalink: ru/architecture/storage/local-path-provisioner.html
 lang: ru
 search: local-path-provisioner, hostpath
-description: Архитектура модуля local-path-provisioner в Deckhouse Kubernetes Platform.
+description: Архитектура модуля local-path-provisioner в Deckhouse Platform.
 ---
 
 Модуль `local-path-provisioner` предоставляет локальное хранилище на узлах Kubernetes с использованием томов `HostPath` и создает ресурсы StorageClass для управления выделением локального хранилища.
@@ -19,7 +19,7 @@ description: Архитектура модуля local-path-provisioner в Deckh
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`local-path-provisioner`](/modules/local-path-provisioner/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`local-path-provisioner`](/modules/local-path-provisioner/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля local-path-provisioner](../../images/architecture/storage/c4-l2-local-path-provisioner.ru.png)
 

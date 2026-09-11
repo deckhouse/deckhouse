@@ -1,9 +1,9 @@
 ---
-title: How can I apply an update DKP immediately, bypassing update windows, canary releases, and manual update mode?
+title: How can I apply an update DP immediately, bypassing update windows, canary releases, and manual update mode?
 lang: en
 ---
 
-To apply a Deckhouse Kubernetes Platform (DKP) update immediately, add the annotation `release.deckhouse.io/apply-now: "true"` to the corresponding [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource.
+To apply a Deckhouse Platform (DP) update immediately, add the annotation `release.deckhouse.io/apply-now: "true"` to the corresponding [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource.
 
 This will bypass update windows, [canary release settings](../user/network/canary-deployment.html), and the [manual cluster update mode](../admin/configuration/update/configuration.html#manual-update-approval).
 The update will be applied immediately after the annotation is set.

@@ -31,7 +31,7 @@ lang: ru
 - [`automountServiceAccountToken`](#automountserviceaccounttoken).
 
 {% alert level="info" %}
-В Deckhouse Kubernetes Platform (DKP) допустимые значения указанных параметров безопасности контролируются модулем [`admission-policy-engine`](/modules/admission-policy-engine/).
+В Deckhouse Platform (DP) допустимые значения указанных параметров безопасности контролируются модулем [`admission-policy-engine`](/modules/admission-policy-engine/).
 {% endalert %}
 
 ## runAsUser
@@ -878,7 +878,7 @@ spec:
 Например, по умолчанию максимальное количество незавершенных соединений в очереди (`somaxconn`) ограничено небольшим системным значением. Высоконагруженному балансировщику трафика NGINX этого может не хватать, из-за чего он начнет отбрасывать пакеты. С помощью `sysctls` контейнеру можно индивидуально выделить увеличенный размер очереди.
 
 {% alert level="info" %}
-В кластере DKP ряд параметров `sysctls` настраивается автоматически при установке.
+В кластере DP ряд параметров `sysctls` настраивается автоматически при установке.
 Ознакомиться с полным списком таких параметров можно в разделе [«Параметры sysctl, настраиваемые платформой»](../../reference/sysctl.html).
 {% endalert %}
 

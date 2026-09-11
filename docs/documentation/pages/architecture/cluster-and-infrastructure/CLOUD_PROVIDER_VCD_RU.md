@@ -3,7 +3,7 @@ title: Модуль cloud-provider-vcd
 permalink: ru/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vcd.html
 lang: ru
 search: cloud-provider-vcd, cloud provider vcd, vmware cloud director
-description: Архитектура модуля cloud-provider-vcd в Deckhouse Kubernetes Platform.
+description: Архитектура модуля cloud-provider-vcd в Deckhouse Platform.
 ---
 
 Модуль [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) обеспечивает интеграцию с облачными ресурсами [VMware Cloud Director](https://www.vmware.com/products/cloud-infrastructure/cloud-director). Он используется модулем [`node-manager`](/modules/node-manager/) для заказа узлов в соответствии [с настройками группы узлов](/modules/node-manager/cr.html#nodegroup).
@@ -19,7 +19,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля cloud-provider-vcd](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vcd.ru.png)
 
@@ -66,7 +66,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
    * **infra-controller-manager**.
 
-1. **CSI-драйвер (VCD)** — реализация CSI-драйвера для VMware Cloud Director. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html). В модуле `cloud-provider-vcd` используется [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
+1. **CSI-драйвер (VCD)** — реализация CSI-драйвера для VMware Cloud Director. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html). В модуле `cloud-provider-vcd` используется [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
 
    CSI-драйвер (VCD) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

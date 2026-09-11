@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/yandex/authorization.html
 lang: ru
 ---
 
-Для того чтобы Deckhouse Kubernetes Platform (DKP) мог управлять ресурсами в Yandex Cloud, необходимо:
+Для того чтобы Deckhouse Platform (DP) мог управлять ресурсами в Yandex Cloud, необходимо:
 
 - создать сервисный аккаунт;
 - назначить ему необходимые IAM-роли;
@@ -42,7 +42,7 @@ systemctl status cloud-init.service
 
 ## Создание сервисного аккаунта
 
-Для управления ресурсами в Yandex Cloud через DKP создайте сервисный аккаунт и выдайте ему права на редактирование.
+Для управления ресурсами в Yandex Cloud через DP создайте сервисный аккаунт и выдайте ему права на редактирование.
 Подробную инструкцию по созданию сервисного аккаунта смотрите в [документации Yandex Cloud](https://cloud.yandex.com/ru/docs/resource-manager/operations/cloud/set-access-bindings).
 
 Для создания сервисного аккаунта выполните команду:
@@ -66,7 +66,7 @@ name: deckhouse
 
 ## Назначение IAM-ролей
 
-Для работы DKP с ресурсами облака назначьте сервисному аккаунту следующие роли:
+Для работы DP с ресурсами облака назначьте сервисному аккаунту следующие роли:
 
 ```shell
 yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>

@@ -11,7 +11,7 @@ lang: ru
 - Datastore — для размещения root-дисков виртуальных машин;
 - CNS-диски (Container Native Storage) — для автоматического создания PersistentVolume’ов через CSI.
 
-Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, маркированных как `zone`.  
+Deckhouse Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, маркированных как `zone`.  
 Можно указать:
 
 - имя StorageClass по умолчанию ([`default`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-default));
@@ -37,7 +37,7 @@ spec:
 
 ### Изменение размера тома (PVC)
 
-Deckhouse Kubernetes Platform поддерживает Online Resize PersistentVolume, начиная с версии vSphere 7.0U2. Однако из-за особенностей CSI и API vSphere после изменения размера PVC требуется выполнить дополнительные действия:
+Deckhouse Platform поддерживает Online Resize PersistentVolume, начиная с версии vSphere 7.0U2. Однако из-за особенностей CSI и API vSphere после изменения размера PVC требуется выполнить дополнительные действия:
 
 1. Выполните `d8 k cordon <имя_узла>`.
 1. Удалите под, использующий PVC.

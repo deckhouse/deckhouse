@@ -3,7 +3,7 @@ title: Модуль cilium-hubble
 permalink: ru/architecture/network/cilium-hubble.html
 lang: ru
 search: cilium-hubble, cilium, hubble
-description: Архитектура модуля cilium-hubble в Deckhouse Kubernetes Platform.
+description: Архитектура модуля cilium-hubble в Deckhouse Platform.
 ---
 
 Модуль [`cilium-hubble`](/modules/cilium-hubble/) обеспечивает визуализацию сетевого стека кластера, если включен Cilium CNI.
@@ -19,7 +19,7 @@ description: Архитектура модуля cilium-hubble в Deckhouse Kube
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`cilium-hubble`](/modules/cilium-hubble/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображена на следующей диаграмме:
+Архитектура модуля [`cilium-hubble`](/modules/cilium-hubble/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображена на следующей диаграмме:
 
 ![Архитектура модуля cilium-hubble](../../images/architecture/network/c4-l2-cilium-hubble.ru.png)
 

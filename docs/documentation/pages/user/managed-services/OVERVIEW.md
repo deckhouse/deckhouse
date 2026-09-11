@@ -1,7 +1,7 @@
 ---
 title: "Overview"
 permalink: en/user/managed-services/
-description: "Using managed services in Deckhouse Kubernetes Platform"
+description: "Using managed services in Deckhouse Platform"
 ---
 
 Managed services allow users to create and use ready-to-run application services by using Kubernetes custom resources.

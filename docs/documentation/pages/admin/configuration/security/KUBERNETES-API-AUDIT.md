@@ -1,7 +1,7 @@
 ---
 title: Kubernetes API event audit
 permalink: en/admin/configuration/security/events/kubernetes-api-audit.html
-description: "Configure Kubernetes API audit logging in Deckhouse Kubernetes Platform. API server event tracking, audit policy configuration, and security event analysis."
+description: "Configure Kubernetes API audit logging in Deckhouse Platform. API server event tracking, audit policy configuration, and security event analysis."
 ---
 
 The [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) feature allows you to track requests
@@ -14,7 +14,7 @@ By default, audit results are written to the `/var/log/kube-audit/audit.log` fil
 
 ## Built-in audit policies
 
-Deckhouse Kubernetes Platform (DKP) configures a basic audit policy by default, which can be supplemented with custom rules.
+Deckhouse Platform (DP) configures a basic audit policy by default, which can be supplemented with custom rules.
 
 This policy implements the following rules:
 
@@ -262,7 +262,7 @@ rules:
 
 ## Working with the audit log file
 
-On DKP master nodes, it is assumed that a log collection tool (`log-shipper`, `promtail`, or `filebeat`) is installed
+On DP master nodes, it is assumed that a log collection tool (`log-shipper`, `promtail`, or `filebeat`) is installed
 to monitor the `/var/log/kube-audit/audit.log` file.
 
 The log rotation settings for this file are predefined and cannot be changed:
@@ -318,5 +318,5 @@ spec:
 
 In this case, the log will be available in the `kube-apiserver` container stdout.
 
-Then, using the [built-in DKP logging mechanism](../../../configuration/logging/delivery.html),
+Then, using the [built-in DP logging mechanism](../../../configuration/logging/delivery.html),
 you can configure log collection and forwarding to your own security system.

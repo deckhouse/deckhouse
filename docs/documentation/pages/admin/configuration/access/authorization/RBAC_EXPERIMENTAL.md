@@ -12,14 +12,14 @@ the [`user-authz`](/modules/user-authz/) module must be enabled in the cluster.
 This module creates a set of cluster roles (ClusterRole) suitable for most user and group access management tasks.
 
 {% alert level="warning" %}
-Starting from Deckhouse Kubernetes Platform (DKP) v1.64, the module includes an experimental role-based access model.
+Starting from Deckhouse Platform (DP) v1.64, the module includes an experimental role-based access model.
 The current role model will continue to function, but it will be deprecated in the future.
 
 The current and experimental role-based access models are incompatible.
 Automatic conversion of resources is not possible.
 {% endalert %}
 
-Unlike the [current role model](rbac-current.html) in DKP,
+Unlike the [current role model](rbac-current.html) in DP,
 the experimental model does not use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) resources.
 Access control is configured using the standard Kubernetes RBAC approach
 via [RoleBinding or ClusterRoleBinding](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#rolebinding-and-clusterrolebinding) resources referencing a role created by the `user-authz` module.
@@ -27,7 +27,7 @@ via [RoleBinding or ClusterRoleBinding](https://kubernetes.io/docs/reference/acc
 The module creates special aggregated cluster roles (ClusterRole).
 By using these roles in [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) or [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/), you can achieve the following:
 
-- Control access to modules associated with a specific [DKP subsystem](#role-model-subsystems).
+- Control access to modules associated with a specific [DP subsystem](#role-model-subsystems).
 
   For example, to allow a user acting as a network administrator to configure *network* modules
   (such as [`cni-cilium`](/modules/cni-cilium/), [`ingress-nginx`](/modules/ingress-nginx/), [`istio`](/modules/istio/), etc.),
@@ -57,7 +57,7 @@ Use rules can only be used in [RoleBinding](https://kubernetes.io/docs/reference
 
 Use roles are intended for granting permissions to users *within a specific namespace*.
 "Users" in this context typically refers to developers deploying applications in a cluster configured by an administrator.
-These users don’t need to manage DKP modules or the cluster,
+These users don’t need to manage DP modules or the cluster,
 but they do need permissions to create Ingress resources, configure application authentication, collect logs, etc.
 
 Use roles define access to namespaced module resources and standard Kubernetes namespaced resources
@@ -88,7 +88,7 @@ A manage role only grants access to system namespaces (those starting with `d8-`
 and only to those where the modules associated with the role’s subsystem are running.
 {% endalert %}
 
-Manage roles are intended for granting permissions to administer the entire DKP or its parts ([specific subsystems](#role-model-subsystems)),
+Manage roles are intended for granting permissions to administer the entire DP or its parts ([specific subsystems](#role-model-subsystems)),
 but not for managing user applications.
 For example, you can use a manage role to allow a security administrator to manage modules
 responsible for the cluster’s security functions.
@@ -99,10 +99,10 @@ and will not be able to change anything in user application namespaces.
 A manage role grants access to:
 
 - Kubernetes cluster-wide resources.
-- Management of DKP modules (ModuleConfig resources) within the role’s [subsystem](#role-model-subsystems)
-  or across all DKP modules if using the `d8:manage:all:*` role.
-- Management of DKP module cluster-wide resources within the role’s [subsystem](#role-model-subsystems)
-  or all DKP module resources if using the `d8:manage:all:*` role.
+- Management of DP modules (ModuleConfig resources) within the role’s [subsystem](#role-model-subsystems)
+  or across all DP modules if using the `d8:manage:all:*` role.
+- Management of DP module cluster-wide resources within the role’s [subsystem](#role-model-subsystems)
+  or all DP module resources if using the `d8:manage:all:*` role.
 - System namespaces (starting with `d8-` or `kube-`) in which the modules from the role’s [subsystem](#role-model-subsystems) are running
   or all system namespaces in the case of the `d8:manage:all:*` role.
 
@@ -113,14 +113,14 @@ The naming format for a manage role is `d8:manage:<SUBSYSTEM>:<ACCESS_LEVEL>`, w
 
 Examples of manage roles:
 
-- `d8:manage:all:viewer`: View access to the configuration of all DKP modules (ModuleConfig resources),
+- `d8:manage:all:viewer`: View access to the configuration of all DP modules (ModuleConfig resources),
   their cluster-wide and namespaced resources, and standard Kubernetes objects (excluding secrets and RBAC resources)
   in all system namespaces (starting with `d8-` or `kube-`).
 - `d8:manage:all:manager`: Same as `d8:manage:all:viewer`, but with `admin`-level access,
-  meaning, permission to view, create,edit, and delete configurations of all DKP modules (ModuleConfig resources),
+  meaning, permission to view, create,edit, and delete configurations of all DP modules (ModuleConfig resources),
   their cluster-wide and namespaced resources, and standard Kubernetes objects in all system namespaces
   (starting with `d8-` or `kube-`).
-- `d8:manage:observability:viewer`: View access to DKP module configurations (ModuleConfig resources)
+- `d8:manage:observability:viewer`: View access to DP module configurations (ModuleConfig resources)
   in the `observability` subsystem, their cluster-wide and namespaced resources, and standard Kubernetes objects
   (excluding secrets and RBAC resources) in system namespaces such as `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`,
   `d8-operator-prometheus`, `d8-upmeter`, and `kube-prometheus-pushgateway`.
@@ -135,7 +135,7 @@ The module provides two access levels for administrators:
 
 ## Role model subsystems
 
-Each DKP module belongs to a specific subsystem.
+Each DP module belongs to a specific subsystem.
 For each subsystem, there is a set of roles with different access levels.
 These roles are automatically updated when a module is enabled or disabled.
 

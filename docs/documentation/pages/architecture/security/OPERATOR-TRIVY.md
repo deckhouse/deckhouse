@@ -2,7 +2,7 @@
 title: Module operator-trivy
 permalink: en/architecture/security/operator-trivy.html
 search: operator-trivy, image scanning, vulnerability scanning
-description: Architecture of the operator-trivy module in Deckhouse Kubernetes Platform.
+description: Architecture of the operator-trivy module in Deckhouse Platform.
 ---
 
 The [`operator-trivy`](/modules/operator-trivy/) module scans user images at runtime for known CVEs (Common Vulnerabilities and Exposures), including vulnerabilities specific to Astra Linux, ALT Linux, and RED OS. It is based on the [Trivy](https://github.com/aquasecurity/trivy) project. Scanning uses [public vulnerability databases](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), enriched with Astra Linux, ALT Linux, RED OS databases, and [BDU FSTEC (Data Bank of Information Security Threats by the Federal Service for Technical and Export Control of Russia)](https://bdu.fstec.ru/vul).
@@ -61,7 +61,7 @@ The following assumptions are made to simplify the diagram:
 - Pods can run with multiple replicas, but all pods are shown as a single replica in the diagram.
 {% endalert %}
 
-The level 2 C4 architecture of the [`operator-trivy`](/modules/operator-trivy/) module and its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown in the following diagram:
+The level 2 C4 architecture of the [`operator-trivy`](/modules/operator-trivy/) module and its interactions with other Deckhouse Platform (DP) components are shown in the following diagram:
 
 ![Operator-trivy module architecture](../../images/architecture/security/c4-l2-operator-trivy.svg)
 

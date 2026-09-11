@@ -2,7 +2,7 @@
 title: Kubelet
 permalink: en/architecture/kubernetes-and-scheduling/kubelet.html
 search: kubelet, kubelet agent, kubelet architecture, kubelet interactions
-description: Architecture and role of kubelet in Deckhouse Kubernetes Platform.
+description: Architecture and role of kubelet in Deckhouse Platform.
 ---
 
 Kubelet is not a control plane component, but it plays a key role in the operation of a Kubernetes cluster.
@@ -11,7 +11,7 @@ Kubelet is an agent that runs on every node in a Kubernetes cluster. It ensures 
 
 ## Static pod manifests
 
-Kubelet starts control plane components from static pod manifests located in the `/etc/kubernetes/manifests` directory. In Deckhouse Kubernetes Platform, kubelet processes only files with the `.yaml` or `.yml` extension in this directory.
+Kubelet starts control plane components from static pod manifests located in the `/etc/kubernetes/manifests` directory. In Deckhouse Platform, kubelet processes only files with the `.yaml` or `.yml` extension in this directory.
 
 Files with other extensions, such as `kube-apiserver.backup`, `kube-apiserver.yaml.bak`, editor swap files, or other temporary files, are ignored. This prevents accidental processing of backup or non-manifest files as static pod manifests.
 
@@ -29,7 +29,7 @@ Kubelet interactions are shown in the following diagram:
 
 ![Kubelet interactions](../../images/architecture/kubernetes-and-scheduling/c4-l2-kubelet.png)
 
-Kubelet monitors the state of containers in all pods running on the node, including both user workloads and DKP components, by performing Startup, Liveness, and Readiness probes according to the pod specification. For more information about probes, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes).
+Kubelet monitors the state of containers in all pods running on the node, including both user workloads and DP components, by performing Startup, Liveness, and Readiness probes according to the pod specification. For more information about probes, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes).
 
 Kubelet also interacts with the following components:
 

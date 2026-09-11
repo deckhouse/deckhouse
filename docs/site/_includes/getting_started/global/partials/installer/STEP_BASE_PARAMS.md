@@ -2,7 +2,7 @@
   <li>
 <p>On the home page, click the "Install Deckhouse Kubernetes Platform" button.</p>
 <div class="gs-installer__image">
-<img src="/images/gs/installer/install-button.png" alt="Install Deckhouse Kubernetes Platform" style="width: 100%;">
+<img src="/images/gs/installer/install-button.png" alt="Install Deckhouse Platform" style="width: 100%;">
 </div>
   </li>
   <li>
@@ -14,7 +14,7 @@
 <img src="/images/gs/installer/enter-license-key.png" alt="Basic installation parameters" style="width: 100%;">
 </div>
   </li>
-  <li><a href="../../../documentation/v1/reference/release-channels.html">Deckhouse Kubernetes Platform update channel</a>. Stable is selected by default.</li>
+  <li><a href="../../../documentation/v1/reference/release-channels.html">Deckhouse Platform update channel</a>. Stable is selected by default.</li>
   <li>Kubernetes version. By default, the "Auto" mode is selected, which chooses the <a href="../../../documentation/v1/reference/supported_versions.html#kubernetes">currently recommended version</a>.</li>
 </ul>
 <div class="gs-installer__image">

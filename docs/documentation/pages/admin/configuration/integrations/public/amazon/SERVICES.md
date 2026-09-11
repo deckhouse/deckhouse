@@ -8,7 +8,7 @@ permalink: en/admin/integrations/public/amazon/services.html
 To allow cluster nodes to access private Amazon ECR repositories, follow these steps:
 
 1. Define read permissions for container images in the repository policies.
-   It's important that the `Principal` field includes the IAM Role attached to the Deckhouse Kubernetes Platform (DKP) nodes.
+   It's important that the `Principal` field includes the IAM Role attached to the Deckhouse Platform (DP) nodes.
 
    Example policy:
 
@@ -49,7 +49,7 @@ To allow cluster nodes to access private Amazon ECR repositories, follow these s
      - ecr:DescribeRepositories
    ```
 
-The [additionalRolePolicies](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) parameter lets you extend the set of IAM actions granted to EC2 instances managed by DKP.
+The [additionalRolePolicies](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) parameter lets you extend the set of IAM actions granted to EC2 instances managed by DP.
 This is particularly useful if access to the following is required:
 
 - Amazon ECR

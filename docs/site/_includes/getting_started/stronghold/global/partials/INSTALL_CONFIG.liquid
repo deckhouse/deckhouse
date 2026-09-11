@@ -6,7 +6,7 @@
 {% endif %}
 
 <div markdown="1">
-  The recommended settings for a Deckhouse Kubernetes Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
+  The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
 - `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc){% else %} access parameters{% endif %}, and the initial cluster parameters.
 {% if page.platform_type == 'cloud' %}- `resources.yml` — description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc).{% endif %}
 
@@ -20,7 +20,7 @@
 - We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
 {%- endif %}
 {% if page.platform_code == 'yandex' %}
-- If Deckhouse Stronghold is deployed on top of Deckhouse Kubernetes Platform 1.76 and above, it is necessary to explicitly enable the `cni-simple-bridge` module in the `config.yml` file when using CentOS 8.
+- If Deckhouse Stronghold is deployed on top of Deckhouse Platform 1.76 and above, it is necessary to explicitly enable the `cni-simple-bridge` module in the `config.yml` file when using CentOS 8.
 
   {% offtopic title="Example configuration for CentOS 8 in Yandex Cloud..." %}
   ```yaml

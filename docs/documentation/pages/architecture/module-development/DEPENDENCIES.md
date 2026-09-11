@@ -1,23 +1,23 @@
 ---
-title: "Dependencies of the Deckhouse Kubernetes Platform modules"
+title: "Dependencies of the Deckhouse Platform modules"
 permalink: en/architecture/module-development/dependencies/
 lang: en
-description: Module dependency types in Deckhouse Kubernetes Platform — DKP version, Kubernetes version, and inter-module dependencies with required and optional modes.
+description: Module dependency types in Deckhouse Platform — DP version, Kubernetes version, and inter-module dependencies with required and optional modes.
 ---
 
 This section covers the dependencies you can set for the module.
 
-Dependencies are a set of conditions (requirements) that must be met in order for Deckhouse Kubernetes Platform to be able to run a module.
+Dependencies are a set of conditions (requirements) that must be met in order for Deckhouse Platform to be able to run a module.
 
-Deckhouse Kubernetes Platform (DKP) supports the following module dependencies:
+Deckhouse Platform (DP) supports the following module dependencies:
 
-- [Deckhouse Kubernetes Platform version](#deckhouse-kubernetes-platform-version-dependency);
+- [Deckhouse Platform version](#deckhouse-kubernetes-platform-version-dependency);
 - [Kubernetes version](#kubernetes-version-dependency);
 - [version of other modules](#dependency-on-the-version-of-other-modules).
 
-## Deckhouse Kubernetes Platform version dependency
+## Deckhouse Platform version dependency
 
-This dependency defines the minimum or maximum DKP version with which the module is compatible.
+This dependency defines the minimum or maximum DP version with which the module is compatible.
 
 An example of setting up a dependency for Kubernetes 1.27 and higher in the `module.yaml` file:
 
@@ -29,15 +29,15 @@ requirements:
 ```
 
 {% alert level="info" %}
-For testing, you can set the `TEST_EXTENDER_DECKHOUSE_VERSION` environment variable to imitate the desired version of Deckhouse Kubernetes Platform.
+For testing, you can set the `TEST_EXTENDER_DECKHOUSE_VERSION` environment variable to imitate the desired version of Deckhouse Platform.
 {% endalert %}
 
 Deckhouse checks whether the dependency is met in the following cases:
 
 1. **When installing or upgrading a module**
-   If the DKP version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
+   If the DP version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
 
-   Below is an example of the ModuleRelease resource for which the DKP version does not meet the module requirements:
+   Below is an example of the ModuleRelease resource for which the DP version does not meet the module requirements:
 
    ```console
    root@dev-master-0:~# d8 k get mr
@@ -50,10 +50,10 @@ Deckhouse checks whether the dependency is met in the following cases:
       test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
    ```
 
-1. **When upgrading Deckhouse Kubernetes Platform**
-   Deckhouse checks if the new DKP version matches the dependencies of the installed and active modules. If at least one module is not compatible with the new version, the DKP upgrade will not be performed.
+1. **When upgrading Deckhouse Platform**
+   Deckhouse checks if the new DP version matches the dependencies of the installed and active modules. If at least one module is not compatible with the new version, the DP upgrade will not be performed.
 
-   Below is an example of the DeckhouseRelease resource for which the DKP version does not meet the module requirements:
+   Below is an example of the DeckhouseRelease resource for which the DP version does not meet the module requirements:
 
    ```console
    root@dev-master-0:~# d8 k get deckhousereleases.deckhouse.io
@@ -68,7 +68,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    ```
 
 1. **When conducting initial module analyses**
-   Deckhouse checks the current version of DKP and the dependencies of the installed modules. If a mismatch is discovered, the module will be disabled.
+   Deckhouse checks the current version of DP and the dependencies of the installed modules. If a mismatch is discovered, the module will be disabled.
 
 ## Kubernetes version dependency
 
@@ -84,7 +84,7 @@ requirements:
 ```
 
 {% alert level="info" %}
-For testing, you can set the `TEST_EXTENDER_KUBERNETES_VERSION` environment variable to imitate the desired version of Deckhouse Kubernetes Platform.
+For testing, you can set the `TEST_EXTENDER_KUBERNETES_VERSION` environment variable to imitate the desired version of Deckhouse Platform.
 {% endalert %}
 
 Deckhouse checks whether the dependency is met in the following cases:
@@ -126,10 +126,10 @@ Deckhouse checks whether the dependency is met in the following cases:
    ```
 
 1. **When conducting initial module analyses**
-   If the Kubernetes version does not conform to the dependencies of the modules that are already installed, DKP will disable those modules.
+   If the Kubernetes version does not conform to the dependencies of the modules that are already installed, DP will disable those modules.
 
-1. **When upgrading Deckhouse Kubernetes Platform**
-   Deckhouse checks the default Kubernetes version value for DKP and if it is not compatible with the active modules, the DKP update will not be carried out.
+1. **When upgrading Deckhouse Platform**
+   Deckhouse checks the default Kubernetes version value for DP and if it is not compatible with the active modules, the DP update will not be carried out.
 
    Below is an example of the DeckhouseRelease resource for which the Kubernetes version does not meet the module requirements:
 
@@ -147,14 +147,14 @@ Deckhouse checks whether the dependency is met in the following cases:
 ## Dependency on the version of other modules
 
 Dependencies on other modules describe the conditions for enabling, updating, and disabling a module.
-A module in the Deckhouse Kubernetes Platform may have required and conditional dependencies on versions of other modules.
+A module in the Deckhouse Platform may have required and conditional dependencies on versions of other modules.
 
 ### Required dependencies
 
 This dependency defines the list of **enabled** modules and their versions that are required for the module to work.
 
 {% alert level="info" %}
-The built-in DKP module version is considered equal to the DKP version.
+The built-in DP module version is considered equal to the DP version.
 {% endalert %}
 
 If you need to specify that some module is simply enabled, no matter what version, then you can use the following syntax (using the `user-authn` module as an example):
@@ -179,8 +179,8 @@ requirements:
 ### Conditional module requirements
 
 {% alert level="danger" %}
-Conditional dependencies for modules are available for Deckhouse Kubernetes Platform starting with version 1.73.
-If you need to use them for a module, [set a Deckhouse Kubernetes Platform version dependency](#deckhouse-kubernetes-platform-version-dependency) 1.73 or higher for that module.
+Conditional dependencies for modules are available for Deckhouse Platform starting with version 1.73.
+If you need to use them for a module, [set a Deckhouse Platform version dependency](#deckhouse-kubernetes-platform-version-dependency) 1.73 or higher for that module.
 {% endalert %}
 
 Use this when your module works alone, but integrates with another module **if it is present**.

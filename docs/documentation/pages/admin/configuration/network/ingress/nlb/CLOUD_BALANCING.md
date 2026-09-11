@@ -1,7 +1,7 @@
 ---
 title: "Balancing in clusters on cloud platforms"
 permalink: en/admin/configuration/network/ingress/nlb/cloud-balancing.html
-description: "Configure load balancing in cloud clusters for Deckhouse Kubernetes Platform. AWS, GCP, Azure load balancer integration and cloud-native load balancing setup."
+description: "Configure load balancing in cloud clusters for Deckhouse Platform. AWS, GCP, Azure load balancer integration and cloud-native load balancing setup."
 ---
 
 A list of supported providers:

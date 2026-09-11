@@ -1,13 +1,13 @@
 ---
 title: Рантайм-аудит
 permalink: ru/admin/configuration/security/events/runtime-audit.html
-description: "Настройка рантайм-аудита в Deckhouse Kubernetes Platform. Мониторинг рантайма, обнаружение угроз на основе событий ядра Linux и аудита Kubernetes API."
+description: "Настройка рантайм-аудита в Deckhouse Platform. Мониторинг рантайма, обнаружение угроз на основе событий ядра Linux и аудита Kubernetes API."
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) предоставляет встроенные средства поиска угроз безопасности
+Deckhouse Platform (DP) предоставляет встроенные средства поиска угроз безопасности
 за счёт анализа событий ядра Linux и аудита событий Kubernetes API.
-DKP позволяет:
+DP позволяет:
 
 - находить угрозы в окружениях, анализируя приложения и контейнеры;
 - обнаруживать попытки применения уязвимостей из базы CVE и признаки запуска криптовалютных майнеров;
@@ -19,7 +19,7 @@ DKP позволяет:
 
 ## Источники данных для рантайм-аудита
 
-DKP использует два основных источника событий:
+DP использует два основных источника событий:
 
 - события ядра Linux — с помощью eBPF-драйвера для [системы обнаружения угроз Falco](https://falco.org/);
 - события [аудита API Kubernetes](./kubernetes-api-audit.html) — через интеграцию с механизмом [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) и вебхук-интерфейс.
@@ -68,7 +68,7 @@ DKP использует два основных источника событи
      enabled: true
    ```
 
-1. (**Опционально**) Если control plane в кластере не управляется DKP при помощи [`control-plane-manager`](/modules/control-plane-manager/),
+1. (**Опционально**) Если control plane в кластере не управляется DP при помощи [`control-plane-manager`](/modules/control-plane-manager/),
    настройте [вебхук аудита API Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) вручную.
 
 Все доступные параметры рантайм-аудита доступны [в разделе документации модуля `runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html).
@@ -114,7 +114,7 @@ DKP использует два основных источника событи
 ## Работа с правилами аудита
 
 Для анализа событий рантайм-аудита используются правила, определяющие критерии подозрительного поведения.
-В DKP предусмотрены:
+В DP предусмотрены:
 
 - **встроенные правила**, включая:
   - правила для аудита Kubernetes (располагаются в контейнере `falco` по пути `/etc/falco/k8s_audit_rules.yaml`);
@@ -166,7 +166,7 @@ spec:
 
 ### Применение стороннего правила
 
-Поскольку структура правил Falco отличается от схемы кастомных ресурсов DKP,
+Поскольку структура правил Falco отличается от схемы кастомных ресурсов DP,
 сторонние правила из интернета необходимо сконвертировать [в ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) перед применением.
 
 Используйте следующий скрипт для конвертации:
@@ -220,7 +220,7 @@ go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 
 ## Сбор логов и оповещения
 
-DKP экспортирует события рантайм-аудита в формате метрик Prometheus,
+DP экспортирует события рантайм-аудита в формате метрик Prometheus,
 по которым можно настроить сбор логов и оповещения с помощью ресурсов модулей [`log-shipper`](/modules/log-shipper/) и [`observability`](/modules/observability/).
 Это позволяет:
 
@@ -314,7 +314,7 @@ d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 
 ## Отладка и эмуляция событий
 
-Для отладки и эмуляции событий рантайм-аудита в DKP можно использовать:
+Для отладки и эмуляции событий рантайм-аудита в DP можно использовать:
 
 - утилиту `event-generator`;
 - HTTP-эндпоинт `/test` сервиса `falcosidekick`.

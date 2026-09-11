@@ -2,7 +2,7 @@
 title: Csi-netapp module
 permalink: en/architecture/storage/external/csi-netapp.html
 search: csi-netapp, netapp
-description: Architecture of the csi-netapp module in Deckhouse Kubernetes Platform.
+description: Architecture of the csi-netapp module in Deckhouse Platform.
 ---
 
 The [`csi-netapp`](/modules/csi-netapp/) module is designed to manage volumes using NetApp storage systems. It enables creating StorageClass resources in Kubernetes using the NetappStorageClass custom resource.
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`csi-netapp`](/modules/csi-netapp/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`csi-netapp`](/modules/csi-netapp/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![csi-netapp module architecture](../../../images/architecture/storage/c4-l2-csi-netapp.png)
 
@@ -35,7 +35,7 @@ The module consists of the following components:
 
     It consists of a single container, **controller**.
 
-1. **CSI driver (netapp)**: CSI driver implementation for the `csi.trident.netapp.io` provisioner. To study the typical CSI driver architecture used in DKP, refer to the [CSI driver documentation page](../csi-drivers/csi-driver.html).
+1. **CSI driver (netapp)**: CSI driver implementation for the `csi.trident.netapp.io` provisioner. To study the typical CSI driver architecture used in DP, refer to the [CSI driver documentation page](../csi-drivers/csi-driver.html).
 
 ## Module interactions
 

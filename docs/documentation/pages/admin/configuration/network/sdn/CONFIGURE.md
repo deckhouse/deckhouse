@@ -6,7 +6,7 @@ description: |
 search: software-defined networks, VLAN interfaces, additional networks, underlay networks
 ---
 
-To use SDN in a DKP cluster, you need to prepare the infrastructure for enabling the [`sdn`](/modules/sdn/) module, as well as perform some preparatory actions after enabling it.
+To use SDN in a DP cluster, you need to prepare the infrastructure for enabling the [`sdn`](/modules/sdn/) module, as well as perform some preparatory actions after enabling it.
 
 ## Preparing the infrastructure for enabling the `sdn` module
 
@@ -14,7 +14,7 @@ Before using additional software-defined networks (hereinafter referred to as ad
 
 * **For creating additional networks based on tagged VLANs:**
   * Allocate VLAN ID ranges on the data center switches and configure them on the corresponding switch interfaces.
-  * Select physical interfaces on the nodes for subsequent configuration of tagged VLAN interfaces. You can reuse interfaces already used by the DKP local network.
+  * Select physical interfaces on the nodes for subsequent configuration of tagged VLAN interfaces. You can reuse interfaces already used by the DP local network.
 
 * **For creating additional networks based on direct, untagged access to a network interface:**
   * Reserve separate physical interfaces on the nodes and connect them into a single local network at the data center level.
@@ -56,7 +56,7 @@ annotations:
 
 {% endalert %}
 
-In this example, each cluster node has two network interfaces: eth0 (DKP local network) and eth1 (dedicated interface for additional networks).
+In this example, each cluster node has two network interfaces: eth0 (DP local network) and eth1 (dedicated interface for additional networks).
 
 ### Marking interfaces for organizing additional software-defined networks
 
@@ -171,7 +171,7 @@ Example configuring a bond interface:
 
 ## Configuring and connecting additional virtual networks for use in application pods
 
-The Deckhouse Kubernetes Platform provides the ability to declaratively manage additional networks for application workloads (pods, virtual machines). At the same time:
+The Deckhouse Platform provides the ability to declaratively manage additional networks for application workloads (pods, virtual machines). At the same time:
 
 * Each additional network implies a single L2 data exchange domain.
 * Within the Pod’s network namespace, an additional network is represented as a tap interface.
@@ -379,7 +379,7 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
 
 The IPAM mechanism allows you to automatically allocate and assign **IPv4 addresses** for additional network interfaces of pods connected to [cluster networks](#creating-a-publicly-accessible-network-cluster) and [project networks](#creating-a-project-network-user-network).
 
-#### Principles and features of IPAM in DKP
+#### Principles and features of IPAM in DP
 
 For each required IP address, a object [IPAddress](/modules/sdn/cr.html#ipaddress) ([ClusterIPAddress](/modules/sdn/cr.html#clusteripaddress) — for cluster networks) is created and used, which references the project network or cluster network. The controller allocates an address from the pool and stores the result in `status.address`, `status.network`, `status.routes` of the IPAddress (ClusterIPAddress) object. The agent on the node assigns an IP address and routes to the interface inside the pod and sets the `status.conditions[Attached]` and `status.usedByPods` fields of the IPAddress (ClusterIPAddress) object.
 
@@ -449,7 +449,7 @@ This feature is designed for high-performance workloads that require direct acce
 
 ### Key features
 
-DKP implements the following features for working with underlay networks:
+DP implements the following features for working with underlay networks:
 
 * **Hardware device passthrough**: Physical network interfaces (PF/VF) are directly exposed to pods, bypassing the kernel network stack for maximum performance.
 * **SR-IOV configuration**: Automatic configuration of SR-IOV on selected Physical Functions to create Virtual Functions, allowing multiple pods to share the same hardware.

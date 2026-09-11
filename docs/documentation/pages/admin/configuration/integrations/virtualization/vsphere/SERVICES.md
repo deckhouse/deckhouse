@@ -3,7 +3,7 @@ title: Integration with VMware vSphere services
 permalink: en/admin/integrations/virtualization/vsphere/services.html
 ---
 
-Deckhouse Kubernetes Platform integrates with VMware vSphere infrastructure and uses [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resources
+Deckhouse Platform integrates with VMware vSphere infrastructure and uses [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resources
 to describe the specifications of virtual machines created as part of the Kubernetes cluster.
 
 Key features:
@@ -18,7 +18,7 @@ Key features:
   - Via MetalLB (in BGP mode).
 
 {% alert level="info" %}
-DKP supports hybrid integration with VMware vSphere. For configuration details, see [Hybrid cluster with vSphere](../../hybrid/vsphere-hybrid.html) section.
+DP supports hybrid integration with VMware vSphere. For configuration details, see [Hybrid cluster with vSphere](../../hybrid/vsphere-hybrid.html) section.
 {% endalert %}
 
 ## vSphere resource management
@@ -67,7 +67,7 @@ To reduce the number of nodes in a `CloudPermanent` group:
 
    Save the changes.
 
-1. In the [DKP installer container](/products/kubernetes-platform/documentation/v1/installing/#installing), apply the updated configuration:
+1. In the [DP installer container](/products/kubernetes-platform/documentation/v1/installing/#installing), apply the updated configuration:
 
    ```shell
    dhctl converge \
@@ -116,7 +116,7 @@ To completely remove a `CloudPermanent` group:
 
    Save the changes.
 
-1. In the [DKP installer container](/products/kubernetes-platform/documentation/v1/installing/#installing), apply the updated configuration:
+1. In the [DP installer container](/products/kubernetes-platform/documentation/v1/installing/#installing), apply the updated configuration:
 
    ```shell
    dhctl converge \

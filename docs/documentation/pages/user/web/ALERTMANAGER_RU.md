@@ -1,6 +1,6 @@
 ---
 title: Веб-интерфейс управления алертами
-description: "Веб-интерфейс Alertmanager для управления алертами в Deckhouse Kubernetes Platform. Просмотр информации об алертах, уровень критичности, временное отключение оповещений (silence)."
+description: "Веб-интерфейс Alertmanager для управления алертами в Deckhouse Platform. Просмотр информации об алертах, уровень критичности, временное отключение оповещений (silence)."
 permalink: ru/user/web/alertmanager.html
 lang: ru
 search: alert management, alertmanager, notification management, alert silencing, управление алертами, обработка алертов, управление уведомлениями, подавление алертов
@@ -9,7 +9,7 @@ search: alert management, alertmanager, notification management, alert silencing
 С помощью веб-интерфейса управления алертами можно получить подробную информацию об алерте, включая источник, уровень критичности и время срабатывания,
 а также при необходимости временно отключить оповещения об алерте (silence).
 
-Список всех доступных алертов системы мониторинга Deckhouse Kubernetes Platform приведён на [отдельной странице документации](../../reference/alerts.html).
+Список всех доступных алертов системы мониторинга Deckhouse Platform приведён на [отдельной странице документации](../../reference/alerts.html).
 
 ## Доступ к веб-интерфейсу
 

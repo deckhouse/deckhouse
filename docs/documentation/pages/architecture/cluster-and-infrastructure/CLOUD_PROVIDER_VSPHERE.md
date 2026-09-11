@@ -2,7 +2,7 @@
 title: Cloud-provider-vsphere module
 permalink: en/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vsphere.html
 search: cloud-provider-vsphere, cloud provider vsphere, vmware vsphere
-description: Architecture of the cloud-provider-vsphere module in Deckhouse Kubernetes Platform.
+description: Architecture of the cloud-provider-vsphere module in Deckhouse Platform.
 ---
 
 The `cloud-provider-vsphere` module is responsible for interacting with the [VMware vSphere](https://www.vmware.com/products/cloud-infrastructure/vsphere) cloud resources. It allows the [`node-manager`](/modules/node-manager/) module to use VMware vSphere resources for provisioning nodes for the specified [node group](/modules/node-manager/cr.html#nodegroup).
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Cloud-provider-vsphere architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vsphere.png)
 

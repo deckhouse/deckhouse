@@ -2,7 +2,7 @@
 title: "Kubernetes NetworkPolicy"
 permalink: en/admin/configuration/network/policy/kubernetes_networkpolicy.html
 description: |
-  Kubernetes NetworkPolicy model, selectors, default policies, and API limitations in Deckhouse Kubernetes Platform.
+  Kubernetes NetworkPolicy model, selectors, default policies, and API limitations in Deckhouse Platform.
 relatedLinks:
   - title: "Network Policies — Kubernetes documentation"
     url: https://kubernetes.io/docs/concepts/services-networking/network-policies/
@@ -14,7 +14,7 @@ relatedLinks:
     url: troubleshooting.html
 ---
 
-The standard [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) resource (`networking.k8s.io/v1`) defines L3/L4 traffic rules for pods (TCP, UDP, optionally SCTP). In DKP, these policies are enforced by the [`cni-cilium`](/modules/cni-cilium/) module or the [`network-policy-engine`](/modules/network-policy-engine/) module, depending on the CNI in use; the mapping between CNI and engine is described in [Network policy implementation in DKP](configuration.html#network-policy-implementation-in-dkp).
+The standard [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) resource (`networking.k8s.io/v1`) defines L3/L4 traffic rules for pods (TCP, UDP, optionally SCTP). In DP, these policies are enforced by the [`cni-cilium`](/modules/cni-cilium/) module or the [`network-policy-engine`](/modules/network-policy-engine/) module, depending on the CNI in use; the mapping between CNI and engine is described in [Network policy implementation in DP](configuration.html#network-policy-implementation-in-dp).
 
 ## Isolation model
 

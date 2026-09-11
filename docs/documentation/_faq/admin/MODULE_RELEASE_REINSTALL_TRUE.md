@@ -7,7 +7,7 @@ In some cases, there may be a problem with automatically downloading the image a
 
 - Damage to the file system or other problems that have rendered the module image invalid.
 - Switching to a different registry.
-- Switching from one DKP edition to another.
+- Switching from one DP edition to another.
 
 In this case, the module may be in the `Ready` state. The error occurs in the module's pods. To find the problematic pod, use the command:
 

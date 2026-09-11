@@ -2,10 +2,10 @@
 title: Managed-memcached module
 permalink: en/architecture/managed-services/managed-memcached.html
 search: managed-memcached, memcached
-description: Architecture of the managed-memcached module in Deckhouse Kubernetes Platform.
+description: Architecture of the managed-memcached module in Deckhouse Platform.
 ---
 
-The [`managed-memcached`](/modules/managed-memcached/) module simplifies the deployment and management of Memcached instances in Deckhouse Kubernetes Platform (DKP). It provides:
+The [`managed-memcached`](/modules/managed-memcached/) module simplifies the deployment and management of Memcached instances in Deckhouse Platform (DP). It provides:
 
 * **Automated Deployment**: Deploy Memcached instances with a simple YAML configuration.
 * **High Availability**: Support for both standalone (Standalone) and group (Group) deployments.
@@ -27,7 +27,7 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica per Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`managed-memcached`](/modules/managed-memcached/) module and its interactions with other components of DKP are shown in the following diagram:
+The level-2 C4 architecture of the [`managed-memcached`](/modules/managed-memcached/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Managed-memcached module architecture](../../images/architecture/managed-services/c4-l2-managed-memcached.png)
 

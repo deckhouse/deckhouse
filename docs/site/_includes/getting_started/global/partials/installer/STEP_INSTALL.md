@@ -8,7 +8,7 @@ To see the full log, click the "Open log" button.</p>
 <img src="/images/gs/installer/install-log.png" alt="What the installation screen with log looks like..." style="width: 100%;">
 </div>
 <p>The installation process may take from 5 to 30 minutes depending on connection quality and the number of configured nodes.</p>
-<p><b>The DKP cluster is deployed!</b> 🎉</p>
+<p><b>The DP cluster is deployed!</b> 🎉</p>
 <div class="gs-installer__image">
 <img src="/images/gs/installer/install-finished.png" alt="What the installation completion screen looks like..." style="width: 100%;">
 </div>

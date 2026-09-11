@@ -3,10 +3,10 @@ title: Модуль secrets-store-integration
 permalink: ru/architecture/security/secrets-store-integration.html
 lang: ru
 search: vault, secrets
-description: Архитектура модуля secrets-store-integration в Deckhouse Kubernetes Platform.
+description: Архитектура модуля secrets-store-integration в Deckhouse Platform.
 ---
 
-Модуль [`secrets-store-integration`](/modules/secrets-store-integration/) реализует доставку секретов для приложений в Deckhouse Kubernetes Platform (DKP) из внешнего хранилища, совместимого с API [HashiCorp Vault](https://github.com/hashicorp/vault).
+Модуль [`secrets-store-integration`](/modules/secrets-store-integration/) реализует доставку секретов для приложений в Deckhouse Platform (DP) из внешнего хранилища, совместимого с API [HashiCorp Vault](https://github.com/hashicorp/vault).
 
 Модуль предоставляет следующие возможности:
 
@@ -36,7 +36,7 @@ description: Архитектура модуля secrets-store-integration в De
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура модуля [`secrets-store-integration`](/modules/secrets-store-integration/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`secrets-store-integration`](/modules/secrets-store-integration/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля secrets-store-integration](../../images/architecture/security/c4-l2-secrets-store-integration.ru.svg)
 

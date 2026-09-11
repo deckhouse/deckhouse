@@ -82,7 +82,7 @@ zones:
 Подробнее о том, как создать и назначить роль пользователю можно ознакомиться в разделах[«Настройка через vSphere Client»](authorization.html#настройка-через-vsphere-client) и [«Настройка через govc»](authorization.html#настройка-через-govc).
 {% endalert %}
 
-**Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:**
+**Детальный список привилегий, необходимых для работы Deckhouse Platform в vSphere:**
 
 <table>
   <thead>
@@ -138,7 +138,7 @@ zones:
         <code>Folder.Move</code><br/>
         <code>Folder.Rename</code>
       </td>
-      <td>Группировка кластера Deckhouse Kubernetes Platform в одном <code>Folder</code> в vSphere Inventory.</td>
+      <td>Группировка кластера Deckhouse Platform в одном <code>Folder</code> в vSphere Inventory.</td>
     </tr>
     <tr>
       <td>Global</td>
@@ -150,7 +150,7 @@ zones:
         <code>Global.GlobalTag</code><br/>
         <code>Global.SystemTag</code>
       </td>
-      <td>Доступ к глобальным и системным тегам, используемым Deckhouse Kubernetes Platform при работе с объектами vSphere.</td>
+      <td>Доступ к глобальным и системным тегам, используемым Deckhouse Platform при работе с объектами vSphere.</td>
     </tr>
     <tr>
       <td>vSphere Tagging</td>
@@ -178,13 +178,13 @@ zones:
         <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
         <code>InventoryService.Tagging.ModifyUsedByForTag</code>
       </td>
-      <td>Deckhouse Kubernetes Platform использует теги для определения доступных ему объектов <code>Datacenter</code>, <code>Cluster</code> и <code>Datastore</code>, а также для определения виртуальных машин, находящихся под его управлением.</td>
+      <td>Deckhouse Platform использует теги для определения доступных ему объектов <code>Datacenter</code>, <code>Cluster</code> и <code>Datastore</code>, а также для определения виртуальных машин, находящихся под его управлением.</td>
     </tr>
     <tr>
       <td>Network</td>
       <td>Assign network</td>
       <td><code>Network.Assign</code></td>
-      <td>Подключение сетей и port group к виртуальным машинам кластера Deckhouse Kubernetes Platform.</td>
+      <td>Подключение сетей и port group к виртуальным машинам кластера Deckhouse Platform.</td>
     </tr>
     <tr>
       <td>Resource</td>
@@ -202,7 +202,7 @@ zones:
         <code>Resource.EditPool</code><br/>
         <code>Resource.RenamePool</code>
       </td>
-      <td>Размещение виртуальных машин кластера Deckhouse Kubernetes Platform в целевом пуле ресурсов и управление этим пулом.</td>
+      <td>Размещение виртуальных машин кластера Deckhouse Platform в целевом пуле ресурсов и управление этим пулом.</td>
     </tr>
     <tr>
       <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> в vSphere 7)</td>
@@ -290,7 +290,7 @@ zones:
         <code>VirtualMachine.Config.SwapPlacement</code><br/>
         <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
       </td>
-      <td>Управление жизненным циклом виртуальных машин кластера Deckhouse Kubernetes Platform.</td>
+      <td>Управление жизненным циклом виртуальных машин кластера Deckhouse Platform.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Edit Inventory</td>
@@ -306,7 +306,7 @@ zones:
         <code>VirtualMachine.Inventory.Delete</code><br/>
         <code>VirtualMachine.Inventory.Move</code>
       </td>
-      <td>Создание, удаление и перемещение виртуальных машин кластера Deckhouse Kubernetes Platform в инвентаре vSphere.</td>
+      <td>Создание, удаление и перемещение виртуальных машин кластера Deckhouse Platform в инвентаре vSphere.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Guest Operations</td>
@@ -356,7 +356,7 @@ zones:
         <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
         <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
       </td>
-      <td>Клонирование шаблонов виртуальных машин, их настройка и развертывание при создании узлов кластера Deckhouse Kubernetes Platform.</td>
+      <td>Клонирование шаблонов виртуальных машин, их настройка и развертывание при создании узлов кластера Deckhouse Platform.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Snapshot Management</td>

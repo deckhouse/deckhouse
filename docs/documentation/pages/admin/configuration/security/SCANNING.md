@@ -1,15 +1,15 @@
 ---
 title: Container image vulnerability scanning
 permalink: en/admin/configuration/security/scanning.html
-description: "Configure container image vulnerability scanning in Deckhouse Kubernetes Platform using Trivy. Automated security scanning, vulnerability detection, and security policy enforcement."
+description: "Configure container image vulnerability scanning in Deckhouse Platform using Trivy. Automated security scanning, vulnerability detection, and security policy enforcement."
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides a built-in tool for automatically detecting vulnerabilities
+Deckhouse Platform (DP) provides a built-in tool for automatically detecting vulnerabilities
 in container images based on the [Trivy](https://github.com/aquasecurity/trivy) project.
 
 ## Vulnerability scanning
 
-DKP scans all container images used by cluster pods.
+DP scans all container images used by cluster pods.
 The checks include:
 
 - Known vulnerabilities (CVEs) in the images in use.
@@ -31,7 +31,7 @@ d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 ```
 
 In the current version, there is no option to limit the list of resources to be scanned within a namespace.
-DKP scans **all resources** in a namespace labeled with `security-scanning.deckhouse.io/enabled=""`.
+DP scans **all resources** in a namespace labeled with `security-scanning.deckhouse.io/enabled=""`.
 
 ## Start conditions and scanning process
 

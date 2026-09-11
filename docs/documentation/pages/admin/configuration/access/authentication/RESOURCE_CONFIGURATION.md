@@ -1,10 +1,10 @@
 ---
 title: "Resource configuration"
 permalink: en/admin/configuration/access/authentication/resource-configuration.html
-description: "Configure resource limits and requests for authentication components in Deckhouse Kubernetes Platform. Dex, Kubeconfig Generator, and Basic Auth Proxy resource management."
+description: "Configure resource limits and requests for authentication components in Deckhouse Platform. Dex, Kubeconfig Generator, and Basic Auth Proxy resource management."
 ---
 
-Deckhouse Kubernetes Platform allows you to configure resource limits and requests for all components. By default, the following values are used:
+Deckhouse Platform allows you to configure resource limits and requests for all components. By default, the following values are used:
 
 - **Dex OIDC Provider** — 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)
 - **Kubeconfig Generator** — 10m CPU / 25Mi memory (requests), 100m CPU / 100Mi memory (limits)

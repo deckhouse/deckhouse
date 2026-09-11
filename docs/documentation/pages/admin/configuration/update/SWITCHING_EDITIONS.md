@@ -1,7 +1,7 @@
 ---
-title: "Switching between DKP editions"
+title: "Switching between DP editions"
 permalink: en/admin/configuration/update/switching-editions.html
-description: "Switching between Deckhouse Kubernetes Platform editions. Migration from Community Edition to Enterprise Edition and license management."
+description: "Switching between Deckhouse Platform editions. Migration from Community Edition to Enterprise Edition and license management."
 ---
 
 {% capture wait_queue %}
@@ -23,7 +23,7 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_of_the_internal_modules %}
-1. Determine the list of internal modules used in the cluster that are not supported in DKP new edition. To do this, follow these steps:
+1. Determine the list of internal modules used in the cluster that are not supported in DP new edition. To do this, follow these steps:
 
    <!REMOVE_FOR_CE>
 
@@ -35,7 +35,7 @@ Summary:
 
    <!/REMOVE_FOR_CE>
 
-   1. Get the list of internal modules not supported in DKP $NEW_EDITION:
+   1. Get the list of internal modules not supported in DP $NEW_EDITION:
 
       ```shell
       (set -e
@@ -74,7 +74,7 @@ Summary:
 
    1. Disable the modules from the list if acceptable (the module functionality is not used, or you are ready to give it up). Otherwise, **abort the switching process.**
 
-      You can disable the modules from the list in the DKP web interface under System → System Management → Deckhouse → Modules, or by running the following command:
+      You can disable the modules from the list in the DP web interface under System → System Management → Deckhouse → Modules, or by running the following command:
 
       ```shell
       echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
@@ -83,7 +83,7 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_of_the_external_modules %}
-1. Determine the list of external modules launched via `moduleSource/deckhouse` that are not supported in DKP new edition. To do this, follow these steps:
+1. Determine the list of external modules launched via `moduleSource/deckhouse` that are not supported in DP new edition. To do this, follow these steps:
 
    <!REMOVE_FOR_CE>
 
@@ -95,7 +95,7 @@ Summary:
 
    <!/REMOVE_FOR_CE>
 
-   1. Get the list of external modules launched via `moduleSource/deckhouse` with the result of checking their availability in DKP new edition:
+   1. Get the list of external modules launched via `moduleSource/deckhouse` with the result of checking their availability in DP new edition:
 
       ```shell
       (set -e
@@ -188,7 +188,7 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_of_the_queue %}
-1. Make sure all tasks in the DKP queue are complete before continuing the switching process:
+1. Make sure all tasks in the DP queue are complete before continuing the switching process:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 {% endcapture %}
@@ -426,11 +426,11 @@ d8 k --as=system:sudouser delete ngc containerdv2-$NEW_EDITION-config.sh
 
 {% endcapture %}
 
-This guide describes the steps required to switch the Deckhouse Kubernetes Platform edition in a running cluster. Follow the sections in order.
+This guide describes the steps required to switch the Deckhouse Platform edition in a running cluster. Follow the sections in order.
 
 The switching process differs depending on how you work with the image registry. Choose the method that applies to your cluster and follow the instructions.
 
-A valid license key is required when switching to DKP BE/SE/SE+/EE. It is not required when switching to DKP CE.
+A valid license key is required when switching to DP BE/SE/SE+/EE. It is not required when switching to DP CE.
 
 {% alert level="warning" %}
 This guide assumes the use of a public container image registry (`registry.deckhouse.io`). If you use a different registry address, adjust the commands or refer to the [guide for switching Deckhouse to a third-party container image registry](../registry/third-party.html).
@@ -442,21 +442,21 @@ Execute all commands on the master node of the existing cluster as the `root` us
 
 Before switching between revisions, follow these steps:
 
-1. Make sure that [the DKP queues are empty](#pre-switch-preparation).
-1. Determine the [current DKP revision and version](#determining-the-current-edition-and-version).
+1. Make sure that [the DP queues are empty](#pre-switch-preparation).
+1. Determine the [current DP revision and version](#determining-the-current-edition-and-version).
 1. Verify that you can switch [from the current version to the desired one](#checking-whether-switching-to-the-desired-edition-is-possible).
 
 ### Queue check
 
-Make sure the DKP queues are empty and there are no running tasks that could interfere with the switch:
+Make sure the DP queues are empty and there are no running tasks that could interfere with the switch:
 
 {{ wait_queue }}
 
 ### Determining the current edition and version
 
-To ensure the correctness of further steps, determine the current DKP edition used in the cluster. This helps avoid errors during the switch and confirms that the required modules and features are supported in the new edition.
+To ensure the correctness of further steps, determine the current DP edition used in the cluster. This helps avoid errors during the switch and confirms that the required modules and features are supported in the new edition.
 
-You can find the edition and version currently used in the cluster on the main page of the DKP web interface, or by using CLI commands:
+You can find the edition and version currently used in the cluster on the main page of the DP web interface, or by using CLI commands:
 
 - edition:
 
@@ -472,14 +472,14 @@ You can find the edition and version currently used in the cluster on the main p
 
 ### Checking whether switching to the desired edition is possible
 
-Different DKP editions support different sets of modules, Kubernetes versions, and features. It is important to understand what functional changes will occur during the switch and which capabilities will become unavailable. This will help you prepare for the switching process.
+Different DP editions support different sets of modules, Kubernetes versions, and features. It is important to understand what functional changes will occur during the switch and which capabilities will become unavailable. This will help you prepare for the switching process.
 
-A comparison of DKP editions by module set can be found in the documentation on the [Edition comparison](../../../reference/revision-comparison.html) page.
+A comparison of DP editions by module set can be found in the documentation on the [Edition comparison](../../../reference/revision-comparison.html) page.
 
 What to consider before switching:
 
 {% tabs step1 %}
-{% tab "To DKP CE" %}
+{% tab "To DP CE" %}
 
 {{
    take_care_of_the_internal_modules
@@ -496,7 +496,7 @@ What to consider before switching:
 {{ take_care_of_the_queue }}
 {% endtab %}
 
-{% tab "To DKP BE" %}
+{% tab "To DP BE" %}
 {{
    take_care_of_the_internal_modules
    | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
@@ -512,7 +512,7 @@ What to consider before switching:
 {{ take_care_of_the_queue }}
 {% endtab %}
 
-{% tab "To DKP SE" %}
+{% tab "To DP SE" %}
 {{
    take_care_of_the_internal_modules
    | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
@@ -528,7 +528,7 @@ What to consider before switching:
 {{ take_care_of_the_queue }}
 {% endtab %}
 
-{% tab "To DKP SE+" %}
+{% tab "To DP SE+" %}
 {{
    take_care_of_the_internal_modules
    | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
@@ -544,7 +544,7 @@ What to consider before switching:
 {{ take_care_of_the_queue }}
 {% endtab %}
 
-{% tab "To DKP EE" %}
+{% tab "To DP EE" %}
 {{
    take_care_of_the_internal_modules
    | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
@@ -565,23 +565,23 @@ What to consider before switching:
 
 ### Selecting a switching method
 
-When selecting a switching method, consider how the DKP container image repository is configured within the cluster.
+When selecting a switching method, consider how the DP container image repository is configured within the cluster.
 
-There are two ways to work with the DKP container image registry:
+There are two ways to work with the DP container image registry:
 
-- Using the [`registry`](/modules/registry/) module — **(recommended)** — the configuration for working with the DKP registry is specified in the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module parameters (ModuleConfig `deckhouse`). This method provides a smoother transition process and automatic verification that the required images are present. If your cluster uses this method for working with the DKP container registry, use the section ["Switching Using the registry Module"](#switching-using-the-registry-module) to switch editions.
+- Using the [`registry`](/modules/registry/) module — **(recommended)** — the configuration for working with the DP registry is specified in the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module parameters (ModuleConfig `deckhouse`). This method provides a smoother transition process and automatic verification that the required images are present. If your cluster uses this method for working with the DP container registry, use the section ["Switching Using the registry Module"](#switching-using-the-registry-module) to switch editions.
 
-- Without using the `registry` module — the configuration for working with the DKP registry is set during cluster installation [in `InitConfiguration`](../../../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), and the [`registry.mode`](/modules/deckhouse/configuration. html#parameters-registry-mode) of the `deckhouse` module (ModuleConfig `deckhouse`) is set to `Unmanaged`, and the [`registry.unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged) parameter of the `deckhouse` module is not specified.
+- Without using the `registry` module — the configuration for working with the DP registry is set during cluster installation [in `InitConfiguration`](../../../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), and the [`registry.mode`](/modules/deckhouse/configuration. html#parameters-registry-mode) of the `deckhouse` module (ModuleConfig `deckhouse`) is set to `Unmanaged`, and the [`registry.unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged) parameter of the `deckhouse` module is not specified.
 
-  This method is the only one available for managed Kubernetes clusters where the control plane is managed by a cloud provider rather than DKP (e.g. Amazon EKS, Azure AKS, Google GKE, etc.).
+  This method is the only one available for managed Kubernetes clusters where the control plane is managed by a cloud provider rather than DP (e.g. Amazon EKS, Azure AKS, Google GKE, etc.).
 
-  If your cluster uses this method for managing the DKP container image repository, refer to the section ["Switching without using the registry module"](#switching-without-the-registry-module) to switch versions.
+  If your cluster uses this method for managing the DP container image repository, refer to the section ["Switching without using the registry module"](#switching-without-the-registry-module) to switch versions.
 
 ### Switching using the registry module
 
 {% alert level="warning" %}
 - Before proceeding, complete the preparatory steps described in the [Pre-switch preparation](#pre-switch-preparation) section.
-- This switching method must be performed only in `Unmanaged` mode. Make sure that the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the previous DKP edition in `Unmanaged` mode. If this is not the case, perform the [migration to using the registry module](../registry/managing-interaction.html#migration-to-registry-management-format-using-the-registry-module) and switch the registry to `Unmanaged` mode.
+- This switching method must be performed only in `Unmanaged` mode. Make sure that the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the previous DP edition in `Unmanaged` mode. If this is not the case, perform the [migration to using the registry module](../registry/managing-interaction.html#migration-to-registry-management-format-using-the-registry-module) and switch the registry to `Unmanaged` mode.
 - This method is not applicable for managed Kubernetes (EKS, AKS, GKE).
 {% endalert %}
 
@@ -596,7 +596,7 @@ There are two ways to work with the DKP container image registry:
    Choose the example for your target edition:
 
    {% tabs switch-registry-edition %}
-   {% tab "DKP CE" %}
+   {% tab "DP CE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<EDITION_CODE>", "ce"
@@ -606,7 +606,7 @@ There are two ways to work with the DKP container image registry:
       }}
    {% endtab %}
 
-   {% tab "DKP BE" %}
+   {% tab "DP BE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<EDITION_CODE>", "be"
@@ -616,7 +616,7 @@ There are two ways to work with the DKP container image registry:
       }}
    {% endtab %}
 
-   {% tab "DKP SE" %}
+   {% tab "DP SE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<EDITION_CODE>", "se"
@@ -626,7 +626,7 @@ There are two ways to work with the DKP container image registry:
       }}
    {% endtab %}
 
-   {% tab "DKP SE+" %}
+   {% tab "DP SE+" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<EDITION_CODE>", "se-plus"
@@ -636,7 +636,7 @@ There are two ways to work with the DKP container image registry:
       }}
    {% endtab %}
 
-   {% tab "DKP EE" %}
+   {% tab "DP EE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<EDITION_CODE>", "ee"
@@ -702,15 +702,15 @@ There are two ways to work with the DKP container image registry:
 Choose the target edition:
 
 {% tabs switch-without-registry %}
-{% tab "DKP CE/BE/SE/SE+/EE" %}
+{% tab "DP CE/BE/SE/SE+/EE" %}
 1. Run the command to set the authentication credentials for the image registry:
 
    {% tabs without-registry-auth %}
-   {% tab "DKP CE" %}
-      Not required for DKP CE.
+   {% tab "DP CE" %}
+      Not required for DP CE.
    {% endtab %}
 
-   {% tab "DKP BE" %}
+   {% tab "DP BE" %}
       {{
          ngc_auth_registry
          | regex_replace: "\$NEW_EDITION", "be"
@@ -723,7 +723,7 @@ Choose the target edition:
       }}
    {% endtab %}
 
-   {% tab "DKP SE" %}
+   {% tab "DP SE" %}
       {{
          ngc_auth_registry
          | regex_replace: "\$NEW_EDITION", "se"
@@ -736,7 +736,7 @@ Choose the target edition:
       }}
    {% endtab %}
 
-   {% tab "DKP SE+" %}
+   {% tab "DP SE+" %}
       {{
          ngc_auth_registry
          | regex_replace: "\$NEW_EDITION", "se-plus"
@@ -749,7 +749,7 @@ Choose the target edition:
       }}
    {% endtab %}
 
-   {% tab "DKP EE" %}
+   {% tab "DP EE" %}
       {{
          ngc_auth_registry
          | regex_replace: "\$NEW_EDITION", "ee"
@@ -766,14 +766,14 @@ Choose the target edition:
 1. Switch the container image registry:
 
    {% tabs without-registry-switch %}
-   {% tab "DKP CE" %}
+   {% tab "DP CE" %}
       {{
          change_registry_helper_ce
          | regex_replace: "^", "   "
       }}
    {% endtab %}
 
-   {% tab "DKP BE" %}
+   {% tab "DP BE" %}
       {{
          change_registry_helper
          | regex_replace: "\$NEW_EDITION", "be"
@@ -781,7 +781,7 @@ Choose the target edition:
       }}
    {% endtab %}
 
-   {% tab "DKP SE" %}
+   {% tab "DP SE" %}
       {{
          change_registry_helper
          | regex_replace: "\$NEW_EDITION", "se"
@@ -789,7 +789,7 @@ Choose the target edition:
       }}
    {% endtab %}
 
-   {% tab "DKP SE+" %}
+   {% tab "DP SE+" %}
       {{
          change_registry_helper
          | regex_replace: "\$NEW_EDITION", "se-plus"
@@ -797,7 +797,7 @@ Choose the target edition:
       }}
    {% endtab %}
 
-   {% tab "DKP EE" %}
+   {% tab "DP EE" %}
       {{
          change_registry_helper
          | regex_replace: "\$NEW_EDITION", "ee"
@@ -808,7 +808,7 @@ Choose the target edition:
 
 {{ take_care_deckhuse_imagepullbackoff }}
 
-1. Wait for DKP to be ready:
+1. Wait for DP to be ready:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 
@@ -832,11 +832,11 @@ Choose the target edition:
 1. Perform cleanup:
 
    {% tabs without-registry-cleanup %}
-   {% tab "DKP CE" %}
-      Not required for DKP CE.
+   {% tab "DP CE" %}
+      Not required for DP CE.
    {% endtab %}
 
-   {% tab "DKP BE" %}
+   {% tab "DP BE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "be"
@@ -849,7 +849,7 @@ Choose the target edition:
       }}
    {% endtab %}
 
-   {% tab "DKP SE" %}
+   {% tab "DP SE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "se"
@@ -862,7 +862,7 @@ Choose the target edition:
       }}
    {% endtab %}
 
-   {% tab "DKP SE+" %}
+   {% tab "DP SE+" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "se-plus"
@@ -875,7 +875,7 @@ Choose the target edition:
       }}
    {% endtab %}
 
-   {% tab "DKP EE" %}
+   {% tab "DP EE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "ee"

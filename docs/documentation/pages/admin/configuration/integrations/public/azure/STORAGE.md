@@ -5,7 +5,7 @@ permalink: en/admin/integrations/public/azure/storage.html
 
 ## Storage
 
-When running on Azure, Deckhouse Kubernetes Platform (DKP) automatically creates the following StorageClass resources:
+When running on Azure, Deckhouse Platform (DP) automatically creates the following StorageClass resources:
 
 | Name                    | Disk type        |
 | ---------------------- | ---------------- |
@@ -42,7 +42,7 @@ spec:
 
 ## Load balancing
 
-DKP automatically creates LoadBalancer resources in Azure when using Kubernetes Service objects of the LoadBalancer type.
+DP automatically creates LoadBalancer resources in Azure when using Kubernetes Service objects of the LoadBalancer type.
 
 Additional features:
 

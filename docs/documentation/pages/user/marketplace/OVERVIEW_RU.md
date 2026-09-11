@@ -1,17 +1,17 @@
 ---
 title: Marketplace
 permalink: ru/user/marketplace/
-description: "Использование Marketplace в Deckhouse Kubernetes Platform. Просмотр доступных пакетов приложений, установка в неймспейс и управление жизненным циклом."
+description: "Использование Marketplace в Deckhouse Platform. Просмотр доступных пакетов приложений, установка в неймспейс и управление жизненным циклом."
 lang: ru
 search: marketplace, application, пакеты приложений, установка приложения, управление приложениями
 ---
 
-Этот раздел описывает способы использования Marketplace в Deckhouse Kubernetes Platform (DKP).
+Этот раздел описывает способы использования Marketplace в Deckhouse Platform (DP).
 
 Marketplace позволяет устанавливать готовые приложения в свой неймспейс из реестров, подключённых администратором кластера. Каждое приложение устанавливается в виде ресурса [Application](../../reference/api/cr.html#application) и может существовать в нескольких независимых экземплярах — например, отдельные Redis-инстансы для кеширования и сессий в одном неймспейсе.
 
 {% alert level="info" %}
-Marketplace и ресурс Application доступны начиная с DKP версии 1.76.
+Marketplace и ресурс Application доступны начиная с DP версии 1.76.
 {% endalert %}
 
 ## Предварительные условия

@@ -1,7 +1,7 @@
 ---
 title: Planning for a high pod count on a node
 permalink: en/guides/high-pod-density.html
-description: Recommendations for preparing Deckhouse Kubernetes Platform nodes to run a large number of pods (hundreds and thousands per node).
+description: Recommendations for preparing Deckhouse Platform nodes to run a large number of pods (hundreds and thousands per node).
 lang: en
 layout: sidebar-guides
 ---
@@ -17,12 +17,12 @@ For nodes with high pod density:
 - Use lightweight application images with minimum amount of layers (for example, `distroless`).
 {% endalert %}
 
-For such scenarios, Deckhouse Kubernetes Platform (DKP) configures control plane components automatically — no additional manual configuration is required.
+For such scenarios, Deckhouse Platform (DP) configures control plane components automatically — no additional manual configuration is required.
 
 ## Pod limit per node
 
 {% alert %}
-The pod limit per node in DKP is calculated based on the node subnet size set via the [`podSubnetNodeCIDRPrefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) parameter. To fit up to 1000 pods on a node, set the value ≤ `21` when deploying the cluster.
+The pod limit per node in DP is calculated based on the node subnet size set via the [`podSubnetNodeCIDRPrefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) parameter. To fit up to 1000 pods on a node, set the value ≤ `21` when deploying the cluster.
 {% endalert %}
 
 The subnet size allocated to a node determines the maximum number of pods that can be allocated to a node:

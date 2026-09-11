@@ -1,12 +1,12 @@
 ---
 title: Репозитории пакетов
 permalink: ru/admin/configuration/marketplace/package-repository.html
-description: "Подключение реестра пакетов к Deckhouse Kubernetes Platform Marketplace через PackageRepository. Настройка аутентификации, интервала сканирования и мониторинг статуса репозитория."
+description: "Подключение реестра пакетов к Deckhouse Platform Marketplace через PackageRepository. Настройка аутентификации, интервала сканирования и мониторинг статуса репозитория."
 lang: ru
 search: PackageRepository, package repository, registry packages, репозиторий пакетов, реестр пакетов, сканирование
 ---
 
-Подключение Deckhouse Kubernetes Platform (DKP) к container registry, содержащему пакеты приложений, выполняется с помощью [PackageRepository](../../../reference/api/cr.html#packagerepository). После подключения DKP автоматически сканирует реестр и создаёт объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
+Подключение Deckhouse Platform (DP) к container registry, содержащему пакеты приложений, выполняется с помощью [PackageRepository](../../../reference/api/cr.html#packagerepository). После подключения DP автоматически сканирует реестр и создаёт объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
 
 Пример манифеста PackageRepository:
 
@@ -56,7 +56,7 @@ spec:
 
 ### Интервал сканирования
 
-По умолчанию DKP пересканирует реестр каждые **6 часов**. Переопределить интервал можно с помощью параметра `scanInterval`:
+По умолчанию DP пересканирует реестр каждые **6 часов**. Переопределить интервал можно с помощью параметра `scanInterval`:
 
 ```yaml
 spec:

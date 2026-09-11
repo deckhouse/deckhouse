@@ -2,10 +2,10 @@
 title: Csi-ceph module
 permalink: en/architecture/storage/external/csi-ceph.html
 search: csi-ceph, ceph, cephfs, rbd
-description: Architecture of the csi-ceph module in Deckhouse Kubernetes Platform.
+description: Architecture of the csi-ceph module in Deckhouse Platform.
 ---
 
-The `csi-ceph` module is designed to integrate DKP with Ceph clusters and provides storage management based on [RBD (RADOS Block Device)](https://docs.ceph.com/en/reef/rbd/) or [CephFS](https://docs.ceph.com/en/reef/cephfs/). It allows creating StorageClasses in Kubernetes using the CephStorageClass resource.
+The `csi-ceph` module is designed to integrate DP with Ceph clusters and provides storage management based on [RBD (RADOS Block Device)](https://docs.ceph.com/en/reef/rbd/) or [CephFS](https://docs.ceph.com/en/reef/cephfs/). It allows creating StorageClasses in Kubernetes using the CephStorageClass resource.
 
 For more details about the module, refer to [the module documentation section](/modules/csi-ceph/).
 
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`csi-ceph`](/modules/csi-ceph/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`csi-ceph`](/modules/csi-ceph/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![csi-ceph module architecture](../../../images/architecture/storage/c4-l2-csi-ceph.png)
 
@@ -42,7 +42,7 @@ The module consists of the following components:
 
 1. **CSI driver (rbd/cephfs)**: An implementation of the CSI driver for the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` provisioner. The CSI driver is selected by setting the storage class type in the CephStorageClass custom resource.
 
-   The `csi-cephfs` CSI driver follows [the standard CSI driver architecture used in DKP](../csi-drivers/csi-driver.html).
+   The `csi-cephfs` CSI driver follows [the standard CSI driver architecture used in DP](../csi-drivers/csi-driver.html).
 
    The `csi-rbd` CSI driver uses [an architecture that differs from the standard CSI driver architecture](../../storage/csi-drivers/csi-driver-ceph-rbd.html).
 

@@ -1,13 +1,13 @@
 ---
-title: Обновление DKP в закрытом окружении
+title: Обновление DP в закрытом окружении
 permalink: ru/guides/airgapped-update.html
-description: Руководство по обновлению Deckhouse Kubernetes Platform в закрытом окружении.
+description: Руководство по обновлению Deckhouse Platform в закрытом окружении.
 lang: ru
 layout: sidebar-guides
 ---
 
 {% alert level="info" %}
-В руководстве рассматривается DKP Enterprise Edition, но механизмы аналогичны и для [других редакций](../documentation/v1/reference/revision-comparison.html).
+В руководстве рассматривается DP Enterprise Edition, но механизмы аналогичны и для [других редакций](../documentation/v1/reference/revision-comparison.html).
 
 Для выполнения приведенных в руководстве команд потребуется аутентификация в хранилище образов контейнеров `registry.deckhouse.ru`. Для аутентификации используйте `license-token` в качестве имени и ваш лицензионный ключ в качестве пароля.
 
@@ -16,7 +16,7 @@ layout: sidebar-guides
 
 ## Механика обновления платформы с помощью релизных каналов
 
-Обновления Deckhouse Kubernetes Platform (DKP) основаны [на каналах обновлений](../documentation/v1/architecture/updating.html#каналы-обновлений). Канал обновлений, заданный для установленной у вас копии DKP, можно посмотреть [в ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html), выполнив команду:
+Обновления Deckhouse Platform (DP) основаны [на каналах обновлений](../documentation/v1/architecture/updating.html#каналы-обновлений). Канал обновлений, заданный для установленной у вас копии DP, можно посмотреть [в ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html), выполнив команду:
 
 ```bash
 d8 k get mc deckhouse -o jsonpath='{.spec.settings.releaseChannel}'
@@ -28,9 +28,9 @@ d8 k get mc deckhouse -o jsonpath='{.spec.settings.releaseChannel}'
 Stable
 ```
 
-Технически обновление DKP выглядит следующим образом: в хранилище образов находится образ с именем `release-channel` и тегом по названию канала обновлений, который указывает на образ уже конкретной версии DKP (при выпуске новой версии этот образ заменяется на новый).
+Технически обновление DP выглядит следующим образом: в хранилище образов находится образ с именем `release-channel` и тегом по названию канала обновлений, который указывает на образ уже конкретной версии DP (при выпуске новой версии этот образ заменяется на новый).
 
-Рассмотрим содержимое образа DKP Enterprise Edition с каналом обновлений Alpha.
+Рассмотрим содержимое образа DP Enterprise Edition с каналом обновлений Alpha.
 
 Выполните следующую команду (требуется предварительная аутентификация в хранилище образов контейнеров `registry.deckhouse.ru`?используя ):
 
@@ -113,16 +113,16 @@ version.json
   }
   ```
 
-При изменении значения в поле версии (`version`) в файле `version.json` в хранилище образов DKP в кластере применяет новый релиз: создаётся `deckhouserelease` и начинается процесс обновления.
+При изменении значения в поле версии (`version`) в файле `version.json` в хранилище образов DP в кластере применяет новый релиз: создаётся `deckhouserelease` и начинается процесс обновления.
 
 {% alert level="info" %}
 Если для модуля `deckhouse` задан ручной режим обновления (поле [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode)), обновление версии требуется подтвердить вручную.
 {% endalert %}
 
-При разрыве минорных версий между версией в кластере и версией в образе `release-channel` DKP автоматически попробует восстановить промежуточные `deckhouserelease` для выполнения последовательного обновления.
+При разрыве минорных версий между версией в кластере и версией в образе `release-channel` DP автоматически попробует восстановить промежуточные `deckhouserelease` для выполнения последовательного обновления.
 
 {% alert level="warning" %}
-Обратите внимание, что DKP нельзя обновлять непоследовательно, пропуская минорные релизы (это не относится к патч-релизам). В минорных релизах зачастую присутствуют миграции, которые должны применяться последовательно. Эти миграции время от времени удаляются. Пропуск минорных релизов может привести к следующим последствиям:
+Обратите внимание, что DP нельзя обновлять непоследовательно, пропуская минорные релизы (это не относится к патч-релизам). В минорных релизах зачастую присутствуют миграции, которые должны применяться последовательно. Эти миграции время от времени удаляются. Пропуск минорных релизов может привести к следующим последствиям:
 
 - образование «мусора»;
 - некорректная работа кластера из-за невыполненных миграций.
@@ -132,7 +132,7 @@ version.json
 
 Модули из источника имеют схожую механику обновления, но их релизный цикл отвязан от релизов платформы и полностью самостоятелен.
 
-В кластере есть ресурсы [ModuleSource](../documentation/v1/reference/api/cr.html#modulesource), которые отслеживаются DKP, и на основе которых обнаруживается список доступных модулей.
+В кластере есть ресурсы [ModuleSource](../documentation/v1/reference/api/cr.html#modulesource), которые отслеживаются DP, и на основе которых обнаруживается список доступных модулей.
 
 Чтобы посмотреть, из какого репозитория будут устанавливаться модули, используйте команду:
 
@@ -187,7 +187,7 @@ changelog.yaml
 version.json
 ```
 
-Образ модуля, аналогично образу самой платформы DKP, содержит файлы `changelog.yaml` и `version.json`.
+Образ модуля, аналогично образу самой платформы DP, содержит файлы `changelog.yaml` и `version.json`.
 
 Для просмотра содержимого файла `version.json` используйте команду:
 
@@ -203,7 +203,7 @@ crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | 
 }
 ```
 
-В поле `version` содержится версия модуля. При её изменении DKP применяет новый релиз (создаётся `modulerelease` и начинается процесс обновления).
+В поле `version` содержится версия модуля. При её изменении DP применяет новый релиз (создаётся `modulerelease` и начинается процесс обновления).
 
 {% alert level="warning" %}
 Обратите внимание, что модули нельзя обновлять непоследовательно, пропуская через минорные релизы (это не относится к патч-релизам). В минорных релизах зачастую присутствуют миграции, которые должны применяться последовательно. Эти миграции время от времени удаляются. Пропуск минорных релизов может привести к следующим последствиям:
@@ -212,19 +212,19 @@ crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | 
 - некорректная работа кластера из-за невыполненных миграций.
 {% endalert %}
 
-При отсутствии необходимых минорных версий DKP выведет ошибку вида `minor version is greater than deployed $version by one`.
+При отсутствии необходимых минорных версий DP выведет ошибку вида `minor version is greater than deployed $version by one`.
 
-При разрыве минорных версий между версией в кластере и версией в образе `release` DKP автоматически попробует восстановить промежуточные `modulerelease` для выполнения последовательного обновления.
+При разрыве минорных версий между версией в кластере и версией в образе `release` DP автоматически попробует восстановить промежуточные `modulerelease` для выполнения последовательного обновления.
 
 ## Механика обновления баз данных сканера уязвимостей
 
 {% alert level="warning" %}
-Доступно в DKP EE, DKP CSE Lite и DKP CSE Pro.
+Доступно в DP EE, DP Ultimate, DP CSE Lite, DP CSE Pro, DP Certified Pro и DP Certified Lite.
 {% endalert %}
 
 Базы уязвимостей обновляются раз в 6 часов. Модуль `operator-trivy` в кластере самостоятельно скачивает их из registry один раз за этот промежуток.
 
-Образы баз уязвимостей на примере [DKP EE](/modules/operator-trivy/) имеют постоянные имена и теги и находятся по путям:
+Образы баз уязвимостей на примере [DP EE](/modules/operator-trivy/) имеют постоянные имена и теги и находятся по путям:
 
 ```bash
 registry.deckhouse.ru/deckhouse/ee/security/trivy-db:2
@@ -241,13 +241,13 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
 
 ## Пример сценария обновления платформы, модулей и баз данных уязвимостей
 
-Чтобы выполнить в закрытом окружении обновление DKP, используемых модулей и баз данных уязвимостей до актуальных версий, скачайте последние патч-релизы всех минорных версий платформы и указанных модулей и загрузите их в ваше хранилище образов.
+Чтобы выполнить в закрытом окружении обновление DP, используемых модулей и баз данных уязвимостей до актуальных версий, скачайте последние патч-релизы всех минорных версий платформы и указанных модулей и загрузите их в ваше хранилище образов.
 
-Если запустить конструкцию `d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' $(pwd)/d8-bundle` для скачивания всех образов, находящихся на релизных каналах, и всех модулей (которых уже более 30 для DKP EE), то в результате получится объёмный `d8-bundle` (на момент написания руководства объём директории `d8-bundle` составил более 50 ГБ).
+Если запустить конструкцию `d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' $(pwd)/d8-bundle` для скачивания всех образов, находящихся на релизных каналах, и всех модулей (которых уже более 30 для DP EE), то в результате получится объёмный `d8-bundle` (на момент написания руководства объём директории `d8-bundle` составил более 50 ГБ).
 
 Чтобы этого не происходило, выкачивать следует только соответствующие вашей версии образы по следующей инструкции:
 
-1. Получите версию DKP в Вашем кластере с помощью команды:
+1. Получите версию DP в Вашем кластере с помощью команды:
 
    ```bash
    d8 k -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {"core.deckhouse.io/edition","core.deckhouse.io/version"}'
@@ -314,8 +314,8 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
 При попытке скачать образы платформы с помощью команды `d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY'` возможно возникновение следующей ошибки:
 
 ```console
-Sep  9 00:10:57.145 INFO  ╔ Pull Deckhouse Kubernetes Platform
-Sep  9 00:11:01.532 ERROR Pull Deckhouse Kubernetes Platform failed error="Find tags to mirror: Find versions to mirror: get stable release version from registry: Cannot mirror Deckhouse: source registry contains suspended release channel \"stable\", try again later"
+Sep  9 00:10:57.145 INFO  ╔ Pull Deckhouse Platform
+Sep  9 00:11:01.532 ERROR Pull Deckhouse Platform failed error="Find tags to mirror: Find versions to mirror: get stable release version from registry: Cannot mirror Deckhouse: source registry contains suspended release channel \"stable\", try again later"
 Error: pull failed, see the log for details
 ```
 
@@ -330,7 +330,7 @@ d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY' --deckhouse-tag='v1.71.3'
 Пример вывода:
 
 ```console
-Sep 16 12:56:25.074 INFO  ╔ Pull Deckhouse Kubernetes Platform
+Sep 16 12:56:25.074 INFO  ╔ Pull Deckhouse Platform
 Sep 16 12:56:25.713 INFO  ║ Skipped releases lookup as tag "v1.71.3" is specifically requested with --deckhouse-tag
 Sep 16 12:56:25.714 INFO  ║ Creating OCI Image Layouts
 Sep 16 12:56:25.720 INFO  ║ Resolving tags
@@ -345,8 +345,8 @@ Sep 16 12:56:27.087 INFO  ║║ [1 / 1] Pulling registry.deckhouse.ru/deckhouse
 
 ## Особенности при работе с сертифицированной редакцией платформы
 
-При обновлении DKP CSE учитывайте следующие особенности:
+При обновлении DP CSE учитывайте следующие особенности:
 
-* Адрес хранилища образов для DKP CSE: `registry-cse.deckhouse.ru/deckhouse/cse`.
-* Начиная с DKP CSE 1.73, платформа поддерживает канал обновлений LTS. После загрузки образов в локальное хранилище образов обновление выполняется согласно настройкам [в блоке `spec.settings.update`](/modules/deckhouse/configuration.html#parameters-update) в ModuleConfig `deckhouse`.
-* При обновлении с версии, предшествующей DKP CSE 1.73, канал обновлений не используется. Выполните обновление, следуя [«Руководству по обновлению DKP CSE»](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73-cse/update.html).
+* Адрес хранилища образов для DP CSE: `registry-cse.deckhouse.ru/deckhouse/cse`.
+* Начиная с DP CSE 1.73, платформа поддерживает канал обновлений LTS. После загрузки образов в локальное хранилище образов обновление выполняется согласно настройкам [в блоке `spec.settings.update`](/modules/deckhouse/configuration.html#parameters-update) в ModuleConfig `deckhouse`.
+* При обновлении с версии, предшествующей DP CSE 1.73, канал обновлений не используется. Выполните обновление, следуя [«Руководству по обновлению DP CSE»](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73-cse/update.html).

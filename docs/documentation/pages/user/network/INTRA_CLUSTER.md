@@ -1,10 +1,10 @@
 ---
 title: "Intra-cluster communication"
-description: "Organizing intra-cluster communication in Deckhouse Kubernetes Platform via Services. Standard load balancing and advanced load balancing with the service-with-healthchecks module."
+description: "Organizing intra-cluster communication in Deckhouse Platform via Services. Standard load balancing and advanced load balancing with the service-with-healthchecks module."
 permalink: en/user/network/intra-cluster.html
 ---
 
-To organize intra-cluster communication in Deckhouse Kubernetes Platform,
+To organize intra-cluster communication in Deckhouse Platform,
 it is recommended to use Services instead of accessing Pods directly.
 Services provide load balancing between Pods, stable network connectivity,
 and DNS integration for convenient service discovery.

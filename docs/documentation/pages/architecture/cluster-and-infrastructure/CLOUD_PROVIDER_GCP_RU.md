@@ -3,7 +3,7 @@ title: Модуль cloud-provider-gcp
 permalink: ru/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-gcp.html
 lang: ru
 search: cloud-provider-gcp, cloud provider gcp, google cloud platform
-description: Архитектура модуля cloud-provider-gcp в Deckhouse Kubernetes Platform.
+description: Архитектура модуля cloud-provider-gcp в Deckhouse Platform.
 ---
 
 Модуль [`cloud-provider-gcp`](/modules/cloud-provider-gcp/) обеспечивает интеграцию с облачными ресурсами [Google Cloud Platform](https://cloud.google.com/). Он используется модулем [`node-manager`](/modules/node-manager/) для заказа узлов в соответствии [с настройками группы узлов](/modules/node-manager/cr.html#nodegroup).
@@ -19,7 +19,7 @@ description: Архитектура модуля cloud-provider-gcp в Deckhouse
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`cloud-provider-gcp`](/modules/cloud-provider-gcp/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`cloud-provider-gcp`](/modules/cloud-provider-gcp/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля cloud-provider-gcp](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-gcp.ru.png)
 
@@ -50,7 +50,7 @@ description: Архитектура модуля cloud-provider-gcp в Deckhouse
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-1. **CSI-драйвер (gcp)** — реализация CSI-драйвера для GCP. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html).
+1. **CSI-драйвер (gcp)** — реализация CSI-драйвера для GCP. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html).
 
 ## Взаимодействия модуля
 

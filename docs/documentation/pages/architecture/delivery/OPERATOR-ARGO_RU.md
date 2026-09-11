@@ -3,10 +3,10 @@ title: Модуль operator-argo
 permalink: ru/architecture/delivery/operator-argo.html
 lang: ru
 search: operator-argo, GitOps, Argo CD, развёртывание приложений
-description: Архитектура модуля operator-argo в Deckhouse Kubernetes Platform.
+description: Архитектура модуля operator-argo в Deckhouse Platform.
 ---
 
-Модуль [`operator-argo`](/modules/operator-argo/) разворачивает [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator) в кластере Deckhouse Kubernetes Platform (DKP). Модуль позволяет установить Argo CD в кластере DKP с помощью ресурса ArgoCD.
+Модуль [`operator-argo`](/modules/operator-argo/) разворачивает [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator) в кластере Deckhouse Platform (DP). Модуль позволяет установить Argo CD в кластере DP с помощью ресурса ArgoCD.
 
 Модуль работает со следующими кастомными ресурсами:
 
@@ -31,7 +31,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 * На схеме изображены только основные контейнеры каждого компонента.
 {% endalert %}
 
-Архитектура модуля [`operator-argo`](/modules/operator-argo/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующих диаграммах:
+Архитектура модуля [`operator-argo`](/modules/operator-argo/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующих диаграммах:
 
 - Основной оператор модуля:
 
@@ -53,7 +53,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 
 Модуль состоит из следующих компонентов:
 
-1. **Argocd-operator-controller-manager** (Deployment) — реализация [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator), позволяющая разворачивать экземпляры Argo CD в кластере DKP. Компонент работает со следующими кастомными ресурсами:
+1. **Argocd-operator-controller-manager** (Deployment) — реализация [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator), позволяющая разворачивать экземпляры Argo CD в кластере DP. Компонент работает со следующими кастомными ресурсами:
    - [ArgoCD](/modules/operator-argo/cr.html#argocd) — основной ресурс для развёртывания и настройки экземпляра Argo CD;
    - [ArgoCDExport](/modules/operator-argo/cr.html#argocdexport) — экспорт настроек и состояния Argo CD для резервного копирования или миграции. Оператор читает кастомный ресурс ArgoCDExport и создаёт Job/CronJob с именем, совпадающим с именем ресурса ArgoCDExport. Созданный Job/CronJob выполняет резервное копирование настроек экземпляра Argo CD;
    - [NamespaceManagement](/modules/operator-argo/cr.html#namespacemanagement) — определение правил управления неймспейсами для экземпляра Argo CD. Оператор следит за кастомным ресурсом NamespaceManagement и соответствующим образом обновляет ConfigMap `argocd-cmd-params-cm`;
@@ -141,7 +141,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
    Для включения компонента необходимо задать параметры в разделе [`.spec.sso.dex`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-sso-dex) кастомного ресурса ArgoCD.
 
    {% alert level="warning" %}
-   Для аутентификации пользователей Argo CD в DKP модуль `operator-argo` поддерживает интеграцию с модулем [`user-authn`](/modules/user-authn/) (встроенная аутентификация DKP). Другие внешние провайдеры через Dex в данной конфигурации не используются.
+   Для аутентификации пользователей Argo CD в DP модуль `operator-argo` поддерживает интеграцию с модулем [`user-authn`](/modules/user-authn/) (встроенная аутентификация DP). Другие внешние провайдеры через Dex в данной конфигурации не используются.
 
    Подробнее с примерами использования модуля `operator-argo` можно ознакомиться [в разделе документации модуля](/modules/operator-argo/examples.html#аутентификация).
    {% endalert %}

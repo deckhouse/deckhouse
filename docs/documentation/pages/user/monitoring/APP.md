@@ -1,10 +1,10 @@
 ---
 title: "Configuring Application Monitoring"
-description: "Configuring application monitoring in Deckhouse Kubernetes Platform. Integration via labels, ServiceMonitor, PodMonitor, ScrapeConfig. Integration with Prometheus and blackbox-exporter for availability checks."
+description: "Configuring application monitoring in Deckhouse Platform. Integration via labels, ServiceMonitor, PodMonitor, ScrapeConfig. Integration with Prometheus and blackbox-exporter for availability checks."
 permalink: en/user/monitoring/app.html
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports four ways to connect an application to the monitoring system:
+Deckhouse Platform (DP) supports four ways to connect an application to the monitoring system:
 
 | Connection method | Description |
 | ------------------ | -------- |
@@ -21,7 +21,7 @@ For advanced configuration options, refer to [additional annotations](#additiona
 {% endalert %}
 
 1. Make sure the [`monitoring-custom`](/modules/monitoring-custom/) module is enabled.
-   If necessary, contact your DKP administrator.
+   If necessary, contact your DP administrator.
 
 1. Ensure that the application exposing metrics does so in the [Prometheus format](https://prometheus.io/docs/instrumenting/exposition_formats/).
 
@@ -165,7 +165,7 @@ you can specify additional annotations for the Pod or Service for which monitori
 
 ## Configuring metrics collection using PodMonitor or ServiceMonitor resources
 
-DKP supports connecting applications using two functionally similar resources:
+DP supports connecting applications using two functionally similar resources:
 
 - [PodMonitor](/modules/operator-prometheus/cr.html#podmonitor) (recommended): Discovers Pods directly
   and collects metrics from their containers. In most cases, this is the preferred option,
@@ -341,12 +341,12 @@ To connect an application to the monitoring system, follow these steps:
 
 ## Configuring metrics collection using blackbox-exporter
 
-DKP supports availability metrics collection using [blackbox-exporter](https://github.com/prometheus/blackbox_exporter/),
-which is not included in DKP and must be installed separately in the cluster.
+DP supports availability metrics collection using [blackbox-exporter](https://github.com/prometheus/blackbox_exporter/),
+which is not included in DP and must be installed separately in the cluster.
 The [Probe](/modules/operator-prometheus/cr.html#probe) custom resource is used to define availability checks (probes)
 executed by Prometheus.
 
-To connect a Probe to the DKP monitoring system, follow these steps:
+To connect a Probe to the DP monitoring system, follow these steps:
 
 1. Add the `prometheus.deckhouse.io/probe-watcher-enabled: "true"` label to the namespace where the Probe will be created:
 

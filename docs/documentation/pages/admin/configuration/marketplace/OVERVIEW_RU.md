@@ -1,7 +1,7 @@
 ---
 title: Marketplace
 permalink: ru/admin/configuration/marketplace/
-description: "Настройка и управление Marketplace в Deckhouse Kubernetes Platform. Подключение репозиториев пакетов, мониторинг операций сканирования и предоставление пользователям доступа к приложениям."
+description: "Настройка и управление Marketplace в Deckhouse Platform. Подключение репозиториев пакетов, мониторинг операций сканирования и предоставление пользователям доступа к приложениям."
 lang: ru
 search: marketplace, package repository, packages, пакеты, репозиторий пакетов, приложения
 relatedLinks:
@@ -9,10 +9,10 @@ relatedLinks:
     url: ../../../user/marketplace/
 ---
 
-Marketplace — это система управления единицами поставки Deckhouse Kubernetes Platform (DKP) (Packages). Позволяет администраторам подключать реестры пакетов, обнаруживать доступные пакеты и открывать пользователям проектов возможность их установки.
+Marketplace — это система управления единицами поставки Deckhouse Platform (DP) (Packages). Позволяет администраторам подключать реестры пакетов, обнаруживать доступные пакеты и открывать пользователям проектов возможность их установки.
 
 {% alert level="info" %}
-Marketplace доступен начиная с DKP версии 1.76.
+Marketplace доступен начиная с DP версии 1.76.
 {% endalert %}
 
 ## Задачи администратора

@@ -3,17 +3,17 @@ title: Гибридный кластер с VCD
 permalink: ru/admin/integrations/hybrid/vcd-hybrid.html
 lang: ru
 search: гибрид с VCD
-description: Подготовка к гибридной интеграции с VMware Cloud Director в Deckhouse Kubernetes Platform.
+description: Подготовка к гибридной интеграции с VMware Cloud Director в Deckhouse Platform.
 ---
 
-Далее описан процесс добавления узлов из VMware Cloud Director (VCD) в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
+Далее описан процесс добавления узлов из VMware Cloud Director (VCD) в существующий статический кластер Deckhouse Platform (DP).
 
-Для интеграции с VCD используется модуль [`cloud-provider-vcd`](/modules/cloud-provider-vcd/). Он обеспечивает взаимодействие DKP с VMware Cloud Director, создание и удаление виртуальных машин, получение информации об инфраструктуре VCD, а также интеграцию со StorageClass и другими возможностями провайдера.
+Для интеграции с VCD используется модуль [`cloud-provider-vcd`](/modules/cloud-provider-vcd/). Он обеспечивает взаимодействие DP с VMware Cloud Director, создание и удаление виртуальных машин, получение информации об инфраструктуре VCD, а также интеграцию со StorageClass и другими возможностями провайдера.
 
 В разделе описаны два способа добавления узлов:
 
-- **Автоматическое создание узлов в VCD**. DKP создаёт виртуальные машины через API VCD. Параметры ВМ задаются ресурсом [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass), а требуемое количество узлов — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
-- **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DKP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
+- **Автоматическое создание узлов в VCD**. DP создаёт виртуальные машины через API VCD. Параметры ВМ задаются ресурсом [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass), а требуемое количество узлов — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
+- **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
 
 ## Предварительные требования для VCD
 
@@ -128,7 +128,7 @@ description: Подготовка к гибридной интеграции с 
    d8 k apply -f vcd-instanceclass-nodegroup.yaml
    ```
 
-   После применения манифеста DKP начнёт создавать виртуальные машины в VCD, управляемые модулем `node-manager`.
+   После применения манифеста DP начнёт создавать виртуальные машины в VCD, управляемые модулем `node-manager`.
 
 1. Убедитесь, что в кластере появилось требуемое количество узлов:
 

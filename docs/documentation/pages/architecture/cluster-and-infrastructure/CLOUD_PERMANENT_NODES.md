@@ -16,7 +16,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) module and its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown in the following diagram:
+The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) module and its interactions with other Deckhouse Platform (DP) components are shown in the following diagram:
 
 ![Node-manager architecture for CloudPermanent nodes](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-permanent-nodes.png)
 
@@ -82,7 +82,7 @@ The following external components interact with the module:
 
 ## Architecture features specific to CloudPermanent nodes
 
-1. Nodes are persistent and are created, managed, and deleted by the user. Node management is performed not directly in the infrastructure but via the **dhctl** utility executed as part of the DKP installer.
+1. Nodes are persistent and are created, managed, and deleted by the user. Node management is performed not directly in the infrastructure but via the **dhctl** utility executed as part of the DP installer.
 1. `Terraform-manager` is a [module](/modules/terraform-manager/) used for automated management of cloud infrastructure resources. It checks the Terraform state and applies non-destructive changes to infrastructure resources. The module architecture is described on the [corresponding documentation page](../infrastructure/terraform-manager.html).
 1. **Csi-driver** is used to provision disks in the cloud infrastructure.
 1. **Cloud-controller-manager** is used to provision load balancers and other infrastructure resources according to its specification.

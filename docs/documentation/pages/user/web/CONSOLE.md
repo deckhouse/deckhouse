@@ -1,11 +1,11 @@
 ---
-title: "Deckhouse Kubernetes Platform web UI"
-description: "Deckhouse Kubernetes Platform web interface. Monitoring, parameter configuration, node and module management, security and network configuration."
+title: "Deckhouse Platform web UI"
+description: "Deckhouse Platform web interface. Monitoring, parameter configuration, node and module management, security and network configuration."
 permalink: en/user/web/ui.html
 search: web UI, web interface
 ---
 
-The Deckhouse Kubernetes Platform (DKP) web UI provides access to cluster management, including monitoring, parameter configuration, node and module management, as well as security and network configuration. Most operations available from the command line through the `d8` utility ([Deckhouse CLI](../../cli/d8/)) or `kubectl` can also be performed through the web UI.
+The Deckhouse Platform (DP) web UI provides access to cluster management, including monitoring, parameter configuration, node and module management, as well as security and network configuration. Most operations available from the command line through the `d8` utility ([Deckhouse CLI](../../cli/d8/)) or `kubectl` can also be performed through the web UI.
 
 ## Accessing the web UI
 
@@ -29,7 +29,7 @@ To open the web UI, do as follows:
 
 ### "Overview" subsection
 
-The "Overview" subsection contains key information about the Deckhouse Kubernetes Platform (DKP) cluster and its components.
+The "Overview" subsection contains key information about the Deckhouse Platform (DP) cluster and its components.
 
 !["Overview" subsection interface](../../images/console/console_main.png)
 
@@ -56,7 +56,7 @@ Main elements of the web UI:
 
 ### "Updates" subsection
 
-The "Updates" subsection contains information about DKP releases.
+The "Updates" subsection contains information about DP releases.
 
 !["Updates" subsection interface](../../images/console/releases.png)
 
@@ -68,7 +68,7 @@ The "Modules" subsection lists enabled and disabled modules. A filter is availab
 
 ### "Global settings" subsection
 
-This subsection provides access to critical DKP cluster settings:
+This subsection provides access to critical DP cluster settings:
 
 - **"Global cluster settings"**: Configuration of the DNS name template and the list of tolerations.
 - **"Global module settings"**: Configuration of the high availability mode, and fields for specifying IngressClass and StorageClass.
@@ -152,7 +152,7 @@ The "Create resource" form lets you specify parameters for a new instance config
 
 ### "Nodes" subsection
 
-This subsection provides summary information about all DKP cluster nodes with filtering and sorting capabilities.
+This subsection provides summary information about all DP cluster nodes with filtering and sorting capabilities.
 
 The node card displays:
 
@@ -229,7 +229,7 @@ The lower part of the form contains fields for entering template parameters and 
 
 This subsection is intended for creating project templates.
 
-Project templates include basic usage scenarios by default and demonstrate DKP capabilities. To add a new template, use the "Create" button in the upper-right corner.
+Project templates include basic usage scenarios by default and demonstrate DP capabilities. To add a new template, use the "Create" button in the upper-right corner.
 
 !["Project templates" subsection interface](../../images/console/system-management-projecttemplates-deckhouse-io.png)
 
@@ -284,7 +284,7 @@ If necessary, you can block a user or reset a password.
 
 ### "Ingress controllers" subsection
 
-This subsection displays information about the current Ingress controllers responsible for traffic routing inside the DKP cluster.
+This subsection displays information about the current Ingress controllers responsible for traffic routing inside the DP cluster.
 If necessary, you can sort the list of controllers and add new ones.
 
 The "Nginx Ingress controllers" card displays its main parameters:
@@ -337,7 +337,7 @@ This subsection is intended for managing local volumes. It contains four section
 
 ### "CVE scanner" subsection
 
-This subsection is intended for scanning container images for vulnerabilities (CVEs) in the DKP cluster.
+This subsection is intended for scanning container images for vulnerabilities (CVEs) in the DP cluster.
 
 The subsection contains the "Vulnerability reports" and "Scanned namespaces" tabs:
 
@@ -410,7 +410,7 @@ To get detailed information about an alert, click "Read description". At the bot
 
 !["Active alerts" subsection interface](../../images/console/active_alerts.png)
 
-A list of all monitoring system alerts available in DKP is provided on a [separate documentation page](../../reference/alerts.html).
+A list of all monitoring system alerts available in DP is provided on a [separate documentation page](../../reference/alerts.html).
 
 ## Logging
 

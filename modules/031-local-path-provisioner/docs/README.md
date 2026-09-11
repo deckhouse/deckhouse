@@ -1,6 +1,6 @@
 ---
 title: "The local-path-provisioner module"
-description: "Management of local storage on Kubernetes nodes in the Deckhouse Kubernetes Platform."
+description: "Management of local storage on Kubernetes nodes in the Deckhouse Platform."
 ---
 
 Local Path Provisioner provides a way for the Kubernetes users to utilize the local storage on each node.

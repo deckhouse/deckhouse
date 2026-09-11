@@ -3,7 +3,7 @@ title: Модули управления DNS
 permalink: ru/architecture/network/dns-modules.html
 lang: ru
 search: dns, coredns, доменные имена
-description: Архитектура модулей kube-dns и node-local-dns в Deckhouse Kubernetes Platform.
+description: Архитектура модулей kube-dns и node-local-dns в Deckhouse Platform.
 relatedLinks:
   - title: "Модуль kube-dns: настройки"
     url: /modules/kube-dns/configuration.html
@@ -13,7 +13,7 @@ relatedLinks:
     url: /products/kubernetes-platform/documentation/v1/architecture/network/dns-caching.html
 ---
 
-Модуль [`kube-dns`](/modules/kube-dns/) обеспечивает работу сервиса разрешения доменных имён на базе [CoreDNS](https://coredns.io/) в Deckhouse Kubernetes Platform (DKP).
+Модуль [`kube-dns`](/modules/kube-dns/) обеспечивает работу сервиса разрешения доменных имён на базе [CoreDNS](https://coredns.io/) в Deckhouse Platform (DP).
 
 Подробнее о настройках модуля и примерах его использования можно узнать [в соответствующем разделе документации](/modules/kube-dns/configuration.html).
 
@@ -28,7 +28,7 @@ relatedLinks:
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`kube-dns`](/modules/kube-dns/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
+Архитектура модуля [`kube-dns`](/modules/kube-dns/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Platform (DP) показаны на следующей диаграмме:
 
 ![Архитектура модуля kube-dns](../../images/architecture/network/c4-l2-kube-dns.ru.png)
 
@@ -89,7 +89,7 @@ relatedLinks:
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании Cilium в качестве CNI-плагина на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
+Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании Cilium в качестве CNI-плагина на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Platform (DP) показаны на следующей диаграмме:
 
 ![Архитектура модуля node-local-dns](../../images/architecture/network/c4-l2-node-local-dns.ru.png)
 
@@ -145,7 +145,7 @@ relatedLinks:
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании CNI-плагина [`cni-flannel`](/modules/cni-flannel/) или [`cni-simple-bridge`](/modules/cni-simple-bridge/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
+Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании CNI-плагина [`cni-flannel`](/modules/cni-flannel/) или [`cni-simple-bridge`](/modules/cni-simple-bridge/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Platform (DP) показаны на следующей диаграмме:
 
 ![Архитектура модуля node-local-dns](../../images/architecture/network/c4-l2-node-local-dns-without-cilium.ru.png)
 

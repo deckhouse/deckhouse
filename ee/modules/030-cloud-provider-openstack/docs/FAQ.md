@@ -18,7 +18,7 @@ The `annotations` field of the corresponding inlet configuration in the [Ingress
 - `loadbalancer.openstack.deckhouse.io/load-balancer-id`: Instructs OpenStack CCM to use a pre-created Octavia load balancer.
 - `loadbalancer.openstack.deckhouse.io/load-balancer-address`: Instructs OpenStack CCM to associate a pre-allocated floating IP with the load balancer it creates.
 
-DKP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
+DP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
 
 When using the `loadbalancer.openstack.deckhouse.io/load-balancer-id` annotation, the load balancer must meet the following requirements:
 
@@ -34,7 +34,7 @@ When using only `loadbalancer.openstack.deckhouse.io/load-balancer-address`, the
 
 If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the Service object.
 
-Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DKP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
+Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
 
 ### IngressNginxController with a pre-created load balancer
 
@@ -143,7 +143,7 @@ spec:
 A hybrid cluster combines bare metal and OpenStack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
 {% alert level="info" %}
-The Deckhouse Kubernetes Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
+The Deckhouse Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
 To do this, use the [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) parameter of the `node-manager` module. The prefix specified in the parameter will be added to the name of all CloudEphemeral nodes added to the cluster. It is not possible to set a prefix for a specific NodeGroup.
 {% endalert %}
 

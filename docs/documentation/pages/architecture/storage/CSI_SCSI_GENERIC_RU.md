@@ -3,7 +3,7 @@ title: Модуль csi-scsi-generic
 permalink: ru/architecture/storage/external/csi-scsi-generic.html
 lang: ru
 search: csi-scsi-generic, iscsi
-description: Архитектура модуля csi-scsi-generic в Deckhouse Kubernetes Platform.
+description: Архитектура модуля csi-scsi-generic в Deckhouse Platform.
 ---
 
 Модуль [`csi-scsi-generic`](/modules/csi-scsi-generic/) предназначен для управления томами на СХД с подключением по SCSI. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса SCSIStorageClass и поддерживает работу как по технологии iSCSI, так и по Fibre Channel (FC).
@@ -19,7 +19,7 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse K
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`csi-scsi-generic`](/modules/csi-scsi-generic/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`csi-scsi-generic`](/modules/csi-scsi-generic/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля csi-scsi-generic](../../../images/architecture/storage/c4-l2-csi-scsi-generic.ru.png)
 

@@ -1,7 +1,7 @@
 ---
 title: "Application delivery with Argo CD"
 permalink: en/user/delivery/argocd/
-description: "Application delivery with Argo CD in Deckhouse Kubernetes Platform."
+description: "Application delivery with Argo CD in Deckhouse Platform."
 lang: en
 search: argocd, application delivery
 relatedLinks:
@@ -11,13 +11,13 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-This section describes how to organize application delivery with Argo CD in Deckhouse Kubernetes Platform (DKP).
+This section describes how to organize application delivery with Argo CD in Deckhouse Platform (DP).
 
 Argo CD lets you describe applications declaratively and synchronize their state with the contents of a Git repository.
 The user specifies the manifest source, target cluster, namespace, and synchronization parameters,
 after which Argo CD deploys the application and keeps it in the target state.
 
-In DKP, Argo CD instances are deployed with the [operator-argo](/modules/operator-argo/) module.
+In DP, Argo CD instances are deployed with the [operator-argo](/modules/operator-argo/) module.
 Typical work with Argo CD includes:
 
 - creating or using an existing [AppProject](/modules/operator-argo/cr.html#appproject) object;

@@ -3,11 +3,11 @@ title: Disaster resilience
 permalink: en/architecture/disaster-resilience/
 ---
 
-**Disaster resilience** is the ability of infrastructure based on Deckhouse Kubernetes Platform (DKP)
+**Disaster resilience** is the ability of infrastructure based on Deckhouse Platform (DP)
 to remain operational in the event of large-scale failures.
 It is achieved through distributed deployment, automatic traffic switching, and replication of critical components.
 
-DKP implements two approaches to disaster resilience:
+DP implements two approaches to disaster resilience:
 
 - Geo-distribution, which is a distribution of infrastructure components
   across different availability zones (Multi-AZ) or regions (Multi-Region).

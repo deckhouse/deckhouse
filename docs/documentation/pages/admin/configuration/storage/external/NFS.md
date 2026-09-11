@@ -1,12 +1,12 @@
 ---
 title: "NFS storage"
 permalink: en/admin/configuration/storage/external/nfs.html
-description: "Configure NFS storage integration in Deckhouse Kubernetes Platform. CSI driver setup, StorageClass configuration, RPC-with-TLS security, and NFS server connection guide."
+description: "Configure NFS storage integration in Deckhouse Platform. CSI driver setup, StorageClass configuration, RPC-with-TLS security, and NFS server connection guide."
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports integration with Network File System (NFS), providing the ability to use network file storage as Kubernetes volumes. The [`csi-nfs`](/modules/csi-nfs/) module provides a CSI driver for connecting to NFS servers and creating PersistentVolumes based on them.
+Deckhouse Platform (DP) supports integration with Network File System (NFS), providing the ability to use network file storage as Kubernetes volumes. The [`csi-nfs`](/modules/csi-nfs/) module provides a CSI driver for connecting to NFS servers and creating PersistentVolumes based on them.
 
-This page provides instructions for configuring NFS storage in DKP, including connecting to an NFS server, creating StorageClass, configuring RPC-with-TLS security, and verifying system functionality.
+This page provides instructions for configuring NFS storage in DP, including connecting to an NFS server, creating StorageClass, configuring RPC-with-TLS security, and verifying system functionality.
 
 ## System Requirements
 

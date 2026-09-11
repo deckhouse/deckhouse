@@ -14,7 +14,7 @@ description: "Настройка Azure для работы облачного п
 {% endalert %}
 
 {% alert level="warning" %}
-Начиная с DKP 1.77, для новых кластеров в Azure по умолчанию используется CNI `cilium`. В существующих кластерах текущая конфигурация CNI сохраняется.
+Начиная с DP 1.77, для новых кластеров в Azure по умолчанию используется CNI `cilium`. В существующих кластерах текущая конфигурация CNI сохраняется.
 
 Для новых кластеров на всех узлах требуется ядро Linux версии 5.8 или новее. Также убедитесь, что правила межсетевого экрана разрешают межузловой UDP-трафик, необходимый для работы Cilium VXLAN.
 
@@ -23,7 +23,7 @@ description: "Настройка Azure для работы облачного п
 
 Для управления облаком Microsoft Azure необходимо иметь соответствующую учетную запись и хотя бы одну привязанную [подписку (Subscription)](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
 
-Для управления ресурсами в облаке Microsoft Azure средствами Deckhouse Kubernetes Platform необходимо создать service account. Для этого:
+Для управления ресурсами в облаке Microsoft Azure средствами Deckhouse Platform необходимо создать service account. Для этого:
 
 1. Установите [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), авторизуйтесь и получите `Subscription ID`:
 

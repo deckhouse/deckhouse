@@ -8,7 +8,7 @@
 <img src="/images/gs/installer/cloud-install-log.png" alt="Как выглядит окно настройки узлов..." style="width: 100%;">
 </div>
 <p>Процесс установки может занять от 5 до 30 минут, в зависимости от качества соединения и количества настраиваемых узлов.</p>
-<p><b>Кластер DKP развёрнут!</b> 🎉</p>
+<p><b>Кластер DP развёрнут!</b> 🎉</p>
 <div class="gs-installer__image">
 <img src="/images/gs/installer/install-finished.png" alt="Как выглядит окно окончания установки..." style="width: 100%;">
 </div>

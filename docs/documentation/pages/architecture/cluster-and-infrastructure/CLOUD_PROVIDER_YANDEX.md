@@ -2,7 +2,7 @@
 title: Cloud-provider-yandex module
 permalink: en/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
 search: cloud-provider-yandex, cloud provider yandex
-description: Architecture of the cloud-provider-yandex module in Deckhouse Kubernetes Platform.
+description: Architecture of the cloud-provider-yandex module in Deckhouse Platform.
 ---
 
 The `cloud-provider-yandex` module is responsible for interacting with the [Yandex Cloud](https://yandex.cloud/en) cloud resources. It allows the [`node-manager`](/modules/node-manager/) module to use Yandex Cloud resources for provisioning nodes for the specified [node group](/modules/node-manager/cr.html#nodegroup).
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Cloud-provider-yandex architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-yandex.png)
 

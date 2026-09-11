@@ -1,6 +1,6 @@
 ---
 title: "Веб-интерфейс управления секретами"
-description: "Веб-интерфейс Stronghold для управления секретами в Deckhouse Kubernetes Platform. Настройка механизмов секретов, управление методами аутентификации, контроль доступа и политики безопасности."
+description: "Веб-интерфейс Stronghold для управления секретами в Deckhouse Platform. Настройка механизмов секретов, управление методами аутентификации, контроль доступа и политики безопасности."
 permalink: ru/user/web/stronghold.html
 lang: ru
 ---
@@ -8,7 +8,7 @@ lang: ru
 Веб-интерфейс управления секретами (веб-интерфейс Stronghold) предназначен для управления механизмами секретов, аутентификацией и контролем доступа в кластере. Работа обеспечивается модулем [stronghold](/modules/stronghold/).
 
 {% alert level="info" %}
-Подробнее инструменты безопасности, включая Stronghold, рассматриваются в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Подробнее инструменты безопасности, включая Stronghold, рассматриваются в курсе [«Инструменты безопасности в Deckhouse Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 {% endalert %}
 
 С его помощью можно:
@@ -30,7 +30,7 @@ lang: ru
 Инструкции по настройке распространённых типов механизмов — в [документации Deckhouse Stronghold](/products/stronghold/documentation/): [механизм секретов KV](/products/stronghold/documentation/user/secrets-engines/kv/overview.html) и [механизм секретов PKI](/products/stronghold/documentation/user/secrets-engines/pki.html).
 
 {% alert level="info" %}
-Работа с этими механизмами также подробно разобрана в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Работа с этими механизмами также подробно разобрана в курсе [«Инструменты безопасности в Deckhouse Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 {% endalert %}
 
 ### Просмотр информации о механизме секретов

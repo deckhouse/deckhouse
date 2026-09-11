@@ -3,7 +3,7 @@ title: Geo-distribution
 permalink: en/architecture/disaster-resilience/geo-distribution.html
 ---
 
-Geo-distribution, in the context of disaster resilience in Deckhouse Kubernetes Platform (DKP),
+Geo-distribution, in the context of disaster resilience in Deckhouse Platform (DP),
 is an architectural approach that ensures continuous cluster operation by distributing its components
 across multiple [availability zones (Multi-AZ)](#using-multiple-availability-zones-multi-az) or [regions (Multi-Region)](#using-multiple-regions-multi-region).
 This approach minimizes the risks of incidents of various scales.
@@ -15,7 +15,7 @@ This is the responsibility of the platform administrator.
 
 ## Using multiple availability zones (Multi-AZ)
 
-DKP lets you distribute cluster nodes across availability zones.
+DP lets you distribute cluster nodes across availability zones.
 This approach increases application resilience to infrastructure-wide failures
 and ensures the applications remain functional even if one of the zones in a data center or cloud becomes unavailable.
 
@@ -43,7 +43,7 @@ For the node labeling process and how to add nodes to groups, refer to ["Node ma
 
 ## Using multiple regions (Multi-Region)
 
-DKP supports distributing cluster nodes across different regions.
+DP supports distributing cluster nodes across different regions.
 This approach allows applications to continue running
 even in the event of a complete outage of a data center or cloud provider.
 
@@ -91,5 +91,5 @@ For details on traffic balancing options and configuration, refer to [Network](.
 ## Storage organization
 
 Storage system organization and configuration in a geo-distributed cluster are handled by the administrator.
-DKP supports various storage options and the choice depends on the specific project needs.
+DP supports various storage options and the choice depends on the specific project needs.
 For details on supported storage systems, their features and configuration, refer to [Storage](../../admin/configuration/storage/).

@@ -1,20 +1,20 @@
 ---
-title: "Архитектура мониторинга в Deckhouse Kubernetes Platform"
+title: "Архитектура мониторинга в Deckhouse Platform"
 permalink: ru/architecture/observability/monitoring.html
 lang: ru
 search: monitoring architecture, prometheus architecture, monitoring components, observability architecture, архитектура мониторинга, компоненты мониторинга
-description: Архитектура мониторинга в Deckhouse Kubernetes Platform.
+description: Архитектура мониторинга в Deckhouse Platform.
 ---
 
 ## Состав и схема взаимодействия компонентов мониторинга
 
 ![Схема взаимодействия](../../images/prometheus/prometheus_monitoring.svg)
 
-### Компоненты, устанавливаемые DKP
+### Компоненты, устанавливаемые DP
 
 | Компонент                   | Описание                                                                                                                                                                                                                                                                                        |
 |-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **prometheus-operator**     | Модуль DKP, отвечающий за запуск Prometheus в кластере.                                                                                                                                                                                                                                   |
+| **prometheus-operator**     | Модуль DP, отвечающий за запуск Prometheus в кластере.                                                                                                                                                                                                                                   |
 | **prometheus-main**         | Основной Prometheus, который выполняет scrape каждые 30 секунд (с помощью параметра `scrapeInterval` можно изменить это значение). Он обрабатывает все правила, отправляет алерты и является основным источником данных.                                                                        |
 | **prometheus-longterm**     | Дополнительный Prometheus, хранящий выборку разреженных данных из основного prometheus-main                                                                                                                                                                                                      |
 | **aggregating-proxy**       | Агрегирующий и кеширующий прокси, объединяющий main и longterm в один источник. Помогает избежать провалов в данных при недоступности одного из Prometheus.                                                                                                                                     |
@@ -22,17 +22,17 @@ description: Архитектура мониторинга в Deckhouse Kubernet
 | **grafana**                 | UI для отображения метрик в формате дашбордов.                                                                                                                                                                                                                                                  |
 | **metrics-adapter**         | Компонент, предоставляющий API Kubernetes для доступа к метрикам. Необходим для правильной работы VPA.                                                                                                                                                                                          |
 | **Различные exporter'ы**    | Набор готовых exporter'ов Prometheus для всех необходимых метрик: `kube-state-metrics`, `node-exporter`, `oomkill-exporter`, `image-availability-exporter`.                                                                                                                                     |
-| **upmeter**                 | Модуль для оценки доступности компонентов DKP.                                                                                                                                                                                                                                                  |
+| **upmeter**                 | Модуль для оценки доступности компонентов DP.                                                                                                                                                                                                                                                  |
 | **trickster**               | Кеширующий прокси, снижающий нагрузку на Prometheus. В ближайшем времени будет deprecated.                                                                                                                                                                                                       |
 
 ### Внешние компоненты
 
-DKP может интегрироваться с большим количеством разнообразных решений следующими способами:
+DP может интегрироваться с большим количеством разнообразных решений следующими способами:
 
 | Название                       | Описание|
 |--------------------------------|--------------------------------------------------------------------------|
-| **Alertmanagers**              | Alertmanager'ы могут быть подключены к Prometheus и Grafana и находиться как в кластере DKP, так и за его пределами.|
-| **Long-term metrics storages** | Используя протокол `remote write`, возможно отсылать метрики из DKP в большое количество хранилищ, включающее [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
+| **Alertmanagers**              | Alertmanager'ы могут быть подключены к Prometheus и Grafana и находиться как в кластере DP, так и за его пределами.|
+| **Long-term metrics storages** | Используя протокол `remote write`, возможно отсылать метрики из DP в большое количество хранилищ, включающее [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
 
 ## Prometheus
 
@@ -43,7 +43,7 @@ Prometheus собирает метрики и выполняет правила:
   * отправляет алерты;
   * или сохраняет новые метрики (результат выполнения правил) в свою базу данных.
 
-Prometheus устанавливается модулем `prometheus-operator` DKP, который выполняет следующие функции:
+Prometheus устанавливается модулем `prometheus-operator` DP, который выполняет следующие функции:
 - определяет следующие кастомные ресурсы:
   - `Prometheus` — определяет инсталляцию (кластер) *Prometheus*;
   - `ServiceMonitor` — определяет, как собирать метрики с сервисов;
@@ -181,9 +181,9 @@ Prometheus устанавливается модулем `prometheus-operator` D
    - по HTTP отправляет запрос Prometheus'у на перезагрузку
 1. Prometheus перечитывает конфиг и видит изменившиеся *rule'ы*.
 
-## Архитектура оценки доступности компонентов DKP (upmeter)
+## Архитектура оценки доступности компонентов DP (upmeter)
 
-Оценка доступности в DKP осуществляется модулем [upmeter](/modules/upmeter/).
+Оценка доступности в DP осуществляется модулем [upmeter](/modules/upmeter/).
 
 Состав модуля [upmeter](/modules/upmeter/):
 
@@ -194,4 +194,4 @@ Prometheus устанавливается модулем `prometheus-operator` D
   - **webui** — показывает дашборд со статистикой по пробам и группам доступности (требует авторизации).
 - **smoke-mini** — поддерживает постоянное *smoke-тестирование* с помощью StatefulSet.
 
-Модуль отправляет около 100 показаний метрик каждые 5 минут. Это значение зависит от количества включенных модулей Deckhouse Kubernetes Platform.
+Модуль отправляет около 100 показаний метрик каждые 5 минут. Это значение зависит от количества включенных модулей Deckhouse Platform.
