@@ -1,0 +1,209 @@
+candi:
+  fixes:
+    - summary: Fix hanging sysctl tuner on nodes with many loop and dm devices
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22756
+    - summary: >-
+        containerd v2 no longer starts without the `erofs` snapshotter, and loads the `erofs` module before
+        start.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22885
+cloud-provider-aws:
+  fixes:
+    - summary: fix GetCapacity not implemented error spam in logs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22903
+    - summary: Fixed CVEs in the cloud-provider-aws module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22962
+cloud-provider-azure:
+  fixes:
+    - summary: fix GetCapacity not implemented error spam in logs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22903
+cloud-provider-dvp:
+  fixes:
+    - summary: fix GetCapacity not implemented error spam in logs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22903
+    - summary: Fixed CVEs in the cloud-provider-dvp module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22963
+cloud-provider-gcp:
+  fixes:
+    - summary: fix GetCapacity not implemented error spam in logs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22903
+    - summary: Fixed CVEs in the cloud-provider-gcp module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22960
+cloud-provider-openstack:
+  fixes:
+    - summary: Fixed CVEs in the cloud-provider-openstack module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22964
+deckhouse:
+  fixes:
+    - summary: Exclude all Python test files from webhook image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22780
+    - summary: Keep `x-kubernetes-sensitive-data` on CRDs that have a conversion webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22870
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Honor a channel-level release suspend for clusters that reach the suspended version through a
+        step-by-step update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22745
+      impact: >-
+        A Deckhouse release suspended on its release channel is no longer applied by clusters that are
+        behind and reach it through a step-by-step update. The suspend flag lives only in the release-channel
+        image; previously it was dropped when the target release was built from its per-version image,
+        so lagging clusters updated to a suspended release anyway.
+descheduler:
+  features:
+    - summary: Always run the descheduler with the upstream `EvictionsInBackground` feature gate enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22801
+      impact: >-
+        The `descheduler` Deployment in `d8-descheduler` restarts once on upgrade to pick up the new argument.
+        Descheduling behavior is unchanged for workloads that do not implement their own eviction policy.
+docs:
+  features:
+    - summary: Add managed-valkey module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22725
+    - summary: Refactor build pipeline and add CSE edition support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21375
+    - summary: Update virtualization module architecture section according to release v1.10.0
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22765
+    - summary: Add monitoring-kubernetes module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22840
+    - summary: Add documentation for Managed PostgreSQL service.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20233
+    - summary: Add extended-monitoring module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22919
+    - summary: Add registry-packages-proxy module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22930
+  fixes:
+    - summary: Fix broken JUnit XML report links on the Kubernetes conformance page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22781
+    - summary: Clarify global storageClass behavior for Prometheus
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22970
+    - summary: Fix alert rendering in OpenAPI specs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22978
+istio:
+  fixes:
+    - summary: Waypoints are no longer advertised as cross-network east-west gateways.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22810
+    - summary: Enable Istio Gateway API deployment and gatewayclass controllers for istiod 1.27 and 1.29.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22811
+    - summary: Document that ambient-mode workloads cannot take part in federation or multicluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22951
+multitenancy-manager:
+  fixes:
+    - summary: Refresh grant webhook CA bundles after the admission certificate is rotated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22822
+node-manager:
+  fixes:
+    - summary: >-
+        node-controller reads the CAPI instance-class checksum from a helm-rendered ConfigMap instead
+        of a possibly stale MachineTemplate, so MachineDeployments follow InstanceClass changes and their
+        bootstrap Secrets keep a valid token.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22909
+      impact: >-
+        CAPI NodeGroups whose MachineDeployment was stuck on an old MachineTemplate are rolled to the
+        current InstanceClass after the update, within maxSurgePerZone/maxUnavailablePerZone. Groups already
+        on the current template are not touched.
+    - summary: >-
+        node-controller no longer removes taints set by other components on the first reconcile of Static
+        and CloudPermanent nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22988
+registry:
+  fixes:
+    - summary: Fix the order in which the Unmanaged params are stored for the fallback to the Legacy mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22976
+    - summary: Fix the security context in the registry module for CSE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22977
+registry-packages-proxy:
+  fixes:
+    - summary: >-
+        Bump golang.org/x/{crypto,net,sys,text} to clear 24 CVEs, including CVE-2026-56854 (CRITICAL)
+        and CVE-2026-25681, CVE-2026-39821, CVE-2026-46600 (HIGH).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22754
+registrypackages:
+  fixes:
+    - summary: Fix dm-verity devices that could never be closed for containerd 2.2.7 (CSE only).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22807
+service-with-healthchecks:
+  fixes:
+    - summary: Annotations and labels of a ServiceWithHealthchecks are now copied to the Service created
+        for it.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22835
+      impact: >-
+        After the update, the controller adds the annotations and labels of every ServiceWithHealthchecks
+        to the Service created for it.
+
+        If a ServiceWithHealthchecks of the `LoadBalancer` type carries annotations that configure the
+        load balancer
+
+        (`network.deckhouse.io/load-balancer-ips`, `network.deckhouse.io/load-balancer-shared-ip-key`
+        and similar),
+
+        the load balancer controller applies them and may assign a different address to the service, which
+        causes a short interruption of the connections.
+    - summary: >-
+        Stopped publishing terminated pods in EndpointSlices and started publishing pods being deleted
+        as terminating endpoints.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22836
+      impact: >-
+        Endpoints for pods in a terminal phase (Failed/Succeeded) are no longer published. In DVP clusters
+        this prevents traffic from being routed to a VirtualMachine IP that has been reused by another
+        pod. Pods being deleted are now published with the serving and terminating conditions, which enables
+        the graceful shutdown flow for consumers. Pod readiness is derived from the PodReady condition,
+        and stale probe results are reset when a pod becomes not ready, is recreated, or changes its IP.
+    - summary: Fixed a load balancer losing all its endpoints for good after a target pod was replaced.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22979
+      impact: >-
+        The `service-with-healthchecks` controller and agent are restarted.
+
+        A `ServiceWithHealthchecks` that was left in `NotAllEndpointsAreReady` with no EndpointSlice
+
+        recovers automatically once the updated agent starts, no manual action is needed.
+user-authz:
+  fixes:
+    - summary: >-
+        The identity collision check no longer applies to the platform's own identities, so a retried
+        bootstrap creates the initial User again instead of timing out.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22871
+      impact: >-
+        The installer, the deckhouse ServiceAccount, holders of the cluster
+
+        administrator kubeconfig and the kube-system / d8-system ServiceAccounts
+
+        can create a User or a Group named by an existing authorization rule
+
+        without the acknowledgement annotation. Every other requester is checked
+
+        as before.
+    - summary: >-
+        Grant custom ClusterRoles (annotated with `user-authz.deckhouse.io/access-level`) through one
+        aggregated ClusterRole per access level, so the number of bindings per ClusterAuthorizationRule/AuthorizationRule
+        no longer depends on the number of such roles.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22967
+      impact: >-
+        During the first `user-authz` release after the update the per-role bindings are protected from
+        the release engine, the aggregated ones are created, and the per-role bindings are deleted right
+        after the release. Permissions granted through annotated ClusterRoles stay in place throughout.
+
+        The `user-authz.deckhouse.io/access-level` label is now set automatically on annotated ClusterRoles.
+
+        In audit logs, access granted through annotated ClusterRoles is attributed to `user-authz:<level>:custom`
+        instead of the individual ClusterRole.
+    - summary: >-
+        Group the module alerts under a group named apart from the alerts themselves, so the incident
+        shelf accepts them.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22994
+    - summary: >-
+        The D8UserAuthzRenderSlow and D8UserAuthzReleaseSlow alerts no longer fire on a single slow render
+        or release, such as a cluster bootstrap under CPU pressure or the one-time migration pass.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23000
+      impact: >-
+        D8UserAuthzRenderSlow requires at least three renders averaging above 30 seconds over 30 minutes,
+
+        D8UserAuthzReleaseSlow at least two releases averaging above 5 minutes over one hour, and both
+        must
+
+        hold for 15 minutes. Severities are one step lower (6 and 7). Their descriptions now point at
+        CPU
+
+        shortage on the node rather than at the number of ClusterAuthorizationRules, which does not affect
+
+        render time.
