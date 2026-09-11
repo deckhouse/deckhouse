@@ -2,7 +2,8 @@
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 
-{{- range $cr := .Values.admissionPolicyEngine.internal.securityPolicies }}
+{{- range $policy := .Values.admissionPolicyEngine.internal.securityPolicies }}
+{{- range $cr := include "scoped_policy_variants" (list $policy) | fromYamlArray }}
   {{- if not $cr.spec.policies.allowPrivileged }}
     {{- include "allow_privileged" (list $context $cr) }}
   {{- end }}
@@ -69,7 +70,8 @@
   {{- if $cr.spec.policies.blockWildcardDomains }}
     {{- include "verify_ingresses" (list $context $cr) }}
   {{- end }}
-  {{- end }}  
+  {{- end }}
+{{- end }}
 {{- end }}
 
 {{/* Global constraint for exec/attach on heritage: deckhouse pods - not tied to SecurityPolicy CR */}}
@@ -570,8 +572,7 @@ spec:
         kinds: ["PodExecOptions", "PodAttachOptions"]
     scope: Namespaced
     namespaces:
-      - "d8-*"
-      - "kube-*"
+      {{- include "system_namespaces" . | fromYamlArray | toYaml | nindent 6 }}
   {{- end }}
 {{- end }}
 

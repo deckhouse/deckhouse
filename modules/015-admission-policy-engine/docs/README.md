@@ -337,7 +337,8 @@ Configuring PSS policies for namespaces is done by setting a special label `secu
 The default policy can be overridden globally ([in the module settings](configuration.html#parameters-podsecuritystandards-defaultpolicy)).
 
 {% alert level="info" %}
-The module does not apply policies to system namespaces.
+In namespaces named `d8-*` and `kube-*`, the `restricted` standard applies in `warn` mode regardless of the default policy.
+To enforce policies in such a namespace, set the label `security.deckhouse.io/enable-security-policy-check` to `true` on it.
 {% endalert %}
 
 {% alert level="info" %}
