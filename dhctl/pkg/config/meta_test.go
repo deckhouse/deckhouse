@@ -129,6 +129,37 @@ func TestClusterConfigForInfrastructure(t *testing.T) {
 		_, ok := infra["cloud"]
 		require.False(t, ok)
 	})
+
+	// OpenStack and HuaweiCloud layouts read var.clusterConfiguration.podSubnetCIDR (etc.) directly
+	// and cannot read ModuleConfig; once a cluster migrates and the field is removed from
+	// ClusterConfiguration, Terraform must still get the value the cluster actually runs with, or
+	// every apply from then on hits an object with no such attribute at all.
+	t.Run("resolves network parameters for Terraform even after they are removed from ClusterConfiguration", func(t *testing.T) {
+		m := metaConfigWithNetwork(t,
+			nil, // removed from ClusterConfiguration
+			map[string]interface{}{
+				"podSubnetCIDR":           "10.11.0.0/16",
+				"serviceSubnetCIDR":       "10.22.0.0/16",
+				"podSubnetNodeCIDRPrefix": "23",
+			},
+		)
+		m.ClusterType = CloudClusterType
+		m.ClusterConfig["cloud"] = json.RawMessage(`{"provider":"OpenStack"}`)
+
+		infra := m.clusterConfigForInfrastructure()
+
+		var podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix string
+		require.NoError(t, json.Unmarshal(infra["podSubnetCIDR"], &podSubnetCIDR))
+		require.NoError(t, json.Unmarshal(infra["serviceSubnetCIDR"], &serviceSubnetCIDR))
+		require.NoError(t, json.Unmarshal(infra["podSubnetNodeCIDRPrefix"], &podSubnetNodeCIDRPrefix))
+		require.Equal(t, "10.11.0.0/16", podSubnetCIDR)
+		require.Equal(t, "10.22.0.0/16", serviceSubnetCIDR)
+		require.Equal(t, "23", podSubnetNodeCIDRPrefix)
+
+		// The persisted ClusterConfig (→ the secret) must still not carry them.
+		_, ok := m.ClusterConfig["podSubnetCIDR"]
+		require.False(t, ok)
+	})
 }
 
 func TestGetDNSAddress(t *testing.T) {
@@ -482,6 +513,32 @@ func TestEnrichProxyData(t *testing.T) {
 			"httpsProxy": "https://2.3.4.5",
 			"noProxy":    []string{"example.com", ".example.com", "127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
+	})
+
+	// The two CIDRs are being migrated to ModuleConfig control-plane-manager; noProxy must exclude
+	// the value the control plane actually runs with, not a stale/deprecated ClusterConfiguration
+	// field, or in-cluster traffic would go through the proxy on a migrated cluster.
+	t.Run("ModuleConfig network settings win over ClusterConfiguration", func(t *testing.T) {
+		cfg := metaConfigWithNetwork(t,
+			map[string]string{
+				"clusterDomain":     "cluster.local",
+				"podSubnetCIDR":     "10.111.0.0/16",
+				"serviceSubnetCIDR": "10.222.0.0/16",
+			},
+			map[string]interface{}{
+				"podSubnetCIDR":     "10.11.0.0/16",
+				"serviceSubnetCIDR": "10.22.0.0/16",
+			},
+		)
+		cfg.ClusterConfig["proxy"] = json.RawMessage(`{"httpProxy":"http://1.2.3.4"}`)
+
+		p, err := cfg.EnrichProxyData()
+		require.NoError(t, err)
+
+		require.Equal(t, map[string]any{
+			"httpProxy": "http://1.2.3.4",
+			"noProxy":   []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.11.0.0/16", "10.22.0.0/16"},
+		}, p)
 	})
 }
 

@@ -20,9 +20,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
+
+func metaConfigWithModuleConfigNetwork(t *testing.T, network map[string]interface{}) *config.MetaConfig {
+	t.Helper()
+
+	return &config.MetaConfig{
+		ModuleConfigs: []*config.ModuleConfig{{
+			ObjectMeta: metav1.ObjectMeta{Name: "control-plane-manager"},
+			Spec:       config.ModuleConfigSpec{Settings: config.SettingsValues{"network": network}},
+		}},
+	}
+}
 
 func TestGetCidrFromMetaConfig(t *testing.T) {
 	tests := []struct {
@@ -50,7 +62,7 @@ func TestGetCidrFromMetaConfig(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "missing podSubnetCIDR field in ClusterConfiguration",
+			errorMsg:    "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration",
 		},
 		{
 			metaConfig: &config.MetaConfig{
@@ -59,14 +71,14 @@ func TestGetCidrFromMetaConfig(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "missing serviceSubnetCIDR field in ClusterConfiguration",
+			errorMsg:    "serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration",
 		},
 		{
 			metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{},
 			},
 			expectError: true,
-			errorMsg:    "missing podSubnetCIDR field in ClusterConfiguration",
+			errorMsg:    "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration",
 		},
 	}
 
@@ -170,29 +182,36 @@ func TestCheckCidrIntersection(t *testing.T) {
 			},
 		},
 		{
-			name: "missing podSubnetCIDR",
+			// A CIDR set nowhere is not this check's concern - RequireNetwork enforces presence
+			// where it matters, and a cluster whose control plane dhctl did not create (no
+			// ClusterConfiguration, e.g. EKS) routinely has neither CIDR anywhere.
+			name: "missing podSubnetCIDR: nothing to compare, skipped",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{
 					"serviceSubnetCIDR": []byte(`"10.0.0.0/8"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "missing podSubnetCIDR field in ClusterConfiguration")
-			},
+			wantErr: assert.NoError,
 		},
 		{
-			name: "missing serviceSubnetCIDR",
+			name: "missing serviceSubnetCIDR: nothing to compare, skipped",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{
 					"podSubnetCIDR": []byte(`"10.0.0.0/8"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "missing serviceSubnetCIDR field in ClusterConfiguration")
-			},
+			wantErr: assert.NoError,
 		},
 		{
-			name: "no ClusterConfiguration",
+			name: "no ClusterConfiguration, resolved from ModuleConfig",
+			fields: fields{metaConfig: metaConfigWithModuleConfigNetwork(t, map[string]interface{}{
+				"podSubnetCIDR":     "10.111.0.0/16",
+				"serviceSubnetCIDR": "10.222.0.0/16",
+			})},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "no ClusterConfiguration and no ModuleConfig: nothing to compare, skipped",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: nil,
 			}},
@@ -304,7 +323,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "missing podSubnetCIDR field in ClusterConfiguration")
+				return assert.ErrorContains(t, err, "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
 			},
 		},
 		{
@@ -318,7 +337,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "missing serviceSubnetCIDR field in ClusterConfiguration")
+				return assert.ErrorContains(t, err, "serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
 			},
 		},
 		{

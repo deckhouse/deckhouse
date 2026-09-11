@@ -130,7 +130,7 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 
 	var (
 		oldSettings                          map[string]interface{}
-		oldSettingsForKubernetesVersionGuard map[string]interface{}
+		oldSettingsForMigrationGuards map[string]interface{}
 	)
 
 	switch review.Operation {
@@ -139,6 +139,9 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 			// Use raw settings (GetMap), not ExtractLatestSettings/validateCR: a conversion
 			// failure on an unrelated field must not hide an existing kubernetesVersion pin.
 			if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, nil, rawModuleConfigSettings(cfg)); res != nil || err != nil {
+				return res, err
+			}
+			if res, err := v.validateControlPlaneManagerNetwork(ctx, nil, rawModuleConfigSettings(cfg), cfg.GetAnnotations()); res != nil || err != nil {
 				return res, err
 			}
 		}
@@ -159,14 +162,15 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 			// Explicitly clear: CEL transition must not see partial/unconverted settings
 			// even if a future extractSettingsFromModuleConfig starts returning them with err.
 			oldSettings = nil
-			// Keep the kubernetesVersion clear-guard alive when conversion of the old object
-			// fails, but do not feed unconverted settings to CEL transition rules.
+			// Keep the control-plane-manager migration guards (kubernetesVersion, network) alive
+			// when conversion of the old object fails, but do not feed unconverted settings to
+			// CEL transition rules.
 			oldConfig := new(v1alpha1.ModuleConfig)
 			if json.Unmarshal(review.OldObjectRaw, oldConfig) == nil {
-				oldSettingsForKubernetesVersionGuard = rawModuleConfigSettings(oldConfig)
+				oldSettingsForMigrationGuards = rawModuleConfigSettings(oldConfig)
 			}
 		} else {
-			oldSettingsForKubernetesVersionGuard = oldSettings
+			oldSettingsForMigrationGuards = oldSettings
 		}
 
 		if res, err := v.validateUpdate(ctx, review, cfg, allowExperimental); res != nil || err != nil {
@@ -174,7 +178,7 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		}
 	}
 
-	return v.validateCommon(ctx, cfg, oldSettings, oldSettingsForKubernetesVersionGuard)
+	return v.validateCommon(ctx, cfg, oldSettings, oldSettingsForMigrationGuards)
 }
 
 // validateDelete guards deletion: a confirmation-required module that is still
@@ -373,7 +377,7 @@ func (v *moduleConfigValidator) validateCommon(
 	ctx context.Context,
 	cfg *v1alpha1.ModuleConfig,
 	oldSettings map[string]interface{},
-	oldSettingsForKubernetesVersionGuard map[string]interface{},
+	oldSettingsForMigrationGuards map[string]interface{},
 ) (*kwhvalidating.ValidatorResult, error) {
 	if cfg.Spec.Source == v1alpha1.ModuleSourceEmbedded {
 		return rejectResult("'Embedded' is a forbidden source")
@@ -384,11 +388,12 @@ func (v *moduleConfigValidator) validateCommon(
 	// check if spec.version value is valid and the version is the latest
 	result := v.configValidator.Validate(cfg)
 
-	// The kubernetesVersion guard runs before resolveModuleSource on purpose. That call returns a
-	// non-nil *allow* result when the Module CR is missing (fresh install, or the window while the
-	// loader recreates it), which returns from validateCommon before anything below runs — so a
-	// guard placed after it can be bypassed by deleting Module/control-plane-manager and then
-	// applying an out-of-window pin. The DELETE path already runs the guard first for this reason.
+	// The control-plane-manager migration guards (kubernetesVersion, network) run before
+	// resolveModuleSource on purpose. That call returns a non-nil *allow* result when the Module CR
+	// is missing (fresh install, or the window while the loader recreates it), which returns from
+	// validateCommon before anything below runs — so a guard placed after it can be bypassed by
+	// deleting Module/control-plane-manager and then applying an out-of-window change. The DELETE
+	// path already runs the guards first for this reason.
 	//
 	// Scoped to control-plane-manager so ordering for every other module is untouched: a
 	// ModuleConfig for a not-yet-installed module must keep being allowed with a warning.
@@ -396,7 +401,10 @@ func (v *moduleConfigValidator) validateCommon(
 		if result.HasError() {
 			return rejectResult(result.Error)
 		}
-		if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, result.Settings, oldSettingsForKubernetesVersionGuard); res != nil || err != nil {
+		if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, result.Settings, oldSettingsForMigrationGuards); res != nil || err != nil {
+			return res, err
+		}
+		if res, err := v.validateControlPlaneManagerNetwork(ctx, result.Settings, oldSettingsForMigrationGuards, cfg.GetAnnotations()); res != nil || err != nil {
 			return res, err
 		}
 	}
