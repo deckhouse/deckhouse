@@ -17,8 +17,11 @@ limitations under the License.
 package fallback
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"log/slog"
 	"slices"
 	"strings"
 	"testing"
@@ -188,6 +191,12 @@ func peers(names ...string) []domain.Peer {
 func newHarness(t *testing.T, store *stubStore) *harness {
 	t.Helper()
 
+	return newLoggedHarness(t, store, log.NewNop())
+}
+
+func newLoggedHarness(t *testing.T, store *stubStore, logger *log.Logger) *harness {
+	t.Helper()
+
 	h := &harness{
 		alive:    &stubAlive{members: slices.Clone(group)},
 		expected: &stubExpected{peers: peers(group...)},
@@ -214,7 +223,7 @@ func newHarness(t *testing.T, store *stubStore) *harness {
 			CacheSynced: func() bool { return h.synced },
 			InNodeGroup: func() bool { return h.inGroup },
 		},
-		log.NewNop(),
+		logger,
 	)
 
 	return h
@@ -246,6 +255,32 @@ func deletes(calls []string) int {
 	}
 
 	return n
+}
+
+type logLine struct {
+	Level    string `json:"level"`
+	Msg      string `json:"msg"`
+	Attempt  int    `json:"attempt"`
+	Failures int    `json:"failures"`
+}
+
+func drainLogs(t *testing.T, logs *bytes.Buffer) []logLine {
+	t.Helper()
+
+	var lines []logLine
+
+	dec := json.NewDecoder(logs)
+
+	for dec.More() {
+		var line logLine
+		if err := dec.Decode(&line); err != nil {
+			t.Fatalf("log output is not JSON lines: %v", err)
+		}
+
+		lines = append(lines, line)
+	}
+
+	return lines
 }
 
 func TestGateIsOpenBeforeTheFirstPass(t *testing.T) {
@@ -375,6 +410,66 @@ func TestRepeatedFailuresRaiseOneWarning(t *testing.T) {
 
 	if !slices.Equal(h.events.warnings, []string{reasonHeartbeatFailed}) {
 		t.Errorf("warnings = %v, want exactly one %s", h.events.warnings, reasonHeartbeatFailed)
+	}
+}
+
+func TestFailuresAfterTheErrorAreLoggedAtDebugUntilTheStreakEnds(t *testing.T) {
+	const streak = maxFailures + 3
+
+	unreachable := errors.New("dial tcp: i/o timeout")
+	logs := &bytes.Buffer{}
+	store := newStore()
+	store.failHeartbeat = unreachable
+	h := newLoggedHarness(t, store, log.NewLogger(
+		log.WithOutput(logs),
+		log.WithHandlerType(log.JSONHandlerType),
+		log.WithLevel(slog.LevelDebug),
+	))
+
+	h.loseQuorum(t.Context())
+
+	for range streak - 1 {
+		h.clock.advance(heartbeat)
+		h.monitor.reconcile(t.Context())
+	}
+
+	var levels []string
+
+	for _, line := range drainLogs(t, logs) {
+		if strings.HasPrefix(line.Msg, "fallback heartbeat") {
+			levels = append(levels, line.Level)
+		}
+	}
+
+	want := slices.Concat(
+		slices.Repeat([]string{"warn"}, maxFailures-1),
+		[]string{"error"},
+		slices.Repeat([]string{"debug"}, streak-maxFailures),
+	)
+	if !slices.Equal(levels, want) {
+		t.Errorf("%d failures in a row were logged at %v, want %v", streak, levels, want)
+	}
+
+	if !slices.Equal(h.events.warnings, []string{reasonHeartbeatFailed}) {
+		t.Errorf("warnings = %v, want exactly one %s", h.events.warnings, reasonHeartbeatFailed)
+	}
+
+	store.failHeartbeat = nil
+	h.clock.advance(heartbeat)
+	h.monitor.reconcile(t.Context())
+
+	recovered := []logLine{{Level: "info", Msg: "fallback heartbeat reaches the Kubernetes API again", Failures: streak}}
+	if got := drainLogs(t, logs); !slices.Equal(got, recovered) {
+		t.Errorf("logs = %+v when the streak ended, want %+v", got, recovered)
+	}
+
+	store.failHeartbeat = unreachable
+	h.clock.advance(heartbeat)
+	h.monitor.reconcile(t.Context())
+
+	restarted := []logLine{{Level: "warn", Msg: "fallback heartbeat failed", Attempt: 1}}
+	if got := drainLogs(t, logs); !slices.Equal(got, restarted) {
+		t.Errorf("logs = %+v on the first failure of a new streak, want %+v", got, restarted)
 	}
 }
 

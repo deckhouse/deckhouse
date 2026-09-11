@@ -110,7 +110,7 @@ type Monitor struct {
 	failures       int
 	deleted        types.UID
 	recordVanished bool
-	leftNodeGroup bool
+	leftNodeGroup  bool
 }
 
 func New(params Params, deps Deps, logger *log.Logger) *Monitor {
@@ -357,7 +357,10 @@ func (m *Monitor) beat(ctx context.Context, quorumLostAt time.Time) {
 	m.failures++
 	m.setAPIReachable(false)
 
-	if m.failures == maxFailures {
+	switch {
+	case m.failures < maxFailures:
+		m.logger.Warn("fallback heartbeat failed", "error", err, "attempt", m.failures)
+	case m.failures == maxFailures:
 		m.logger.Error("fallback heartbeat keeps failing, this node is not protected from evacuation",
 			"error", err,
 			"attempts", m.failures,
@@ -366,11 +369,9 @@ func (m *Monitor) beat(ctx context.Context, quorumLostAt time.Time) {
 			"fallback heartbeat failed %d times in a row, this node is not protected from evacuation: %v",
 			m.failures, err,
 		))
-
-		return
+	default:
+		m.logger.Debug("fallback heartbeat failed", "error", err, "attempt", m.failures)
 	}
-
-	m.logger.Warn("fallback heartbeat failed", "error", err, "attempt", m.failures)
 }
 
 func (m *Monitor) write(ctx context.Context, now, quorumLostAt time.Time) error {
