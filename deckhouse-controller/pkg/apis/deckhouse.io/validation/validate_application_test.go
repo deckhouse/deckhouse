@@ -18,15 +18,18 @@ package validation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
@@ -133,13 +136,33 @@ func (s *applicationValidationHandlerSuite) TestSettingsAreValidatedOnlyByAPVWhi
 func (s *applicationValidationHandlerSuite) validate(app *v1alpha1.Application, manager *fakePackageManager) *admissionv1.AdmissionResponse {
 	s.T().Helper()
 
-	ap := &v1alpha1.ApplicationPackage{ObjectMeta: metav1.ObjectMeta{Name: app.Spec.PackageName}}
 	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
-	apv := newAPV(apvName, false, nil)
-	handler := applicationValidationHandler(newFakeClient(s.T(), ap, apv), manager)
-	review := newModuleConfigAdmissionReview("UPDATE", app, nil)
 
-	return callHandler(s.T(), handler, review)
+	// A real UPDATE always carries the object it replaces, and the handler rejects one
+	// that does not: an update to itself is the neutral old object for tests that are
+	// not about immutability.
+	return s.submit("UPDATE", app, app, newAPV(apvName, false, nil), manager)
+}
+
+// submit submits one admission request, letting a test choose the operation, the
+// previously stored object and the APV whose settings schema is published.
+func (s *applicationValidationHandlerSuite) submit(
+	operation string,
+	app, oldApp *v1alpha1.Application,
+	apv *v1alpha1.ApplicationPackageVersion,
+	manager *fakePackageManager,
+) *admissionv1.AdmissionResponse {
+	s.T().Helper()
+
+	ap := &v1alpha1.ApplicationPackage{ObjectMeta: metav1.ObjectMeta{Name: app.Spec.PackageName}}
+	handler := applicationValidationHandler(newFakeClient(s.T(), ap, apv), manager)
+
+	var old interface{}
+	if oldApp != nil {
+		old = oldApp
+	}
+
+	return callHandler(s.T(), handler, newModuleConfigAdmissionReview(operation, app, old))
 }
 
 func TestParsePackageDependencyConstraint(t *testing.T) {
@@ -212,14 +235,14 @@ func TestValidateApplicationSettings(t *testing.T) {
 	t.Run("nil package schemas is a no-op", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
 		app := newApplication("repo", "pkg", "1.0.0")
-		require.NoError(t, validateAppSettings(apv, app))
+		require.NoError(t, validateAppSettings(apv, app, nil))
 	})
 
 	t.Run("nil settings schema is a no-op", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
 		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{}
 		app := newApplication("repo", "pkg", "1.0.0")
-		require.NoError(t, validateAppSettings(apv, app))
+		require.NoError(t, validateAppSettings(apv, app, nil))
 	})
 
 	t.Run("settings satisfying the schema pass", func(t *testing.T) {
@@ -232,7 +255,7 @@ func TestValidateApplicationSettings(t *testing.T) {
 		app := newApplication("repo", "pkg", "1.0.0")
 		app.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"foo": "bar"})
 
-		require.NoError(t, validateAppSettings(apv, app))
+		require.NoError(t, validateAppSettings(apv, app, nil))
 	})
 
 	t.Run("settings violating the schema are rejected", func(t *testing.T) {
@@ -246,7 +269,7 @@ func TestValidateApplicationSettings(t *testing.T) {
 		// "foo" is required but missing
 		app.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"other": "value"})
 
-		require.Error(t, validateAppSettings(apv, app))
+		require.Error(t, validateAppSettings(apv, app, nil))
 	})
 }
 
@@ -424,7 +447,7 @@ func TestValidateAppAgainstApv(t *testing.T) {
 			manager := &fakePackageManager{checkErr: tt.checkErr}
 			app := newApplication(repo, pkg, version)
 
-			err := validateAppAgainstApv(context.Background(), cli, manager, app)
+			err := validateAppAgainstApv(context.Background(), cli, manager, app, nil)
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -438,4 +461,145 @@ func TestValidateAppAgainstApv(t *testing.T) {
 			assert.Equal(t, tt.wantCheck, manager.checkCalled)
 		})
 	}
+}
+
+// immutableSettingsAPV publishes a settings schema whose storageClass field carries
+// x-deckhouse-immutable, the shape the console and the webhook both read.
+func immutableSettingsAPV(app *v1alpha1.Application) *v1alpha1.ApplicationPackageVersion {
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
+	apv := newAPV(apvName, false, nil)
+	apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{
+		SettingsSchema: &v1alpha1.PackageSchema{
+			OpenAPIV3Schema: &openapi.OpenAPIV3Schema{
+				Type: openapi.StringOrArray{"object"},
+				Properties: map[string]openapi.OpenAPIV3Schema{
+					"storageClass": {
+						Type:       openapi.StringOrArray{"string"},
+						XImmutable: true,
+					},
+					// Both marks on one field: the value is frozen, and the controller
+					// resolves it from the project when the manifest leaves it empty.
+					"grantedClass": {
+						Type:       openapi.StringOrArray{"string"},
+						XGrant:     "storageclasses",
+						XImmutable: true,
+					},
+					"replicas": {Type: openapi.StringOrArray{"integer"}},
+				},
+			},
+		},
+	}
+
+	return apv
+}
+
+// TestImmutableSettingsFieldCannotChangeOnUpdate is the end-to-end check for
+// extractOldApplication → validateAppSettings → checkImmutableSettings.
+func (s *applicationValidationHandlerSuite) TestImmutableSettingsFieldCannotChangeOnUpdate() {
+	tests := []struct {
+		name        string
+		operation   string
+		newSettings map[string]any
+		oldSettings map[string]any
+		oldApplied  map[string]any
+		wantAllowed bool
+		wantMessage string
+	}{
+		{
+			name:        "UPDATE changing the immutable field is rejected",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"storageClass": "slow"},
+			oldSettings: map[string]any{"storageClass": "fast"},
+			wantMessage: "storageClass",
+		},
+		{
+			name:        "UPDATE keeping the immutable field is allowed",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"storageClass": "fast"},
+			oldSettings: map[string]any{"storageClass": "fast"},
+			wantAllowed: true,
+		},
+		{
+			name:        "UPDATE changing another field is allowed",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"storageClass": "fast", "replicas": float64(3)},
+			oldSettings: map[string]any{"storageClass": "fast", "replicas": float64(1)},
+			wantAllowed: true,
+		},
+		{
+			name:        "CREATE may set the immutable field",
+			operation:   "CREATE",
+			newSettings: map[string]any{"storageClass": "fast"},
+			wantAllowed: true,
+		},
+		{
+			// The manifest never named the field, so spec.settings alone would read it
+			// as "never set" and take any value the update offers.
+			name:        "UPDATE overriding a value only the release knows is rejected",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"storageClass": "slow"},
+			oldSettings: map[string]any{},
+			oldApplied:  map[string]any{"storageClass": "fast"},
+			wantMessage: "storageClass",
+		},
+		{
+			name:        "UPDATE leaving a granted field to the project is allowed",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"replicas": float64(3)},
+			oldSettings: map[string]any{"replicas": float64(1)},
+			oldApplied:  map[string]any{"grantedClass": "fast-ssd", "replicas": float64(1)},
+			wantAllowed: true,
+		},
+		{
+			name:        "UPDATE overriding the granted field is rejected",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"grantedClass": "cheap-hdd"},
+			oldSettings: map[string]any{},
+			oldApplied:  map[string]any{"grantedClass": "fast-ssd"},
+			wantMessage: "grantedClass",
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			app := newApplication("repo", "pkg", "1.0.0")
+			app.Spec.Settings = v1alpha1.MakeMappedFields(tt.newSettings)
+
+			var oldApp *v1alpha1.Application
+			if tt.oldSettings != nil {
+				oldApp = newApplication("repo", "pkg", "1.0.0")
+				oldApp.Spec.Settings = v1alpha1.MakeMappedFields(tt.oldSettings)
+			}
+
+			if tt.oldApplied != nil {
+				raw, err := json.Marshal(tt.oldApplied)
+				s.Require().NoError(err)
+				oldApp.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: raw}
+			}
+
+			response := s.submit(tt.operation, app, oldApp, immutableSettingsAPV(app), &fakePackageManager{})
+
+			s.Require().Equal(tt.wantAllowed, response.Allowed)
+			if tt.wantAllowed {
+				return
+			}
+
+			s.Require().NotNil(response.Result)
+			s.Contains(response.Result.Message, tt.wantMessage)
+			// The denial is the only feedback kubectl prints, so it must name the object.
+			s.Contains(response.Result.Message, "my-app")
+		})
+	}
+}
+
+// TestExtractOldApplicationRejectsUpdateWithoutOldObject pins the fail-closed direction:
+// an UPDATE always carries the object it replaces, and admitting one that does not would
+// leave every immutable field unchecked.
+func TestExtractOldApplicationRejectsUpdateWithoutOldObject(t *testing.T) {
+	_, err := extractOldApplication(&kwhmodel.AdmissionReview{Operation: kwhmodel.OperationUpdate})
+	require.Error(t, err)
+
+	oldApp, err := extractOldApplication(&kwhmodel.AdmissionReview{Operation: kwhmodel.OperationCreate})
+	require.NoError(t, err)
+	assert.Nil(t, oldApp)
 }

@@ -150,6 +150,43 @@ Behavior:
 - An explicit user value always wins over the injected default.
 - If the multitenancy feature is inactive for the resource (the CRD is absent, no catalog exists for the project, or the catalog has no default), the field is left untouched — no defaulting and no validation.
 
+### Fields that cannot be changed after installation (`x-deckhouse-immutable`)
+
+Some settings only make sense at install time: changing a `storageClass` once the volumes are provisioned either has
+no effect or breaks the application. Mark such a field with `x-deckhouse-immutable: true` and it can be chosen when
+the application is created and never again.
+
+```yaml
+# openapi/settings.yaml
+type: object
+properties:
+  storageClass:
+    type: string
+    default: default
+    x-deckhouse-immutable: true
+  postgres:
+    type: object
+    x-deckhouse-immutable: true
+    properties:
+      storageClass:
+        type: string
+      volumeSize:
+        type: string
+```
+
+Behavior:
+
+- Only the literal `true` marks a field. Any other value is ignored.
+- The mark on an object freezes the whole block: every nested field below it becomes unchangeable too, as in the
+  `postgres` example above.
+- An update that changes a marked field is rejected by the validating webhook, naming the field.
+- The web console renders a marked field read-only in the edit form of an installed application, and editable in
+  the install form.
+- Comparison happens after schema defaults are applied: leaving a marked key out of the manifest keeps the value the
+  application already runs with, so removing the key from the manifest is not by itself a change.
+- The mark is not inherited into array elements or map entries that the update adds — a new element has no previous
+  value to be frozen against.
+
 ## Local build
 
 Build and push the package to a registry:
