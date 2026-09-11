@@ -641,7 +641,7 @@ LIB_HELM_DIR ?= $(CURDIR)/helm_lib
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.13.1
-DECKHOUSE_CLI_VERSION ?= v0.33.1
+DECKHOUSE_CLI_VERSION ?= v0.33.16
 CRD_ENRICHER_VERSION ?= v0.0.2
 DMT_VERSION ?= 0.2.4
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
