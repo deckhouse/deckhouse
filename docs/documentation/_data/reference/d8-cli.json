@@ -1154,7 +1154,7 @@
         {
           "name": "build [IMAGE_NAME...]",
           "description": "Build images",
-          "longDescription": "Build images that are described in werf.yaml.\n\nThe result of build command is built images pushed into the specified repo (or locally if repo is   \nnot specified).\n\nIf one or more IMAGE_NAME parameters specified, werf will build only these images.",
+          "longDescription": "Build images that are described in werf.yaml.\n\nThe result of build command is built images pushed into the specified repo (or locally if repo is \nnot specified).\n\nIf one or more IMAGE_NAME parameters specified, werf will build only these images.",
           "aliases": null,
           "flags": {
             "add-custom-tag": {
@@ -1634,7 +1634,7 @@
             {
               "name": "apply",
               "description": "Apply bundle into Kubernetes",
-              "longDescription": "Take latest bundle from the specified container registry using specified version tag or version     \nmask and apply it as a helm chart into Kubernetes cluster.",
+              "longDescription": "Take latest bundle from the specified container registry using specified version tag or version   \nmask and apply it as a helm chart into Kubernetes cluster.",
               "aliases": null,
               "flags": {
                 "add-annotation": {
@@ -2183,7 +2183,7 @@
             {
               "name": "copy",
               "description": "Copy published bundle into another location",
-              "longDescription": "Take latest bundle from the specified container registry using specified version tag and copy it    \neither into a different tag within the same container registry or into another container registry.",
+              "longDescription": "Take latest bundle from the specified container registry using specified version tag and copy it  \neither into a different tag within the same container registry or into another container registry.",
               "aliases": null,
               "flags": {
                 "container-registry-mirror": {
@@ -2312,7 +2312,7 @@
             {
               "name": "plan",
               "description": "Plan bundle apply into Kubernetes",
-              "longDescription": "Take latest bundle from the specified container registry using specified version tag or version     \nmask and plan its deployment as a helm chart into Kubernetes cluster.",
+              "longDescription": "Take latest bundle from the specified container registry using specified version tag or version   \nmask and plan its deployment as a helm chart into Kubernetes cluster.",
               "aliases": null,
               "flags": {
                 "add-annotation": {
@@ -2831,7 +2831,7 @@
             {
               "name": "publish [IMAGE_NAME...]",
               "description": "Publish bundle",
-              "longDescription": "Publish bundle into the container registry. werf bundle contains built images defined in the        \nwerf.yaml, Helm chart, Service values which contain built images tags, any custom values and set    \nvalues params provided during publish invocation, werf addon templates.\n\nPublished into container registry bundle can be rolled out by the \"werf bundle\" command.",
+              "longDescription": "Publish bundle into the container registry. werf bundle contains built images defined in the      \nwerf.yaml, Helm chart, Service values which contain built images tags, any custom values and set  \nvalues params provided during publish invocation, werf addon templates.\n\nPublished into container registry bundle can be rolled out by the \"werf bundle\" command.",
               "aliases": null,
               "flags": {
                 "add-annotation": {
@@ -3415,7 +3415,7 @@
             {
               "name": "render",
               "description": "Render Kubernetes manifests from bundle",
-              "longDescription": "Take locally extracted bundle or download bundle from the specified container registry using        \nspecified version tag or version mask and render it as Kubernetes manifests.",
+              "longDescription": "Take locally extracted bundle or download bundle from the specified container registry using      \nspecified version tag or version mask and render it as Kubernetes manifests.",
               "aliases": null,
               "flags": {
                 "add-annotation": {
@@ -3908,7 +3908,7 @@
                 {
                   "name": "build [PATH]",
                   "description": "Build TypeScript chart.",
-                  "longDescription": "Build TypeScript chart in the specified directory. If PATH is not specified, uses the current       \ndirectory.",
+                  "longDescription": "Build TypeScript chart in the specified directory. If PATH is not specified, uses the current     \ndirectory.",
                   "aliases": null,
                   "flags": {
                     "config": {
@@ -4042,7 +4042,7 @@
                 {
                   "name": "init [PATH]",
                   "description": "Initialize the files needed to render manifests using TypeScript.",
-                  "longDescription": "Initialize the files needed to render manifests using TypeScript. If PATH is not specified, uses    \nthe current directory.",
+                  "longDescription": "Initialize the files needed to render manifests using TypeScript. If PATH is not specified, uses  \nthe current directory.",
                   "aliases": null,
                   "flags": {
                     "config": {
@@ -4359,7 +4359,7 @@
         {
           "name": "cleanup",
           "description": "Cleanup project images in the container registry",
-          "longDescription": "Safely cleanup unused project images in the container registry.\n\nThe command works according to special rules called cleanup policies, which the user defines in     \nwerf.yaml.\n\nIt is safe to run this command periodically (daily is enough) by automated cleanup job in parallel  \nwith other werf commands such as build, converge and host cleanup.",
+          "longDescription": "Safely cleanup unused project images in the container registry.\n\nThe command works according to special rules called cleanup policies, which the user defines in   \nwerf.yaml.\n\nIt is safe to run this command periodically (daily is enough) by automated cleanup job in         \nparallel with other werf commands such as build, converge and host cleanup.",
           "aliases": null,
           "flags": {
             "allow-includes-update": {
@@ -4787,7 +4787,7 @@
             {
               "name": "config [IMAGE_NAME...] [options] [--docker-compose-options=\"OPTIONS\"] [--docker-compose-command-options=\"OPTIONS\"]",
               "description": "Run docker-compose config command with forwarded image names.",
-              "longDescription": "Run docker-compose config command with forwarded image names.\nImage environment name format: $WERF_\u003cFORMATTED_WERF_IMAGE_NAME\u003e_DOCKER_IMAGE_NAME                  \n($WERF_DOCKER_IMAGE_NAME for nameless image).\n\u003cFORMATTED_WERF_IMAGE_NAME\u003e is werf image name from werf.yaml modified according to the following   \nrules:\n- all characters are uppercase (app -\u003e APP);\n- charset /- is replaced with _ (DEV/APP-FRONTEND -\u003e DEV_APP_FRONTEND).\nIf one or more IMAGE_NAME parameters specified, werf will build and forward only these images.\nGiven the following werf configuration:\n# werf.yaml\nproject: x\nconfigVersion: 1\n---\nimage: frontend\ndockerfile: frontend.Dockerfile\n---\nimage: geodata-backend\ndockerfile: backend.Dockerfile\nUse described images as follows in your docker compose configuration:\n# docker-compose.yaml\nservices:\n  frontend:\n    image: $WERF_FRONTEND_DOCKER_IMAGE_NAME\n  backend:\n    image: $WERF_GEODATA_BACKEND_DOCKER_IMAGE_NAME\n",
+              "longDescription": "Run docker-compose config command with forwarded image names.\nImage environment name format: $WERF_\u003cFORMATTED_WERF_IMAGE_NAME\u003e_DOCKER_IMAGE_NAME                \n($WERF_DOCKER_IMAGE_NAME for nameless image).\n\u003cFORMATTED_WERF_IMAGE_NAME\u003e is werf image name from werf.yaml modified according to the following \nrules:\n- all characters are uppercase (app -\u003e APP);\n- charset /- is replaced with _ (DEV/APP-FRONTEND -\u003e DEV_APP_FRONTEND).\nIf one or more IMAGE_NAME parameters specified, werf will build and forward only these images.\nGiven the following werf configuration:\n# werf.yaml\nproject: x\nconfigVersion: 1\n---\nimage: frontend\ndockerfile: frontend.Dockerfile\n---\nimage: geodata-backend\ndockerfile: backend.Dockerfile\nUse described images as follows in your docker compose configuration:\n# docker-compose.yaml\nservices:\n  frontend:\n    image: $WERF_FRONTEND_DOCKER_IMAGE_NAME\n  backend:\n    image: $WERF_GEODATA_BACKEND_DOCKER_IMAGE_NAME\n",
               "aliases": null,
               "flags": {
                 "allow-includes-update": {
@@ -5251,7 +5251,7 @@
             {
               "name": "down [IMAGE_NAME...] [options] [--docker-compose-options=\"OPTIONS\"] [--docker-compose-command-options=\"OPTIONS\"]",
               "description": "Run docker-compose down command with forwarded image names.",
-              "longDescription": "Run docker-compose down command with forwarded image names.\nImage environment name format: $WERF_\u003cFORMATTED_WERF_IMAGE_NAME\u003e_DOCKER_IMAGE_NAME                  \n($WERF_DOCKER_IMAGE_NAME for nameless image).\n\u003cFORMATTED_WERF_IMAGE_NAME\u003e is werf image name from werf.yaml modified according to the following   \nrules:\n- all characters are uppercase (app -\u003e APP);\n- charset /- is replaced with _ (DEV/APP-FRONTEND -\u003e DEV_APP_FRONTEND).\nIf one or more IMAGE_NAME parameters specified, werf will build and forward only these images.\nGiven the following werf configuration:\n# werf.yaml\nproject: x\nconfigVersion: 1\n---\nimage: frontend\ndockerfile: frontend.Dockerfile\n---\nimage: geodata-backend\ndockerfile: backend.Dockerfile\nUse described images as follows in your docker compose configuration:\n# docker-compose.yaml\nservices:\n  frontend:\n    image: $WERF_FRONTEND_DOCKER_IMAGE_NAME\n  backend:\n    image: $WERF_GEODATA_BACKEND_DOCKER_IMAGE_NAME\n",
+              "longDescription": "Run docker-compose down command with forwarded image names.\nImage environment name format: $WERF_\u003cFORMATTED_WERF_IMAGE_NAME\u003e_DOCKER_IMAGE_NAME                \n($WERF_DOCKER_IMAGE_NAME for nameless image).\n\u003cFORMATTED_WERF_IMAGE_NAME\u003e is werf image name from werf.yaml modified according to the following \nrules:\n- all characters are uppercase (app -\u003e APP);\n- charset /- is replaced with _ (DEV/APP-FRONTEND -\u003e DEV_APP_FRONTEND).\nIf one or more IMAGE_NAME parameters specified, werf will build and forward only these images.\nGiven the following werf configuration:\n# werf.yaml\nproject: x\nconfigVersion: 1\n---\nimage: frontend\ndockerfile: frontend.Dockerfile\n---\nimage: geodata-backend\ndockerfile: backend.Dockerfile\nUse described images as follows in your docker compose configuration:\n# docker-compose.yaml\nservices:\n  frontend:\n    image: $WERF_FRONTEND_DOCKER_IMAGE_NAME\n  backend:\n    image: $WERF_GEODATA_BACKEND_DOCKER_IMAGE_NAME\n",
               "aliases": null,
               "flags": {
                 "allow-includes-update": {
@@ -5715,7 +5715,7 @@
             {
               "name": "run [IMAGE_NAME...] [options] [--docker-compose-options=\"OPTIONS\"] [--docker-compose-command-options=\"OPTIONS\"] -- SERVICE [COMMAND] [ARGS...]",
               "description": "Run docker-compose run command with forwarded image names.",
-              "longDescription": "Run docker-compose run command with forwarded image names.\nImage environment name format: $WERF_\u003cFORMATTED_WERF_IMAGE_NAME\u003e_DOCKER_IMAGE_NAME                  \n($WERF_DOCKER_IMAGE_NAME for nameless image).\n\u003cFORMATTED_WERF_IMAGE_NAME\u003e is werf image name from werf.yaml modified according to the following   \nrules:\n- all characters are uppercase (app -\u003e APP);\n- charset /- is replaced with _ (DEV/APP-FRONTEND -\u003e DEV_APP_FRONTEND).\nIf one or more IMAGE_NAME parameters specified, werf will build and forward only these images.\nGiven the following werf configuration:\n# werf.yaml\nproject: x\nconfigVersion: 1\n---\nimage: frontend\ndockerfile: frontend.Dockerfile\n---\nimage: geodata-backend\ndockerfile: backend.Dockerfile\nUse described images as follows in your docker compose configuration:\n# docker-compose.yaml\nservices:\n  frontend:\n    image: $WERF_FRONTEND_DOCKER_IMAGE_NAME\n  backend:\n    image: $WERF_GEODATA_BACKEND_DOCKER_IMAGE_NAME\n",
+              "longDescription": "Run docker-compose run command with forwarded image names.\nImage environment name format: $WERF_\u003cFORMATTED_WERF_IMAGE_NAME\u003e_DOCKER_IMAGE_NAME                \n($WERF_DOCKER_IMAGE_NAME for nameless image).\n\u003cFORMATTED_WERF_IMAGE_NAME\u003e is werf image name from werf.yaml modified according to the following \nrules:\n- all characters are uppercase (app -\u003e APP);\n- charset /- is replaced with _ (DEV/APP-FRONTEND -\u003e DEV_APP_FRONTEND).\nIf one or more IMAGE_NAME parameters specified, werf will build and forward only these images.\nGiven the following werf configuration:\n# werf.yaml\nproject: x\nconfigVersion: 1\n---\nimage: frontend\ndockerfile: frontend.Dockerfile\n---\nimage: geodata-backend\ndockerfile: backend.Dockerfile\nUse described images as follows in your docker compose configuration:\n# docker-compose.yaml\nservices:\n  frontend:\n    image: $WERF_FRONTEND_DOCKER_IMAGE_NAME\n  backend:\n    image: $WERF_GEODATA_BACKEND_DOCKER_IMAGE_NAME\n",
               "aliases": null,
               "flags": {
                 "allow-includes-update": {
@@ -6179,7 +6179,7 @@
             {
               "name": "up [IMAGE_NAME...] [options] [--docker-compose-options=\"OPTIONS\"] [--docker-compose-command-options=\"OPTIONS\"] [--] [SERVICE...]",
               "description": "Run docker-compose up command with forwarded image names.",
-              "longDescription": "Run docker-compose up command with forwarded image names.\nImage environment name format: $WERF_\u003cFORMATTED_WERF_IMAGE_NAME\u003e_DOCKER_IMAGE_NAME                  \n($WERF_DOCKER_IMAGE_NAME for nameless image).\n\u003cFORMATTED_WERF_IMAGE_NAME\u003e is werf image name from werf.yaml modified according to the following   \nrules:\n- all characters are uppercase (app -\u003e APP);\n- charset /- is replaced with _ (DEV/APP-FRONTEND -\u003e DEV_APP_FRONTEND).\nIf one or more IMAGE_NAME parameters specified, werf will build and forward only these images.\nGiven the following werf configuration:\n# werf.yaml\nproject: x\nconfigVersion: 1\n---\nimage: frontend\ndockerfile: frontend.Dockerfile\n---\nimage: geodata-backend\ndockerfile: backend.Dockerfile\nUse described images as follows in your docker compose configuration:\n# docker-compose.yaml\nservices:\n  frontend:\n    image: $WERF_FRONTEND_DOCKER_IMAGE_NAME\n  backend:\n    image: $WERF_GEODATA_BACKEND_DOCKER_IMAGE_NAME\n",
+              "longDescription": "Run docker-compose up command with forwarded image names.\nImage environment name format: $WERF_\u003cFORMATTED_WERF_IMAGE_NAME\u003e_DOCKER_IMAGE_NAME                \n($WERF_DOCKER_IMAGE_NAME for nameless image).\n\u003cFORMATTED_WERF_IMAGE_NAME\u003e is werf image name from werf.yaml modified according to the following \nrules:\n- all characters are uppercase (app -\u003e APP);\n- charset /- is replaced with _ (DEV/APP-FRONTEND -\u003e DEV_APP_FRONTEND).\nIf one or more IMAGE_NAME parameters specified, werf will build and forward only these images.\nGiven the following werf configuration:\n# werf.yaml\nproject: x\nconfigVersion: 1\n---\nimage: frontend\ndockerfile: frontend.Dockerfile\n---\nimage: geodata-backend\ndockerfile: backend.Dockerfile\nUse described images as follows in your docker compose configuration:\n# docker-compose.yaml\nservices:\n  frontend:\n    image: $WERF_FRONTEND_DOCKER_IMAGE_NAME\n  backend:\n    image: $WERF_GEODATA_BACKEND_DOCKER_IMAGE_NAME\n",
               "aliases": null,
               "flags": {
                 "allow-includes-update": {
@@ -7087,7 +7087,7 @@
         {
           "name": "converge",
           "description": "Build and push images, then deploy application into Kubernetes",
-          "longDescription": "Build and push images, then deploy application into Kubernetes.\n\nThe result of converge command is an application deployed into Kubernetes for current git state.    \nCommand will create release and wait until all resources of the release will become ready.\n\nEnvironment is a required param for the deploy by default, because it is needed to construct Helm   \nRelease name and Kubernetes Namespace. Either --env or $WERF_ENV should be specified for command.",
+          "longDescription": "Build and push images, then deploy application into Kubernetes.\n\nThe result of converge command is an application deployed into Kubernetes for current git state.  \nCommand will create release and wait until all resources of the release will become ready.\n\nEnvironment is a required param for the deploy by default, because it is needed to construct Helm \nRelease name and Kubernetes Namespace. Either --env or $WERF_ENV should be specified for command.",
           "aliases": null,
           "flags": {
             "add-annotation": {
@@ -8117,7 +8117,7 @@
         {
           "name": "dismiss",
           "description": "Delete werf release from Kubernetes",
-          "longDescription": "Delete application from Kubernetes.\n\nHelm Release will be purged and optionally Kubernetes Namespace.\n\nEnvironment is a required param for the dismiss by default, because it is needed to construct Helm  \nRelease name and Kubernetes Namespace. Either --env or $WERF_ENV should be specified for command.",
+          "longDescription": "Delete application from Kubernetes.\n\nHelm Release will be purged and optionally Kubernetes Namespace.\n\nEnvironment is a required param for the dismiss by default, because it is needed to construct     \nHelm Release name and Kubernetes Namespace. Either --env or $WERF_ENV should be specified for     \ncommand.",
           "aliases": null,
           "flags": {
             "allow-includes-update": {
@@ -8656,7 +8656,7 @@
         {
           "name": "export [IMAGE_NAME...] [options]",
           "description": "Export images",
-          "longDescription": "Export images to an arbitrary repository according to a template specified by the --tag option      \n(build if needed).\nThe tag may contain the following shortcuts:\n- %image%, %image_slug% or %image_safe_slug% to use the image name (necessary if there is more than \none image in the werf config);\n- %image_content_based_tag% to use a content-based tag.\nAll meta-information related to werf is removed from the exported images, and then images are       \ncompletely under the user's responsibility.",
+          "longDescription": "Export images to an arbitrary repository according to a template specified by the --tag option    \n(build if needed).\nThe tag may contain the following shortcuts:\n- %image%, %image_slug% or %image_safe_slug% to use the image name (necessary if there is more    \nthan one image in the werf config);\n- %image_content_based_tag% to use a content-based tag.\nAll meta-information related to werf is removed from the exported images, and then images are     \ncompletely under the user's responsibility.",
           "aliases": null,
           "flags": {
             "add-label": {
@@ -15158,7 +15158,7 @@
                 {
                   "name": "generate-secret-key",
                   "description": "Generate hex encryption key",
-                  "longDescription": "Generate hex encryption key.\nFor further usage, the encryption key should be saved in $WERF_SECRET_KEY or .werf_secret_key file.",
+                  "longDescription": "Generate hex encryption key.\nFor further usage, the encryption key should be saved in $WERF_SECRET_KEY or .werf_secret_key     \nfile.",
                   "aliases": null,
                   "flags": {
                     "debug": {
@@ -18111,7 +18111,7 @@
             {
               "name": "cleanup",
               "description": "Cleanup old unused werf cache and data of all projects on host machine.",
-              "longDescription": "Cleanup old unused werf cache and data of all projects on host machine.\n\nThe data include:\n* Lost Docker containers and images from interrupted builds.\n* Old service tmp dirs, which werf creates during every build, converge and other commands.\n* Local cache:\n  * remote Git clones cache;\n  * Git worktree cache.\n\nIt is safe to run this command periodically by automated cleanup job in parallel with other werf    \ncommands such as build, converge and cleanup.",
+              "longDescription": "Cleanup old unused werf cache and data of all projects on host machine.\n\nThe data include:\n* Lost Docker containers and images from interrupted builds.\n* Old service tmp dirs, which werf creates during every build, converge and other commands.\n* Local cache:\n  * remote Git clones cache;\n  * Git worktree cache.\n\nIt is safe to run this command periodically by automated cleanup job in parallel with other werf  \ncommands such as build, converge and cleanup.",
               "aliases": null,
               "flags": {
                 "allowed-backend-storage-volume-usage": {
@@ -18290,7 +18290,7 @@
             {
               "name": "purge",
               "description": "Purge werf images, cache and other data for all projects on host machine",
-              "longDescription": "Purge werf images, cache and other data for all projects on host machine.\n\nThe data include:\n* Old service tmp dirs, which werf creates during every build, converge and other commands.\n* Local cache:\n  * remote Git clones cache;\n  * Git worktree cache.\n* Shared context:\n  * Mounts which persists between several builds (mounts from build_dir).\n\nWARNING: Do not run this command during any other werf command is working on the host machine. This \ncommand is supposed to be run manually.",
+              "longDescription": "Purge werf images, cache and other data for all projects on host machine.\n\nThe data include:\n* Old service tmp dirs, which werf creates during every build, converge and other commands.\n* Local cache:\n  * remote Git clones cache;\n  * Git worktree cache.\n* Shared context:\n  * Mounts which persists between several builds (mounts from build_dir).\n\nWARNING: Do not run this command during any other werf command is working on the host machine.    \nThis command is supposed to be run manually.",
               "aliases": null,
               "flags": {
                 "container-registry-mirror": {
@@ -19335,7 +19335,7 @@
         {
           "name": "lint [IMAGE_NAME...]",
           "description": "Lint Helm chart",
-          "longDescription": "Lint Helm chart. This command will calculate digests and build (if needed) all images defined in    \nthe werf.yaml.",
+          "longDescription": "Lint Helm chart. This command will calculate digests and build (if needed) all images defined in  \nthe werf.yaml.",
           "aliases": null,
           "flags": {
             "add-annotation": {
@@ -20921,7 +20921,7 @@
         {
           "name": "plan",
           "description": "Prepare deploy plan and show how resources in a Kubernetes cluster would change on next deploy",
-          "longDescription": "Prepare deploy plan and show how resources in a Kubernetes cluster would change on next deploy.\n\nEnvironment is a required param by default, because it is needed to construct Helm Release name and \nKubernetes Namespace. Either --env or $WERF_ENV should be specified for command.",
+          "longDescription": "Prepare deploy plan and show how resources in a Kubernetes cluster would change on next deploy.\n\nEnvironment is a required param by default, because it is needed to construct Helm Release name   \nand Kubernetes Namespace. Either --env or $WERF_ENV should be specified for command.",
           "aliases": null,
           "flags": {
             "add-annotation": {
@@ -22134,7 +22134,7 @@
         {
           "name": "render [IMAGE_NAME...]",
           "description": "Render Kubernetes templates",
-          "longDescription": "Render Kubernetes templates. This command will calculate digests and build (if needed) all images   \ndefined in the werf.yaml.",
+          "longDescription": "Render Kubernetes templates. This command will calculate digests and build (if needed) all images \ndefined in the werf.yaml.",
           "aliases": null,
           "flags": {
             "add-annotation": {
@@ -22873,7 +22873,7 @@
         {
           "name": "rollback",
           "description": "Rollback the Helm release",
-          "longDescription": "Rollback the Helm release.\n\nRollback to the previous revision by default. Use --revision to specify the revision to rollback    \nto. Should be run inside of a werf project directory, otherwise --namespace and --release must be   \nspecified.\n\nThe result of rollback command is an application deployed into Kubernetes. Command will create the  \nnew release based on the one we rollback to and wait until all resources of the release will become \nready.",
+          "longDescription": "Rollback the Helm release.\n\nRollback to the previous revision by default. Use --revision to specify the revision to rollback  \nto. Should be run inside of a werf project directory, otherwise --namespace and --release must be \nspecified.\n\nThe result of rollback command is an application deployed into Kubernetes. Command will create    \nthe new release based on the one we rollback to and wait until all resources of the release will  \nbecome ready.",
           "aliases": null,
           "flags": {
             "add-annotation": {
@@ -24181,7 +24181,7 @@
             {
               "name": "merge",
               "description": "Merge per-image SBOMs into a product-level SBOM",
-              "longDescription": "Merge per-image CycloneDX 1.6 SBOMs into a single product/module-level SBOM.\n\nTakes a JSON mapping file (image name -\u003e sha256 digest) as input, pulls per-image SBOMs from the    \ncontainer registry, and produces an aggregated SBOM with preserved dependency graphs.\n\nTwo ISPRAS-defined output formats are supported:\n- \"container\": hierarchical — each image becomes a top-level container component with nested        \npackages.\n- \"oss\": flat — all packages from all images are merged into a deduplicated flat list.\n\nGOST properties (attack_surface, security_function) are aggregated bottom-up using the \"yes \u003e       \nindirect \u003e no\" precedence rule.",
+              "longDescription": "Merge per-image CycloneDX 1.6 SBOMs into a single product/module-level SBOM.\n\nTakes a JSON mapping file (image name -\u003e sha256 digest) as input, pulls per-image SBOMs from the  \ncontainer registry, and produces an aggregated SBOM with preserved dependency graphs.\n\nTwo ISPRAS-defined output formats are supported:\n- \"container\": hierarchical — each image becomes a top-level container component with nested      \npackages.\n- \"oss\": flat — all packages from all images are merged into a deduplicated flat list.\n\nGOST properties (attack_surface, security_function) are aggregated bottom-up using the \"yes \u003e     \nindirect \u003e no\" precedence rule.",
               "aliases": null,
               "flags": {
                 "app-name": {
@@ -24360,7 +24360,7 @@
             {
               "name": "validate",
               "description": "Validate SBOM file against ISPRAS schemas",
-              "longDescription": "Validate CycloneDX JSON SBOM files against ISPRAS schemas using sbom-checker.\n\nThe command runs sbom-checker inside a Docker container and reports validation results. Supports    \nboth OSS and container SBOM types.",
+              "longDescription": "Validate CycloneDX JSON SBOM files against ISPRAS schemas using sbom-checker.\n\nThe command runs sbom-checker inside a Docker container and reports validation results. Supports  \nboth OSS and container SBOM types.",
               "aliases": null,
               "flags": {
                 "check-vcs": {
@@ -24545,7 +24545,7 @@
             {
               "name": "copy",
               "description": "Copy stages between container registry and archive",
-              "longDescription": "Copy project stages between storages.\n\nSupported copy scenarios:\n\t• Container registry to container registry\n\t• Container registry to archive\n\t• Archive to container registry\n\nBy default copies all project stages. Use --all=false to copy only stages relevant for the current  \ngit commit. This requires a working directory with git repository and performs build to identify    \ncurrent stages.\n\nNote: this flag is ignored when copying from archive to container registry.\n",
+              "longDescription": "Copy project stages between storages.\n\nSupported copy scenarios:\n\t• Container registry to container registry\n\t• Container registry to archive\n\t• Archive to container registry\n\nBy default copies all project stages. Use --all=false to copy only stages relevant for the        \ncurrent git commit. This requires a working directory with git repository and performs build to   \nidentify current stages.\n\nNote: this flag is ignored when copying from archive to container registry.\n",
               "aliases": null,
               "flags": {
                 "all": {
@@ -25050,7 +25050,7 @@
         {
           "name": "verify --image-ref \u003cimage-ref\u003e [--image-ref \u003cimage-ref\u003e...] --verify-roots=\u003croot-ca.pem\u003e [--verify-manifest] [--verify-elf-files]",
           "description": "Verify images",
-          "longDescription": "Verify the integrity of built images by checking signatures of manifests and ELF files using        \nspecific image references.\n\nThe command outputs detailed logs about the verification process.",
+          "longDescription": "Verify the integrity of built images by checking signatures of manifests and ELF files using      \nspecific image references.\n\nThe command outputs detailed logs about the verification process.",
           "aliases": null,
           "flags": {
             "container-registry-mirror": {
@@ -47587,11 +47587,262 @@
     },
     {
       "name": "package",
-      "description": "Operate packages",
-      "longDescription": "Operate packages",
+      "description": "Package build and bootstrap tool for containerized packages",
+      "longDescription": "A plugin for building and bootstrapping packages.\n\nThis plugin helps you:\n\t• Bootstrap new packages from templates with registry configuration\n\t• Build containerized packages and push them to container registries\n\t• Manage package lifecycle with semantic versioning\n",
       "aliases": null,
       "flags": {},
-      "subcommands": null
+      "subcommands": [
+        {
+          "name": "bootstrap",
+          "description": "Bootstrap a new package (module or application)",
+          "longDescription": "Bootstrap a new package from templates.\n\nUse 'bootstrap module \u003cname\u003e' for a module (with hooks, CRDs).\nUse 'bootstrap app \u003cname\u003e' for an application package (per-instance resources).\n",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "app \u003cname\u003e",
+              "description": "Bootstrap a new application package",
+              "longDescription": "Bootstrap a new application package from templates.\n\n  • Creates a package with type Application in package.yaml\n  • Includes hooks\n  • Initializes a git repository with an initial commit\n",
+              "aliases": [
+                "application"
+              ],
+              "flags": {
+                "extended": {
+                  "description": "Generate extended files in the package",
+                  "shorthand": "",
+                  "global": false
+                },
+                "hooks": {
+                  "description": "Generate hooks in the package",
+                  "shorthand": "",
+                  "global": false
+                },
+                "output": {
+                  "description": "Custom path for the package (default: \u003ccwd\u003e/\u003cname\u003e)",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "werf": {
+                  "description": "Use werf file for images",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "module \u003cname\u003e",
+              "description": "Bootstrap a new module package",
+              "longDescription": "Bootstrap a new module package from templates.\n\n  • Creates a package with type Module in package.yaml\n  • Includes hooks and CRDs; templates use package name\n  • Initializes a git repository with an initial commit\n",
+              "aliases": null,
+              "flags": {
+                "extended": {
+                  "description": "Generate extended files in the package",
+                  "shorthand": "",
+                  "global": false
+                },
+                "hooks": {
+                  "description": "Generate hooks in the package",
+                  "shorthand": "",
+                  "global": false
+                },
+                "output": {
+                  "description": "Custom path for the package (default: \u003ccwd\u003e/\u003cname\u003e)",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "werf": {
+                  "description": "Use werf file for images",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "build --version \u003cversion\u003e [--repository \u003crepository\u003e] [--force]",
+          "description": "Build and push a package to a container registry",
+          "longDescription": "Build a package using Werf and push it to a container registry.\n\nThis command:\n  • Validates the package structure (package.yaml)\n  • Builds container images using Werf in a Docker container\n  • Pushes the built images to the specified registry\n  • Tags images with semantic version\n\nEnvironment Variables:\n  PACKAGE_BUILD_REPOSITORY                Registry URL for build command\n  PACKAGE_BUILD_REPOSITORY_USER           Registry username for authentication\n  PACKAGE_BUILD_REPOSITORY_TOKEN          Registry token for authentication\n  PACKAGE_BUILD_FINAL_REPOSITORY          Final registry URL for the published artifact\n  PACKAGE_BUILD_FINAL_REPOSITORY_USER     Final registry username for authentication\n  PACKAGE_BUILD_FINAL_REPOSITORY_TOKEN    Final registry token for authentication\n  PACKAGE_BUILD_INSECURE                  Allow plain HTTP and skip TLS verification\n",
+          "aliases": null,
+          "flags": {
+            "debug": {
+              "description": "enable debug logging",
+              "shorthand": "",
+              "global": false
+            },
+            "final-repo": {
+              "description": "Final repository (env: PACKAGE_BUILD_FINAL_REPOSITORY)",
+              "shorthand": "",
+              "global": false
+            },
+            "final-token": {
+              "description": "Final registry token (env: PACKAGE_BUILD_FINAL_REPOSITORY_TOKEN)",
+              "shorthand": "",
+              "global": false
+            },
+            "final-user": {
+              "description": "Final registry user (env: PACKAGE_BUILD_FINAL_REPOSITORY_USER)",
+              "shorthand": "",
+              "global": false
+            },
+            "force": {
+              "description": "force update version in registry",
+              "shorthand": "f",
+              "global": false
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification for every registry used by the build, including the final repository and base-image pulls (env: PACKAGE_BUILD_INSECURE)",
+              "shorthand": "",
+              "global": false
+            },
+            "repo": {
+              "description": "Repository (env: PACKAGE_BUILD_REPOSITORY)",
+              "shorthand": "r",
+              "global": false
+            },
+            "sign": {
+              "description": "sign package with certificate and key. --sign-cert and --sign-key are required",
+              "shorthand": "",
+              "global": false
+            },
+            "sign-cert": {
+              "description": "sign certificate path or base64 string (env: PACKAGE_BUILD_SIGN_CERT)",
+              "shorthand": "",
+              "global": false
+            },
+            "sign-key": {
+              "description": "sign key path or base64 string or vault url (env: PACKAGE_BUILD_SIGN_KEY)",
+              "shorthand": "",
+              "global": false
+            },
+            "token": {
+              "description": "Registry token (env: PACKAGE_BUILD_REPOSITORY_TOKEN)",
+              "shorthand": "t",
+              "global": false
+            },
+            "user": {
+              "description": "Registry user (env: PACKAGE_BUILD_REPOSITORY_USER)",
+              "shorthand": "u",
+              "global": false
+            },
+            "version": {
+              "description": "Package version",
+              "shorthand": "v",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "doc [linter]",
+          "description": "Show documentation for verify linters and rules",
+          "longDescription": "Show documentation for the linters run by 'package verify'.\n\nUse 'package doc' to list every linter.\n\nUse 'package doc \u003clinter\u003e' to see what a linter checks, the rules it runs with\ntheir default severities, and the .pkglint.yaml keys that configure it.\n\nUse 'package doc \u003clinter\u003e --rule \u003crule\u003e' to see what makes a single rule report a\nfinding and how to satisfy it.\n\nA rule's impact caps the severity of its findings: ignored hides them, warn\nreports them without failing, error fails verification.",
+          "aliases": null,
+          "flags": {
+            "rule": {
+              "description": "Show documentation for a single rule of the linter",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "render",
+          "description": "Render package templates to Kubernetes manifests",
+          "longDescription": "Render a package's templates to Kubernetes manifests using stubbed runtime values.\n\nUse 'package render' in a package directory to preview the manifests that would be\ninstalled in a cluster. Image digests, registry and credentials are stubbed, so the\noutput is a smoke-check preview, not a faithful representation of a real cluster.\n\nUse 'package render --remote \u003cregistry-path\u003e/\u003cpackage\u003e:\u003cversion\u003e' to render a\npublished bundle image instead of the current directory. The image must exist and\nmust carry an explicit tag or digest. Only the bundle image is renderable: the\nrelease image ships without a templates directory.\n\nRegistry credentials default to the ambient Docker keychain. Pass --remote-user and\n--remote-password to authenticate explicitly, or set them in the environment:\n\n  PACKAGE_REMOTE_USER      fallback for --remote-user\n  PACKAGE_REMOTE_PASSWORD  fallback for --remote-password\n\nUse --file to print only the manifests rendered from the template with that file\nname, and --render-file to write a clean render (without '# Source:' headers) to a file.",
+          "aliases": null,
+          "flags": {
+            "file": {
+              "description": "Show only manifests rendered from the template with this file name",
+              "shorthand": "",
+              "global": false
+            },
+            "remote": {
+              "description": "Render a published bundle image by its reference, \u003cregistry-path\u003e/\u003cpackage\u003e:\u003cversion\u003e",
+              "shorthand": "r",
+              "global": false
+            },
+            "remote-password": {
+              "description": "Registry password or token for --remote (env: PACKAGE_REMOTE_PASSWORD)",
+              "shorthand": "",
+              "global": false
+            },
+            "remote-user": {
+              "description": "Registry user for --remote (env: PACKAGE_REMOTE_USER)",
+              "shorthand": "",
+              "global": false
+            },
+            "render-file": {
+              "description": "Write the clean render (without '# Source:' headers) to this file path",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "verify",
+          "description": "Verify a package structure and configuration",
+          "longDescription": "Verify a package structure and configuration.\n\nUse 'package verify' to verify the current package directory against the\n'static' linter settings.\n\nUse 'package verify remote \u003cregistry-path\u003e \u003cpackage\u003e' to verify a published\npackage instead.\n\nLinter configuration can be customized via .pkglint.yaml in the package root.",
+          "aliases": null,
+          "flags": {
+            "hide-warnings": {
+              "description": "Hide warning-level messages",
+              "shorthand": "",
+              "global": false
+            },
+            "lint-config": {
+              "description": "Path to lint config file",
+              "shorthand": "",
+              "global": false
+            },
+            "show-ignored": {
+              "description": "Show ignored-level messages",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": [
+            {
+              "name": "remote \u003cregistry-path\u003e \u003cpackage\u003e",
+              "description": "Verify a published package from a registry",
+              "longDescription": "Verify a published package.\n\nThe arguments are the registry path the package is published under and the package\nname. Build publishes two images per version, both tagged with that version:\n\n  bundle   \u003cregistry-path\u003e/\u003cpackage\u003e:\u003cversion\u003e\n           checked against the 'remote.bundle' linter settings\n  release  \u003cregistry-path\u003e/\u003cpackage\u003e/version:\u003cversion\u003e\n           checked against the 'remote.release' linter settings\n\nWithout --version the latest published version is verified, chosen by comparing the\nrepository tags as semver. The bundle image carries the package itself and is always\nverified; add --release to verify the release image alongside it, in which case both\nare verified concurrently and each must exist.\n\nLint settings are read from the working directory, not from the image: published\nimages do not carry a .pkglint.yaml.",
+              "aliases": null,
+              "flags": {
+                "hide-warnings": {
+                  "description": "Hide warning-level messages",
+                  "shorthand": "",
+                  "global": true
+                },
+                "lint-config": {
+                  "description": "Path to lint config file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "release": {
+                  "description": "Also verify the release image published for the version",
+                  "shorthand": "",
+                  "global": false
+                },
+                "show-ignored": {
+                  "description": "Show ignored-level messages",
+                  "shorthand": "",
+                  "global": true
+                },
+                "version": {
+                  "description": "Version to verify (default: the latest published version)",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "snapshot",
