@@ -43,3 +43,8 @@ git:
 shell:
   install:
   - cd /src
+---
+{{- $_ := set . "FuzzEngine" "go" }}
+{{- $_ := set . "FuzzSrcImage" (printf "%s/%s-artifact" .ModuleName .ImageName) }}
+{{- $_ := set . "FuzzPackages" "./src" }}
+{{- include "fuzz image" . }}
