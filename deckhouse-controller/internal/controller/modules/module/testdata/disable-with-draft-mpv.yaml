@@ -1,0 +1,25 @@
+---
+# Disabling a module whose package version is only a draft: it is not enabled by any
+# bundle, so the controller drops it to the disabled/not-ready state.
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+spec:
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0
+  enabled: false
+status:
+  summary:
+    state: Ready
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: test-source-test-module-v1.0.0
+  labels:
+    packages.deckhouse.io/draft: "true"
+spec:
+  packageName: test-module
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0

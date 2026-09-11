@@ -81,7 +81,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				ConditionInstalled: {metav1.ConditionFalse, "Disabled"},
 				ConditionReady:     {metav1.ConditionFalse, "Disabled"},
 			},
-			state:   statePending,
+			state:   StatePending,
 			message: "Installation is blocked: the module is disabled",
 			tip:     "Enable the module to start the installation.",
 		},
@@ -94,7 +94,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				ConditionEnabled:   {metav1.ConditionFalse, "DependencyNotEnabled"},
 				ConditionInstalled: {metav1.ConditionFalse, "DependencyNotEnabled"},
 			},
-			state:   statePending,
+			state:   StatePending,
 			message: "Installation is blocked: a required module is not enabled",
 			tip:     "Enable the required module listed in the condition message. The installation will continue automatically.",
 		},
@@ -107,7 +107,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				ConditionEnabled:   {metav1.ConditionFalse, "EnabledScriptError"},
 				ConditionInstalled: {metav1.ConditionFalse, "EnabledScriptError"},
 			},
-			state:   stateFailed,
+			state:   StateFailed,
 			message: "Installation failed: the module's enabled-script failed",
 			tip:     "Check the Deckhouse controller logs for the script error. Fix the script or the cluster state it inspects.",
 		},
@@ -122,7 +122,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				ConditionEnabled:   {metav1.ConditionFalse, "CustomRuleForbid"},
 				ConditionInstalled: {metav1.ConditionFalse, "CustomRuleForbid"},
 			},
-			state:   statePending,
+			state:   StatePending,
 			message: "Installation is blocked: CustomRuleForbid",
 			tip:     "",
 		},
@@ -142,7 +142,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				ConditionManaged:              {metav1.ConditionUnknown, "Disabled"},
 				ConditionConfigurationApplied: {metav1.ConditionUnknown, "Disabled"},
 			},
-			state:   stateSuspended,
+			state:   StateSuspended,
 			message: "Module is suspended: the module was disabled",
 			tip:     "Enable the module to resume. The controller will restore all conditions and resume operation automatically.",
 		},
@@ -156,7 +156,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				ConditionInstalled: {metav1.ConditionFalse, "DependencyNotEnabled"},
 				ConditionScaled:    {metav1.ConditionUnknown, "DependencyNotEnabled"},
 			},
-			state:   stateSuspended,
+			state:   StateSuspended,
 			message: "Module is suspended: requirements unmet",
 			tip:     "Solve the module requirements. After it, the controller will automatically restore all conditions and resume operation.",
 		},
@@ -170,7 +170,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				ConditionEnabled: {metav1.ConditionTrue, "Enabled"},
 				ConditionReady:   {metav1.ConditionTrue, "Ready"},
 			},
-			state:   stateReady,
+			state:   StateReady,
 			message: "",
 			tip:     "",
 		},
@@ -190,7 +190,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			wantConds: map[string]*expectedCondition{
 				ConditionScaled: {metav1.ConditionFalse, "Reconciling"},
 			},
-			state:   stateUpdating,
+			state:   StateUpdating,
 			message: "Update applied: the new version's workload is rolling out",
 			tip:     "Wait for the rollout to finish. If it stalls, check pod status and events.",
 		},
@@ -200,7 +200,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				withVersionChanged(),
 				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionUnknown, ""),
 			),
-			state:   stateUpdating,
+			state:   StateUpdating,
 			message: "Update applied: waiting for a workload the health monitor can confirm",
 			tip:     "Either no report has arrived yet, or the chart ships no Deployment or StatefulSet, the only kinds the health monitor watches.",
 		},
@@ -213,14 +213,14 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			name: "deleting: disabled module is torn down",
 			opts: []mappingOption{
 				installed(),
-				withInternalCondition(intRequirementsMet, metav1.ConditionFalse, reasonDisabled),
+				withInternalCondition(intRequirementsMet, metav1.ConditionFalse, ReasonDisabled),
 				withDeleting(),
 			},
 			wantConds: map[string]*expectedCondition{
 				ConditionEnabled:   {metav1.ConditionFalse, condmap.ReasonDeleting},
 				ConditionInstalled: {metav1.ConditionFalse, condmap.ReasonDeleting},
 			},
-			state:   stateDeleting,
+			state:   StateDeleting,
 			message: "Module is being deleted",
 			tip:     "No action is required. The resource disappears once its release is taken down.",
 		},
@@ -280,6 +280,6 @@ func TestComputeAndApplyConditionsOnDeletion(t *testing.T) {
 		assert.Equal(t, metav1.ConditionFalse, cond.Status, "condition %s status", cond.Type)
 		assert.Equal(t, condmap.ReasonDeleting, cond.Reason, "condition %s reason", cond.Type)
 	}
-	assert.Equal(t, stateDeleting, module.Status.Summary.State)
+	assert.Equal(t, StateDeleting, module.Status.Summary.State)
 	assert.Empty(t, module.Status.CurrentVersion.Version)
 }
