@@ -429,6 +429,10 @@ entries:
                     en: Chaos engineering
                     ru: Хаос-инжиниринг
                   url: /admin/configuration/high-reliability-and-availability/chaos-engineering.html
+                - title:
+                    en: Virtual machine fault tolerance and balancing
+                    ru: Отказоустойчивость и балансировка виртуальных машин
+                  url: /admin/configuration/high-reliability-and-availability/vm-reliability.html
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
@@ -477,6 +481,10 @@ entries:
                         en: Migrating container runtime to ContainerdV2
                         ru: Миграция container runtime на ContainerdV2
                       url: /admin/configuration/platform-scaling/node/migrating.html
+                    - title:
+                        en: Maintenance of nodes running virtual machines
+                        ru: Обслуживание узлов с виртуальными машинами
+                      url: /admin/configuration/platform-scaling/node/vm-node-maintenance.html
             - title:
                 en: Application scaling and resource management
                 ru: Масштабирование приложений и управление ресурсами
@@ -650,6 +658,10 @@ entries:
                         ru: Настройка SDN в кластере DKP
                       url: /admin/configuration/network/sdn/configure.html
                 - title:
+                    en: Virtual machine networking
+                    ru: Сеть виртуальных машин
+                  url: /admin/configuration/network/vm-network.html
+                - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
                   folders:
@@ -790,6 +802,86 @@ entries:
                         ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
                       url: /admin/configuration/storage/external/yadro.html
             - title:
+                en: Virtualization
+                ru: Виртуализация
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/virtualization/
+                - title:
+                    en: Installation and configuration
+                    ru: Установка и настройка
+                  folders:
+                    - title:
+                        en: Requirements and limits
+                        ru: Требования и пределы
+                      url: /admin/configuration/virtualization/requirements.html
+                    - title:
+                        en: Installing and updating the module
+                        ru: Установка и обновление модуля
+                      url: /admin/configuration/virtualization/install.html
+                    - title:
+                        en: Module parameters
+                        ru: Параметры модуля
+                      url: /admin/configuration/virtualization/settings.html
+                - title:
+                    en: Images and storage
+                    ru: Образы и хранилище
+                  folders:
+                    - title:
+                        en: Virtual machine image storage
+                        ru: Хранилище образов виртуальных машин
+                      url: /admin/configuration/virtualization/image-storage.html
+                    - title:
+                        en: Storage for disks and images
+                        ru: Хранилища для дисков и образов
+                      url: /admin/configuration/virtualization/storage-classes.html
+                    - title:
+                        en: Cluster images
+                        ru: Кластерные образы
+                      url: /admin/configuration/virtualization/cluster-images.html
+                - title:
+                    en: Virtual machine classes
+                    ru: Классы виртуальных машин
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/virtualization/vm-classes.html
+                    - title:
+                        en: Virtual processor
+                        ru: Виртуальный процессор
+                      url: /admin/configuration/virtualization/vm-classes-cpu.html
+                    - title:
+                        en: Placement across nodes
+                        ru: Размещение по узлам
+                      url: /admin/configuration/virtualization/vm-classes-placement.html
+                    - title:
+                        en: Sizing policy
+                        ru: Политика сайзинга
+                      url: /admin/configuration/virtualization/vm-classes-sizing.html
+                    - title:
+                        en: CPU oversubscription
+                        ru: Переподписка на CPU
+                      url: /admin/configuration/virtualization/cpu-oversubscription.html
+                - title:
+                    en: Device passthrough
+                    ru: Проброс устройств
+                  folders:
+                    - title:
+                        en: USB devices
+                        ru: USB-устройства
+                      url: /admin/configuration/virtualization/usb-devices.html
+                    - title:
+                        en: GPU devices
+                        ru: GPU-устройства
+                      url: /admin/configuration/virtualization/gpu-devices.html
+                    - title:
+                        en: PCI devices
+                        ru: PCI-устройства
+                      url: /admin/configuration/virtualization/pci-devices.html
+            - title:
                 en: Security
                 ru: Безопасность
               folders:
@@ -813,6 +905,10 @@ entries:
                         en: Runtime audit
                         ru: Рантайм-аудит
                       url: /admin/configuration/security/events/runtime-audit.html
+                    - title:
+                        en: Virtualization event audit
+                        ru: Аудит событий виртуализации
+                      url: /admin/configuration/security/events/virtualization-audit.html
                 - title:
                     en: Security policies
                     ru: Политики безопасности
@@ -1069,6 +1165,22 @@ entries:
                     ru: Подключение физических сетевых интерфейсов к подам DPDK-приложений
                   url: /user/network/sdn/underlay.html
             - title:
+                en: Virtual machines
+                ru: Виртуальные машины
+              folders:
+                - title:
+                    en: IP addresses of virtual machines
+                    ru: IP-адреса виртуальных машин
+                  url: /user/network/virtualization/vm-ip-addresses.html
+                - title:
+                    en: Accessing applications on a virtual machine
+                    ru: Доступ к приложениям на виртуальной машине
+                  url: /user/network/virtualization/vm-publishing.html
+                - title:
+                    en: Additional network interfaces
+                    ru: Дополнительные сетевые интерфейсы
+                  url: /user/network/virtualization/vm-additional-interfaces.html
+            - title:
                 en: Intra-cluster communication
                 ru: Внутрикластерное взаимодействие
               url: /user/network/intra-cluster.html
@@ -1247,9 +1359,112 @@ entries:
               draft: true
         - title:
             en: Virtual machines
-            ru: TODO Виртуальные машины
-          url: /user/virtual-machines.html
-          draft: true
+            ru: Виртуальные машины
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/virtualization/
+            - title:
+                en: Quick start
+                ru: Быстрый старт
+              url: /user/virtualization/quickstart.html
+            - title:
+                en: Virtual machine images
+                ru: Образы виртуальных машин
+              url: /user/virtualization/images.html
+            - title:
+                en: Disks
+                ru: Диски
+              folders:
+                - title:
+                    en: Virtual machine disks
+                    ru: Диски виртуальных машин
+                  url: /user/virtualization/disks.html
+                - title:
+                    en: Resizing and migrating disks
+                    ru: Изменение размера и миграция дисков
+                  url: /user/virtualization/disk-operations.html
+                - title:
+                    en: Exporting disk data
+                    ru: Экспорт данных диска
+                  url: /user/virtualization/data-export.html
+            - title:
+                en: Working with a virtual machine
+                ru: Работа с виртуальной машиной
+              folders:
+                - title:
+                    en: Creating a virtual machine
+                    ru: Создание виртуальной машины
+                  url: /user/virtualization/vm-create.html
+                - title:
+                    en: CPU and memory
+                    ru: Процессор и память
+                  url: /user/virtualization/vm-resources.html
+                - title:
+                    en: Guest OS and bootloader
+                    ru: Гостевая ОС и загрузчик
+                  url: /user/virtualization/vm-os-and-boot.html
+                - title:
+                    en: Initial provisioning and the guest OS agent
+                    ru: Начальная инициализация и агент гостевой ОС
+                  url: /user/virtualization/vm-provisioning.html
+                - title:
+                    en: Connecting to a virtual machine
+                    ru: Подключение к виртуальной машине
+                  url: /user/virtualization/vm-access.html
+                - title:
+                    en: Changing the configuration
+                    ru: Изменение конфигурации
+                  url: /user/virtualization/vm-configuration.html
+                - title:
+                    en: Placement across nodes
+                    ru: Размещение по узлам
+                  url: /user/virtualization/vm-placement.html
+                - title:
+                    en: Attaching disks and images
+                    ru: Подключение дисков и образов
+                  url: /user/virtualization/vm-block-devices.html
+                - title:
+                    en: Live migration
+                    ru: Живая миграция
+                  url: /user/virtualization/vm-migration.html
+                - title:
+                    en: Collecting debug information
+                    ru: Сбор отладочной информации
+                  url: /user/virtualization/vm-debug.html
+            - title:
+                en: Snapshots and cloning
+                ru: Снимки и клонирование
+              folders:
+                - title:
+                    en: Snapshots of disks and virtual machines
+                    ru: Снимки дисков и виртуальных машин
+                  url: /user/virtualization/snapshots.html
+                - title:
+                    en: Cloning virtual machines
+                    ru: Клонирование виртуальных машин
+                  url: /user/virtualization/vm-cloning.html
+            - title:
+                en: Virtual machine pools
+                ru: Пулы виртуальных машин
+              url: /user/virtualization/vm-pools.html
+            - title:
+                en: Device passthrough
+                ru: Проброс устройств
+              folders:
+                - title:
+                    en: USB devices
+                    ru: USB-устройства
+                  url: /user/virtualization/usb-devices.html
+                - title:
+                    en: GPU devices
+                    ru: GPU-устройства
+                  url: /user/virtualization/gpu-devices.html
+                - title:
+                    en: PCI devices
+                    ru: PCI-устройства
+                  url: /user/virtualization/pci-devices.html
         - title:
             en: Network capabilities
             ru: TODO Сетевые возможности
