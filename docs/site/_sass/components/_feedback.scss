@@ -112,7 +112,12 @@
     }
 
     .modal-window__close-btn {
+        position: absolute;
+        top: 16px;
+        right: 16px;
         color: #00122C;
+        text-decoration: none;
+        line-height: 1;
 
         &:hover {
             color: #f27474;
@@ -120,6 +125,8 @@
 
         @include breakpoints.max-w(s) {
             font-size: 15px;
+            top: 10px;
+            right: 10px;
         }
     }
     
@@ -153,7 +160,13 @@
     &--access {
         display: none;
         flex-direction: row;
+        align-items: center;
         gap: 17px;
+        
+        .window__feedback--title {
+            flex: 1;
+            padding-right: 10px;
+        }
     }
 
     &--later {
@@ -169,21 +182,24 @@
         }
 
         .window__feedback--title {
-            max-width: 256px;
-
-            @include breakpoints.max-w(xl) {
-                max-width: 200px;
-            }
+            flex: 1;
+            padding-right: 10px;
         }
     }
 
     &--error {
         display: none; 
         flex-direction: row;
+        align-items: flex-start;
         gap: 17px;
 
         @include breakpoints.max-w(xl) {
             gap: 12px;
+        }
+        
+        .window__feedback--container {
+            flex: 1;
+            padding-right: 10px;
         }
     }
 
