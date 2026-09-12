@@ -35,6 +35,8 @@ shell:
     jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
 {{- end }}
 ---
+{{ tpl (.Files.Get (printf "%sdocs/site/werf-islandkit.inc.yaml" .ModulePath)) . }}
+---
 image: web-frontend-artifact
 from: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
 final: false
@@ -95,6 +97,13 @@ git:
   - backends
   - Makefile
   - images/src
+  # Печатает site-islandkit-artifact и кладёт импортом ниже. Из git эти пути
+  # брать нельзя: в dev-режиме werf добавит локально нарендеренные копии, и
+  # они перекроют то, что собрала стадия, - страница будет собрана из старых
+  # фрагментов при свежем бандле.
+  - _includes/_generated
+  - assets/islandkit
+  - _data/islandkit_header.json
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: '**/*'
@@ -112,8 +121,23 @@ git:
   to: /rawdata/global
   stageDependencies:
     setup: ['**/*']
-{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:
+  # Шапка: фрагменты, их индекс и бандл печатает site-islandkit-artifact.
+  # Без условия по окружению - шапка нужна в любой сборке, а не только в
+  # прод-профилях, как внешние данные меню ниже.
+  - image: site-islandkit-artifact
+    add: /data/_generated
+    to: /srv/jekyll-data/site/_includes/_generated
+    before: setup
+  - image: site-islandkit-artifact
+    add: /data/islandkit_header.json
+    to: /srv/jekyll-data/site/_data/islandkit_header.json
+    before: setup
+  - image: site-islandkit-artifact
+    add: /data/islandkit-assets
+    to: /srv/jekyll-data/site/assets/islandkit
+    before: setup
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
   - image: site-external-artifacts
     add: /data/topnav.json
     to: /srv/jekyll-data/site/_data/topnav.json

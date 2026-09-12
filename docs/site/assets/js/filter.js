@@ -647,20 +647,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (openMobile) {
     const filter = document.querySelector('.filter__block');
-    const hamburgerCollapse = document.querySelector('.hamburger--collapse');
     const body = document.body;
+
+    // Закрывала эту панель кнопка-гамбургер шапки: фильтр добавлял ей класс
+    // show, и она превращалась в крестик. Шапку теперь печатает остров, её
+    // кнопка принадлежит ему и называется иначе — а одалживание чужого
+    // контрола и было тем, из-за чего два независимых блока держались за один
+    // класс. Своя кнопка создаётся здесь же, чтобы не трогать разметку
+    // фильтра.
+    let closeButton = null;
+    if (filter) {
+      closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'filter__close';
+      closeButton.textContent = document.documentElement.lang === 'ru' ? 'Закрыть' : 'Close';
+      closeButton.addEventListener('click', function () { closeFilterMobilePanel(); });
+      filter.insertBefore(closeButton, filter.firstChild);
+    }
 
     function closeFilterMobilePanel() {
       if (filter) filter.classList.remove('show');
-      if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
       if (body) body.classList.remove('filter-opened');
+      if (openMobile) {
+        // Открывалка панели — <div> без tabindex: это легаси, её разметку мы
+        // не трогаем. Но focus() по такому элементу молча ничего не делает, и
+        // фокус после закрытия падал в <body> — следующий Tab начинал обход с
+        // начала страницы. tabindex="-1" делает элемент фокусируемым
+        // программно, не добавляя его в порядок обхода клавишей Tab.
+        openMobile.setAttribute('tabindex', '-1');
+        openMobile.focus();
+      }
     }
 
     openMobile.addEventListener('click', () => {
       if (!filter) return;
       filter.classList.add('show');
-      if (hamburgerCollapse) hamburgerCollapse.classList.add('show');
       if (body) body.classList.add('filter-opened');
+      if (closeButton) closeButton.focus();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && filter && filter.classList.contains('show')) {
+        closeFilterMobilePanel();
+      }
     });
 
     if (applyButtonBlock) {
