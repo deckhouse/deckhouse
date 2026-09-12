@@ -8,4 +8,5 @@ spec:
     expectedTestBlockNames:
       - pss-baseline-functional
       - security-policy-functional
+      - security-policy-no-ranges-functional
       - security-policy-spe-pod
