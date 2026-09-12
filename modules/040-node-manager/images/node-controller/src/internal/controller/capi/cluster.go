@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,6 +36,8 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/clusterprefix"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -46,31 +49,74 @@ type ClusterReconciler struct {
 	BaseWithReader
 }
 
+var clusterReconcileRequest = []reconcile.Request{{NamespacedName: types.NamespacedName{
+	Name:      cloudProviderSecretName,
+	Namespace: cloudProviderSecretNamespace,
+}}}
+
+func isProviderTemplateSecret(namespace, name string) bool {
+	return namespace == providerTemplateSecretNamespace &&
+		strings.HasPrefix(name, "d8-cloud-provider-") &&
+		strings.HasSuffix(name, "-capi")
+}
+
+func isClusterReconcileRequest(req ctrl.Request) bool {
+	if req.Namespace == cloudProviderSecretNamespace &&
+		(req.Name == cloudProviderSecretName || req.Name == clusterConfigSecretName) {
+		return true
+	}
+
+	return isProviderTemplateSecret(req.Namespace, req.Name)
+}
+
+// ForPredicates limits the primary Secret watch to inputs that can change cloud
+// cluster resources. Provider template Secrets are matched by name because the
+// active provider is discovered at runtime.
+func (r *ClusterReconciler) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return isClusterReconcileRequest(ctrl.Request{NamespacedName: types.NamespacedName{
+			Name:      obj.GetName(),
+			Namespace: obj.GetNamespace(),
+		}})
+	})}
+}
+
 func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
-	// WithEventFilter is controller-wide, so it also covers the NodeGroup watch below.
-	// NodeGroup events must always pass — on a static cluster the cloud-provider Secret may not
-	// exist, and NodeGroup is the only trigger for ensureStaticCluster. The Secret (primary For)
-	// is filtered down to the cloud-provider one.
-	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if _, ok := obj.(*deckhousev1.NodeGroup); ok {
-			return true
-		}
-		return obj.GetNamespace() == cloudProviderSecretNamespace && obj.GetName() == cloudProviderSecretName
-	}))
-	// Re-enqueue only on spec/generation changes — NodeGroup status updates must not trigger
-	// a no-op re-ensure, otherwise the createIfNotExists path logs on every status bump.
-	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(
+	enqueue := handler.EnqueueRequestsFromMapFunc(
 		func(_ context.Context, _ client.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: types.NamespacedName{
-				Name:      cloudProviderSecretName,
-				Namespace: cloudProviderSecretNamespace,
-			}}}
+			return clusterReconcileRequest
 		},
-	), builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	)
+
+	// NodeGroup status updates do not affect static cluster resources.
+	w.Watches(&deckhousev1.NodeGroup{}, enqueue,
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+
+	// Cluster templates may depend on control-plane endpoints.
+	w.Watches(&corev1.Pod{}, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetNamespace() == "kube-system" &&
+				obj.GetLabels()["component"] == "kube-apiserver" &&
+				obj.GetLabels()["tier"] == "control-plane"
+		}),
+	))
+	w.Watches(&discoveryv1.EndpointSlice{}, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetNamespace() == "default" && obj.GetName() == "kubernetes"
+		}),
+	))
+
+	// Cluster templates may use the global cluster prefix to name provider resources.
+	moduleConfig := newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig")
+	w.Watches(moduleConfig, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetName() == clusterprefix.GlobalModuleConfigName
+		}),
+	))
 }
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	if req.Name != cloudProviderSecretName || req.Namespace != cloudProviderSecretNamespace {
+	if !isClusterReconcileRequest(req) {
 		return ctrl.Result{}, nil
 	}
 
@@ -103,15 +149,44 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 		return fmt.Errorf("get cloud-provider secret: %w", err)
 	}
 
-	clusterName := string(secret.Data["capiClusterName"])
-	clusterKind := string(secret.Data["capiClusterKind"])
-	infraAPIVersion := string(secret.Data["capiClusterAPIVersion"])
+	cloudProvider := decodeCloudProviderSecret(secret.Data)
+	clusterName, _ := cloudProvider["capiClusterName"].(string)
+	clusterKind, _ := cloudProvider["capiClusterKind"].(string)
+	infraAPIVersion, _ := cloudProvider["capiClusterAPIVersion"].(string)
+	cloudType, _ := cloudProvider["type"].(string)
 
 	if clusterName == "" || clusterKind == "" {
 		return nil
 	}
+
+	if cloudType == "" {
+		return fmt.Errorf("cloud-provider secret has no type")
+	}
+
 	if infraAPIVersion == "" {
 		infraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
+	}
+
+	provider, _ := cloudProvider[cloudType].(map[string]interface{})
+	if provider == nil {
+		provider = map[string]interface{}{}
+	}
+
+	if err := r.ensureProviderInfrastructure(
+		ctx,
+		cloudType,
+		provider,
+		clusterConfig,
+		infraAPIVersion,
+		clusterKind,
+		clusterName,
+	); err != nil {
+		return err
+	}
+
+	controlPlane := deckhouseControlPlane(clusterName)
+	if err := r.applyClusterObject(ctx, controlPlane); err != nil {
+		return fmt.Errorf("apply DeckhouseControlPlane %s: %w", controlPlane.GetName(), err)
 	}
 
 	infraAPIGroup := infraAPIVersion
@@ -187,6 +262,149 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 
 	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
 	return nil
+}
+
+func (r *ClusterReconciler) ensureProviderInfrastructure(
+	ctx context.Context,
+	cloudType string,
+	provider map[string]any,
+	clusterConfig *clusterConfiguration,
+	expectedAPIVersion string,
+	expectedKind string,
+	expectedName string,
+) error {
+	data, err := r.readProviderTemplate(
+		ctx,
+		cloudType,
+		engineCAPITemplates,
+		clusterTemplateContractKey,
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"read %s cluster-template contract: %w",
+			cloudType,
+			err,
+		)
+	}
+
+	contract, err := parseClusterTemplateContract(data)
+	if err != nil {
+		return fmt.Errorf("cloud provider %s: %w", cloudType, err)
+	}
+
+	templateContext, err := r.buildClusterTemplateContext(
+		ctx,
+		provider,
+		clusterConfig,
+		expectedName,
+	)
+	if err != nil {
+		return fmt.Errorf("build %s cluster-template context: %w", cloudType, err)
+	}
+
+	objects, err := renderClusterTemplate(contract, templateContext)
+	if err != nil {
+		return fmt.Errorf("cloud provider %s: %w", cloudType, err)
+	}
+
+	if err := validateClusterTemplateObjects(
+		objects,
+		expectedAPIVersion,
+		expectedKind,
+		expectedName,
+	); err != nil {
+		return fmt.Errorf("cloud provider %s: %w", cloudType, err)
+	}
+
+	for _, object := range objects {
+		if err := r.applyClusterObject(ctx, object); err != nil {
+			return fmt.Errorf(
+				"apply provider infrastructure %s %s: %w",
+				object.GetKind(),
+				object.GetName(),
+				err,
+			)
+		}
+	}
+
+	return nil
+}
+
+func (r *ClusterReconciler) applyClusterObject(ctx context.Context, object *unstructured.Unstructured) error {
+	prepareClusterTemplateObject(object)
+	if err := r.Client.Patch(
+		ctx,
+		object,
+		client.Apply,
+		client.FieldOwner("node-controller"),
+		client.ForceOwnership,
+	); err != nil {
+		return err
+	}
+
+	current := &unstructured.Unstructured{}
+	current.SetGroupVersionKind(object.GroupVersionKind())
+	// Provider kinds are discovered at runtime, and credential Secrets do not match
+	// node-controller's cache label selector. Read the just-applied object directly.
+	if err := r.APIReader.Get(ctx, client.ObjectKeyFromObject(object), current); err != nil {
+		return fmt.Errorf("read applied object for Helm handover: %w", err)
+	}
+	original := current.DeepCopy()
+	if !removeLegacyHelmMetadata(current) {
+		return nil
+	}
+	if err := r.Client.Patch(ctx, current, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("remove Helm ownership metadata: %w", err)
+	}
+	return nil
+}
+
+func deckhouseControlPlane(clusterName string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "infrastructure.cluster.x-k8s.io/v1alpha1",
+		"kind":       "DeckhouseControlPlane",
+		"metadata": map[string]interface{}{
+			"name":      clusterName + "-control-plane",
+			"namespace": capiNamespace,
+			"labels": map[string]interface{}{
+				"app": "capi-controller-manager",
+			},
+		},
+	}}
+}
+
+func (r *ClusterReconciler) buildClusterTemplateContext(
+	ctx context.Context,
+	provider map[string]any,
+	clusterConfig *clusterConfiguration,
+	clusterName string,
+) (clusterTemplateContext, error) {
+	endpoints, err := (&bashiblecontext.Service{
+		Client: r.Client,
+		Reader: r.APIReader,
+	}).ReadEndpoints(ctx)
+	if err != nil {
+		return clusterTemplateContext{}, fmt.Errorf("discover control-plane endpoints: %w", err)
+	}
+
+	prefix, err := clusterprefix.Resolve(ctx, r.APIReader)
+	if err != nil {
+		return clusterTemplateContext{}, fmt.Errorf("resolve cluster prefix: %w", err)
+	}
+
+	return clusterTemplateContext{
+		Provider: provider,
+		Cluster: clusterTemplateClusterContext{
+			Name:            clusterName,
+			Namespace:       capiNamespace,
+			PodSubnet:       clusterConfig.PodSubnetCIDR,
+			ServiceSubnet:   clusterConfig.ServiceSubnetCIDR,
+			Domain:          clusterConfig.ClusterDomain,
+			Prefix:          prefix,
+			MasterEndpoints: endpoints.ClusterMasterEndpoints,
+			MasterAddresses: endpoints.APIServerEndpoints,
+		},
+	}, nil
 }
 
 func (r *ClusterReconciler) ensureStaticCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {

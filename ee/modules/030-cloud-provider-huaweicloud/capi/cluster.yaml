@@ -1,7 +1,10 @@
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-kind: HuaweiCloudCluster
-metadata:
-  name: "huaweicloud"
-  namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "caphc-controller-manager")) | nindent 2 }}
-spec:
+version: v1
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: HuaweiCloudCluster
+  metadata:
+    name: {{ .cluster.name | quote }}
+    namespace: {{ .cluster.namespace | quote }}
+    labels:
+      app: caphc-controller-manager
+  spec:

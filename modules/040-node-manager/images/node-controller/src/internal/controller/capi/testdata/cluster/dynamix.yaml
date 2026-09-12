@@ -1,0 +1,11 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: DynamixCluster
+metadata:
+  name: dynamix
+  namespace: d8-cloud-instance-manager
+  labels:
+    app: capd-controller-manager
+    heritage: deckhouse
+    module: node-manager
+spec:
+  resourceGroup: test-prefix-rg

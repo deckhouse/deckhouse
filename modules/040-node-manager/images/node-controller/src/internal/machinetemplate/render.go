@@ -93,13 +93,46 @@ func deepCopy(m map[string]any) (map[string]any, error) {
 	return out, nil
 }
 
+// parseNamedTemplate uses the restricted function set and fails on missing context keys.
+func parseNamedTemplate(name, text string) (*template.Template, error) {
+	return template.
+		New(name).
+		Funcs(sandboxFuncMap).
+		Option("missingkey=error").
+		Parse(text)
+}
+
+// RenderSandboxedTemplate renders a provider template using the restricted
+// function set and a copy of its context.
+func RenderSandboxedTemplate(
+	name string,
+	text string,
+	context map[string]any,
+) ([]byte, error) {
+	contextCopy, err := deepCopy(context)
+	if err != nil {
+		return nil, fmt.Errorf("copy %s context: %w", name, err)
+	}
+
+	tmpl, err := parseNamedTemplate(name, text)
+	if err != nil {
+		return nil, fmt.Errorf("parse %s: %w", name, err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, contextCopy); err != nil {
+		return nil, fmt.Errorf("render %s: %w", name, err)
+	}
+
+	return buf.Bytes(), nil
+}
+
 func parseTemplate(text string) (*template.Template, error) {
-	// missingkey=error turns a typo in a context path into a loud render failure. Under the v1
-	// default a missing path rendered "<no value>" into the object and reached the cloud.
-	t, err := template.New("machine-template").Funcs(sandboxFuncMap).Option("missingkey=error").Parse(text)
+	t, err := parseNamedTemplate("machine-template", text)
 	if err != nil {
 		return nil, fmt.Errorf("parse machine template: %w", err)
 	}
+
 	return t, nil
 }
 
