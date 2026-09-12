@@ -89,8 +89,7 @@ spec:
                 spe_ports_path := ["spec", "network", "hostPorts"]
                 spe_ports_applied := path_value_resolved(spe, spe_ports_path)
                 spe_ports := allowed_values_or_empty(spe, spe_ports_path)
-                effective_ranges := port_ranges(spe_ports_applied)
-                range_result := check_ports_with_protocol_in_ranges(ports, "hostPorts", effective_ranges, spe_ports)
+                range_result := host_port_result(ports, spe_ports_applied, spe_ports)
                 failed := failed_result(bool_result, range_result)
                 msg := violation_message("The hostNetwork or hostPort are not allowed", sprintf("%v: %v", [review_kind, obj.metadata.name]), failed.detail)
               }
@@ -184,7 +183,27 @@ spec:
                 ports := host_ports
               }
 
-              port_ranges(true) := []
+              # `allowedHostPorts` is optional, and omitting it places no restriction on host ports,
+              # while an empty list forbids every one of them. The check has to stay total either
+              # way: the constraint is also rendered for a policy that only sets `allowHostNetwork`,
+              # and reading an absent `parameters.ranges` left the whole violation rule undefined,
+              # so such a policy silently stopped denying anything at all.
+              host_port_result(_, false, _) := {"allowed": true, "msg": "", "detail": {}} if {
+                not host_port_ranges_configured
+              }
 
-              port_ranges(false) := input.parameters.ranges
+              host_port_result(ports, false, spe_ports) := result if {
+                host_port_ranges_configured
+                result := check_ports_with_protocol_in_ranges(ports, "hostPorts", input.parameters.ranges, spe_ports)
+              }
+
+              # An exception that names host ports governs them on its own, so the policy ranges
+              # give way to it.
+              host_port_result(ports, true, spe_ports) := result if {
+                result := check_ports_with_protocol_in_ranges(ports, "hostPorts", [], spe_ports)
+              }
+
+              host_port_ranges_configured if {
+                object.get(input.parameters, "ranges", null) != null
+              }
  
