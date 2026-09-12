@@ -1,0 +1,30 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+  annotations:
+    modules.deckhouse.io/embedded: "true"
+  finalizers:
+    - module.deckhouse.io/statistic-registered
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ModulePackageVersion
+      name: embedded-test-module-v1.0.1
+      uid: embedded-version-uid
+      controller: false
+      blockOwnerDeletion: true
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: embedded-test-module-v1.0.1
+  uid: embedded-version-uid
+spec:
+  packageName: test-module
+  packageRepositoryName: embedded
+  packageVersion: v1.0.1
+status:
+  used: true
