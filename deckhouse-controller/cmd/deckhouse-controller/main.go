@@ -166,6 +166,7 @@ func main() {
 
 	// Add more commands to the "module" command registered by addon-operator above.
 	debug.DefineModuleConfigDebugCommands(rootCmd, logger)
+	debug.DefineModuleCheckReleaseCommand(rootCmd)
 
 	// deckhouse-controller helper subcommands.
 	helpers.DefineHelperCommands(rootCmd, logger)
