@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"user-authz-controller/internal/metrics"
 )
 
 func roleBinding(ns, name, role string, labels map[string]string, subjects ...rbacv1.Subject) *rbacv1.RoleBinding {
@@ -71,7 +74,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 
 func reconcileOnce(t *testing.T, c client.Client) {
 	t.Helper()
-	r := New(c, logr.Discard())
+	r := New(c, metrics.New(), logr.Discard())
 	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -163,7 +166,7 @@ func TestReconcile_IsIdempotent(t *testing.T) {
 	c := reconcileWith(t, roleBinding("team", "devs", "d8:use:role:user", nil, user("jane"), sa("", "bot")))
 
 	first := dictSubjects(t, c)
-	r := New(c, logr.Discard())
+	r := New(c, metrics.New(), logr.Discard())
 	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
 		t.Fatal(err)
 	}
@@ -278,5 +281,46 @@ func TestOwnedIndexValue(t *testing.T) {
 	plain := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "user-authz:dev:user", Labels: map[string]string{"heritage": "deckhouse"}}}
 	if got := OwnedIndexValue(plain); got != nil {
 		t.Errorf("a binding without the dict labels must not be indexed, got %v", got)
+	}
+}
+
+func TestReconcile_ReportsMetrics(t *testing.T) {
+	t.Parallel()
+	m := metrics.New()
+	c := newClient(t,
+		roleBinding("team", "devs", "d8:use:role:user", nil, user("jane"), user("bob")),
+		legacyDict("d8:dict:jane", user("jane")),
+		legacyDict("d8:dict:gone", user("gone")),
+	)
+	if _, err := New(c, m, logr.Discard()).Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	expected := `
+# HELP d8_user_authz_authorization_rules Reconciled objects known to the controller, by kind (1 for the singleton dict and manage reconcilers).
+# TYPE d8_user_authz_authorization_rules gauge
+d8_user_authz_authorization_rules{kind="dict"} 1
+# HELP d8_user_authz_bindings_actual Bindings of the reconciled objects of a kind after their last reconcile; equals desired once the controller converged.
+# TYPE d8_user_authz_bindings_actual gauge
+d8_user_authz_bindings_actual{kind="dict"} 2
+# HELP d8_user_authz_bindings_desired Bindings the reconciled objects of a kind must have.
+# TYPE d8_user_authz_bindings_desired gauge
+d8_user_authz_bindings_desired{kind="dict"} 2
+# HELP d8_user_authz_bindings_drift Bindings still not in the desired state after the last reconcile, by reason (missing, extra, changed); above zero only while the controller fails to converge.
+# TYPE d8_user_authz_bindings_drift gauge
+d8_user_authz_bindings_drift{kind="dict",reason="changed"} 0
+d8_user_authz_bindings_drift{kind="dict",reason="extra"} 0
+d8_user_authz_bindings_drift{kind="dict",reason="missing"} 0
+`
+	if err := testutil.CollectAndCompare(m, strings.NewReader(expected),
+		"d8_user_authz_authorization_rules", "d8_user_authz_bindings_desired", "d8_user_authz_bindings_actual", "d8_user_authz_bindings_drift"); err != nil {
+		t.Fatal(err)
+	}
+	// one binding created (bob), one deleted (gone)
+	if got := testutil.ToFloat64(m.ApplyTotal().WithLabelValues(metrics.KindDict, metrics.OpCreate, metrics.ResultSuccess)); got != 1 {
+		t.Errorf("creates = %v, want 1", got)
+	}
+	if got := testutil.ToFloat64(m.ApplyTotal().WithLabelValues(metrics.KindDict, metrics.OpDelete, metrics.ResultSuccess)); got != 1 {
+		t.Errorf("deletes = %v, want 1", got)
 	}
 }

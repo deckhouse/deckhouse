@@ -53,6 +53,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"user-authz-controller/internal/metrics"
 )
 
 const (
@@ -87,13 +89,14 @@ var AutomatedLabels = map[string]string{labelHeritage: "deckhouse", labelAutomat
 
 // Reconciler projects manage ClusterRoleBindings into use RoleBindings.
 type Reconciler struct {
-	client client.Client
-	log    logr.Logger
+	client  client.Client
+	metrics *metrics.Collector
+	log     logr.Logger
 }
 
 // New constructs a Reconciler.
-func New(c client.Client, log logr.Logger) *Reconciler {
-	return &Reconciler{client: c, log: log}
+func New(c client.Client, m *metrics.Collector, log logr.Logger) *Reconciler {
+	return &Reconciler{client: c, metrics: m, log: log}
 }
 
 // RoleRefIndexValue is the indexer of RoleRefIndexField: the name of the referenced ClusterRole.
@@ -137,7 +140,7 @@ func Register(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.RoleBinding{}, AutomatedIndexField, AutomatedIndexValue); err != nil {
 		return fmt.Errorf("index automated rolebindings: %w", err)
 	}
-	r := New(mgr.GetClient(), mgr.GetLogger().WithName("manage-bindings"))
+	r := New(mgr.GetClient(), metrics.Default, mgr.GetLogger().WithName("manage-bindings"))
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup manage-bindings controller: %w", err)
 	}
@@ -212,13 +215,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		}
 	}
 
-	var errs []error
+	var (
+		errs  []error
+		drift metrics.Drift
+	)
 	for _, key := range slices.SortedFunc(maps.Keys(expected), compareKeys) {
-		if err := r.ensure(ctx, key, expected[key]); err != nil {
+		if err := r.ensure(ctx, key, expected[key], &drift); err != nil {
 			errs = append(errs, err)
 		}
 	}
+	observe := func() {
+		// drift is what is still wrong after the writes: projections that could not be written and
+		// stale bindings that could not be removed.
+		r.metrics.Observe(metrics.KindManage, RequestName, metrics.Observation{Desired: len(expected), Actual: len(expected) - drift.Missing - drift.Changed, Drift: drift})
+	}
 	if len(errs) != 0 {
+		observe()
 		return reconcile.Result{}, errors.Join(errs...)
 	}
 
@@ -234,13 +246,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		if _, ok := expected[client.ObjectKeyFromObject(rb)]; ok {
 			continue
 		}
-		if err := r.client.Delete(ctx, rb); err != nil && !apierrors.IsNotFound(err) {
+		err := r.client.Delete(ctx, rb)
+		if apierrors.IsNotFound(err) {
+			err = nil
+		}
+		r.metrics.RecordApply(metrics.KindManage, metrics.OpDelete, err)
+		if err != nil {
+			drift.Extra++
 			errs = append(errs, fmt.Errorf("delete use binding %s/%s: %w", rb.Namespace, rb.Name, err))
 			continue
 		}
 		r.log.Info("use binding removed", "namespace", rb.Namespace, "name", rb.Name)
 	}
 
+	observe()
 	return reconcile.Result{}, errors.Join(errs...)
 }
 
@@ -253,23 +272,38 @@ func compareKeys(a, b client.ObjectKey) int {
 
 // ensure makes the RoleBinding at key equal to want in everything the reconciler owns: its labels
 // and annotation, roleRef and subjects. Foreign labels and annotations are preserved. roleRef is
-// immutable, so a binding with a different one is recreated.
-func (r *Reconciler) ensure(ctx context.Context, key client.ObjectKey, want *rbacv1.RoleBinding) error {
+// immutable, so a binding with a different one is recreated. drift counts what could not be fixed.
+func (r *Reconciler) ensure(ctx context.Context, key client.ObjectKey, want *rbacv1.RoleBinding, drift *metrics.Drift) error {
 	current := &rbacv1.RoleBinding{}
 	err := r.client.Get(ctx, key, current)
 	if apierrors.IsNotFound(err) {
-		return r.create(ctx, key, want)
+		if err := r.create(ctx, key, want); err != nil {
+			drift.Missing++
+			return err
+		}
+		return nil
 	}
 	if err != nil {
+		drift.Changed++
 		return fmt.Errorf("get use binding %s: %w", key, err)
 	}
 
 	if !reflect.DeepEqual(current.RoleRef, want.RoleRef) {
-		if err := r.client.Delete(ctx, current); err != nil && !apierrors.IsNotFound(err) {
+		err := r.client.Delete(ctx, current)
+		if apierrors.IsNotFound(err) {
+			err = nil
+		}
+		r.metrics.RecordApply(metrics.KindManage, metrics.OpDelete, err)
+		if err != nil {
+			drift.Changed++
 			return fmt.Errorf("delete use binding %s with a stale roleRef: %w", key, err)
 		}
 		r.log.Info("use binding recreated: roleRef changed", "namespace", key.Namespace, "name", key.Name, "from", current.RoleRef.Name, "to", want.RoleRef.Name)
-		return r.create(ctx, key, want)
+		if err := r.create(ctx, key, want); err != nil {
+			drift.Changed++
+			return err
+		}
+		return nil
 	}
 
 	if hasEntries(current.Labels, want.Labels) && hasEntries(current.Annotations, want.Annotations) &&
@@ -281,7 +315,10 @@ func (r *Reconciler) ensure(ctx context.Context, key client.ObjectKey, want *rba
 	updated.Labels = merged(current.Labels, want.Labels)
 	updated.Annotations = merged(current.Annotations, want.Annotations)
 	updated.Subjects = want.Subjects
-	if err := r.client.Update(ctx, updated); err != nil {
+	err = r.client.Update(ctx, updated)
+	r.metrics.RecordApply(metrics.KindManage, metrics.OpUpdate, err)
+	if err != nil {
+		drift.Changed++
 		return fmt.Errorf("update use binding %s: %w", key, err)
 	}
 	r.log.Info("use binding updated", "namespace", key.Namespace, "name", key.Name)
@@ -290,7 +327,12 @@ func (r *Reconciler) ensure(ctx context.Context, key client.ObjectKey, want *rba
 }
 
 func (r *Reconciler) create(ctx context.Context, key client.ObjectKey, want *rbacv1.RoleBinding) error {
-	if err := r.client.Create(ctx, want); err != nil && !apierrors.IsAlreadyExists(err) {
+	err := r.client.Create(ctx, want)
+	if apierrors.IsAlreadyExists(err) {
+		err = nil
+	}
+	r.metrics.RecordApply(metrics.KindManage, metrics.OpCreate, err)
+	if err != nil {
 		return fmt.Errorf("create use binding %s: %w", key, err)
 	}
 	r.log.Info("use binding created", "namespace", key.Namespace, "name", key.Name)
