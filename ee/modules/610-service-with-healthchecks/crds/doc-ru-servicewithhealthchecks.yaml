@@ -348,6 +348,14 @@ spec:
             status:
               description: Определяет наблюдаемое состояние `ServiceWithHealthchecks`.
               properties:
+                clusterIP:
+                  description: |-
+                    Адрес дочернего сервиса: либо запрошенный в `spec.clusterIP`, либо выданный кластером.
+
+                    Адрес отражается здесь и никогда не записывается обратно в спецификацию.
+                clusterIPs:
+                  description: |-
+                    Все адреса дочернего сервиса, по одному на каждое семейство IP-адресов.
                 conditions:
                   description: Текущее состояние сервиса
                   items:

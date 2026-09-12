@@ -217,6 +217,11 @@ func (in *ServiceWithHealthchecksSpec) DeepCopy() *ServiceWithHealthchecksSpec {
 func (in *ServiceWithHealthchecksStatus) DeepCopyInto(out *ServiceWithHealthchecksStatus) {
 	*out = *in
 	in.LoadBalancer.DeepCopyInto(&out.LoadBalancer)
+	if in.ClusterIPs != nil {
+		in, out := &in.ClusterIPs, &out.ClusterIPs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	out.HealthcheckCondition = in.HealthcheckCondition
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions

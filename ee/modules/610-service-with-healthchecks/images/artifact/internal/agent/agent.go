@@ -41,6 +41,7 @@ const (
 	endpointServiceNameLabelKey = "kubernetes.io/service-name"
 	endpointControllerLabelKey  = "endpointslice.kubernetes.io/managed-by"
 	controllerName              = "servicewithhealthchecks"
+	serviceWithHealthchecksKind = "ServiceWithHealthchecks"
 
 	// resyncPeriod bounds how long a ServiceWithHealthchecks may stay out of sync with the
 	// pods on this node. New target pods are learned from watch events only, and once the
@@ -484,10 +485,15 @@ func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(
 		return err
 	}
 
+	// A slice created before the owner reference was introduced, or left over from a recreated
+	// parent, is adopted here instead of being recreated.
+	ownerIsOutdated := !reflect.DeepEqual(existingEPS.OwnerReferences, desiredEPS.OwnerReferences)
+
 	// Use Patch instead of Update to avoid conflicts and ResourceVersion issues.
-	if !endpointsAreEqual(existingEPS.Endpoints, desiredEPS.Endpoints) {
+	if ownerIsOutdated || !endpointsAreEqual(existingEPS.Endpoints, desiredEPS.Endpoints) {
 		patch := client.MergeFrom(existingEPS.DeepCopy())
 		existingEPS.Endpoints = desiredEPS.Endpoints
+		existingEPS.OwnerReferences = desiredEPS.OwnerReferences
 		if err := r.Patch(ctx, existingEPS, patch); err != nil {
 			r.logger.Error("couldn't patch EndpointSlice", log.Err(err), "name", desiredNameForEndpointSlice)
 			return err
@@ -505,6 +511,7 @@ func (r *ServiceWithHealthchecksReconciler) BuildEndpointSlice(desiredName strin
 				endpointServiceNameLabelKey: svc.GetName(),
 				endpointControllerLabelKey:  controllerName,
 			},
+			OwnerReferences: []metav1.OwnerReference{ownerReferenceForServiceWithHealthchecks(svc)},
 		},
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Ports:       r.buildPortsForEndpointslice(svc),
@@ -512,6 +519,24 @@ func (r *ServiceWithHealthchecksReconciler) BuildEndpointSlice(desiredName strin
 
 	eps.Endpoints = r.buildEndpoints(svc)
 	return eps
+}
+
+// ownerReferenceForServiceWithHealthchecks ties a slice to the resource it was built from, so
+// that the garbage collector removes the slices of every node once that resource is gone. The
+// child Service is owned by the same resource, so both branches of the tree are cleaned up.
+//
+// BlockOwnerDeletion is deliberately left unset: with the OwnerReferencesPermissionEnforcement
+// admission plugin enabled it would require the agent to have access to the
+// servicewithhealthchecks/finalizers subresource, which it has no other reason to hold.
+func ownerReferenceForServiceWithHealthchecks(svc networkv1alpha1.ServiceWithHealthchecks) metav1.OwnerReference {
+	isController := true
+	return metav1.OwnerReference{
+		APIVersion: networkv1alpha1.GroupVersion.String(),
+		Kind:       serviceWithHealthchecksKind,
+		Name:       svc.GetName(),
+		UID:        svc.GetUID(),
+		Controller: &isController,
+	}
 }
 
 func (r *ServiceWithHealthchecksReconciler) buildPortsForEndpointslice(svc networkv1alpha1.ServiceWithHealthchecks) []discoveryv1.EndpointPort {
