@@ -342,7 +342,8 @@ status:
 Политику по умолчанию можно переопределить глобально ([в настройках модуля](configuration.html#parameters-podsecuritystandards-defaultpolicy)).
 
 {% alert level="info" %}
-Модуль не применяет политики к системным неймспейсам.
+В неймспейсах с именами `d8-*` и `kube-*` стандарт `restricted` применяется в режиме `warn` независимо от политики по умолчанию.
+Чтобы включить в таком неймспейсе полноценное применение политик, установите на него лейбл `security.deckhouse.io/enable-security-policy-check` со значением `true`.
 {% endalert %}
 
 {% alert level="info" %}
