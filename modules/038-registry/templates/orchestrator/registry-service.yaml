@@ -12,6 +12,10 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
   annotations:
     registry.deckhouse.io/config-hash: {{ $orchestrator.hash | quote }}
+    # Survives the upgrade that stops rendering it, and is removed later by the current
+    # implementation's controller once the node agent actually owns the container runtime
+    # configuration on every node.
+    "helm.sh/resource-policy": keep
 spec:
   clusterIP: None
   selector:

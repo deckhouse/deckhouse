@@ -77,6 +77,11 @@ metadata:
     registry.deckhouse.io/hash: {{ $hash | quote }}
     registry.deckhouse.io/version: {{ $version | quote }}
     registry.deckhouse.io/config-checksum: {{ $config_checksum | sha256sum | quote }}
+    # Survives the upgrade that stops rendering it — see the Service beside it. This proxy is what
+    # answers the in-cluster address on a `Direct` cluster, and it has to keep answering until the
+    # node agent of the current implementation owns the runtime configuration on every node. The
+    # controller removes it then.
+    "helm.sh/resource-policy": keep
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $ | nindent 2 }}
   revisionHistoryLimit: 2
