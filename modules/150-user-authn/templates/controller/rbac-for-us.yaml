@@ -140,18 +140,6 @@ rules:
   - watch
   - delete
 - apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
   - ""
   resources:
   - events
@@ -179,6 +167,12 @@ subjects:
   name: controller
   namespace: d8-{{ .Chart.Name }}
 ---
+# Leader election. The lease lives in the module's own namespace, so the grant is here in the Role
+# rather than in the ClusterRole above: cluster-wide it would let the controller take over the lease
+# of any other component, and it would tie the lease to the ClusterRoleBinding - a controller that
+# loses its cluster-wide access would then also lose the lease and exit after RenewDeadline instead
+# of standing NotReady until the access is back. user-authz-controller keeps its lease rights the
+# same way.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -192,6 +186,18 @@ rules:
   - secrets
   verbs:
   - get
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

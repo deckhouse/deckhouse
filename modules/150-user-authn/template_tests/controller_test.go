@@ -57,6 +57,27 @@ var _ = Describe("Module :: user-authn :: helm template :: controller", func() {
 		Expect(deployment.Field("spec.template.spec.containers.0.env").String()).ToNot(ContainSubstring("HA_MODE"))
 	})
 
+	It("Should keep the lease rights in the namespaced Role, not in the ClusterRole", func() {
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		// The lease lives in d8-user-authn. Granting it cluster-wide would tie it to the
+		// ClusterRoleBinding: a controller that loses its cluster-wide access would then also lose the
+		// lease and exit after RenewDeadline, instead of staying NotReady until the access is back.
+		clusterRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:controller")
+		Expect(clusterRole.Exists()).To(BeTrue())
+		Expect(clusterRole.Field("rules").String()).ToNot(ContainSubstring("leases"))
+
+		role := hec.KubernetesResource("Role", "d8-user-authn", "controller")
+		Expect(role.Exists()).To(BeTrue())
+		Expect(role.Field("rules").String()).To(ContainSubstring("coordination.k8s.io"))
+		Expect(role.Field("rules").String()).To(ContainSubstring("leases"))
+
+		roleBinding := hec.KubernetesResource("RoleBinding", "d8-user-authn", "controller")
+		Expect(roleBinding.Exists()).To(BeTrue())
+		Expect(roleBinding.Field("roleRef.name").String()).To(Equal("controller"))
+		Expect(roleBinding.Field("subjects.0.name").String()).To(Equal("controller"))
+	})
+
 	It("Should give the readiness probe time for both readyz checks", func() {
 		Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
