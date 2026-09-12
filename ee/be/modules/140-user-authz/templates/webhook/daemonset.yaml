@@ -24,9 +24,14 @@ spec:
     - containerName: webhook
       minAllowed:
         {{- include "webhook_resources" . | nindent 8 }}
+      # The ceiling has to bound the informer caches, not the idle baseline: the webhook now holds
+      # the ClusterAuthorizationRules and the RBAC objects of the cluster, which at a few thousand
+      # rules and tens of thousands of bindings is an order of magnitude more than the old
+      # config.json. A ceiling equal to minAllowed would leave VPA unable to raise anything.
       maxAllowed:
-        cpu: 50m
-        memory: 50Mi
+        cpu: 500m
+        memory: 500Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
   {{- end }}
 
 {{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
@@ -52,8 +57,14 @@ spec:
       - port: 40443
         protocol: TCP
         metadata:
-          description: Node-local authorization webhook listener.    
-{{- end }}   
+          description: Node-local authorization webhook listener.
+      # kube-rbac-proxy exposes the webhook metrics on the node IP for Prometheus; the webhook itself
+      # serves them only on 127.0.0.1. hostNetwork pods must declare their host ports.
+      - port: 4233
+        protocol: TCP
+        metadata:
+          description: Metrics endpoint fronted by kube-rbac-proxy.
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -115,11 +126,82 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           failureThreshold: 6
+        # The rollout must not move to the next master until this one is actually authorizing: the
+        # webhook is fail-closed, and it spends its first moments waiting for the informer caches.
+        # The probe has to be an exec for the same reason the liveness probe is - the listener
+        # requires a client certificate.
+        readinessProbe:
+          exec:
+            command:
+            - /healthcheck
+          initialDelaySeconds: 2
+          periodSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          # /healthcheck asks the API server, and that check retries for up to ~21s, while kubelet
+          # defaults an exec probe to 1s. Without this the probe reports a failure whenever the API
+          # server is merely slow. 15s is what kube-apiserver's own probes use.
+          timeoutSeconds: 15
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "webhook_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4233"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        # Use the node-local kube-apiserver endpoint for the same reason the webhook does: hostNetwork
+        # pods may be blocked from the "kubernetes" ClusterIP.
+        - name: KUBERNETES_SERVICE_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6443"
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:4243/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: user-authz-webhook
+        ports:
+        - containerPort: 4233
+          name: https-metrics
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4233
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4233
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
       volumes:
       - name: user-authz-webhook-secret

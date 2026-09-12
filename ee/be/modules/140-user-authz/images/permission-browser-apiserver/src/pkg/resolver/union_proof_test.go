@@ -6,8 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package resolver
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,6 +16,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 )
 
 // TestResolveAccessibleNamespaces_UnionProof reproduces the full real-world
@@ -114,11 +113,7 @@ func TestResolveAccessibleNamespaces_UnionProof(t *testing.T) {
 		]
 	}`
 
-	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.json")
-	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
-
-	mtEngine, err := multitenancy.NewEngine(configPath, nil, nil, nil)
+	mtEngine, err := multitenancy.NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), nil, nil, nil)
 	require.NoError(t, err)
 
 	resolver := setupResolver(t, objs, mtEngine)

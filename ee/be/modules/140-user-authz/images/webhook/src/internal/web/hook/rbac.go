@@ -8,13 +8,15 @@ package hook
 import (
 	"fmt"
 	"log"
-	"strings"
+	"sync"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	rbaclisters "k8s.io/client-go/listers/rbac/v1"
 	kcache "k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
 )
 
 // independentRBACResolver reports whether a request is allowed by RBAC grants
@@ -23,26 +25,197 @@ type independentRBACResolver interface {
 	AllowsIndependently(spec *WebhookResourceSpec) bool
 }
 
-// carManagedCRBPrefix is the name prefix of ClusterRoleBindings rendered from
-// ClusterAuthorizationRules by the user-authz module (see
-// modules/140-user-authz/templates/cluster-role-bindings.yaml:
-// "user-authz:<car-name>:<postfix>").
-const carManagedCRBPrefix = "user-authz:"
-
 // isCARManagedClusterRoleBinding reports whether the ClusterRoleBinding was
-// generated from a ClusterAuthorizationRule by the user-authz module.
+// generated from a ClusterAuthorizationRule by the user-authz module (by its
+// Helm chart in earlier releases, by user-authz-controller now); the naming
+// contract lives in go_lib/user-authz/binding.
 //
 // Such bindings are cluster-wide by construction, but their intended scope is
 // the CAR's multi-tenancy options (limitNamespaces etc.), which is exactly
 // what this webhook enforces. They must therefore be excluded when we check
 // whether the user has access *independently* of any CAR - otherwise the
 // CAR's accessLevel would leak into namespaces outside its limitNamespaces.
-func isCARManagedClusterRoleBinding(binding *rbacv1.ClusterRoleBinding) bool {
-	if !strings.HasPrefix(binding.Name, carManagedCRBPrefix) {
-		return false
+func isCARManagedClusterRoleBinding(crb *rbacv1.ClusterRoleBinding) bool {
+	return binding.IsRuleBinding(crb.Name, crb.GetLabels())
+}
+
+// crbSubjectKey is a subject a ClusterRoleBinding names, in the form the request is matched
+// against: a username (a User subject, or the canonical name of a ServiceAccount subject) or a
+// group name.
+type crbSubjectKey struct {
+	isGroup bool
+	name    string
+}
+
+// crbSubjectKeys returns the keys under which the binding has to be found. It mirrors
+// subjectsMatch with an empty default namespace, which is what a ClusterRoleBinding gets.
+func crbSubjectKeys(subjects []rbacv1.Subject) []crbSubjectKey {
+	keys := make([]crbSubjectKey, 0, len(subjects))
+	for _, subject := range subjects {
+		switch subject.Kind {
+		case rbacv1.UserKind:
+			keys = append(keys, crbSubjectKey{name: subject.Name})
+		case rbacv1.GroupKind:
+			keys = append(keys, crbSubjectKey{isGroup: true, name: subject.Name})
+		case rbacv1.ServiceAccountKind:
+			// A ClusterRoleBinding has no namespace to default to, so the subject's own namespace
+			// is the only one; an empty one yields a name no request can carry, as before.
+			keys = append(keys, crbSubjectKey{name: fmt.Sprintf("system:serviceaccount:%s:%s", subject.Namespace, subject.Name)})
+		}
 	}
-	bindingLabels := binding.GetLabels()
-	return bindingLabels["heritage"] == "deckhouse" && bindingLabels["module"] == "user-authz"
+	return keys
+}
+
+// independentCRBIndex maps a subject to the CAR-independent ClusterRoleBindings that name it.
+//
+// Without it every request the multi-tenancy filters would deny costs a full scan of every
+// ClusterRoleBinding in the cluster, and a cluster with a few thousand rules has tens of thousands
+// of them. The index is maintained incrementally from the ClusterRoleBinding informer's events, so
+// a change costs work proportional to the subjects of the one binding that changed and a lookup
+// costs one map access per subject of the request. Nothing here needs debouncing: there is no
+// rebuild to coalesce.
+//
+// CAR-generated bindings are left out entirely (see isCARManagedClusterRoleBinding): they are the
+// bindings whose scope this webhook enforces, so they must never answer "granted independently".
+type independentCRBIndex struct {
+	mu sync.RWMutex
+	// bySubject maps a subject to the bindings naming it, keyed by binding name so an update
+	// replaces rather than duplicates.
+	bySubject map[crbSubjectKey]map[string]*rbacv1.ClusterRoleBinding
+	// keysOf records what each binding contributed, so an update or a delete can withdraw exactly
+	// the previous contribution.
+	keysOf map[string][]crbSubjectKey
+}
+
+func newIndependentCRBIndex() *independentCRBIndex {
+	return &independentCRBIndex{
+		bySubject: make(map[crbSubjectKey]map[string]*rbacv1.ClusterRoleBinding),
+		keysOf:    make(map[string][]crbSubjectKey),
+	}
+}
+
+// upsert indexes the binding, replacing whatever it contributed before. A CAR-generated binding is
+// withdrawn instead: a binding that gains the module's labels stops being an independent grant.
+func (i *independentCRBIndex) upsert(crb *rbacv1.ClusterRoleBinding) {
+	if crb == nil {
+		return
+	}
+	if isCARManagedClusterRoleBinding(crb) {
+		i.delete(crb)
+		return
+	}
+
+	keys := crbSubjectKeys(crb.Subjects)
+
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	i.withdrawLocked(crb.Name)
+	if len(keys) == 0 {
+		return
+	}
+	for _, key := range keys {
+		bindings := i.bySubject[key]
+		if bindings == nil {
+			bindings = make(map[string]*rbacv1.ClusterRoleBinding, 1)
+			i.bySubject[key] = bindings
+		}
+		bindings[crb.Name] = crb
+	}
+	i.keysOf[crb.Name] = keys
+}
+
+// delete withdraws the binding from the index.
+func (i *independentCRBIndex) delete(crb *rbacv1.ClusterRoleBinding) {
+	if crb == nil {
+		return
+	}
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.withdrawLocked(crb.Name)
+}
+
+// withdrawLocked removes every contribution of the binding. The caller holds the write lock.
+func (i *independentCRBIndex) withdrawLocked(name string) {
+	for _, key := range i.keysOf[name] {
+		bindings := i.bySubject[key]
+		if bindings == nil {
+			continue
+		}
+		delete(bindings, name)
+		if len(bindings) == 0 {
+			delete(i.bySubject, key)
+		}
+	}
+	delete(i.keysOf, name)
+}
+
+// forRequest returns the CAR-independent ClusterRoleBindings that name the user or any of their
+// groups, each at most once.
+func (i *independentCRBIndex) forRequest(username string, groups []string) []*rbacv1.ClusterRoleBinding {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	var (
+		out  []*rbacv1.ClusterRoleBinding
+		seen map[string]struct{}
+	)
+	collect := func(key crbSubjectKey) {
+		for name, crb := range i.bySubject[key] {
+			if seen == nil {
+				seen = make(map[string]struct{})
+			}
+			if _, dup := seen[name]; dup {
+				continue
+			}
+			seen[name] = struct{}{}
+			out = append(out, crb)
+		}
+	}
+
+	collect(crbSubjectKey{name: username})
+	for _, group := range groups {
+		collect(crbSubjectKey{isGroup: true, name: group})
+	}
+
+	return out
+}
+
+// len reports how many bindings the index holds; it exists for the tests.
+func (i *independentCRBIndex) len() int {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	return len(i.keysOf)
+}
+
+// eventHandler keeps the index in step with the ClusterRoleBinding informer.
+func (i *independentCRBIndex) eventHandler() kcache.ResourceEventHandler {
+	return kcache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if crb, ok := obj.(*rbacv1.ClusterRoleBinding); ok {
+				i.upsert(crb)
+			}
+		},
+		UpdateFunc: func(_, newObj interface{}) {
+			if crb, ok := newObj.(*rbacv1.ClusterRoleBinding); ok {
+				i.upsert(crb)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			crb, ok := obj.(*rbacv1.ClusterRoleBinding)
+			if !ok {
+				// The informer reports a delete it could not observe directly as a tombstone.
+				tombstone, isTombstone := obj.(kcache.DeletedFinalStateUnknown)
+				if !isTombstone {
+					return
+				}
+				if crb, ok = tombstone.Obj.(*rbacv1.ClusterRoleBinding); !ok {
+					return
+				}
+			}
+			i.delete(crb)
+		},
+	}
 }
 
 // RBACEvaluator checks requests against RBAC objects from informer caches.
@@ -57,10 +230,13 @@ func isCARManagedClusterRoleBinding(binding *rbacv1.ClusterRoleBinding) bool {
 type RBACEvaluator struct {
 	logger *log.Logger
 
-	roleLister               rbaclisters.RoleLister
-	roleBindingLister        rbaclisters.RoleBindingLister
-	clusterRoleLister        rbaclisters.ClusterRoleLister
-	clusterRoleBindingLister rbaclisters.ClusterRoleBindingLister
+	roleLister        rbaclisters.RoleLister
+	roleBindingLister rbaclisters.RoleBindingLister
+	clusterRoleLister rbaclisters.ClusterRoleLister
+
+	// clusterRoleBindings indexes the CAR-independent ClusterRoleBindings by subject, so a request
+	// does not pay for a scan of every binding in the cluster.
+	clusterRoleBindings *independentCRBIndex
 
 	synced []kcache.InformerSynced
 }
@@ -68,7 +244,12 @@ type RBACEvaluator struct {
 // NewRBACEvaluator registers RBAC informers in the factory and returns an
 // evaluator backed by their listers. The caller is responsible for starting
 // the factory and waiting for cache sync.
-func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInformerFactory) *RBACEvaluator {
+//
+// The ClusterRoleBinding index is fed by an event handler, which has to be registered before the
+// factory starts; a failure to register it is fatal, because an index that never fills would report
+// every request as not granted independently and the webhook would deny access that
+// RoleBindings and non-CAR ClusterRoleBindings do grant.
+func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInformerFactory) (*RBACEvaluator, error) {
 	rbacInformers := informerFactory.Rbac().V1()
 
 	roles := rbacInformers.Roles()
@@ -76,19 +257,29 @@ func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInform
 	clusterRoles := rbacInformers.ClusterRoles()
 	clusterRoleBindings := rbacInformers.ClusterRoleBindings()
 
+	index := newIndependentCRBIndex()
+	indexSynced, err := clusterRoleBindings.Informer().AddEventHandler(index.eventHandler())
+	if err != nil {
+		return nil, fmt.Errorf("register the independent ClusterRoleBinding index: %w", err)
+	}
+
 	return &RBACEvaluator{
-		logger:                   logger,
-		roleLister:               roles.Lister(),
-		roleBindingLister:        roleBindings.Lister(),
-		clusterRoleLister:        clusterRoles.Lister(),
-		clusterRoleBindingLister: clusterRoleBindings.Lister(),
+		logger:              logger,
+		roleLister:          roles.Lister(),
+		roleBindingLister:   roleBindings.Lister(),
+		clusterRoleLister:   clusterRoles.Lister(),
+		clusterRoleBindings: index,
 		synced: []kcache.InformerSynced{
 			roles.Informer().HasSynced,
 			roleBindings.Informer().HasSynced,
 			clusterRoles.Informer().HasSynced,
 			clusterRoleBindings.Informer().HasSynced,
+			// The informer reports synced once the initial list has been popped; the handler that
+			// fills the index is fed from a separate queue. Answering from a half-filled index
+			// would deny requests that a non-CAR ClusterRoleBinding grants.
+			indexSynced.HasSynced,
 		},
-	}
+	}, nil
 }
 
 // Synced reports whether all RBAC informer caches have synced.
@@ -131,20 +322,9 @@ func (e *RBACEvaluator) AllowsIndependently(spec *WebhookResourceSpec) bool {
 }
 
 func (e *RBACEvaluator) clusterRoleBindingsAllow(spec *WebhookResourceSpec) bool {
-	bindings, err := e.clusterRoleBindingLister.List(labels.Everything())
-	if err != nil {
-		e.logger.Printf("independent RBAC check: failed to list ClusterRoleBindings: %v", err)
-		return false
-	}
-
-	for _, binding := range bindings {
-		if isCARManagedClusterRoleBinding(binding) {
-			continue
-		}
-		if !subjectsMatch(binding.Subjects, spec, "") {
-			continue
-		}
-
+	// Only the bindings that name the request's user or one of its groups can grant anything, and
+	// the index already excludes the CAR-generated ones.
+	for _, binding := range e.clusterRoleBindings.forRequest(spec.User, spec.Group) {
 		role, err := e.clusterRoleLister.Get(binding.RoleRef.Name)
 		if err != nil {
 			continue

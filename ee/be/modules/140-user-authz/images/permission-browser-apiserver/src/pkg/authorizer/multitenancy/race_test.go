@@ -7,36 +7,38 @@ package multitenancy
 
 import (
 	"context"
-	"regexp"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 )
+
+// swappableRules (a RulesProvider whose directory can be replaced while the engine serves) and
+// newSwappableRules live in engine_test.go.
+
+func groupRule(name, kind, subject string, limit []string, system bool) rules.Rule {
+	return rules.Rule{
+		Name:                          name,
+		Subjects:                      []rules.Subject{{Kind: kind, Name: subject}},
+		LimitNamespaces:               limit,
+		AllowAccessToSystemNamespaces: system,
+	}
+}
 
 // TestEngine_ConcurrentAuthorize tests that concurrent calls to Authorize don't race
 func TestEngine_ConcurrentAuthorize(t *testing.T) {
 	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"user1": {
-					LimitNamespaces:        []*regexp.Regexp{regexp.MustCompile("^ns-.*$")},
-					NamespaceFiltersAbsent: false,
-				},
-				"user2": {
-					AllowAccessToSystemNamespaces: true,
-					NamespaceFiltersAbsent:        true,
-				},
-			},
-			"Group": {
-				"developers": {
-					LimitNamespaces:        []*regexp.Regexp{regexp.MustCompile("^dev-.*$")},
-					NamespaceFiltersAbsent: false,
-				},
-			},
-			"ServiceAccount": {},
-		},
+		rules: mttest.Rules(
+			groupRule("user1", "User", "user1", []string{"ns-.*"}, false),
+			groupRule("user2", "User", "user2", nil, true),
+			groupRule("developers", "Group", "developers", []string{"dev-.*"}, false),
+		),
+		bindings: mttest.NoBindings(),
 	}
 
 	ctx := context.Background()
@@ -89,15 +91,10 @@ func TestEngine_ConcurrentAuthorize(t *testing.T) {
 	wg.Wait()
 }
 
-// TestEngine_ConcurrentDirectoryUpdate tests that updating directory while authorizing doesn't race
+// TestEngine_ConcurrentDirectoryUpdate tests that rebuilding the directory while authorizing doesn't race
 func TestEngine_ConcurrentDirectoryUpdate(t *testing.T) {
-	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User":           make(map[string]DirectoryEntry),
-			"Group":          make(map[string]DirectoryEntry),
-			"ServiceAccount": make(map[string]DirectoryEntry),
-		},
-	}
+	provider := newSwappableRules()
+	e := &Engine{rules: provider, bindings: mttest.NoBindings()}
 
 	ctx := context.Background()
 	const goroutines = 50
@@ -125,26 +122,13 @@ func TestEngine_ConcurrentDirectoryUpdate(t *testing.T) {
 		}()
 	}
 
-	// Writers (simulating renewDirectories)
+	// Writers (simulating the informer rebuild)
 	for i := 0; i < goroutines; i++ {
 		go func(id int) {
 			defer wg.Done()
 
 			for j := 0; j < iterations; j++ {
-				newDir := map[string]map[string]DirectoryEntry{
-					"User": {
-						"user1": {
-							LimitNamespaces:        []*regexp.Regexp{regexp.MustCompile("^test-.*$")},
-							NamespaceFiltersAbsent: false,
-						},
-					},
-					"Group":          make(map[string]DirectoryEntry),
-					"ServiceAccount": make(map[string]DirectoryEntry),
-				}
-
-				e.mu.Lock()
-				e.directory = newDir
-				e.mu.Unlock()
+				provider.Set(groupRule("user1", "User", "user1", []string{"test-.*"}, false))
 			}
 		}(i)
 	}
@@ -156,16 +140,10 @@ func TestEngine_ConcurrentDirectoryUpdate(t *testing.T) {
 // Authorize against a shared ResourceScope from many goroutines.
 func TestEngine_ConcurrentClusterScopedAuthorize(t *testing.T) {
 	e := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"restricted": {
-					LimitNamespaces:        []*regexp.Regexp{regexp.MustCompile("^allowed-.*$")},
-					NamespaceFiltersAbsent: false,
-				},
-			},
-			"Group":          {},
-			"ServiceAccount": {},
-		},
+		rules: mttest.Rules(
+			groupRule("restricted", "User", "restricted", []string{"allowed-.*"}, false),
+		),
+		bindings: mttest.NoBindings(),
 		resourceScope: staticResourceScope{
 			"/pods":  true,
 			"/nodes": false,
@@ -208,16 +186,10 @@ func TestEngine_ConcurrentClusterScopedAuthorize(t *testing.T) {
 // TestCompositeAuthorizer_ConcurrentAccess tests composite authorizer under concurrent load
 func TestCompositeAuthorizer_ConcurrentAccess(t *testing.T) {
 	mt := &Engine{
-		directory: map[string]map[string]DirectoryEntry{
-			"User": {
-				"restricted": {
-					LimitNamespaces:        []*regexp.Regexp{regexp.MustCompile("^allowed-.*$")},
-					NamespaceFiltersAbsent: false,
-				},
-			},
-			"Group":          {},
-			"ServiceAccount": {},
-		},
+		rules: mttest.Rules(
+			groupRule("restricted", "User", "restricted", []string{"allowed-.*"}, false),
+		),
+		bindings: mttest.NoBindings(),
 	}
 
 	rbac := &mockRBACAuthorizer{decision: authorizer.DecisionAllow}

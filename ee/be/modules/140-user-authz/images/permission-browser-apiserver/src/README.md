@@ -172,21 +172,24 @@ make test
 ./permission-browser-apiserver \
   --secure-port=8443 \
   --tls-cert-file=/path/to/tls.crt \
-  --tls-private-key-file=/path/to/tls.key \
-  --user-authz-config=/path/to/config.json
+  --tls-private-key-file=/path/to/tls.key
 ```
+
+The multi-tenancy rules are read from the ClusterAuthorizationRules of the cluster
+through an informer (shared with the user-authz webhook via `go_lib/user-authz`), so
+the server needs a kubeconfig with `get`, `list` and `watch` on
+`clusterauthorizationrules.deckhouse.io` and on ClusterRoleBindings.
 
 ## Configuration
 
-Only `--user-authz-config` is defined by this server; the rest come from the
-generic apiserver's recommended options, so the list below is not exhaustive.
+The flags come from the generic apiserver's recommended options, so the list
+below is not exhaustive.
 
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--secure-port` | HTTPS port | 443 |
 | `--tls-cert-file` | TLS certificate file | - |
 | `--tls-private-key-file` | TLS key file | - |
-| `--user-authz-config` | Path to user-authz webhook config | `/etc/user-authz-webhook/config.json` |
 | `--authentication-kubeconfig` | Kubeconfig for authentication | - |
 | `--authorization-kubeconfig` | Kubeconfig for authorization | - |
 

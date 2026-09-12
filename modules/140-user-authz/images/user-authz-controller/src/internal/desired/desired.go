@@ -33,26 +33,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
+
 	v1 "user-authz-controller/api/v1"
 	"user-authz-controller/api/v1alpha1"
 )
 
+// The names and labels of the bindings are the contract the authorization webhook and
+// permission-browser recognise rule bindings by; they live in go_lib/user-authz/binding so the three
+// cannot drift apart.
 const (
 	// LabelHeritage and LabelModule are the Deckhouse module labels every binding carries.
-	LabelHeritage = "heritage"
-	LabelModule   = "module"
+	LabelHeritage = binding.LabelHeritage
+	LabelModule   = binding.LabelModule
 	// LabelManagedBy marks bindings owned by the controller.
-	LabelManagedBy = "user-authz.deckhouse.io/managed-by"
+	LabelManagedBy = binding.LabelManagedBy
 	// LabelBindingKind distinguishes the binding to the aggregated custom ClusterRole.
 	LabelBindingKind = "user-authz.deckhouse.io/binding-kind"
 
-	ModuleName           = "user-authz"
-	HeritageValue        = "deckhouse"
-	ManagedByValue       = "user-authz-controller"
+	ModuleName           = binding.ModuleName
+	HeritageValue        = binding.HeritageValue
+	ManagedByValue       = binding.ManagedByValue
 	BindingKindAggregate = "aggregated-custom"
 
 	// NamePrefix is the common prefix of every binding of every rule.
-	NamePrefix = "user-authz:"
+	NamePrefix = binding.NamePrefix
 
 	AccessLevelUser           = "User"
 	AccessLevelPrivilegedUser = "PrivilegedUser"
@@ -255,21 +260,13 @@ func validateAdditionalRole(role v1.AdditionalRole) error {
 
 // RulePrefix is the name prefix shared by all bindings of the rule.
 func RulePrefix(ruleName string) string {
-	return NamePrefix + ruleName + ":"
+	return binding.RulePrefix(ruleName)
 }
 
 // RuleNameOf extracts the rule name from a binding name of the form user-authz:<rule>:<postfix>.
 // Rule names are DNS-1123 subdomains, so the second segment is unambiguous.
 func RuleNameOf(bindingName string) (string, bool) {
-	rest, ok := strings.CutPrefix(bindingName, NamePrefix)
-	if !ok {
-		return "", false
-	}
-	name, _, found := strings.Cut(rest, ":")
-	if !found || name == "" {
-		return "", false
-	}
-	return name, true
+	return binding.RuleNameOf(bindingName)
 }
 
 // OwnerReference builds the controller owner reference to the rule.
