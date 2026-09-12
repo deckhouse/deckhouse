@@ -12,7 +12,7 @@ DVP поддерживает проброс USB-устройств в вирту
 
 Для проброса USB требуются:
 
-- `containerd v2` — подробные требования к узлам кластера описаны в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri);
+- `containerd v2` — подробные требования к узлам кластера описаны в параметре [`defaultCRI`](/modules/node-manager/configuration.html#parameters-defaultcri);
 - [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) версии не ниже 1.34;
 - [Deckhouse Kubernetes Platform (DKP)](https://releases.deckhouse.ru/) версии не ниже 1.75.
 
