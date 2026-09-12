@@ -1,0 +1,51 @@
+{{- /* Vendored from https://github.com/yandex-cloud/cert-manager-webhook-yandex @ 1a7dd500a97e9206fa5cfebb102decd3889e3544 */}}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /webhook
+  to: /webhook
+  before: setup
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/webhook"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+from: {{ index $.Images "builder/golang" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+mount:
+{{ include "mount points for golang builds" . }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -o /webhook .
+  - chown 64535:64535 /webhook
+  - chmod 0700 /webhook
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

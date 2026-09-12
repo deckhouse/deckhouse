@@ -45,6 +45,15 @@ properties:
     description: |
       Service Account для [Google Cloud](usage.html#заказ-wildcard-сертификата-с-dns-в-google)
       из того же проекта с ролью Администратора DNS.
+  yandexFolderID:
+    description: |
+      Идентификатор каталога [Yandex Cloud](usage.html#заказ-wildcard-сертификата-с-dns-в-yandex-cloud-dns),
+      в котором расположена публичная DNS-зона для ACME DNS-01 challenge.
+  yandexServiceAccountJSON:
+    description: |
+      Авторизованный ключ сервисного аккаунта Yandex Cloud в формате JSON, закодированный в base64.
+      Сервисному аккаунту нужна роль `dns.editor` (или эквивалентная) на каталог с DNS-зоной.
+      См. [usage](usage.html#заказ-wildcard-сертификата-с-dns-в-yandex-cloud-dns).
   email:
     description: |
       Email проекта, на который LetsEncrypt будет слать уведомления.

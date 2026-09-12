@@ -124,6 +124,24 @@ const cloudDNS = `
 cloudDNSServiceAccount: ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAicHJvamVjdC0yMDkzMTciLAogICJwcml2YXRlX2tleV9pZCI6ICJwcml2YXRlX2lkIiwKICAicHJpdmF0ZV9rZXkiOiAicHJpdmF0ZV9rZXkiLAogICJjbGllbnRfZW1haWwiOiAiZG5zMDEtc29sdmVyQHByb2plY3QtMjA5MzE3LmlhbS5nc2VydmljZWFjY291bnQuY29tIiwKICAiY2xpZW50X2lkIjogIjExNzM1MzAzMzgzOTQ2NTUzNjY3MiIsCiAgImF1dGhfdXJpIjogImh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbS9vL29hdXRoMi9hdXRoIiwKICAidG9rZW5fdXJpIjogImh0dHBzOi8vb2F1dGgyLmdvb2dsZWFwaXMuY29tL3Rva2VuIiwKICAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL29hdXRoMi92MS9jZXJ0cyIsCiAgImNsaWVudF94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL3JvYm90L3YxL21ldGFkYXRhL3g1MDkvZG5zMDEtc29sdmVyJXByb2plY3QtMjA5MzE3LmlhbS5nc2VydmljZWFjY291bnQuY29tIgp9Cg==
 `
 
+const yandexDNS = `
+yandexFolderID: b1gabcdefghijklmnopq
+yandexServiceAccountJSON: eyJpZCI6ImFqZSIsInNlcnZpY2VfYWNjb3VudF9pZCI6ImFqZSJ9
+internal:
+  enableCAInjector: true
+  selfSignedCA:
+    cert: string
+    key: string
+  webhookCert:
+    ca: string
+    key: string
+    crt: string
+  yandexWebhookCert:
+    ca: string
+    key: string
+    crt: string
+`
+
 const letsencryptResourcesValues = `
 requests:
   cpu: "100m"
@@ -487,6 +505,64 @@ podAntiAffinity:
 			}
 		})
 	})
+
+	Context("Yandex DNS", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", yandexDNS)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly for Yandex DNS enabled cluster", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			secret := f.KubernetesResource("Secret", "d8-cert-manager", "yandex")
+			Expect(secret.Exists()).To(BeTrue())
+
+			tlsSecret := f.KubernetesResource("Secret", "d8-cert-manager", "yandex-dns-webhook-tls")
+			Expect(tlsSecret.Exists()).To(BeTrue())
+
+			clusterIssuer := f.KubernetesResource("ClusterIssuer", "d8-cert-manager", "yandex")
+			Expect(clusterIssuer.Exists()).To(BeTrue())
+			Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.webhook.groupName").String()).To(Equal("acme.cloud.yandex.com"))
+			Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.webhook.solverName").String()).To(Equal("yandex-cloud-dns"))
+			Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.webhook.config.folder").String()).To(Equal("b1gabcdefghijklmnopq"))
+			Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.webhook.config.serviceAccountSecretRef.name").String()).To(Equal("yandex"))
+			Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.webhook.config.serviceAccountSecretRef.key").String()).To(Equal("iamkey.json"))
+
+			deployment := f.KubernetesResource("Deployment", "d8-cert-manager", "yandex-dns-webhook")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			service := f.KubernetesResource("Service", "d8-cert-manager", "yandex-dns-webhook")
+			Expect(service.Exists()).To(BeTrue())
+
+			apiService := f.KubernetesGlobalResource("APIService", "v1alpha1.acme.cloud.yandex.com")
+			Expect(apiService.Exists()).To(BeTrue())
+			Expect(apiService.Field("spec.group").String()).To(Equal("acme.cloud.yandex.com"))
+			Expect(apiService.Field("spec.service.name").String()).To(Equal("yandex-dns-webhook"))
+			Expect(apiService.Field("spec.service.namespace").String()).To(Equal("d8-cert-manager"))
+		})
+	})
+
+	Context("Default without Yandex DNS", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager)
+			f.HelmRender()
+		})
+
+		It("Must not render Yandex DNS resources", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Secret", "d8-cert-manager", "yandex").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("ClusterIssuer", "d8-cert-manager", "yandex").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-cert-manager", "yandex-dns-webhook").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("APIService", "v1alpha1.acme.cloud.yandex.com").Exists()).To(BeFalse())
+		})
+	})
+
 	Context("<DisableLetsencrypt>", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManagedHa)

@@ -1,0 +1,89 @@
+{{- if and (hasKey .Values.certManager "yandexFolderID") (hasKey .Values.certManager "yandexServiceAccountJSON") }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: yandex-dns-webhook
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:yandex-dns-webhook:secrets-reader
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+- apiGroups: ["flowcontrol.apiserver.k8s.io"]
+  resources: ["flowschemas", "prioritylevelconfigurations"]
+  verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:yandex-dns-webhook:secrets-reader
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cert-manager:yandex-dns-webhook:secrets-reader
+subjects:
+- kind: ServiceAccount
+  name: yandex-dns-webhook
+  namespace: d8-cert-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: yandex-dns-webhook:webhook-authentication-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: yandex-dns-webhook
+  namespace: d8-cert-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:yandex-dns-webhook:auth-delegator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: yandex-dns-webhook
+  namespace: d8-cert-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:yandex-dns-webhook:domain-solver
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+rules:
+- apiGroups: ["acme.cloud.yandex.com"]
+  resources: ["*"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:yandex-dns-webhook:domain-solver
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cert-manager:yandex-dns-webhook:domain-solver
+subjects:
+- kind: ServiceAccount
+  name: cert-manager
+  namespace: d8-cert-manager
+{{- end }}

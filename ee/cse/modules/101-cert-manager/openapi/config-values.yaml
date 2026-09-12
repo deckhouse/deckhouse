@@ -108,6 +108,22 @@ properties:
         "eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0=",
       ]
 
+  yandexFolderID:
+    type: string
+    description: |
+      The ID of the [Yandex Cloud](usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns) folder
+      that contains the public DNS zone used for the ACME DNS-01 challenge.
+    x-examples: ["b1gabcdefghijklmnopq"]
+
+  yandexServiceAccountJSON:
+    type: string
+    format: byte
+    description: |
+      A base64-encoded authorized key JSON for a Yandex Cloud service account
+      with the `dns.editor` role (or equivalent) on the folder with the DNS zone.
+      See [usage](usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns).
+    x-examples: ["eyJpZCI6ImFqZSIsInNlcnZpY2VfYWNjb3VudF9pZCI6ImFqZSJ9"]
+
   email:
     type: string
     format: email

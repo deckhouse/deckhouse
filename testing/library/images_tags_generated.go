@@ -12,10 +12,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",
 	},
 	"certManager": map[string]interface{}{
-		"certManagerAcmeSolver": "imageHash-certManager-certManagerAcmeSolver",
-		"certManagerCainjector": "imageHash-certManager-certManagerCainjector",
-		"certManagerController": "imageHash-certManager-certManagerController",
-		"certManagerWebhook":    "imageHash-certManager-certManagerWebhook",
+		"certManagerAcmeSolver":   "imageHash-certManager-certManagerAcmeSolver",
+		"certManagerCainjector":   "imageHash-certManager-certManagerCainjector",
+		"certManagerController":   "imageHash-certManager-certManagerController",
+		"certManagerWebhook":      "imageHash-certManager-certManagerWebhook",
+		"certManagerWebhookYandex": "imageHash-certManager-certManagerWebhookYandex",
 	},
 	"chrony": map[string]interface{}{
 		"chrony":         "imageHash-chrony-chrony",
