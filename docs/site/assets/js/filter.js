@@ -51,11 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let fullResetHandler = null;
 
   const editionTitles = {
-    'ce': 'Community Edition',
+    'ce': 'Open/Community Edition',
+    'core': 'Core Edition',
     'be': 'Basic Edition',
     'se': 'Standard Edition',
     'se-plus': 'Standard Edition+',
-    'ee': 'Enterprise Edition',
+    'ee': 'Ultimate/Enterprise Edition',
     'cse-lite': 'CSE Lite',
     'cse-pro': 'CSE Pro'
   };

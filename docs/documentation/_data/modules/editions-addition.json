@@ -3,6 +3,13 @@
     "name": "CE",
     "title": "Community Edition"
   },
+  "core": {
+    "name": "CORE",
+    "title": "Core Edition",
+    "includeModules": [
+      "admission-policy-engine"
+    ]
+  },
   "be": {
     "name": "BE",
     "title": "Basic Edition",

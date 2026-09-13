@@ -15,6 +15,7 @@
   "alb": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
