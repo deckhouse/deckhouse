@@ -24,25 +24,29 @@ moduleAllowedStages:
 # It is used for sorting editions (e.g. to calculate editions list from minimal available one)
 editions:
   - id: "ce"
-    name: "CE"
-    title: "Community Edition"
+    name: "Open, CE"
+    title: "Open/Community Edition"
     weight: 1
   - id: "be"
     name: "BE"
     title: "Basic Edition"
-    weight: 2
+    weight: 3
+  - id: "core"
+    name: "Core"
+    title: "Core Edition"
+    weight: 5
   - id: "se"
     name: "SE"
     title: "Standard Edition"
-    weight: 3
+    weight: 7
   - id: "se-plus"
     name: "SE+"
     title: "Standard Edition+"
-    weight: 4
+    weight: 9
   - id: "ee"
-    name: "EE"
-    title: "Enterprise Edition"
-    weight: 7
+    name: "Ultimate, EE"
+    title: "Ultimate/Enterprise Edition"
+    weight: 11
   - id: "cse-lite"
     name: "CSE Lite"
     name_version: "CSE Lite (1.73)"
