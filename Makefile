@@ -641,7 +641,7 @@ LIB_HELM_DIR ?= $(CURDIR)/helm_lib
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.13.1
-DECKHOUSE_CLI_VERSION ?= v0.33.1
+DECKHOUSE_CLI_VERSION ?= v0.33.16
 CRD_ENRICHER_VERSION ?= v0.0.2
 DMT_VERSION ?= 0.2.4
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
@@ -673,9 +673,19 @@ dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
 ## Generate tools documentation
 .PHONY: generate-docs
 generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
+  ##~ d8 embeds werf, whose help texts are hard-wrapped to min(stderr terminal width, 100).
+  ##~ Running this from a terminal narrower than 100 columns silently yields a different
+  ##~ d8-cli.json than CI, which has no TTY and so always wraps at 100, and the go_generate
+  ##~ job then fails on "git diff --exit-code". Keep stderr off the TTY and replay it
+  ##~ afterwards, so the wrap width is pinned without hiding real errors.
 	@$(DECKHOUSE_CLI) --version
 	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
-	@DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+	@err=$$(mktemp); \
+	if DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI) help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json 2>"$$err"; then \
+		cat "$$err" >&2; rm -f "$$err"; echo "d8 help-json content is updated"; \
+	else \
+		rc=$$?; cat "$$err" >&2; rm -f "$$err"; exit $$rc; \
+	fi
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
