@@ -18,7 +18,10 @@ package clusterprojectrolebinding
 
 import (
 	"context"
+	"fmt"
+	"k8s.io/client-go/util/flowcontrol"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -234,4 +237,46 @@ func TestReconcile_StatusUnchangedNoWrite(t *testing.T) {
 
 	assert.Equal(t, first.ResourceVersion, second.ResourceVersion,
 		"an unchanged reconcile must not rewrite the status and re-enqueue the object")
+}
+
+// countingLimiter records how many tokens the fan-out asked for.
+type countingLimiter struct {
+	flowcontrol.RateLimiter
+	waits int
+}
+
+func (c *countingLimiter) Wait(ctx context.Context) error {
+	c.waits++
+	return c.RateLimiter.Wait(ctx)
+}
+
+// TestReconcile_FanOutTakesOneTokenPerNamespace: every RoleBinding write of a fan-out goes through
+// the limiter, so a cluster with thousands of namespaces spreads its writes instead of bursting.
+func TestReconcile_FanOutTakesOneTokenPerNamespace(t *testing.T) {
+	objs := []client.Object{cprb("ops", "d8:project:viewer")}
+	for i := 0; i < 5; i++ {
+		name := fmt.Sprintf("p%d", i)
+		objs = append(objs, project(name, false, name, name+"-be"))
+	}
+	r, _ := newReconciler(t, objs...)
+	limiter := &countingLimiter{RateLimiter: flowcontrol.NewFakeAlwaysRateLimiter()}
+	r.Limiter = limiter
+
+	reconcileCPRB(t, r, "ops")
+
+	if limiter.waits != 10 {
+		t.Fatalf("fan-out into 10 namespaces must take 10 tokens, took %d", limiter.waits)
+	}
+}
+
+// TestReconcile_DefaultBudgetKeepsSmallFanOutsFast: with the default budget the fan-out of three
+// projects is a matter of milliseconds, not the seconds the e2e waits allow.
+func TestReconcile_DefaultBudgetKeepsSmallFanOutsFast(t *testing.T) {
+	r, _ := newReconciler(t, cprb("ops", "d8:project:viewer"),
+		project("a", false, "a"), project("b", false, "b", "b-be"), project("c", false, "c"))
+	started := time.Now()
+	reconcileCPRB(t, r, "ops")
+	if elapsed := time.Since(started); elapsed > 5*time.Second {
+		t.Fatalf("fan-out of three projects took %v, the budget is seconds", elapsed)
+	}
 }

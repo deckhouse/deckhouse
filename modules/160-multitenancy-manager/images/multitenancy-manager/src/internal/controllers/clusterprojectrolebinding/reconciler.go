@@ -22,11 +22,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -44,6 +48,37 @@ import (
 // Reconciler fans out service RoleBindings for ClusterProjectRoleBinding objects.
 type Reconciler struct {
 	client.Client
+	// Limiter paces the writes of one fan-out. A ClusterProjectRoleBinding spans every namespace of
+	// every project, and an unpaced loop over thousands of them is a burst the API server has to
+	// absorb from a single client. Nil means the default budget (fanOutQPS / fanOutBurst).
+	Limiter flowcontrol.RateLimiter
+}
+
+const (
+	// fanOutQPS and fanOutBurst are the write budget of one fan-out. Sized so that the fan-out of
+	// two or three projects still completes within seconds (the e2e waits give it 60 s) while a
+	// cluster with thousands of namespaces spreads its writes over minutes instead of a burst.
+	fanOutQPS   = 20
+	fanOutBurst = 40
+)
+
+// fanOutDuration is how long one ClusterProjectRoleBinding reconcile spent writing its RoleBindings.
+var fanOutDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
+	Name:    "d8_multitenancy_cprb_fanout_duration_seconds",
+	Help:    "Wall time of one ClusterProjectRoleBinding fan-out (RoleBinding upserts and prunes across the project namespaces).",
+	Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300},
+})
+
+func init() {
+	metrics.Registry.MustRegister(fanOutDuration)
+}
+
+// limiter returns the configured limiter, building the default one on first use.
+func (r *Reconciler) limiter() flowcontrol.RateLimiter {
+	if r.Limiter == nil {
+		r.Limiter = flowcontrol.NewTokenBucketRateLimiter(fanOutQPS, fanOutBurst)
+	}
+	return r.Limiter
 }
 
 // Reconcile keeps the service RoleBindings of a single ClusterProjectRoleBinding in sync with the
@@ -126,9 +161,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Fan out into every namespace, accumulating per-namespace errors so a single bad namespace
-	// does not block the rest of the cluster (CPRB can span thousands of namespaces).
+	// does not block the rest of the cluster (CPRB can span thousands of namespaces). Each write
+	// takes a token first, so the burst a large cluster would otherwise see is spread out.
+	started := time.Now()
+	limiter := r.limiter()
 	var errs []error
 	for ns, project := range target {
+		if err := limiter.Wait(ctx); err != nil {
+			return ctrl.Result{}, fmt.Errorf("fan-out rate limiter: %w", err)
+		}
 		if err := r.upsertRoleBinding(ctx, cprb, ns, project); err != nil {
 			errs = append(errs, err)
 		}
@@ -137,6 +178,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err := r.pruneRoleBindings(ctx, cprb.Name, target); err != nil {
 		errs = append(errs, err)
 	}
+	fanOutDuration.Observe(time.Since(started).Seconds())
 
 	if len(errs) > 0 {
 		return ctrl.Result{}, errors.Join(errs...)
