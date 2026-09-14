@@ -171,18 +171,27 @@ steps:
         > images_fuzz_tags_werf.tmp.json
       mv images_fuzz_tags_werf.tmp.json images_fuzz_tags_werf.json
 
-      MC=/tmp/mc
-      curl -fsSL -o "${MC}" https://dl.min.io/client/mc/release/linux-amd64/mc
-      chmod +x "${MC}"
+      if ! command -v aws >/dev/null 2>&1; then
+        AWS_CLI_DIR="$(mktemp -d "${RUNNER_TEMP}/fuzz-aws-cli.XXXXXX")"
+        curl -fsSL \
+          -o "${AWS_CLI_DIR}/awscliv2.zip" \
+          "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        unzip -q "${AWS_CLI_DIR}/awscliv2.zip" -d "${AWS_CLI_DIR}"
+        "${AWS_CLI_DIR}/aws/install" \
+          --bin-dir "${AWS_CLI_DIR}/bin" \
+          --install-dir "${AWS_CLI_DIR}/cli"
+        export PATH="${AWS_CLI_DIR}/bin:${PATH}"
+        rm -rf "${AWS_CLI_DIR}/aws" "${AWS_CLI_DIR}/awscliv2.zip"
+      fi
 
-      "${MC}" alias set fuzz-s3 \
-        "${FUZZ_S3_ENDPOINT}" \
-        "${FUZZ_S3_ACCESS_KEY}" \
-        "${FUZZ_S3_SECRET_KEY}"
-
-      "${MC}" cp \
-        "images_fuzz_tags_werf.json" \
-        "fuzz-s3/anomaloys-materials/build-reports/${REPOSITORY}/${BRANCH_SLUG}/images_fuzz_tags_werf.json"
+      AWS_CA_BUNDLE="${AWS_CA_BUNDLE:-/etc/ssl/certs/ca-certificates.crt}" \
+      AWS_ACCESS_KEY_ID="${FUZZ_S3_ACCESS_KEY}" \
+      AWS_SECRET_ACCESS_KEY="${FUZZ_S3_SECRET_KEY}" \
+      aws --endpoint-url "${FUZZ_S3_ENDPOINT}" \
+        --region us-east-1 \
+        s3 cp "images_fuzz_tags_werf.json" \
+          "s3://anomaloys-materials/build-reports/${REPOSITORY}/${BRANCH_SLUG}/images_fuzz_tags_werf.json" \
+          --only-show-errors
 {!{- end }!}
 
 # </template: build_fuzz_template>
