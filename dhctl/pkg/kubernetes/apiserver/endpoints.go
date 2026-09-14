@@ -50,8 +50,8 @@ func GetEndpoints(
 	return getEndpoints(ctx, kubeCl, false)
 }
 
-// GetReadyEndpoints returns sorted unique endpoints that are ready to accept
-// connections. Terminating and explicitly not-ready endpoints are excluded.
+// GetReadyEndpoints returns sorted unique endpoints reported as ready.
+// Terminating and explicitly not-ready endpoints are excluded.
 func GetReadyEndpoints(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
@@ -131,8 +131,7 @@ func GetReadyHostsForNodes(
 
 // getEndpoints returns sorted unique API server endpoints in host:port format.
 // It merges non-terminating kube-apiserver Pods with the kubernetes EndpointSlice.
-// Readiness is intentionally not checked; callers that require ready endpoints
-// must apply their own safety filtering.
+// If readyOnly is true, not-ready and terminating endpoints are excluded.
 func getEndpoints(ctx context.Context, kubeCl *client.KubernetesClient, readyOnly bool) ([]string, error) {
 	endpoints := make(map[string]struct{})
 

@@ -58,113 +58,76 @@ func (i *NodeIP) Name() string {
 	return i.InternalIP
 }
 
-func GetCloudConfig(
-	ctx context.Context,
-	kubeProvider kubernetes.KubeClientProviderWithCtx,
-	nodeGroupName string,
-	showDeckhouseLogs bool,
-	apiserverHosts ...string,
-) (string, error) {
+func GetCloudConfig(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
 
-	err := dhlog.RunProcess(
-		ctx,
-		dhlog.FromContext(ctx),
-		name,
-		func(ctx context.Context) error {
-			if showDeckhouseLogs {
-				logCtx, cancel := context.WithCancel(ctx)
-				defer cancel()
+	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), name, func(ctx context.Context) error {
+		if showDeckhouseLogs {
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
 
-				go func() {
-					for {
-						select {
-						case <-logCtx.Done():
-							return
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+						if err != nil {
+							dhlog.FromContext(ctx).DebugContext(
+								ctx,
+								fmt.Sprintf("Could not get Kubernetes client for Deckhouse log printer: %v", err),
+							)
 
-						default:
-							kubeCl, err := kubeProvider.KubeClientCtx(logCtx)
-							if err != nil {
-								dhlog.FromContext(logCtx).DebugContext(
-									logCtx,
-									fmt.Sprintf(
-										"Could not get Kubernetes client for Deckhouse log printer: %v",
-										err,
-									),
-								)
-
-								select {
-								case <-logCtx.Done():
-									return
-								case <-time.After(time.Second):
-								}
-
-								continue
+							select {
+							case <-ctx.Done():
+								return
+							case <-time.After(time.Second):
 							}
 
-							_, _ = deckhouse.NewLogPrinter(kubeCl).
-								WithLeaderElectionAwarenessMode(
-									types.NamespacedName{
-										Namespace: "d8-system",
-										Name:      "deckhouse-leader-election",
-									},
-								).
-								Print(logCtx)
+							continue
 						}
+
+						_, _ = deckhouse.NewLogPrinter(kubeCl).
+							WithLeaderElectionAwarenessMode(
+								types.NamespacedName{
+									Namespace: "d8-system",
+									Name:      "deckhouse-leader-election",
+								},
+							).
+							Print(ctx)
 					}
-				}()
-			}
-
-			allPassedHosts := strings.Join(apiserverHosts, ",")
-
-			if nodeGroupName == global.MasterNodeGroupName {
-				if len(apiserverHosts) > 0 {
-					dhlog.FromContext(ctx).InfoContext(
-						ctx,
-						fmt.Sprintf(
-							"Waiting while all API-server endpoints '%s' will be available in bootstrap secret",
-							allPassedHosts,
-						),
-					)
-				} else {
-					dhlog.FromContext(ctx).DebugContext(
-						ctx,
-						"Got empty API-server endpoints from arguments",
-					)
 				}
-			}
+			}()
+		}
 
-			kubeCl, err := kubeProvider.KubeClientCtx(ctx)
-			if err != nil {
-				return fmt.Errorf(
-					"get Kubernetes client while waiting for cloud config: %w",
-					err,
-				)
-			}
-
-			state, err := waitForCloudConfigSecret(
-				ctx,
-				kubeCl,
-				nodeGroupName,
-				apiserverHosts,
-				cloudConfigWaitTimeout,
-			)
-			if err != nil {
-				return err
-			}
-
-			cloudData = state.cloudConfig
-
+		if nodeGroupName == global.MasterNodeGroupName && len(apiserverHosts) > 0 {
 			dhlog.FromContext(ctx).InfoContext(
 				ctx,
-				"Cloud configuration found!",
+				fmt.Sprintf(
+					"Waiting for API server hosts %v to appear in the bootstrap Secret",
+					apiserverHosts,
+				),
 			)
+		}
 
-			return nil
-		},
-	)
+		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get Kubernetes client while waiting for cloud config: %w", err)
+		}
+
+		state, err := waitForCloudConfigSecret(ctx, kubeCl, nodeGroupName, apiserverHosts, cloudConfigWaitTimeout)
+		if err != nil {
+			return err
+		}
+
+		cloudData = state.cloudConfig
+		dhlog.FromContext(ctx).InfoContext(ctx, "Cloud configuration found!")
+
+		return nil
+	})
 
 	return cloudData, err
 }

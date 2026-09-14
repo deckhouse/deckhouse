@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
@@ -78,7 +79,7 @@ func TestInspectCloudConfigSecretReportsMissingHosts(t *testing.T) {
 	require.ErrorContains(
 		t,
 		err,
-		"API server hosts not found in cloud config: 10.0.0.3",
+		"API server hosts not found in apiserverEndpoints: 10.0.0.3",
 	)
 	require.Equal(t, []string{"10.0.0.3"}, state.missingHosts)
 	require.Equal(t, "43", state.resourceVersion)
@@ -138,6 +139,36 @@ func TestWaitForCloudConfigSecretReturnsExistingSecret(t *testing.T) {
 		state.cloudConfig,
 	)
 	require.Empty(t, state.missingHosts)
+}
+
+func TestGetCloudConfigReturnsExistingCloudConfig(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+
+	_, err := kubeCl.CoreV1().
+		Secrets(cloudConfigSecretNamespace).
+		Create(
+			t.Context(),
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "manual-bootstrap-for-master",
+					Namespace: cloudConfigSecretNamespace,
+				},
+				Data: map[string][]byte{
+					"cloud-config": []byte("#cloud-config\n"),
+				},
+			},
+			metav1.CreateOptions{},
+		)
+	require.NoError(t, err)
+
+	cloudConfig, err := GetCloudConfig(
+		t.Context(),
+		kubernetes.NewSimpleKubeClientGetter(kubeCl),
+		"master",
+		false,
+	)
+	require.NoError(t, err)
+	require.Equal(t, base64.StdEncoding.EncodeToString([]byte("#cloud-config\n")), cloudConfig)
 }
 
 func TestWaitForCloudConfigSecretWaitsForUpdate(t *testing.T) {

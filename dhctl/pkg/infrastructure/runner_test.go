@@ -492,3 +492,34 @@ func TestRunnerRefreshVariablesAndReplanBeforeVMDestruction(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []byte("new variables"), actualVariables)
 }
+
+func TestRunnerSkipsVariablesRefreshWithoutVMDestruction(t *testing.T) {
+	tests := []struct {
+		name                   string
+		changes                int
+		hasVMDestruction       bool
+		autoDismissDestructive bool
+	}{
+		{name: "no changes", changes: plan.HasNoChanges},
+		{name: "non-destructive changes", changes: plan.HasChanges},
+		{name: "destructive change outside VM", changes: plan.HasDestructiveChanges},
+		{name: "dismissed VM destruction", changes: plan.HasDestructiveChanges, hasVMDestruction: true, autoDismissDestructive: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			refreshCalls := 0
+			runner := newTestRunner(&fakeExecutor{}).
+				WithVariablesRefresher(func(context.Context) ([]byte, error) {
+					refreshCalls++
+					return []byte("new variables"), nil
+				})
+			runner.changesInPlan = tt.changes
+			runner.hasVMDestruction = tt.hasVMDestruction
+			runner.changeSettings.AutoDismissDestructive = tt.autoDismissDestructive
+
+			require.NoError(t, runner.refreshVariablesAndReplanBeforeVMDestruction(t.Context()))
+			require.Zero(t, refreshCalls)
+		})
+	}
+}

@@ -110,7 +110,7 @@ func inspectCloudConfigSecret(
 		state.missingHosts = slices.Sorted(maps.Keys(missingHosts))
 		if len(state.missingHosts) > 0 {
 			return state, fmt.Errorf(
-				"API server hosts not found in cloud config: %s",
+				"API server hosts not found in apiserverEndpoints: %s",
 				strings.Join(state.missingHosts, ", "),
 			)
 		}
@@ -340,8 +340,7 @@ func waitForCloudConfigSecret(
 					watchClosed = true
 
 				case watch.Bookmark:
-					// The bookmark only advances resourceVersion.
-					// No Secret data needs to be inspected.
+					// Bookmarks contain no Secret data to inspect.
 				}
 			}
 		}
