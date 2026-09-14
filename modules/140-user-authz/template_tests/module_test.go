@@ -170,7 +170,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus"]`)
 			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
 
@@ -294,6 +294,76 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(manifest).To(ContainSubstring("hostPorts:"))
 			Expect(manifest).To(ContainSubstring("port: 40443"))
 			Expect(manifest).To(ContainSubstring("protocol: TCP"))
+		})
+
+		It("Should expose the webhook metrics for Prometheus", func() {
+			ds := f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook")
+			Expect(ds.Exists()).To(BeTrue())
+
+			// The webhook serves metrics on 127.0.0.1 and the sidecar publishes them on the node.
+			Expect(ds.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			Expect(ds.Field("spec.template.spec.containers.1.ports.0.containerPort").Int()).To(Equal(int64(4233)))
+			Expect(ds.Field("spec.template.spec.containers.1.ports.0.name").String()).To(Equal("https-metrics"))
+			Expect(ds.Field("spec.template.spec.containers.1.args").String()).To(ContainSubstring(":4233"))
+			Expect(ds.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("http://127.0.0.1:4243/metrics"))
+			// The sidecar authorizes scrapers against the virtual subresource granted in rbac-to-us.
+			Expect(ds.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("prometheus-metrics"))
+			role := f.KubernetesResource("Role", "d8-user-authz", "access-to-webhook-prometheus-metrics")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(ContainSubstring("daemonsets/prometheus-metrics"))
+			Expect(role.Field("rules").String()).To(ContainSubstring("user-authz-webhook"))
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "access-to-webhook-prometheus-metrics").Exists()).To(BeTrue())
+			// The sidecar needs d8:rbac-proxy to ask the API server about the scraper.
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:webhook:rbac-proxy").Exists()).To(BeTrue())
+
+			// The alert rules select job="user-authz-webhook": the PodMonitor takes the job name from
+			// the app label of the pods, so both must stay in place.
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "user-authz-webhook")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
+			Expect(podMonitor.Field("spec.podMetricsEndpoints.0.port").String()).To(Equal("https-metrics"))
+			Expect(ds.Field("spec.template.metadata.labels.app").String()).To(Equal("user-authz-webhook"))
+
+			rule := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-user-authz-webhook")
+			Expect(rule.Exists()).To(BeTrue())
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzWebhookRulesNotSynced"))
+			// Field().String() hands back JSON, so the selector's quotes arrive escaped.
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring(`job=\"user-authz-webhook\"`))
+		})
+
+		It("Should expose the permission-browser metrics for Prometheus", func() {
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			// The apiserver's own port is behind the aggregation layer, so the metrics come out of a
+			// loopback endpoint through the sidecar instead.
+			Expect(deployment.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			Expect(deployment.Field("spec.template.spec.containers.1.ports.0.containerPort").Int()).To(Equal(int64(4276)))
+			Expect(deployment.Field("spec.template.spec.containers.1.ports.0.name").String()).To(Equal("https-metrics"))
+			Expect(deployment.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("http://127.0.0.1:4276/metrics"))
+
+			role := f.KubernetesResource("Role", "d8-user-authz", "access-to-permission-browser-apiserver-prometheus-metrics")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(ContainSubstring("deployments/prometheus-metrics"))
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "access-to-permission-browser-apiserver-prometheus-metrics").Exists()).To(BeTrue())
+
+			// The alert rules select job="permission-browser-apiserver"; the PodMonitor takes the job
+			// name from the app label of the pods.
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "permission-browser-apiserver")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
+			Expect(deployment.Field("spec.template.metadata.labels.app").String()).To(Equal("permission-browser-apiserver"))
+		})
+
+		It("Should let the webhook and permission-browser watch the ClusterAuthorizationRules", func() {
+			// Both read the multi-tenancy options straight from the rules instead of a rendered file.
+			webhookRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:webhook")
+			Expect(webhookRole.Exists()).To(BeTrue())
+			Expect(webhookRole.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules"))
+
+			browserRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:permission-browser-apiserver")
+			Expect(browserRole.Exists()).To(BeTrue())
+			Expect(browserRole.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules"))
 		})
 
 		It("Should deploy permission-browser-apiserver and supporting objects", func() {

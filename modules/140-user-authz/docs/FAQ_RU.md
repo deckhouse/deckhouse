@@ -146,6 +146,67 @@ d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
 
 Если правило остаётся в `Ready=False` с `ApplyError` из-за того, что у биндинга вручную изменили `roleRef`, удалите этот биндинг: `roleRef` неизменяем, контроллер пересоздаст биндинг с правильным.
 
+## Как проверить, что вебхук авторизации знает актуальные правила?
+
+Вебхук авторизации и Permission Browser читают параметры мультитенантности из объектов ClusterAuthorizationRule (параметры `limitNamespaces`, `namespaceSelector`, `allowAccessToSystemNamespaces`) напрямую из API через общий informer, поэтому изменение доходит до них за время окна склейки informer'а, а не после рендера Helm.
+
+**Порядок применения.** `user-authz-controller` пишет ClusterRoleBinding'и правила примерно одновременно с самим правилом, и до вебхука они идут разными watch-потоками, поэтому биндинги могут прийти первыми. Субъект, которого управляемый контроллером биндинг связывает с правилом, где вебхук его ещё не видел, получает отказ во всех неймспейсах до прихода правила: кластерный биндинг никогда не даёт больше, чем разрешает его правило. Тот же механизм работает в Permission Browser, поэтому он не может показать доступ шире того, что применяет API-сервер.
+
+**Состояние.** Вебхук сообщает состояние своего informer'а правил.
+
+Чтобы проверить, что поды вебхука запущены, выполните команду:
+
+```bash
+d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+```
+
+Пример вывода (по одному поду на каждый master, в сети узла; готовы должны быть оба контейнера):
+
+```console
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE       NOMINATED NODE   READINESS GATES
+user-authz-webhook-qrm2n   2/2     Running   0          2d    10.0.0.11    master-0   <none>           <none>
+user-authz-webhook-h6jbh   2/2     Running   0          2d    10.0.0.12    master-1   <none>           <none>
+user-authz-webhook-97fvs   2/2     Running   0          2d    10.0.0.13    master-2   <none>           <none>
+```
+
+Чтобы вывести последние 100 строк логов контейнера вебхука из всех таких подов, выполните команду:
+
+```bash
+d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
+```
+
+Пример вывода:
+
+```console
+2026/09/11 10:00:00 server is starting to listen on  127.0.0.1:40443 ...
+2026/09/11 10:00:01 rules source: directory rebuilt from 12 rules (18 subjects, 0 quarantined) in 4.2ms
+```
+
+Строка `rules source: directory rebuilt from N rules` показывает, что informer получил список правил, и сколько их в каталоге; `quarantined` — число правил, у которых не скомпилировались шаблоны `limitNamespaces`.
+
+**Метрики.** Webhook отдаёт их по адресу `127.0.0.1` внутри своего пода; сайдкар `kube-rbac-proxy` публикует их на узле, а собирает `PodMonitor` `user-authz-webhook` (должен быть включён модуль `operator-prometheus`). На каждый master приходится один набор серий.
+
+| Метрика | Описание |
+|---|---|
+| `user_authz_webhook_rules_informer_synced` | `1`, если вебхук хотя бы раз получил список `ClusterAuthorizationRules`. Пока `0`, каждый субъект, связанный биндингом правила, получает отказ |
+| `user_authz_webhook_rules_observed` | Количество правил, из которых собран текущий каталог |
+| `user_authz_webhook_rules_subjects` | Количество различных субъектов в текущем каталоге |
+| `user_authz_webhook_rules_max_resource_version` | Наибольший `resourceVersion` среди наблюдаемых правил — отметка для сравнения с кластером при измерении отставания |
+| `user_authz_webhook_rules_quarantined` | Количество правил, у которых не компилируется паттерн `limitNamespaces` или `namespaceSelector`. Сломанный фильтр отбрасывается, поэтому субъекты получают более узкую область, чем записано |
+| `user_authz_webhook_rules_directory_updated_timestamp_seconds` | Unix-время последней пересборки |
+| `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Количество пересборок и время, которое они занимают |
+| `user_authz_webhook_rules_watch_errors_total` | Ошибки list/watch informer'а правил |
+
+Permission Browser отдаёт тот же набор с префиксом `user_authz_permission_browser`. Отдаёт он их так же — на loopback-адресе за сайдкаром `kube-rbac-proxy`, собирает `PodMonitor` `permission-browser-apiserver`; порт самого API-сервера остаётся за слоем агрегации, который Prometheus скрейпить не может. За ним следят два алерта: `D8UserAuthzPermissionBrowserTargetDown` и `D8UserAuthzPermissionBrowserRulesNotSynced`. Некомпилируемое правило и постоянные ошибки watch — свойство кластера, а не одного потребителя, поэтому о них уже сообщают алерты вебхука выше.
+
+**Алерты** (в правилах Prometheus `d8_user_authz`, группа `D8UserAuthzWebhookMalfunctioning`):
+
+- `D8UserAuthzWebhookTargetDown` — webhook не скрейпится 5 минут (пока алерт активен, остальные сработать не могут);
+- `D8UserAuthzWebhookRulesNotSynced` — экземпляр 10 минут не получил список правил;
+- `D8UserAuthzWebhookRulesQuarantined` — правило 10 минут не компилируется;
+- `D8UserAuthzWebhookRulesWatchErrors` — устойчивые ошибки watch в течение 15 минут;
+- `D8UserAuthzWebhookRulesStale` — каталог не пересобирался сутки (норма для кластера, где правила не меняются).
+
 ## Как расширить роли или создать новую?
 
 [Экспериментальная ролевая модель](./#экспериментальная-ролевая-модель) построена на принципе агрегации, она собирает более мелкие роли в более обширные,
