@@ -26,7 +26,7 @@ lang: ru
 
 Чтобы посмотреть список аренд IP-адресов (`vmipl`), используйте команду:
 
-```bash
+```shell
 d8 k get vmipl
 ```
 
@@ -44,9 +44,9 @@ ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12
 
 Адрес закреплён за машиной, когда ресурс переходит в фазу `Attached`. Остальные фазы описаны в поле [`.status.phase`](/modules/virtualization/cr.html#virtualmachineipaddress-v1alpha2-status-phase).
 
-По умолчанию DP назначает машине адрес сам и держит его закреплённым до удаления машины. Посмотреть назначенный адрес можно командой:
+По умолчанию Deckhouse Platform (DP) назначает машине адрес сам и держит его закреплённым до удаления машины. Посмотреть назначенный адрес можно командой:
 
-```bash
+```shell
 d8 k get vmip
 ```
 
@@ -93,7 +93,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 
 1. Создайте ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress):
 
-   ```yaml
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachineIPAddress
@@ -134,7 +134,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 
 Получите название ресурса [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) для заданной виртуальной машины:
 
-```bash
+```shell
 d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
 ```
 
@@ -146,7 +146,7 @@ linux-vm-7prpx
 
 Удалите блок `.metadata.ownerReferences` из найденного ресурса:
 
-```bash
+```shell
 d8 k patch vmip linux-vm-7prpx --type=merge --patch '{"metadata":{"ownerReferences":null}}'
 
 # Или внесите аналогичные изменения, отредактировав ресурс.
@@ -163,7 +163,7 @@ spec:
 
 Даже если ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) удалить, IP-адрес остаётся арендованным за проектом ещё 10 минут, и его можно занять снова:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineIPAddress
@@ -177,7 +177,7 @@ EOF
 
 ## IPAM для основной сети
 
-{% alert level="warning" %}
+{% alert level="info" %}
 Общий IPAM работает, только если в модуле [`sdn`](/modules/sdn/) для основной сети кластера настроен пул адресов. Без него адресами машин управляют устаревшие ресурсы [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress), описанные выше.
 {% endalert %}
 
@@ -189,7 +189,7 @@ EOF
 
 Пример статического ресурса IPAddress для основной сети:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: network.deckhouse.io/v1alpha1
 kind: IPAddress
@@ -218,14 +218,14 @@ spec:
 
 Текущий адрес и имя ресурса IPAddress, за которым он закреплён, показывает статус машины:
 
-```bash
+```shell
 d8 k get vm linux-vm -o jsonpath='{.status.networks[?(@.type=="Main")]}'
 ```
 
 Пример вывода:
 
 <!-- markdownlint-disable MD031 -->
-```txt
+```console
 {"id":1,"ipAddress":"10.66.10.14","ipAddressName":"linux-vm-4bkqr","type":"Main"}
 ```
 {: .nowrap-default }

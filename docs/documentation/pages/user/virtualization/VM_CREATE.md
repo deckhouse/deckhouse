@@ -27,7 +27,7 @@ The following steps show how to start an Ubuntu 24.04 virtual machine on the dis
 
 1. Create a [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<"EOF"
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
@@ -82,7 +82,7 @@ The following steps show how to start an Ubuntu 24.04 virtual machine on the dis
 
 1. Verify that the machine has started:
 
-   ```bash
+   ```shell
    d8 k get vm linux-vm
    ```
 
@@ -147,7 +147,7 @@ From creation to deletion, a virtual machine goes through several phases. The cu
 
 The conditions in the [`.status.conditions`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-conditions) block answer the question of why the machine is in its current phase. To view the ones that have a message, run the following command:
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.message != "")'
 ```
 
@@ -157,19 +157,19 @@ Where `<VM_NAME>` is the virtual machine name.
 
 While a VM is in the `Pending` phase, it waits for its dependent resources to become ready, that is, disks, images, the VM class, and the secret with the initial configuration script. A delay in this phase means that one of the resources isn't ready or that the namespace or project quotas are exhausted. The conditions ending in `Ready` show what exactly blocks the startup:
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type | test(".*Ready"))'
 ```
 
-In the `Starting` phase, the dependent resources are ready and DP starts the VM on one of the nodes. If the startup drags on, there's no suitable node, or the suitable nodes lack CPU or memory. The `Running` condition reports the reason:
+In the `Starting` phase, the dependent resources are ready and Deckhouse Platform (DP) starts the VM on one of the nodes. If the startup drags on, there's no suitable node, or the suitable nodes lack CPU or memory. The `Running` condition reports the reason:
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type=="Running")'
 ```
 
 In the `Migrating` phase, the machine moves to another node by live migration. The migration doesn't start or gets interrupted if the CPU instruction sets on the nodes are incompatible, the kernel versions differ, no node matches the placement rules, or the suitable nodes lack resources. The `Migrating` condition together with the [`.status.migrationState`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-migrationstate) block shows the migration progress:
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status | {condition: .conditions[] | select(.type=="Migrating"), migrationState}'
 ```
 

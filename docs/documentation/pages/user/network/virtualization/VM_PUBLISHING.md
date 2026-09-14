@@ -28,7 +28,7 @@ A machine gets into a service by labels. Assign the machine the label that the s
 
 Assign the label with the `d8 k label` command:
 
-```bash
+```shell
 d8 k label vm linux-vm app=nginx
 ```
 
@@ -64,7 +64,7 @@ A headless service doesn't allocate an IP address of its own, but returns the ad
 
 Create a service with `clusterIP: None`:
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -110,7 +110,7 @@ A service of this type gives the machine application a stable address inside the
 
 Here is an example of a `ClusterIP` configuration:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -150,7 +150,7 @@ A service of this type opens the machine application on a port of every cluster 
 
 Create the following service:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -202,7 +202,7 @@ A service of this type gives the application an external address through a load 
 
 `LoadBalancer` is a service type that automatically creates an external load balancer with a permanent IP address. This balancer distributes incoming traffic among virtual machines, making the service available from the internet.
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -254,7 +254,7 @@ To publish a virtual machine service through `Ingress`, create the following res
 
 An internal service to bind with `Ingress`. Example:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -273,7 +273,7 @@ EOF
 
 And an `Ingress` resource for publishing. Example:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress

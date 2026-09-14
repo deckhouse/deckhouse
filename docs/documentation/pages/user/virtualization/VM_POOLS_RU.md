@@ -6,8 +6,8 @@ search: пул ВМ, VirtualMachinePool, реплики, масштабиров�
 lang: ru
 ---
 
-{% alert level="warning" %}
-Доступно в коммерческих редакциях DP.
+{% alert level="info" %}
+Доступно в коммерческих редакциях Deckhouse Platform (DP).
 {% endalert %}
 
 Ресурс [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) поддерживает заданное число одинаковых виртуальных машин (ВМ) и позволяет масштабировать их через субресурс `scale`, HorizontalPodAutoscaler (HPA) или KEDA. Поле `virtualMachineTemplate.spec` совпадает с обычным `VirtualMachineSpec`, поэтому реплика ничем не отличается от вручную созданной виртуальной машины.
@@ -31,7 +31,7 @@ lang: ru
 
 Помимо дисков реплики в `blockDeviceRefs` можно перечислить общие образы [VirtualImage](/modules/virtualization/cr.html#virtualimage) и [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage), например единый ISO или CD-ROM для всех реплик. Такие образы подключаются только на чтение, они одни на весь пул, и записи в `virtualDiskTemplates` им не нужны.
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachinePool
@@ -156,7 +156,7 @@ spec:
 
 Чтобы изменить число реплик вручную, выполните:
 
-```bash
+```shell
 d8 k scale virtualmachinepool/runners -n ci --replicas=8
 ```
 
@@ -213,7 +213,7 @@ spec:
 
 Чтобы убрать именно заданные реплики (и сжать пул на это число), используйте субресурс `scaleDownWith`:
 
-```bash
+```shell
 d8 k create --raw \
   /apis/subresources.virtualization.deckhouse.io/v1alpha2/namespaces/ci/virtualmachinepools/runners/scaledownwith \
   -f - <<'EOF'

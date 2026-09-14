@@ -11,7 +11,7 @@ lang: ru
 Образ появляется в кластере в три шага:
 
 1. Администратор создаёт ресурс [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) и указывает в нём источник данных.
-1. DP загружает образ из этого источника во внутреннее хранилище (DVCR).
+1. Deckhouse Platform (DP) загружает образ из этого источника во внутреннее хранилище (DVCR).
 1. Загруженный образ становится доступен для создания дисков.
 
 Источником образа может быть HTTP-сервер с файлом образа, хранилище образов контейнеров или файл на вашем компьютере, который вы загружаете из командной строки. Кроме того, образ можно создать из другого образа, из диска виртуальной машины или из снимка диска.
@@ -73,7 +73,7 @@ DP принимает файл образа в следующих формата
 
 1. Создайте ресурс [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage):
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: ClusterVirtualImage
@@ -90,7 +90,7 @@ DP принимает файл образа в следующих формата
 
 1. Проверьте, что образ создан:
 
-   ```bash
+   ```shell
    d8 k get clustervirtualimage ubuntu-24-04
 
    # Короткий вариант команды.
@@ -131,7 +131,7 @@ DP умеет забирать образ из внешнего хранилищ
 
 1. Скачайте файл образа на локальную машину:
 
-   ```bash
+   ```shell
    curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
    ```
 
@@ -144,7 +144,7 @@ DP умеет забирать образ из внешнего хранилищ
 
 1. Соберите образ контейнера. В примере используется хранилище [docker.com](https://www.docker.com/), для работы с которым нужны учётная запись и настроенное окружение:
 
-   ```bash
+   ```shell
    docker build -t docker.io/<USERNAME>/ubuntu2404:latest
    ```
 
@@ -152,13 +152,13 @@ DP умеет забирать образ из внешнего хранилищ
 
 1. Загрузите собранный образ контейнера в хранилище:
 
-   ```bash
+   ```shell
    docker push docker.io/<USERNAME>/ubuntu2404:latest
    ```
 
 1. Создайте ресурс [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage), указав путь к образу контейнера:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: ClusterVirtualImage
@@ -199,7 +199,7 @@ DP работает только с теми хранилищами, где вк
 
 1. Создайте ресурс [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) с источником `Upload`:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: ClusterVirtualImage
@@ -216,7 +216,7 @@ DP работает только с теми хранилищами, где вк
 
 1. Получите адреса, по которым принимается файл:
 
-   ```bash
+   ```shell
    d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}" | jq
    ```
 
@@ -236,7 +236,7 @@ DP работает только с теми хранилищами, где вк
 
 1. Загрузите файл по выбранному адресу. В примере сначала скачивается образ Cirros, а затем отправляется в кластер:
 
-   ```bash
+   ```shell
    curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
    curl https://virtualization.example.com/upload/<SECRET_URL> --progress-bar -T cirros.img | cat
    ```
@@ -245,7 +245,7 @@ DP работает только с теми хранилищами, где вк
 
 1. Убедитесь, что образ перешёл в фазу `Ready`:
 
-   ```bash
+   ```shell
    d8 k get cvi some-image
    ```
 

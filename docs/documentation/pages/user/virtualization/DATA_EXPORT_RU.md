@@ -18,13 +18,13 @@ lang: ru
 
 Пример экспорта диска, команда выполняется на узле кластера:
 
-```bash
+```shell
 d8 data export download -n <NAMESPACE> vd/<VD_NAME> -o file.img
 ```
 
 Пример экспорта снимка диска, команда выполняется на узле кластера:
 
-```bash
+```shell
 d8 data export download -n <NAMESPACE> vds/<VD_SNAPSHOT_NAME> -o file.img
 ```
 

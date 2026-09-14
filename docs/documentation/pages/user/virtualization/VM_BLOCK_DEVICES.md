@@ -123,7 +123,7 @@ The device is attached when the resource moves to the `Attached` phase. The othe
 
 Check the state of your resource:
 
-```bash
+```shell
 d8 k get vmbda attach-blank-disk
 ```
 
@@ -139,7 +139,7 @@ attach-blank-disk   Attached   linux-vm         3m7s
 
 Connect to the virtual machine and make sure the disk is attached:
 
-```bash
+```shell
 d8 v ssh cloud@linux-vm --command "lsblk"
 ```
 
@@ -160,13 +160,13 @@ sdc       8:32   0 95.9M  0 disk <--- dynamically attached blank-disk disk
 
 To detach the disk from the virtual machine, delete the resource you created earlier:
 
-```bash
+```shell
 d8 k delete vmbda attach-blank-disk
 ```
 
 Images are attached the same way, only the `kind` field takes the [VirtualImage](/modules/virtualization/cr.html#virtualimage) or [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) value.
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineBlockDeviceAttachment

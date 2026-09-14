@@ -56,13 +56,13 @@ The `type: Migratable` condition in the VM status shows whether the VM can be mo
 
 The overall picture for all VMs:
 
-```bash
+```shell
 d8 k get vm -o wide
 ```
 
 The value in the `MIGRATABLE` column shows the result, and the condition describes the reason:
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type=="Migratable")'
 ```
 
@@ -78,7 +78,7 @@ The most common reasons:
 | `VirtualMachineNonMigratable` | The VM can't be moved by live migration, and the reason is in the `message` field of the condition. | Read the `message` of the condition. If it's about the CPU, use the `Discovery`, `Model`, or `Features` types in the VM class |
 | `VirtualMachineDisksShouldBeMigrating` | The VM can be moved, and its local disks are moved along with it | — |
 
-Moving disks along with a VM is available in commercial DP editions, so the `VirtualMachineDisksShouldBeMigrating` reason appears only there. In DP Open, a VM with disks in storage available from one node gets the `VirtualMachineDisksNotMigratable` reason.
+Moving disks along with a VM is available in commercial Deckhouse Platform (DP) editions, so the `VirtualMachineDisksShouldBeMigrating` reason appears only there. In DP Open, a VM with disks in storage available from one node gets the `VirtualMachineDisksNotMigratable` reason.
 
 ## Specifics of the Migratable condition
 
@@ -108,7 +108,7 @@ A migration is started by the `Evict` operation, which you create manually or wi
 
 Before starting the migration, check the current status of the virtual machine:
 
-```bash
+```shell
 d8 k get vm
 ```
 
@@ -126,7 +126,7 @@ At this moment it runs on the `virtlab-pt-1` node.
 
 To migrate a virtual machine from one node to another, taking its placement requirements into account, use the following command:
 
-```bash
+```shell
 d8 v migrate -n <NAMESPACE> <VM_NAME> [--force] [--target-node-name string]
 ```
 
@@ -136,7 +136,7 @@ The `--force` flag activates the [AutoConverge](#migrations-with-insufficient-ne
 
 To place the virtual machine on a specific target node, specify the name of that node in the `--target-node-name` option. For example, if the virtual machine has to be placed on the `production-1` node:
 
-```bash
+```shell
 d8 v migrate -n project-1 linux-vm --target-node-name production-1
 ```
 
@@ -144,7 +144,7 @@ Under the hood, a virtual machine operation is created with the specific node se
 
 You can also start a migration by manually creating a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) (`vmop`) resource of the `Migrate` type:
 
-```yaml
+```shell
 d8 k create -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineOperation
@@ -174,7 +174,7 @@ EOF
 
 To track the virtual machine migration right after the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource is created, run the following command:
 
-```bash
+```shell
 d8 k get vm -w
 ```
 
@@ -264,7 +264,7 @@ If the network limits the migration speed, you can do the following:
 
 1. Cancel the current migration operation by deleting the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource, where `<VMOP_NAME>` is the name of that resource:
 
-   ```bash
+   ```shell
    d8 k delete vmop <VMOP_NAME>
    ```
 
@@ -293,7 +293,7 @@ The migration has completed successfully when the resource moves to the `Complet
 
 To view the active operations, run the following command:
 
-```bash
+```shell
 d8 k get vmop
 ```
 
@@ -326,7 +326,7 @@ To cancel a migration, delete the corresponding resource.
 
 When the placement rules of a running machine change, DP moves it to a suitable node with a live migration.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 The feature is available in commercial DP editions.
 {% endalert %}
 

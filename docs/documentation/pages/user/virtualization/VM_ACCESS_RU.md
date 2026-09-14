@@ -18,7 +18,7 @@ lang: ru
 
 Серийная консоль:
 
-```bash
+```shell
 d8 v console linux-vm
 ```
 
@@ -37,19 +37,19 @@ Password: cloud
 
 Подключение по VNC:
 
-```bash
+```shell
 d8 v vnc linux-vm
 ```
 
 Подключение по SPICE:
 
-```bash
+```shell
 d8 v spice linux-vm
 ```
 
 Подключение по SSH:
 
-```bash
+```shell
 d8 v ssh cloud@linux-vm
 ```
 
@@ -107,7 +107,7 @@ spec:
 
 Для подключения нужен клиент `remote-viewer` из пакета `virt-viewer`, и команда `d8 v spice` открывает его сама. Если такого клиента нет, запустите только прокси и подключитесь своим клиентом на порт, который выведет команда:
 
-```bash
+```shell
 d8 v spice linux-vm --proxy-only
 ```
 
@@ -119,7 +119,7 @@ SPICE резервирует память независимо от того, п
 
 ## Политика запуска и управление состоянием ВМ
 
-Политика запуска определяет, как DP поддерживает состояние машины. Её задаёт параметр [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy):
+Политика запуска определяет, как Deckhouse Platform (DP) поддерживает состояние машины. Её задаёт параметр [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy):
 
 - `AlwaysOnUnlessStoppedManually` — вариант по умолчанию. Машина всегда работает, а остановить её можно только вручную;
 - `AlwaysOn` — машина всегда работает, и даже после выключения из гостевой ОС DP запускает её снова;
@@ -144,13 +144,13 @@ SPICE резервирует память независимо от того, п
 
 Перезапустить машину проще всего утилитой `d8`:
 
-```bash
+```shell
 d8 v restart linux-vm
 ```
 
 Та же операция ресурсом:
 
-```bash
+```shell
 d8 k create -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineOperation
@@ -165,7 +165,7 @@ EOF
 
 Результат покажет список операций:
 
-```bash
+```shell
 d8 k get virtualmachineoperation
 
 # Короткий вариант команды.

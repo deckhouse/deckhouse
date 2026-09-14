@@ -7,7 +7,7 @@ search: VM images, VirtualImage, creating an image, image upload
 
 An image holds the contents of a disk that you use to create virtual machine disks. A [VirtualImage](/modules/virtualization/cr.html#virtualimage) is created in a project and available only in the project or namespace where it was created.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 To make the same image available to every project in the cluster, you need a cluster image, [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage). Only an administrator can create it; the procedure is described in [Cluster images of virtual machines](../../admin/configuration/virtualization/cluster-images.html).
 {% endalert %}
 
@@ -16,7 +16,7 @@ A virtual machine accesses an attached image in read-only mode.
 An image appears in a project in three steps:
 
 1. You create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource and specify a data source in it.
-1. DP downloads the image from that source to the storage, which is either DVCR or a PVC, depending on the selected type.
+1. Deckhouse Platform (DP) downloads the image from that source to the storage, which is either DVCR or a PVC, depending on the selected type.
 1. The downloaded image becomes available for creating disks.
 
 ## Sources and storage options
@@ -48,7 +48,7 @@ The simplest way to create an image is to provide a link to a file hosted on an 
 
 1. Create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource. In the example, the image is stored in DVCR:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -67,7 +67,7 @@ The simplest way to create an image is to provide a link to a file hosted on an 
 
 1. Verify that the image is created:
 
-   ```bash
+   ```shell
    d8 k get virtualimage ubuntu-24-04
 
    # Short form of the command.
@@ -103,7 +103,7 @@ The simplest way to create an image is to provide a link to a file hosted on an 
 
 The [`checksum`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-datasource-http-checksum) block makes DP verify what it downloaded from the HTTP server. The image reaches the `Ready` phase only if the downloaded file matches every specified checksum, otherwise the resource ends up in the `Failed` phase:
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
@@ -149,7 +149,7 @@ To create disks from an image faster, store it in a PVC. DP can then clone the v
 
 1. Create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource with the `PersistentVolumeClaim` storage type:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -173,7 +173,7 @@ To create disks from an image faster, store it in a PVC. DP can then clone the v
 
 1. Verify that the image is created:
 
-   ```bash
+   ```shell
    d8 k get vi ubuntu-24-04-pvc
    ```
 
@@ -216,7 +216,7 @@ DP can pull an image from an external container image registry, but the disk fil
 
 1. Download the image file to your local machine:
 
-   ```bash
+   ```shell
    curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
    ```
 
@@ -229,7 +229,7 @@ DP can pull an image from an external container image registry, but the disk fil
 
 1. Build the container image. The example uses the [docker.com](https://www.docker.com/) registry, which requires an account and a configured environment:
 
-   ```bash
+   ```shell
    docker build -t docker.io/<USERNAME>/ubuntu2404:latest
    ```
 
@@ -237,13 +237,13 @@ DP can pull an image from an external container image registry, but the disk fil
 
 1. Push the built container image to the registry:
 
-   ```bash
+   ```shell
    docker push docker.io/<USERNAME>/ubuntu2404:latest
    ```
 
 1. Create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource that points to the container image:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -288,7 +288,7 @@ If the image file is on your computer, upload it directly. DP creates a temporar
 
 1. Create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource with the `Upload` source:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -307,7 +307,7 @@ If the image file is on your computer, upload it directly. DP creates a temporar
 
 1. Get the addresses that accept the file:
 
-   ```bash
+   ```shell
    d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}" | jq
    ```
 
@@ -327,7 +327,7 @@ If the image file is on your computer, upload it directly. DP creates a temporar
 
 1. Upload the file to the selected address. The example first downloads the Cirros image and then sends it to the cluster:
 
-   ```bash
+   ```shell
    curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
    curl https://virtualization.example.com/upload/<SECRET_URL> --progress-bar -T cirros.img | cat
    ```
@@ -336,7 +336,7 @@ If the image file is on your computer, upload it directly. DP creates a temporar
 
 1. Verify that the image has reached the `Ready` phase:
 
-   ```bash
+   ```shell
    d8 k get vi some-image
    ```
 
@@ -376,7 +376,7 @@ You can create an image from a [disk](disks.html) if the disk isn't attached to 
 
 Create an image using the required disk as the source:
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
@@ -420,7 +420,7 @@ You can create an image from a [disk snapshot](snapshots.html#creating-disk-snap
 
 Create an image using the disk snapshot as the source:
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage

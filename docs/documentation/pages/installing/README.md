@@ -718,7 +718,7 @@ The other parameters are covered in [Virtualization module parameters](../admin/
 
 To check if virtualization is ready, run the following command:
 
-```bash
+```shell
 d8 k get modules virtualization
 ```
 
@@ -735,33 +735,33 @@ The module phase should be `Ready`.
 
 How components are distributed across nodes depends on the cluster configuration. A cluster may have only master nodes running both control plane components and workloads; master and worker nodes; master, system, and worker nodes; or other combinations. Worker nodes here are the nodes without restrictions (taints) that would prevent regular workloads from running.
 
-Components are distributed by priority: if the cluster has a suitable node type, the component lands on it. What each component is responsible for is described in [Virtualization subsystem](../architecture/virtualization/).
+Deckhouse Platform (DP) distributes the components by priority, and if the cluster has a suitable node type, the component lands on it. What each component is responsible for is described in [Virtualization subsystem](../architecture/virtualization/).
 
-| Component name                | Node group         | Comment                                                                                      |
-|-------------------------------|--------------------|------------------------------------------------------------------------------------------------|
-| `virt-operator-*`             | system/master      |                                                                                              |
-| `virt-api-*`                  | master             |                                                                                              |
-| `virt-controller-*`           | system/worker      |                                                                                              |
-| `virt-handler-*`              | All cluster nodes  |                                                                                              |
-| `virtualization-api-*`        | master             |                                                                                              |
-| `virtualization-controller-*` | master             |                                                                                              |
-| `dvcr-*`                      | system             | Storage has to be available on the node. With no system nodes, the component lands on a worker node. |
-| `virtualization-audit-*`      | master             | Available in DP EE and Ultimate.                                                             |
-| `virtualization-dra-*`        | Dedicated nodes    | Available in commercial DP editions.                                                         |
-| `vm-route-forge-*`            | All cluster nodes  |                                                                                              |
+| Component name                | Node group        | Comment                                                                                              |
+|-------------------------------|-------------------|------------------------------------------------------------------------------------------------------|
+| `virt-operator-*`             | system/master     |                                                                                                      |
+| `virt-api-*`                  | master            |                                                                                                      |
+| `virt-controller-*`           | system/worker     |                                                                                                      |
+| `virt-handler-*`              | All cluster nodes |                                                                                                      |
+| `virtualization-api-*`        | master            |                                                                                                      |
+| `virtualization-controller-*` | master            |                                                                                                      |
+| `dvcr-*`                      | system            | Storage has to be available on the node. With no system nodes, the component lands on a worker node. |
+| `virtualization-audit-*`      | master            | Available in commercial DP editions.                                                                 |
+| `virtualization-dra-*`        | Dedicated nodes   | Available in commercial DP editions.                                                                 |
+| `vm-route-forge-*`            | All cluster nodes |                                                                                                      |
 
 The `virtualization-dra-*` component runs only on nodes labeled with `virtualization.deckhouse.io/usbip`.
 
 The components that create and upload virtual machine images and disks run only while that work is in progress:
 
-| Component name                                   | Node group    | Comment                                                                     |
-|--------------------------------------------------|---------------|--------------------------------------------------------------------------------|
+| Component name                                   | Node group    | Comment                                                                            |
+|--------------------------------------------------|---------------|------------------------------------------------------------------------------------|
 | `d8v-vi-importer-*`, `d8v-cvi-importer-*`        | system/worker | Uploads an image from an external source or another resource to the image storage. |
-| `d8v-vi-uploader-*`, `d8v-cvi-uploader-*`        | system/worker | Accepts the file that you upload from the CLI or the web interface.         |
-| `d8v-vd-pvc-importer-*`, `d8v-vi-pvc-importer-*` | system/worker | Moves an image from the image storage to a disk volume.                     |
-| `d8v-pvc-pvc-source-importer-*`                  | system/worker | Serves the data of the source volume over the network when a disk is cloned. |
-| `d8v-pvc-pvc-target-importer-*`                  | system/worker | Receives the data on the target volume when a disk is cloned.               |
-| `d8v-vi-bounder-*`                               | system/worker | Keeps the volume on the required node while an image is created on it.      |
+| `d8v-vi-uploader-*`, `d8v-cvi-uploader-*`        | system/worker | Accepts the file that you upload from the CLI or the web interface.                |
+| `d8v-vd-pvc-importer-*`, `d8v-vi-pvc-importer-*` | system/worker | Moves an image from the image storage to a disk volume.                            |
+| `d8v-pvc-pvc-source-importer-*`                  | system/worker | Serves the data of the source volume over the network when a disk is cloned.       |
+| `d8v-pvc-pvc-target-importer-*`                  | system/worker | Receives the data on the target volume when a disk is cloned.                      |
+| `d8v-vi-bounder-*`                               | system/worker | Keeps the volume on the required node while an image is created on it.             |
 
 ### Cluster with taints on all nodes
 

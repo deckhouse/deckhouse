@@ -17,7 +17,7 @@ You can grow a disk even while it's attached to a running virtual machine (VM). 
 
 1. Check the current disk size:
 
-   ```bash
+   ```shell
    d8 k get vd linux-vm-root
    ```
 
@@ -33,7 +33,7 @@ You can grow a disk even while it's attached to a running virtual machine (VM). 
 
 1. Set the new size in the [`.spec.persistentVolumeClaim.size`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-size) parameter:
 
-   ```bash
+   ```shell
    d8 k patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim":{"size":"11Gi"}}}'
 
    # You can achieve the same result by editing the resource.
@@ -42,7 +42,7 @@ You can grow a disk even while it's attached to a running virtual machine (VM). 
 
 1. Verify that the size has changed:
 
-   ```bash
+   ```shell
    d8 k get vd linux-vm-root
    ```
 
@@ -91,7 +91,7 @@ The virtual machine must be in the `Running` phase, and the source and target st
 
 To move a disk, specify the new storage class in the [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-storageclassname) parameter:
 
-```bash
+```shell
 d8 k patch vd disk --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 
 # You can achieve the same result by editing the resource.
@@ -102,7 +102,7 @@ After that, a live migration of the VM starts, during which the disk moves to th
 
 If you need to move several disks of the same machine, change the storage class one disk at a time:
 
-```bash
+```shell
 d8 k patch vd disk1 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 d8 k patch vd disk2 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 ```

@@ -6,8 +6,8 @@ search: USB в ВМ, проброс USB, USBDevice, подключение ус�
 lang: ru
 ---
 
-{% alert level="warning" %}
-Проброс USB-устройств доступен в коммерческих редакциях DP.
+{% alert level="info" %}
+Проброс USB-устройств доступен в коммерческих редакциях Deckhouse Platform (DP).
 {% endalert %}
 
 DP поддерживает проброс USB-устройств в виртуальные машины (ВМ) с использованием DRA (Dynamic Resource Allocation). Физическое устройство подключено к узлу кластера, а виртуальная машина работает с ним так, как будто устройство подключено напрямую к ней.
@@ -22,7 +22,7 @@ DP поддерживает проброс USB-устройств в вирту�
 
 Пример просмотра USB-устройств в неймспейсе:
 
-```bash
+```shell
 d8 k get usbdevice -n my-project
 ```
 
@@ -65,7 +65,7 @@ logitech-webcam   node-2   Logitech       Webcam C920   False      10m
 
 После появления ресурса [USBDevice](/modules/virtualization/cr.html#usbdevice) в неймспейсе его можно подключить к виртуальной машине. Для этого добавьте устройство в параметр [`.spec.usbDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-usbdevices) ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine):
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine

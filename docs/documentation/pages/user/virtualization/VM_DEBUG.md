@@ -7,7 +7,7 @@ search: debug information, VM diagnostics, support
 
 If a machine doesn't behave as expected, collect its state and the state of the related resources into a single archive.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 The `collect-debug-info` command requires `d8` v0.27.0 or later.
 {% endalert %}
 
@@ -34,7 +34,7 @@ The command result is written to a compressed archive (tar.gz) that goes to stdo
 
 Usage example:
 
-```bash
+```shell
 # Collect debug information for the 'linux-vm' virtual machine
 d8 v collect-debug-info linux-vm > debug-info.tar.gz
 

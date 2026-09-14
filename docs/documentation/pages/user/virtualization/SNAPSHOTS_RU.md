@@ -58,7 +58,7 @@ spec:
 
 Пример манифеста для создания снимка диска:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualDiskSnapshot
@@ -72,7 +72,7 @@ EOF
 
 Для просмотра списка снимков дисков, выполните следующую команду:
 
-```bash
+```shell
 d8 k get vdsnapshot
 ```
 
@@ -127,7 +127,7 @@ linux-vm-root-snapshot Ready     true         3m2s
 
 Для того чтобы восстановить диск из ранее созданного снимка диска, необходимо в качестве `dataSource` указать соответствующий объект:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualDisk
@@ -199,7 +199,7 @@ spec:
 
 Пример манифеста для создания снимка виртуальной машины:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineSnapshot
@@ -291,7 +291,7 @@ spec:
 
 Информацию о конфликтах при восстановлении ВМ из снимка можно посмотреть в статусе ресурса:
 
-```bash
+```shell
 d8 k get vmop <VMOP_NAME> -o json | jq '.status.resources'
 ```
 

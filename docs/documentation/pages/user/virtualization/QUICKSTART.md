@@ -13,7 +13,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 
 1. Create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) from an external source:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -30,7 +30,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 
 1. Create a [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) from that image. Make sure the cluster has a default StorageClass, then apply the manifest:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -47,7 +47,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 
 1. Create a [VirtualMachine](/modules/virtualization/cr.html#virtualmachine). The example uses a cloud-init script that creates the `cloud` user:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
@@ -80,7 +80,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 
 1. Verify that the image and the disk are created and the VM is running. Resources don't become ready instantly, so wait for the expected values in the `PHASE` column:
 
-   ```bash
+   ```shell
    d8 k get vi,vd,vm
    ```
 
@@ -102,7 +102,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 
 1. Connect to the VM over the console:
 
-   ```bash
+   ```shell
    d8 v console linux-vm
    ```
 
@@ -124,7 +124,7 @@ This section walks through a minimal scenario: you create an Ubuntu 24.04 image,
 
 1. Delete the created resources:
 
-   ```bash
+   ```shell
    d8 k delete vm linux-vm
    d8 k delete vd linux-disk
    d8 k delete vi ubuntu

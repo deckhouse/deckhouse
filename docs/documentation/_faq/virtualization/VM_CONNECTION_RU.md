@@ -18,7 +18,7 @@ VNC выводит изображение экрана гостевой ОС и 
 
 Проверьте в гостевой ОС, включена ли поддержка виртуального терминала в конфигурации ядра:
 
-```bash
+```shell
 cat /boot/config-$(uname -r) | grep CONFIG_VT
 ```
 
@@ -37,7 +37,7 @@ CONFIG_VT=y
 
 В гостевой ОС включите и запустите службу `serial-getty` для `ttyS0`:
 
-```bash
+```shell
 sudo systemctl enable --now serial-getty@ttyS0.service
 ```
 

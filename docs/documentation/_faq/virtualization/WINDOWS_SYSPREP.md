@@ -211,7 +211,7 @@ Replace `<PRODUCT_KEY>` with your Windows product key, and `<ADMIN_PASSWORD>` an
 
 1. Create a secret with the type `provisioning.virtualization.deckhouse.io/sysprep`:
 
-   ```bash
+   ```shell
    d8 k create secret generic sysprep-config --type="provisioning.virtualization.deckhouse.io/sysprep" --from-file=./autounattend.xml
    ```
 

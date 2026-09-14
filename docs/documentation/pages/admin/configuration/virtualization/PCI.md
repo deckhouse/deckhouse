@@ -5,8 +5,8 @@ description: "PCI device passthrough to virtual machines: node requirements, the
 search: PCI devices, PCI passthrough, NodePCIDevice, PCIDevice, vfio-pci, IOMMU
 ---
 
-{% alert level="warning" %}
-PCI device passthrough is available in commercial DP editions.
+{% alert level="info" %}
+PCI device passthrough is available in commercial Deckhouse Platform (DP) editions.
 {% endalert %}
 
 PCI device passthrough lets you attach a physical device of a node to a virtual machine (VM), for example an industrial controller, a hardware security module, a capture card, an FPGA, or an entire network card. In the guest operating system, such a device works under its own driver, so a VM can use the hardware DP doesn't support directly.
@@ -23,7 +23,7 @@ To enable hardware I/O virtualization, turn on `VT-d` on Intel or `AMD-Vi` on AM
 
 To see which nodes are ready for PCI device passthrough, run the following command:
 
-```bash
+```shell
 d8 k get nodes -l virtualization.deckhouse.io/vfio=true,virtualization.deckhouse.io/containerd-version=v2
 ```
 
@@ -38,7 +38,7 @@ A node missing from the output has not been assigned the label. Check the `/sys/
 
 To verify that the component is actually running on these nodes, run the following command:
 
-```bash
+```shell
 d8 k -n d8-virtualization get pods -l app=virtualization-dra-pci -o wide
 ```
 
@@ -50,7 +50,7 @@ To make a device available to a project, follow these steps.
 
 1. Find the device among the detected ones:
 
-   ```bash
+   ```shell
    d8 k get nodepcidevice
    ```
 
@@ -69,7 +69,7 @@ To make a device available to a project, follow these steps.
 
 1. Assign a namespace with the [`.spec.assignedNamespace`](/modules/virtualization/cr.html#nodepcidevice-v1alpha2-spec-assignednamespace) parameter:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: NodePCIDevice
@@ -82,7 +82,7 @@ To make a device available to a project, follow these steps.
 
 1. Make sure that a [PCIDevice](/modules/virtualization/cr.html#pcidevice) resource has appeared in the namespace:
 
-   ```bash
+   ```shell
    d8 k get pcidevice -n my-project
    ```
 

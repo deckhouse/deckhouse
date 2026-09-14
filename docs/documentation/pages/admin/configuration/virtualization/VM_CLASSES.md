@@ -12,14 +12,14 @@ On the initial installation, the module creates the `generic` class with the Neh
 {% alert level="info" %}
 The `generic` class matches a CPU with the smallest instruction set, so it isn't suitable for production workloads.
 
-Once all nodes are added to the cluster and configured, create at least one class with the `Discovery` CPU type. DP selects an instruction set available on all nodes at once, so virtual machines can make fuller use of the CPUs while still being able to migrate between nodes. The instruction set is fixed when the resource is created and doesn't change as nodes are added or removed.
+Once all nodes are added to the cluster and configured, create at least one class with the `Discovery` CPU type. Deckhouse Platform (DP) selects an instruction set available on all nodes at once, so virtual machines can make fuller use of the CPUs while still being able to migrate between nodes. The instruction set is fixed when the resource is created and doesn't change as nodes are added or removed.
 
 For an example of such a class, see [vCPU Discovery configuration example](vm-classes-cpu.html#vcpu-discovery-configuration-example).
 {% endalert %}
 
 Classes exist at the cluster level. To list them, run the following command:
 
-```bash
+```shell
 d8 k get virtualmachineclass
 ```
 
@@ -54,7 +54,7 @@ Don't add the annotation to the `generic` class, because a module update can rem
 
 1. Check which classes exist in the cluster:
 
-   ```bash
+   ```shell
    d8 k get vmclass
    ```
 
@@ -71,13 +71,13 @@ Don't add the annotation to the `generic` class, because a module update can rem
 
 1. Designate the default class:
 
-   ```bash
+   ```shell
    d8 k annotate vmclass host-passthrough-custom virtualmachineclass.virtualization.deckhouse.io/is-default-class=true
    ```
 
 1. Verify that the annotation is set:
 
-   ```bash
+   ```shell
    d8 k get vmclass
    ```
 

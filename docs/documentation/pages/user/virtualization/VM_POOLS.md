@@ -5,8 +5,8 @@ description: "Virtual machine pools: creating identical replicas, scaling a pool
 search: VM pool, VirtualMachinePool, replicas, pool scaling, reclaim
 ---
 
-{% alert level="warning" %}
-Available in commercial DP editions.
+{% alert level="info" %}
+Available in commercial Deckhouse Platform (DP) editions.
 {% endalert %}
 
 The [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) resource maintains a given number of identical virtual machines (VMs) and lets you scale them through the `scale` subresource, HorizontalPodAutoscaler (HPA), or KEDA. The `virtualMachineTemplate.spec` field matches the regular `VirtualMachineSpec`, so a replica is no different from a manually created virtual machine.
@@ -30,7 +30,7 @@ Every `virtualDiskTemplates` entry has to appear in `blockDeviceRefs` exactly on
 
 Besides replica disks, `blockDeviceRefs` can list shared [VirtualImage](/modules/virtualization/cr.html#virtualimage) and [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) images, for example a single ISO or CD-ROM for all replicas. Such images are attached read-only, there's one of them for the whole pool, and they don't need an entry in `virtualDiskTemplates`.
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachinePool
@@ -155,7 +155,7 @@ A pool supports the standard `scale` subresource, compatible with manual replica
 
 To change the number of replicas manually, run the following command:
 
-```bash
+```shell
 d8 k scale virtualmachinepool/runners -n ci --replicas=8
 ```
 
@@ -212,7 +212,7 @@ By default, when a pool scales down, the controller picks which replica to delet
 
 To remove exactly the replicas you specify (and scale the pool down by that number), use the `scaleDownWith` subresource:
 
-```bash
+```shell
 d8 k create --raw \
   /apis/subresources.virtualization.deckhouse.io/v1alpha2/namespaces/ci/virtualmachinepools/runners/scaledownwith \
   -f - <<'EOF'

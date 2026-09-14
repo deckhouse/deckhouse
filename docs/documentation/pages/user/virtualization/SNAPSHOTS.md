@@ -57,7 +57,7 @@ spec:
 
 Here is an example manifest for creating a disk snapshot:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualDiskSnapshot
@@ -71,7 +71,7 @@ EOF
 
 To view the list of disk snapshots, run the following command:
 
-```bash
+```shell
 d8 k get vdsnapshot
 ```
 
@@ -126,7 +126,7 @@ A new disk is created from a snapshot, and the original disk stays untouched.
 
 To recover a disk from a previously created disk snapshot, specify the corresponding object as the `dataSource`:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualDisk
@@ -198,7 +198,7 @@ spec:
 
 Here is an example manifest for creating a virtual machine snapshot:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineSnapshot
@@ -290,7 +290,7 @@ Recovering a virtual machine from a snapshot is possible only when all of the fo
 
 To view information about conflicts when recovering a VM from a snapshot, check the resource status:
 
-```bash
+```shell
 d8 k get vmop <VMOP_NAME> -o json | jq '.status.resources'
 ```
 

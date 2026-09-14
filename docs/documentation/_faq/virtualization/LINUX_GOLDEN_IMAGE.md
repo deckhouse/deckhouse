@@ -13,20 +13,20 @@ A golden image is a pre-configured virtual machine (VM) image that can be used t
 
    - For RHEL/CentOS:
 
-     ```bash
+     ```shell
      yum install -y qemu-guest-agent
      ```
 
    - For Debian/Ubuntu:
 
-     ```bash
+     ```shell
      apt-get update
      apt-get install -y qemu-guest-agent
      ```
 
 1. Enable and start the service:
 
-   ```bash
+   ```shell
    systemctl enable qemu-guest-agent
    systemctl start qemu-guest-agent
    ```
@@ -35,7 +35,7 @@ A golden image is a pre-configured virtual machine (VM) image that can be used t
 
 1. Prepare the image. Clean unused filesystem blocks:
 
-   ```bash
+   ```shell
    fstrim -v /
    fstrim -v /boot
    ```
@@ -44,20 +44,20 @@ A golden image is a pre-configured virtual machine (VM) image that can be used t
 
    - For RHEL:
 
-     ```bash
+     ```shell
      nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
      rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
      ```
 
    - For Debian/Ubuntu:
 
-     ```bash
+     ```shell
      rm -f /etc/network/interfaces.d/*
      ```
 
 1. Clean system identifiers:
 
-   ```bash
+   ```shell
    echo -n > /etc/machine-id
    rm -f /var/lib/dbus/machine-id
    ln -s /etc/machine-id /var/lib/dbus/machine-id
@@ -65,13 +65,13 @@ A golden image is a pre-configured virtual machine (VM) image that can be used t
 
 1. Remove the SSH host keys:
 
-   ```bash
+   ```shell
    rm -f /etc/ssh/ssh_host_*
    ```
 
 1. Clean the systemd journal:
 
-   ```bash
+   ```shell
    journalctl --vacuum-size=100M --vacuum-time=7d
    ```
 
@@ -79,32 +79,32 @@ A golden image is a pre-configured virtual machine (VM) image that can be used t
 
    - For RHEL:
 
-     ```bash
+     ```shell
      yum clean all
      ```
 
    - For Debian/Ubuntu:
 
-     ```bash
+     ```shell
      apt-get clean
      ```
 
 1. Clean temporary files:
 
-   ```bash
+   ```shell
    rm -rf /tmp/*
    rm -rf /var/tmp/*
    ```
 
 1. Clean logs:
 
-   ```bash
+   ```shell
    find /var/log -name "*.log" -type f -exec truncate -s 0 {} \;
    ```
 
 1. Clean command history:
 
-   ```bash
+   ```shell
    history -c
    ```
 
@@ -112,45 +112,45 @@ A golden image is a pre-configured virtual machine (VM) image that can be used t
 
    Restore the contexts right away:
 
-   ```bash
+   ```shell
    restorecon -R /
    ```
 
    Or schedule a relabel for the next boot:
 
-   ```bash
+   ```shell
    touch /.autorelabel
    ```
 
 1. Verify that `/etc/fstab` references UUID or `LABEL` rather than names like `/dev/sdX`:
 
-   ```bash
+   ```shell
    blkid
    cat /etc/fstab
    ```
 
 1. Reset cloud-init state (logs and seed):
 
-   ```bash
+   ```shell
    cloud-init clean --logs --seed
    ```
 
 1. Perform final synchronization and buffer cleanup:
 
-   ```bash
+   ```shell
    sync
    echo 3 > /proc/sys/vm/drop_caches
    ```
 
 1. Shut down the virtual machine:
 
-   ```bash
+   ```shell
    poweroff
    ```
 
 1. Create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource that references the prepared VM’s [VirtualDisk](/modules/virtualization/cr.html#virtualdisk):
 
-   ```bash
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -168,7 +168,7 @@ A golden image is a pre-configured virtual machine (VM) image that can be used t
 
    Or create a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource so the image is available cluster-wide for all projects:
 
-   ```bash
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: ClusterVirtualImage
@@ -188,7 +188,7 @@ A golden image is a pre-configured virtual machine (VM) image that can be used t
 
 1. Create a new [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) from the resulting image:
 
-   ```bash
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk

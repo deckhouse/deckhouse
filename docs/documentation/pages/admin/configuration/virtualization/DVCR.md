@@ -5,7 +5,7 @@ description: "Internal virtual machine image storage (DVCR): volume size and sto
 search: DVCR, image storage, volume size, storage cleanup, garbage collection
 ---
 
-DP stores virtual machine images in an internal container image storage (DVCR) that resides on a persistent volume of the cluster. Images travel from there to virtual machine disks, so the size of the volume determines how many images fit into the cluster.
+Deckhouse Platform (DP) stores virtual machine images in an internal container image storage (DVCR) that resides on a persistent volume of the cluster. Images travel from there to virtual machine disks, so the size of the volume determines how many images fit into the cluster.
 
 ## Size and storage class
 
@@ -44,7 +44,7 @@ While garbage collection is running, the storage works in read-only mode, so cre
 
 To see how much space is occupied and which data will be removed during the next collection, run:
 
-```bash
+```shell
 d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
 ```
 

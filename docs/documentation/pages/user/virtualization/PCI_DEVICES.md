@@ -5,8 +5,8 @@ description: "Attaching project PCI devices to a virtual machine and the limitat
 search: PCI in a VM, PCI passthrough, PCIDevice, migration limitations
 ---
 
-{% alert level="warning" %}
-PCI device passthrough is available in commercial DP editions.
+{% alert level="info" %}
+PCI device passthrough is available in commercial Deckhouse Platform (DP) editions.
 {% endalert %}
 
 PCI device passthrough lets you use a physical device of a node in a virtual machine (VM), for example an industrial controller, a hardware security module, a capture card, or an FPGA. The device works in the guest operating system under its own driver, so install that driver in the guest system yourself.
@@ -19,7 +19,7 @@ The devices that the administrator has made available to your project appear in 
 
 1. Choose a device among the available ones:
 
-   ```bash
+   ```shell
    d8 k get pcidevice -n my-project
    ```
 
@@ -37,7 +37,7 @@ The devices that the administrator has made available to your project appear in 
 
 1. Add the device to the [`.spec.pciDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-pcidevices) parameter of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
@@ -54,7 +54,7 @@ The devices that the administrator has made available to your project appear in 
 
 1. Make sure that the device is attached to the machine:
 
-   ```bash
+   ```shell
    d8 k get vm linux-vm -o jsonpath='{.status.pciDevices}'
    ```
 

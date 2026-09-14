@@ -32,7 +32,7 @@ lang: ru
 
 1. Проверьте значение `uptime` виртуальной машины:
 
-   ```bash
+   ```shell
    ansible -m shell -a "uptime" -i inventory.yaml all
 
    # frontend.demo-app | CHANGED | rc=0 >>
@@ -41,7 +41,7 @@ lang: ru
 
 Если вы не хотите использовать файл inventory, передайте все параметры прямо в командной строке:
 
-```bash
+```shell
 ansible -m shell -a "uptime" \
   -i "frontend.demo-app," \
   -e "ansible_ssh_common_args='-o ProxyCommand=\"d8 v port-forward --stdio=true %h %p\"'" \

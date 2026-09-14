@@ -79,7 +79,7 @@ Below is a typical Windows guest OS installation scenario from an ISO image. Bef
 
 1. Start the virtual machine:
 
-   ```bash
+   ```shell
    d8 v start win-vm
    ```
 
@@ -87,7 +87,7 @@ Below is a typical Windows guest OS installation scenario from an ISO image. Bef
 
    VNC connection:
 
-   ```bash
+   ```shell
    d8 v vnc -n default win-vm
    ```
 
@@ -95,6 +95,6 @@ Below is a typical Windows guest OS installation scenario from an ISO image. Bef
 
 1. For further work, connect via VNC again:
 
-   ```bash
+   ```shell
    d8 v vnc -n default win-vm
    ```

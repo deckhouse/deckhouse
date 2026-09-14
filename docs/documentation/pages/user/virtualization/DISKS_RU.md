@@ -11,7 +11,7 @@ lang: ru
 - [`persistentVolumeClaim`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim) — параметры хранения, то есть StorageClass и размер;
 - [`dataSource`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-datasource) — источник данных, которым может быть образ, другой диск или снимок.
 
-Без блока `dataSource` создаётся пустой диск, и тогда в `persistentVolumeClaim` нужно указать хотя бы размер. Если источник задан, блок `persistentVolumeClaim` можно опустить, тогда размер DP возьмёт из источника, а класс хранения подберёт по нему же. Когда подобрать класс не удаётся, DP использует StorageClass по умолчанию на уровне кластера либо класс, заданный для дисков в [настройках модуля](../../admin/configuration/virtualization/storage-classes.html).
+Без блока `dataSource` создаётся пустой диск, и тогда в `persistentVolumeClaim` нужно указать хотя бы размер. Если источник задан, блок `persistentVolumeClaim` можно опустить, тогда размер Deckhouse Platform (DP) возьмёт из источника, а класс хранения подберёт по нему же. Когда подобрать класс не удаётся, DP использует StorageClass по умолчанию на уровне кластера либо класс, заданный для дисков в [настройках модуля](../../admin/configuration/virtualization/storage-classes.html).
 
 Ход создания диска показывает колонка `PHASE` в выводе `d8 k get vd`, её значения описаны в поле [`.status.phase`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-phase). Если диск надолго остаётся не готов, причину подскажет блок [`.status.conditions`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-conditions).
 
@@ -41,7 +41,7 @@ lang: ru
 
 Чтобы посмотреть доступные хранилища, выполните команду:
 
-```bash
+```shell
 d8 k get storageclass
 ```
 
@@ -69,7 +69,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Создайте ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk), указав размер и класс хранения:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -86,7 +86,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Проверьте, что диск создан:
 
-   ```bash
+   ```shell
    d8 k get vd blank-disk
    ```
 
@@ -131,7 +131,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Посмотрите распакованный размер образа в колонке `UNPACKEDSIZE`:
 
-   ```bash
+   ```shell
    d8 k get vi ubuntu-24-04 -o wide
    ```
 
@@ -147,7 +147,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Создайте диск, задав размер больше распакованного:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -171,7 +171,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Создайте второй диск, не указывая размер:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -193,7 +193,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Сравните размеры созданных дисков:
 
-   ```bash
+   ```shell
    d8 k get vd
    ```
 
@@ -240,7 +240,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Создайте ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) с источником `Upload`:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -256,7 +256,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Получите адреса, по которым принимается файл:
 
-   ```bash
+   ```shell
    d8 k get vd uploaded-disk -o jsonpath="{.status.imageUploadURLs}" | jq
    ```
 
@@ -276,7 +276,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Загрузите файл по выбранному адресу:
 
-   ```bash
+   ```shell
    curl https://virtualization.example.com/upload/<SECRET_URL> --progress-bar -T <IMAGE_FILE> | cat
    ```
 
@@ -284,7 +284,7 @@ nfs-4-1-wffc           nfs.csi.k8s.io                        Delete          Wai
 
 1. Убедитесь, что диск перешёл в фазу `Ready`:
 
-   ```bash
+   ```shell
    d8 k get vd uploaded-disk
    ```
 

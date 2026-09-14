@@ -18,7 +18,7 @@ lang: ru
 
 1. Посмотрите текущий размер диска:
 
-   ```bash
+   ```shell
    d8 k get vd linux-vm-root
    ```
 
@@ -34,7 +34,7 @@ lang: ru
 
 1. Задайте новый размер в параметре [`.spec.persistentVolumeClaim.size`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-size):
 
-   ```bash
+   ```shell
    d8 k patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim":{"size":"11Gi"}}}'
 
    # Того же результата можно добиться, отредактировав ресурс.
@@ -43,7 +43,7 @@ lang: ru
 
 1. Убедитесь, что размер изменился:
 
-   ```bash
+   ```shell
    d8 k get vd linux-vm-root
    ```
 
@@ -92,7 +92,7 @@ lang: ru
 
 Чтобы перенести диск, укажите новый класс хранения в параметре [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-storageclassname):
 
-```bash
+```shell
 d8 k patch vd disk --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 
 # Того же результата можно добиться, отредактировав ресурс.
@@ -103,7 +103,7 @@ d8 k edit vd disk
 
 Если перенести нужно несколько дисков одной машины, меняйте класс хранения последовательно, по одному диску за раз:
 
-```bash
+```shell
 d8 k patch vd disk1 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 d8 k patch vd disk2 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 ```

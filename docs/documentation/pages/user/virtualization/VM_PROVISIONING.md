@@ -5,7 +5,7 @@ description: "Initial guest system configuration through cloud-init and Sysprep,
 search: cloud-init, Sysprep, provisioning, guest OS agent, qemu-guest-agent
 ---
 
-On the first boot of a virtual machine (VM), the guest system is configured by an initialization script, and after that DP communicates with it through the guest OS agent.
+On the first boot of a virtual machine (VM), the guest system is configured by an initialization script, and after that Deckhouse Platform (DP) communicates with it through the guest OS agent.
 
 ## VM initialization scripts
 
@@ -20,7 +20,7 @@ The following initialization scripts are supported:
 
 Cloud-Init is a tool for automatically configuring virtual machines at first boot. It performs a wide range of configuration tasks without manual intervention.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 The Cloud-Init configuration is written in YAML and has to start with the `#cloud-config` header at the beginning of the configuration block. For other possible headers and their purpose, see the [official cloud-init documentation](https://cloudinit.readthedocs.io/en/latest/explanation/format.html#headers-and-content-types).
 {% endalert %}
 
@@ -184,7 +184,7 @@ Install QEMU Guest Agent in the guest system so that DP can interact with the op
 
 DP works with `qemu-guest-agent` version 5.2.0 and later. To check the installed version, run the following command:
 
-```bash
+```shell
 qemu-guest-agent --version
 ```
 
@@ -205,7 +205,7 @@ status:
 
 The `AGENT` column shows whether the agent is running:
 
-```bash
+```shell
 d8 k get vm -o wide
 ```
 
@@ -221,7 +221,7 @@ fedora   Running   5d21h    6       5%             8000Mi   False          True 
 
 Install the agent with the command for your distribution and start the service:
 
-```bash
+```shell
 # Debian and derivatives.
 sudo apt install qemu-guest-agent
 

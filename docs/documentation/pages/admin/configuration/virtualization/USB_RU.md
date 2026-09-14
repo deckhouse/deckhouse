@@ -6,8 +6,8 @@ search: USB-устройства, проброс USB, NodeUSBDevice, usbip
 lang: ru
 ---
 
-{% alert level="warning" %}
-Проброс USB-устройств доступен в коммерческих редакциях DP.
+{% alert level="info" %}
+Проброс USB-устройств доступен в коммерческих редакциях Deckhouse Platform (DP).
 {% endalert %}
 
 За проброс USB-устройств к виртуальным машинам (ВМ) отвечает системный компонент `virtualization-dra`, которому на узле нужны три модуля ядра:
@@ -20,7 +20,7 @@ DP загружает их на узлах сам. Узел, где доступ
 
 Чтобы посмотреть, какие узлы готовы к пробросу USB-устройств, выполните команду:
 
-```bash
+```shell
 d8 k get nodes -l virtualization.deckhouse.io/usbip=true
 ```
 
@@ -33,7 +33,7 @@ node-1   Ready    worker   10d   v1.34.1
 
 Чтобы убедиться, что компонент действительно работает на этих узлах, выполните команду:
 
-```bash
+```shell
 d8 k -n d8-virtualization get pods -l app=virtualization-dra -o wide
 ```
 
@@ -55,7 +55,7 @@ d8 k -n d8-virtualization get pods -l app=virtualization-dra -o wide
 
 Ресурс [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) описывает физическое USB-устройство, обнаруженное на узле. Ресурс существует на уровне кластера, поэтому все обнаруженные устройства видны вам в одном списке:
 
-```bash
+```shell
 d8 k get nodeusbdevice
 ```
 
@@ -84,7 +84,7 @@ logitech-webcam   node-2   True    True       True       my-project   15m
 
 1. Назначьте неймспейс параметром [`.spec.assignedNamespace`](/modules/virtualization/cr.html#nodeusbdevice-v1alpha2-spec-assignednamespace):
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: NodeUSBDevice
@@ -97,7 +97,7 @@ logitech-webcam   node-2   True    True       True       my-project   15m
 
 1. Убедитесь, что в неймспейсе появился ресурс [USBDevice](/modules/virtualization/cr.html#usbdevice):
 
-   ```bash
+   ```shell
    d8 k get usbdevice -n my-project
    ```
 
@@ -113,7 +113,7 @@ logitech-webcam   node-2   True    True       True       my-project   15m
 
 Идентификаторы устройства, его расположение и текущие условия хранятся в статусе ресурса:
 
-```bash
+```shell
 d8 k get nodeusbdevice <DEVICE_NAME> -o yaml
 ```
 
@@ -121,7 +121,7 @@ d8 k get nodeusbdevice <DEVICE_NAME> -o yaml
 
 Чтобы получить только атрибуты устройства, обратитесь к нужным полям напрямую:
 
-```bash
+```shell
 d8 k get nodeusbdevice <DEVICE_NAME> \
   -o jsonpath='{.status.attributes.manufacturer}{" "}{.status.attributes.product}{" ("}{.status.attributes.vendorID}{":"}{.status.attributes.productID}{")\n"}'
 ```

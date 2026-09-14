@@ -5,8 +5,8 @@ description: "USB device passthrough to virtual machines: preparing nodes, the N
 search: USB devices, USB passthrough, NodeUSBDevice, usbip
 ---
 
-{% alert level="warning" %}
-USB device passthrough is available in commercial DP editions.
+{% alert level="info" %}
+USB device passthrough is available in commercial Deckhouse Platform (DP) editions.
 {% endalert %}
 
 USB device passthrough to virtual machines (VMs) is handled by the `virtualization-dra` system component, which needs three kernel modules on the node:
@@ -19,7 +19,7 @@ DP loads them on the nodes itself. A node where all three modules are available 
 
 To see which nodes are ready for USB device passthrough, run the following command:
 
-```bash
+```shell
 d8 k get nodes -l virtualization.deckhouse.io/usbip=true
 ```
 
@@ -32,7 +32,7 @@ node-1   Ready    worker   10d   v1.34.1
 
 To verify that the component is actually running on these nodes, run the following command:
 
-```bash
+```shell
 d8 k -n d8-virtualization get pods -l app=virtualization-dra -o wide
 ```
 
@@ -54,7 +54,7 @@ A USB device travels from the node to a virtual machine in four steps:
 
 The [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource describes a physical USB device detected on a node. The resource exists at the cluster level, so you see all detected devices in a single list:
 
-```bash
+```shell
 d8 k get nodeusbdevice
 ```
 
@@ -83,7 +83,7 @@ Until a namespace is assigned to a device, the project owner doesn't see it. To 
 
 1. Assign the namespace with the [`.spec.assignedNamespace`](/modules/virtualization/cr.html#nodeusbdevice-v1alpha2-spec-assignednamespace) parameter:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: NodeUSBDevice
@@ -96,7 +96,7 @@ Until a namespace is assigned to a device, the project owner doesn't see it. To 
 
 1. Verify that a [USBDevice](/modules/virtualization/cr.html#usbdevice) resource appears in the namespace:
 
-   ```bash
+   ```shell
    d8 k get usbdevice -n my-project
    ```
 
@@ -112,7 +112,7 @@ Full details about a device and its current state are available in the resource 
 
 The device identifiers, its location, and the current conditions are stored in the resource status:
 
-```bash
+```shell
 d8 k get nodeusbdevice <DEVICE_NAME> -o yaml
 ```
 
@@ -120,7 +120,7 @@ Where `<DEVICE_NAME>` is the name of the [NodeUSBDevice](/modules/virtualization
 
 To get only the device attributes, query the fields you need directly:
 
-```bash
+```shell
 d8 k get nodeusbdevice <DEVICE_NAME> \
   -o jsonpath='{.status.attributes.manufacturer}{" "}{.status.attributes.product}{" ("}{.status.attributes.vendorID}{":"}{.status.attributes.productID}{")\n"}'
 ```

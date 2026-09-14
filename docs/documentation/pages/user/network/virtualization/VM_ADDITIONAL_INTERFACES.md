@@ -11,7 +11,7 @@ Besides the main cluster network, a virtual machine (VM) can be connected to add
 
 Besides the main cluster network, a machine can connect to additional networks, both project and cluster ones.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 To work with additional networks, the `sdn` module has to be enabled.
 {% endalert %}
 
@@ -44,7 +44,7 @@ Specifics and important points of working with additional network interfaces:
 >
 > To fix this, set the parameters that make the system answer requests strictly through the interface with the target IP and use the correct source address:
 >
-> ```bash
+> ```shell
 > sysctl -w net.ipv4.conf.all.arp_ignore=1
 > sysctl -w net.ipv4.conf.all.arp_announce=2
 > ```
@@ -119,7 +119,7 @@ The [VirtualMachineMACAddressLease](/modules/virtualization/cr.html#virtualmachi
 
 To view the list of MAC address leases (`vmmacl`), run the following command:
 
-```bash
+```shell
 d8 k get vmmacl
 ```
 
@@ -141,7 +141,7 @@ A MAC address is assigned automatically to each additional interface from the sh
 
 To check the assigned MAC addresses, run the following command:
 
-```bash
+```shell
 d8 k get vmmac
 ```
 
@@ -190,7 +190,7 @@ To create a project network:
 
 ## IPAM for additional network interfaces
 
-DP can hand out addresses in an additional network itself, if an administrator has configured an address pool for that network.
+Deckhouse Platform (DP) can hand out addresses in an additional network itself, if an administrator has configured an address pool for that network.
 
 {% tabs net-ipam %}
 

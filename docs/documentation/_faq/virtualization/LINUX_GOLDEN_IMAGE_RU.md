@@ -13,20 +13,20 @@ Golden image — это предварительно настроенный об
 
    - Для RHEL/CentOS:
 
-     ```bash
+     ```shell
      yum install -y qemu-guest-agent
      ```
 
    - Для Debian/Ubuntu:
 
-     ```bash
+     ```shell
      apt-get update
      apt-get install -y qemu-guest-agent
      ```
 
 1. Включите и запустите сервис:
 
-   ```bash
+   ```shell
    systemctl enable qemu-guest-agent
    systemctl start qemu-guest-agent
    ```
@@ -35,7 +35,7 @@ Golden image — это предварительно настроенный об
 
 1. Подготовьте образ. Очистите неиспользуемые блоки файловой системы:
 
-   ```bash
+   ```shell
    fstrim -v /
    fstrim -v /boot
    ```
@@ -44,20 +44,20 @@ Golden image — это предварительно настроенный об
 
    - Для RHEL:
 
-     ```bash
+     ```shell
      nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
      rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
      ```
 
    - Для Debian/Ubuntu:
 
-     ```bash
+     ```shell
      rm -f /etc/network/interfaces.d/*
      ```
 
 1. Очистите системные идентификаторы:
 
-   ```bash
+   ```shell
    echo -n > /etc/machine-id
    rm -f /var/lib/dbus/machine-id
    ln -s /etc/machine-id /var/lib/dbus/machine-id
@@ -65,13 +65,13 @@ Golden image — это предварительно настроенный об
 
 1. Удалите ключи хоста SSH:
 
-   ```bash
+   ```shell
    rm -f /etc/ssh/ssh_host_*
    ```
 
 1. Очистите журнал systemd:
 
-   ```bash
+   ```shell
    journalctl --vacuum-size=100M --vacuum-time=7d
    ```
 
@@ -79,32 +79,32 @@ Golden image — это предварительно настроенный об
 
    - Для RHEL:
 
-     ```bash
+     ```shell
      yum clean all
      ```
 
    - Для Debian/Ubuntu:
 
-     ```bash
+     ```shell
      apt-get clean
      ```
 
 1. Очистите временные файлы:
 
-   ```bash
+   ```shell
    rm -rf /tmp/*
    rm -rf /var/tmp/*
    ```
 
 1. Очистите логи:
 
-   ```bash
+   ```shell
    find /var/log -name "*.log" -type f -exec truncate -s 0 {} \;
    ```
 
 1. Очистите историю команд:
 
-   ```bash
+   ```shell
    history -c
    ```
 
@@ -112,45 +112,45 @@ Golden image — это предварительно настроенный об
 
    Восстановите контексты сразу:
 
-   ```bash
+   ```shell
    restorecon -R /
    ```
 
    Либо запланируйте пересчёт контекстов на следующую загрузку:
 
-   ```bash
+   ```shell
    touch /.autorelabel
    ```
 
 1. Проверьте, что в `/etc/fstab` указаны UUID или `LABEL`, а не имена вида `/dev/sdX`:
 
-   ```bash
+   ```shell
    blkid
    cat /etc/fstab
    ```
 
 1. Сбросьте состояние cloud-init (логи и seed):
 
-   ```bash
+   ```shell
    cloud-init clean --logs --seed
    ```
 
 1. Выполните финальную синхронизацию и очистку буферов:
 
-   ```bash
+   ```shell
    sync
    echo 3 > /proc/sys/vm/drop_caches
    ```
 
 1. Выключите виртуальную машину:
 
-   ```bash
+   ```shell
    poweroff
    ```
 
 1. Создайте ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage), указав исходный ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) подготовленной ВМ:
 
-   ```bash
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -168,7 +168,7 @@ Golden image — это предварительно настроенный об
 
    Либо создайте ресурс [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage), чтобы образ был доступен на уровне кластера для всех проектов:
 
-   ```bash
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: ClusterVirtualImage
@@ -188,7 +188,7 @@ Golden image — это предварительно настроенный об
 
 1. Создайте новый ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) из полученного образа:
 
-   ```bash
+   ```shell
    d8 k apply -f -<<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk

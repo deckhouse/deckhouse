@@ -16,7 +16,7 @@ lang: ru
 - при выводе узла на обслуживание или обновление, чтобы освободить его от ВМ;
 - при обновлении прошивки виртуальных машин, которое иначе потребовало бы их перезапуска.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 Живая миграция ограничена по скорости и по числу одновременных перемещений:
 
 - узел готовит и передаёт память только одной ВМ за раз, и одновременно принимает только одну входящую миграцию;
@@ -34,7 +34,7 @@ lang: ru
 
 1. Посмотрите, на каком узле ВМ работает сейчас:
 
-   ```bash
+   ```shell
    d8 k get vm
    ```
 
@@ -50,9 +50,9 @@ lang: ru
 
    ВМ запущена на узле `virtlab-pt-1`.
 
-1. Создайте ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типом `Evict`. DP подберёт для ВМ новый узел, соблюдая требования к её размещению:
+1. Создайте ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типом `Evict`. Deckhouse Platform (DP) подберёт для ВМ новый узел, соблюдая требования к её размещению:
 
-   ```bash
+   ```shell
    d8 k create -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachineOperation
@@ -68,7 +68,7 @@ lang: ru
 
 1. Сразу после создания ресурса проследите за ходом миграции:
 
-   ```bash
+   ```shell
    d8 k get vm -w
    ```
 
@@ -140,7 +140,7 @@ spec:
 
 ВМ, которые не смогут мигрировать с узла, лучше найти перед началом обслуживания, до того, как узел будет выведен из планирования:
 
-```bash
+```shell
 d8 k get vm -o wide | grep <NODE_NAME>
 ```
 
@@ -148,7 +148,7 @@ d8 k get vm -o wide | grep <NODE_NAME>
 
 Одного значения в колонке недостаточно. ВМ со значением `True` и причиной `VirtualMachineWaitingForMigrationTarget` тоже никуда не поедет, пока подходящий узел не вернётся в планирование, поэтому перед обслуживанием посмотрите причины всех ВМ на узле:
 
-```bash
+```shell
 d8 k get vm -o json | jq -r '.items[] | [.metadata.name, (.status.conditions[] | select(.type=="Migratable") | .reason)] | @tsv'
 ```
 
@@ -162,13 +162,13 @@ d8 k get vm -o json | jq -r '.items[] | [.metadata.name, (.status.conditions[] |
 
 Освободить узел от всех ресурсов, включая системные, можно командой:
 
-```bash
+```shell
 d8 k drain <NODE_NAME> --ignore-daemonsets --delete-emptydir-data
 ```
 
 Чтобы вытеснить с узла только виртуальные машины, добавьте отбор по лейблу:
 
-```bash
+```shell
 d8 k drain <NODE_NAME> --pod-selector vm.kubevirt.internal.virtualization.deckhouse.io/name --delete-emptydir-data
 ```
 
@@ -178,7 +178,7 @@ d8 k drain <NODE_NAME> --pod-selector vm.kubevirt.internal.virtualization.deckho
 
 Чтобы вернуть узел в работу, остановите команду `drain` сочетанием клавиш `Ctrl+C`, а затем выполните:
 
-```bash
+```shell
 d8 k uncordon <NODE_NAME>
 ```
 
@@ -202,7 +202,7 @@ d8 k uncordon <NODE_NAME>
 
 Обнаружив такую ВМ при переводе узла в режим обслуживания, DP добавляет на узел аннотацию `virtualization.deckhouse.io/virtualmachines-restart-required`. Чтобы разрешить перезапуск, добавьте на узел ответную аннотацию:
 
-```bash
+```shell
 d8 k annotate node <NODE_NAME> virtualization.deckhouse.io/virtualmachines-restart-approved=""
 ```
 
@@ -222,7 +222,7 @@ DP реагирует на вытеснение ВМ с узла. Если вы�
 
 ### Выключение и перезагрузка узла с виртуальными машинами
 
-Работающие виртуальные машины откладывают выключение и перезагрузку своего узла. DP сам помечает их рабочие нагрузки лейблом `pod.deckhouse.io/inhibit-node-shutdown`, по которому Deckhouse Platform задерживает выключение узла. Механизм доступен в редакциях DP EE и Ultimate, описан в [документации модуля `node-manager`](/modules/node-manager/) и включения не требует.
+Работающие виртуальные машины откладывают выключение и перезагрузку своего узла. DP сам помечает их рабочие нагрузки лейблом `pod.deckhouse.io/inhibit-node-shutdown` и по нему задерживает выключение узла. Механизм доступен в коммерческих редакциях DP, описан в [документации модуля `node-manager`](/modules/node-manager/) и включения не требует.
 
 Если на узле запрошено выключение или перезагрузка, а на нём ещё работают виртуальные машины:
 
@@ -237,7 +237,7 @@ DP реагирует на вытеснение ВМ с узла. Если вы�
 
 Чтобы узнать причину, выполните следующую команду:
 
-```bash
+```shell
 d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.reason}{"\n"}{end}'
 ```
 
@@ -248,13 +248,13 @@ d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="Grac
 
   Остановка доступна только для политик запуска `Manual` и `AlwaysOnUnlessStoppedManually`. Проверьте политику ВМ:
 
-  ```bash
+  ```shell
   d8 k -n <NAMESPACE> get vm <VM_NAME> -o jsonpath='{.spec.runPolicy}'
   ```
 
   При политике `AlwaysOn` команда остановки будет отклонена с причиной `NotApplicableForVirtualMachineRunPolicy`. В этом случае сначала измените политику, а после завершения работ верните прежнее значение:
 
-  ```bash
+  ```shell
   d8 k -n <NAMESPACE> patch vm <VM_NAME> --type merge -p '{"spec":{"runPolicy":"AlwaysOnUnlessStoppedManually"}}'
   ```
 

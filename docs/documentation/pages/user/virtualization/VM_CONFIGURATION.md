@@ -5,7 +5,7 @@ description: "Changing the configuration of a running virtual machine: which par
 search: changing VM configuration, VM restart, CPU hotplug, memory hotplug
 ---
 
-You can change the configuration of a virtual machine (VM) at any time after creation. On a powered-off machine, the changes apply right away, and on a running one it depends on what exactly you changed.
+You can change the configuration of a virtual machine (VM) at any time after creation. On a powered-off machine, the changes apply right away, and on a running one Deckhouse Platform (DP) applies them differently depending on what exactly you changed.
 
 | Configuration block                                                                                             | How it applies on a running VM                                                                                                                                                               |
 |-----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -30,7 +30,7 @@ The following example changes the number of cores.
 
 1. Check how many cores the guest OS sees now:
 
-   ```bash
+   ```shell
    d8 v ssh cloud@linux-vm --command "nproc"
    ```
 
@@ -42,7 +42,7 @@ The following example changes the number of cores.
 
 1. Set the new number of cores:
 
-   ```bash
+   ```shell
    d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
 
    # You can achieve the same result by editing the resource.
@@ -51,7 +51,7 @@ The following example changes the number of cores.
 
 1. Verify that the change is accepted but not applied yet. The guest OS still sees one core, and the list of pending changes isn't empty:
 
-   ```bash
+   ```shell
    d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
    ```
 
@@ -70,7 +70,7 @@ The following example changes the number of cores.
 
    The `NEED RESTART` column shows the same:
 
-   ```bash
+   ```shell
    d8 k get vm linux-vm -o wide
    ```
 
@@ -86,13 +86,13 @@ The following example changes the number of cores.
 
 1. Restart the machine:
 
-   ```bash
+   ```shell
    d8 v restart linux-vm
    ```
 
 1. Check the result. After the restart, the [`.status.restartAwaitingChanges`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-restartawaitingchanges) block is empty and the guest OS sees two cores:
 
-   ```bash
+   ```shell
    d8 v ssh cloud@linux-vm --command "nproc"
    ```
 
@@ -150,7 +150,7 @@ When the feature is enabled and the new [`.spec.cpu.cores`](/modules/virtualizat
 
 Set the new number of cores:
 
-```bash
+```shell
 d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":4}}}'
 ```
 
@@ -170,14 +170,14 @@ d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":4}}}'
 
 The guest OS doesn't always bring new cores into service on its own, especially after a live migration. In Linux, a core is brought online through sysfs:
 
-```bash
+```shell
 echo 1 > /sys/devices/system/cpu/cpu1/online
 ```
 
 To make this happen automatically, add a `udev` rule:
 
 <!-- markdownlint-disable MD031 -->
-```bash
+```shell
 cat <<'EOF' > /etc/udev/rules.d/99-hotplug-cpu.rules
 SUBSYSTEM=="cpu",ACTION=="add",RUN+="/bin/sh -c '[ ! -e /sys$devpath/online ] || echo 1 > /sys$devpath/online'"
 EOF
@@ -215,7 +215,7 @@ When the feature is enabled, the new [`.spec.memory.size`](/modules/virtualizati
 
 Set the new memory size:
 
-```bash
+```shell
 d8 k patch vm linux-vm --type merge -p '{"spec":{"memory":{"size":"4Gi"}}}'
 ```
 
@@ -235,14 +235,14 @@ d8 k patch vm linux-vm --type merge -p '{"spec":{"memory":{"size":"4Gi"}}}'
 
 As with cores, the guest OS may not bring new memory blocks into service on its own. In Linux, a block is brought online through sysfs, and the device name is visible in the `lsmem` output or in the `/sys/bus/memory/devices/` directory:
 
-```bash
+```shell
 echo 1 > /sys/bus/memory/devices/memoryXXX/online
 ```
 
 To make this happen automatically, add a `udev` rule:
 
 <!-- markdownlint-disable MD031 -->
-```bash
+```shell
 cat <<'EOF' > /etc/udev/rules.d/99-hotplug-memory.rules
 SUBSYSTEM=="memory",ACTION=="add",DEVPATH=="/devices/system/memory/memory[0-9]*", TEST=="state", ATTR{state}!="online", ATTR{state}="online"
 EOF

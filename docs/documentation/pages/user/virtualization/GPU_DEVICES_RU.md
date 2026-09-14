@@ -6,8 +6,8 @@ search: GPU в ВМ, проброс GPU, GPUClass, видеоадаптер
 lang: ru
 ---
 
-{% alert level="warning" %}
-Проброс GPU-устройств — экспериментальная возможность, доступная в коммерческих редакциях DP.
+{% alert level="info" %}
+Проброс GPU-устройств — экспериментальная возможность, доступная в коммерческих редакциях Deckhouse Platform (DP).
 {% endalert %}
 
 DP подключает физические GPU-устройства к виртуальным машинам с помощью DRA (Dynamic Resource Allocation). Устройство запрашивается по ссылке на `GPUClass` в блоке [`.spec.gpus`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-gpus) ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).

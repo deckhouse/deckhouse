@@ -84,7 +84,7 @@ The following examples cover each CPU type.
 - A specific CPU model with a known instruction set. Set with the `Model` type.
   First, check which models the target node supports:
 
-  ```bash
+  ```shell
   d8 k get nodes <NODE_NAME> -o json | jq '.metadata.labels | to_entries[] | select(.key | test("cpu-model.node.virtualization.deckhouse.io")) | .key | split("/")[1]' -r
   ```
 
@@ -138,7 +138,7 @@ A CPU instruction set is every command the processor can execute, from addition 
 
 Three classes suit such a cluster:
 
-- `universal`: VMs start on any node and migrate between all four. DP takes the instruction set common to both processors, so compatibility is maximal, while some capabilities of "CPU Y" stay unused.
+- `universal`: VMs start on any node and migrate between all four. Deckhouse Platform (DP) takes the instruction set common to both processors, so compatibility is maximal, while some capabilities of "CPU Y" stay unused.
 - `cpuX`: VMs start only on nodes with "CPU X" and migrate between them, using all instructions of that processor.
 - `cpuY`: The same for nodes with "CPU Y".
 

@@ -5,8 +5,8 @@ description: "GPU device passthrough to virtual machines: cluster requirements, 
 search: GPU devices, GPU passthrough, GPUClass, graphics adapter
 ---
 
-{% alert level="warning" %}
-GPU device passthrough is an experimental feature available in commercial DP editions.
+{% alert level="info" %}
+GPU device passthrough is an experimental feature available in commercial Deckhouse Platform (DP) editions.
 {% endalert %}
 
 DP attaches physical GPU devices to virtual machines using DRA (Dynamic Resource Allocation). A project owner requests a device by a reference to a `GPUClass` in the [`.spec.gpus`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-gpus) block of their machine, and you prepare the cluster for this.

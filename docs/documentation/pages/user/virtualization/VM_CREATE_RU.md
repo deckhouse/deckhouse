@@ -28,7 +28,7 @@ lang: ru
 
 1. Создайте ресурс [VirtualMachine](/modules/virtualization/cr.html#virtualmachine):
 
-   ```bash
+   ```shell
    d8 k apply -f - <<"EOF"
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
@@ -83,7 +83,7 @@ lang: ru
 
 1. Проверьте, что машина запустилась:
 
-   ```bash
+   ```shell
    d8 k get vm linux-vm
    ```
 
@@ -148,7 +148,7 @@ lang: ru
 
 Условия в блоке [`.status.conditions`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-conditions) отвечают на вопрос, почему машина находится в текущей фазе. Посмотреть те из них, где есть сообщение, можно так:
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.message != "")'
 ```
 
@@ -158,19 +158,19 @@ d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.message != ""
 
 Пока ВМ находится в фазе `Pending`, она ждёт готовности зависимых ресурсов, то есть дисков, образов, класса ВМ, секрета со сценарием начальной конфигурации. Задержка на этой фазе означает, что какой-то из ресурсов не готов либо исчерпаны квоты неймспейса или проекта. Что именно блокирует запуск, показывают условия, оканчивающиеся на `Ready`:
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type | test(".*Ready"))'
 ```
 
-В фазе `Starting` зависимые ресурсы готовы, и DP запускает ВМ на одном из узлов. Если запуск затягивается, подходящего узла нет либо на подходящих узлах не хватает процессора или памяти. Причину сообщает условие `Running`:
+В фазе `Starting` зависимые ресурсы готовы, и Deckhouse Platform (DP) запускает ВМ на одном из узлов. Если запуск затягивается, подходящего узла нет либо на подходящих узлах не хватает процессора или памяти. Причину сообщает условие `Running`:
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type=="Running")'
 ```
 
 В фазе `Migrating` машина переезжает на другой узел живой миграцией. Миграция не начнётся или прервётся, если наборы процессорных инструкций на узлах несовместимы, версии ядра различаются, ни один узел не подходит под правила размещения или на подходящих узлах не хватает ресурсов. Ход миграции показывает условие `Migrating` вместе с блоком [`.status.migrationState`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-migrationstate):
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status | {condition: .conditions[] | select(.type=="Migrating"), migrationState}'
 ```
 

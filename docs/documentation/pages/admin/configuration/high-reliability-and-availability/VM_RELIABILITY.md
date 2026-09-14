@@ -5,7 +5,7 @@ description: "Rebalancing virtual machines across nodes, diagnosing slow VMs, an
 search: VM rebalancing, ColdStandby, fault tolerance, slow VM
 ---
 
-Node load changes over time, and nodes sometimes fail. DP balances the placement of virtual machines (VMs) across nodes and restarts machines from a failed node, while metrics help you find out why a machine runs slowly.
+Node load changes over time, and nodes sometimes fail. Deckhouse Platform (DP) balances the placement of virtual machines (VMs) across nodes and restarts machines from a failed node, while metrics help you find out why a machine runs slowly.
 
 ## VM rebalancing
 

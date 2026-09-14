@@ -8,7 +8,7 @@ lang: ru
 
 Образ хранит содержимое диска, из которого вы создаёте диски виртуальных машин. Образ [VirtualImage](/modules/virtualization/cr.html#virtualimage) создаётся в проекте и доступен только в том проекте или неймспейсе, где он создан.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 Чтобы один и тот же образ был доступен всем проектам кластера, нужен кластерный образ [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage). Создать его может администратор, порядок описан в разделе [«Кластерные образы виртуальных машин»](../../admin/configuration/virtualization/cluster-images.html).
 {% endalert %}
 
@@ -17,7 +17,7 @@ lang: ru
 Образ появляется в проекте в три шага:
 
 1. Вы создаёте ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage) и указываете в нём источник данных.
-1. DP загружает образ из этого источника в хранилище, которым в зависимости от выбранного типа выступает DVCR или PVC.
+1. Deckhouse Platform (DP) загружает образ из этого источника в хранилище, которым в зависимости от выбранного типа выступает DVCR или PVC.
 1. Загруженный образ становится доступен для создания дисков.
 
 ## Источники и варианты хранения
@@ -49,7 +49,7 @@ lang: ru
 
 1. Создайте ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage). В примере образ сохраняется в DVCR:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -68,7 +68,7 @@ lang: ru
 
 1. Проверьте, что образ создан:
 
-   ```bash
+   ```shell
    d8 k get virtualimage ubuntu-24-04
 
    # Короткий вариант команды.
@@ -104,7 +104,7 @@ lang: ru
 
 Блок [`checksum`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-datasource-http-checksum) заставляет DP проверить то, что он скачал с HTTP-сервера. Образ перейдёт в фазу `Ready`, только если загруженный файл совпал со всеми указанными контрольными суммами, иначе ресурс окажется в фазе `Failed`:
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
@@ -150,7 +150,7 @@ EOF
 
 1. Создайте ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage) с типом хранения `PersistentVolumeClaim`:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -174,7 +174,7 @@ EOF
 
 1. Проверьте, что образ создан:
 
-   ```bash
+   ```shell
    d8 k get vi ubuntu-24-04-pvc
    ```
 
@@ -217,7 +217,7 @@ DP умеет забирать образ из внешнего хранилищ
 
 1. Скачайте файл образа на локальную машину:
 
-   ```bash
+   ```shell
    curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
    ```
 
@@ -230,7 +230,7 @@ DP умеет забирать образ из внешнего хранилищ
 
 1. Соберите образ контейнера. В примере используется хранилище [docker.com](https://www.docker.com/), для работы с которым нужны учётная запись и настроенное окружение:
 
-   ```bash
+   ```shell
    docker build -t docker.io/<USERNAME>/ubuntu2404:latest
    ```
 
@@ -238,13 +238,13 @@ DP умеет забирать образ из внешнего хранилищ
 
 1. Загрузите собранный образ контейнера в хранилище:
 
-   ```bash
+   ```shell
    docker push docker.io/<USERNAME>/ubuntu2404:latest
    ```
 
 1. Создайте ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage), указав путь к образу контейнера:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -289,7 +289,7 @@ DP работает только с теми хранилищами, где вк
 
 1. Создайте ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage) с источником `Upload`:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -308,7 +308,7 @@ DP работает только с теми хранилищами, где вк
 
 1. Получите адреса, по которым принимается файл:
 
-   ```bash
+   ```shell
    d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}" | jq
    ```
 
@@ -328,7 +328,7 @@ DP работает только с теми хранилищами, где вк
 
 1. Загрузите файл по выбранному адресу. В примере сначала скачивается образ Cirros, а затем отправляется в кластер:
 
-   ```bash
+   ```shell
    curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
    curl https://virtualization.example.com/upload/<SECRET_URL> --progress-bar -T cirros.img | cat
    ```
@@ -337,7 +337,7 @@ DP работает только с теми хранилищами, где вк
 
 1. Убедитесь, что образ перешёл в фазу `Ready`:
 
-   ```bash
+   ```shell
    d8 k get vi some-image
    ```
 
@@ -377,7 +377,7 @@ DP работает только с теми хранилищами, где вк
 
 Создайте образ, указав источником нужный диск:
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
@@ -421,7 +421,7 @@ EOF
 
 Создайте образ, указав источником снимок диска:
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage

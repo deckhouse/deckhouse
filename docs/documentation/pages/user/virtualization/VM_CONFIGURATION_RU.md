@@ -6,7 +6,7 @@ search: изменение конфигурации ВМ, перезапуск �
 lang: ru
 ---
 
-Конфигурацию виртуальной машины (ВМ) можно менять в любой момент после создания. У выключенной машины изменения применяются сразу, у работающей — по-разному, в зависимости от того, что именно вы изменили.
+Конфигурацию виртуальной машины (ВМ) можно менять в любой момент после создания. У выключенной машины изменения применяются сразу, а у работающей Deckhouse Platform (DP) применяет их по-разному, в зависимости от того, что именно вы изменили.
 
 | Блок конфигурации                                                                                               | Как применяется у работающей ВМ                                                                                                                                  |
 |-----------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -31,7 +31,7 @@ lang: ru
 
 1. Посмотрите, сколько ядер видит гостевая ОС сейчас:
 
-   ```bash
+   ```shell
    d8 v ssh cloud@linux-vm --command "nproc"
    ```
 
@@ -43,7 +43,7 @@ lang: ru
 
 1. Задайте новое число ядер:
 
-   ```bash
+   ```shell
    d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
 
    # Того же результата можно добиться, отредактировав ресурс.
@@ -52,7 +52,7 @@ lang: ru
 
 1. Убедитесь, что изменение принято, но ещё не применено. Гостевая ОС по-прежнему видит одно ядро, а список ожидающих изменений не пуст:
 
-   ```bash
+   ```shell
    d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
    ```
 
@@ -71,7 +71,7 @@ lang: ru
 
    То же самое показывает колонка `NEED RESTART`:
 
-   ```bash
+   ```shell
    d8 k get vm linux-vm -o wide
    ```
 
@@ -87,13 +87,13 @@ lang: ru
 
 1. Перезапустите машину:
 
-   ```bash
+   ```shell
    d8 v restart linux-vm
    ```
 
 1. Проверьте результат. После перезапуска блок [`.status.restartAwaitingChanges`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-restartawaitingchanges) пуст, а гостевая ОС видит два ядра:
 
-   ```bash
+   ```shell
    d8 v ssh cloud@linux-vm --command "nproc"
    ```
 
@@ -151,7 +151,7 @@ spec:
 
 Задайте новое число ядер:
 
-```bash
+```shell
 d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":4}}}'
 ```
 
@@ -171,14 +171,14 @@ d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":4}}}'
 
 Гостевая ОС не всегда вводит новые ядра в работу сама, особенно после живой миграции. В Linux ядро включается через sysfs:
 
-```bash
+```shell
 echo 1 > /sys/devices/system/cpu/cpu1/online
 ```
 
 Чтобы это происходило автоматически, добавьте правило `udev`:
 
 <!-- markdownlint-disable MD031 -->
-```bash
+```shell
 cat <<'EOF' > /etc/udev/rules.d/99-hotplug-cpu.rules
 SUBSYSTEM=="cpu",ACTION=="add",RUN+="/bin/sh -c '[ ! -e /sys$devpath/online ] || echo 1 > /sys$devpath/online'"
 EOF
@@ -216,7 +216,7 @@ spec:
 
 Задайте новый объём памяти:
 
-```bash
+```shell
 d8 k patch vm linux-vm --type merge -p '{"spec":{"memory":{"size":"4Gi"}}}'
 ```
 
@@ -236,14 +236,14 @@ d8 k patch vm linux-vm --type merge -p '{"spec":{"memory":{"size":"4Gi"}}}'
 
 Как и с ядрами, гостевая ОС может не ввести новые блоки памяти в работу сама. В Linux блок включается через sysfs, а имя устройства видно в выводе `lsmem` или в каталоге `/sys/bus/memory/devices/`:
 
-```bash
+```shell
 echo 1 > /sys/bus/memory/devices/memoryXXX/online
 ```
 
 Чтобы это происходило автоматически, добавьте правило `udev`:
 
 <!-- markdownlint-disable MD031 -->
-```bash
+```shell
 cat <<'EOF' > /etc/udev/rules.d/99-hotplug-memory.rules
 SUBSYSTEM=="memory",ACTION=="add",DEVPATH=="/devices/system/memory/memory[0-9]*", TEST=="state", ATTR{state}!="online", ATTR{state}="online"
 EOF

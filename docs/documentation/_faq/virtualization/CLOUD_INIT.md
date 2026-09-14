@@ -120,7 +120,7 @@ mounts:
 
 #### Configuring network interfaces for additional networks
 
-{% alert level="warning" %}
+{% alert level="info" %}
 The settings described in this section apply only to additional networks. The main network (Main) is configured automatically via cloud-init and does not require manual configuration.
 {% endalert %}
 

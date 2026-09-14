@@ -5,8 +5,8 @@ description: "Attaching a GPU device provided by an administrator to a project v
 search: GPU in a VM, GPU passthrough, GPUClass, graphics adapter
 ---
 
-{% alert level="warning" %}
-GPU device passthrough is an experimental feature available in commercial DP editions.
+{% alert level="info" %}
+GPU device passthrough is an experimental feature available in commercial Deckhouse Platform (DP) editions.
 {% endalert %}
 
 DP attaches physical GPU devices to virtual machines using DRA (Dynamic Resource Allocation). A device is requested by a reference to a `GPUClass` in the [`.spec.gpus`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-gpus) block of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.

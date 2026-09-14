@@ -37,13 +37,13 @@ lang: ru
 
 1. Примените сохранённый манифест:
 
-   ```bash
+   ```shell
    d8 k apply -f containerd-dvcr-remove-old-config.yaml
    ```
 
 1. Проверьте, что модуль `registry` запущен:
 
-   ```bash
+   ```shell
    d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
    ```
 
@@ -61,7 +61,7 @@ lang: ru
 
 1. Удалите разовый манифест NodeGroupConfiguration:
 
-   ```bash
+   ```shell
    d8 k delete -f containerd-dvcr-remove-old-config.yaml
    ```
 

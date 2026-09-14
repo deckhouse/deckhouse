@@ -8,7 +8,7 @@ lang: ru
 
 Если машина ведёт себя не так, как ожидалось, соберите её состояние и состояние связанных ресурсов в один архив.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 Для использования команды `collect-debug-info` требуется версия `d8` v0.27.0 или выше.
 {% endalert %}
 
@@ -35,7 +35,7 @@ lang: ru
 
 Пример использования:
 
-```bash
+```shell
 # Сбор отладочной информации для виртуальной машины 'linux-vm'
 d8 v collect-debug-info linux-vm > debug-info.tar.gz
 

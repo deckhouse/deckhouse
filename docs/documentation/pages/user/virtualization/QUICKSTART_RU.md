@@ -14,7 +14,7 @@ lang: ru
 
 1. Создайте образ [VirtualImage](/modules/virtualization/cr.html#virtualimage) из внешнего источника:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
@@ -31,7 +31,7 @@ lang: ru
 
 1. Создайте диск [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) из этого образа. Убедитесь, что в кластере задан StorageClass по умолчанию, и примените манифест:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -48,7 +48,7 @@ lang: ru
 
 1. Создайте виртуальную машину [VirtualMachine](/modules/virtualization/cr.html#virtualmachine). В примере используется сценарий cloud-init, который создаёт пользователя `cloud`:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
@@ -81,7 +81,7 @@ lang: ru
 
 1. Проверьте, что образ и диск созданы, а ВМ запущена. Ресурсы переходят в готовое состояние не мгновенно, поэтому дождитесь нужных значений в колонке `PHASE`:
 
-   ```bash
+   ```shell
    d8 k get vi,vd,vm
    ```
 
@@ -103,7 +103,7 @@ lang: ru
 
 1. Подключитесь к ВМ по консоли:
 
-   ```bash
+   ```shell
    d8 v console linux-vm
    ```
 
@@ -125,7 +125,7 @@ lang: ru
 
 1. Удалите созданные ресурсы:
 
-   ```bash
+   ```shell
    d8 k delete vm linux-vm
    d8 k delete vd linux-disk
    d8 k delete vi ubuntu

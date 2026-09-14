@@ -14,7 +14,7 @@ For virtual machines that no longer meet the new requirements, the `SizingPolicy
 When defining policies, take the [CPU topology](../../../user/virtualization/vm-resources.html#cpu-topologies) of virtual machines into account.
 {% endalert %}
 
-A policy consists of a list of rules, each applying to its own range of cores. The range is set in the required `cores` block, and ranges of different rules must not overlap, otherwise DP rejects the class.
+A policy consists of a list of rules, each applying to its own range of cores. The range is set in the required `cores` block, and ranges of different rules must not overlap, otherwise Deckhouse Platform (DP) rejects the class.
 
 A valid structure, where the ranges follow one another without overlapping:
 

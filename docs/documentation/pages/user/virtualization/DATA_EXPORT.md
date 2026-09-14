@@ -17,13 +17,13 @@ You can export virtual machine (VM) disks and disk snapshots with the `d8` utili
 
 An example of exporting a disk, with the command run on a cluster node:
 
-```bash
+```shell
 d8 data export download -n <NAMESPACE> vd/<VD_NAME> -o file.img
 ```
 
 An example of exporting a disk snapshot, with the command run on a cluster node:
 
-```bash
+```shell
 d8 data export download -n <NAMESPACE> vds/<VD_SNAPSHOT_NAME> -o file.img
 ```
 

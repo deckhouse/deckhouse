@@ -7,8 +7,8 @@ search: virtualization audit, security events, virtualization-audit, VM audit
 
 The audit records actions on virtual machines (VMs) and on the module itself, so that you can investigate an incident and reconstruct the sequence of events.
 
-{% alert level="warning" %}
-Available in the DP EE and Ultimate editions.
+{% alert level="info" %}
+Available in commercial Deckhouse Platform (DP) editions.
 {% endalert %}
 
 ## Enabling the audit

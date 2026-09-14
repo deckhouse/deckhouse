@@ -18,7 +18,7 @@ The serial console works independently of the graphics subsystem.
 
 Check in the guest OS whether virtual terminal support is enabled in the kernel configuration:
 
-```bash
+```shell
 cat /boot/config-$(uname -r) | grep CONFIG_VT
 ```
 
@@ -37,7 +37,7 @@ If the `getty` service for this port is not running, `d8 v console` will not sho
 
 In the guest OS, enable and start the `serial-getty` service for `ttyS0`:
 
-```bash
+```shell
 sudo systemctl enable --now serial-getty@ttyS0.service
 ```
 

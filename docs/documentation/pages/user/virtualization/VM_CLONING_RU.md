@@ -15,7 +15,7 @@ lang: ru
 {% alert level="info" %}
 Лейблы не копируются с исходной ВМ на клон. Это предотвращает маршрутизацию трафика Service (Service выбирают ВМ по меткам) на клон. Если клон должен входить в Service, добавьте нужные лейблы после клонирования. Например:
 
-```bash
+```shell
 d8 k label vm <VM_NAME> label-name=label-value
 ```
 
@@ -63,7 +63,7 @@ customization:
 
 Информацию о конфликтах, возникших при клонировании, можно просмотреть в статусе ресурса операции:
 
-```bash
+```shell
 # Для клонирования из существующей ВМ.
 d8 k get vmop <VMOP_NAME> -o json | jq '.status.resources'
 
@@ -207,7 +207,7 @@ spec:
 
 Чтобы посмотреть список ресурсов, сохранённых в снимке, используйте команду:
 
-```bash
+```shell
 d8 k get vmsnapshot <SNAPSHOT_NAME> -o jsonpath='{.status.resources}' | jq
 ```
 

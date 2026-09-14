@@ -29,7 +29,7 @@ lang: ru
 
 Проставьте лейбл командой `d8 k label`:
 
-```bash
+```shell
 d8 k label vm linux-vm app=nginx
 ```
 
@@ -65,7 +65,7 @@ Headless-сервис не выделяет собственный IP-адрес
 
 Создайте сервис с `clusterIP: None`:
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -111,7 +111,7 @@ EOF
 
 Пример конфигурации `ClusterIP`:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -151,7 +151,7 @@ EOF
 
 Создайте следующий сервис:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -203,7 +203,7 @@ EOF
 
 `LoadBalancer` — это тип сервиса, который автоматически создаёт внешний балансировщик нагрузки с постоянным IP-адресом. Этот балансировщик распределяет входящий трафик среди виртуальных машин, обеспечивая доступность сервиса из интернета.
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -255,7 +255,7 @@ Ingress открывает приложение машины по доменно
 
 Внутренний сервис для связки с `Ingress`. Пример:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -274,7 +274,7 @@ EOF
 
 И ресурс `Ingress` для публикации. Пример:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress

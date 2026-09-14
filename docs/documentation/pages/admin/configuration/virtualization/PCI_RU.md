@@ -6,8 +6,8 @@ search: PCI-устройства, проброс PCI, NodePCIDevice, PCIDevice, 
 lang: ru
 ---
 
-{% alert level="warning" %}
-Проброс PCI-устройств доступен в коммерческих редакциях DP.
+{% alert level="info" %}
+Проброс PCI-устройств доступен в коммерческих редакциях Deckhouse Platform (DP).
 {% endalert %}
 
 Проброс PCI-устройств позволяет подключить к виртуальной машине (ВМ) физическое устройство узла, например промышленный контроллер, аппаратный модуль безопасности, плату видеозахвата, ПЛИС или сетевую карту целиком. В гостевой операционной системе такое устройство работает под её собственным драйвером, поэтому в ВМ можно использовать оборудование, которое DP не поддерживает напрямую.
@@ -24,7 +24,7 @@ lang: ru
 
 Чтобы посмотреть, какие узлы готовы к пробросу PCI-устройств, выполните команду:
 
-```bash
+```shell
 d8 k get nodes -l virtualization.deckhouse.io/vfio=true,virtualization.deckhouse.io/containerd-version=v2
 ```
 
@@ -39,7 +39,7 @@ node-1   Ready    worker   10d   v1.34.1
 
 Чтобы убедиться, что компонент действительно работает на этих узлах, выполните команду:
 
-```bash
+```shell
 d8 k -n d8-virtualization get pods -l app=virtualization-dra-pci -o wide
 ```
 
@@ -51,7 +51,7 @@ DP обнаруживает устройства на подходящих уз�
 
 1. Найдите устройство среди обнаруженных:
 
-   ```bash
+   ```shell
    d8 k get nodepcidevice
    ```
 
@@ -70,7 +70,7 @@ DP обнаруживает устройства на подходящих уз�
 
 1. Назначьте неймспейс параметром [`.spec.assignedNamespace`](/modules/virtualization/cr.html#nodepcidevice-v1alpha2-spec-assignednamespace):
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: NodePCIDevice
@@ -83,7 +83,7 @@ DP обнаруживает устройства на подходящих уз�
 
 1. Убедитесь, что в неймспейсе появился ресурс [PCIDevice](/modules/virtualization/cr.html#pcidevice):
 
-   ```bash
+   ```shell
    d8 k get pcidevice -n my-project
    ```
 

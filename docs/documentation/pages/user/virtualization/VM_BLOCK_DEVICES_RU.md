@@ -124,7 +124,7 @@ EOF
 
 Проверьте состояние вашего ресурса:
 
-```bash
+```shell
 d8 k get vmbda attach-blank-disk
 ```
 
@@ -140,7 +140,7 @@ attach-blank-disk   Attached   linux-vm         3m7s
 
 Подключитесь к виртуальной машине и удостоверитесь, что диск подключён:
 
-```bash
+```shell
 d8 v ssh cloud@linux-vm --command "lsblk"
 ```
 
@@ -161,13 +161,13 @@ sdc       8:32   0 95.9M  0 disk <--- динамически подключен�
 
 Для отключения диска от виртуальной машины удалите ранее созданный ресурс:
 
-```bash
+```shell
 d8 k delete vmbda attach-blank-disk
 ```
 
 Образы подключаются так же, только в поле `kind` указывается значение [VirtualImage](/modules/virtualization/cr.html#virtualimage) или [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineBlockDeviceAttachment

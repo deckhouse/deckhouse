@@ -5,8 +5,8 @@ description: "Attaching project USB devices to a virtual machine, including with
 search: USB in a VM, USB passthrough, USBDevice, attaching a device
 ---
 
-{% alert level="warning" %}
-USB device passthrough is available in commercial DP editions.
+{% alert level="info" %}
+USB device passthrough is available in commercial Deckhouse Platform (DP) editions.
 {% endalert %}
 
 DP supports USB device passthrough to virtual machines (VMs) using DRA (Dynamic Resource Allocation). The physical device is connected to a cluster node, and the virtual machine works with it as if the device were plugged into the machine itself.
@@ -21,7 +21,7 @@ The administrator takes care of the node and cluster version requirements, so th
 
 An example of viewing the USB devices in a namespace:
 
-```bash
+```shell
 d8 k get usbdevice -n my-project
 ```
 
@@ -64,7 +64,7 @@ A device is attached to and detached from a machine without stopping it.
 
 Once a [USBDevice](/modules/virtualization/cr.html#usbdevice) resource appears in the namespace, you can attach it to a virtual machine. To do this, add the device to the [`.spec.usbDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-usbdevices) parameter of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource:
 
-```bash
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine

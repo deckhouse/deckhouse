@@ -25,7 +25,7 @@ The [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachin
 
 To view the list of IP address leases (`vmipl`), run the following command:
 
-```bash
+```shell
 d8 k get vmipl
 ```
 
@@ -43,9 +43,9 @@ The [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipad
 
 An address is assigned to a machine when the resource moves to the `Attached` phase. The other phases are described in the [`.status.phase`](/modules/virtualization/cr.html#virtualmachineipaddress-v1alpha2-status-phase) field.
 
-By default, DP assigns an address to the machine itself and keeps it assigned until the machine is deleted. To view the assigned address, run the following command:
+By default, Deckhouse Platform (DP) assigns an address to the machine itself and keeps it assigned until the machine is deleted. To view the assigned address, run the following command:
 
-```bash
+```shell
 d8 k get vmip
 ```
 
@@ -92,7 +92,7 @@ Instead of a random address from the pool, you can give a machine an address you
 
 1. Create a [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource:
 
-   ```yaml
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachineIPAddress
@@ -133,7 +133,7 @@ To keep the automatically allocated IP address of a virtual machine from being d
 
 Get the name of the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource for the given virtual machine:
 
-```bash
+```shell
 d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
 ```
 
@@ -145,7 +145,7 @@ linux-vm-7prpx
 
 Remove the `.metadata.ownerReferences` block from the resource you found:
 
-```bash
+```shell
 d8 k patch vmip linux-vm-7prpx --type=merge --patch '{"metadata":{"ownerReferences":null}}'
 
 # Or make the same changes by editing the resource.
@@ -162,7 +162,7 @@ spec:
 
 Even if the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource is deleted, the IP address stays leased to the current project or namespace for another 10 minutes. So you can claim it again on request:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineIPAddress
@@ -176,7 +176,7 @@ EOF
 
 ## IPAM for the main network
 
-{% alert level="warning" %}
+{% alert level="info" %}
 The shared IPAM works only if an address pool is configured for the main cluster network in the [`sdn`](/modules/sdn/) module. Without it, machine addresses are managed by the deprecated [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resources described above.
 {% endalert %}
 
@@ -188,7 +188,7 @@ The address of a machine in the main network is held by the [IPAddress](/modules
 
 An example of a static IPAddress resource for the main network:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: network.deckhouse.io/v1alpha1
 kind: IPAddress
@@ -217,14 +217,14 @@ Changing the `ipAddressName` field of the main network changes the address of th
 
 The current address and the name of the IPAddress resource it is assigned to are shown in the machine status:
 
-```bash
+```shell
 d8 k get vm linux-vm -o jsonpath='{.status.networks[?(@.type=="Main")]}'
 ```
 
 Example output:
 
 <!-- markdownlint-disable MD031 -->
-```txt
+```console
 {"id":1,"ipAddress":"10.66.10.14","ipAddressName":"linux-vm-4bkqr","type":"Main"}
 ```
 {: .nowrap-default }

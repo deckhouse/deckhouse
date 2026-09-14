@@ -67,6 +67,6 @@ StorageClass хранилища DVCR можно сменить только пе
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-{% alert level="warning" %}
+{% alert level="info" %}
 Хранилище выбранного StorageClass должно быть доступно на узлах, где запускается DVCR, то есть на system-узлах либо на worker-узлах, если system-узлов в кластере нет.
 {% endalert %}

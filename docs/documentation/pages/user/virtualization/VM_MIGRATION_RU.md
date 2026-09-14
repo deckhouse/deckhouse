@@ -57,13 +57,13 @@ lang: ru
 
 Общая картина по всем ВМ:
 
-```bash
+```shell
 d8 k get vm -o wide
 ```
 
 Значение в колонке `MIGRATABLE` показывает результат, причина описывается в условии:
 
-```bash
+```shell
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type=="Migratable")'
 ```
 
@@ -79,7 +79,7 @@ d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type=="Migrat
 | `VirtualMachineNonMigratable` | ВМ нельзя перенести живой миграцией, причина указана в поле `message` условия. | Прочитайте `message` условия. Если дело в процессоре, используйте в классе ВМ типы `Discovery`, `Model` или `Features` |
 | `VirtualMachineDisksShouldBeMigrating` | ВМ можно перенести, её локальные диски будут перенесены вместе с ней | — |
 
-Перенос дисков вместе с ВМ доступен в коммерческих редакциях DP, поэтому причина `VirtualMachineDisksShouldBeMigrating` встречается только в них. В DP Open ВМ с дисками в хранилище, доступном с одного узла, получает причину `VirtualMachineDisksNotMigratable`.
+Перенос дисков вместе с ВМ доступен в коммерческих редакциях Deckhouse Platform (DP), поэтому причина `VirtualMachineDisksShouldBeMigrating` встречается только в них. В DP Open ВМ с дисками в хранилище, доступном с одного узла, получает причину `VirtualMachineDisksNotMigratable`.
 
 ## Особенности условия Migratable
 
@@ -109,7 +109,7 @@ d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type=="Migrat
 
 Перед запуском миграции посмотрите текущий статус виртуальной машины:
 
-```bash
+```shell
 d8 k get vm
 ```
 
@@ -127,7 +127,7 @@ linux-vm   Running   79m      virtlab-pt-1   10.66.10.14   79m
 
 Для миграции виртуальной машины с одного узла на другой с учётом требований к её размещению используйте команду:
 
-```bash
+```shell
 d8 v migrate -n <NAMESPACE> <VM_NAME> [--force] [--target-node-name string]
 ```
 
@@ -137,7 +137,7 @@ d8 v migrate -n <NAMESPACE> <VM_NAME> [--force] [--target-node-name string]
 
 Чтобы разместить виртуальную машину на конкретном целевом узле, укажите имя этого узла в опции `--target-node-name`. Например, если виртуальная машина должна быть размещена на узле `production-1`:
 
-```bash
+```shell
 d8 v migrate -n project-1 linux-vm --target-node-name production-1
 ```
 
@@ -145,7 +145,7 @@ d8 v migrate -n project-1 linux-vm --target-node-name production-1
 
 Запустить миграцию можно также, вручную создав ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) (`vmop`) с типом `Migrate`:
 
-```yaml
+```shell
 d8 k create -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineOperation
@@ -175,7 +175,7 @@ EOF
 
 Для отслеживания миграции виртуальной машины сразу после создания ресурса [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation), выполните команду:
 
-```bash
+```shell
 d8 k get vm -w
 ```
 
@@ -265,7 +265,7 @@ linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
 
 1. Отменить текущую операцию миграции, удалив ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation), где `<VMOP_NAME>` — имя этого ресурса:
 
-   ```bash
+   ```shell
    d8 k delete vmop <VMOP_NAME>
    ```
 
@@ -294,7 +294,7 @@ linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
 
 Посмотреть активные операции можно командой:
 
-```bash
+```shell
 d8 k get vmop
 ```
 
@@ -327,7 +327,7 @@ firmware-update-fnbk2   Completed   100%       Evict   linux-vm         1m
 
 Когда правила размещения меняются у работающей машины, DP переносит её на подходящий узел живой миграцией.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 Возможность доступна в коммерческих редакциях DP.
 {% endalert %}
 

@@ -32,7 +32,7 @@ The example assumes that:
 
 1. Check the virtual machine `uptime`:
 
-   ```bash
+   ```shell
    ansible -m shell -a "uptime" -i inventory.yaml all
 
    # frontend.demo-app | CHANGED | rc=0 >>
@@ -41,7 +41,7 @@ The example assumes that:
 
 If you do not want to use an inventory file, pass all parameters on the command line:
 
-```bash
+```shell
 ansible -m shell -a "uptime" \
   -i "frontend.demo-app," \
   -e "ansible_ssh_common_args='-o ProxyCommand=\"d8 v port-forward --stdio=true %h %p\"'" \

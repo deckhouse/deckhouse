@@ -67,6 +67,6 @@ To change the DVCR StorageClass, perform the following steps:
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-{% alert level="warning" %}
+{% alert level="info" %}
 The storage for the chosen StorageClass must be reachable from the nodes where DVCR runs: system nodes, or worker nodes if the cluster has no system nodes.
 {% endalert %}

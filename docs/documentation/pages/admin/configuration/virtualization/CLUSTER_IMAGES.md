@@ -10,7 +10,7 @@ An image holds the contents of a disk that project owners use to create virtual 
 An image appears in the cluster in three steps:
 
 1. The administrator creates a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource and specifies a data source in it.
-1. DP downloads the image from that source to the internal storage (DVCR).
+1. Deckhouse Platform (DP) downloads the image from that source to the internal storage (DVCR).
 1. The downloaded image becomes available for creating disks.
 
 The image source can be an HTTP server hosting the image file, a container image registry, or a file on your computer that you upload from the command line. You can also create an image from another image, from a virtual machine disk, or from a disk snapshot.
@@ -72,7 +72,7 @@ The simplest way to create an image is to provide a link to a file hosted on an 
 
 1. Create a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: ClusterVirtualImage
@@ -89,7 +89,7 @@ The simplest way to create an image is to provide a link to a file hosted on an 
 
 1. Verify that the image is created:
 
-   ```bash
+   ```shell
    d8 k get clustervirtualimage ubuntu-24-04
 
    # Short form of the command.
@@ -130,7 +130,7 @@ DP can pull an image from an external container image registry, but the disk fil
 
 1. Download the image file to your local machine:
 
-   ```bash
+   ```shell
    curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
    ```
 
@@ -143,7 +143,7 @@ DP can pull an image from an external container image registry, but the disk fil
 
 1. Build the container image. The example uses the [docker.com](https://www.docker.com/) registry, which requires an account and a configured environment:
 
-   ```bash
+   ```shell
    docker build -t docker.io/<USERNAME>/ubuntu2404:latest
    ```
 
@@ -151,13 +151,13 @@ DP can pull an image from an external container image registry, but the disk fil
 
 1. Push the built container image to the registry:
 
-   ```bash
+   ```shell
    docker push docker.io/<USERNAME>/ubuntu2404:latest
    ```
 
 1. Create a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource that points to the container image:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: ClusterVirtualImage
@@ -198,7 +198,7 @@ If the image file is on your computer, upload it directly. DP creates a temporar
 
 1. Create a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource with the `Upload` source:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: ClusterVirtualImage
@@ -215,7 +215,7 @@ If the image file is on your computer, upload it directly. DP creates a temporar
 
 1. Get the addresses that accept the file:
 
-   ```bash
+   ```shell
    d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}" | jq
    ```
 
@@ -235,7 +235,7 @@ If the image file is on your computer, upload it directly. DP creates a temporar
 
 1. Upload the file to the selected address. The example first downloads the Cirros image and then sends it to the cluster:
 
-   ```bash
+   ```shell
    curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
    curl https://virtualization.example.com/upload/<SECRET_URL> --progress-bar -T cirros.img | cat
    ```
@@ -244,7 +244,7 @@ If the image file is on your computer, upload it directly. DP creates a temporar
 
 1. Verify that the image has reached the `Ready` phase:
 
-   ```bash
+   ```shell
    d8 k get cvi some-image
    ```
 

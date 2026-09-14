@@ -6,8 +6,8 @@ search: PCI в ВМ, проброс PCI, PCIDevice, ограничения ми�
 lang: ru
 ---
 
-{% alert level="warning" %}
-Проброс PCI-устройств доступен в коммерческих редакциях DP.
+{% alert level="info" %}
+Проброс PCI-устройств доступен в коммерческих редакциях Deckhouse Platform (DP).
 {% endalert %}
 
 Проброс PCI-устройств позволяет использовать в виртуальной машине (ВМ) физическое устройство узла, например промышленный контроллер, аппаратный модуль безопасности, плату видеозахвата или ПЛИС. Устройство работает в гостевой операционной системе под её собственным драйвером, поэтому установите этот драйвер в гостевой системе самостоятельно.
@@ -20,7 +20,7 @@ lang: ru
 
 1. Выберите устройство среди доступных:
 
-   ```bash
+   ```shell
    d8 k get pcidevice -n my-project
    ```
 
@@ -38,7 +38,7 @@ lang: ru
 
 1. Добавьте устройство в параметр [`.spec.pciDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-pcidevices) ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine):
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
@@ -55,7 +55,7 @@ lang: ru
 
 1. Убедитесь, что устройство подключено к машине:
 
-   ```bash
+   ```shell
    d8 k get vm linux-vm -o jsonpath='{.status.pciDevices}'
    ```
 

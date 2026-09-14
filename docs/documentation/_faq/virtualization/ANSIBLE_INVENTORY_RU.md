@@ -5,7 +5,7 @@ subsystems:
 lang: ru
 ---
 
-{% alert level="warning" %}
+{% alert level="info" %}
 Для использования команды `d8 v ansible-inventory` требуется версия `d8` v0.27.0 или выше.
 
 Команда работает только для виртуальных машин, у которых подключена основная сеть кластера (Main).
@@ -17,13 +17,13 @@ lang: ru
 
 1. При необходимости задайте переменные хоста через аннотации (например, пользователя для SSH):
 
-   ```bash
+   ```shell
    d8 k -n demo-app annotate vm frontend vars.ansible.deckhouse.io/ansible_user="cloud"
    ```
 
 1. Запустите Ansible с динамически сформированным инвентарём:
 
-   ```bash
+   ```shell
    ANSIBLE_INVENTORY_ENABLED=yaml ansible -m shell -a "uptime" all -i <(d8 v ansible-inventory -n demo-app -o yaml)
    ```
 
@@ -33,7 +33,7 @@ lang: ru
 
 1. Либо сохраните инвентарь в файл и выполните проверку:
 
-   ```bash
+   ```shell
    d8 v ansible-inventory --list -o yaml -n demo-app > inventory.yaml
    ansible -m shell -a "uptime" -i inventory.yaml all
    ```

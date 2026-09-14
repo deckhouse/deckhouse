@@ -10,7 +10,7 @@ A disk stores virtual machine (VM) data, including the operating system and appl
 - [`persistentVolumeClaim`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim): Storage parameters, that is, the StorageClass and the size.
 - [`dataSource`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-datasource): The data source, which can be an image, another disk, or a snapshot.
 
-Without the `dataSource` block, an empty disk is created, and then you have to specify at least the size in `persistentVolumeClaim`. If a source is set, you can omit the `persistentVolumeClaim` block, and DP takes the size from the source and picks the storage class based on it too. When no class can be picked, DP uses the cluster-wide default StorageClass or the class set for disks in the [module settings](../../admin/configuration/virtualization/storage-classes.html).
+Without the `dataSource` block, an empty disk is created, and then you have to specify at least the size in `persistentVolumeClaim`. If a source is set, you can omit the `persistentVolumeClaim` block, and Deckhouse Platform (DP) takes the size from the source and picks the storage class based on it too. When no class can be picked, DP uses the cluster-wide default StorageClass or the class set for disks in the [module settings](../../admin/configuration/virtualization/storage-classes.html).
 
 The `PHASE` column in the `d8 k get vd` output shows the progress of disk creation; for its values, see the [`.status.phase`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-phase) field. If a disk stays not ready for a long time, the [`.status.conditions`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-status-conditions) block tells you the reason.
 
@@ -40,7 +40,7 @@ DP determines the remaining parameters, including the disk format, on its own fr
 
 To view the available storage types, run the following command:
 
-```bash
+```shell
 d8 k get storageclass
 ```
 
@@ -68,7 +68,7 @@ An empty disk is what you need to install an operating system on it or to store 
 
 1. Create a [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resource with the size and the storage class:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -85,7 +85,7 @@ An empty disk is what you need to install an operating system on it or to store 
 
 1. Verify that the disk is created:
 
-   ```bash
+   ```shell
    d8 k get vd blank-disk
    ```
 
@@ -130,7 +130,7 @@ Specifying the disk size is optional. If you don't set it, DP creates the disk e
 
 1. Check the unpacked image size in the `UNPACKEDSIZE` column:
 
-   ```bash
+   ```shell
    d8 k get vi ubuntu-24-04 -o wide
    ```
 
@@ -146,7 +146,7 @@ Specifying the disk size is optional. If you don't set it, DP creates the disk e
 
 1. Create a disk with a size larger than the unpacked one:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -170,7 +170,7 @@ Specifying the disk size is optional. If you don't set it, DP creates the disk e
 
 1. Create a second disk without specifying the size:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -192,7 +192,7 @@ Specifying the disk size is optional. If you don't set it, DP creates the disk e
 
 1. Compare the sizes of the created disks:
 
-   ```bash
+   ```shell
    d8 k get vd
    ```
 
@@ -239,7 +239,7 @@ If the image file is on your computer, upload it straight into a disk. DP create
 
 1. Create a [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resource with the `Upload` source:
 
-   ```bash
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualDisk
@@ -255,7 +255,7 @@ If the image file is on your computer, upload it straight into a disk. DP create
 
 1. Get the addresses that accept the file:
 
-   ```bash
+   ```shell
    d8 k get vd uploaded-disk -o jsonpath="{.status.imageUploadURLs}" | jq
    ```
 
@@ -275,7 +275,7 @@ If the image file is on your computer, upload it straight into a disk. DP create
 
 1. Upload the file to the selected address:
 
-   ```bash
+   ```shell
    curl https://virtualization.example.com/upload/<SECRET_URL> --progress-bar -T <IMAGE_FILE> | cat
    ```
 
@@ -283,7 +283,7 @@ If the image file is on your computer, upload it straight into a disk. DP create
 
 1. Verify that the disk has reached the `Ready` phase:
 
-   ```bash
+   ```shell
    d8 k get vd uploaded-disk
    ```
 

@@ -79,7 +79,7 @@ lang: ru
 
 1. Запустите виртуальную машину:
 
-   ```bash
+   ```shell
    d8 v start win-vm
    ```
 
@@ -87,7 +87,7 @@ lang: ru
 
    Подключение по VNC:
 
-   ```bash
+   ```shell
    d8 v vnc -n default win-vm
    ```
 
@@ -95,6 +95,6 @@ lang: ru
 
 1. Для дальнейшей работы снова подключитесь по VNC:
 
-   ```bash
+   ```shell
    d8 v vnc -n default win-vm
    ```

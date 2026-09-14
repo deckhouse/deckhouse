@@ -37,13 +37,13 @@ Applying a NodeGroupConfiguration (NGC) manifest removes the file on the nodes. 
 
 1. Apply the saved manifest:
 
-   ```bash
+   ```shell
    d8 k apply -f containerd-dvcr-remove-old-config.yaml
    ```
 
 1. Verify that the `registry` module is running:
 
-   ```bash
+   ```shell
    d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
    ```
 
@@ -61,7 +61,7 @@ Applying a NodeGroupConfiguration (NGC) manifest removes the file on the nodes. 
 
 1. Delete the one-time NodeGroupConfiguration manifest:
 
-   ```bash
+   ```shell
    d8 k delete -f containerd-dvcr-remove-old-config.yaml
    ```
 

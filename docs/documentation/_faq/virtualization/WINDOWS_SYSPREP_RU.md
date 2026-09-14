@@ -211,7 +211,7 @@ lang: ru
 
 1. Создайте секрет с типом `provisioning.virtualization.deckhouse.io/sysprep`:
 
-   ```bash
+   ```shell
    d8 k create secret generic sysprep-config --type="provisioning.virtualization.deckhouse.io/sysprep" --from-file=./autounattend.xml
    ```
 

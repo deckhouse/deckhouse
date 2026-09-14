@@ -17,7 +17,7 @@ You can connect to a virtual machine (VM) in four ways. The first is a remote ma
 
 Serial console:
 
-```bash
+```shell
 d8 v console linux-vm
 ```
 
@@ -36,19 +36,19 @@ To exit the console, press `Ctrl+]`.
 
 Connecting over VNC:
 
-```bash
+```shell
 d8 v vnc linux-vm
 ```
 
 Connecting over SPICE:
 
-```bash
+```shell
 d8 v spice linux-vm
 ```
 
 Connecting over SSH:
 
-```bash
+```shell
 d8 v ssh cloud@linux-vm
 ```
 
@@ -106,7 +106,7 @@ A shared clipboard, a resize to the client window, and a local cursor are added 
 
 Connecting requires the `remote-viewer` client from the `virt-viewer` package, and the `d8 v spice` command opens it for you. If you don't have such a client, run the proxy alone and connect with your own client to the port the command prints:
 
-```bash
+```shell
 d8 v spice linux-vm --proxy-only
 ```
 
@@ -118,7 +118,7 @@ SPICE reserves memory whether a client is connected or not. This memory is part 
 
 ## Startup policy and VM state management
 
-The startup policy determines how DP maintains the machine state. It's set by the [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) parameter:
+The startup policy determines how Deckhouse Platform (DP) maintains the machine state. It's set by the [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) parameter:
 
 - `AlwaysOnUnlessStoppedManually`: The default option. The machine always runs, and you can stop it only manually.
 - `AlwaysOn`: The machine always runs, and even after a shutdown from the guest OS DP starts it again.
@@ -143,13 +143,13 @@ The following example shows how to perform an operation on a virtual machine:
 
 The easiest way to restart a machine is with the `d8` utility:
 
-```bash
+```shell
 d8 v restart linux-vm
 ```
 
 The same operation with a resource:
 
-```bash
+```shell
 d8 k create -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineOperation
@@ -164,7 +164,7 @@ EOF
 
 The list of operations shows the result:
 
-```bash
+```shell
 d8 k get virtualmachineoperation
 
 # Short form of the command.

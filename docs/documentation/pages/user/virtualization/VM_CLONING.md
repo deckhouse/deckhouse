@@ -14,7 +14,7 @@ The cloned VM gets a new IP address for the cluster network and new MAC addresse
 {% alert level="info" %}
 Labels aren't copied from the source VM to the clone. This prevents Service traffic (Services select VMs by labels) from being routed to the clone. If the clone has to be part of a Service, add the labels you need after cloning. For example:
 
-```bash
+```shell
 d8 k label vm <VM_NAME> label-name=label-value
 ```
 
@@ -62,7 +62,7 @@ You can use one of three modes for the cloning operation:
 
 To view information about the conflicts that arose during cloning, check the status of the operation resource:
 
-```bash
+```shell
 # For cloning from an existing VM.
 d8 k get vmop <VMOP_NAME> -o json | jq '.status.resources'
 
@@ -206,7 +206,7 @@ The `nameReplacements` and `customization` parameters are configured in the [`.s
 
 To view the list of resources saved in a snapshot, run the following command:
 
-```bash
+```shell
 d8 k get vmsnapshot <SNAPSHOT_NAME> -o jsonpath='{.status.resources}' | jq
 ```
 

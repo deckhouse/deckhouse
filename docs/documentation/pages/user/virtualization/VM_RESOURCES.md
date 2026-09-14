@@ -22,7 +22,7 @@ In this example, the machine gets two virtual cores and a guaranteed 20% of the 
 
 If `coreFraction` isn't set, each virtual core gets 100% of a physical one.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 An administrator can restrict the set of allowed `coreFraction` values in the sizing policy of the VM class, and then you have to choose from them.
 {% endalert %}
 
@@ -32,9 +32,9 @@ The guaranteed share is taken into account when selecting a node, so a machine d
 
 ### Automatic coreFraction (Auto)
 
-DP can pick the CPU time share on its own, following how much the machine consumes.
+Deckhouse Platform (DP) can pick the CPU time share on its own, following how much the machine consumes.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 The feature is available in commercial DP editions and is in the Alpha stage. It requires the enabled [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module, which picks the core fraction, and the `HotplugCPUAndMemoryWithInPlaceResize` feature in the module settings.
 {% endalert %}
 

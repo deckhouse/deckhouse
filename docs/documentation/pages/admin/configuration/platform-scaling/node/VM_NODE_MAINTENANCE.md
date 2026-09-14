@@ -15,7 +15,7 @@ Live migration moves a running virtual machine from one node to another without 
 - Node maintenance or update, to free the node from VMs.
 - Virtual machine firmware update, which would otherwise require a restart.
 
-{% alert level="warning" %}
+{% alert level="info" %}
 Live migration is limited in speed and in the number of concurrent moves:
 
 - A node prepares and sends the memory of only one VM at a time, and accepts only one incoming migration at a time.
@@ -33,7 +33,7 @@ The following steps show how to move a selected VM to another node.
 
 1. Check which node the VM currently runs on:
 
-   ```bash
+   ```shell
    d8 k get vm
    ```
 
@@ -49,9 +49,9 @@ The following steps show how to move a selected VM to another node.
 
    The VM runs on the `virtlab-pt-1` node.
 
-1. Create a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource with the `Evict` type. DP selects a new node for the VM, respecting its placement requirements:
+1. Create a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource with the `Evict` type. Deckhouse Platform (DP) selects a new node for the VM, respecting its placement requirements:
 
-   ```bash
+   ```shell
    d8 k create -f - <<EOF
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachineOperation
@@ -67,7 +67,7 @@ The following steps show how to move a selected VM to another node.
 
 1. Right after creating the resource, follow the migration progress:
 
-   ```bash
+   ```shell
    d8 k get vm -w
    ```
 
@@ -139,7 +139,7 @@ Beforehand, create a network class (VLAN ID ranges and parent network interfaces
 
 It's better to find the VMs that won't be able to migrate off a node before maintenance starts, before the node is made unschedulable:
 
-```bash
+```shell
 d8 k get vm -o wide | grep <NODE_NAME>
 ```
 
@@ -147,7 +147,7 @@ VMs with the `False` value in the `MIGRATABLE` column have to be stopped when th
 
 The column value alone isn't enough. A VM with the `True` value and the `VirtualMachineWaitingForMigrationTarget` reason won't move anywhere either, until a suitable node returns to scheduling, so before maintenance, look at the reasons for all VMs on the node:
 
-```bash
+```shell
 d8 k get vm -o json | jq -r '.items[] | [.metadata.name, (.status.conditions[] | select(.type=="Migratable") | .reason)] | @tsv'
 ```
 
@@ -161,13 +161,13 @@ Work on a node that runs virtual machines can disrupt them. To prevent this, swi
 
 To free the node from all resources, including system ones, run:
 
-```bash
+```shell
 d8 k drain <NODE_NAME> --ignore-daemonsets --delete-emptydir-data
 ```
 
 To evict only virtual machines from the node, add a label selector:
 
-```bash
+```shell
 d8 k drain <NODE_NAME> --pod-selector vm.kubevirt.internal.virtualization.deckhouse.io/name --delete-emptydir-data
 ```
 
@@ -177,7 +177,7 @@ After the command runs, the node switches to maintenance mode, and virtual machi
 
 To return the node to service, stop the `drain` command with `Ctrl+C`, and then run:
 
-```bash
+```shell
 d8 k uncordon <NODE_NAME>
 ```
 
@@ -201,7 +201,7 @@ A virtual machine can't always be moved to another node by live migration. It ca
 
 When DP finds such a VM while switching the node to maintenance mode, it adds the `virtualization.deckhouse.io/virtualmachines-restart-required` annotation to the node. To allow the restart, add the matching annotation to the node:
 
-```bash
+```shell
 d8 k annotate node <NODE_NAME> virtualization.deckhouse.io/virtualmachines-restart-approved=""
 ```
 
@@ -221,7 +221,7 @@ The VM owner sees the same information in the `EvictionRequired` condition of th
 
 ### Shutting down and rebooting a node with virtual machines
 
-Running virtual machines postpone the shutdown and reboot of their node. DP labels their workloads with `pod.deckhouse.io/inhibit-node-shutdown`, and Deckhouse Platform uses this label to delay the node shutdown. The mechanism is available in the DP EE and Ultimate editions, is described in the [`node-manager` module documentation](/modules/node-manager/), and doesn't need to be enabled.
+Running virtual machines postpone the shutdown and reboot of their node. DP labels their workloads with `pod.deckhouse.io/inhibit-node-shutdown` and uses this label to delay the node shutdown. The mechanism is available in commercial DP editions, is described in the [`node-manager` module documentation](/modules/node-manager/), and doesn't need to be enabled.
 
 If a shutdown or reboot is requested on a node that still runs virtual machines:
 
@@ -236,7 +236,7 @@ On nodes where the delay mechanism works, the `GracefulShutdownPostpone` conditi
 
 To check the reason, run the following command:
 
-```bash
+```shell
 d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.reason}{"\n"}{end}'
 ```
 
@@ -247,13 +247,13 @@ The shutdown delay doesn't move virtual machines to other nodes, it only keeps t
 
   Stopping is available only for the `Manual` and `AlwaysOnUnlessStoppedManually` run policies. Check the VM policy:
 
-  ```bash
+  ```shell
   d8 k -n <NAMESPACE> get vm <VM_NAME> -o jsonpath='{.spec.runPolicy}'
   ```
 
   With the `AlwaysOn` policy, the stop command is rejected with the `NotApplicableForVirtualMachineRunPolicy` reason. In that case, change the policy first, and restore the previous value once the work is done:
 
-  ```bash
+  ```shell
   d8 k -n <NAMESPACE> patch vm <VM_NAME> --type merge -p '{"spec":{"runPolicy":"AlwaysOnUnlessStoppedManually"}}'
   ```
 
