@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/api/v1alpha1"
+	"controller/internal/jsonpath"
 	"controller/internal/namespaces"
 	"controller/internal/naming"
 	"controller/internal/resolve"
@@ -45,10 +46,16 @@ import (
 // (recomputed from live granted objects, not all watched) does not drift unbounded.
 const ResyncInterval = 2 * time.Minute
 
-// ProjectReconciler materializes AvailableClusterResource catalogs for project namespaces.
+// ProjectReconciler materializes AvailableClusterResource catalogs for project namespaces and
+// recounts the grant-violation metric of each namespace it reconciles.
 type ProjectReconciler struct {
 	client.Client
 	Mapper meta.RESTMapper
+	// Usage reads the objects a GrantableClusterResourceReference governs. It is the uncached API
+	// reader in the controller; when nil (tests of the catalog alone) violations are not scanned.
+	Usage client.Reader
+	// Factory compiles the field paths of the references; shared with the webhooks.
+	Factory jsonpath.Factory
 }
 
 // Reconcile reconciles a single (project) namespace.
@@ -59,6 +66,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	ns := &corev1.Namespace{}
 	if err := r.Get(ctx, types.NamespacedName{Name: req.Name}, ns); err != nil {
 		if k8serrors.IsNotFound(err) {
+			clearViolations(req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("get namespace: %w", err)
@@ -67,6 +75,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// the default namespace, system namespaces, namespaces of "virtual" projects — must not, even
 	// when a registration's defaultAvailability is All. Clean up any catalog that lingers there.
 	if _, isProjectNS := ns.Labels[naming.ProjectLabel]; !isProjectNS {
+		clearViolations(ns.Name)
 		return ctrl.Result{}, r.cleanupCatalog(ctx, ns.Name)
 	}
 
@@ -102,6 +111,13 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 	regList := &v1alpha1.GrantableClusterResourceDefinitionList{}
 	if err := r.List(ctx, regList); err != nil {
 		return err
+	}
+	if r.Usage != nil && r.Factory != nil {
+		violations, err := scanViolations(ctx, r.Client, r.Usage, r.Mapper, r.Factory, ns.Name, grants, regList.Items)
+		if err != nil {
+			return fmt.Errorf("scan grant violations: %w", err)
+		}
+		publishViolations(ns.Name, violations)
 	}
 	for i := range regList.Items {
 		reg := &regList.Items[i]

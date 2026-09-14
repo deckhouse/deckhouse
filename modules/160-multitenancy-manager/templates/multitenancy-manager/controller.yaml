@@ -70,6 +70,9 @@ spec:
             - containerPort: 9090
               name: healthz
               protocol: TCP
+            - containerPort: 9091
+              name: metrics
+              protocol: TCP
             - containerPort: 9443
               name: webhook
               protocol: TCP

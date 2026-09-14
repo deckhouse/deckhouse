@@ -192,7 +192,7 @@ If an existing object uses a cluster-wide resource that becomes unavailable to t
 
 When such objects are detected, the [`ClusterResourceGrantPolicyViolation`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation) alert is triggered. Information about violations is available on the Grafana dashboard under "Security" → "Cluster Resource Grant Violations".
 
-The `d8_cluster_objects_grant_violated` metric is used for monitoring.
+The `d8_cluster_objects_grant_violated` metric is used for monitoring. It is exported by the module controller, which recounts the violations of a project namespace on every reconcile and at least every two minutes, using the same availability rules as the admission webhook.
 
 ### Resources registered by DP
 
