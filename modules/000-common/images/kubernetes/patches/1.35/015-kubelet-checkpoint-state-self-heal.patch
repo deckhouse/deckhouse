@@ -103,10 +103,10 @@ index 00000000000..7310962943d
 +package checkpointselfheal
 diff --git a/pkg/kubelet/cm/checkpointselfheal/metrics.go b/pkg/kubelet/cm/checkpointselfheal/metrics.go
 new file mode 100644
-index 00000000000..db9423f6a3f
+index 00000000000..190c2b2c532
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/metrics.go
-@@ -0,0 +1,73 @@
+@@ -0,0 +1,81 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -133,11 +133,10 @@ index 00000000000..db9423f6a3f
 +// Registered here rather than in pkg/kubelet/metrics so this change does not
 +// touch that file. legacyregistry is the registry kubelet serves on /metrics.
 +//
-+// Alerting on resetsTotal is not optional: this turns a loud refusal to start
-+// into a quiet repair, so a bug in kubelet config generation would restart
-+// pinned workload across a whole NodeGroup instead of failing visibly. The
-+// counters live in the kubelet process and reset with it, so alert on
-+// increase() rather than an absolute value.
++// A reset happens while kubelet starts, before anything scrapes it, so a series
++// created on first use would already read 1 and increase() would never see it
++// grow. init therefore creates every series at zero, which makes the change
++// visible across the kubelet restart.
 +
 +const subsystem = "kubelet"
 +
@@ -179,6 +178,15 @@ index 00000000000..db9423f6a3f
 +	legacyregistry.MustRegister(resetsTotal)
 +	legacyregistry.MustRegister(stoppedContainersTotal)
 +	legacyregistry.MustRegister(stopFailuresTotal)
++
++	// Series can be created only once the vectors are registered.
++	for _, manager := range []ManagerName{ManagerCPU, ManagerMemory} {
++		for _, reason := range []Reason{ReasonPolicyMismatch, ReasonCheckpointCorrupt, ReasonStateValidation} {
++			resetsTotal.WithLabelValues(string(manager), string(reason))
++		}
++		stoppedContainersTotal.WithLabelValues(string(manager))
++		stopFailuresTotal.WithLabelValues(string(manager))
++	}
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal.go b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
 new file mode 100644
@@ -415,10 +423,10 @@ index 00000000000..c7f15c827b3
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/stop.go b/pkg/kubelet/cm/checkpointselfheal/stop.go
 new file mode 100644
-index 00000000000..7410440d430
+index 00000000000..507b0264df6
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/stop.go
-@@ -0,0 +1,275 @@
+@@ -0,0 +1,283 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -517,12 +525,20 @@ index 00000000000..7410440d430
 +
 +// markAllUnstopped records that nothing could be stopped and writes the report
 +// anyway: the containers are still out there holding resources the state has
-+// given up.
++// given up. A container lost by both managers is counted once, as in the stop
++// pass; without a listing it is known only by its assignment key.
 +func markAllUnstopped(reportDir string, resets []ResourceManagerStateReset, reason string) {
++	counted := map[AssignmentKey]bool{}
 +	for i := range resets {
 +		for j := range resets[i].LostAssignments {
-+			resets[i].LostAssignments[j].Error = reason
-+			stopFailuresTotal.WithLabelValues(string(resets[i].Manager)).Inc()
++			lost := &resets[i].LostAssignments[j]
++			lost.Error = reason
++
++			key := AssignmentKey{PodUID: lost.PodUID, ContainerName: lost.ContainerName}
++			if !counted[key] {
++				counted[key] = true
++				stopFailuresTotal.WithLabelValues(string(resets[i].Manager)).Inc()
++			}
 +		}
 +	}
 +	writeResetReport(reportDir, resets)
