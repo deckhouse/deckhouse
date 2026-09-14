@@ -54,18 +54,18 @@ properties:
     properties:
       gatewayAPI:
         description: |
-          Общие параметры использования Gateway API модулями DKP.
+          Общие параметры использования Gateway API модулями DP.
         properties:
           enabled:
             description: |
-              Включает использование ресурсов Gateway API (Gateway, HTTPRoute и т. д.) модулями DKP, которые его поддерживают.
+              Включает использование ресурсов Gateway API (Gateway, HTTPRoute и т. д.) модулями DP, которые его поддерживают.
 
               В отличие от [ingressClass](#parameters-modules-ingress-ingressclass), встроенного Gateway по умолчанию не существует, поэтому Gateway API фактически используется модулем только если этот флаг включён **и** для него удалось определить Gateway — либо из параметра [gateway](#parameters-modules-gatewayAPI-gateway), либо из переопределения на уровне модуля, либо из Gateway, автоматически обнаруженного в кластере.
 
               Модули, поддерживающие Gateway API, могут переопределить этот параметр собственным параметром `gatewayAPI.enabled`.
           gateway:
             description: |
-              Ссылка на объект Gateway (из Gateway API), используемый модулями DKP при создании ресурсов Gateway API.
+              Ссылка на объект Gateway (из Gateway API), используемый модулями DP при создании ресурсов Gateway API.
 
               Если параметр не указан, модули используют Gateway, автоматически обнаруженный в кластере (если он есть).
             properties:
@@ -79,7 +79,7 @@ properties:
         description: |
           > **Устарел**. Используйте параметр [settings.modules.gatewayAPI.gateway](#parameters-modules-gatewayAPI-gateway).
           
-          Ссылка на объект Gateway (из Gateway API), используемый модулями DKP при создании ресурсов Gateway API.
+          Ссылка на объект Gateway (из Gateway API), используемый модулями DP при создании ресурсов Gateway API.
 
           Если параметр не указан, модули используют Gateway, автоматически обнаруженный в кластере (если он есть).
         properties:
@@ -91,23 +91,23 @@ properties:
               Неймспейс объекта Gateway.
       ingress:
         description: |
-          Общие параметры использования Ingress модулями DKP.
+          Общие параметры использования Ingress модулями DP.
         properties:
           ingressClass:
             description: |
-              Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями DKP по умолчанию при создании Ingress-ресурсов.
+              Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями DP по умолчанию при создании Ingress-ресурсов.
 
               Некоторые модули поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
           enabled:
             description: |
-              Включает создание Ingress-ресурсов модулями DKP, которые это поддерживают.
+              Включает создание Ingress-ресурсов модулями DP, которые это поддерживают.
 
               Модули, поддерживающие Ingress, могут переопределить этот параметр собственным параметром `ingress.enabled`.
       ingressClass:
         description: |
           > **Устарел**. Используйте параметр [settings.modules.ingress.ingressClass](#parameters-modules-ingress-ingressClass).
           
-          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями DKP по умолчанию при создании Ingress-ресурсов.
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями DP по умолчанию при создании Ingress-ресурсов.
 
           Некоторые модули поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
       publicDomainTemplate:
