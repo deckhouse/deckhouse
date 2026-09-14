@@ -194,7 +194,9 @@ spec:
                 format: date-time
                 type: string
               message:
-                description: Human-readable message about the repository status.
+                description: |-
+                  Human-readable message about the repository status.
+                  Set when the last scan failed, cleared after a successful scan.
                 type: string
               packages:
                 description: List of packages available in this repository.
@@ -219,7 +221,9 @@ spec:
                   when listing tags.
                 type: boolean
               phase:
-                description: Current phase of the repository.
+                description: |-
+                  Current phase of the repository: `Active` after a successful scan,
+                  `Error` when the last scan failed (see `message` and the `LastScanSucceeded` condition).
                 type: string
             type: object
         required:
