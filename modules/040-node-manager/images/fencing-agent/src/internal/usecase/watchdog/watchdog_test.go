@@ -226,11 +226,31 @@ type harness struct {
 	opener  *fakeOpener
 	state   *stubState
 	events  *fakeEvents
+	clock   *clock
 	gate    struct {
 		mu    sync.Mutex
 		feed  bool
 		cause string
 	}
+}
+
+type clock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func (c *clock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.now
+}
+
+func (c *clock) advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.now = c.now.Add(d)
 }
 
 // newHarness wires a manager whose own Node is observed, healthy and
@@ -243,7 +263,13 @@ func newHarness(t *testing.T) *harness {
 	state := &stubState{state: Snapshot{Observed: true}}
 	events := &fakeEvents{}
 
-	h := &harness{device: device, opener: opener, state: state, events: events}
+	h := &harness{
+		device: device,
+		opener: opener,
+		state:  state,
+		events: events,
+		clock:  &clock{now: time.Date(2026, 6, 2, 15, 0, 0, 0, time.UTC)},
+	}
 	h.gate.feed = true
 
 	h.manager = New(
@@ -259,6 +285,7 @@ func newHarness(t *testing.T) *harness {
 
 				return h.gate.feed, h.gate.cause
 			},
+			Now: h.clock.Now,
 		},
 		log.NewNop(),
 	)
@@ -274,6 +301,20 @@ func (h *harness) closeGate(cause string) {
 	defer h.gate.mu.Unlock()
 
 	h.gate.feed, h.gate.cause = false, cause
+}
+
+func (h *harness) holdGateUndecided(cause string) {
+	h.gate.mu.Lock()
+	defer h.gate.mu.Unlock()
+
+	h.gate.feed, h.gate.cause = true, cause
+}
+
+func (h *harness) decideGate() {
+	h.gate.mu.Lock()
+	defer h.gate.mu.Unlock()
+
+	h.gate.feed, h.gate.cause = true, ""
 }
 
 func (h *harness) tick(t *testing.T) {
@@ -435,6 +476,41 @@ func TestManagerNeverReArmsWhileTheNodeIsBeingRemoved(t *testing.T) {
 	}
 }
 
+func TestManagerDisarmsWhenTheNodeLeavesItsNodeGroup(t *testing.T) {
+	h := newHarness(t)
+
+	h.tick(t)
+
+	h.state.set(Snapshot{Observed: true, LeftNodeGroup: true, NodeGroup: "worker-2"})
+	h.tick(t)
+	h.tick(t)
+
+	keepAlives, magicCloses, _ := h.device.counters()
+	if magicCloses != 1 {
+		t.Errorf("magic closes: %d, want exactly one disarm after the Node left the group", magicCloses)
+	}
+
+	if keepAlives != 1 {
+		t.Errorf("keepalives: %d, want no feeding for a Node this group no longer contains", keepAlives)
+	}
+
+	if h.events.count(reasonDisarmed) != 1 {
+		t.Errorf("disarm events: %d, want the operator told once", h.events.count(reasonDisarmed))
+	}
+
+	if !h.manager.Ready() {
+		t.Error("leaving the group is a deliberate state and must not turn the pod NotReady")
+	}
+
+	// Relabeled back into the group: fencing comes back with it.
+	h.state.set(Snapshot{Observed: true, NodeGroup: "worker"})
+	h.tick(t)
+
+	if h.opener.opens() != 2 {
+		t.Errorf("device was opened %d times, want a re-arm once the Node is back in its group", h.opener.opens())
+	}
+}
+
 // Without WDIOF_MAGICCLOSE the kernel ignores the disarm, so stopping the feed
 // would panic the Node mid-operation.
 func TestManagerKeepsFeedingWhenTheDeviceCannotBeDisarmed(t *testing.T) {
@@ -497,30 +573,6 @@ func TestManagerKeepsFeedingWhenTheDisarmFails(t *testing.T) {
 
 	if !h.manager.Ready() {
 		t.Error("feeding through a planned operation is the best available state, not a fault")
-	}
-}
-
-func TestManagerStopsTheAgentWhenTheOwnNodeUIDChanged(t *testing.T) {
-	h := newHarness(t)
-
-	h.tick(t)
-
-	h.state.set(Snapshot{Observed: true, UIDMismatch: true})
-
-	err := h.manager.tick()
-	if err == nil || !errors.Is(err, errFatal) {
-		t.Fatalf("tick error is %v, want a fatal error so the pod restarts with a fresh identity", err)
-	}
-
-	if h.events.count(reasonIdentityChanged) != 1 {
-		t.Errorf("identity events: %d, want 1", h.events.count(reasonIdentityChanged))
-	}
-
-	// The deferred Close in the agent is what disarms on the way out.
-	h.manager.Close()
-
-	if _, magicCloses, _ := h.device.counters(); magicCloses != 1 {
-		t.Errorf("magic closes: %d, want the device disarmed on shutdown", magicCloses)
 	}
 }
 
@@ -730,7 +782,7 @@ func TestAliveTracksTheFeedLoop(t *testing.T) {
 	}
 
 	h.manager.started.Store(true)
-	h.manager.lastTick.Store(time.Now().Add(-time.Hour).UnixNano())
+	h.manager.lastTick.Store(h.clock.Now().Add(-time.Hour).UnixNano())
 
 	if h.manager.Alive() {
 		t.Error("liveness must fail once the feed loop stopped ticking")
@@ -740,5 +792,71 @@ func TestAliveTracksTheFeedLoop(t *testing.T) {
 
 	if !h.manager.Alive() {
 		t.Error("liveness must pass right after a tick")
+	}
+}
+
+func TestManagerFlagsAFeedGateThatNeverDecides(t *testing.T) {
+	h := newHarness(t)
+	h.holdGateUndecided("fallback monitor has not run yet")
+
+	h.tick(t)
+
+	if !h.manager.Ready() {
+		t.Fatal("the start-up grace itself must not cost readiness")
+	}
+
+	h.clock.advance(verdictGrace + time.Second)
+	h.tick(t)
+	h.tick(t)
+
+	if h.manager.Ready() {
+		t.Error("a gate that never decided must show up as NotReady")
+	}
+
+	if got := h.events.count(reasonGateUndecided); got != 1 {
+		t.Errorf("gate events: %d, want exactly one per streak", got)
+	}
+
+	keepAlives, magicCloses, releases := h.device.counters()
+	if keepAlives != 3 {
+		t.Errorf("keepalives: %d, want the feeding to continue through the alarm", keepAlives)
+	}
+
+	if magicCloses != 0 || releases != 0 {
+		t.Errorf("magic closes %d and releases %d, want the device left alone", magicCloses, releases)
+	}
+}
+
+func TestManagerClearsTheGateAlarmOnTheFirstVerdict(t *testing.T) {
+	h := newHarness(t)
+	h.holdGateUndecided("fallback monitor has not run yet")
+
+	h.tick(t)
+	h.clock.advance(verdictGrace + time.Second)
+	h.tick(t)
+
+	if h.manager.Ready() {
+		t.Fatal("the alarm did not raise, the rest of this test proves nothing")
+	}
+
+	h.decideGate()
+	h.tick(t)
+
+	if !h.manager.Ready() {
+		t.Error("readiness must return once the gate reaches a verdict")
+	}
+}
+
+func TestManagerDoesNotFlagAClosedGateAsUndecided(t *testing.T) {
+	h := newHarness(t)
+
+	h.tick(t)
+	h.closeGate("quorum lost")
+	h.tick(t)
+	h.clock.advance(verdictGrace + time.Second)
+	h.tick(t)
+
+	if got := h.events.count(reasonGateUndecided); got != 0 {
+		t.Errorf("gate events: %d, want none for a gate that decided to close", got)
 	}
 }

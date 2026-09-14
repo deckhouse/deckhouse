@@ -53,6 +53,7 @@ func MaintenanceAnnotations() []string {
 type NodeSignals struct {
 	// UID detects a Node recreated under the same name.
 	UID string
+	NodeGroup string
 	// Maintenance is true while any maintenance annotation is present.
 	Maintenance bool
 	// MaintenanceReasons holds the annotations actually present.
