@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -29,13 +28,15 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type RegistryProxyCheck struct {
-	MetaConfig             *config.MetaConfig
-	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	MetaConfig *config.MetaConfig
+	// NodeInterface resolves the connection at the moment the check runs — see NodeInterfaceFunc.
+	// It is a function rather than the initializer itself so the tunnel this check opens can be
+	// stood up locally in tests; production passes nodeInterfaceResolverFor(initializer).
+	NodeInterface NodeInterfaceFunc
 	// LegacyMode reflects whether the SSH client used here runs the legacy
 	// clissh backend (true) or modern gossh (false). Set at suite
 	// construction from sshclient.Config.IsLegacyMode().
@@ -49,15 +50,10 @@ const (
 	httpClientTimeoutSec = 20
 )
 
-var (
-	realmRe   = regexp.MustCompile(`realm="(http[s]{0,1}:\/\/[a-z0-9\.\:\/\-]+)"`)
-	serviceRe = regexp.MustCompile(`service="(.*?)"`)
-)
-
 const RegistryProxyCheckName preflight.CheckName = "registry-access-through-proxy"
 
 func (RegistryProxyCheck) Description() string {
-	return "registry access through proxy"
+	return "the container registry is reachable from the node through the proxy"
 }
 
 func (RegistryProxyCheck) Phase() preflight.Phase {
@@ -65,65 +61,123 @@ func (RegistryProxyCheck) Phase() preflight.Phase {
 }
 
 func (RegistryProxyCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NetworkRetry
 }
 
-func (c RegistryProxyCheck) Run(ctx context.Context) error {
-	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
-	if err != nil {
-		return err
+func (c RegistryProxyCheck) Run(ctx context.Context) (string, error) {
+	if c.MetaConfig == nil {
+		return "", errors.New("meta config is required")
 	}
-	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
-	if !ok {
-		return nil
-	}
+
 	proxyURL, noProxy, err := utils.GetProxyFromMetaConfig(c.MetaConfig)
 	if err != nil {
-		return fmt.Errorf("get proxy config: %w", err)
+		return "", fmt.Errorf("reading ClusterConfiguration.proxy: %w", err)
 	}
 	if proxyURL == nil {
-		return nil
+		return "", preflight.NotApplicable("no proxy is configured in ClusterConfiguration.proxy")
 	}
 
 	registry := c.MetaConfig.Registry.Settings.RemoteData
 	registryAddress, _ := registry.AddressAndPath()
-	if utils.ShouldSkipProxyCheck(registryAddress, noProxy) {
-		return nil
-	}
-
-	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, wrapper.Client(), proxyURL, c.LegacyMode)
-	if err != nil {
-		return fmt.Errorf(`Cannot set up tunnel to the control-plane host: %w.
-Please check connectivity to the control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
-	}
-	defer tun.Stop()
-
 	registryURL := &url.URL{
 		Scheme: strings.ToLower(string(registry.Scheme)),
 		Host:   registryAddress,
 		Path:   registryPath,
 	}
 
+	if utils.ShouldSkipProxyCheck(registryURL, noProxy) {
+		return "", preflight.NotApplicable("%s is exempt from the proxy by ClusterConfiguration.proxy.noProxy", registryAddress)
+	}
+
+	if c.NodeInterface == nil {
+		return "", errors.New("no connection resolver was given to the check")
+	}
+
+	nodeInterface, err := c.NodeInterface(ctx)
+	if err != nil {
+		return "", err
+	}
+	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		return "", preflight.NotApplicable("there is no SSH connection to a node to make the request from")
+	}
+
+	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, wrapper.Client(), proxyURL, c.LegacyMode)
+	if err != nil {
+		return "", tunnelFailure(wrapper.Client(), proxyURL, err)
+	}
+	defer tun.Stop()
+
 	ctx, cancel := context.WithTimeout(ctx, httpClientTimeoutSec*time.Second)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
 	if err != nil {
-		return fmt.Errorf("prepare request: %w", err)
+		return "", fmt.Errorf("building the request to %s: %w", registryURL, err)
 	}
 
-	httpCl := utils.BuildHTTPClientWithLocalhostProxy(proxyURL)
+	httpCl, err := utils.BuildHTTPClientWithLocalhostProxy(proxyURL, utils.TLSOptions{
+		ServerName: registryURL.Hostname(),
+		CACert:     registry.CA,
+	})
+	if err != nil {
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  "the registry CA certificate",
+			Observed: err.Error(),
+			Expected: "a PEM bundle the request can be made with",
+			Fix:      `correct .spec.settings.registry.<mode>.ca in the "deckhouse" ModuleConfig (InitConfiguration.deckhouse.registryCA)`,
+		})
+	}
+
 	resp, err := httpCl.Do(req)
 	if err != nil {
-		return fmt.Errorf(`Container registry API connectivity check failed with error: %w.
-Please check connectivity from the control-plane node to the proxy and from the proxy to the container registry.`, err)
+		// A proxy that refuses the CONNECT answers with a status, not with a connection, and
+		// that status is the whole diagnosis — it must not be reported as "the registry did
+		// not answer".
+		if refusal := proxyRefusal(proxyConnectStatus(err), proxyURL, registryURL); refusal != nil {
+			return "", refusal
+		}
+
+		return "", &preflight.Failure{
+			Checked:  fmt.Sprintf("GET %s from %s via proxy %s", registryURL, hostLabelOfClient(wrapper.Client()), proxyURL.Redacted()),
+			Observed: classifyNetworkError(err),
+			Expected: "the registry API to answer",
+			Fix: fmt.Sprintf(
+				"check that the node reaches %s and that the proxy reaches %s, "+
+					"or add %s to ClusterConfiguration.proxy.noProxy so the node goes direct",
+				proxyURL.Redacted(), registryAddress, registryURL.Hostname(),
+			),
+			Err: err,
+		}
+	}
+	defer resp.Body.Close()
+
+	if err := c.checkResponse(resp, registryURL, proxyURL); err != nil {
+		return "", err
 	}
 
-	if err = checkResponseIsFromDockerRegistry(resp); err != nil {
-		return err
+	return fmt.Sprintf("%s answers from %s via proxy %s",
+		registryAddress, hostLabelOfClient(wrapper.Client()), proxyURL.Redacted()), nil
+}
+
+// checkResponse tells apart the three things that can come back on this path: the proxy refusing
+// the request, something that is not a registry answering at the address, and the registry.
+func (c RegistryProxyCheck) checkResponse(resp *http.Response, registryURL, proxyURL *url.URL) error {
+	switch {
+	case resp.StatusCode == http.StatusProxyAuthRequired, resp.StatusCode == http.StatusForbidden:
+		// The same two answers the CONNECT path produces, on the plain-http path where they
+		// arrive as a response instead. One wording for both.
+		return proxyRefusal(resp.StatusCode, proxyURL, registryURL)
+	case resp.StatusCode >= 500:
+		return &preflight.Failure{
+			Checked:  fmt.Sprintf("GET %s via proxy %s", registryURL, proxyURL.Redacted()),
+			Observed: fmt.Sprintf("HTTP %d", resp.StatusCode),
+			Expected: "HTTP 200 or 401 from the registry API",
+			Fix:      fmt.Sprintf("check that the proxy reaches %s and that the registry is up", registryURL.Host),
+		}
 	}
 
-	return nil
+	return checkResponseIsFromDockerRegistry(resp)
 }
 
 func checkResponseIsFromDockerRegistry(resp *http.Response) error {
@@ -148,12 +202,17 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 }
 
 func RegistryProxy(meta *config.MetaConfig, sshProviderInitializer *providerinitializer.SSHProviderInitializer, legacyMode bool) preflight.Check {
-	check := RegistryProxyCheck{MetaConfig: meta, SSHProviderInitializer: sshProviderInitializer, LegacyMode: legacyMode}
+	check := RegistryProxyCheck{
+		MetaConfig:    meta,
+		NodeInterface: nodeInterfaceResolverFor(sshProviderInitializer),
+		LegacyMode:    legacyMode,
+	}
 	return preflight.Check{
 		Name:        RegistryProxyCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
 }

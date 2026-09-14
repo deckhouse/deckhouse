@@ -31,6 +31,7 @@ import (
 	convergectx "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -215,6 +216,15 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 }
 
 func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
+	// Before anything is read or changed: converge reaches the existing nodes over SSH, and a key
+	// they do not accept used to cost about four minutes of "Try to connect to host" before
+	// "Timeout while \"Waiting for SSH connection\"". It runs here rather than in the command so
+	// that Commander gets it too — it has always sent skip_preflight_checks to converge, where
+	// nothing read them.
+	if err := suites.RunNodeAccessPreflights(ctx, c.SSHProviderInitializer, &c.Options.Preflight, "Preflight checks: converge"); err != nil {
+		return nil, err
+	}
+
 	if !c.CommanderMode {
 		if c.CacheID == "" {
 			return nil, fmt.Errorf("Incorrect cache identity. You need to pass --ssh-host, --kube-client-from-cluster, or --kubeconfig")

@@ -53,7 +53,7 @@ type StaticInstancesSSHAccessCheck struct {
 const StaticInstancesSSHAccessCheckName preflight.CheckName = "static-instances-ssh-access"
 
 func (StaticInstancesSSHAccessCheck) Description() string {
-	return "SSH access to StaticInstances is configured correctly."
+	return "ssh access to StaticInstances is configured correctly"
 }
 
 func (StaticInstancesSSHAccessCheck) Phase() preflight.Phase {
@@ -61,27 +61,65 @@ func (StaticInstancesSSHAccessCheck) Phase() preflight.Phase {
 }
 
 func (StaticInstancesSSHAccessCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NetworkRetry
 }
 
-func (c StaticInstancesSSHAccessCheck) Run(ctx context.Context) error {
+func (c StaticInstancesSSHAccessCheck) Run(ctx context.Context) (string, error) {
+	if c.MetaConfig == nil || strings.TrimSpace(c.MetaConfig.ResourcesYAML) == "" {
+		return "", preflight.NotApplicable("the --config file declares no resources")
+	}
+
 	docs := input.YAMLSplitRegexp.Split(c.MetaConfig.ResourcesYAML, -1)
 	instances, creds, err := parseResources(docs)
 	if err != nil {
-		return err
+		return "", err
+	}
+	if len(instances) == 0 {
+		return "", preflight.NotApplicable("the --config file declares no StaticInstance")
 	}
 
+	// Every instance, not the first that fails: these are separate machines, and an operator
+	// setting up a static cluster would otherwise fix them one bootstrap run at a time.
+	var unreachable []string
 	for _, inst := range instances {
 		cred, ok := creds[inst.CredName]
 		if !ok {
-			return fmt.Errorf("Instance %s: SSHCredentials %s not found", inst.Name, inst.CredName)
+			return "", preflight.Permanent(&preflight.Failure{
+				Checked:  fmt.Sprintf("StaticInstance %q in the --config file", inst.Name),
+				Observed: fmt.Sprintf("it refers to SSHCredentials %q, which the file does not contain", inst.CredName),
+				Expected: "an SSHCredentials resource for every StaticInstance",
+				Fix:      fmt.Sprintf("add the SSHCredentials %q document, or correct spec.credentialsRef.name", inst.CredName),
+			})
 		}
+
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Checking StaticInstance %s (%s)", inst.Name, inst.Address))
 		if err := checkSSHAccess(ctx, c.SSHProviderInitializer, inst.Address, cred); err != nil {
-			return fmt.Errorf("SSH access check failed for %s (%s:%d): %w", inst.Name, inst.Address, cred.SSHPort, err)
+			unreachable = append(unreachable, fmt.Sprintf("%s (%s@%s:%d): %s",
+				inst.Name, cred.User, inst.Address, cred.SSHPort, oneLineError(err)))
 		}
 	}
-	return nil
+
+	if len(unreachable) > 0 {
+		return "", &preflight.Failure{
+			Checked:  fmt.Sprintf("ssh login to each of the %d StaticInstances, from the master node", len(instances)),
+			Observed: "- " + strings.Join(unreachable, "\n- "),
+			Expected: "every StaticInstance to accept the SSHCredentials it names",
+			Fix: "check spec.user and the private key of the SSHCredentials, and that the machines accept SSH " +
+				"from the master node (Deckhouse adopts them from there, not from this host)",
+		}
+	}
+
+	return fmt.Sprintf("all %d StaticInstances accept the credentials they name", len(instances)), nil
+}
+
+// oneLineError keeps a per-instance line to one line: the full text is in the debug log, and a
+// dozen multi-line causes in one block is unreadable.
+func oneLineError(err error) string {
+	text := strings.TrimSpace(err.Error())
+	if idx := strings.IndexByte(text, '\n'); idx >= 0 {
+		text = strings.TrimSpace(text[:idx]) + " …"
+	}
+	return text
 }
 
 func parseResources(docs []string) ([]staticInstance, map[string]*v1alpha2.SSHCredentialsSpec, error) {
@@ -196,6 +234,42 @@ func parseSSHCredentials(sc *v1alpha2.SSHCredentials) (*v1alpha2.SSHCredentialsS
 	}, nil
 }
 
+// staticInstanceSession builds the connection to one StaticInstance.
+//
+// The hop matters as much as the credentials. Deckhouse adopts static instances from the master
+// node, not from the installer host, so the check has to reach them the same way — through
+// whatever the master reaches them through. master is the session of the connection to the master,
+// or nil when the run is local and there is no hop at all.
+func staticInstanceSession(address string, cred *v1alpha2.SSHCredentialsSpec, master *session.Session) *session.Session {
+	config := session.NewSession(session.Input{
+		User:       cred.User,
+		Port:       strconv.Itoa(cred.SSHPort),
+		BecomePass: cred.SudoPasswordEncoded,
+	})
+	config.AddAvailableHosts(session.Host{Host: address})
+
+	switch {
+	case master == nil:
+		// Nothing to hop through.
+	case master.BastionHost != "":
+		// The master is itself reached through a bastion, and so is everything behind it.
+		config.BastionHost = master.BastionHost
+		config.BastionPort = master.BastionPort
+		config.BastionUser = master.BastionUser
+		config.BastionPassword = master.BastionPassword
+	default:
+		// The master is the hop.
+		config.BastionHost = master.Host()
+		config.BastionPort = master.Port
+		config.BastionUser = master.User
+		// Deliberately not master.BecomePass: that is the sudo password, and putting it
+		// here would offer it to the master's sshd as an SSH password. The master is
+		// reached by key, so there is no password to carry over.
+	}
+
+	return config
+}
+
 func checkSSHAccess(ctx context.Context, sshProviderInitializer *providerinitializer.SSHProviderInitializer, address string, cred *v1alpha2.SSHCredentialsSpec) error {
 	nodeInterface, err := helper.GetNodeInterface(ctx, sshProviderInitializer, sshProviderInitializer.GetSettings())
 	if err != nil {
@@ -220,26 +294,7 @@ func checkSSHAccess(ctx context.Context, sshProviderInitializer *providerinitial
 		pkeys = sshClient.PrivateKeys()
 	}
 
-	config := session.NewSession(session.Input{
-		User:       cred.User,
-		Port:       strconv.Itoa(cred.SSHPort),
-		BecomePass: cred.SudoPasswordEncoded,
-	})
-	config.AddAvailableHosts(session.Host{Host: address})
-
-	if remote {
-		if sess.BastionHost != "" {
-			config.BastionHost = sess.BastionHost
-			config.BastionPort = sess.BastionPort
-			config.BastionUser = sess.BastionUser
-			config.BastionPassword = sess.BastionPassword
-		} else {
-			config.BastionHost = sess.AvailableHosts()[0].Host
-			config.BastionPort = sess.Port
-			config.BastionUser = sess.User
-			config.BastionPassword = sess.BecomePass
-		}
-	}
+	config := staticInstanceSession(address, cred, sess)
 
 	if cred.PrivateSSHKey != "" {
 		// The dhctl pod sets no TMPDIR and mounts / read-only; only /tmp is writable.
@@ -301,6 +356,7 @@ func StaticInstancesSSHAccess(metaConfig *config.MetaConfig, sshProviderInitiali
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.LongCheckTimeout,
 		Run:         check.Run,
 	}
 }

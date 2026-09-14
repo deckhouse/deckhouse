@@ -16,7 +16,6 @@ package checks
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -25,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils"
 )
 
@@ -126,40 +126,22 @@ func TestCheckResponse_WrongStatus(t *testing.T) {
 	s.ErrorIs(checkResponseIsFromDockerRegistry(resp), ErrRegistryUnreachable)
 }
 
-func TestCheckRegistryCredentials(t *testing.T) {
-	type fields struct {
-		installConfig *config.DeckhouseInstaller
-		metaConfig    *config.MetaConfig
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		wantErr assert.ErrorAssertionFunc
-	}{
-		{
-			name: "check registry.deckhouse.io/deckhouse/ce",
-			fields: fields{
-				installConfig: &config.DeckhouseInstaller{
-					DevBranch: "pr0001",
-					Registry: registry_mocks.ConfigBuilder(
-						registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
-						registry_mocks.WithSchemeHTTPS(),
-					),
-				},
-				metaConfig: &config.MetaConfig{
-					Registry: registry_mocks.ConfigBuilder(
-						registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
-						registry_mocks.WithSchemeHTTPS(),
-					),
-				},
-			},
-			wantErr: assert.NoError,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			check := RegistryCredentials(tt.fields.metaConfig, tt.fields.installConfig)
-			tt.wantErr(t, check.Run(t.Context()), fmt.Sprintf("CheckRegistryCredentials()"))
-		})
-	}
+// TestRegistryCredentialsWithoutCredentialsIsNotApplicable: a registry used anonymously has no
+// credentials to check. This test used to assert NoError and reach registry.deckhouse.io over
+// real HTTPS to get it — it failed wherever the network was unavailable, and it was passing for
+// the wrong reason: the CE bypass it was written for compares a repo:tag against a bare repo
+// address and never matched.
+func TestRegistryCredentialsWithoutCredentialsIsNotApplicable(t *testing.T) {
+	registryCfg := registry_mocks.ConfigBuilder(
+		registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
+		registry_mocks.WithSchemeHTTPS(),
+	)
+
+	check := RegistryCredentials(
+		&config.MetaConfig{Registry: registryCfg},
+		&config.DeckhouseInstaller{DevBranch: "pr0001", Registry: registryCfg},
+	)
+
+	_, err := check.Run(t.Context())
+	assert.ErrorIs(t, err, preflight.ErrNotApplicable)
 }

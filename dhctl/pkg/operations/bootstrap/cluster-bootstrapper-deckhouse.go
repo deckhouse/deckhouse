@@ -25,6 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -67,6 +69,18 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 
 		installConfig.KubeadmBootstrap = b.Options.Bootstrap.KubeadmBootstrap
 		installConfig.MasterNodeSelector = b.Options.Bootstrap.MasterNodeSelector
+
+		// This command pulls the Deckhouse image into a cluster that already exists, and it had
+		// no checks at all: a registry it cannot reach, or credentials it is not accepted with,
+		// surfaced fifteen minutes later as a Deckhouse pod stuck in Pending. The global suite
+		// asks exactly that, in one round trip, before the Deployment is created.
+		if err := preflight.RunSuite(ctx, suites.NewGlobalSuite(suites.GlobalDeps{
+			MetaConfig:    metaConfig,
+			InstallConfig: installConfig,
+			BuildInfo:     b.Options.BuildInfo,
+		}), preflight.PhasePreInfra, "Preflight checks: install-deckhouse", &b.Options.Preflight); err != nil {
+			return err
+		}
 
 		kubeCl, err := b.KubeProvider.Client(ctx)
 		if err != nil {

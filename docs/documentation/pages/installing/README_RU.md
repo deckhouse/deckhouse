@@ -601,7 +601,7 @@ dhctl bootstrap \
    - Сервер (ВМ), выбранный для установки master-узла, должен соответствовать [минимальным системным требованиям](/products/kubernetes-platform/guides/hardware-requirements.html):
      - не менее 4 CPU;
      - не менее 8 ГБ RAM;
-     - не менее 60 ГБ диска с производительностью 400+ IOPS;
+     - не менее 50 ГБ диска с производительностью 400+ IOPS;
      - ядро Linux версии 5.8 или новее;
      - установлен один из пакетных менеджеров: `apt`, `apt-get`, `yum` или `rpm`;
      - доступ к стандартным системным репозиториям для установки зависимостей;
@@ -636,26 +636,92 @@ dhctl bootstrap \
 
 Для пропуска отдельной проверки используйте флаг `--preflight-skip-check`, передав в качестве аргумента имя preflight-чека. Флаг можно указывать несколько раз.
 
-- `--preflight-skip-all-checks` — пропуск всех предварительных проверок;
+Полный список проверок, к чему каждая применяется и что утверждает, выводит команда `dhctl preflight list`.
+
+- `--preflight-skip-all-checks` — пропуск всех предварительных проверок.
+
+Проверки конфигурации (фаза `PreInfraPreflights`):
+
+- `--preflight-skip-check=registry-credentials` — пропуск проверки учетных данных для доступа к хранилищу образов;
+- `--preflight-skip-check=registry-reachable` — пропуск проверки доступности хранилища образов с хоста установщика;
+- `--preflight-skip-check=deckhouse-image-available` — пропуск проверки наличия образа Deckhouse нужной версии в хранилище;
+- `--preflight-skip-check=registry-required-images` — пропуск проверки того, что в хранилище есть сами образы релиза, а не только тег;
+- `--preflight-skip-check=dhctl-edition` — пропуск проверки соответствия редакции установщика и редакции образа Deckhouse;
+- `--preflight-skip-check=dhctl-version` — пропуск проверки соответствия версии инсталлятора версии образа Deckhouse;
+- `--preflight-skip-check=bastion-availability` — пропуск проверки доступности bastion-хоста;
+- `--preflight-skip-check=cloud-disk-name-length` — пропуск проверки того, что префикс кластера не делает имена дисков слишком длинными;
+- `--preflight-skip-check=cloud-master-system-requirements` — пропуск проверки соответствия instance class master-узла минимальным требованиям;
+- `--preflight-skip-check=instance-class-provider` — пропуск проверки соответствия ресурсов InstanceClass облачному провайдеру;
+- `--preflight-skip-check=cloud-node-network-cidr-intersection` — пропуск проверки пересечения подсетей кластера с сетью, в которой облако создаёт узлы;
+- `--preflight-skip-check=cloud-ssh-key-matches-public-key` — пропуск проверки соответствия приватного ключа dhctl и `sshPublicKey`, который установит облако;
+- `--preflight-skip-check=static-instances-ip-duplication` — пропуск проверки уникальности адресов StaticInstances;
+- `--preflight-skip-check=immutable-installer-images` — пропуск проверки того, что образ установщика содержит запрошенный control plane Kubernetes;
+- `--preflight-skip-check=immutable-kubeconfig-kept` — пропуск проверки того, что admin kubeconfig сохраняется вне удаляемого dhctl каталога;
+- `--preflight-skip-check=immutable-kubeconfig-out` — пропуск проверки того, что для admin kubeconfig задан путь сохранения;
+- `--preflight-skip-check=immutable-machines-availability` — пропуск проверки доступности машин, указанных в `--master-host`;
+- `--preflight-skip-check=immutable-post-bootstrap-script` — пропуск проверки отсутствия post-bootstrap-скрипта;
+- `--preflight-skip-check=immutable-registry-mode` — пропуск проверки режима Unmanaged у хранилища образов;
+- `--preflight-skip-check=immutable-signature-mode` — пропуск проверки отключенного режима подписи control plane;
+- `--preflight-skip-check=immutable-supported-provider` — пропуск проверки поддержки платформы для immutable master-узла.
+
+Проверки узлов (фаза `PostInfraPreflights`):
+
+- `--preflight-skip-check=static-single-ssh-host` — пропуск проверки количества указанных SSH-хостов;
+- `--preflight-skip-check=static-ssh-connectivity` — пропуск проверки доступности SSH-порта узла;
+- `--preflight-skip-check=static-ssh-credential` — пропуск проверки учетных данных SSH-пользователя;
 - `--preflight-skip-check=static-ssh-tunnel` — пропуск проверки проброса SSH;
+- `--preflight-skip-check=static-instances-ssh-access` — пропуск проверки SSH-доступа к StaticInstances;
+- `--preflight-skip-check=sudo-installed` — пропуск проверки наличия `sudo` на узле;
+- `--preflight-skip-check=sudo-allowed` — пропуск проверки прав доступа для выполнения команды `sudo`;
+- `--preflight-skip-check=deckhouse-user` — пропуск проверки наличия пользователя `deckhouse`;
+- `--preflight-skip-check=node-system-requirements` — пропуск проверки соответствия системным требованиям;
+- `--preflight-skip-check=python-modules` — пропуск проверки наличия Python;
 - `--preflight-skip-check=ports-availability` — пропуск проверки доступности необходимых портов;
 - `--preflight-skip-check=resolve-localhost` — пропуск проверки разрешения `localhost`;
-- `--preflight-skip-check=dhctl-edition` — пропуск проверки версии DKP;
-- `--preflight-skip-check=registry-access-through-proxy` — пропуск проверки доступа к хранилищу образов через прокси-сервер;
-- `--preflight-skip-check=public-domain-template` — пропуск проверки шаблона `publicDomain`;
-- `--preflight-skip-check=static-ssh-credential` — пропуск проверки учетных данных SSH-пользователя;
-- `--preflight-skip-check=registry-credentials` — пропуск проверки учетных данных для доступа к хранилищу образов;
-- `--preflight-skip-check=python-modules` — пропуск проверки наличия Python;
-- `--preflight-skip-check=sudo-allowed` — пропуск проверки прав доступа для выполнения команды `sudo`;
-- `--preflight-skip-check=static-system-requirements` — пропуск проверки соответствия системным требованиям;
-- `--preflight-skip-check=static-single-ssh-host` — пропуск проверки количества указанных SSH-хостов;
-- `--preflight-skip-check=cloud-api-accessibility` — пропуск проверки доступности Cloud API;
 - `--preflight-skip-check=time-drift` — пропуск проверки отсутствия рассинхронизации времени (time drift);
-- `--preflight-skip-check=cidr-intersection` — пропуск проверки пересечения CIDR;
-- `--preflight-skip-check=deckhouse-user` — пропуск проверки наличия пользователя `deckhouse`;
-- `--preflight-skip-check=yandex-cloud-config` — пропуск проверки конфигурации Yandex Cloud с WithNatInstance;
-- `--preflight-skip-check=dvp-kubeconfig` — пропуск проверки DVP kubeconfig.
-- `--preflight-skip-check=static-instances-ssh-credentials` — пропуск проверки доступности StaticInstances с SSHCredentials.
+- `--preflight-skip-check=node-hostname` — пропуск проверки того, что имя узла подходит Kubernetes в качестве имени ноды;
+- `--preflight-skip-check=node-os-supported` — пропуск проверки поддерживаемости операционной системы узла;
+- `--preflight-skip-check=node-xfs-ftype` — пропуск проверки XFS, отформатированной без `d_type`;
+- `--preflight-skip-check=node-resolve-hostname` — пропуск проверки резолва узлом собственного имени;
+- `--preflight-skip-check=node-leftovers` — пропуск проверки отсутствия на узле своего container runtime или Kubernetes;
+- `--preflight-skip-check=node-cri-requirements` — пропуск проверки требований `ContainerdV2` (ядро, systemd, cgroup v2, erofs);
+- `--preflight-skip-check=node-kernel-modules` — пропуск проверки того, что модули ядра, которые загружает Deckhouse, могут быть загружены на узле;
+- `--preflight-skip-check=node-selinux-tools` — пропуск проверки наличия утилит для установки политики SELinux на узле с SELinux в режиме enforcing;
+- `--preflight-skip-check=node-disk-space` — пропуск проверки размера диска узла;
+- `--preflight-skip-check=static-free-disk-space` — пропуск проверки достаточного свободного места на диске узла;
+- `--preflight-skip-check=node-internal-network` — пропуск проверки наличия у узла адреса внутри `internalNetworkCIDRs`;
+- `--preflight-skip-check=host-network-cidr-intersection` — пропуск проверки пересечения CIDR кластера с сетями узла;
+- `--preflight-skip-check=registry-access-through-proxy` — пропуск проверки доступа к хранилищу образов через прокси-сервер;
+- `--preflight-skip-check=cloud-api-accessibility` — пропуск проверки доступности Cloud API;
+- `--preflight-skip-check=cloud-kube-data-device` — пропуск проверки того, что диск, выделенный провайдером под данные Kubernetes, присутствует на master-узле;
+- `--preflight-skip-check=registry-access-from-master` — пропуск проверки доступности хранилища образов с самого master-узла;
+- `--preflight-skip-check=immutable-api-reachable` — пропуск проверки того, что порт API первого immutable-мастера отвечает;
+
+Подсети кластера и `publicDomainTemplate` больше не preflight-проверки: они читают только
+конфигурацию, поэтому проверяются при её загрузке — одинаково в `dhctl config`, в converge и при
+bootstrap. Пропустить их флагом нельзя; имена `cidr-intersection`, `static-cidr-intersection` и
+`public-domain-template` по-прежнему принимаются для совместимости, но ничего не делают.
+
+Пропуск проверки, которую впоследствии разделили надвое, по-прежнему отключает всё, что она
+делала раньше: `--preflight-skip-check=registry-credentials` отключает и `registry-reachable`,
+`dhctl-edition` — и `deckhouse-image-available`, `sudo-allowed` — и `sudo-installed`, а
+`static-ssh-credential` — и `static-ssh-connectivity`.
+
+Проверки, которые спрашивают о самой машине, называются `node-*` и выполняются и на облачном
+master-узле, и на статическом узле; с префиксом `static-` остались только те, что применимы
+исключительно к статическому кластеру. Прежние имена переименованных проверок по-прежнему
+принимаются флагом `--preflight-skip-check`.
+
+Проверки узла — `sudo-installed`, `sudo-allowed`, `python-modules`, `resolve-localhost`,
+`time-drift`, `node-hostname`, `node-disk-space`, `node-leftovers`,
+`node-cri-requirements`, `node-internal-network`, `node-system-requirements` и
+`host-network-cidr-intersection` — теперь выполняются и на облачном master-узле, не только на
+статическом. Имена на обоих путях одинаковые.
+
+Еще два флага влияют не на состав проверок, а на то, как они выполняются:
+
+- `--preflight-fail-fast` — остановиться на первой непройденной проверке, не выполняя остальные проверки фазы;
+- `--preflight-no-cache` — выполнить все проверки заново, не используя результаты, запомненные в предыдущем запуске.
 
 Пример применения флага пропуска:
 

@@ -588,7 +588,7 @@ List of checks performed by the installer before starting Deckhouse Kubernetes P
    - The server (VM) selected for the master node installation must meet the [minimum system requirements](/products/kubernetes-platform/guides/hardware-requirements.html):
      - At least 4 CPU cores.
      - At least 8 GB of RAM.
-     - At least 60 GB of disk space with 400+ IOPS performance.
+     - At least 50 GB of disk space with 400+ IOPS performance.
      - Linux kernel version 5.8 or newer.
      - One of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`.
      - Access to standard OS package repositories.
@@ -622,26 +622,92 @@ List of checks performed by the installer before starting Deckhouse Kubernetes P
 
 To skip a specific check, use the `--preflight-skip-check` flag and pass the preflight check name as its argument. The flag can be specified multiple times.
 
+`dhctl preflight list` prints every check, what it applies to and what it asserts.
+
 - `--preflight-skip-all-checks`: Skip all preflight checks.
+
+Configuration checks (the `PreInfraPreflights` phase):
+
+- `--preflight-skip-check=registry-credentials`: Skip the check for registry access credentials.
+- `--preflight-skip-check=registry-reachable`: Skip the check that the registry answers from the installer host.
+- `--preflight-skip-check=deckhouse-image-available`: Skip the check that the Deckhouse image of this version is in the registry.
+- `--preflight-skip-check=registry-required-images`: Skip the check that the registry holds the images the release is made of, and not just the tag that names it.
+- `--preflight-skip-check=dhctl-edition`: Skip the check that the installer edition matches the Deckhouse image edition.
+- `--preflight-skip-check=dhctl-version`: Skip the check that the installer version matches the Deckhouse image version.
+- `--preflight-skip-check=bastion-availability`: Skip the bastion host availability check.
+- `--preflight-skip-check=cloud-disk-name-length`: Skip the check that the cluster prefix does not make generated disk names too long.
+- `--preflight-skip-check=cloud-master-system-requirements`: Skip the check that the master node instance class meets the minimum requirements.
+- `--preflight-skip-check=instance-class-provider`: Skip the check that InstanceClass resources match the cloud provider.
+- `--preflight-skip-check=cloud-node-network-cidr-intersection`: Skip the check that the cluster subnets do not overlap the cloud network the nodes are created on.
+- `--preflight-skip-check=cloud-ssh-key-matches-public-key`: Skip the check that a private key dhctl holds matches the `sshPublicKey` the cloud will install.
+- `--preflight-skip-check=static-instances-ip-duplication`: Skip the check for duplicate StaticInstance addresses.
+- `--preflight-skip-check=immutable-installer-images`: Skip the check that the installer image carries the requested Kubernetes control plane.
+- `--preflight-skip-check=immutable-kubeconfig-kept`: Skip the check that the admin kubeconfig is written outside the directory dhctl cleans up.
+- `--preflight-skip-check=immutable-kubeconfig-out`: Skip the check that the admin kubeconfig has a destination.
+- `--preflight-skip-check=immutable-machines-availability`: Skip the check that the machines named with `--master-host` answer.
+- `--preflight-skip-check=immutable-post-bootstrap-script`: Skip the check that no post-bootstrap script is requested.
+- `--preflight-skip-check=immutable-registry-mode`: Skip the check that the registry runs in Unmanaged mode.
+- `--preflight-skip-check=immutable-signature-mode`: Skip the check that the control-plane signature mode is off.
+- `--preflight-skip-check=immutable-supported-provider`: Skip the check that the platform is supported for an immutable master.
+
+Node checks (the `PostInfraPreflights` phase):
+
+- `--preflight-skip-check=static-single-ssh-host`: Skip the check for the number of specified SSH hosts.
+- `--preflight-skip-check=static-ssh-connectivity`: Skip the check that the node answers on its SSH port.
+- `--preflight-skip-check=static-ssh-credential`: Skip the check for SSH user credentials.
 - `--preflight-skip-check=static-ssh-tunnel`: Skip the SSH forwarding check.
+- `--preflight-skip-check=static-instances-ssh-access`: Skip the check for SSH access to StaticInstances.
+- `--preflight-skip-check=sudo-installed`: Skip the check that `sudo` is installed on the node.
+- `--preflight-skip-check=sudo-allowed`: Skip the check for `sudo` privileges.
+- `--preflight-skip-check=deckhouse-user`: Skip the `deckhouse` user existence check.
+- `--preflight-skip-check=node-system-requirements`: Skip the check for meeting system requirements.
+- `--preflight-skip-check=python-modules`: Skip the check for Python installation.
 - `--preflight-skip-check=ports-availability`: Skip the check for the availability of required ports.
 - `--preflight-skip-check=resolve-localhost`: Skip the `localhost` resolution check.
-- `--preflight-skip-check=dhctl-edition`: Skip the DKP version check.
-- `--preflight-skip-check=registry-access-through-proxy`: Skip the check for accessing the registry through a proxy server.
-- `--preflight-skip-check=public-domain-template`: Skip the check for the `publicDomain` template.
-- `--preflight-skip-check=static-ssh-credential`: Skip the check for SSH user credentials.
-- `--preflight-skip-check=registry-credentials`: Skip the check for registry access credentials.
-- `--preflight-skip-check=python-modules`: Skip the check for Python installation.
-- `--preflight-skip-check=sudo-allowed`: Skip the check for `sudo` privileges.
-- `--preflight-skip-check=static-system-requirements`: Skip the check for meeting system requirements.
-- `--preflight-skip-check=static-single-ssh-host`: Skip the check for the number of specified SSH hosts.
-- `--preflight-skip-check=cloud-api-accessibility`: Skip the Cloud API accessibility check.
 - `--preflight-skip-check=time-drift`: Skip the time drift check.
-- `--preflight-skip-check=cidr-intersection`: Skip the CIDR intersection check.
-- `--preflight-skip-check=deckhouse-user`: Skip the `deckhouse` user existence check.
-- `--preflight-skip-check=yandex-cloud-config`: Skip the Yandex Cloud with NAT Instance configuration check.
-- `--preflight-skip-check=dvp-kubeconfig`: Skip the DVP kubeconfig check.
-- `--preflight-skip-check=static-instances-ssh-credentials` — skip verifying accessibility StaticInstances with SSHCredentials.
+- `--preflight-skip-check=node-hostname`: Skip the check that the node hostname is one Kubernetes accepts as a node name.
+- `--preflight-skip-check=node-os-supported`: Skip the check that the node runs an operating system Deckhouse can configure.
+- `--preflight-skip-check=node-xfs-ftype`: Skip the check for an XFS filesystem formatted without `d_type`.
+- `--preflight-skip-check=node-resolve-hostname`: Skip the check that the node resolves its own hostname.
+- `--preflight-skip-check=node-leftovers`: Skip the check that the node carries no container runtime or Kubernetes of its own.
+- `--preflight-skip-check=node-cri-requirements`: Skip the check that the node meets what `ContainerdV2` needs (kernel, systemd, cgroup v2, erofs).
+- `--preflight-skip-check=node-kernel-modules`: Skip the check that the kernel modules Deckhouse loads can be loaded on the node.
+- `--preflight-skip-check=node-selinux-tools`: Skip the check that a node with SELinux enforcing has the tools to install the Deckhouse policy.
+- `--preflight-skip-check=node-disk-space`: Skip the check that the node has the disk Deckhouse needs.
+- `--preflight-skip-check=static-free-disk-space`: Skip the check that the node has enough free disk for the bootstrap.
+- `--preflight-skip-check=node-internal-network`: Skip the check that the node has an address inside `internalNetworkCIDRs`.
+- `--preflight-skip-check=host-network-cidr-intersection`: Skip the check for intersection between the cluster CIDRs and the host networks.
+- `--preflight-skip-check=registry-access-through-proxy`: Skip the check for accessing the registry through a proxy server.
+- `--preflight-skip-check=cloud-api-accessibility`: Skip the Cloud API accessibility check.
+- `--preflight-skip-check=cloud-kube-data-device`: Skip the check that the disk the provider attached for Kubernetes data is on the master.
+- `--preflight-skip-check=registry-access-from-master`: Skip the check that the master node itself can reach the registry.
+- `--preflight-skip-check=immutable-api-reachable`: Skip the check that the API port of an immutable first master answers.
+
+The cluster subnets and `publicDomainTemplate` are no longer preflight checks: they read nothing
+but the configuration, so they are validated when it is loaded — by `dhctl config`, by converge
+and by bootstrap alike. No flag skips them, and the names `cidr-intersection`,
+`static-cidr-intersection` and `public-domain-template` are still accepted for compatibility but
+do nothing.
+
+Skipping a check that was later split in two still skips everything it used to do: passing
+`--preflight-skip-check=registry-credentials` also skips `registry-reachable`, `dhctl-edition`
+also skips `deckhouse-image-available`, `sudo-allowed` also skips `sudo-installed`, and
+`static-ssh-credential` also skips `static-ssh-connectivity`.
+
+Checks that ask about the machine itself are named `node-*` and run on a cloud master as well as
+on a static node; the ones named `static-*` apply to a static cluster only. The previous
+`static-` spellings of the renamed checks are still accepted by `--preflight-skip-check`.
+
+The node checks — `sudo-installed`, `sudo-allowed`, `python-modules`, `resolve-localhost`,
+`time-drift`, `node-hostname`, `node-disk-space`, `node-leftovers`,
+`node-cri-requirements`, `node-internal-network`, `node-system-requirements` and
+`host-network-cidr-intersection` — now run on a cloud master as well as on a static node. They
+keep their names on both paths.
+
+Two more flags control how the checks are run rather than which of them run:
+
+- `--preflight-fail-fast`: Stop at the first failed check instead of reporting every check of the phase.
+- `--preflight-no-cache`: Run every check for real, ignoring results remembered from a previous run.
 
 Example of using a preflight skip flag:
 

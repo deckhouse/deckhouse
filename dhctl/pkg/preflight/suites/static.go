@@ -17,6 +17,8 @@ package suites
 import (
 	"context"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -36,25 +38,49 @@ type StaticDeps struct {
 	GlobalOpts *options.GlobalOptions
 }
 
-func NewStaticSuite(deps StaticDeps, ctx context.Context) (preflight.Suite, error) {
-	nodeInterface, err := helper.GetNodeInterface(ctx, deps.SSHProviderInitializer, deps.SSHProviderInitializer.GetSettings())
+// NewStaticSuite assembles the checks; it opens nothing. The connection to the node is resolved
+// by each check when it runs — see checks.NodeInterfaceFunc. Building it here used to open SSH
+// during the pre-infra phase, before the preflight header had been printed, so a wrong credential
+// arrived as a raw lib-connection line after a silent retry loop and static-ssh-credential, the
+// check for exactly that, ran afterwards and was cosmetic.
+func NewStaticSuite(deps StaticDeps) preflight.Suite {
+	nodeInterface := nodeInterfaceResolver(deps.SSHProviderInitializer)
 
-	return preflight.NewSuite(
-		checks.CidrIntersectionStatic(deps.MetaConfig),
+	built := make([]preflight.Check, 0, 11+len(nodeChecks(nodeCheckDeps{})))
+	built = append(built,
 		checks.StaticInstancesIPDuplication(deps.MetaConfig),
-		checks.SingleSSHHost(deps.SSHProviderInitializer),
+		checks.SingleSSHHost(nodeInterface),
 		checks.BastionAvailability(deps.SSHProviderInitializer),
-		checks.SSHCredential(deps.SSHProviderInitializer),
-		checks.SudoAllowed(nodeInterface),
+		checks.SSHConnectivity(deps.SSHProviderInitializer),
+		checks.SSHCredential(nodeInterface),
 		checks.SSHTunnel(deps.SSHProviderInitializer, deps.GlobalOpts),
 		checks.StaticInstancesSSHAccess(deps.MetaConfig, deps.SSHProviderInitializer),
-		checks.HostNetworkCIDRIntersection(deps.MetaConfig, nodeInterface),
-		checks.DeckhouseUser(nodeInterface, deps.GlobalOpts),
-		checks.StaticSystemRequirements(deps.SSHProviderInitializer, deps.InstallConfig),
-		checks.Python(nodeInterface),
+		checks.NodeSystemRequirements(nodeInterface, deps.InstallConfig),
 		checks.RegistryProxy(deps.MetaConfig, deps.SSHProviderInitializer, deps.LegacyMode),
+		checks.RegistryFromMaster(deps.MetaConfig, deps.SSHProviderInitializer),
 		checks.Ports(deps.SSHProviderInitializer, deps.GlobalOpts),
-		checks.LocalhostDomain(nodeInterface, deps.GlobalOpts),
-		checks.TimeDrift(nodeInterface),
-	), err
+		// Static only: a cloud master arrives on a disk dhctl asked the provider for, and it is
+		// empty. A static node is a machine that has been doing something else.
+		checks.StaticFreeDiskSpace(nodeInterface),
+	)
+
+	// The questions asked of the machine itself, shared with the cloud path. They declare no
+	// dependency on the SSH checks above: those stop the phase outright when they fail, because
+	// nothing here — and nothing in the bootstrap that follows — can be done over a connection
+	// that was refused.
+	built = append(built, nodeChecks(nodeCheckDeps{
+		MetaConfig:    deps.MetaConfig,
+		InstallConfig: deps.InstallConfig,
+		GlobalOpts:    deps.GlobalOpts,
+		NodeInterface: nodeInterface,
+	})...)
+
+	return preflight.NewSuite(built...)
+}
+
+// nodeInterfaceResolver defers helper.GetNodeInterface to the moment a check runs.
+func nodeInterfaceResolver(initializer *providerinitializer.SSHProviderInitializer) checks.NodeInterfaceFunc {
+	return func(ctx context.Context) (libcon.Interface, error) {
+		return helper.GetNodeInterface(ctx, initializer, initializer.GetSettings())
+	}
 }

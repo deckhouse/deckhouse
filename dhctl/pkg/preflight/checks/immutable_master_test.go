@@ -49,7 +49,7 @@ func TestImmutableKubeconfigOut(t *testing.T) {
 				tt.commanderMode,
 			)
 
-			err := check.Run(t.Context())
+			_, err := check.Run(t.Context())
 			if !tt.wantErr {
 				require.NoError(t, err)
 				return
@@ -91,7 +91,7 @@ func TestImmutableKubeconfigKept(t *testing.T) {
 				&options.GlobalOptions{TmpDir: tmpDir},
 			)
 
-			err := check.Run(t.Context())
+			_, err := check.Run(t.Context())
 			if tt.wantMessage == "" {
 				require.NoError(t, err)
 				return
@@ -128,7 +128,7 @@ func TestImmutableSupportedProvider(t *testing.T) {
 				ProviderName: tt.provider,
 			})
 
-			err := check.Run(t.Context())
+			_, err := check.Run(t.Context())
 			if tt.wantMessage == "" {
 				require.NoError(t, err)
 				return

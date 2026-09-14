@@ -1,0 +1,129 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package checks
+
+import (
+	"errors"
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+)
+
+// dfOutput builds what `df -Pk` prints for a filesystem of the given size.
+//
+// The two units are deliberate and are the ones the checks use: a disk is sold and reported in
+// decimal GB, and free space is compared in GiB, which is what an operator sees in `df -h`.
+func dfOutput(totalGB, freeGiB int) string {
+	totalKB := totalGB * 1000 * 1000
+	freeKB := freeGiB * 1024 * 1024
+	return "Filesystem     1024-blocks     Used Available Capacity Mounted on\n" +
+		fmt.Sprintf("/dev/vda1 %d %d %d 22%% /\n", totalKB, totalKB-freeKB, freeKB)
+}
+
+func TestNodeDiskSpace(t *testing.T) {
+	tests := []struct {
+		name       string
+		node       *fakeNode
+		wantDetail string
+		wantErr    string
+	}{
+		{
+			name:       "a disk above the floor",
+			node:       newFakeNode().on("df -Pk /var/lib").prints(dfOutput(100, 60)),
+			wantDetail: "has 100 GB at /var/lib",
+		},
+		{
+			// The same floor cloud-master-system-requirements checks the configuration against,
+			// and which nothing checked against an actual machine.
+			name:    "a disk below the floor",
+			node:    newFakeNode().on("df -Pk /var/lib").prints(dfOutput(30, 25)),
+			wantErr: "it is 30 GB",
+		},
+		{
+			name:    "df is not there",
+			node:    newFakeNode().on("df -Pk /var/lib").fails(errors.New("bash: df: command not found")),
+			wantErr: "cannot measure the disk on",
+		},
+		{
+			name:    "df printed something else",
+			node:    newFakeNode().on("df -Pk /var/lib").prints("df: /var/lib: No such file or directory"),
+			wantErr: "its output could not be read",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			check := NodeDiskSpaceCheck{NodeInterface: FixedNodeInterface(tt.node)}
+			detail, err := check.Run(t.Context())
+
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Contains(t, detail, tt.wantDetail)
+		})
+	}
+}
+
+// TestStaticFreeDiskSpace is the static-only half: a cloud master arrives on a disk dhctl asked
+// the provider for and it is empty, a static node is a machine that has been doing something else.
+func TestStaticFreeDiskSpace(t *testing.T) {
+	tests := []struct {
+		name    string
+		node    *fakeNode
+		wantErr string
+	}{
+		{
+			name: "enough free",
+			node: newFakeNode().on("df -Pk /var/lib").prints(dfOutput(100, 40)),
+		},
+		{
+			name: "exactly at the floor",
+			node: newFakeNode().on("df -Pk /var/lib").prints(dfOutput(100, 20)),
+		},
+		{
+			// ENOSPC inside bashible — in tar, in the package manager, in containerd or in etcd —
+			// lands in the retry storm, which repeats it until the bundle is killed.
+			name:    "a nearly full disk",
+			node:    newFakeNode().on("df -Pk /var/lib").prints(dfOutput(100, 5)),
+			wantErr: "5 GiB is free",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			check := StaticFreeDiskSpaceCheck{NodeInterface: FixedNodeInterface(tt.node)}
+			detail, err := check.Run(t.Context())
+
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+
+				var failure *preflight.Failure
+				require.ErrorAs(t, err, &failure)
+				assert.Contains(t, failure.Expected, "at least 20 GiB")
+				return
+			}
+			require.NoError(t, err)
+			assert.Contains(t, detail, "free at /var/lib")
+		})
+	}
+}

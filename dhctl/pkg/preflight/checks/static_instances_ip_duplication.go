@@ -17,6 +17,7 @@ package checks
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -40,41 +41,87 @@ func (StaticInstancesIPDuplicationCheck) Phase() preflight.Phase {
 }
 
 func (StaticInstancesIPDuplicationCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.RetryPolicy{Attempts: 1}
+	return preflight.NoRetry
 }
 
-func (c StaticInstancesIPDuplicationCheck) Run(ctx context.Context) error {
+func (c StaticInstancesIPDuplicationCheck) Run(_ context.Context) (string, error) {
 	if c.MetaConfig == nil || c.MetaConfig.ResourcesYAML == "" {
-		return nil
+		return "", preflight.NotApplicable("the --config file declares no resources")
 	}
 
 	documents := input.YAMLSplitRegexp.Split(c.MetaConfig.ResourcesYAML, -1)
+
+	// address -> the StaticInstance that claimed it first.
 	instances := make(map[string]string)
+	var duplicates []string
 
-	for _, doc := range documents {
+	for i, doc := range documents {
 		var result map[string]any
-		err := yaml.Unmarshal([]byte(doc), &result)
-		if err != nil {
-			return fmt.Errorf("cannot unmarshal YAML: %v", err)
+		if err := yaml.Unmarshal([]byte(doc), &result); err != nil {
+			return "", preflight.Permanent(&preflight.Failure{
+				Checked:  fmt.Sprintf("resources document #%d in the --config file", i+1),
+				Observed: err.Error(),
+				Expected: "a YAML document",
+				Fix:      "correct the document, or remove it from the --config file",
+			})
+		}
+		if result["kind"] != "StaticInstance" {
+			continue
 		}
 
-		if result["kind"] == "StaticInstance" {
-			meta := result["metadata"].(map[string]any)
-			name := meta["name"].(string)
-
-			spec := result["spec"].(map[string]any)
-			address := spec["address"].(string)
-
-			instName, ok := instances[address]
-			if ok {
-				return fmt.Errorf("Duplicate address for %s: %s and %s\n", address, instName, name)
-			} else {
-				instances[address] = name
-			}
+		// Read rather than assert: these are operator-written documents, and a StaticInstance
+		// with a missing spec or a numeric name used to panic the check — a Go stack trace in
+		// place of the sentence naming the document.
+		name := nestedString(result, "metadata", "name")
+		address := nestedString(result, "spec", "address")
+		if name == "" {
+			name = fmt.Sprintf("document #%d", i+1)
 		}
+		if address == "" {
+			return "", preflight.Permanent(&preflight.Failure{
+				Checked:  fmt.Sprintf("StaticInstance %q in the --config file", name),
+				Observed: "spec.address is missing or is not a string",
+				Expected: "the address Deckhouse will reach the machine at",
+				Fix:      fmt.Sprintf("set spec.address on StaticInstance %q", name),
+			})
+		}
+
+		if first, taken := instances[address]; taken {
+			// All of them, not the first: with several duplicates the operator would otherwise
+			// fix one pair per run.
+			duplicates = append(duplicates, fmt.Sprintf("%s: %s and %s", address, first, name))
+			continue
+		}
+		instances[address] = name
 	}
 
-	return nil
+	if len(duplicates) > 0 {
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  "the spec.address of every StaticInstance in the --config file",
+			Observed: "- " + strings.Join(duplicates, "\n- "),
+			Expected: "one StaticInstance per address",
+			Fix:      "give each machine its own StaticInstance, or remove the duplicates",
+		})
+	}
+
+	if len(instances) == 0 {
+		return "", preflight.NotApplicable("the --config file declares no StaticInstance")
+	}
+	return fmt.Sprintf("%d StaticInstances have distinct addresses", len(instances)), nil
+}
+
+// nestedString reads a string at a path, and returns "" for anything that is not one.
+func nestedString(object map[string]any, path ...string) string {
+	var current any = object
+	for _, key := range path {
+		asMap, ok := current.(map[string]any)
+		if !ok {
+			return ""
+		}
+		current = asMap[key]
+	}
+	value, _ := current.(string)
+	return value
 }
 
 func StaticInstancesIPDuplication(meta *config.MetaConfig) preflight.Check {
@@ -84,6 +131,7 @@ func StaticInstancesIPDuplication(meta *config.MetaConfig) preflight.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Cacheable:   true,
 		Run:         check.Run,
 	}
 }

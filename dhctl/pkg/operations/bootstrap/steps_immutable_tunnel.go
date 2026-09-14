@@ -16,8 +16,13 @@ package bootstrap
 
 import (
 	"context"
+	"net"
+	"strconv"
+
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
 )
 
 // openImmutableChannel reaches the first master, whose address the rest of the
@@ -42,4 +47,50 @@ func (b *ClusterBootstrapper) openImmutableChannelTo(ctx context.Context, host s
 		remotePort,
 		purpose,
 	)
+}
+
+// masterAPIEndpoint hands the preflight check a way to reach the API port of the first master, or
+// nil on a bootstrap whose master is not an immutable one. The address is an output of the
+// BaseInfra phase, so it is read when the check runs rather than when the suite is built.
+func (b *ClusterBootstrapper) masterAPIEndpoint(bctx *bootstrapContext) func(context.Context) (*checks.MasterAPIEndpoint, error) {
+	if bctx.immutable == nil {
+		return nil
+	}
+
+	return func(ctx context.Context) (*checks.MasterAPIEndpoint, error) {
+		masterIP := bctx.immutable.masterIP
+		if masterIP == "" {
+			return nil, nil
+		}
+
+		master := net.JoinHostPort(masterIP, strconv.Itoa(immutable.APIServerPort))
+
+		// A tunnel of its own rather than the one the rest of the bootstrap keeps open: that
+		// one is opened later, by connectToImmutableMaster, and the whole point of asking
+		// here is to answer before the silent wait that follows it.
+		dial, stop, err := b.openImmutableChannelTo(ctx, masterIP, immutable.APIServerPort, "master API reachability")
+		if err != nil {
+			return nil, err
+		}
+
+		return &checks.MasterAPIEndpoint{
+			Dial:    dial,
+			Master:  master,
+			Bastion: bastionLabel(b.SSHProviderInitializer.GetConfig()),
+			Stop:    stop,
+		}, nil
+	}
+}
+
+// bastionLabel names the hop as the operator wrote it, or is empty when the master is reached
+// directly.
+func bastionLabel(connectionConfig *sshconfig.ConnectionConfig) string {
+	config := immutable.BastionConfig(connectionConfig)
+	if config == nil {
+		return ""
+	}
+	if config.BastionPort != nil {
+		return net.JoinHostPort(config.BastionHost, strconv.Itoa(*config.BastionPort))
+	}
+	return config.BastionHost
 }

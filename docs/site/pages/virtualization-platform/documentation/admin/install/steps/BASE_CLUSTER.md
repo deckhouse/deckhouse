@@ -235,19 +235,24 @@ List of checks performed by the installer before starting platform installation:
 {% offtopic title="List of preflight skip flags..." %}
 
 - `--preflight-skip-all-checks` — skip all preflight checks.
-- `--preflight-skip-ssh-forward-check` — skip the SSH forwarding check.
-- `--preflight-skip-availability-ports-check` — skip the check for the availability of required ports.
-- `--preflight-skip-resolving-localhost-check` — skip the `localhost` resolution check.
-- `--preflight-skip-deckhouse-version-check` — skip the Deckhouse version check.
-- `--preflight-skip-registry-through-proxy` — skip the check for access to the registry through a proxy server.
-- `--preflight-skip-public-domain-template-check` — skip the check for the `publicDomain` template.
-- `--preflight-skip-ssh-credentials-check` — skip the check for SSH user credentials.
-- `--preflight-skip-registry-credential` — skip the check for registry access credentials.
-- `--preflight-skip-containerd-exist` — skip the check for the existence of `containerd`.
-- `--preflight-skip-python-checks` — skip the check for Python installation.
-- `--preflight-skip-sudo-allowed` — skip the check for `sudo` privileges.
-- `--preflight-skip-system-requirements-check` — skip the system requirements check.
-- `--preflight-skip-one-ssh-host` — skip the check for the number of specified SSH hosts.
+- `--preflight-skip-check=<name>` — skip one check by name. Repeat the flag, or pass a comma-separated list. The names most often used here:
+  - `static-ssh-tunnel` — the SSH forwarding check.
+  - `ports-availability` — the check for the availability of required ports.
+  - `resolve-localhost` — the `localhost` resolution check.
+  - `dhctl-edition` — the check that the installer edition matches the Deckhouse image edition.
+  - `registry-access-through-proxy` — the check for access to the registry through a proxy server.
+  - `public-domain-template` — the check for the `publicDomainTemplate` value.
+  - `static-ssh-credential` — the check for SSH user credentials.
+  - `registry-credentials` — the check for registry access credentials.
+  - `python-modules` — the check for Python installation.
+  - `sudo-allowed` — the check for `sudo` privileges.
+  - `static-system-requirements` — the system requirements check.
+  - `static-single-ssh-host` — the check for the number of specified SSH hosts.
+- `--preflight-fail-fast` — stop at the first failed check instead of reporting every check of the phase.
+- `--preflight-no-cache` — run every check for real, ignoring results remembered from a previous run.
+
+`dhctl bootstrap --help` lists every check name. The per-check flags of earlier releases
+(`--preflight-skip-ssh-forward-check` and the rest) were replaced by `--preflight-skip-check`.
 
 Example of using the preflight skip flag:
 

@@ -16,10 +16,6 @@ package checks
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"os/exec"
-	"strings"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
@@ -46,7 +42,7 @@ func (PortsCheck) Phase() preflight.Phase {
 }
 
 func (PortsCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NoRetry
 }
 
 func (c PortsCheck) Run(ctx context.Context) error {
@@ -66,15 +62,7 @@ func checkAvailabilityPorts(ctx context.Context, nodeInterface libcon.Interface,
 	scriptCmd := nodeInterface.UploadScript(file)
 	out, err := scriptCmd.Execute(ctx)
 	if err != nil {
-		outMsg := strings.Trim(string(out), "\n")
-		if outMsg != "" {
-			return fmt.Errorf("required ports check failed: %s", outMsg)
-		}
-
-		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
-			return fmt.Errorf("required ports check failed: %w, %s", err, string(ee.Stderr))
-		}
-		return fmt.Errorf("Could not execute a script to check if all necessary ports are open on the node: %w", err)
+		return scriptFailure("check that the required ports are free", nodeInterface, out, err)
 	}
 
 	return nil
@@ -87,6 +75,7 @@ func Ports(sshProviderInitializer *providerinitializer.SSHProviderInitializer, g
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Run:         check.Run,
+		Timeout:     preflight.NodeCheckTimeout,
+		Run:         preflight.Detailless(check.Run),
 	}
 }

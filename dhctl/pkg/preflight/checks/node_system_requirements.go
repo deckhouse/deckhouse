@@ -27,69 +27,70 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-type StaticSystemRequirementsCheck struct {
-	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
-	InstallConfig          *config.DeckhouseInstaller
+type NodeSystemRequirementsCheck struct {
+	// NodeInterface resolves the connection at the moment the check runs, the way every other
+	// node check does — see NodeInterfaceFunc. This one held the initializer instead, which
+	// made it the one node check that could not be run against a fake.
+	NodeInterface NodeInterfaceFunc
+	InstallConfig *config.DeckhouseInstaller
 }
 
-const StaticSystemRequirementsCheckName preflight.CheckName = "static-system-requirements"
+const NodeSystemRequirementsCheckName preflight.CheckName = "node-system-requirements"
 
-func (StaticSystemRequirementsCheck) Description() string {
-	return "node meets system requirements"
+func (NodeSystemRequirementsCheck) Description() string {
+	return "the node has the CPU and RAM Deckhouse needs"
 }
 
-func (StaticSystemRequirementsCheck) Phase() preflight.Phase {
+func (NodeSystemRequirementsCheck) Phase() preflight.Phase {
 	return preflight.PhasePostInfra
 }
 
-func (StaticSystemRequirementsCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+func (NodeSystemRequirementsCheck) RetryPolicy() preflight.RetryPolicy {
+	return preflight.NoRetry
 }
 
-func (c StaticSystemRequirementsCheck) Run(ctx context.Context) error {
-	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
+func (c NodeSystemRequirementsCheck) Run(ctx context.Context) (string, error) {
+	nodeInterface, err := c.NodeInterface(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
+	host := hostPhrase(nodeInterface)
 
 	ramKb, err := extractRAMCapacityFromNode(ctx, nodeInterface)
 	if err != nil {
-		return err
+		return "", scriptFailure("read /proc/meminfo", nodeInterface, nil, err)
 	}
 
 	coresCount, err := extractCPULogicalCoresCountFromNode(ctx, nodeInterface)
 	if err != nil {
-		return err
+		return "", scriptFailure("read /proc/cpuinfo", nodeInterface, nil, err)
 	}
 
 	requirements := systemRequirementsForConfig(c.InstallConfig)
 
-	var failures []string
+	var violations []string
 	if coresCount < requirements.cpuCores {
-		failures = append(failures, fmt.Sprintf(
-			" - System requirements mandate at least %d CPU(s) on the node, but it has %d",
-			requirements.cpuCores,
-			coresCount,
-		))
+		violations = append(violations, fmt.Sprintf("%d CPU, at least %d required", coresCount, requirements.cpuCores))
 	}
-
 	if ramKb < requirements.memoryMB*1024 {
-		failures = append(failures, fmt.Sprintf(
-			" - System requirements mandate at least %d MiB of RAM on the node, but it has %d MiB",
-			requirements.memoryMB,
-			ramKb/1024,
-		))
+		violations = append(violations, fmt.Sprintf("%d MiB of RAM, at least %d MiB required (%d GB minus %d MiB tolerance)",
+			ramKb/1024, requirements.memoryMB, (requirements.memoryMB+reservedMemoryThresholdMB)/1024, reservedMemoryThresholdMB))
 	}
 
-	if len(failures) > 0 {
-		return fmt.Errorf("Deckhouse system requirements are not met by your current configuration:\n%s", strings.Join(failures, ";\n"))
+	if len(violations) > 0 {
+		// Hardware does not grow between two attempts of the same check.
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  fmt.Sprintf("/proc/cpuinfo and /proc/meminfo on %s", host),
+			Observed: "- " + strings.Join(violations, "\n- "),
+			Expected: fmt.Sprintf("at least %d CPU and %d MiB of RAM", requirements.cpuCores, requirements.memoryMB),
+			Fix: fmt.Sprintf("give the machine more resources, or set bundle: Minimal in the \"deckhouse\" ModuleConfig (%d CPU / %d MiB)",
+				minimalBundleRequiredCPUCores, minimalBundleRequiredMemoryMB),
+		})
 	}
 
-	return nil
+	return fmt.Sprintf("%s has %d CPU and %d MiB of RAM", host, coresCount, ramKb/1024), nil
 }
 
 func extractRAMCapacityFromNode(ctx context.Context, nodeInterface libcon.Interface) (int, error) {
@@ -145,20 +146,21 @@ func logicalCoresCountFromCPUInfo(cpuinfo []byte) (int, error) {
 	return len(processors), nil
 }
 
-func StaticSystemRequirements(
-	sshProviderInitializer *providerinitializer.SSHProviderInitializer,
+func NodeSystemRequirements(
+	nodeInterface NodeInterfaceFunc,
 	installConfig *config.DeckhouseInstaller,
 ) preflight.Check {
-	check := StaticSystemRequirementsCheck{
-		SSHProviderInitializer: sshProviderInitializer,
-		InstallConfig:          installConfig,
+	check := NodeSystemRequirementsCheck{
+		NodeInterface: nodeInterface,
+		InstallConfig: installConfig,
 	}
 
 	return preflight.Check{
-		Name:        StaticSystemRequirementsCheckName,
+		Name:        NodeSystemRequirementsCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
 }

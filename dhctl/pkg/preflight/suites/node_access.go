@@ -15,22 +15,26 @@
 package suites
 
 import (
-	"context"
-
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-type StaticAbortDeps struct {
+// NodeAccessDeps is the one dependency these checks have.
+type NodeAccessDeps struct {
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 }
 
-func NewStaticAbortSuite(deps StaticAbortDeps, ctx context.Context) (preflight.Suite, error) {
-	nodeInterface, err := helper.GetNodeInterface(ctx, deps.SSHProviderInitializer, deps.SSHProviderInitializer.GetSettings())
+// NewNodeAccessSuite is the smallest suite there is: can dhctl log in to the machines, and can it
+// run a command on them. It is what every command that touches existing nodes needs before it
+// starts — abort, converge, destroy, check — and none of them had it. An operator with a key the
+// node does not accept waited about four minutes of "Try to connect to host" before the timeout;
+// one without sudo waited for "Timeout while \"Get Kubernetes API client\"".
+func NewNodeAccessSuite(deps NodeAccessDeps) preflight.Suite {
+	nodeInterface := nodeInterfaceResolver(deps.SSHProviderInitializer)
 	return preflight.NewSuite(
-		checks.SSHCredential(deps.SSHProviderInitializer),
-		checks.SudoAllowed(nodeInterface),
-	), err
+		checks.SSHCredential(nodeInterfaceResolver(deps.SSHProviderInitializer)),
+		checks.SudoInstalled(nodeInterface),
+		checks.SudoAllowed(nodeInterface).After(checks.SudoInstalledCheckName),
+	)
 }
