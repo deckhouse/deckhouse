@@ -19,6 +19,7 @@ package source
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -74,6 +75,20 @@ func (r *recorder) WatchError(err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.watchErrors = append(r.watchErrors, err)
+}
+
+// lastSynced is the last value handed to SyncedChanged, as "true"/"false"/"none" so a test can
+// tell "not reported yet" from "reported false".
+func (r *recorder) lastSynced() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.synced) == 0 {
+		return "none"
+	}
+	if r.synced[len(r.synced)-1] {
+		return "true"
+	}
+	return "false"
 }
 
 func (r *recorder) watchErrorCount() int {
@@ -168,8 +183,19 @@ func TestSource_BuildsAndFollowsChanges(t *testing.T) {
 
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
-	if len(rec.synced) != 1 || !rec.synced[0] {
-		t.Errorf("SyncedChanged must be reported once: %v", rec.synced)
+	// The report follows the state, and only its changes: a source that has listed the cluster
+	// and is following it reports true, and reports it once however many events arrive. Whether
+	// a false precedes it depends on whether the client produced a watch error before the first
+	// list, which is a property of the fake, not of the source - so what is pinned here is the
+	// end state and the absence of repeats.
+	if len(rec.synced) == 0 || !rec.synced[len(rec.synced)-1] {
+		t.Errorf("a source following the cluster must end up reported as synced: %v", rec.synced)
+	}
+	for i := 1; i < len(rec.synced); i++ {
+		if rec.synced[i] == rec.synced[i-1] {
+			t.Errorf("SyncedChanged is reported on changes only, got %v", rec.synced)
+			break
+		}
 	}
 	if len(rec.updates) < 3 {
 		t.Errorf("expected at least three rebuilds, got %d", len(rec.updates))
@@ -219,6 +245,51 @@ func TestSource_QuarantineIsReported(t *testing.T) {
 // A cluster without the ClusterAuthorizationRule CRD is a normal bootstrap state, not a failure:
 // the source must keep retrying, report it as such, and never publish an empty directory that a
 // consumer would mistake for "there are no rules".
+// A rule that cannot be read at all is counted with the quarantined ones.
+//
+// It stays out of the directory, which is right - the ordering guard then restricts every subject
+// its bindings name until the rule can be read - but it used to stay out of the counting too, so
+// the quarantine gauge read zero and its alert stayed silent while a rule sat in the cluster doing
+// nothing it says it does.
+func TestSource_ARuleThatCannotBeReadIsCounted(t *testing.T) {
+	// limitNamespaces has to be a list. The CRD schema rejects this, so reaching it means
+	// something upstream is broken - which is exactly when the operator needs to be told.
+	broken := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "ClusterAuthorizationRule",
+		"metadata":   map[string]interface{}{"name": "broken", "resourceVersion": "2"},
+		"spec":       map[string]interface{}{"limitNamespaces": "team-a"},
+	}}
+
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"), broken)
+	rec := &recorder{}
+	s := New(client, Options{Debounce: 20 * time.Millisecond, Observer: rec, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+
+	// The readable rule is served as usual.
+	if !s.Directory().KnowsRule("team-a") {
+		t.Error("one unreadable rule must not take the readable ones down with it")
+	}
+	// And the unreadable one is not silently gone.
+	if s.Directory().KnowsRule("broken") {
+		t.Error("a rule that cannot be read must not be in the directory: its subjects are restricted until it can be")
+	}
+
+	eventually(t, "the unreadable rule to be counted", func() bool {
+		rec.mu.Lock()
+		defer rec.mu.Unlock()
+		if len(rec.updates) == 0 {
+			return false
+		}
+		_, counted := rec.updates[len(rec.updates)-1].Quarantined["broken"]
+		return counted
+	})
+}
+
 func TestSource_CRDMissing(t *testing.T) {
 	client := newClient()
 	client.PrependReactor("list", "clusterauthorizationrules", func(k8stesting.Action) (bool, runtime.Object, error) {
@@ -234,7 +305,8 @@ func TestSource_CRDMissing(t *testing.T) {
 	defer cancel()
 	go s.Run(ctx)
 
-	eventually(t, "the missing CRD to be noticed", func() bool { return rec.watchErrorCount() > 0 })
+	// It takes a streak, not one error: see TestSource_CRDMissingNeedsCorroboration for why.
+	eventually(t, "the missing CRD to be confirmed", func() bool { return rec.watchErrorCount() >= crdMissingConfirmations })
 
 	if got := s.State(); got != StateCRDMissing {
 		t.Errorf("state = %v, want %v", got, StateCRDMissing)
@@ -282,6 +354,194 @@ func TestSource_WatchErrorKeepsDirectory(t *testing.T) {
 	}
 	if rec.watchErrorCount() == 0 {
 		t.Error("the error must reach the observer, it is what the alert counts")
+	}
+}
+
+// A watch that keeps failing eventually means the directory has stopped tracking the cluster, and
+// saying so is the difference between a stale answer and a wrong one. What must NOT happen is
+// reporting it early: this state gates the readiness of a fail-closed authorizer on every master.
+func TestSource_StaleAfterEnoughConsecutiveWatchErrors(t *testing.T) {
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"))
+	s := New(client, Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 3, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+
+	// Below the threshold nothing changes. A handful of transient errors is a normal day.
+	s.watchError(nil, errors.New("connection refused"))
+	s.watchError(nil, errors.New("connection refused"))
+	if got := s.State(); got != StateSynced {
+		t.Fatalf("state = %v after 2 of 3 errors, want %v: the threshold must not be eager", got, StateSynced)
+	}
+
+	s.watchError(nil, errors.New("connection refused"))
+	if got := s.State(); got != StateStale {
+		t.Errorf("state = %v after the threshold, want %v", got, StateStale)
+	}
+
+	// The directory itself is untouched: it is a real snapshot, and the webhook keeps answering
+	// from it. Only readiness changes.
+	if s.Directory() == nil || !s.Directory().KnowsRule("team-a") {
+		t.Error("going stale must not drop the rules already known")
+	}
+
+	// Recovery has to happen through the path a real cluster takes, not by reaching into the
+	// field. The first version of this test zeroed consecutiveWatchErrors by hand and therefore
+	// passed while the only reset in the code lived in awaitSync - which runs once, at the first
+	// sync, and never again. Watch errors are ordinary on a long-lived cluster; the count crept up
+	// until it crossed the threshold and then State() said Stale forever, holding both consumers
+	// unready on a cluster where nothing was wrong.
+	//
+	// What proves the watch is alive is the watch delivering something. Create a rule and wait for
+	// it to arrive.
+	if _, err := client.Resource(rules.GroupVersionResource).Create(context.Background(),
+		car("team-b", "2", []string{"bob"}, "team-b"), metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, "the new rule to arrive", func() bool {
+		d := s.Directory()
+		return d != nil && d.KnowsRule("team-b")
+	})
+
+	if got := s.State(); got != StateSynced {
+		t.Errorf("state = %v after the watch delivered again, want %v", got, StateSynced)
+	}
+	if err := s.LastError(); err != nil {
+		t.Errorf("LastError = %v after recovery, want nil", err)
+	}
+}
+
+// Going stale is reported, and so is coming back.
+//
+// The observer used to hear about the first sync and nothing after it, so the gauge an operator
+// would reach for read "synced" for the life of the process - including while the source had
+// stopped tracking the cluster and the consumer was answering 503 to every request. The one
+// metric that could show it was the one metric that could not.
+func TestSource_SyncedIsReportedWhenTheStateChanges(t *testing.T) {
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"))
+	rec := &recorder{}
+	s := New(client, Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 3, Observer: rec, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+	eventually(t, "the source to report itself synced", func() bool { return rec.lastSynced() == "true" })
+
+	s.watchError(nil, errors.New("connection refused"))
+	s.watchError(nil, errors.New("connection refused"))
+	if got := rec.lastSynced(); got != "true" {
+		t.Errorf("below the threshold the source is still synced, reported %s", got)
+	}
+
+	s.watchError(nil, errors.New("connection refused"))
+	if got := rec.lastSynced(); got != "false" {
+		t.Errorf("a stale source must be reported as not synced, reported %s", got)
+	}
+
+	// And the watch delivering again puts it back.
+	if _, err := client.Resource(rules.GroupVersionResource).Create(context.Background(),
+		car("team-b", "2", []string{"bob"}, "team-b"), metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, "the source to report itself synced again", func() bool { return rec.lastSynced() == "true" })
+}
+
+// The streak must be consecutive. Errors spread out over the life of a process, with the watch
+// working in between - which is every long-lived cluster - must never add up to Stale.
+func TestSource_ScatteredWatchErrorsNeverAccumulate(t *testing.T) {
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"))
+	s := New(client, Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 3, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+
+	for round := 0; round < 5; round++ {
+		// Two errors - one below the threshold - and then the watch delivers.
+		s.watchError(nil, errors.New("connection refused"))
+		s.watchError(nil, errors.New("connection refused"))
+
+		name := fmt.Sprintf("team-%d", round)
+		if _, err := client.Resource(rules.GroupVersionResource).Create(context.Background(),
+			car(name, fmt.Sprintf("%d", round+2), []string{"bob"}, name), metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		eventually(t, "the rule of round "+name, func() bool {
+			d := s.Directory()
+			return d != nil && d.KnowsRule(name)
+		})
+
+		if got := s.State(); got != StateSynced {
+			t.Fatalf("round %d: state = %v, want %v: two errors with a working watch in between "+
+				"must not add up across rounds", round, got, StateSynced)
+		}
+	}
+}
+
+// A source that has never listed the cluster is Unsynced, not Stale, however many errors it has
+// seen: there is no directory to be stale about, and the two states mean different things to the
+// consumers - Unsynced closes the webhook's serving gate, Stale deliberately does not.
+func TestSource_NeverListedStaysUnsynced(t *testing.T) {
+	s := New(newClient(), Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 2, Logf: t.Logf})
+	s.watchError(nil, errors.New("connection refused"))
+	s.watchError(nil, errors.New("connection refused"))
+	s.watchError(nil, errors.New("connection refused"))
+
+	if got := s.State(); got != StateUnsynced {
+		t.Errorf("state = %v, want %v", got, StateUnsynced)
+	}
+}
+
+// A missing CRD outranks staleness: there are no rules to track, so an empty directory is the truth
+// and the consumer must not be held unready for it.
+//
+// But it takes more than one NotFound to say so. CRDMissing is the one state that OPENS the
+// webhook's serving gate, and reaching it wrongly on a cluster that does have rules opens that gate
+// with an empty directory - after which the ordering guard denies every subject a rule covers, each
+// denial cached by the API server for unauthorizedTTL.
+func TestSource_CRDMissingNeedsCorroboration(t *testing.T) {
+	s := New(newClient(), Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 50, Logf: t.Logf})
+	s.synced.Store(true)
+	notFound := apierrors.NewNotFound(rules.GroupVersionResource.GroupResource(), "")
+
+	for i := 1; i < crdMissingConfirmations; i++ {
+		s.watchError(nil, notFound)
+		if got := s.State(); got == StateCRDMissing {
+			t.Fatalf("state = %v after %d NotFound(s): a transient NotFound must not read as a missing CRD", got, i)
+		}
+	}
+
+	s.watchError(nil, notFound)
+	if got := s.State(); got != StateCRDMissing {
+		t.Errorf("state = %v after %d NotFounds, want %v", got, crdMissingConfirmations, StateCRDMissing)
+	}
+
+	// And once established it outranks staleness: an absent CRD is not a directory that stopped
+	// tracking, it is a cluster with nothing to track.
+	for i := 0; i < 60; i++ {
+		s.watchError(nil, notFound)
+	}
+	if got := s.State(); got != StateCRDMissing {
+		t.Errorf("state = %v, want %v", got, StateCRDMissing)
+	}
+}
+
+// The streak has to be consecutive, or an unlucky mix of unrelated failures would open the gate.
+func TestSource_CRDMissingStreakIsConsecutive(t *testing.T) {
+	s := New(newClient(), Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 50, Logf: t.Logf})
+	s.synced.Store(true)
+	notFound := apierrors.NewNotFound(rules.GroupVersionResource.GroupResource(), "")
+
+	for i := 0; i < crdMissingConfirmations*3; i++ {
+		s.watchError(nil, notFound)
+		s.watchError(nil, errors.New("connection refused"))
+		if got := s.State(); got == StateCRDMissing {
+			t.Fatalf("state = %v: NotFounds interleaved with other errors are not a missing CRD", got)
+		}
 	}
 }
 

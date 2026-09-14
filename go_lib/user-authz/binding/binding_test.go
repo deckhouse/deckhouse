@@ -36,6 +36,7 @@ func crb(name string, labels map[string]string, subjects ...rbacv1.Subject) *rba
 }
 
 func TestRuleNameOf(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		rule string
 		ok   bool
@@ -60,6 +61,7 @@ func TestRuleNameOf(t *testing.T) {
 }
 
 func TestIsRuleBinding(t *testing.T) {
+	t.Parallel()
 	if !IsRuleBinding("user-authz:team-a:admin", moduleLabels) {
 		t.Errorf("a module binding of a rule must be recognised")
 	}
@@ -76,6 +78,7 @@ func TestIsRuleBinding(t *testing.T) {
 }
 
 func TestIndex(t *testing.T) {
+	t.Parallel()
 	idx := NewIndex()
 	alice := rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}
 	devs := rbacv1.Subject{Kind: rbacv1.GroupKind, Name: "devs"}
@@ -125,6 +128,7 @@ func TestIndex(t *testing.T) {
 }
 
 func TestIndex_EventHandler(t *testing.T) {
+	t.Parallel()
 	idx := NewIndex()
 	h := idx.EventHandler()
 	alice := rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}

@@ -133,7 +133,9 @@ func Project(obj interface{}) (interface{}, error) {
 		if err != nil || !found {
 			continue
 		}
-		if err := unstructured.SetNestedField(projected.Object, runtime.DeepCopyJSONValue(value), "spec", field); err != nil {
+		// SetNestedField already stores a deep copy of the value, so copying it here first would
+		// copy every spec field twice on every object of the initial list.
+		if err := unstructured.SetNestedField(projected.Object, value, "spec", field); err != nil {
 			return nil, fmt.Errorf("rule %q: project spec.%s: %w", u.GetName(), field, err)
 		}
 	}
