@@ -494,7 +494,7 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
         ```
 
    * If there is no direct access to the API server, use one of the following options:
-      * enable access to the API-server over the Ingress controller (the [publishAPI](../user-authn/configuration.html#parameters-publishapi) parameter) and specify the addresses from which requests originate (the [whitelistSourceRanges](../user-authn/configuration.html#parameters-publishapi-whitelistsourceranges) parameter);
+      * enable access to the API-server over the Ingress controller (the [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module) and specify the addresses from which requests originate (the [whitelistSourceRanges](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges) parameter);
       * specify addresses from which requests will originate in a separate Ingress controller (the [acceptRequestsFrom](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter).
 
    * If a non-public CA is used:

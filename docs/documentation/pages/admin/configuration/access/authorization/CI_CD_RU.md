@@ -23,7 +23,7 @@ description: "Настройка доступа CI/CD к API Kubernetes в Deckh
 Для настройки аутентификации через токен для ServiceAccount должны быть соблюдены следующие требования:
 
 - Доступ к кластеру с правами на создание ServiceAccount и секретов.
-- Для внешнего доступа: опубликованный через Ingress API-сервер Kubernetes (для публикации используется параметр [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi)) или прямой доступ к API через VPN.
+- Для внешнего доступа: опубликованный через Ingress API-сервер Kubernetes (для публикации используется параметр [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`) или прямой доступ к API через VPN.
 
 ### Создание ServiceAccount и долгоживущего токена
 
@@ -103,19 +103,37 @@ EOF
 
 При использовании publishAPI:
 
+{% tabs api_publish_type %}
+{% tab "При публикации API-сервера через Ingress" %}
+
+При публикации API-сервера через Ingress используйте команды:
+
 ```shell
-API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+API_HOST=$(d8 k -n kube-system get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
 echo "API endpoint: https://${API_HOST}"
 ```
+
+{% endtab %}
+{% tab "При публикации API-сервера через Gateway API (`alb`)" %}
+
+При публикации API-сервера через Gateway API (модуль [`alb`](/modules/alb/)) используйте команды:
+
+```shell
+API_HOST=$(d8 k -n kube-system get httproute kubernetes-api -o jsonpath='{.spec.hostnames[0]}')
+echo "API endpoint: https://${API_HOST}"
+```
+
+{% endtab %}
+{% endtabs %}
 
 {% alert level="info" %}
 Если сертификат API подписан публичным CA (Let's Encrypt), параметр `--certificate-authority` не требуется.
 {% endalert %}
 
-Для приватного CA:
+Для приватного CA (self-signed, режим по умолчанию — общий для обоих способов публикации):
 
 ```shell
-d8 k -n d8-user-authn get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/ca.crt
+d8 k -n kube-system get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/ca.crt
 ```
 
 ### Создание kubeconfig
@@ -194,7 +212,7 @@ d8 k --server=$KUBE_SERVER --token=$KUBE_TOKEN get ns
 
 Для настройки Basic Auth должны быть соблюдены следующие требования:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) включён.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager` включён.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) настроен для IdP.
 
 ### Включение
@@ -283,7 +301,7 @@ DP/Dex не получает пароль пользователя. Способ
 
 Для настройки Token Exchange должны быть соблюдены следующие требования:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) включён.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager` включён.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) настроен как **тип OIDC**.
 
 {% alert level="warning" %}

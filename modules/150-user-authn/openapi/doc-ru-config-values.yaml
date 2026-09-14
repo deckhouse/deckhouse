@@ -1,7 +1,12 @@
 type: object
 properties:
   publishAPI:
-    description: 'Настройки публикации API-сервера Kubernetes через Ingress для обеспечения его публичного доступа.'
+    description: |
+      Настройки публикации API-сервера Kubernetes через Ingress или Gateway API для обеспечения публичного доступа к нему. 
+
+      > **Важно.** Начиная с версии DP 1.77 для публикации API-сервера Kubernetes используйте параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`.
+      
+      Подробнее о способах публикации Kubernetes API — [в документации модуля `control-plane-manager`](/modules/control-plane-manager/#публикация-api-kubernetes)
     properties:
       enabled:
         description: 'Если указать `true`, в namespace `d8-user-authn` кластера будет создан Ingress-ресурс, который откроет публичный доступ к API-серверу.'

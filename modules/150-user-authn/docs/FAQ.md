@@ -274,7 +274,10 @@ Make sure your application Ingress has TLS configured before integrating with De
 
 ## How to generate a kubeconfig and access Kubernetes API?
 
-`kubeconfig` for remote access to the cluster via `kubectl` can be generated in the [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).
+{% tabs kubeconfig %}
+{% tab "For DKP version 1.76 and earlier" %}
+
+`kubeconfig` for remote access to the cluster via `kubectl` can be generated in the [`kubeconfigurator` web interface](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
 
 Configure the [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter:
 
@@ -290,6 +293,16 @@ Configure the [`publishAPI`](/modules/user-authn/configuration.html#parameters-p
   publishAPI:
     enabled: true
   ```
+
+The name `kubeconfig` is reserved for the kubeconfig generation web interface. The URL depends on the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter (for example, for the template that looks like `%s.kube.my`, the kubeconfig generation web interface will be available at `kubeconfig.kube.my`, and for `%s-kube.company.my` — at `kubeconfig-kube.company.my`).
+
+{% endtab %}
+{% tab "For DKP version 1.77 and later" %}
+
+For a cluster running DKP version 1.77 and later, refer to the [«How to generate a kubeconfig to access the Kubernetes API?»](/modules/control-plane-manager/faq.html#how-to-generate-a-kubeconfig-to-access-the-kubernetes-api) section of the `control-plane-manager` module documentation.
+
+{% endtab %}
+{% endtabs %}
 
 ### Configuring kube-apiserver
 
@@ -368,6 +381,9 @@ Dex will mount the `keytab` automatically and start accepting SPNEGO. A server�
 
 ## How to configure Basic Authentication for accessing Kubernetes API via LDAP?
 
+{% tabs api_ldap %}
+{% tab "For DKP version 1.76 and earlier" %}
+
 1. Enable the [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
 1. Create a [DexProvider](/modules/user-authn/cr.html#dexprovider) resource of type `LDAP` and set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for groups obtained from LDAP.
@@ -378,6 +394,25 @@ Only one authentication provider in the cluster can have [`enableBasicAuth`](/mo
 {% endalert %}
 
 A detailed example is described in the [Usage](/modules/user-authn/usage.html#configuring-basic-authentication) section.
+
+{% endtab %}
+{% tab "For DKP version 1.77 and later" %}
+
+For a cluster running DKP version 1.77 and later, use the `control-plane-manager` module settings:
+
+1. Enable the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter in the `control-plane-manager` module configuration.
+1. Create a [DexProvider](/modules/user-authn/cr.html#dexprovider) resource of type `LDAP` and set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for groups obtained from LDAP.
+1. Provide users with a `kubeconfig` configured for Basic Authentication (LDAP username and password).
+
+{% alert level="warning" %}
+Only one authentication provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+{% endalert %}
+
+A detailed example is described in the [Usage](/modules/user-authn/usage.html#configuring-basic-authentication) section.
+
+{% endtab %}
+{% endtabs %}
 
 ## How is Dex protected against credential brute-forcing?
 

@@ -9,20 +9,26 @@ lang: ru
 
 Чтобы настроить доступ, выполните следующие шаги:
 
-1. Включите публикацию Kubernetes API. Для этого установите [параметр `publishAPI.enabled: true`](/modules/user-authn/configuration.html#parameters-publishapi-enabled) в настройках модуля `user-authn` или с помощью веб-интерфейса администратора Deckhouse.
+1. Включите публикацию Kubernetes API. Для этого установите параметр [`apiserver.publishAPI.ingress.enabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в настройках модуля `control-plane-manager` или с помощью веб-интерфейса администратора Deckhouse.
 
    Пример конфигурации модуля:
 
    ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
    spec:
      enabled: true
-     version: 2
+     version: 3
      settings:
-       publishAPI:
-         enabled: true
+       apiserver:
+         publishAPI:
+           ingress:
+             enabled: true
    ```
 
-1. Откройте [веб-интерфейс DP](../../../../user/web/ui.html). Опубликованный API становится доступен для генерации kubeconfig автоматически после включения параметра `publishAPI` в модуле `user-authn`.
+1. Откройте [веб-интерфейс DP](../../../../user/web/ui.html). Опубликованный API становится доступен для генерации kubeconfig автоматически после включения публикации API (параметр [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled)) в модуле `control-plane-manager`. Этот веб-интерфейс доступен по URL:
 
 1. Сгенерируйте конфигурацию `kubectl`. В веб-интерфейсе пользователь получит набор команд для настройки `kubectl`. Эти команды можно скопировать и вставить в консоль. Аутентификация будет производиться по OIDC-токену, выданному Dex. При поддержке провайдером функции продления сессии конфигурация будет включать `refresh token`, что позволит продлевать доступ без повторной аутентификации.
 
@@ -38,19 +44,17 @@ lang: ru
 
 ## Как работает защита доступа к Kubernetes API
 
-В Deckhouse Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера, сохранив контроль над доступом. Публикация API и настройка аутентификации осуществляется через [модуль `user-authn`](/modules/user-authn/). Вы можете настроить:
+В Deckhouse Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера или Gateway API, сохранив контроль над доступом (подробнее о способах публикации Kubernetes API — [в документации модуля `control-plane-manager`](/modules/control-plane-manager/#публикация-api-kubernetes)). Публикация API настраивается через [модуль `control-plane-manager`](/modules/control-plane-manager/), а аутентификация — через [модуль `user-authn`](/modules/user-authn/). Вы можете настроить:
 
-- список доверенных IP-адресов или сетей, которым разрешён доступ;
-- список групп пользователей, которые имеют право аутентификации;
+- список доверенных сетевых адресов и подсетей, которым разрешён доступ;
 - Ingress-контроллер, через который будет осуществляться доступ.
 
 Для настройки:
 
 1. Включите публикацию API, как в примере выше.
-1. Настройте ограничения доступа. В [конфигурации модуля](/modules/user-authn/configuration.html) можно указать:
-   - список сетевых адресов, которым разрешён доступ (`allowedSourceRanges`);
-   - список групп пользователей, которым разрешено подключение к Kubernetes API (`allowedUserGroups`);
-   - выбор Ingress-контроллера, через который будет работать публикация (`ingressClass`).
+1. Настройте ограничения доступа. В [конфигурации модуля `control-plane-manager`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress) можно указать:
+   - список сетевых адресов, которым разрешён доступ ([`apiserver.publishAPI.ingress.whitelistSourceRanges`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges));
+   - выбор Ingress-контроллера, через который будет работать публикация ([`apiserver.publishAPI.ingress.ingressClass`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-ingressclass)).
 1. Используйте [веб-интерфейс DP](../../../../user/web/ui.html). Пользователи смогут получить безопасный доступ к API через сгенерированный в нём kubeconfig. Этот kubeconfig будет содержать OIDC-токен и настройки подключения через Ingress.
 
 Что будет настроено автоматически при включении публикации API:
@@ -65,7 +69,7 @@ lang: ru
 
 Для настройки:
 
-1. Включите публикацию API (параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi)).
+1. Включите публикацию API (параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`).
 1. Настройте провайдер LDAP в модуле `user-authn` и включите в нём опцию [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 
 {% alert level="warning" %}
