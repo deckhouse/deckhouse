@@ -148,15 +148,29 @@ ssh "${SSH_BASE_OPTS[@]}" "${SSH_TARGET}" \
   "REMOTE_TEST_DIR=$(printf '%q' "${REMOTE_TEST_DIR}") TEST_DIRS=$(printf '%q' "${TEST_DIRS[*]}") bash -s" <<'REMOTE'
 set -eu
 FAILED=0
+PASSED_TESTS=()
+FAILED_TESTS=()
 for name in ${TEST_DIRS}; do
   echo "Executing chainsaw test: ${name}"
   # bash -lc loads root login env (PATH/kubeconfig), matching interactive `sudo -i`.
-  if ! sudo bash -lc "cd ${REMOTE_TEST_DIR}/tests/${name} && chainsaw test --test-dir . --config ../../chainsaw-config.yaml --parallel 1"; then
+  if sudo bash -lc "cd ${REMOTE_TEST_DIR}/tests/${name} && chainsaw test --test-dir . --config ../../chainsaw-config.yaml --parallel 1"; then
+    PASSED_TESTS+=("${name}")
+  else
     echo "Test failed: ${name}"
+    FAILED_TESTS+=("${name}")
     FAILED=1
-    break
   fi
 done
+
+echo ""
+echo "=== control-plane-manager e2e summary: ${#PASSED_TESTS[@]} passed, ${#FAILED_TESTS[@]} failed ==="
+for name in "${PASSED_TESTS[@]}"; do
+  echo "  PASS  ${name}"
+done
+for name in "${FAILED_TESTS[@]}"; do
+  echo "  FAIL  ${name}"
+done
+
 echo "Cleaning up remote directory: ${REMOTE_TEST_DIR}"
 rm -rf "${REMOTE_TEST_DIR}"
 exit "${FAILED}"
