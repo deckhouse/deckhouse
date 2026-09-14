@@ -1,0 +1,8 @@
+diff --git a/go.mod b/go.mod
+--- a/go.mod
++++ b/go.mod
+@@ -202,3 +202,4 @@ require (
+ replace (
++	github.com/akutz/gofsutil => ../gofsutil
+ 	github.com/go-logr/logr => github.com/go-logr/logr v1.4.2
+ 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
