@@ -95,7 +95,7 @@ type Params struct {
 	RetryInterval    time.Duration
 	MaxRetryInterval time.Duration
 	TakeoverDelay    time.Duration
-	FallbackTTL time.Duration
+	FallbackTTL      time.Duration
 }
 
 type Deps struct {
@@ -402,7 +402,7 @@ func (w *Writer) report(
 
 	w.logger.Info("fencing state recorded",
 		"member", peer.Name,
-		"detected_at", inc.detectedAt.UTC().Format(time.RFC3339),
+		"detected_at", failed.DetectedAt.UTC().Format(metav1.RFC3339Micro),
 		"alive", view.AliveCount(),
 		"quorum", view.QuorumSize(),
 	)

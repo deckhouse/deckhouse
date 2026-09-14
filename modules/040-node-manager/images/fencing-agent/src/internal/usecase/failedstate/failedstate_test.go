@@ -17,7 +17,9 @@ limitations under the License.
 package failedstate
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -171,7 +173,6 @@ func (s *stubStore) Delete(_ context.Context, name string, uid types.UID) error 
 
 	return nil
 }
-
 
 func (s *stubStore) beat(name string, stamp time.Time) {
 	for i := range s.states {
@@ -636,6 +637,46 @@ func TestDetectedAtIsTheFirstSighting(t *testing.T) {
 
 	if got := store.recorded[failed].DetectedAt; !got.Time.Equal(firstSighting) {
 		t.Errorf("detectedAt = %s, want the first sighting %s, not the moment the write went through", got, firstSighting)
+	}
+}
+
+func TestRecordedLogCarriesTheStoredDetectedAt(t *testing.T) {
+	const failed = "worker-3"
+
+	logs := &bytes.Buffer{}
+	store := newStore()
+	h := newHarness(t, writerFor(failed), store)
+	h.writer.logger = log.NewLogger(log.WithOutput(logs), log.WithHandlerType(log.JSONHandlerType))
+
+	h.settle(t.Context())
+	h.clock.advance(630134567 * time.Nanosecond)
+	h.failPeer(t.Context(), failed)
+
+	want, err := json.Marshal(store.recorded[failed].DetectedAt)
+	if err != nil {
+		t.Fatalf("detectedAt does not serialize: %v", err)
+	}
+
+	var logged []json.RawMessage
+
+	dec := json.NewDecoder(logs)
+
+	for dec.More() {
+		var line struct {
+			Msg        string          `json:"msg"`
+			DetectedAt json.RawMessage `json:"detected_at"`
+		}
+		if err := dec.Decode(&line); err != nil {
+			t.Fatalf("log output is not JSON lines: %v", err)
+		}
+
+		if line.Msg == "fencing state recorded" {
+			logged = append(logged, line.DetectedAt)
+		}
+	}
+
+	if len(logged) != 1 || !bytes.Equal(logged[0], want) {
+		t.Errorf("detected_at logged as %s, want exactly one %s as stored in the object", logged, want)
 	}
 }
 
