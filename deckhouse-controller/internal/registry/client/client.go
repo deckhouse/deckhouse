@@ -66,11 +66,11 @@ func (c *Client) GetDigest(ctx context.Context, ref string) (*v1.Hash, error) {
 	return c.wrapped.GetDigest(ctx, ref)
 }
 
-func (c *Client) GetManifest(ctx context.Context, ref string) (registry.ManifestResult, error) {
+func (c *Client) GetManifest(ctx context.Context, ref string, opts ...registry.ManifestGetOption) (registry.ManifestResult, error) {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetManifest")
 	defer span.End()
 
-	return c.wrapped.GetManifest(ctx, ref)
+	return c.wrapped.GetManifest(ctx, ref, opts...)
 }
 
 func (c *Client) GetImageConfig(ctx context.Context, ref string) (*v1.ConfigFile, error) {
@@ -85,6 +85,13 @@ func (c *Client) CheckImageExists(ctx context.Context, ref string) error {
 	defer span.End()
 
 	return c.wrapped.CheckImageExists(ctx, ref)
+}
+
+func (c *Client) GetIndex(ctx context.Context, ref string) (v1.ImageIndex, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetIndex")
+	defer span.End()
+
+	return c.wrapped.GetIndex(ctx, ref)
 }
 
 func (c *Client) GetImage(ctx context.Context, ref string, opts ...registry.ImageGetOption) (registry.Image, error) {
@@ -108,11 +115,25 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 	return c.wrapped.ListTags(ctx, opts...)
 }
 
+func (c *Client) StreamTags(ctx context.Context, visit func(tags []string) error, opts ...registry.ListTagsOption) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "StreamTags")
+	defer span.End()
+
+	return c.wrapped.StreamTags(ctx, visit, opts...)
+}
+
 func (c *Client) ListRepositories(ctx context.Context, opts ...registry.ListRepositoriesOption) ([]string, error) {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "ListRepositories")
 	defer span.End()
 
 	return c.wrapped.ListRepositories(ctx, opts...)
+}
+
+func (c *Client) StreamRepositories(ctx context.Context, visit func(repos []string) error, opts ...registry.ListRepositoriesOption) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "StreamRepositories")
+	defer span.End()
+
+	return c.wrapped.StreamRepositories(ctx, visit, opts...)
 }
 
 func (c *Client) PushIndex(ctx context.Context, tag string, idx v1.ImageIndex, opts ...registry.ImagePushOption) error {
