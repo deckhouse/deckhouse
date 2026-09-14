@@ -213,6 +213,10 @@ assignments lived in it are stopped, so the normal kubelet lifecycle recreates t
 and the manager pins them again from a clean state. The stop is synchronous, inside
 `containerManagerImpl.Start` before the runtime is marked synced, so no pod can be
 admitted while CPUs and NUMA zones look free in the state but are still occupied.
+Each container is stopped with its own pod's `terminationGracePeriodSeconds`, read from the CRI
+container annotations since pod specs are not loaded that early; preStop hooks are not run, the
+stop bypasses kubelet's kill path. A stop request that fails while the runtime finished stopping
+the container anyway is counted as a stop, not a failure.
 
 A reset is reported by the metrics `kubelet_checkpoint_state_reset_total{manager,reason}`,
 `..._stopped_containers_total{manager}`, `..._stop_failures_total{manager}`, by the pod
