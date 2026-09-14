@@ -670,7 +670,7 @@ Node checks (the `PostInfraPreflights` phase):
 - `--preflight-skip-check=node-xfs-ftype`: Skip the check for an XFS filesystem formatted without `d_type`.
 - `--preflight-skip-check=node-resolve-hostname`: Skip the check that the node resolves its own hostname.
 - `--preflight-skip-check=node-leftovers`: Skip the check that the node carries no container runtime or Kubernetes of its own.
-- `--preflight-skip-check=node-cri-requirements`: Skip the check that the node meets what `ContainerdV2` needs (kernel, systemd, cgroup v2, erofs).
+- `--preflight-skip-check=node-cri-requirements`: Skip the check that the node meets what `ContainerdV2` needs (kernel, systemd, cgroup v2, `erofs`).
 - `--preflight-skip-check=node-kernel-modules`: Skip the check that the kernel modules Deckhouse loads can be loaded on the node.
 - `--preflight-skip-check=node-selinux-tools`: Skip the check that a node with SELinux enforcing has the tools to install the Deckhouse policy.
 - `--preflight-skip-check=node-disk-space`: Skip the check that the node has the disk Deckhouse needs.

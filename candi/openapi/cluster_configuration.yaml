@@ -98,6 +98,8 @@ apiVersions:
         description: |
           Address space of the cluster's Pods.
 
+          Must be an address with a prefix length, for example `10.111.0.0/16`. A value written without one is rejected when the configuration is loaded.
+
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       podSubnetNodeCIDRPrefix:
         type: string
@@ -119,6 +121,8 @@ apiVersions:
         x-unsafe: true
         description: |
           Address space of the cluster's services.
+
+          Must be an address with a prefix length, for example `10.222.0.0/16`. A value written without one is rejected when the configuration is loaded.
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       clusterDomain:

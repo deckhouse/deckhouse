@@ -679,12 +679,12 @@ dhctl bootstrap \
 - `--preflight-skip-check=ports-availability` — пропуск проверки доступности необходимых портов;
 - `--preflight-skip-check=resolve-localhost` — пропуск проверки разрешения `localhost`;
 - `--preflight-skip-check=time-drift` — пропуск проверки отсутствия рассинхронизации времени (time drift);
-- `--preflight-skip-check=node-hostname` — пропуск проверки того, что имя узла подходит Kubernetes в качестве имени ноды;
-- `--preflight-skip-check=node-os-supported` — пропуск проверки поддерживаемости операционной системы узла;
+- `--preflight-skip-check=node-hostname` — пропуск проверки того, что имя узла соответствует требованиям Kubernetes;
+- `--preflight-skip-check=node-os-supported` — пропуск проверки того, что операционная система узла поддерживается;
 - `--preflight-skip-check=node-xfs-ftype` — пропуск проверки XFS, отформатированной без `d_type`;
-- `--preflight-skip-check=node-resolve-hostname` — пропуск проверки резолва узлом собственного имени;
+- `--preflight-skip-check=node-resolve-hostname` — пропуск проверки того, что узел разрешает собственное имя;
 - `--preflight-skip-check=node-leftovers` — пропуск проверки отсутствия на узле своего container runtime или Kubernetes;
-- `--preflight-skip-check=node-cri-requirements` — пропуск проверки требований `ContainerdV2` (ядро, systemd, cgroup v2, erofs);
+- `--preflight-skip-check=node-cri-requirements` — пропуск проверки требований `ContainerdV2` (ядро, systemd, cgroup v2, `erofs`);
 - `--preflight-skip-check=node-kernel-modules` — пропуск проверки того, что модули ядра, которые загружает Deckhouse, могут быть загружены на узле;
 - `--preflight-skip-check=node-selinux-tools` — пропуск проверки наличия утилит для установки политики SELinux на узле с SELinux в режиме enforcing;
 - `--preflight-skip-check=node-disk-space` — пропуск проверки размера диска узла;
@@ -695,7 +695,7 @@ dhctl bootstrap \
 - `--preflight-skip-check=cloud-api-accessibility` — пропуск проверки доступности Cloud API;
 - `--preflight-skip-check=cloud-kube-data-device` — пропуск проверки того, что диск, выделенный провайдером под данные Kubernetes, присутствует на master-узле;
 - `--preflight-skip-check=registry-access-from-master` — пропуск проверки доступности хранилища образов с самого master-узла;
-- `--preflight-skip-check=immutable-api-reachable` — пропуск проверки того, что порт API первого immutable-мастера отвечает;
+- `--preflight-skip-check=immutable-api-reachable` — пропуск проверки того, что порт API первого immutable master-узла отвечает.
 
 Подсети кластера и `publicDomainTemplate` больше не preflight-проверки: они читают только
 конфигурацию, поэтому проверяются при её загрузке — одинаково в `dhctl config`, в converge и при
@@ -720,7 +720,7 @@ master-узле, и на статическом узле; с префиксом 
 
 Еще два флага влияют не на состав проверок, а на то, как они выполняются:
 
-- `--preflight-fail-fast` — остановиться на первой непройденной проверке, не выполняя остальные проверки фазы;
+- `--preflight-fail-fast` — остановиться на первой же ошибке, не выполняя остальные проверки фазы;
 - `--preflight-no-cache` — выполнить все проверки заново, не используя результаты, запомненные в предыдущем запуске.
 
 Пример применения флага пропуска:
