@@ -1,25 +1,5 @@
 version: v1
 template: |
-  ---
-  apiVersion: v1
-  kind: Secret
-  metadata:
-    name: capi-user-credentials
-    namespace: {{ .cluster.namespace | quote }}
-    labels:
-      app: capcd-controller-manager
-  type: Opaque
-  data:
-    {{- with get .provider "username" }}
-    username: {{ . | b64enc | quote }}
-    {{- end }}
-    {{- with get .provider "password" }}
-    password: {{ . | b64enc | quote }}
-    {{- end }}
-    {{- with get .provider "apiToken" }}
-    refreshToken: {{ . | b64enc | quote }}
-    {{- end }}
-  ---
   apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
   kind: VCDCluster
   metadata:

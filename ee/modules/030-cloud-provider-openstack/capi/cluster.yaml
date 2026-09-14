@@ -5,53 +5,6 @@ template: |
   {{- if hasKey $provider "apiServerFloatingIP" }}
     {{- $apiServerFloatingIP = $provider.apiServerFloatingIP }}
   {{- end }}
-  {{- $controlPlaneEndpoint := dict }}
-  {{- $clusterMasterEndpoints := .cluster.masterEndpoints | default (list) }}
-  {{- if and (not $apiServerFloatingIP) (gt (len $clusterMasterEndpoints) 0) }}
-    {{- $firstEndpoint := first $clusterMasterEndpoints }}
-    {{- $_ := set $controlPlaneEndpoint "host" (index $firstEndpoint "address") }}
-    {{- $_ := set $controlPlaneEndpoint "port" (index $firstEndpoint "kubeApiPort") }}
-  {{- end }}
-  {{- $clusterMasterAddresses := .cluster.masterAddresses | default (list) }}
-  {{- if and (not $apiServerFloatingIP) (eq (len $controlPlaneEndpoint) 0) (gt (len $clusterMasterAddresses) 0) }}
-    {{- $hostPort := splitList ":" (first $clusterMasterAddresses) }}
-    {{- if gt (len $hostPort) 1 }}
-      {{- $_ := set $controlPlaneEndpoint "host" (first $hostPort) }}
-      {{- $_ := set $controlPlaneEndpoint "port" (atoi (last $hostPort)) }}
-    {{- end }}
-  {{- end }}
-  {{- $cloudsYAML := printf "clouds:\n  openstack:\n    auth:\n      auth_url: %s\n      username: %s\n      password: %s\n"
-    ($provider.connection.authURL | quote)
-    ($provider.connection.username | quote)
-    ($provider.connection.password | quote)
-  }}
-  {{- with get $provider.connection "tenantName" }}
-    {{- $cloudsYAML = printf "%s      project_name: %s\n" $cloudsYAML (. | quote) }}
-  {{- end }}
-  {{- with get $provider.connection "tenantID" }}
-    {{- $cloudsYAML = printf "%s      project_id: %s\n" $cloudsYAML (. | quote) }}
-  {{- end }}
-  {{- $cloudsYAML = printf "%s      user_domain_name: %s\n      project_domain_name: %s\n    region_name: %s\n    identity_api_version: 3"
-    $cloudsYAML
-    ($provider.connection.domainName | quote)
-    ($provider.connection.domainName | quote)
-    ($provider.connection.region | quote)
-  }}
-  ---
-  apiVersion: v1
-  kind: Secret
-  metadata:
-    name: capi-user-credentials
-    namespace: {{ .cluster.namespace | quote }}
-    labels:
-      app: capo-controller-manager
-  type: Opaque
-  data:
-    {{- with get $provider.connection "caCert" }}
-    cacert: {{ . | b64enc | quote }}
-    {{- end }}
-    clouds.yaml: {{ $cloudsYAML | b64enc | quote }}
-  ---
   apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
   kind: OpenStackCluster
   metadata:
@@ -63,12 +16,11 @@ template: |
     apiServerLoadBalancer:
       enabled: false
   {{- if not $apiServerFloatingIP }}
+    {{- $endpoint := first .controlPlane.endpoints }}
     disableAPIServerFloatingIP: true
-    {{- if and (hasKey $controlPlaneEndpoint "host") (hasKey $controlPlaneEndpoint "port") }}
     controlPlaneEndpoint:
-      host: {{ $controlPlaneEndpoint.host | quote }}
-      port: {{ $controlPlaneEndpoint.port }}
-    {{- end }}
+      host: {{ $endpoint.host | quote }}
+      port: {{ $endpoint.port }}
   {{- end }}
     network:
       filter:

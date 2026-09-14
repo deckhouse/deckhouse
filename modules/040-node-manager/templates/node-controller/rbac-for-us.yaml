@@ -158,7 +158,8 @@ rules:
   - update
   - patch
   - delete
-# CAPI infrastructure resources (DeckhouseControlPlane, provider machine templates)
+# Temporary provider InfrastructureCluster permissions. Provider modules will grant them through
+# aggregated ClusterRoles; keep this fallback until that migration is complete.
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
@@ -178,6 +179,7 @@ rules:
   - patch
   - update
   - watch
+# CAPI infrastructure resources owned by node-controller.
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
