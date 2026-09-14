@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"controller/api/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/naming"
 )
 
@@ -45,7 +46,7 @@ func testMapper() meta.RESTMapper {
 func buildClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
 	scheme := runtime.NewScheme()
-	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, storagev1.AddToScheme, v1alpha1.AddToScheme} {
+	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, storagev1.AddToScheme, v1alpha1.AddToScheme, v1alpha3.AddToScheme} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
 		}
@@ -57,8 +58,15 @@ func buildClient(t *testing.T, objs ...client.Object) client.Client {
 			&v1alpha1.AvailableClusterResource{},
 			&v1alpha1.GrantableClusterResourceDefinition{},
 			&v1alpha1.GrantableClusterResourceReference{},
+			&v1alpha1.ClusterResourceGrantPolicy{},
 		).
 		Build()
+}
+
+// buildClientWithStatus is buildClient for tests that write a policy status.
+func buildClientWithStatus(t *testing.T, objs ...client.Object) client.Client {
+	t.Helper()
+	return buildClient(t, objs...)
 }
 
 func TestReconcile_Catalog(t *testing.T) {

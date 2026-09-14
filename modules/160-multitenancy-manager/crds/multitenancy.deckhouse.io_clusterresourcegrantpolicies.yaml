@@ -117,15 +117,16 @@ spec:
                       description: |-
                         List of names of cluster-wide resources available to the projects.
 
-                        Combined with resources selected using `allowedSelector`.
+                        Combined with resources selected using `allowedSelector`. An empty list is not accepted: omit the field instead, or set `availabilityDefault: None` to make nothing available.
                       items:
                         type: string
+                      minItems: 1
                       type: array
                     allowedSelector:
                       description: |-
                         Label selector for cluster-wide resources available to the projects.
 
-                        Combined with resources specified in `allowed`. Applies only to cluster-wide resources represented by Kubernetes objects.
+                        Combined with resources specified in `allowed`. Applies only to cluster-wide resources represented by Kubernetes objects. An empty selector is not accepted: omit the field instead, or set `availabilityDefault` to open or lock the resource without a list.
                       properties:
                         matchExpressions:
                           description: |-
@@ -156,6 +157,7 @@ spec:
                             - key
                             - operator
                             type: object
+                          minItems: 1
                           type: array
                           x-kubernetes-list-type: atomic
                         matchLabels:
@@ -165,9 +167,13 @@ spec:
                             Set of labels for cluster-wide resources.
 
                             All specified labels must match.
+                          minProperties: 1
                           type: object
                       type: object
                       x-kubernetes-map-type: atomic
+                      x-kubernetes-validations:
+                        - rule: 'has(self.matchLabels) || has(self.matchExpressions)'
+                          message: 'a selector must carry matchLabels or matchExpressions; an empty selector is not accepted'
                     availabilityDefault:
                       description: |-
                         Determines the availability of cluster-wide resources that are not explicitly specified using `allowed`, `allowedSelector`, `denied`, or `deniedSelector`.
@@ -199,7 +205,7 @@ spec:
                       description: |-
                         Label selector for cluster-wide resources unavailable to the projects.
 
-                        Deny rules take precedence over `allowed` and `allowedSelector`. Applies only to cluster-wide resources represented by Kubernetes objects.
+                        Deny rules take precedence over `allowed` and `allowedSelector`. Applies only to cluster-wide resources represented by Kubernetes objects. An empty selector is not accepted.
                       properties:
                         matchExpressions:
                           description: |-
@@ -230,6 +236,7 @@ spec:
                             - key
                             - operator
                             type: object
+                          minItems: 1
                           type: array
                           x-kubernetes-list-type: atomic
                         matchLabels:
@@ -239,9 +246,13 @@ spec:
                             Set of labels for cluster-wide resources.
 
                             All specified labels must match.
+                          minProperties: 1
                           type: object
                       type: object
                       x-kubernetes-map-type: atomic
+                      x-kubernetes-validations:
+                        - rule: 'has(self.matchLabels) || has(self.matchExpressions)'
+                          message: 'a selector must carry matchLabels or matchExpressions; an empty selector is not accepted'
                     resourceName:
                       description: Name of the GrantableClusterResourceDefinition for which the access settings are configured.
                       type: string

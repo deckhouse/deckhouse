@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"controller/api/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/jsonpath"
 )
 
@@ -42,7 +43,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		corev1.AddToScheme, storagev1.AddToScheme, v1alpha1.AddToScheme,
+		corev1.AddToScheme, storagev1.AddToScheme, v1alpha1.AddToScheme, v1alpha3.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)

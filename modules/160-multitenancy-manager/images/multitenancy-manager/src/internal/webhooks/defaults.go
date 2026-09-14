@@ -120,7 +120,7 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		}
 		return nil, fmt.Errorf("get namespace: %w", err)
 	}
-	grants, err := resolve.GrantsForLabels(ctx, m.cl, ns.Labels)
+	grants, err := resolve.GrantsForNamespace(ctx, m.cl, ns)
 	if err != nil {
 		return nil, fmt.Errorf("grants: %w", err)
 	}

@@ -154,6 +154,9 @@ func main() {
 	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant definition reconciler")
 	}
+	if err = (&grantcontrollers.PolicyReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up grant policy reconciler")
+	}
 	// Use the direct (uncached) API reader for the admission webhooks: a cache-backed read lazily
 	// starts an informer and blocks on its sync inside the request, which can exceed the webhook
 	// deadline and pile up into a queue lock. A direct reader keeps reads bounded.
