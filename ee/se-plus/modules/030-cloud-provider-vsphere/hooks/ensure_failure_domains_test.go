@@ -15,11 +15,11 @@ import (
 
 func TestAbsFolderPath(t *testing.T) {
 	tests := []struct {
-		name        string
-		datacenter  string
-		discovered  string
-		cfg         *string
-		want        string
+		name       string
+		datacenter string
+		discovered string
+		cfg        *string
+		want       string
 	}{
 		{"discovery only", "DC", "e2e-tests/foo", nil, "/DC/vm/e2e-tests/foo"},
 		{"cfg overrides discovery", "DC", "old", ptr.To("new/path"), "/DC/vm/new/path"},
@@ -145,7 +145,7 @@ func TestBuildFailureDomain(t *testing.T) {
 
 func TestBuildDeploymentZone(t *testing.T) {
 	dz := buildDeploymentZone("z1", "vcenter.example", "vsphere-z1",
-		"/DC/vm/folder", "/DC/host/cl/Resources/rp", dzTypeBase, "")
+		"/DC/vm/folder", "/DC/host/cl/Resources/rp", "", dzTypeBase, "")
 
 	if got := dz.GetName(); got != "z1" {
 		t.Fatalf("name = %q; want z1", got)
@@ -164,6 +164,11 @@ func TestBuildDeploymentZone(t *testing.T) {
 	if pc["resourcePool"] != "/DC/host/cl/Resources/rp" {
 		t.Fatalf("resourcePool = %v", pc["resourcePool"])
 	}
+	// Base DZ must NOT carry a datastore — that would kill the FD.topology.datastore
+	// fallback for the whole zone.
+	if _, ok := pc["datastore"]; ok {
+		t.Fatalf("base DZ must not set placementConstraint.datastore, got %v", pc["datastore"])
+	}
 	labels := dz.GetLabels()
 	if labels[dzTypeLabel] != dzTypeBase {
 		t.Fatalf("dz-type label = %q; want %q", labels[dzTypeLabel], dzTypeBase)
@@ -175,7 +180,7 @@ func TestBuildDeploymentZone(t *testing.T) {
 
 func TestBuildDeploymentZoneOverrideLabels(t *testing.T) {
 	dz := buildDeploymentZone("z1-worker-fast", "vcenter.example", "vsphere-z1",
-		"/DC/vm/folder", "/DC/host/cl/Resources/prod", dzTypeOverride, "worker-fast")
+		"/DC/vm/folder", "/DC/host/cl/Resources/prod", "/DC/datastore/nvme", dzTypeOverride, "worker-fast")
 	labels := dz.GetLabels()
 	if labels[dzTypeLabel] != dzTypeOverride {
 		t.Fatalf("dz-type label = %q; want %q", labels[dzTypeLabel], dzTypeOverride)
@@ -183,10 +188,17 @@ func TestBuildDeploymentZoneOverrideLabels(t *testing.T) {
 	if labels[dzNodeGroupLabel] != "worker-fast" {
 		t.Fatalf("node-group label = %q; want worker-fast", labels[dzNodeGroupLabel])
 	}
+	spec, _ := dz.Object["spec"].(map[string]interface{})
+	pc, _ := spec["placementConstraint"].(map[string]interface{})
+	// Override DZ MUST carry datastore when provided: CAPV's patched overrideFunc reads it
+	// from PlacementConstraint before falling back to FD.topology.datastore.
+	if pc["datastore"] != "/DC/datastore/nvme" {
+		t.Fatalf("override DZ placementConstraint.datastore = %v; want /DC/datastore/nvme", pc["datastore"])
+	}
 }
 
 func TestBuildDeploymentZoneOmitsEmptyPlacement(t *testing.T) {
-	dz := buildDeploymentZone("z1", "vcenter.example", "vsphere-z1", "", "", dzTypeBase, "")
+	dz := buildDeploymentZone("z1", "vcenter.example", "vsphere-z1", "", "", "", dzTypeBase, "")
 	spec, _ := dz.Object["spec"].(map[string]interface{})
 	pc, _ := spec["placementConstraint"].(map[string]interface{})
 	if _, ok := pc["folder"]; ok {
