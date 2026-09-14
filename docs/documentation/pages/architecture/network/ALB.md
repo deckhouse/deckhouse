@@ -31,7 +31,9 @@ The Level 2 C4 architecture of the [`alb`](/modules/alb/) module and its interac
 
 The module consists of the following components:
 
-1. **Proxy-configurator** (Deployment): The Gateway API control-plane component, built from Istio Pilot (istiod) configured to work with Gateway API only (sidecar injection and istiod's built-in Gateway API infrastructure-provisioning mechanism are disabled). Serves configuration to the Envoy proxies over the xDS protocol and issues certificates for them via a built-in CA server.
+1. **Proxy-configurator** (Deployment): The Gateway API control-plane component, built from Istio Pilot (istiod) configured to work with Gateway API only (sidecar injection and istiod's built-in Gateway API infrastructure-provisioning mechanism are disabled).
+
+   The component serves configuration to the Envoy proxies over the xDS protocol and issues certificates for them via a built-in CA server. It also validates and updates the status of Gateway, HTTPRoute, GRPCRoute, TCPRoute, UDPRoute, TLSRoute, and ListenerSet resources.
 
    It consists of a single **proxy-configurator** container.
 
@@ -39,9 +41,7 @@ The module consists of the following components:
 
    * Manages the ClusterALBInstance and ALBInstance custom resources.
    * Installs Gateway API CRDs (`*.gateway.networking.k8s.io`).
-   * Implements the Gateway API controller for the `d8-alb` GatewayClass:
-     * Creates a Gateway for every instance.
-     * Validates and updates the status of Gateway, HTTPRoute, GRPCRoute, TCPRoute, UDPRoute, TLSRoute, and ListenerSet resources.
+   * Implements the Gateway API controller for the `d8-alb` GatewayClass and creates a Gateway for every instance.
    * Serves the admission webhooks that validate them.
    * Creates temporary Ingress objects for the cert-manager HTTP-01 challenge on top of HTTPRoute when migrating from [`ingress-nginx`](/modules/ingress-nginx/).
    * Creates and removes the proxy and geoproxy components for every ClusterALBInstance/ALBInstance.
@@ -53,7 +53,7 @@ The module consists of the following components:
 
 1. **Proxy** (Deployment or DaemonSet): an Envoy data-plane instance that accepts and routes external traffic according to configuration received from proxy-configurator over the xDS protocol.
 
-   The gateway-controller creates this component dynamically (not via a Helm template) for every ClusterALBInstance/ALBInstance custom resource. The workload kind depends on the [`spec.inlet.type`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-type) parameter: `HostPort` creates a DaemonSet that accepts traffic directly on the node, any other value creates a Deployment behind a Service.
+   The gateway-controller creates this component dynamically (not via a Helm template) for every ClusterALBInstance or ALBInstance custom resource. The workload kind depends on the resource type: a ClusterALBInstance is deployed as a DaemonSet, an ALBInstance as a Deployment behind a Service.
 
    It consists of the following containers:
 
@@ -76,7 +76,7 @@ The module consists of the following components:
 
    It consists of a single **geoproxy** container.
 
-1. **Module-cleanup-waiter** (Job): a Helm pre-delete hook launched before the [`alb`](/modules/alb/) module is removed. It waits for the gateway-controller to finish cleaning up the module's resources, and only then allows the release removal to complete. It does not take part in the module's normal operation.
+1. **Module-cleanup-waiter** (Job): a Helm `pre-delete` hook of the module, launched by the Deckhouse controller before the [`alb`](/modules/alb/) module is removed. It waits for the gateway-controller to finish cleaning up the module's resources, and only then allows the release removal to complete. It does not take part in the module's normal operation.
 
 ## Module interactions
 

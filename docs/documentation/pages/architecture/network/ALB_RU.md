@@ -32,7 +32,9 @@ description: Архитектура модуля alb в Deckhouse Kubernetes Pla
 
 Модуль состоит из следующих компонентов:
 
-1. **Proxy-configurator** (Deployment) — управляющий компонент Gateway API, собранный на основе Istio Pilot (istiod) только для работы с Gateway API (инжект сайдкаров и штатный механизм создания инфраструктуры Gateway API у istiod выключены). Отдаёт конфигурацию для Envoy-прокси по протоколу xDS и выпускает для них сертификаты через встроенный CA-сервер.
+1. **Proxy-configurator** (Deployment) — управляющий компонент Gateway API, собранный на основе Istio Pilot (istiod) только для работы с Gateway API (инжект сайдкаров и штатный механизм создания инфраструктуры Gateway API у istiod выключены).
+
+   Компонент отдаёт конфигурацию для Envoy-прокси по протоколу xDS и выпускает для них сертификаты через встроенный CA-сервер. Также валидирует и обновляет статусы ресурсов Gateway, HTTPRoute, GRPCRoute, TCPRoute, UDPRoute, TLSRoute и ListenerSet.
 
    Состоит из одного контейнера **proxy-configurator**.
 
@@ -40,9 +42,7 @@ description: Архитектура модуля alb в Deckhouse Kubernetes Pla
 
    - управляет кастомными ресурсами ClusterALBInstance и ALBInstance;
    - устанавливает CRD ресурсов Gateway API `*.gateway.networking.k8s.io`;
-   - реализует контроллер Gateway API для GatewayClass `d8-alb`:
-      - создаёт Gateway для каждого инстанса;
-      - валидирует и обновляет статусы ресурсов Gateway, HTTPRoute, GRPCRoute, TCPRoute, UDPRoute, TLSRoute, ListenerSet;
+   - реализует контроллер Gateway API для GatewayClass `d8-alb` и создаёт Gateway для каждого инстанса;
    - обслуживает admission-вебхуки для их валидации;
    - создаёт временные объекты Ingress для HTTP-01 challenge cert-manager поверх HTTPRoute при миграции с [`ingress-nginx`](/modules/ingress-nginx/);
    - создаёт и удаляет компоненты proxy и geoproxy на каждый ClusterALBInstance или ALBInstance.
