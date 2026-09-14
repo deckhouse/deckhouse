@@ -158,14 +158,13 @@ shell:
 
     echo "Download fuzz corpus overlay from S3"
 
-    MC=/tmp/mc
-    curl -fsSL -o "${MC}" https://dl.min.io/client/mc/release/linux-amd64/mc
-    chmod +x "${MC}"
-
-    "${MC}" alias set fuzz-s3 \
-      "$(cat /run/secrets/FUZZ_S3_ENDPOINT)" \
-      "$(cat /run/secrets/FUZZ_S3_ACCESS_KEY)" \
-      "$(cat /run/secrets/FUZZ_S3_SECRET_KEY)"
+    fuzz_s3() {
+      AWS_CA_BUNDLE="${AWS_CA_BUNDLE:-/etc/ssl/certs/ca-certificates.crt}" \
+      AWS_ACCESS_KEY_ID="$(cat /run/secrets/FUZZ_S3_ACCESS_KEY)" \
+      AWS_SECRET_ACCESS_KEY="$(cat /run/secrets/FUZZ_S3_SECRET_KEY)" \
+      aws --endpoint-url "$(cat /run/secrets/FUZZ_S3_ENDPOINT)" \
+        --region us-east-1 "$@"
+    }
 
     FUZZ_S3_REPOSITORY="$(cat /run/secrets/FUZZ_S3_REPOSITORY)"
     FUZZ_S3_BRANCH_SLUG="$(cat /run/secrets/FUZZ_S3_BRANCH_SLUG)"
@@ -174,7 +173,7 @@ shell:
       exit 1
     fi
 
-    S3_FUZZING_PATH="fuzz-s3/anomaloys-materials/${FUZZ_S3_REPOSITORY}/${FUZZ_S3_BRANCH_SLUG}/"
+    S3_FUZZING_PATH="s3://anomaloys-materials/${FUZZ_S3_REPOSITORY}/${FUZZ_S3_BRANCH_SLUG}/"
     echo "Corpus S3 path: ${S3_FUZZING_PATH}"
     TMP_CORPUS="/tmp/fuzzing-s3"
     RESTORED_FILES="/tmp/fuzz-restored-files.txt"
@@ -183,10 +182,10 @@ shell:
     mkdir -p "${TMP_CORPUS}"
     : > "${RESTORED_FILES}"
 
-    if "${MC}" ls "${S3_FUZZING_PATH}" 2>/dev/null | grep -q .; then
+    if fuzz_s3 s3 ls "${S3_FUZZING_PATH}" 2>/dev/null | grep -q .; then
       echo "Fuzz corpus found in S3, download overlay"
 
-      if "${MC}" --quiet mirror "${S3_FUZZING_PATH}" "${TMP_CORPUS}/" >/dev/null; then
+      if fuzz_s3 s3 sync "${S3_FUZZING_PATH}" "${TMP_CORPUS}/" --only-show-errors >/dev/null; then
         MODULE_PATH="$(GOWORK=off go list -m)"
         echo "module path: ${MODULE_PATH}"
 
