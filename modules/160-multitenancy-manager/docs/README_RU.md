@@ -65,10 +65,10 @@ description: Мультитенантность и проекты в Kubernetes.
 1. Создается `Namespace` с именем, которое совпадает c именем [Project](./cr.html#project);
 1. Из шаблона создаются ресурсы проекта:
    * для современных шаблонов (`deckhouse.io/v1alpha2`) настройки описываются структурированными полями (профиль безопасности подов, сетевая изоляция, сбор логов, размещение на узлах и т. д. — [подробнее](usage.html#структурированные-шаблоны)). Контроллер сам создаёт из них нужные объекты в каждом неймспейсе проекта;
-   * для устаревших шаблонов (`deckhouse.io/v1alpha1`) выполняется рендеринг [шаблона ресурсов](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/); значения берутся из параметра [`parameters`](./cr.html#project-v1alpha3-spec-parameters) ресурса [Project](./cr.html#project);
+   * шаблон, сохранённый как `deckhouse.io/v1alpha1` с Helm-полем `resourcesTemplate`, не рендерится: его проекты переходят в состояние `Error` с условием `TemplateRequiresRewrite`, пока шаблон не переписан структурированными полями ([подробнее](usage.html#проверки-шаблонов));
 1. Стандартные поля проекта применяются независимо от шаблона: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) преобразуется в `ResourceQuota`, а [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) — в автоматически управляемый [ProjectRoleBinding](./cr.html#projectrolebinding).
 
-API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Вебхук конвертации сохраняет работоспособность старых манифестов `v1alpha1`/`v1alpha2`, перенося `parameters.administrators` и `parameters.resourceQuota` в стандартные поля. Поле `projectTemplateName` необязательно: если его не указать, используется шаблон `simple`, создающий только неймспейс проекта.
+API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Вебхук конвертации сохраняет работоспособность манифестов `v1alpha2`, перенося `parameters.administrators` и `parameters.resourceQuota` в стандартные поля; версия `v1alpha1` больше не обслуживается. Поле `projectTemplateName` необязательно: если его не указать, используется шаблон `simple`, создающий только неймспейс проекта.
 
 Имена проектов проверяются при создании: недопустимы имена длиннее 61 символа и имена с системными префиксами `d8-` и `kube-`. Кроме того, если существует проект `foo`, нельзя создать проект `foo-bar` (и наоборот): имена вида `foo-*` зарезервированы под дополнительные неймспейсы проекта `foo`.
 

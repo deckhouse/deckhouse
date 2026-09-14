@@ -64,6 +64,8 @@ spec:
                 description: |-
                   Label selector for projects to which the policy applies.
 
+                  The selector is matched against the union of the labels of the Project object and the labels of each namespace of the project; when the same key is set on both, the namespace value wins. A label on the Project selects all its namespaces; a label on one namespace selects that namespace only.
+
                   If the selector is not specified, the policy does not apply to any projects. An empty selector matches all projects.
                 properties:
                   matchExpressions:

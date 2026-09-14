@@ -66,6 +66,10 @@ spec:
 
 ## Можно ли использовать упрощённую и гранулярную ролевые модели одновременно?
 
+Да. Обе модели в итоге сводятся к стандартному механизму RBAC Kubernetes, а RBAC — разрешающая модель: права из всех источников **суммируются**. Если действие разрешено хотя бы одним источником — ClusterAuthorizationRule, AuthorizationRule, RoleBinding на роль гранулярной модели или ProjectRoleBinding, — оно будет разрешено. Ничего специально «переключать» не нужно: можно оставить существующие ClusterAuthorizationRule и постепенно добавлять привязки ролей гранулярной модели.
+
+Это верно и в режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), с одним правилом об уровнях. Ограничение неймспейсов в ClusterAuthorizationRule (`limitNamespaces` или `namespaceSelector`) ограничивает права только этого правила: в неймспейсе вне списка пользователь сохраняет то, что ему дают RoleBinding, AuthorizationRule или ProjectRoleBinding, на уровне этой привязки — `accessLevel` из ClusterAuthorizationRule туда не распространяется. Неймспейс, в котором у пользователя нет ни одного источника прав, остаётся недоступным. Полный список источников и пример — [в описании модуля](./#совместное-использование-clusterauthorizationrule-authorizationrule-и-rbac).
+
 ## Как обновление на релиз с контроллером влияет на биндинги?
 
 Ничего не создаётся заново, доступ не прерывается. Компонент `user-authz-controller` принимает под управление биндинги, которые раньше создавал Helm-чарт: те же объекты с теми же именами, к ним добавляется `ownerReference` на правило.
@@ -296,12 +300,6 @@ d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy
 d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limitNamespaces // [] | length > 0) or (.spec.namespaceSelector != null) or (.spec.allowAccessToSystemNamespaces == true)) | .metadata.name'
 ```
 
-## Как расширить роли или создать новую?
-
-Да. Обе модели в итоге сводятся к стандартному механизму RBAC Kubernetes, а RBAC — разрешающая модель: права из всех источников **суммируются**. Если действие разрешено хотя бы одним источником — ClusterAuthorizationRule, AuthorizationRule, RoleBinding на роль гранулярной модели или ProjectRoleBinding, — оно будет разрешено. Ничего специально «переключать» не нужно: можно оставить существующие ClusterAuthorizationRule и постепенно добавлять привязки ролей гранулярной модели.
-
-Единственное исключение — режим мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)). Если у пользователя есть ClusterAuthorizationRule с ограничением неймспейсов (`limitNamespaces` или `namespaceSelector`), это ограничение работает как **жёсткая граница**: запросы в неймспейсы вне списка отклоняются, даже если там у пользователя есть RoleBinding. Подробнее — [в описании модуля](./#rolebinding-car). Если пользователю нужен комбинированный доступ, используйте AuthorizationRule вместо ClusterAuthorizationRule или не задавайте ограничение пространств имён в CAR.
-
 ## Как получить аналог ролей ClusterAdmin и SuperAdmin в гранулярной модели?
 
 Роли «одной сущностью», как `ClusterAdmin` и `SuperAdmin` упрощённой модели, в гранулярной модели нет — в ней разделяется управление платформой (системные роли) и доступ к приложениям (namespace- и проектные роли). Эквивалент собирается из **двух привязок**: ClusterRoleBinding на системную роль и [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) на проектную роль (она действует во всех проектах, включая создаваемые позже).
@@ -312,9 +310,9 @@ d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limi
 |---------------------|----------------------------------------|
 | `User` | `d8:namespace:viewer` (через `RoleBinding` или `ProjectRoleBinding`). |
 | `PrivilegedUser` | `d8:namespace:user`. |
-| `Editor` | `d8:namespace:manager`. |
+| `Editor` | `d8:namespace:manager` — тот же уровень; отличается область: роль гранулярной модели выдаётся на неймспейс (RoleBinding) или на проект (ProjectRoleBinding), а не на весь кластер с фильтром по неймспейсам. |
 | `Admin` | `d8:namespace:admin`. |
-| `ClusterEditor` | `d8:system:manager` (примерно; область — платформа и системные неймспейсы). |
+| `ClusterEditor` | Прямого аналога нет. `ClusterEditor` — уровень `Editor` во всех неймспейсах, включая системные, плюс cluster-scoped-объекты. Собирается из ClusterProjectRoleBinding на `d8:project:manager` (все проекты) и системной роли для платформенной части; `d8:system:manager` сам по себе эквивалентом не является: доступа к пользовательским неймспейсам он не даёт. |
 | `ClusterAdmin` | `d8:system:manager` + `ClusterProjectRoleBinding` на `d8:project:admin`. |
 | `SuperAdmin` | `d8:system:superadmin` + `ClusterProjectRoleBinding` на `d8:project:superadmin`. |
 
