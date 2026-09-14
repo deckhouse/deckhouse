@@ -103,4 +103,4 @@ The following external components interact with the module:
 
 1. **Load balancer**: Balances HTTP/HTTPS traffic between instances of the proxy component.
 
-1. [`console`](/modules/console/): Requests the Gateway API resource relationship graph for visualization.
+1. **[Deckhouse web UI](/modules/console/)**: Requests the Gateway API resource relationship graph for visualization.

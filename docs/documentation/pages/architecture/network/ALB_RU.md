@@ -104,4 +104,4 @@ description: Архитектура модуля alb в Deckhouse Kubernetes Pla
 
 1. **Балансировщик нагрузки** — балансировка HTTP/HTTPS-трафика между экземплярами компонента proxy.
 
-1. [`console`](/modules/console/) — запрашивает граф связей ресурсов Gateway API для визуализации.
+1. **[Веб-интерфейс Deckhouse](/modules/console/)** — запрашивает граф связей ресурсов Gateway API для визуализации.
