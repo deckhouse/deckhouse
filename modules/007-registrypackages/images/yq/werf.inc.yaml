@@ -41,3 +41,4 @@ import:
 shell:
   setup:
   - chmod +x /yq /install /uninstall
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
