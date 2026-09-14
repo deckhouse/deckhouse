@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
 )
 
 // TestGeneratedListMatchesSuites is the guard against the drift that put cloud-prefix and
@@ -232,8 +233,8 @@ func TestRegistryIsFourChecksNotOne(t *testing.T) {
 // and an operator reading the output cannot tell they exist.
 func TestOnlyTheSSHConnectionStopsThePhase(t *testing.T) {
 	allowed := map[string]struct{}{
-		"static-ssh-connectivity": {},
-		"static-ssh-credential":   {},
+		"ssh-connectivity": {},
+		"ssh-credential":   {},
 	}
 
 	for _, check := range everyCheck(t) {
@@ -244,5 +245,42 @@ func TestOnlyTheSSHConnectionStopsThePhase(t *testing.T) {
 			t.Errorf("check %q ends the phase on failure; only the SSH connection is meant to, "+
 				"everything else uses DependsOn", check.Name)
 		}
+	}
+}
+
+// TestCloudMasterCredentialIsCheckedFirst is the answer to a cloud bootstrap that reported
+// "cannot open tunnel … check that sshd has AllowTcpForwarding yes" when the truth was a wrong
+// --ssh-user.
+//
+// The cloud suite had no credential check at all, so the first check to touch SSH was whichever
+// one ran first, and each reported the failure in its own terms: the cloud API check saw a
+// port-forward that would not open and blamed sshd's forwarding settings — on a machine nobody
+// had logged in to. Asking the question once, before anything tunnels, is the fix; stopping the
+// phase is what keeps the rest from repeating the guess.
+func TestCloudMasterCredentialIsCheckedFirst(t *testing.T) {
+	suite := NewPostCloudSuite(PostCloudDeps{})
+
+	var credentialAt = -1
+	var firstOverSSHAt = -1
+	for i, check := range suite.Checks() {
+		switch check.Name {
+		case checks.SSHCredentialCheckName:
+			credentialAt = i
+			if !check.StopsPhaseOnFailure {
+				t.Error("the credential check has to end the phase: everything after it is asked over that connection")
+			}
+		case checks.CloudAPICheckName, checks.RegistryFromMasterCheckName:
+			if firstOverSSHAt == -1 || i < firstOverSSHAt {
+				firstOverSSHAt = i
+			}
+		}
+	}
+
+	if credentialAt == -1 {
+		t.Fatal("the cloud suite must check that dhctl can log in to the master it just created")
+	}
+	if firstOverSSHAt != -1 && credentialAt > firstOverSSHAt {
+		t.Errorf("the credential is checked at position %d, after a check that tunnels through it at %d",
+			credentialAt, firstOverSSHAt)
 	}
 }

@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -221,8 +222,81 @@ func TestCloudAPIWhenTheMasterNeverAnswers(t *testing.T) {
 	require.Error(t, err)
 	var failure *preflight.Failure
 	require.ErrorAs(t, err, &failure)
-	assert.Contains(t, failure.Checked, "ssh to ubuntu@10.0.0.5")
+	assert.Contains(t, failure.Checked, "ssh login to ubuntu@10.0.0.5")
 	assert.Contains(t, failure.Fix, "22/TCP")
+}
+
+// exitError returns a real *exec.ExitError with the given status, which is what the clissh backend
+// hands back: it runs the ssh binary and passes on what Wait() returned.
+func exitError(t *testing.T, status int) error {
+	t.Helper()
+
+	err := exec.Command("sh", "-c", fmt.Sprintf("exit %d", status)).Run()
+	require.Error(t, err)
+	return err
+}
+
+// TestCloudAPIWithTheWrongSSHUser is the failure this check was reported for: on an OpenStack
+// cluster the master is created, the login user of the image is not the one that was passed, and
+// every message the operator got was about something else — the last of them advising them to
+// check AllowTcpForwarding on a machine they had never logged in to.
+//
+// ssh exits 255 for every reason it could not open a session, so the check cannot know it was the
+// user. What it can do is name the connection it tried — the user included — and put the
+// credential first among the causes.
+func TestCloudAPIWithTheWrongSSHUser(t *testing.T) {
+	assertPointsAtTheCredential := func(t *testing.T, err error) {
+		t.Helper()
+
+		require.Error(t, err)
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+
+		// The user that was tried. Its absence is what made this hard to see.
+		assert.Contains(t, failure.Checked, "ubuntu@10.0.0.5")
+		assert.Contains(t, failure.Fix, "--ssh-user")
+		assert.NotContains(t, failure.Fix, "AllowTcpForwarding",
+			"sshd's forwarding settings are about a session that was never opened")
+	}
+
+	t.Run("the availability probe is what fails", func(t *testing.T) {
+		_, meta := cloudAPIServer(t, func(http.ResponseWriter, *http.Request) {}, "", nil)
+
+		client := newFakeSSHClient("127.0.0.1:1")
+		client.reachErr = exitError(t, 255)
+		check := CloudAPICheck{MetaConfig: meta, SSHProviderInitializer: sourceOf(client)}
+
+		_, err := check.Run(context.Background())
+
+		assertPointsAtTheCredential(t, err)
+	})
+
+	t.Run("the tunnel is what fails", func(t *testing.T) {
+		// The reported shape: the probe passed and opening the forward is where ssh gave up.
+		_, meta := cloudAPIServer(t, func(http.ResponseWriter, *http.Request) {}, "", nil)
+
+		client := newFakeSSHClient("127.0.0.1:1")
+		client.tunnelErr = fmt.Errorf("cannot open tunnel 'L:22323:z01-api.os.linx.ru:5000': %w", exitError(t, 255))
+		check := CloudAPICheck{MetaConfig: meta, SSHProviderInitializer: sourceOf(client)}
+
+		_, err := check.Run(context.Background())
+
+		assertPointsAtTheCredential(t, err)
+	})
+
+	t.Run("an explicit authentication failure is permanent", func(t *testing.T) {
+		// The gossh backend says so in words, and then there is nothing to retry.
+		_, meta := cloudAPIServer(t, func(http.ResponseWriter, *http.Request) {}, "", nil)
+
+		client := newFakeSSHClient("127.0.0.1:1")
+		client.reachErr = errors.New("ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey]")
+		check := CloudAPICheck{MetaConfig: meta, SSHProviderInitializer: sourceOf(client)}
+
+		_, err := check.Run(context.Background())
+
+		assertPointsAtTheCredential(t, err)
+		assert.True(t, isPermanent(err), "a rejected key is not going to be accepted on a retry")
+	})
 }
 
 // TestCloudAPIWhenTheForwardIsRefused: sshd will not open the port. The advice belongs on sshd,

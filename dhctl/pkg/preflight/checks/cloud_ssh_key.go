@@ -18,9 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	"os"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
+
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -67,13 +72,13 @@ func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 	}
 
 	connCfg := c.SSHProviderInitializer.GetConfig()
-	if connCfg == nil || connCfg.Config == nil || len(connCfg.Config.PrivateKeys) == 0 {
-		// An ssh-agent may hold the matching key without dhctl ever seeing it, so the absence of
-		// a --ssh-agent-private-keys argument is not by itself a mistake.
-		return "", preflight.NotApplicable("no --ssh-agent-private-keys were given; the key may come from an ssh-agent")
+
+	var configured []sshconfig.AgentPrivateKey
+	if connCfg != nil && connCfg.Config != nil {
+		configured = connCfg.Config.PrivateKeys
 	}
 
-	signers, err := bastionSigners(connCfg.Config.PrivateKeys)
+	held, err := heldPublicKeys(configured)
 	if err != nil {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  "the private keys given with --ssh-agent-private-keys",
@@ -84,26 +89,98 @@ func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 		})
 	}
 
+	if len(held) == 0 {
+		return "", preflight.NotApplicable(
+			"dhctl was given no private key and no ssh-agent is running, so there is nothing to compare")
+	}
+
 	declaredAuthorized := ssh.MarshalAuthorizedKey(declared)
-	for _, signer := range signers {
-		if string(ssh.MarshalAuthorizedKey(signer.PublicKey())) == string(declaredAuthorized) {
-			return fmt.Sprintf("one of the %d private keys matches %s sshPublicKey (%s)",
-				len(signers), c.MetaConfig.ProviderName, ssh.FingerprintSHA256(declared)), nil
+	for _, key := range held {
+		if string(ssh.MarshalAuthorizedKey(key.publicKey)) == string(declaredAuthorized) {
+			return fmt.Sprintf("%s matches %sClusterConfiguration.sshPublicKey (%s)",
+				key.source, c.MetaConfig.ProviderName, ssh.FingerprintSHA256(declared)), nil
 		}
 	}
 
-	offered := make([]string, 0, len(signers))
-	for _, signer := range signers {
-		offered = append(offered, ssh.FingerprintSHA256(signer.PublicKey()))
+	offered := make([]string, 0, len(held))
+	for _, key := range held {
+		offered = append(offered, fmt.Sprintf("%s (%s)", ssh.FingerprintSHA256(key.publicKey), key.source))
 	}
 
 	return "", preflight.Permanent(&preflight.Failure{
-		Checked:  fmt.Sprintf("%sClusterConfiguration.sshPublicKey against --ssh-agent-private-keys", c.MetaConfig.ProviderName),
+		Checked:  fmt.Sprintf("%sClusterConfiguration.sshPublicKey against the private keys dhctl holds", c.MetaConfig.ProviderName),
 		Observed: fmt.Sprintf("the cloud will install %s; dhctl holds %s", ssh.FingerprintSHA256(declared), strings.Join(offered, ", ")),
 		Expected: "dhctl to hold the private key of the public key the cloud installs",
 		Fix: "pass the private key of sshPublicKey with --ssh-agent-private-keys, " +
 			"or set sshPublicKey in the <Provider>ClusterConfiguration to the public key of the key you are passing",
 	})
+}
+
+// heldKey is a public key dhctl can authenticate with, and where it came from — the source is what
+// makes the failure actionable, since "dhctl holds a different key" reads very differently for a
+// key the operator passed and for one their agent happens to have loaded.
+type heldKey struct {
+	publicKey ssh.PublicKey
+	source    string
+}
+
+// heldPublicKeys collects every key dhctl could offer the master: the ones given with
+// --ssh-agent-private-keys, and the ones a running ssh-agent has loaded.
+//
+// The agent half is what makes this check useful rather than usually not applicable. Passing keys
+// by path is the minority case — most operators have theirs in an agent — and the check used to
+// give up whenever no path was given, which is exactly when the mismatch goes unnoticed until the
+// infrastructure exists and the master will not accept a login.
+func heldPublicKeys(configured []sshconfig.AgentPrivateKey) ([]heldKey, error) {
+	signers, err := bastionSigners(configured)
+	if err != nil {
+		return nil, err
+	}
+
+	held := make([]heldKey, 0, len(signers))
+	for i, signer := range signers {
+		source := "the key given with --ssh-agent-private-keys"
+		if len(signers) > 1 {
+			source = fmt.Sprintf("key %d of --ssh-agent-private-keys", i+1)
+		}
+		held = append(held, heldKey{publicKey: signer.PublicKey(), source: source})
+	}
+
+	return append(held, agentPublicKeys()...), nil
+}
+
+// agentPublicKeys asks the running ssh-agent what it holds. A missing or unreachable agent is not
+// an error: it only means there is nothing to add.
+func agentPublicKeys() []heldKey {
+	socket := os.Getenv("SSH_AUTH_SOCK")
+	if socket == "" {
+		return nil
+	}
+
+	conn, err := net.Dial("unix", socket)
+	if err != nil {
+		return nil
+	}
+	defer conn.Close()
+
+	keys, err := agent.NewClient(conn).List()
+	if err != nil {
+		return nil
+	}
+
+	held := make([]heldKey, 0, len(keys))
+	for _, key := range keys {
+		publicKey, err := ssh.ParsePublicKey(key.Blob)
+		if err != nil {
+			continue
+		}
+		source := "a key in the ssh-agent"
+		if comment := strings.TrimSpace(key.Comment); comment != "" {
+			source = fmt.Sprintf("the ssh-agent key %q", comment)
+		}
+		held = append(held, heldKey{publicKey: publicKey, source: source})
+	}
+	return held
 }
 
 // declaredSSHPublicKey reads sshPublicKey out of the provider configuration. A key that does not

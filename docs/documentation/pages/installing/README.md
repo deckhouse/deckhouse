@@ -653,8 +653,8 @@ Configuration checks (the `PreInfraPreflights` phase):
 Node checks (the `PostInfraPreflights` phase):
 
 - `--preflight-skip-check=static-single-ssh-host`: Skip the check for the number of specified SSH hosts.
-- `--preflight-skip-check=static-ssh-connectivity`: Skip the check that the node answers on its SSH port.
-- `--preflight-skip-check=static-ssh-credential`: Skip the check for SSH user credentials.
+- `--preflight-skip-check=ssh-connectivity`: Skip the check that the node answers on its SSH port.
+- `--preflight-skip-check=ssh-credential`: Skip the check that the SSH user can log in to the node.
 - `--preflight-skip-check=static-ssh-tunnel`: Skip the SSH forwarding check.
 - `--preflight-skip-check=static-instances-ssh-access`: Skip the check for SSH access to StaticInstances.
 - `--preflight-skip-check=sudo-installed`: Skip the check that `sudo` is installed on the node.
@@ -692,11 +692,12 @@ do nothing.
 Skipping a check that was later split in two still skips everything it used to do: passing
 `--preflight-skip-check=registry-credentials` also skips `registry-reachable`, `dhctl-edition`
 also skips `deckhouse-image-available`, `sudo-allowed` also skips `sudo-installed`, and
-`static-ssh-credential` also skips `static-ssh-connectivity`.
+`ssh-credential` also skips `ssh-connectivity`.
 
-Checks that ask about the machine itself are named `node-*` and run on a cloud master as well as
-on a static node; the ones named `static-*` apply to a static cluster only. The previous
-`static-` spellings of the renamed checks are still accepted by `--preflight-skip-check`.
+Checks that ask about the machine itself are named `node-*`, and the ones about reaching it
+`ssh-*`; both run on a cloud master as well as on a static node. The ones named `static-*` apply
+to a static cluster only. The previous `static-` spellings of the renamed checks are still
+accepted by `--preflight-skip-check`.
 
 The node checks — `sudo-installed`, `sudo-allowed`, `python-modules`, `resolve-localhost`,
 `time-drift`, `node-hostname`, `node-disk-space`, `node-leftovers`,

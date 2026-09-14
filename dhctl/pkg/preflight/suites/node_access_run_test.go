@@ -42,5 +42,5 @@ func TestNodeAccessSuiteIsTheCriticalPathOnly(t *testing.T) {
 		names = append(names, check.Name.String())
 	}
 
-	assert.ElementsMatch(t, []string{"static-ssh-credential", "sudo-installed", "sudo-allowed"}, names)
+	assert.ElementsMatch(t, []string{"ssh-credential", "sudo-installed", "sudo-allowed"}, names)
 }

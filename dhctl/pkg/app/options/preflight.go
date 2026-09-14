@@ -36,6 +36,9 @@ var legacyPreflightSkipAliases = map[string]string{
 	"static-node-leftovers":        "node-leftovers",
 	"static-node-cri-requirements": "node-cri-requirements",
 	"static-node-internal-network": "node-internal-network",
+	// Both now run on a cloud master too, where the "static-" prefix named the wrong thing.
+	"static-ssh-credential":   "ssh-credential",
+	"static-ssh-connectivity": "ssh-connectivity",
 }
 
 // unskippablePreflightChecks are the checks --preflight-skip-check must refuse to turn off,
@@ -72,10 +75,10 @@ var retiredPreflightChecks = map[string]string{
 //
 // Each entry names the checks the original check used to perform, including itself.
 var splitPreflightChecks = map[string][]string{
-	"registry-credentials":  {"registry-reachable"},
-	"dhctl-edition":         {"deckhouse-image-available"},
-	"sudo-allowed":          {"sudo-installed"},
-	"static-ssh-credential": {"static-ssh-connectivity"},
+	"registry-credentials": {"registry-reachable"},
+	"dhctl-edition":        {"deckhouse-image-available"},
+	"sudo-allowed":         {"sudo-installed"},
+	"ssh-credential":       {"ssh-connectivity"},
 }
 
 // PreflightOptions describes which preflight checks should be skipped.

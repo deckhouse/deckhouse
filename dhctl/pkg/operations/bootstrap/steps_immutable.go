@@ -390,6 +390,9 @@ func (b *ClusterBootstrapper) disableChecksImmutableMasterCannotAnswer(runner *p
 	)
 	for _, name := range []preflight.CheckName{
 		checks.BastionAvailabilityCheckName,
+		// In the cloud suite since the credential had to be checked before anything tunnels
+		// through it — which an immutable master has no sshd to do.
+		checks.SSHCredentialCheckName,
 		checks.SudoInstalledCheckName,
 		checks.SudoAllowedCheckName,
 		checks.DeckhouseUserCheckName,

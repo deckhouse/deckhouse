@@ -247,7 +247,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
   - `dhctl-edition` — проверка соответствия редакции установщика и редакции образа Deckhouse;
   - `registry-access-through-proxy` — проверка доступа к хранилищу образов через прокси-сервер;
   - `public-domain-template` — проверка значения `publicDomainTemplate`;
-  - `static-ssh-credential` — проверка учетных данных SSH-пользователя;
+  - `ssh-credential` — проверка того, что SSH-пользователь может войти на узел;
   - `registry-credentials` — проверка учетных данных для доступа к хранилищу образов;
   - `python-modules` — проверка наличия Python;
   - `sudo-allowed` — проверка прав доступа для выполнения команды `sudo`;

@@ -58,6 +58,8 @@ type fakeSSHClient struct {
 	// reachErr, when set, is what the availability probe returns — the "master never booted"
 	// case.
 	reachErr error
+	// onAwait, when set, receives the retry parameters the check asked the probe for.
+	onAwait func(retry.Params)
 
 	mu      sync.Mutex
 	tunnels []string
@@ -90,17 +92,28 @@ func (c *fakeSSHClient) Session() *session.Session { return c.sess }
 
 // Check is the availability probe cloud-api-accessibility waits on before it opens the tunnel.
 // reachErr stands in for a master that never answers SSH.
-func (c *fakeSSHClient) Check() libcon.Check { return fakeCheck{err: c.reachErr} }
+func (c *fakeSSHClient) Check() libcon.Check {
+	return fakeCheck{err: c.reachErr, onAwait: c.onAwait}
+}
 
 type fakeCheck struct {
 	libcon.Check
 
 	err error
+	// onAwait records the retry parameters the check asked for. AwaitAvailability is the whole
+	// wait — it loops inside lib-connection and returns only the final outcome — so what a test
+	// can check here is the budget the check requested, not the succession of failures within it.
+	onAwait func(retry.Params)
 }
 
 func (c fakeCheck) WithDelaySeconds(int) libcon.Check { return c }
 
-func (c fakeCheck) AwaitAvailability(context.Context, retry.Params) error { return c.err }
+func (c fakeCheck) AwaitAvailability(_ context.Context, params retry.Params) error {
+	if c.onAwait != nil {
+		c.onAwait(params)
+	}
+	return c.err
+}
 
 func (c fakeCheck) CheckAvailability(context.Context) error { return c.err }
 

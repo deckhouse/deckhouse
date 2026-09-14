@@ -16,13 +16,17 @@ package checks
 
 import (
 	"errors"
+	"fmt"
 	"net"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -182,5 +186,113 @@ func TestSingleSSHHostRun(t *testing.T) {
 		_, err := check.Run(t.Context())
 
 		require.ErrorIs(t, err, preflight.ErrNotApplicable)
+	})
+}
+
+// shortFreshBudget keeps the boot wait to something a test can sit through. The real one matches
+// dhctl's own wait for SSH on the master, which is minutes.
+func shortFreshBudget(t *testing.T, attempts int, wait time.Duration) {
+	t.Helper()
+
+	original := freshMachineBudget
+	freshMachineBudget.attempts = attempts
+	freshMachineBudget.wait = wait
+	t.Cleanup(func() { freshMachineBudget = original })
+}
+
+// TestSSHCredentialAfterInfra is the machine the cloud created a moment ago.
+//
+// The phase this runs in sits between creating the instance and waiting for it, so the first
+// refusals are the machine booting: no route to it yet, then nothing listening on 22, then sshd up
+// but cloud-init has not created the login user. That last one is word for word what a mistyped
+// --ssh-user produces, and no single attempt tells them apart — only the wait does, which is why
+// the check has to carry one.
+func TestSSHCredentialAfterInfra(t *testing.T) {
+	authRefused := errors.New("ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey]")
+
+	t.Run("the check waits for the boot instead of answering at once", func(t *testing.T) {
+		shortFreshBudget(t, 250, time.Second)
+
+		var asked retry.Params
+		client := newFakeSSHClient("")
+		client.onAwait = func(params retry.Params) { asked = params }
+
+		check := SSHCredentialCheck{NodeInterface: nodeInterfaceOf(client), FreshlyCreated: true}
+		detail, err := check.Run(t.Context())
+
+		require.NoError(t, err)
+		assert.Contains(t, detail, "ssh login works for ubuntu@10.0.0.5")
+		// A machine that was created seconds ago needs minutes, not the handful of seconds a
+		// network retry allows — and the budget must not fall short of the wait the bootstrap
+		// does on its own straight after this phase.
+		require.NotNil(t, asked)
+		// 250 one-second attempts is what the bootstrap itself waits straight after this
+		// phase; giving the check less would make it fail on machines the bootstrap would
+		// still have waited for.
+		assert.GreaterOrEqual(t, asked.Attempts(), 250)
+	})
+
+	t.Run("the credential is still refused once the wait is over", func(t *testing.T) {
+		// cloud-init has long finished by now, so a node that answers and still refuses is
+		// refusing for good.
+		shortFreshBudget(t, 250, time.Second)
+
+		client := newFakeSSHClient("")
+		client.reachErr = authRefused
+
+		check := SSHCredentialCheck{NodeInterface: nodeInterfaceOf(client), FreshlyCreated: true}
+		_, err := check.Run(t.Context())
+
+		require.Error(t, err)
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Observed, "the node answers, and it has been refusing the credential")
+		assert.Contains(t, failure.Observed, "4m", "the wait it sat through is what makes this a verdict")
+		assert.Contains(t, failure.Fix, "--ssh-user")
+		// The other reading has to be there: the operator may have the user right and an image
+		// whose cloud-init never created it.
+		assert.Contains(t, failure.Fix, "cloud-init")
+	})
+
+	t.Run("the wait is not multiplied by the runner", func(t *testing.T) {
+		// The waiting is inside the check. A retry policy on top of it would restart a
+		// four-minute wait several times over, and a permanent marker would be a lie besides.
+		check := SSHCredentialAfterInfra(FixedNodeInterface(newFakeNode()))
+
+		assert.Equal(t, preflight.NoRetry, check.Retry)
+		assert.Equal(t, preflight.LongCheckTimeout, check.Timeout)
+	})
+
+	t.Run("the machine never answered at all", func(t *testing.T) {
+		// Never reached, so the credential was never the subject — pointing at --ssh-user here
+		// would be the same mistake in the other direction.
+		shortFreshBudget(t, 250, time.Second)
+
+		client := newFakeSSHClient("")
+		client.reachErr = fmt.Errorf("dial tcp 10.0.0.5:22: %w", syscall.ECONNREFUSED)
+
+		check := SSHCredentialCheck{NodeInterface: nodeInterfaceOf(client), FreshlyCreated: true}
+		_, err := check.Run(t.Context())
+
+		require.Error(t, err)
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Observed, "nothing is listening")
+		assert.Contains(t, failure.Fix, "security groups")
+		assert.NotContains(t, failure.Fix, "--ssh-user")
+	})
+
+	t.Run("an existing machine does not wait", func(t *testing.T) {
+		// converge, destroy and the static path reach machines that have been up for months.
+		// There is no cloud-init to wait out, and a refused credential is final.
+		client := newFakeSSHClient("")
+		client.reachErr = authRefused
+		client.onAwait = func(retry.Params) { t.Error("an existing machine must not be waited for") }
+
+		check := SSHCredentialCheck{NodeInterface: nodeInterfaceOf(client)}
+		_, err := check.Run(t.Context())
+
+		require.Error(t, err)
+		assert.True(t, isPermanent(err), "nothing is going to create the user on a machine already running")
 	})
 }

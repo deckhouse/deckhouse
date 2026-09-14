@@ -148,7 +148,10 @@ func TestSkippingASplitCheckSkipsWhatItUsedToDo(t *testing.T) {
 		{"registry-credentials", []string{"registry-credentials", "registry-reachable"}},
 		{"dhctl-edition", []string{"dhctl-edition", "deckhouse-image-available"}},
 		{"sudo-allowed", []string{"sudo-allowed", "sudo-installed"}},
-		{"static-ssh-credential", []string{"static-ssh-credential", "static-ssh-connectivity"}},
+		{"ssh-credential", []string{"ssh-credential", "ssh-connectivity"}},
+		// The legacy name still expands to both halves: a pipeline written before the rename
+		// keeps working.
+		{"static-ssh-credential", []string{"ssh-credential", "ssh-connectivity"}},
 		{"time-drift", []string{"time-drift"}},
 	}
 

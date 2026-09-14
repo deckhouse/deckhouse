@@ -40,7 +40,7 @@ func TestRunSuiteRunsUnderItsOwnTitle(t *testing.T) {
 	ctx, buf := testContext(t)
 	r := newRecorder()
 
-	err := RunSuite(ctx, NewSuite(nodePassing(r, "static-ssh-credential")), PhasePostInfra,
+	err := RunSuite(ctx, NewSuite(nodePassing(r, "ssh-credential")), PhasePostInfra,
 		"Preflight checks: converge", nil)
 	if err != nil {
 		t.Fatalf("a passing suite is not an error: %v", err)
@@ -52,7 +52,7 @@ func TestRunSuiteRunsUnderItsOwnTitle(t *testing.T) {
 	if !strings.Contains(out, "Preflight checks: converge") {
 		t.Errorf("want the given title in the report, got:\n%s", out)
 	}
-	if got := r.count("static-ssh-credential"); got != 1 {
+	if got := r.count("ssh-credential"); got != 1 {
 		t.Errorf("want the check run once, got %d", got)
 	}
 }
@@ -61,7 +61,7 @@ func TestRunSuiteReportsTheFailure(t *testing.T) {
 	ctx, _ := testContext(t)
 	cause := errors.New("ssh: unable to authenticate")
 
-	err := RunSuite(ctx, NewSuite(nodeFailing(newRecorder(), "static-ssh-credential", cause)),
+	err := RunSuite(ctx, NewSuite(nodeFailing(newRecorder(), "ssh-credential", cause)),
 		PhasePostInfra, "Preflight checks: destroy", nil)
 
 	if err == nil {
@@ -104,7 +104,7 @@ func TestRunSuiteHonoursTheSkipFlags(t *testing.T) {
 
 		opts := &options.PreflightOptions{SkipChecks: []string{"sudo-allowed"}}
 		err := RunSuite(ctx, NewSuite(
-			nodePassing(r, "static-ssh-credential"),
+			nodePassing(r, "ssh-credential"),
 			nodeFailing(r, "sudo-allowed", errors.New("sudo: a password is required")),
 		), PhasePostInfra, "Preflight checks: converge", opts)
 
@@ -124,13 +124,13 @@ func TestRunSuiteHonoursTheSkipFlags(t *testing.T) {
 		r := newRecorder()
 
 		opts := &options.PreflightOptions{SkipAll: true}
-		err := RunSuite(ctx, NewSuite(nodeFailing(r, "static-ssh-credential", errors.New("no"))),
+		err := RunSuite(ctx, NewSuite(nodeFailing(r, "ssh-credential", errors.New("no"))),
 			PhasePostInfra, "Preflight checks: converge", opts)
 
 		if err != nil {
 			t.Fatalf("every check was skipped: %v", err)
 		}
-		if got := r.count("static-ssh-credential"); got != 0 {
+		if got := r.count("ssh-credential"); got != 0 {
 			t.Errorf("skip-all must run nothing, ran %d times", got)
 		}
 		if out := buf.String(); !strings.Contains(out, "skipped") {

@@ -23,6 +23,8 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -32,6 +34,9 @@ type SSHCredentialCheck struct {
 	// NodeInterface resolves the connection at the moment the check runs, the way every other
 	// node check does — see NodeInterfaceFunc.
 	NodeInterface NodeInterfaceFunc
+	// FreshlyCreated is set when the machine was created moments ago, which changes both how long
+	// the check waits and what a rejected credential means. See SSHCredentialAfterInfra.
+	FreshlyCreated bool
 }
 
 var ErrAuthSSHFailed = fmt.Errorf("authentication failed")
@@ -40,8 +45,8 @@ const (
 	// SSHConnectivityCheckName is the half that asks whether the machine answers on the port at
 	// all. Split out because a machine that is not there and a machine that turns the key down
 	// are different problems: one is a network or an address, the other a credential.
-	SSHConnectivityCheckName preflight.CheckName = "static-ssh-connectivity"
-	SSHCredentialCheckName   preflight.CheckName = "static-ssh-credential"
+	SSHConnectivityCheckName preflight.CheckName = "ssh-connectivity"
+	SSHCredentialCheckName   preflight.CheckName = "ssh-credential"
 )
 
 // SSHConnectivityCheck dials the SSH port and goes no further.
@@ -136,10 +141,77 @@ func (c *SSHCredentialCheck) Run(ctx context.Context) (string, error) {
 	}
 
 	client := wrapper.Client()
+
+	if c.FreshlyCreated {
+		return awaitFreshMachineLogin(ctx, client)
+	}
+
 	if err := client.Check().CheckAvailability(ctx); err != nil {
 		return "", sshLoginFailure(client, err)
 	}
 	return fmt.Sprintf("ssh login works for %s", hostLabelOfClient(client)), nil
+}
+
+// freshMachineBudget is how long a machine the cloud has just created is given to accept a login.
+// It matches the wait dhctl does on its own right after this phase (steps_ssh.sshWaitAttempts), so
+// the check never gives up on a machine that the bootstrap would still have waited for.
+var freshMachineBudget = struct {
+	attempts int
+	wait     time.Duration
+}{attempts: 250, wait: 1 * time.Second}
+
+// awaitFreshMachineLogin waits out the boot of a machine that was created seconds ago, and then
+// says which of the two readings the last failure supports.
+//
+// The wait is the point. A new cloud instance refuses a login for a sequence of unrelated reasons
+// — no route to it yet, then nothing listening on 22, then sshd up but cloud-init has not created
+// the login user yet — and every one of them is temporary. The last of those is the hard part:
+// "this user does not exist" is exactly what a mistyped --ssh-user produces too, and no single
+// attempt can tell them apart.
+//
+// What separates them is time. Once the budget is spent, cloud-init has long finished, so a node
+// that answers and still refuses the credential is refusing it for good — and one that has not
+// answered at all was never a credential problem.
+func awaitFreshMachineLogin(ctx context.Context, client libcon.SSHClient) (string, error) {
+	err := client.Check().WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
+		retry.WithWait(freshMachineBudget.wait),
+		retry.WithAttempts(freshMachineBudget.attempts),
+		retry.WithLogger(dhlog.FromContext(ctx)),
+	))
+	if err == nil {
+		return fmt.Sprintf("ssh login works for %s", hostLabelOfClient(client)), nil
+	}
+
+	label := hostLabelOfClient(client)
+	if sshNeverConnected(err) {
+		return "", &preflight.Failure{
+			Checked: fmt.Sprintf("ssh login to %s", label),
+			Observed: fmt.Sprintf("the node answers, and it has been refusing the credential for %s",
+				roundedBudget(freshMachineBudget.attempts, freshMachineBudget.wait)),
+			Expected: "the login user of the node's image to accept the key",
+			// Deliberately not preflight.Permanent: the runner retrying the whole check would
+			// start the wait again, which is the one thing that must not happen here.
+			Fix: "check --ssh-user against the login user of the node's image (ubuntu, ec2-user, debian, " +
+				"altlinux, opensuse — it differs per image) and that the key it is given is the one " +
+				"<Provider>ClusterConfiguration.sshPublicKey declares; if both are right, the image's " +
+				"cloud-init did not create the user",
+			Err: err,
+		}
+	}
+
+	return "", &preflight.Failure{
+		Checked:  fmt.Sprintf("ssh to %s", label),
+		Observed: fmt.Sprintf("%s, for %s", classifyNetworkError(err), roundedBudget(freshMachineBudget.attempts, freshMachineBudget.wait)),
+		Expected: "the machine the cloud has just created to accept SSH",
+		Fix: "check in the cloud console that the instance started, and that its security groups " +
+			"allow 22/TCP from this host",
+		Err: err,
+	}
+}
+
+// roundedBudget states the wait in a unit a reader thinks in.
+func roundedBudget(attempts int, wait time.Duration) string {
+	return (time.Duration(attempts) * wait).Round(time.Minute).String()
 }
 
 // sshLoginFailure separates the two things that go wrong here, because they have nothing to do
@@ -160,27 +232,85 @@ func sshLoginFailure(client libcon.SSHClient, err error) error {
 		return preflight.Permanent(failure)
 	}
 
+	// The legacy backend only. dhctl runs the Go client by default, and that one says what went
+	// wrong — the branch above reads it. clissh shells out to the ssh binary instead, which exits
+	// 255 for everything that stopped it opening a session and puts the reason on a stderr the
+	// caller does not always keep, so here the causes can only be named together. The credential
+	// goes first: cloud images disagree about the login user (ubuntu, ec2-user, debian, altlinux,
+	// opensuse) and picking the wrong one is the common mistake.
+	if status, ok := exitStatus(err); ok && status == sshCouldNotOpenSession {
+		failure.Observed = "ssh could not open a session (exit status 255)"
+		failure.Expected = "the node to accept an SSH session"
+		failure.Fix = "check --ssh-user against the login user of the node's image " +
+			"(ubuntu, ec2-user, debian, altlinux, opensuse — it differs per image), that one of " +
+			"--ssh-agent-private-keys is authorized for that user, and that 22/TCP is open from this host"
+		return failure
+	}
+
 	failure.Observed = classifyNetworkError(err)
 	failure.Expected = "the node to accept an SSH connection"
 	failure.Fix = "check --ssh-host and --ssh-port, and that 22/TCP is open from this host to the node"
 	return failure
 }
 
-// isSSHAuthError reports whether the server answered and turned the credentials down. x/crypto
-// gives no typed error for this, so the text it produces is what there is to match on.
+// sshCouldNotOpenSession is what the ssh binary exits with when it never got as far as a session.
+// It covers authentication, the connection and the host key alike — OpenSSH does not separate
+// them by status. Only the legacy clissh backend can produce it.
+const sshCouldNotOpenSession = 255
+
+// sshNeverConnected reports whether ssh gave up before there was a session at all. Everything that
+// runs over ssh fails in its own terms when this happens — a port-forward reports a forwarding
+// problem, a command reports a command problem — and none of those are what went wrong.
+//
+// The default backend answers through isSSHAuthError; the exit status is the legacy backend's
+// only signal.
+func sshNeverConnected(err error) bool {
+	if isSSHAuthError(err) {
+		return true
+	}
+	status, ok := exitStatus(err)
+	return ok && status == sshCouldNotOpenSession
+}
+
+// isSSHAuthError reports whether the server answered and turned the credentials down.
+//
+// This is the default backend's case: gossh returns what x/crypto produced, which says in words
+// what went wrong. There is no typed error to match on, so the text is what there is.
+//
+// "handshake failed" is deliberately not one of the markers. x/crypto uses it as the prefix for
+// every handshake failure, and an agreement failure — an sshd too old to share a key exchange or
+// cipher — is not a credential problem and must not be answered with "check --ssh-user". The auth
+// case always says so itself. (Host keys cannot be the cause: the backend sets
+// InsecureIgnoreHostKey.)
 func isSSHAuthError(err error) bool {
-	text := err.Error()
+	text := strings.ToLower(err.Error())
 	for _, marker := range []string{
 		"unable to authenticate",
 		"no supported methods remain",
 		"permission denied",
-		"handshake failed",
 	} {
-		if strings.Contains(strings.ToLower(text), marker) {
+		if strings.Contains(text, marker) {
 			return true
 		}
 	}
 	return false
+}
+
+// SSHCredentialAfterInfra is the same question asked of a machine the cloud created moments ago.
+//
+// It waits instead of answering at once, and it does not call a rejected credential permanent:
+// until cloud-init has run, the login user does not exist yet, and a refusal means nothing.
+// Everything else in this phase is asked over this connection, so the wait belongs here — the
+// phase runs before dhctl's own wait for SSH on the master.
+func SSHCredentialAfterInfra(nodeInterface NodeInterfaceFunc) preflight.Check {
+	check := SSHCredentialCheck{NodeInterface: nodeInterface, FreshlyCreated: true}
+	built := SSHCredential(nodeInterface)
+	// The waiting is inside. Letting the runner retry the check on top of that would multiply a
+	// four-minute wait by the retry count.
+	built.Retry = preflight.NoRetry
+	built.Timeout = preflight.LongCheckTimeout
+	built.Run = check.Run
+	return built
 }
 
 func SSHCredential(nodeInterface NodeInterfaceFunc) preflight.Check {

@@ -667,8 +667,8 @@ dhctl bootstrap \
 Проверки узлов (фаза `PostInfraPreflights`):
 
 - `--preflight-skip-check=static-single-ssh-host` — пропуск проверки количества указанных SSH-хостов;
-- `--preflight-skip-check=static-ssh-connectivity` — пропуск проверки доступности SSH-порта узла;
-- `--preflight-skip-check=static-ssh-credential` — пропуск проверки учетных данных SSH-пользователя;
+- `--preflight-skip-check=ssh-connectivity` — пропуск проверки доступности SSH-порта узла;
+- `--preflight-skip-check=ssh-credential` — пропуск проверки того, что SSH-пользователь может войти на узел;
 - `--preflight-skip-check=static-ssh-tunnel` — пропуск проверки проброса SSH;
 - `--preflight-skip-check=static-instances-ssh-access` — пропуск проверки SSH-доступа к StaticInstances;
 - `--preflight-skip-check=sudo-installed` — пропуск проверки наличия `sudo` на узле;
@@ -705,12 +705,12 @@ bootstrap. Пропустить их флагом нельзя; имена `cidr
 Пропуск проверки, которую впоследствии разделили надвое, по-прежнему отключает всё, что она
 делала раньше: `--preflight-skip-check=registry-credentials` отключает и `registry-reachable`,
 `dhctl-edition` — и `deckhouse-image-available`, `sudo-allowed` — и `sudo-installed`, а
-`static-ssh-credential` — и `static-ssh-connectivity`.
+`ssh-credential` — и `ssh-connectivity`.
 
-Проверки, которые спрашивают о самой машине, называются `node-*` и выполняются и на облачном
-master-узле, и на статическом узле; с префиксом `static-` остались только те, что применимы
-исключительно к статическому кластеру. Прежние имена переименованных проверок по-прежнему
-принимаются флагом `--preflight-skip-check`.
+Проверки, которые спрашивают о самой машине, называются `node-*`, а те, что о доступе к ней, —
+`ssh-*`; и те, и другие выполняются и на облачном master-узле, и на статическом узле. С префиксом
+`static-` остались только проверки, применимые исключительно к статическому кластеру. Прежние
+имена переименованных проверок по-прежнему принимаются флагом `--preflight-skip-check`.
 
 Проверки узла — `sudo-installed`, `sudo-allowed`, `python-modules`, `resolve-localhost`,
 `time-drift`, `node-hostname`, `node-disk-space`, `node-leftovers`,

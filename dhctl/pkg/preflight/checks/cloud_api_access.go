@@ -171,13 +171,11 @@ func (c CloudAPICheck) masterClient(ctx context.Context) (libcon.SSHClient, erro
 		retry.WithAttempts(masterReachableBudget.attempts),
 		retry.WithLogger(dhlog.FromContext(ctx)),
 	)); err != nil {
-		return nil, &preflight.Failure{
-			Checked:  fmt.Sprintf("ssh to %s", hostLabelOfClient(sshClient)),
-			Observed: "the master node did not answer",
-			Expected: "the machine created for the master to accept SSH",
-			Fix:      "check that the machine booted and that its security groups allow 22/TCP from this host",
-			Err:      err,
-		}
+		// A machine that is still booting and a machine that turns the credentials down look
+		// alike from here — both are "ssh did not work" — and they are opposite problems. Sending
+		// an operator who mistyped --ssh-user to the security groups costs them the whole wait
+		// again.
+		return nil, sshLoginFailure(sshClient, err)
 	}
 	return sshClient, nil
 }
@@ -285,6 +283,14 @@ func (c CloudAPICheck) proxyOrNetworkFix(cloudAPIConfig *cca.CloudAPIConfig, pro
 // The advice about AllowTcpForwarding used to be attached to the local-bind branch, where it
 // could not apply: the local end is this host's, and sshd has no say in it.
 func tunnelFailure(sshClient libcon.SSHClient, target *url.URL, err error) error {
+	// The forward is opened by running ssh, so everything that stops ssh from connecting at all
+	// surfaces here as a failed forward — and used to be reported as one. A wrong --ssh-user came
+	// back as "check that sshd has AllowTcpForwarding yes", which is advice about a file on a
+	// machine the operator was never logged in to.
+	if sshNeverConnected(err) {
+		return sshLoginFailure(sshClient, err)
+	}
+
 	return &preflight.Failure{
 		Checked:  fmt.Sprintf("ssh port forward to %s through %s", target.Host, hostLabelOfClient(sshClient)),
 		Observed: err.Error(),

@@ -53,6 +53,15 @@ func NewPostCloudSuite(deps PostCloudDeps) preflight.Suite {
 	built := make([]preflight.Check, 0, 6+len(nodeChecks(nodeCheckDeps{})))
 	built = append(built,
 		checks.BastionAvailabilityAfterInfra(deps.SSHProviderInitializer),
+		// First, and it stops the phase: everything below is asked over this connection. Without
+		// it a wrong --ssh-user reached whichever check happened to run first, and each of them
+		// reported the failure as its own subject — cloud-api-accessibility blamed sshd's
+		// AllowTcpForwarding for a login that never happened. The cloud suite had no credential
+		// check at all; only the static one did.
+		//
+		// AfterInfra, not the plain one: this phase runs between creating the machine and waiting
+		// for it, so the first minutes of refusals are the machine booting, not a bad credential.
+		checks.SSHCredentialAfterInfra(nodeInterface),
 		checks.CloudAPIAccess(deps.MetaConfig, deps.SSHProviderInitializer),
 		checks.RegistryFromMaster(deps.MetaConfig, deps.SSHProviderInitializer),
 		checks.NodeSystemRequirements(nodeInterface, deps.InstallConfig),

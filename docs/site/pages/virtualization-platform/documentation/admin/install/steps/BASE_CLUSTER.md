@@ -242,7 +242,7 @@ List of checks performed by the installer before starting platform installation:
   - `dhctl-edition` — the check that the installer edition matches the Deckhouse image edition.
   - `registry-access-through-proxy` — the check for access to the registry through a proxy server.
   - `public-domain-template` — the check for the `publicDomainTemplate` value.
-  - `static-ssh-credential` — the check for SSH user credentials.
+  - `ssh-credential` — the check that the SSH user can log in to the node.
   - `registry-credentials` — the check for registry access credentials.
   - `python-modules` — the check for Python installation.
   - `sudo-allowed` — the check for `sudo` privileges.
