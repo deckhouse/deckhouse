@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -129,8 +129,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-04-13T07:42:09.552718Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56854"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-56854 (GO-2026-6303) затрагивает только пакет golang.org/x/crypto/ssh: опция source-address не применялась к результатам колбэков серверной SSH-аутентификации, кроме аутентификации по публичному ключу (ssh.NewServerConn, (*connection).serverAuthenticate). Пакет golang.org/x/crypto/ssh не собирается в kubelet: go list -deps ./cmd/kubelet (GOOS=linux, исходники Kubernetes 1.30.14, 1.31.14, 1.32.10, 1.33.6, 1.34.2 с патчами Deckhouse) не содержит golang.org/x/crypto/ssh, а таблица функций Go (.gopclntab) собранных бинарников kubelet не содержит ни одной функции и ни одного исходного файла этого пакета. Модуль golang.org/x/crypto попадает в сборку только ради других своих пакетов, уязвимого кода в kubelet нет.",
+      "timestamp": "2026-09-14T12:28:16Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-04-13T07:42:09Z"
+  "last_updated": "2026-09-14T12:28:16Z"
 }

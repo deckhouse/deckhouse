@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-ec60f422ce1257ea6f4647c3ed822de68aa2362c6b60eaa67f2bf2d7ca433ecf",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 5,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -45,8 +45,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-13T07:38:59.769056Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56854"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-56854 (GO-2026-6303) затрагивает только пакет golang.org/x/crypto/ssh: опция source-address не применялась к результатам колбэков серверной SSH-аутентификации, кроме аутентификации по публичному ключу (ssh.NewServerConn, (*connection).serverAuthenticate). Пакет golang.org/x/crypto/ssh не собирается в containerd: go list -deps -tags 'urfave_cli_no_docs osusergo netgo static_build' ./cmd/containerd (GOOS=linux, исходники containerd 1.7.30 и 2.1.6 с патчами Deckhouse) не содержит golang.org/x/crypto/ssh, а таблица функций Go (.gopclntab) собранных бинарников containerd не содержит ни одной функции и ни одного исходного файла этого пакета. Остальные бинарники образа (ctr, containerd-shim-runc-v1, containerd-shim-runc-v2, runc) модуль golang.org/x/crypto не содержат. Проверены сборки без integrity-патчей редакции CSE.",
+      "timestamp": "2026-09-14T12:45:33Z"
     }
   ],
   "timestamp": "2026-03-24T10:46:24Z",
-  "last_updated": "2026-04-13T07:38:59Z"
+  "last_updated": "2026-09-14T12:45:33Z"
 }
