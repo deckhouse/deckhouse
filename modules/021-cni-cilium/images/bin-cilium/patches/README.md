@@ -186,6 +186,38 @@ has since done itself (`bpfVisitor`). Only the metric is left.
 
 Test `~/src/kind/d8-1.20-tests/014-verifier-stat/`
 
+## 017-bpf-lb-generate-icmp-reply.patch
+
+Make a LoadBalancer service IP answer `ping`. A VIP is on no interface anywhere,
+so nothing in the stack replies to an echo request for it and monitoring reads
+the silence as the service being down.
+
+    enable-loadbalancer-icmp-reply: "true"
+
+The control plane marks each LoadBalancer frontend with a (VIP, port 0, proto
+ICMP) service entry, refcounted over the service's ports; the datapath stops
+dropping ICMP in `lb4_extract_tuple()` and, on a match, rewrites the request
+into a reply and sends it back out, rate limited per ingress interface.
+
+Smaller than on 1.17 because 1.20 grew the same refcount-per-VIP machinery
+upstream for its wildcard entries, so the entry rides the StateDB reconciler
+instead of `pkg/service`, and the restore pass is no longer needed. The ICMP
+lookup asks for an exact match (`lb4_lookup_service(&key, true)`) so it can never
+hit upstream's wildcard entry, whose meaning is "drop", and an echo we do not
+answer takes the same path an unpatched build takes.
+
+The rate limiter reuses the existing `icmpv6` member of `struct ratelimit_key`
+rather than adding one: the buckets are separated by `usage`, and a new member
+would change the generated binary `pkg/datapath/maps/mapkv.btf`, which the
+Deckhouse build cannot regenerate and which would break this patch on the next
+upstream tag.
+
+Deckhouse sets `default-lb-service-ipam: none`, which is exactly when upstream
+writes no wildcard entry for a classless LoadBalancer service -- so this patch is
+still required. Needs `kubeProxyReplacement`.
+
+Test `~/src/kind/d8-1.20-tests/017-lb-icmp-reply/`
+
 ## Dropped
 
 Patches from the 1.17 stack that are not carried on 1.20, with the evidence:
