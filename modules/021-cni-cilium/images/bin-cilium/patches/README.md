@@ -149,6 +149,28 @@ reconciles it back within about a second. Patched, the local client's outbound
 entries survive and the inbound ones go; unpatched, all of them go. A table test
 in `pkg/maps/ctmap` pins down the per-direction behaviour.
 
+## 016-add-import-export-conntrack-http-endpoints.patch
+
+`GET /conntrack/export` streams one IPv4 endpoint's conntrack entries as a binary
+stream; `POST /conntrack/import` ingests them on another node. Used to carry a
+VM's established connections across a live migration. See
+`modules/021-cni-cilium/docs/internal/DVP_INTEGRATION.md`.
+
+Each imported entry's RevNAT is translated from the source node's service id to
+the local one, resolved through the service map; a reference that cannot be
+resolved is dropped rather than written with the wrong id.
+
+The wire format is unchanged from 1.17 -- 68 bytes per entry -- so the
+`Cilium-Conntrack-Export-Version` header stays at `"1"` and existing consumers
+keep working. `daemon/cmd/status.go` and `api_handlers.go` are gone in 1.20, so
+the handlers live in `pkg/maps` and are provided by its cell. The generated API
+files come from `make generate-api`, never hand edits.
+
+Test `~/src/kind/d8-1.20-tests/016-conntrack-api/`. It installs the way the
+module does -- `bpf-lb-sock-hostns-only` -- because only then is pod traffic load
+balanced on the tc hooks, which is what produces the service conntrack entries
+the RevNAT translation needs.
+
 ## Dropped
 
 Patches from the 1.17 stack that are not carried on 1.20, with the evidence:
