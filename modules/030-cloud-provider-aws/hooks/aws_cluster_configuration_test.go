@@ -207,7 +207,9 @@ data:
 			Expect(d).To(Not(ExecuteSuccessfully()))
 
 			Expect(d.GoHookError.Error()).Should(ContainSubstring(`layout in body is required`))
-			Expect(d.GoHookError.Error()).Should(ContainSubstring(`vpcNetworkCIDR in body should match`))
+			// dhctl rewrites pattern failures into the shape the value should have: the regex
+			// itself states the rule exactly and tells the reader nothing.
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`vpcNetworkCIDR has the wrong form; it should look like`))
 			Expect(d.GoHookError.Error()).Should(ContainSubstring(`provider in body is required`))
 			Expect(d.GoHookError.Error()).Should(ContainSubstring(`masterNodeGroup in body is required`))
 			Expect(d.GoHookError.Error()).Should(ContainSubstring(`sshPublicKey in body is required`))
