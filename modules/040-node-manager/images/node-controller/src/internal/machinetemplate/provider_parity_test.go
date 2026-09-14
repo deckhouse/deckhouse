@@ -270,8 +270,10 @@ func TestProviderRenderParity(t *testing.T) {
 				Provider:      fixture.providerConfig,
 				Zone:          parityZone,
 				NodeGroupName: parityNodeGroup,
-				ClusterUUID:   parityClusterUUID,
-				PodSubnet:     parityPodSubnet,
+				Cluster: ClusterFacts{
+					UUID:      parityClusterUUID,
+					PodSubnet: parityPodSubnet,
+				},
 			})
 			require.NoError(t, err, "v2 template must render")
 
@@ -563,8 +565,10 @@ func renderV2Spec(fixture providerFixture, contract *Contract, instanceClass map
 		Provider:      fixture.providerConfig,
 		Zone:          parityZone,
 		NodeGroupName: parityNodeGroup,
-		ClusterUUID:   parityClusterUUID,
-		PodSubnet:     parityPodSubnet,
+		Cluster: ClusterFacts{
+			UUID:      parityClusterUUID,
+			PodSubnet: parityPodSubnet,
+		},
 	})
 }
 
