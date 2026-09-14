@@ -107,14 +107,26 @@ func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func handleImplementation(_ context.Context, input *go_hook.HookInput) error {
-	// Read through the module's own helper, which reports "no snapshot" as an error rather than a
-	// zero value: "never recorded a state" and "recorded one this code could not read" are the
-	// difference between admitting a cluster and refusing it.
+	// "The previous implementation never recorded a state" and "it recorded one this code cannot
+	// read" are the difference between admitting a cluster and refusing it, so the two are told
+	// apart here rather than collapsed into a zero value.
 	var legacy *legacyState
-	if state, err := helpers.SnapshotToSingle[legacyState](input, legacyStateSnapName); err == nil {
+	state, err := helpers.SnapshotToSingle[legacyState](input, legacyStateSnapName)
+	switch {
+	case err == nil:
 		legacy = &state
-	} else if !errors.Is(err, helpers.ErrNoSnapshot) {
-		// Present but unreadable: treated as a state with no mode, which `decide` refuses.
+
+	case errors.Is(err, helpers.ErrNoSnapshot):
+		// No such object. The previous implementation never took this cluster, so an upgrade can
+		// take nothing away from it — which is what `decide` reads a nil state as. Refusing here
+		// instead would block every cluster that has never used the legacy modes, since the state
+		// Secret is not rendered on those at all.
+		legacy = nil
+
+	default:
+		// A snapshot the helper could not convert, treated as a state with no mode, which `decide`
+		// refuses. A backstop rather than the usual path: `filterLegacyState` already normalises a
+		// Secret it cannot read into exactly that, and reports no error for it.
 		legacy = &legacyState{}
 	}
 
