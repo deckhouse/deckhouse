@@ -59,7 +59,7 @@ description: "Ответы на часто задаваемые вопросы �
 Актуальный перечень всех возможных для создания `ClusterIssuer` доступен в [шаблонах модуля](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
 
 Встроенные провайдеры, настраиваемые через параметры модуля: Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS и Yandex Cloud DNS.
-Для Yandex Cloud DNS см. [Заказ wildcard-сертификата с DNS в Yandex Cloud DNS](usage.html#заказ-wildcard-сертификата-с-dns-в-yandex-cloud-dns).
+Порядок настройки Yandex Cloud DNS описан в разделе [Заказ wildcard-сертификата с DNS в Yandex Cloud DNS](usage.html#заказ-wildcard-сертификата-с-dns-в-yandex-cloud-dns).
 
 Использование других сторонних DNS-провайдеров реализуется через метод `webhook`.  
 Когда `cert-manager` выполняет вызов `ACME` `DNS-01`, он отправляет запрос на вебхук-сервер, который затем выполняет нужные операции для обновления записи DNS.  

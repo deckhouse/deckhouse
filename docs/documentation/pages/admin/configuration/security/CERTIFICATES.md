@@ -71,8 +71,8 @@ the [`cert-manager`](/modules/cert-manager/) module must be able to create TXT r
 `cert-manager` includes built-in support for popular DNS providers such as AWS Route53, Google Cloud DNS, Cloudflare, and others.
 A full list is available in the [official `cert-manager` documentation](https://cert-manager.io/docs/configuration/acme/dns01/).
 
-The Deckhouse `cert-manager` module can automatically create ClusterIssuers for Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS, and Yandex Cloud DNS when the corresponding module settings are filled in.
-For Yandex Cloud DNS, see [Issuing a DNS wildcard certificate using Yandex Cloud DNS](/modules/cert-manager/usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns).
+The `cert-manager` module in Deckhouse Kubernetes Platform can automatically create ClusterIssuers for Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS, and Yandex Cloud DNS when the corresponding module settings are filled in.
+For Yandex Cloud DNS, follow the steps in [Issuing a DNS wildcard certificate using Yandex Cloud DNS](/modules/cert-manager/usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns).
 
 If your provider is not directly supported, you can configure a webhook
 and deploy a custom ACME handler in the cluster that performs the necessary DNS record updates, then create a `ClusterIssuer` with `dns01.webhook` solver settings according to the webhook documentation.
