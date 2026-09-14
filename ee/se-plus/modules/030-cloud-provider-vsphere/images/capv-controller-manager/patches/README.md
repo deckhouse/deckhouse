@@ -55,4 +55,22 @@ with a `CacheSyncTimeout` because the CRD is not optional in this flavor.
 
 ## 003-datastore-on-deployment-zone.patch
 
-Later
+Adds `Datastore` to `VSphereDeploymentZone.spec.placementConstraint` and makes
+`overrideWithFailureDomainFunc` in `pkg/services/vimmachine.go` prefer it over
+`VSphereFailureDomain.spec.topology.datastore`. Upstream CAPV keeps datastore
+only on FailureDomain, which is one per zone (`spec.zone.name` = tagCategory)
+and whose spec is immutable via the FD validating webhook — so two NodeGroups
+in the same zone can only differ on placement fields that live on
+DeploymentZone (`resourcePool`, `folder`).
+
+Deckhouse's `ensure_failure_domains.go` hook creates an extra
+`VSphereDeploymentZone` per (zone × NodeGroup) whenever the NodeGroup's
+`VsphereInstanceClass` carries `spec.datastore` or `spec.resourcePool`. The
+extra DZ shares the FD with the zone-baseline DZ but writes the InstanceClass
+override into `placementConstraint`. Without this patch the CRD schema would
+reject the new field and CAPV would ignore it anyway.
+
+The change is additive: an empty `placementConstraint.datastore` preserves
+upstream behavior (fallback to `FD.topology.datastore`). Follow-up is to file
+this upstream (sig-cluster-api-vsphere); once merged there the patch can be
+dropped.
