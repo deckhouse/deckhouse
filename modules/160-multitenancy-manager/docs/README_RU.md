@@ -206,7 +206,7 @@ flowchart LR
 
 При обнаружении таких объектов срабатывает [алерт `ClusterResourceGrantPolicyViolation`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation). Информацию о нарушениях можно просмотреть на дашборде Grafana в разделе «Security» → «Cluster Resource Grant Violations».
 
-Для мониторинга используется метрика `d8_cluster_objects_grant_violated`.
+Для мониторинга используется метрика `d8_cluster_objects_grant_violated`. Её отдаёт контроллер модуля: он пересчитывает нарушения при каждой обработке неймспейса проекта и не реже чем раз в две минуты по тем же правилам доступности, что и admission webhook.
 
 ### Ресурсы, регистрируемые DKP
 

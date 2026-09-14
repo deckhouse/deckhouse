@@ -52,7 +52,7 @@ The alert indicates that one or more existing objects in a project use a cluster
 
 Such objects continue to operate. To resolve the discrepancy, grant the project access to the cluster-wide resource in use or modify the object to use an available resource.
 
-Detailed information about violations is available on the Grafana dashboard under "Security" → "Cluster Resource Grant Violations". The `d8_cluster_objects_grant_violated` metric is used for monitoring.
+Detailed information about violations is available on the Grafana dashboard under "Security" → "Cluster Resource Grant Violations". The `d8_cluster_objects_grant_violated` metric is used for monitoring; the module controller exports it, applying the same availability rules as the admission webhook.
 
 ### How can I allow all StorageClasses except specific ones?
 

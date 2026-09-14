@@ -141,6 +141,10 @@ func main() {
 	if err = (&grantcontrollers.ProjectReconciler{
 		Client: runtimeManager.GetClient(),
 		Mapper: runtimeManager.GetRESTMapper(),
+		// Usage objects are of whatever kinds the references name; the uncached reader keeps the
+		// two-minute recount from starting an informer per kind.
+		Usage:   runtimeManager.GetAPIReader(),
+		Factory: jsonpathFactory,
 	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant project reconciler")
 	}
@@ -218,8 +222,10 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
 		HealthProbeBindAddress:        ":9090",
 		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		// The grant-violation series (d8_cluster_objects_grant_violated) is served from here; the
+		// PodMonitor of the module scrapes this port.
 		Metrics: metrics.Options{
-			BindAddress: "0",
+			BindAddress: ":9091",
 		},
 	}
 
