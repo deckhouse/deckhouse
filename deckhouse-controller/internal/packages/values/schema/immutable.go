@@ -34,14 +34,15 @@ func CheckImmutable(s *spec.Schema, oldValues, newValues map[string]any) []error
 	}
 
 	var errs []error
-	walkImmutable(s, s, oldValues, newValues, nil, &errs)
+	walkImmutable(s, s, oldValues, newValues, nil, nil, &errs)
 
 	return errs
 }
 
 // walkImmutable descends the schema and both value trees in lockstep. root is the schema
-// the walk started from, the only place a $ref can be looked up.
-func walkImmutable(root, s *spec.Schema, oldValue, newValue any, path []string, errs *[]error) {
+// the walk started from, the only place a $ref can be looked up. seen holds the $refs
+// already resolved on the way here without a value having been consumed in between.
+func walkImmutable(root, s *spec.Schema, oldValue, newValue any, path []string, seen map[string]bool, errs *[]error) {
 	// Two absent values cannot differ anywhere below. This is also what ends the descent
 	// when a recursive $ref keeps handing back the same schema.
 	if oldValue == nil && newValue == nil {
@@ -51,11 +52,27 @@ func walkImmutable(root, s *spec.Schema, oldValue, newValue any, path []string, 
 	// Loaders expand $ref in place, but a recursive definition is deliberately left
 	// unexpanded: resolve it here or everything below it goes unchecked. Resolution is a
 	// JSON pointer lookup inside root, so it never fetches a remote document.
-	if s.Ref.String() != "" {
+	if ref := s.Ref.String(); ref != "" {
+		// allOf and its neighbours re-enter with the same value at the same path, so a
+		// $ref cycle through one of them never reaches the guard above and recurses
+		// until the stack overflows, which recover cannot catch. Meeting the same $ref
+		// again with no value consumed in between can only be that cycle.
+		if seen[ref] {
+			return
+		}
+
 		resolved, err := spec.ResolveRef(root, &s.Ref)
 		if err != nil || resolved == nil {
 			return
 		}
+
+		if seen == nil {
+			seen = make(map[string]bool, 1)
+		}
+
+		// Scoped to this chain: a sibling branch resolving the same $ref is not a cycle.
+		seen[ref] = true
+		defer delete(seen, ref)
 
 		s = resolved
 	}
@@ -68,7 +85,7 @@ func walkImmutable(root, s *spec.Schema, oldValue, newValue any, path []string, 
 		return
 	}
 
-	walkSubschemas(root, s, oldValue, newValue, path, errs)
+	walkSubschemas(root, s, oldValue, newValue, path, seen, errs)
 
 	oldMap, oldIsMap := oldValue.(map[string]any)
 	newMap, newIsMap := newValue.(map[string]any)
@@ -76,8 +93,9 @@ func walkImmutable(root, s *spec.Schema, oldValue, newValue any, path []string, 
 		for name := range s.Properties {
 			prop := s.Properties[name]
 			// Indexing a nil map is fine: a key missing on one side yields nil there,
-			// which is exactly what compareImmutable needs to see.
-			walkImmutable(root, &prop, oldMap[name], newMap[name], childPath(path, name), errs)
+			// which is exactly what compareImmutable needs to see. Descending into a
+			// value drops seen: the same $ref one level down is nesting, not a cycle.
+			walkImmutable(root, &prop, oldMap[name], newMap[name], childPath(path, name), nil, errs)
 		}
 
 		// Keys the schema does not name are governed by patternProperties, or by
@@ -88,7 +106,7 @@ func walkImmutable(root, s *spec.Schema, oldValue, newValue any, path []string, 
 			}
 
 			if sub := unnamedSchema(s, key); sub != nil {
-				walkImmutable(root, sub, oldMap[key], newMap[key], childPath(path, key), errs)
+				walkImmutable(root, sub, oldMap[key], newMap[key], childPath(path, key), nil, errs)
 			}
 		}
 	}
@@ -100,7 +118,7 @@ func walkImmutable(root, s *spec.Schema, oldValue, newValue any, path []string, 
 		// truncated list compares its dropped tail instead of leaving it unchecked.
 		for i := 0; i < max(len(oldList), len(newList)); i++ {
 			if sub := itemSchema(s, i); sub != nil {
-				walkImmutable(root, sub, itemValue(oldList, i), itemValue(newList, i), childPath(path, fmt.Sprintf("[%d]", i)), errs)
+				walkImmutable(root, sub, itemValue(oldList, i), itemValue(newList, i), childPath(path, fmt.Sprintf("[%d]", i)), nil, errs)
 			}
 		}
 	}
@@ -108,20 +126,20 @@ func walkImmutable(root, s *spec.Schema, oldValue, newValue any, path []string, 
 
 // walkSubschemas descends the keywords that constrain the same value at the same path, so
 // they add no path segment: a mark inside one of them applies to the field it wraps.
-func walkSubschemas(root, s *spec.Schema, oldValue, newValue any, path []string, errs *[]error) {
+func walkSubschemas(root, s *spec.Schema, oldValue, newValue any, path []string, seen map[string]bool, errs *[]error) {
 	for _, branches := range [][]spec.Schema{s.AllOf, s.AnyOf, s.OneOf} {
 		for i := range branches {
-			walkImmutable(root, &branches[i], oldValue, newValue, path, errs)
+			walkImmutable(root, &branches[i], oldValue, newValue, path, seen, errs)
 		}
 	}
 
 	if s.Not != nil {
-		walkImmutable(root, s.Not, oldValue, newValue, path, errs)
+		walkImmutable(root, s.Not, oldValue, newValue, path, seen, errs)
 	}
 
 	for name := range s.Dependencies {
 		if dep := s.Dependencies[name].Schema; dep != nil {
-			walkImmutable(root, dep, oldValue, newValue, path, errs)
+			walkImmutable(root, dep, oldValue, newValue, path, seen, errs)
 		}
 	}
 }

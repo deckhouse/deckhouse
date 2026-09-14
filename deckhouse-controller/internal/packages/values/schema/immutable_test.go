@@ -199,6 +199,30 @@ not:
       x-deckhouse-immutable: true
 `
 
+	// cyclic closes a $ref loop through dependencies, which hands the same value back to
+	// the same schema. ExpandSchema leaves such a loop unexpanded, so it reaches the walk
+	// intact. The mark sits beside the loop rather than inside it: a keyword that keeps
+	// the value walks its own subtree more than once, and counting those repeats would
+	// pin the shape of dependencies instead of the walk coming back at all.
+	const cyclic = `
+type: object
+definitions:
+  node:
+    type: object
+    dependencies:
+      trigger:
+        $ref: '#/definitions/node'
+properties:
+  root:
+    type: object
+    properties:
+      cycle:
+        $ref: '#/definitions/node'
+      storageClass:
+        type: string
+        x-deckhouse-immutable: true
+`
+
 	tests := []struct {
 		name       string
 		schema     string
@@ -401,6 +425,22 @@ not:
 			oldValues: map[string]any{"storageClass": "fast"},
 			newValues: map[string]any{"storageClass": "slow"},
 			wantPaths: []string{"storageClass"},
+		},
+		{
+			// cycle carries an empty map because the loop is only entered once a value
+			// reaches it. Reporting the sibling pins both halves: the walk comes back,
+			// and cutting the cycle did not cut the checking around it.
+			name:   "marked field beside a cyclic $ref changed",
+			schema: cyclic,
+			oldValues: map[string]any{"root": map[string]any{
+				"cycle":        map[string]any{},
+				"storageClass": "fast",
+			}},
+			newValues: map[string]any{"root": map[string]any{
+				"cycle":        map[string]any{},
+				"storageClass": "slow",
+			}},
+			wantPaths: []string{"root.storageClass"},
 		},
 	}
 
