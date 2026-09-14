@@ -62,7 +62,7 @@ An example of using AWS Route53 is available in the section [How to protect `cer
 The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
 
 Built-in providers configured via module settings: Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS, and Yandex Cloud DNS.
-For Yandex Cloud DNS, see [Issuing a DNS wildcard certificate using Yandex Cloud DNS](usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns).
+For Yandex Cloud DNS, follow the steps in [Issuing a DNS wildcard certificate using Yandex Cloud DNS](usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns).
 
 Using other third-party DNS providers is implemented via the `webhook` method.
 

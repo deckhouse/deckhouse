@@ -201,15 +201,18 @@ spec:
 
 ## Заказ wildcard-сертификата с DNS в Yandex Cloud DNS
 
+Чтобы выпустить wildcard-сертификат с проверкой DNS-01 в Yandex Cloud DNS,
+задайте параметры модуля и создайте Certificate со ссылкой на ClusterIssuer `yandex`.
+
 1. Создайте [сервисный аккаунт](https://yandex.cloud/ru/docs/iam/operations/sa/create) в Yandex Cloud и назначьте ему роль `dns.editor` (или эквивалентную) на каталог, в котором находится публичная DNS-зона.
 
-2. Создайте [авторизованный ключ](https://yandex.cloud/ru/docs/iam/operations/authorized-key/create) для сервисного аккаунта и закодируйте полученный JSON-файл в **base64**:
+1. Создайте [авторизованный ключ](https://yandex.cloud/ru/docs/iam/operations/authorized-key/create) для сервисного аккаунта и закодируйте полученный JSON-файл в **Base64**:
 
    ```shell
    base64 authorized_key.json
    ```
 
-3. Укажите параметры модуля:
+1. Укажите параметры модуля:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -220,13 +223,19 @@ spec:
      version: 1
      enabled: true
      settings:
-       yandexFolderID: <ID каталога с DNS-зоной>
-       yandexServiceAccountJSON: <authorized_key.json в base64>
+       yandexFolderID: <FOLDER_ID>
+       yandexServiceAccountJSON: <AUTHORIZED_KEY_JSON_BASE64>
    ```
 
-   После этого Deckhouse автоматически развернёт ACME webhook для Yandex Cloud DNS и создаст ClusterIssuer и Secret для Yandex в namespace `d8-cert-manager`.
+   После этого Deckhouse Kubernetes Platform автоматически развернёт ACME-вебхук для Yandex Cloud DNS
+   и создаст ClusterIssuer и Secret для Yandex в неймспейсе `d8-cert-manager`.
 
-4. Создайте Certificate с валидацией через Yandex Cloud DNS:
+   Где:
+
+   - `<FOLDER_ID>` — идентификатор каталога Yandex Cloud с публичной DNS-зоной;
+   - `<AUTHORIZED_KEY_JSON_BASE64>` — содержимое файла `authorized_key.json`, закодированное в Base64.
+
+1. Создайте Certificate с валидацией через Yandex Cloud DNS:
 
    ```yaml
    apiVersion: cert-manager.io/v1
