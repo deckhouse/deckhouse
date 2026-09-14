@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.33.14",
+  "version": "v0.33.17",
   "aliases": null,
   "flags": {
     "help": {
@@ -25257,6 +25257,549 @@
           "subcommands": null
         },
         {
+          "name": "plugins",
+          "description": "Manage Deckhouse CLI plugins",
+          "longDescription": "Manage Deckhouse CLI plugins.\n\nPlugins are pulled from the in-cluster registry-packages-proxy, authenticated by the\ncurrent kubeconfig identity.\n\nInstalling a plugin that is already present updates it: 'd8 dist plugins install \u003cname\u003e',\nor 'd8 dist plugins install --all' for every installed plugin at once.\n\nEnvironment variables:\n  D8_PLUGINS_SKIP_CLUSTER_CHECKS=1  skip cluster-side plugin requirement checks\n  DECKHOUSE_CLI_PATH                plugins directory (same as --plugins-dir)\n  D8_RPP_ENDPOINT                   registry-packages-proxy base URL\n  D8_RPP_CA_FILE                    PEM CA bundle for proxy TLS verification\n  KUBECONFIG                        path to the kubeconfig file",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure": {
+              "description": "Interact with the source registry over HTTP.",
+              "shorthand": "",
+              "global": false
+            },
+            "insecure-skip-tls-verify": {
+              "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+              "shorthand": "k",
+              "global": true
+            },
+            "license": {
+              "description": "Deckhouse license key. Shortcut for --source-login=license-token --source-password=\u003ckey\u003e. Defaults to $D8_MIRROR_LICENSE_TOKEN.",
+              "shorthand": "",
+              "global": false
+            },
+            "plugins-dir": {
+              "description": "Path to the d8 plugins directory. Defaults to $DECKHOUSE_CLI_PATH.",
+              "shorthand": "",
+              "global": false
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "skip-cluster-checks": {
+              "description": "Skip enforcement of cluster-side plugin requirements (Kubernetes/Deckhouse/module versions) when the cluster is unreachable. Defaults to $D8_PLUGINS_SKIP_CLUSTER_CHECKS.",
+              "shorthand": "",
+              "global": false
+            },
+            "source": {
+              "description": "Pull plugins directly from this registry repo instead of the registry-packages-proxy (bypasses the cluster).",
+              "shorthand": "",
+              "global": false
+            },
+            "source-login": {
+              "description": "Source registry login. Defaults to $D8_MIRROR_SOURCE_LOGIN.",
+              "shorthand": "",
+              "global": false
+            },
+            "source-password": {
+              "description": "Source registry password. Defaults to $D8_MIRROR_SOURCE_PASSWORD.",
+              "shorthand": "",
+              "global": false
+            },
+            "tls-skip-verify": {
+              "description": "Disable TLS certificate validation for the source registry.",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": [
+            {
+              "name": "contract \u003cplugin-name\u003e",
+              "description": "Show a plugin's contract",
+              "longDescription": "Show the latest published contract of a plugin: version, description and requirements.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Interact with the source registry over HTTP.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure-skip-tls-verify": {
+                  "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "license": {
+                  "description": "Deckhouse license key. Shortcut for --source-login=license-token --source-password=\u003ckey\u003e. Defaults to $D8_MIRROR_LICENSE_TOKEN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "plugins-dir": {
+                  "description": "Path to the d8 plugins directory. Defaults to $DECKHOUSE_CLI_PATH.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-ca-file": {
+                  "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-endpoint": {
+                  "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "skip-cluster-checks": {
+                  "description": "Skip enforcement of cluster-side plugin requirements (Kubernetes/Deckhouse/module versions) when the cluster is unreachable. Defaults to $D8_PLUGINS_SKIP_CLUSTER_CHECKS.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source": {
+                  "description": "Pull plugins directly from this registry repo instead of the registry-packages-proxy (bypasses the cluster).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-login": {
+                  "description": "Source registry login. Defaults to $D8_MIRROR_SOURCE_LOGIN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-password": {
+                  "description": "Source registry password. Defaults to $D8_MIRROR_SOURCE_PASSWORD.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "tls-skip-verify": {
+                  "description": "Disable TLS certificate validation for the source registry.",
+                  "shorthand": "",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "install \u003cplugin-name\u003e | --all",
+              "description": "Install or update Deckhouse CLI plugins",
+              "longDescription": "Install a plugin: the newest version compatible with this cluster by default,\nan exact one with --version.\n\nInstalling a plugin that is already present updates it, so this is also how a\nplugin is brought up to date; --all does that for every installed plugin at once,\neach within its own current major.\n\nPlugins this one depends on are installed/upgraded automatically. With --use-major\ndependencies may also cross their own major to satisfy a constraint.\n\nA version already on disk is activated by repointing the 'current' symlink -\nno download. Plugin requirements are always checked before the switch.",
+              "aliases": null,
+              "flags": {
+                "all": {
+                  "description": "Update every installed plugin instead of naming one, each within its own current major.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "context": {
+                  "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "force": {
+                  "description": "Reinstall even if the selected version is already installed (re-pull + re-verify).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "insecure": {
+                  "description": "Interact with the source registry over HTTP.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure-skip-tls-verify": {
+                  "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "license": {
+                  "description": "Deckhouse license key. Shortcut for --source-login=license-token --source-password=\u003ckey\u003e. Defaults to $D8_MIRROR_LICENSE_TOKEN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "plugins-dir": {
+                  "description": "Path to the d8 plugins directory. Defaults to $DECKHOUSE_CLI_PATH.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-ca-file": {
+                  "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-endpoint": {
+                  "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "skip-cluster-checks": {
+                  "description": "Skip enforcement of cluster-side plugin requirements (Kubernetes/Deckhouse/module versions) when the cluster is unreachable. Defaults to $D8_PLUGINS_SKIP_CLUSTER_CHECKS.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source": {
+                  "description": "Pull plugins directly from this registry repo instead of the registry-packages-proxy (bypasses the cluster).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-login": {
+                  "description": "Source registry login. Defaults to $D8_MIRROR_SOURCE_LOGIN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-password": {
+                  "description": "Source registry password. Defaults to $D8_MIRROR_SOURCE_PASSWORD.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "tls-skip-verify": {
+                  "description": "Disable TLS certificate validation for the source registry.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "use-major": {
+                  "description": "Pin to a specific major version. By default an install stays within the installed plugin's major; pass this to cross majors (dependencies may cross theirs too).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "version": {
+                  "description": "Exact version to install. Skips compatibility selection and may install a pre-release.",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "list",
+              "description": "List Deckhouse CLI plugins",
+              "longDescription": "Show the plugins installed locally and, when the transport can enumerate\nthem, the plugins published in the registry and ready to install.\n\nThe published set is read from the tags of the plugins repository, where each\nplugin has an image tagged with its name. Only direct registry access (--source)\nreaches that repository: the registry-packages-proxy addresses plugins by exact\nname and does not serve the plugins path, so over the proxy this half is\nreported as unsupported rather than attempted.\n\nWhatever cannot be resolved is reported in place rather than dropped: a plugin\nwhose versions cannot be read is still listed by name, and an unreachable\nregistry leaves the installed list intact.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Interact with the source registry over HTTP.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure-skip-tls-verify": {
+                  "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "license": {
+                  "description": "Deckhouse license key. Shortcut for --source-login=license-token --source-password=\u003ckey\u003e. Defaults to $D8_MIRROR_LICENSE_TOKEN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "plugins-dir": {
+                  "description": "Path to the d8 plugins directory. Defaults to $DECKHOUSE_CLI_PATH.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-ca-file": {
+                  "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-endpoint": {
+                  "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "skip-cluster-checks": {
+                  "description": "Skip enforcement of cluster-side plugin requirements (Kubernetes/Deckhouse/module versions) when the cluster is unreachable. Defaults to $D8_PLUGINS_SKIP_CLUSTER_CHECKS.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source": {
+                  "description": "Pull plugins directly from this registry repo instead of the registry-packages-proxy (bypasses the cluster).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-login": {
+                  "description": "Source registry login. Defaults to $D8_MIRROR_SOURCE_LOGIN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-password": {
+                  "description": "Source registry password. Defaults to $D8_MIRROR_SOURCE_PASSWORD.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "tls-skip-verify": {
+                  "description": "Disable TLS certificate validation for the source registry.",
+                  "shorthand": "",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "remove \u003cplugin-name\u003e",
+              "description": "Remove an installed plugin",
+              "longDescription": "Remove an installed plugin from disk.",
+              "aliases": [
+                "uninstall",
+                "delete"
+              ],
+              "flags": {
+                "context": {
+                  "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Interact with the source registry over HTTP.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure-skip-tls-verify": {
+                  "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "license": {
+                  "description": "Deckhouse license key. Shortcut for --source-login=license-token --source-password=\u003ckey\u003e. Defaults to $D8_MIRROR_LICENSE_TOKEN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "plugins-dir": {
+                  "description": "Path to the d8 plugins directory. Defaults to $DECKHOUSE_CLI_PATH.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-ca-file": {
+                  "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-endpoint": {
+                  "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "skip-cluster-checks": {
+                  "description": "Skip enforcement of cluster-side plugin requirements (Kubernetes/Deckhouse/module versions) when the cluster is unreachable. Defaults to $D8_PLUGINS_SKIP_CLUSTER_CHECKS.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source": {
+                  "description": "Pull plugins directly from this registry repo instead of the registry-packages-proxy (bypasses the cluster).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-login": {
+                  "description": "Source registry login. Defaults to $D8_MIRROR_SOURCE_LOGIN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-password": {
+                  "description": "Source registry password. Defaults to $D8_MIRROR_SOURCE_PASSWORD.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "tls-skip-verify": {
+                  "description": "Disable TLS certificate validation for the source registry.",
+                  "shorthand": "",
+                  "global": true
+                }
+              },
+              "subcommands": [
+                {
+                  "name": "all",
+                  "description": "Remove all installed plugins",
+                  "longDescription": "Remove all plugins from the Deckhouse CLI at once",
+                  "aliases": null,
+                  "flags": {
+                    "context": {
+                      "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "insecure": {
+                      "description": "Interact with the source registry over HTTP.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "insecure-skip-tls-verify": {
+                      "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kubeconfig": {
+                      "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+                      "shorthand": "k",
+                      "global": true
+                    },
+                    "license": {
+                      "description": "Deckhouse license key. Shortcut for --source-login=license-token --source-password=\u003ckey\u003e. Defaults to $D8_MIRROR_LICENSE_TOKEN.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "plugins-dir": {
+                      "description": "Path to the d8 plugins directory. Defaults to $DECKHOUSE_CLI_PATH.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "rpp-ca-file": {
+                      "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "rpp-endpoint": {
+                      "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "skip-cluster-checks": {
+                      "description": "Skip enforcement of cluster-side plugin requirements (Kubernetes/Deckhouse/module versions) when the cluster is unreachable. Defaults to $D8_PLUGINS_SKIP_CLUSTER_CHECKS.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "source": {
+                      "description": "Pull plugins directly from this registry repo instead of the registry-packages-proxy (bypasses the cluster).",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "source-login": {
+                      "description": "Source registry login. Defaults to $D8_MIRROR_SOURCE_LOGIN.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "source-password": {
+                      "description": "Source registry password. Defaults to $D8_MIRROR_SOURCE_PASSWORD.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "tls-skip-verify": {
+                      "description": "Disable TLS certificate validation for the source registry.",
+                      "shorthand": "",
+                      "global": true
+                    }
+                  },
+                  "subcommands": null
+                }
+              ]
+            },
+            {
+              "name": "versions \u003cplugin-name\u003e",
+              "description": "List all versions of a plugin",
+              "longDescription": "List all published versions of a plugin, newest first. The installed version is\nmarked, versions newer than it are highlighted.\n\nA plugin is published one image per platform, so a release reaches the registry as\nseveral tags. They are collapsed into one line per version, listing the platforms\nthat version was built for.\n\nVersions are fetched by the plugin's name through the registry-packages-proxy, so no\ncatalog access is needed. Install a specific version with\n'd8 dist plugins install \u003cname\u003e --version X' - a version already on disk is switched to\ninstantly, without a download.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Interact with the source registry over HTTP.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure-skip-tls-verify": {
+                  "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "license": {
+                  "description": "Deckhouse license key. Shortcut for --source-login=license-token --source-password=\u003ckey\u003e. Defaults to $D8_MIRROR_LICENSE_TOKEN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "plugins-dir": {
+                  "description": "Path to the d8 plugins directory. Defaults to $DECKHOUSE_CLI_PATH.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-ca-file": {
+                  "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "rpp-endpoint": {
+                  "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "skip-cluster-checks": {
+                  "description": "Skip enforcement of cluster-side plugin requirements (Kubernetes/Deckhouse/module versions) when the cluster is unreachable. Defaults to $D8_PLUGINS_SKIP_CLUSTER_CHECKS.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source": {
+                  "description": "Pull plugins directly from this registry repo instead of the registry-packages-proxy (bypasses the cluster).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-login": {
+                  "description": "Source registry login. Defaults to $D8_MIRROR_SOURCE_LOGIN.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "source-password": {
+                  "description": "Source registry password. Defaults to $D8_MIRROR_SOURCE_PASSWORD.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "tls-skip-verify": {
+                  "description": "Disable TLS certificate validation for the source registry.",
+                  "shorthand": "",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
           "name": "status",
           "description": "Show the distribution status: the d8 version, plugins, what is outdated",
           "longDescription": "Show the state of the d8 distribution: the running deckhouse-cli version and the\ninstalled plugins, with update status from the registry-packages-proxy.\n\nWhen the cluster is unreachable, prints the local data and a warning instead of failing.",
@@ -47121,7 +47664,7 @@
         {
           "name": "build --version \u003cversion\u003e [--repository \u003crepository\u003e] [--force]",
           "description": "Build and push a package to a container registry",
-          "longDescription": "Build a package using Werf and push it to a container registry.\n\nThis command:\n  • Validates the package structure (package.yaml)\n  • Builds container images using Werf in a Docker container\n  • Pushes the built images to the specified registry\n  • Tags images with semantic version\n\nEnvironment Variables:\n  PACKAGE_BUILD_REPOSITORY                Registry URL for build command\n  PACKAGE_BUILD_REPOSITORY_USER           Registry username for authentication\n  PACKAGE_BUILD_REPOSITORY_TOKEN          Registry token for authentication\n  PACKAGE_BUILD_FINAL_REPOSITORY          Final registry URL for the published artifact\n  PACKAGE_BUILD_FINAL_REPOSITORY_USER     Final registry username for authentication\n  PACKAGE_BUILD_FINAL_REPOSITORY_TOKEN    Final registry token for authentication\n",
+          "longDescription": "Build a package using Werf and push it to a container registry.\n\nThis command:\n  • Validates the package structure (package.yaml)\n  • Builds container images using Werf in a Docker container\n  • Pushes the built images to the specified registry\n  • Tags images with semantic version\n\nEnvironment Variables:\n  PACKAGE_BUILD_REPOSITORY                Registry URL for build command\n  PACKAGE_BUILD_REPOSITORY_USER           Registry username for authentication\n  PACKAGE_BUILD_REPOSITORY_TOKEN          Registry token for authentication\n  PACKAGE_BUILD_FINAL_REPOSITORY          Final registry URL for the published artifact\n  PACKAGE_BUILD_FINAL_REPOSITORY_USER     Final registry username for authentication\n  PACKAGE_BUILD_FINAL_REPOSITORY_TOKEN    Final registry token for authentication\n  PACKAGE_BUILD_INSECURE                  Allow plain HTTP and skip TLS verification\n",
           "aliases": null,
           "flags": {
             "debug": {
@@ -47147,6 +47690,11 @@
             "force": {
               "description": "force update version in registry",
               "shorthand": "f",
+              "global": false
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification for every registry used by the build, including the final repository and base-image pulls (env: PACKAGE_BUILD_INSECURE)",
+              "shorthand": "",
               "global": false
             },
             "repo": {
@@ -47421,6 +47969,7 @@
         {
           "name": "download [flags] \u003csnapshot\u003e",
           "description": "Download a snapshot to a local directory tree",
+          "longDescription": "Download a Snapshot CR's manifest tree and volume data into a local directory tree\n(consumed by 'd8 snapshot upload' or 'd8 snapshot restore').\n\n--publish selects how each data leaf's volume bytes are streamed from its DataExport\nexporter pod. With --publish=false (or when autodetection picks it), bytes come straight\nfrom the exporter's in-cluster service, trusting only its internal CA (status.ca). With\n--publish=true, bytes come through the storage-foundation-published Ingress endpoint\n(status.publicURL) instead, so a kubeconfig without direct network access to the cluster's\ninternal service network can still download. If --publish is not given, the command probes\nwhether the in-cluster exporter endpoint is reachable and picks accordingly. Reusing an\nexisting DataExport upgrades its spec.publish from false to true when --publish=true is\nrequested, but never downgrades it back to false, so a concurrent run streaming through the\npublic endpoint is never torn down. IMPORTANT: the publish path works only with a kubeconfig\nauthenticated by a bearer token. Ingress terminates TLS with its own certificate and does not\nforward the client's TLS certificate to the exporter pod, so a certificate-based kubeconfig\nreceives a 401 when --publish=true.",
           "aliases": null,
           "flags": {
             "cleanup": {
@@ -47459,7 +48008,12 @@
               "global": false
             },
             "per-volume-concurrency": {
-              "description": "maximum parallel chunk/file downloads per volume",
+              "description": "maximum parallel chunk/file downloads per volume; lower to 1 on a distant or flaky link if long-lived streams keep breaking",
+              "shorthand": "",
+              "global": false
+            },
+            "publish": {
+              "description": "download volume data through the published (ingress) exporter endpoint instead of the in-cluster service; if unset, the in-cluster endpoint's reachability is auto-detected",
               "shorthand": "",
               "global": false
             },
@@ -47630,7 +48184,7 @@
         {
           "name": "upload [flags]",
           "description": "Upload a downloaded snapshot archive into a namespace",
-          "longDescription": "Upload a local snapshot archive (produced by 'd8 snapshot download') into a namespace.\n\nThe archive tree is reconstructed in stages: first every import-mode CR is created\ntop-down (parents before children) so each child carries a child-\u003eparent ownerRef the\nstate-snapshotter binders use to attach it to its parent; then every node's manifests plus\ndirect child refs are uploaded to the state-snapshotter aggregated API; only after all\nmanifests are uploaded are the data-leaf volume bytes uploaded via a DataImport. Manifests\nare uploaded before any volume data because a leaf's DataImport stays pending until the leaf\nVolumeSnapshot is bound, which requires its ancestors' manifests to already be present.\nAfter the whole tree is uploaded it waits for the root Snapshot and its bound SnapshotContent\nto become Ready, leaving the namespace ready for 'd8 snapshot restore'.\n\n--node restricts the upload to a single node and its descendants. The selected node becomes\nthe upload root; it must be a core Snapshot, a CSI VolumeSnapshot data leaf, or a domain\ndata leaf (e.g. DemoVirtualDiskSnapshot). Domain aggregator nodes (a DemoVirtualMachineSnapshot\nthat references child snapshots) and manifest-only domain nodes cannot be selected as the\nupload root (they have no parent SnapshotContent to attach to when uploaded standalone); they\nare uploaded only as part of a full-archive upload (omit --node) or by selecting an ancestor\nSnapshot.\n\nScope and limitations:\n  - Full Snapshot trees are uploaded as-is, including domain aggregator nodes (a\n    DemoVirtualMachineSnapshot that aggregates child DemoVirtualDiskSnapshot nodes): the CLI\n    creates each node's unified import marker and uploads its manifests + child refs, and the\n    server-side genericbinder reconstructs the aggregator's content from its children's\n    SnapshotContents. The aggregator is a non-root node in this case, so no DataImport is\n    created for it (only its data-leaf descendants stream volume bytes).\n  - Manifest-only domain nodes (e.g. a disk-less DemoVirtualMachineSnapshot, which carries\n    only manifests) are uploaded as part of their parent tree (the server materialises their\n    content from the uploaded manifests alone, with no data leg).\n  - A domain aggregator can be reconstructed only within a tree, never as a standalone --node\n    root. To upload an individual disk snapshot from such a tree on its own, use\n    --node \u003cDomainDataLeafKind\u003e/\u003cname\u003e (e.g. --node DemoVirtualDiskSnapshot/dvd-1).\n  - Both block-volume and filesystem-volume data leaves are supported.\n  - Filesystem archives can upload regular files only. Symlink, hardlink, device, FIFO, and\n    socket entries, plus empty directories other than well-known filesystem-reserved names\n    (for example lost+found), cannot be uploaded: the protocol supports only regular-file\n    PUTs, and creates directories only as a side effect of a file PUT inside them.\n  - --skip-unsupported-fs-entries uploads the supported regular files instead of failing,\n    but causes data loss for each skipped path; review the bounded post-upload summary.\n  - Legacy archives without formatVersion and metadataChecksum are rejected by default because\n    their snapshot.yaml identity and volume metadata are unauthenticated. Use\n    --allow-unauthenticated-legacy only for deliberate migration or inspection of trusted\n    pre-version archives; this mode cannot distinguish a genuine legacy archive from a\n    downgraded and tampered current archive.\n  - Uploading requires RBAC to create DataImport (storage-volume-data-manager) and to call\n    the manifests-and-children-refs-upload subresource (e.g. an admin kubeconfig); the\n    read-only snapshot admin role is not sufficient.",
+          "longDescription": "Upload a local snapshot archive (produced by 'd8 snapshot download') into a namespace.\n\nThe archive tree is reconstructed in stages: first every import-mode CR is created\ntop-down (parents before children) so each child carries a child-\u003eparent ownerRef the\nstate-snapshotter binders use to attach it to its parent; then every node's manifests plus\ndirect child refs are uploaded to the state-snapshotter aggregated API; only after all\nmanifests are uploaded are the data-leaf volume bytes uploaded via a DataImport. Manifests\nare uploaded before any volume data because a leaf's DataImport stays pending until the leaf\nVolumeSnapshot is bound, which requires its ancestors' manifests to already be present.\nAfter the whole tree is uploaded it waits for the root Snapshot and its bound SnapshotContent\nto become Ready, leaving the namespace ready for 'd8 snapshot restore'.\n\n--node restricts the upload to a single node and its descendants. The selected node becomes\nthe upload root; it must be a core Snapshot, a CSI VolumeSnapshot data leaf, or a domain\ndata leaf (e.g. DemoVirtualDiskSnapshot). Domain aggregator nodes (a DemoVirtualMachineSnapshot\nthat references child snapshots) and manifest-only domain nodes cannot be selected as the\nupload root (they have no parent SnapshotContent to attach to when uploaded standalone); they\nare uploaded only as part of a full-archive upload (omit --node) or by selecting an ancestor\nSnapshot.\n\nScope and limitations:\n  - Full Snapshot trees are uploaded as-is, including domain aggregator nodes (a\n    DemoVirtualMachineSnapshot that aggregates child DemoVirtualDiskSnapshot nodes): the CLI\n    creates each node's unified import marker and uploads its manifests + child refs, and the\n    server-side genericbinder reconstructs the aggregator's content from its children's\n    SnapshotContents. The aggregator is a non-root node in this case, so no DataImport is\n    created for it (only its data-leaf descendants stream volume bytes).\n  - Manifest-only domain nodes (e.g. a disk-less DemoVirtualMachineSnapshot, which carries\n    only manifests) are uploaded as part of their parent tree (the server materialises their\n    content from the uploaded manifests alone, with no data leg).\n  - A domain aggregator can be reconstructed only within a tree, never as a standalone --node\n    root. To upload an individual disk snapshot from such a tree on its own, use\n    --node \u003cDomainDataLeafKind\u003e/\u003cname\u003e (e.g. --node DemoVirtualDiskSnapshot/dvd-1).\n  - Both block-volume and filesystem-volume data leaves are supported.\n  - Filesystem archives can upload regular files only. Symlink, hardlink, device, FIFO, and\n    socket entries, plus empty directories other than well-known filesystem-reserved names\n    (for example lost+found), cannot be uploaded: the protocol supports only regular-file\n    PUTs, and creates directories only as a side effect of a file PUT inside them.\n  - --skip-unsupported-fs-entries uploads the supported regular files instead of failing,\n    but causes data loss for each skipped path; review the bounded post-upload summary.\n  - Legacy archives without formatVersion and metadataChecksum are rejected by default because\n    their snapshot.yaml identity and volume metadata are unauthenticated. Use\n    --allow-unauthenticated-legacy only for deliberate migration or inspection of trusted\n    pre-version archives; this mode cannot distinguish a genuine legacy archive from a\n    downgraded and tampered current archive.\n  - Uploading requires RBAC to create DataImport (storage-volume-data-manager) and to call\n    the manifests-and-children-refs-upload subresource (e.g. an admin kubeconfig); the\n    read-only snapshot admin role is not sufficient.\n\n--publish selects how each data leaf's bytes are streamed to its DataImport importer pod.\nWith --publish=false (or when autodetection picks it), bytes go straight to the importer's\nin-cluster service, trusting only its internal CA (status.ca). With --publish=true, bytes go\nthrough the storage-foundation-published Ingress endpoint (status.publicURL) instead, so a\nkubeconfig without direct network access to the cluster's internal service network can still\nupload. If --publish is not given, the command probes whether the in-cluster importer endpoint\nis reachable and picks accordingly. IMPORTANT: the publish path works only with a kubeconfig\nauthenticated by a bearer token. Ingress terminates TLS with its own certificate and does not\nforward the client's TLS certificate to the importer pod, so a certificate-based kubeconfig\nreceives a 401 when --publish=true.",
           "aliases": [
             "import"
           ],
@@ -47667,6 +48221,11 @@
             },
             "node": {
               "description": "restrict import to a single node subtree; format '\u003cKind\u003e/\u003cname\u003e' (e.g. --node VolumeSnapshot/pvc-1)",
+              "shorthand": "",
+              "global": false
+            },
+            "publish": {
+              "description": "upload volume data through the published (ingress) importer endpoint instead of the in-cluster service; if unset, the in-cluster endpoint's reachability is auto-detected",
               "shorthand": "",
               "global": false
             },
@@ -49678,7 +50237,7 @@
         {
           "name": "ansible-inventory",
           "description": "Generate ansible inventory from virtual machines (ansible inventory script compatible).",
-          "longDescription": "Generate ansible inventory from virtual machines.\n\nWhen called without arguments, returns all hosts (same as --list).\n\nOnly virtual machines with assigned IP addresses are included in the inventory.\n\nArguments:\n  --list                   Return all hosts (default behavior if no arguments)\n  --host \u003chostname\u003e        Show variables for a particular host; output format matches inventory entries\n  --output, -o \u003cformat\u003e    Output format: json, ini, or yaml (default: json)\n  --namespace, -n \u003cns\u003e     Namespace to list virtual machines from\n                          (overrides kubeconfig context namespace)\n\nHost names format: \u003cvmname\u003e.\u003cnamespace\u003e (e.g., myvm.default)\n\nVM annotations:\n  - Annotations with prefix 'provisioning.virtualization.deckhouse.io/' are included\n    as host variables (prefix is stripped from variable name)\n  - Use 'provisioning.virtualization.deckhouse.io/groups' annotation to add VMs to groups\n    (comma-separated list of group names)\n\nNetwork access:\n  - For VM access, the Default network interface is used\n  - The 'ansible_ssh_common_args' variable is automatically set for port-forwarding\n    through kubectl using 'd8 v port-forward' command\n  - Additional network interfaces are not currently supported",
+          "longDescription": "Generate ansible inventory from virtual machines.\n\nWhen called without arguments, returns all hosts (same as --list).\n\nOnly virtual machines with assigned IP addresses are included in the inventory.\n\nArguments:\n  --list                   Return all hosts (default behavior if no arguments)\n  --host \u003chostname\u003e        Show variables for a particular host; output format matches inventory entries\n  --output, -o \u003cformat\u003e    Output format: json, ini, or yaml (default: json)\n  --namespace, -n \u003cns\u003e     Namespace to list virtual machines from\n                          (overrides kubeconfig context namespace)\n\nHost names format: \u003cvmname\u003e.\u003cnamespace\u003e (e.g., myvm.default)\n\nVM annotations:\n  - Annotations with prefix 'vars.ansible.deckhouse.io/' are included\n    as host variables (prefix is stripped from variable name)\n  - Use 'ansible.deckhouse.io/groups' annotation to add VMs to groups\n    (comma-separated list of group names)\n\nNetwork access:\n  - For VM access, the Default network interface is used\n  - The 'ansible_ssh_common_args' variable is automatically set for port-forwarding\n    through kubectl using 'd8 v port-forward' command; the --context, --server and\n    --kubeconfig flags of this command are carried over into it\n  - Additional network interfaces are not currently supported",
           "aliases": null,
           "flags": {
             "as": {
@@ -49987,6 +50546,11 @@
               "shorthand": "",
               "global": true
             },
+            "force": {
+              "description": "Connect without asking, even when somebody else is using the console.",
+              "shorthand": "",
+              "global": false
+            },
             "insecure-skip-tls-verify": {
               "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
               "shorthand": "",
@@ -50070,6 +50634,11 @@
           "description": "Evict a virtual machine.",
           "aliases": null,
           "flags": {
+            "all": {
+              "description": "Set this flag to apply the action to all VMs.",
+              "shorthand": "",
+              "global": false
+            },
             "as": {
               "description": "Username to impersonate for the operation",
               "shorthand": "",
@@ -50134,6 +50703,11 @@
               "description": "Path to the kubeconfig file to use for CLI requests.",
               "shorthand": "",
               "global": true
+            },
+            "label-selector": {
+              "description": "Set this flag to apply the action to VMs with the specified labels.",
+              "shorthand": "l",
+              "global": false
             },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
@@ -50204,6 +50778,11 @@
               "description": "Set this flag to wait for the operation to complete.",
               "shorthand": "w",
               "global": false
+            },
+            "yes": {
+              "description": "Set this flag to confirm the action without prompting for confirmation.",
+              "shorthand": "y",
+              "global": false
             }
           },
           "subcommands": null
@@ -50213,6 +50792,11 @@
           "description": "Migrate a virtual machine.",
           "aliases": null,
           "flags": {
+            "all": {
+              "description": "Set this flag to apply the action to all VMs.",
+              "shorthand": "",
+              "global": false
+            },
             "as": {
               "description": "Username to impersonate for the operation",
               "shorthand": "",
@@ -50277,6 +50861,11 @@
               "description": "Path to the kubeconfig file to use for CLI requests.",
               "shorthand": "",
               "global": true
+            },
+            "label-selector": {
+              "description": "Set this flag to apply the action to VMs with the specified labels.",
+              "shorthand": "l",
+              "global": false
             },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
@@ -50351,6 +50940,11 @@
             "wait": {
               "description": "Set this flag to wait for the operation to complete.",
               "shorthand": "w",
+              "global": false
+            },
+            "yes": {
+              "description": "Set this flag to confirm the action without prompting for confirmation.",
+              "shorthand": "y",
               "global": false
             }
           },
@@ -50495,6 +51089,11 @@
           "description": "Restart a virtual machine.",
           "aliases": null,
           "flags": {
+            "all": {
+              "description": "Set this flag to apply the action to all VMs.",
+              "shorthand": "",
+              "global": false
+            },
             "as": {
               "description": "Username to impersonate for the operation",
               "shorthand": "",
@@ -50559,6 +51158,11 @@
               "description": "Path to the kubeconfig file to use for CLI requests.",
               "shorthand": "",
               "global": true
+            },
+            "label-selector": {
+              "description": "Set this flag to apply the action to VMs with the specified labels.",
+              "shorthand": "l",
+              "global": false
             },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
@@ -50628,6 +51232,11 @@
             "wait": {
               "description": "Set this flag to wait for the operation to complete.",
               "shorthand": "w",
+              "global": false
+            },
+            "yes": {
+              "description": "Set this flag to confirm the action without prompting for confirmation.",
+              "shorthand": "y",
               "global": false
             }
           },
@@ -50684,7 +51293,7 @@
               "global": true
             },
             "identity-file": {
-              "description": "Specify a path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
+              "description": "Specify a path to a private key passed to the local SSH/SCP client as -i; If not provided, OpenSSH default identity selection applies",
               "shorthand": "i",
               "global": false
             },
@@ -50694,7 +51303,7 @@
               "global": true
             },
             "known-hosts": {
-              "description": "Set a path to the known_hosts file.",
+              "description": "Set a path to the known_hosts file passed to the local SSH/SCP client as UserKnownHostsFile.",
               "shorthand": "",
               "global": false
             },
@@ -50704,13 +51313,13 @@
               "global": true
             },
             "local-ssh": {
-              "description": "Use the SSH/SCP client available on your system by using this command as ProxyCommand; Default is false: use embedded SSH client with limited capabilities",
+              "description": "Deprecated: local SSH/SCP client is always used",
               "shorthand": "",
               "global": false
             },
             "local-ssh-opts": {
-              "description": "Additional options to be passed to the ssh client if --local-ssh=true is set",
-              "shorthand": "t",
+              "description": "Deprecated: use --ssh-args instead",
+              "shorthand": "",
               "global": false
             },
             "log-flush-frequency": {
@@ -50758,6 +51367,11 @@
               "shorthand": "s",
               "global": true
             },
+            "ssh-args": {
+              "description": "Additional options to be passed to the local SSH/SCP client. May be repeated, or a single value may contain several options separated by spaces (e.g. --ssh-args='-o X -o Y').",
+              "shorthand": "",
+              "global": false
+            },
             "tls-server-name": {
               "description": "If provided, this name will be used to validate server certificate. If this is not provided, hostname used to contact the server is used.",
               "shorthand": "",
@@ -50792,7 +51406,7 @@
           "subcommands": null
         },
         {
-          "name": "ssh [-n|--namespace NAMESPACE] VIRTUAL-MACHINE-NAME",
+          "name": "ssh [-n|--namespace NAMESPACE] VIRTUAL-MACHINE-NAME [-- COMMAND [ARGS]...]",
           "description": "Open a SSH connection to a virtual machine.",
           "aliases": null,
           "flags": {
@@ -50832,7 +51446,7 @@
               "global": true
             },
             "command": {
-              "description": "Specify a command to execute in the VM.",
+              "description": "Specify a command to execute in the VM. Equivalent to passing the command after --.",
               "shorthand": "c",
               "global": false
             },
@@ -50847,7 +51461,7 @@
               "global": true
             },
             "identity-file": {
-              "description": "Specify a path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
+              "description": "Specify a path to a private key passed to the local SSH/SCP client as -i; If not provided, OpenSSH default identity selection applies",
               "shorthand": "i",
               "global": false
             },
@@ -50857,7 +51471,7 @@
               "global": true
             },
             "known-hosts": {
-              "description": "Set a path to the known_hosts file.",
+              "description": "Set a path to the known_hosts file passed to the local SSH/SCP client as UserKnownHostsFile.",
               "shorthand": "",
               "global": false
             },
@@ -50867,13 +51481,13 @@
               "global": true
             },
             "local-ssh": {
-              "description": "Use the SSH/SCP client available on your system by using this command as ProxyCommand; Default is false: use embedded SSH client with limited capabilities",
+              "description": "Deprecated: local SSH/SCP client is always used",
               "shorthand": "",
               "global": false
             },
             "local-ssh-opts": {
-              "description": "Additional options to be passed to the ssh client if --local-ssh=true is set",
-              "shorthand": "t",
+              "description": "Deprecated: use --ssh-args instead",
+              "shorthand": "",
               "global": false
             },
             "log-flush-frequency": {
@@ -50910,6 +51524,11 @@
               "description": "The address and port of the Kubernetes API server",
               "shorthand": "s",
               "global": true
+            },
+            "ssh-args": {
+              "description": "Additional options to be passed to the local SSH/SCP client. May be repeated, or a single value may contain several options separated by spaces (e.g. --ssh-args='-o X -o Y').",
+              "shorthand": "",
+              "global": false
             },
             "tls-server-name": {
               "description": "If provided, this name will be used to validate server certificate. If this is not provided, hostname used to contact the server is used.",
@@ -50949,6 +51568,11 @@
           "description": "Start a virtual machine.",
           "aliases": null,
           "flags": {
+            "all": {
+              "description": "Set this flag to apply the action to all VMs.",
+              "shorthand": "",
+              "global": false
+            },
             "as": {
               "description": "Username to impersonate for the operation",
               "shorthand": "",
@@ -51013,6 +51637,11 @@
               "description": "Path to the kubeconfig file to use for CLI requests.",
               "shorthand": "",
               "global": true
+            },
+            "label-selector": {
+              "description": "Set this flag to apply the action to VMs with the specified labels.",
+              "shorthand": "l",
+              "global": false
             },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
@@ -51082,6 +51711,11 @@
             "wait": {
               "description": "Set this flag to wait for the operation to complete.",
               "shorthand": "w",
+              "global": false
+            },
+            "yes": {
+              "description": "Set this flag to confirm the action without prompting for confirmation.",
+              "shorthand": "y",
               "global": false
             }
           },
@@ -51092,6 +51726,11 @@
           "description": "Stop a virtual machine.",
           "aliases": null,
           "flags": {
+            "all": {
+              "description": "Set this flag to apply the action to all VMs.",
+              "shorthand": "",
+              "global": false
+            },
             "as": {
               "description": "Username to impersonate for the operation",
               "shorthand": "",
@@ -51156,6 +51795,11 @@
               "description": "Path to the kubeconfig file to use for CLI requests.",
               "shorthand": "",
               "global": true
+            },
+            "label-selector": {
+              "description": "Set this flag to apply the action to VMs with the specified labels.",
+              "shorthand": "l",
+              "global": false
             },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
@@ -51225,6 +51869,11 @@
             "wait": {
               "description": "Set this flag to wait for the operation to complete.",
               "shorthand": "w",
+              "global": false
+            },
+            "yes": {
+              "description": "Set this flag to confirm the action without prompting for confirmation.",
+              "shorthand": "y",
               "global": false
             }
           },
@@ -51284,6 +51933,11 @@
               "description": "If true, opt-out of response compression for all requests to the server",
               "shorthand": "",
               "global": true
+            },
+            "force": {
+              "description": "Connect without asking, even when somebody else is using the VNC.",
+              "shorthand": "",
+              "global": false
             },
             "insecure-skip-tls-verify": {
               "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
