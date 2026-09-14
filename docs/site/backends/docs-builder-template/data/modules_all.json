@@ -803,6 +803,7 @@
   "sds-local-volume": {
     "editions": [
       "ce",
+      "core",
       "se",
       "se-plus",
       "ee",
@@ -810,7 +811,8 @@
       "cse-pro"
     ],
     "editionsWithRestrictions": [
-      "ce"
+      "ce",
+      "core"
     ],
     "editionsWithRestrictionsComments": {
       "all": {

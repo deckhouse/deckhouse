@@ -102,7 +102,6 @@ channel_or_version: "Channel/version"
 channel_or_version_of_module: "Module channel/version"
 deckhouse: deckhouse
 documentation: documentation
-Documentation: Documentation
 modules_documentation: Modules documentation
 modules_list: Modules list
 filters: Filters
