@@ -26,11 +26,11 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
 
-	"controller/apis/deckhouse.io/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 )
 
-func ProjectTemplate(template *v1alpha1.ProjectTemplate) error {
+func ProjectTemplate(template *v1alpha2.ProjectTemplate) error {
 	if _, err := LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema); err != nil {
 		return fmt.Errorf("load OpenAPI schema from the '%s' project template spec: %w", template.Name, err)
 	}
@@ -38,7 +38,7 @@ func ProjectTemplate(template *v1alpha1.ProjectTemplate) error {
 	return nil
 }
 
-func Project(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) error {
+func Project(project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) error {
 	templateOpenAPI, err := LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
 	if err != nil {
 		return fmt.Errorf("load open api schema from the '%s' project template spec: %w", template.Name, err)
@@ -79,8 +79,7 @@ func LoadSchema(properties map[string]any) (*spec.Schema, error) {
 // MergeDefaults overlays a parametersSchema's property defaults onto the project-supplied values,
 // producing the effective parameters a template renders against. A project value always wins over a
 // schema default; nested objects are merged recursively; an additionalProperties (free-form map)
-// schema keeps the user's own keys. This is the single source of truth for parameter defaulting,
-// shared by the helm (legacy resourcesTemplate) and the structured render paths.
+// schema keeps the user's own keys. This is the single source of truth for parameter defaulting.
 func MergeDefaults(schema *spec.Schema, projectValues map[string]any) map[string]any {
 	result := make(map[string]any)
 

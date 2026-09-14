@@ -14,15 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package render builds the per-namespace objects of a schema-based ProjectTemplate
-// (deckhouse.io/v1alpha2) directly from its structured fields — the replacement for the
-// Helm resourcesTemplate string. There is no template language in the path: each structured field
-// maps to a concrete object (or a label/annotation), and a fromParam leaf is resolved against the
-// project's effective parameters (the parametersSchema defaults merged with Project.spec.parameters).
+// Package render builds the per-namespace objects of a ProjectTemplate (deckhouse.io/v1alpha2)
+// directly from its structured fields. There is no template language in the path: each structured
+// field maps to a concrete object (or a label/annotation), and a fromParam leaf is resolved against
+// the project's effective parameters (the parametersSchema defaults merged with
+// Project.spec.parameters).
 //
 // The rendered objects are intentionally bare: the heritage/project/project-template labels and the
-// project namespace are injected downstream by the helm post-renderer, exactly as for the legacy
-// resourcesTemplate path, so both paths share the same labelling, filtering and status bookkeeping.
+// project namespace are injected downstream by the helm post-renderer, which also records what was
+// rendered in the project status.
 package render
 
 import (
@@ -74,8 +74,7 @@ func projectNamespaces(project *v1alpha3.Project) []string {
 }
 
 // effectiveParams overlays the template's parametersSchema defaults onto the project parameters,
-// producing the values fromParam leaves resolve against. It mirrors the helm path's defaulting so a
-// structured template and an equivalent resourcesTemplate see the same parameters.
+// producing the values fromParam leaves resolve against.
 func effectiveParams(tmpl *v1alpha2.ProjectTemplate, project *v1alpha3.Project) (map[string]any, error) {
 	schema, err := validate.LoadSchema(tmpl.Spec.ParametersSchema.OpenAPIV3Schema)
 	if err != nil {
@@ -383,8 +382,8 @@ func (r *renderer) falcoAuditRules(uids v1alpha2.IDRange, hasUIDs bool, gids v1a
 	// Unlike SecurityPolicy and OperationPolicy, which reach every namespace of the project through
 	// a label selector, a Falco rule can only name namespaces: the drift detection would otherwise
 	// watch the main namespace and silently ignore the additional ones. Single-namespace projects
-	// keep the plain equality form, both for readability and to stay byte-identical to the legacy
-	// resourcesTemplate rendering.
+	// keep the plain equality form, both for readability and to stay byte-identical to what the
+	// Helm-string versions of the built-in templates rendered.
 	if len(r.namespaces) > 1 {
 		fmt.Fprintf(&cond, " and k8s.ns.name in (%s)", strings.Join(r.namespaces, ", "))
 	} else {
