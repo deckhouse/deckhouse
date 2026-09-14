@@ -1,10 +1,16 @@
 - name: d8.kubelet-checkpoint-state-reset
   rules:
     - alert: D8KubeletCheckpointStateReset
+      # A reset happens only while kubelet starts, so a non-zero counter already means this kubelet reset a
+      # checkpoint. increase() would need a sample from before the reset and misses one after a long Node downtime.
       expr: |
         max by (node, manager, reason) (
-          increase(kubelet_checkpoint_state_reset_total{job="kubelet"}[1h])
+          kubelet_checkpoint_state_reset_total{job="kubelet"}
         ) > 0
+        and on (node)
+        (
+          time() - max by (node) (process_start_time_seconds{job="kubelet"})
+        ) < 3600
       for: 5m
       labels:
         tier: cluster
@@ -14,11 +20,13 @@
         plk_protocol_version: "1"
         summary: Kubelet on Node {{ $labels.node }} reset the {{ $labels.manager }} manager checkpoint.
         description: |
-          Within the last hour, kubelet on Node `{{ $labels.node }}` found the `{{ $labels.manager }}` manager checkpoint unusable (reason `{{ $labels.reason }}`) and reset it instead of refusing to start.
+          Kubelet on Node `{{ $labels.node }}` was started less than an hour ago and, while starting, found the `{{ $labels.manager }}` manager checkpoint unusable (reason `{{ $labels.reason }}`). It reset the checkpoint instead of refusing to start.
 
           Running containers that held exclusive CPUs or NUMA memory zones in the reset state were stopped, so kubelet recreates them and assigns the resources again. Expect restarts of Guaranteed Pods on this Node.
 
           A reset right after a Node reboot is expected, for example, because of per-NUMA memory drift. Repeated resets, or resets on many Nodes at once, may indicate a kubelet configuration problem.
+
+          The alert is resolved an hour after this kubelet start, or earlier if kubelet restarts without a reset.
 
           To find the affected Pods:
 
@@ -44,7 +52,7 @@
         description: |
           After resetting the `{{ $labels.manager }}` manager checkpoint on Node `{{ $labels.node }}`, kubelet failed to stop some containers that held exclusive CPUs or NUMA memory zones.
 
-          Such a container is still running, while the reset state considers its CPUs or memory zone free. A new Guaranteed Pod on this Node may be assigned the same resources.
+          Such a container keeps running with the resources it had before the reset, while kubelet has assigned it resources again from the reset state. The new assignment may not match what the container actually uses, so the same CPUs or NUMA zone may end up assigned to another Guaranteed Pod.
 
           To find the affected Pods:
 
