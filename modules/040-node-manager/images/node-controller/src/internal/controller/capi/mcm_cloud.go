@@ -18,8 +18,6 @@ package capi
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +33,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/bootstrapsecrets"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
@@ -44,7 +43,11 @@ import (
 )
 
 func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
-	ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, validationErr string,
+	ctx context.Context,
+	ng *deckhousev1.NodeGroup,
+	provider cloudprovider.Provider,
+	resolved derived_status.ResolvedNodeGroup,
+	validationErr string,
 ) error {
 	logger := log.FromContext(ctx)
 
@@ -53,17 +56,14 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 		return nil
 	}
 
-	cloudProvider, err := r.readCloudProviderTree(ctx)
-	if err != nil {
-		return err
-	}
-	machineClassKind, _ := cloudProvider["machineClassKind"].(string)
+	registration := provider.Registration
+	machineClassKind := registration.MachineClassKind
 	if machineClassKind == "" {
 		logger.Info("skipping MCM: machineClassKind not set (not an MCM cloud)", "nodeGroup", ng.Name)
 		return nil
 	}
-	cloudType, _ := cloudProvider["type"].(string)
-	region, _ := cloudProvider["region"].(string)
+	cloudType := registration.Type
+	region := registration.Region
 
 	zones := resolved.Zones
 	logger.Info("MCM reconcile decision", "nodeGroup", ng.Name, "validationErr", validationErr, "zones", zones, "machineClassKind", machineClassKind)
@@ -77,32 +77,18 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 		return nil
 	}
 
-	clusterUUID, err := r.readClusterUUID(ctx)
+	inputs, err := (cloudprovider.Source{Reader: r.Client}).LoadMCMInputs(ctx, provider)
 	if err != nil {
 		return err
 	}
-	instancePrefix, err := r.readInstancePrefix(ctx)
-	if err != nil {
-		return err
-	}
-	podSubnet, err := r.readPodSubnet(ctx)
-	if err != nil {
-		return err
-	}
-
-	machineClassTemplate, err := r.readProviderTemplate(ctx, cloudType, engineMCMTemplates, "machine-class.yaml")
-	if err != nil {
-		return err
-	}
-	checksumTemplate, err := r.readProviderTemplate(ctx, cloudType, engineMCMTemplates, "machine-class.checksum")
-	if err != nil {
-		return err
-	}
+	clusterUUID := provider.Cluster.UUID
+	instancePrefix := provider.Prefix
+	podSubnet := provider.Cluster.PodSubnet
 
 	// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
 	// only, so the resolved NodeGroup is serialized here and nowhere else.
 	nodeGroupValues := resolved.ToMap()
-	checksum, err := machineclass.RenderChecksum(checksumTemplate, nodeGroupValues, cloudProvider)
+	checksum, err := machineclass.RenderChecksum(inputs.Checksum, nodeGroupValues, provider.LegacyValues)
 	if err != nil {
 		return fmt.Errorf("render checksum for NodeGroup %s: %w", ng.Name, err)
 	}
@@ -141,7 +127,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 				},
 				"nodeManager": map[string]interface{}{
 					"internal": map[string]interface{}{
-						"cloudProvider": cloudProvider,
+						"cloudProvider": provider.LegacyValues,
 					},
 				},
 			},
@@ -149,7 +135,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 			"zoneName":  zone,
 		}
 
-		mcBytes, err := machineclass.RenderMachineClass(machineClassTemplate, renderCtx)
+		mcBytes, err := machineclass.RenderMachineClass(inputs.MachineClass, renderCtx)
 		if err != nil {
 			return fmt.Errorf("render MachineClass for NodeGroup %s zone %s: %w", ng.Name, zone, err)
 		}
@@ -182,7 +168,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 
 		// Before the MachineClass: machine-controller-manager resolves the credentials and
 		// the cloud-init through secretRef, so a class applied first is a class it cannot act on.
-		if err := r.applyMachineClassSecret(ctx, ng.Name, cloudType, machineClassName, userData, renderCtx); err != nil {
+		if err := r.applyMachineClassSecret(ctx, ng.Name, machineClassName, userData, renderCtx, inputs.Config); err != nil {
 			return err
 		}
 		if err := r.Client.Patch(ctx, machineClassObj, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
@@ -234,12 +220,13 @@ func (r *MachineDeploymentReconciler) machineClassUserData(ctx context.Context, 
 // (pruneStaleCAPI): CollectOrphanedSecrets only takes Secrets whose NodeGroup is gone.
 // Inert — the name is deterministic, so re-adding the zone overwrites it.
 func (r *MachineDeploymentReconciler) applyMachineClassSecret(
-	ctx context.Context, ngName, cloudType, secretName string, userData []byte, renderCtx map[string]interface{},
+	ctx context.Context,
+	ngName string,
+	secretName string,
+	userData []byte,
+	renderCtx map[string]interface{},
+	configTemplate []byte,
 ) error {
-	configTemplate, err := r.readProviderTemplate(ctx, cloudType, engineMCMTemplates, mcmConfigTemplateKey)
-	if err != nil {
-		return fmt.Errorf("read %s for NodeGroup %s: %w", mcmConfigTemplateKey, ngName, err)
-	}
 	config, err := machineclass.RenderMachineClass(configTemplate, renderCtx)
 	if err != nil {
 		return fmt.Errorf("render %s for NodeGroup %s: %w", mcmConfigTemplateKey, ngName, err)
@@ -489,73 +476,6 @@ func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, md
 		current = 0
 	}
 	return int64(calculateReplicas(int32(current), minReplicas, maxReplicas)), nil
-}
-
-func (r *MachineDeploymentReconciler) readCloudProviderTree(ctx context.Context) (map[string]interface{}, error) {
-	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
-		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
-	}, secret); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return map[string]interface{}{}, nil
-		}
-		return nil, fmt.Errorf("get cloud-provider secret: %w", err)
-	}
-	return decodeCloudProviderSecret(secret.Data), nil
-}
-
-// readCloudProviderRegistration reads the same Secret as readCloudProviderTree, but typed. The
-// tree stays for the template render context, which needs the provider's own subtree verbatim.
-func (r *MachineDeploymentReconciler) readCloudProviderRegistration(ctx context.Context) (derived_status.CloudProviderRegistration, error) {
-	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
-		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
-	}, secret); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return derived_status.CloudProviderRegistration{}, nil
-		}
-		return derived_status.CloudProviderRegistration{}, fmt.Errorf("get cloud-provider secret: %w", err)
-	}
-	return derived_status.DecodeRegistration(secret.Data), nil
-}
-
-func decodeCloudProviderSecret(data map[string][]byte) map[string]interface{} {
-	res := make(map[string]interface{}, len(data))
-	for k, v := range data {
-		var val interface{}
-		if err := json.Unmarshal(v, &val); err != nil {
-			res[k] = string(v)
-			continue
-		}
-		res[k] = val
-	}
-	return res
-}
-
-func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string, error) {
-	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
-		Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace,
-	}, secret); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return "", nil
-		}
-		return "", fmt.Errorf("get cluster-configuration secret: %w", err)
-	}
-	raw, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		return "", nil
-	}
-	if decoded, decErr := base64.StdEncoding.DecodeString(string(raw)); decErr == nil {
-		raw = decoded
-	}
-	var cfg struct {
-		PodSubnetCIDR string `json:"podSubnetCIDR"`
-	}
-	if err := sigsyaml.Unmarshal(raw, &cfg); err != nil {
-		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
-	}
-	return cfg.PodSubnetCIDR, nil
 }
 
 // instanceClassSpot reports the provider spot flag; only aws acts on it.

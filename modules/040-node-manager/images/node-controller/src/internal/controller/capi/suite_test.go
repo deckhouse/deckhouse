@@ -161,7 +161,7 @@ var _ = BeforeSuite(func() {
 	// The derived-status service and the pod-subnet reader resolve this secret by its
 	// production name, so the fixture name must match exactly.
 	clusterCfg.Data = map[string][]byte{
-		"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\n"),
+		"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\nserviceSubnetCIDR: 10.222.0.0/16\nclusterDomain: cluster.local\n"),
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, clusterCfg))).To(Succeed())
 
@@ -172,13 +172,16 @@ var _ = BeforeSuite(func() {
 	templates.Data = map[string][]byte{
 		"machine-template.yaml":   []byte(capiMachineTemplateFixture),
 		"instance-class.checksum": []byte(instanceClassChecksumFixture),
-		clusterTemplateContractKey: clusterTemplateContractData(`apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-kind: DeckhouseCluster
-metadata:
-  name: {{ .cluster.name }}
-  namespace: {{ .cluster.namespace }}
-  labels:
-    app: capdvp-controller-manager`),
+		"cluster.yaml": []byte(`version: v1
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: DeckhouseCluster
+  metadata:
+    name: {{ .cluster.name }}
+    namespace: {{ .cluster.namespace }}
+    labels:
+      app: capdvp-controller-manager
+`),
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, templates))).To(Succeed())
 

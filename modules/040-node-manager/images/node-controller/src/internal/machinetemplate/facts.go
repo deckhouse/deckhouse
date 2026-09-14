@@ -14,12 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package derived_status
+package machinetemplate
 
-import "github.com/deckhouse/node-controller/internal/cloudprovider"
+// ClusterFacts is the common .cluster root exposed to provider templates.
+type ClusterFacts struct {
+	Name      string
+	Namespace string
+	UUID      string
+	PodSubnet string
+}
 
-// CloudProviderRegistration is kept as an alias while derived status migrates to the shared
-// cloud-provider input contract.
-type CloudProviderRegistration = cloudprovider.Registration
-
-var DecodeRegistration = cloudprovider.DecodeRegistration
+// ToMap returns the stable template representation of ClusterFacts.
+func (facts ClusterFacts) ToMap() map[string]any {
+	return map[string]any{
+		"name":      facts.Name,
+		"namespace": facts.Namespace,
+		"uuid":      facts.UUID,
+		"podSubnet": facts.PodSubnet,
+	}
+}

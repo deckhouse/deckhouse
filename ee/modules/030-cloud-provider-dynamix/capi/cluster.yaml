@@ -1,6 +1,6 @@
 version: v1
 template: |
-  {{- $prefix := .cluster.prefix | required "cluster.prefix is required" }}
+  {{- $prefix := .prefix | required "prefix is required" }}
   apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
   kind: DynamixCluster
   metadata:

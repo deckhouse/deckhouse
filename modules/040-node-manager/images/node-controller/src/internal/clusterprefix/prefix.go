@@ -23,10 +23,8 @@ package clusterprefix
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,15 +32,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	sigsyaml "sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/node-controller/internal/common"
 )
 
 const (
 	GlobalModuleConfigName = "global"
-
-	clusterConfigSecretName      = "d8-cluster-configuration"
-	clusterConfigSecretNamespace = "kube-system"
-	clusterConfigSecretKey       = "cluster-configuration.yaml"
 )
 
 // ModuleConfigGVK is the GVK used to read the global ModuleConfig as unstructured.
@@ -65,12 +60,30 @@ func ModuleConfigGVK() schema.GroupVersionKind {
 // returns an empty string. The ModuleConfig read short-circuits, so the secret
 // is only read when the ModuleConfig has no prefix.
 func Resolve(ctx context.Context, reader client.Reader) (string, error) {
+	return resolve(ctx, reader, func() (string, error) {
+		return FromClusterConfigurationSecret(ctx, reader)
+	})
+}
+
+// ResolveWithClusterConfiguration is Resolve for callers that have already read the
+// ClusterConfiguration. It preserves the same precedence without reading the Secret twice.
+func ResolveWithClusterConfiguration(
+	ctx context.Context,
+	reader client.Reader,
+	configuration common.ClusterConfiguration,
+) (string, error) {
+	return resolve(ctx, reader, func() (string, error) {
+		return configuration.Cloud.Prefix, nil
+	})
+}
+
+func resolve(ctx context.Context, reader client.Reader, fallback func() (string, error)) (string, error) {
 	if prefix, err := FromModuleConfig(ctx, reader); err != nil {
 		return "", err
 	} else if prefix != "" {
 		return prefix, nil
 	}
-	return FromClusterConfigurationSecret(ctx, reader)
+	return fallback()
 }
 
 // FromModuleConfig returns spec.settings.prefix from the global ModuleConfig, or
@@ -98,34 +111,9 @@ func FromModuleConfig(ctx context.Context, reader client.Reader) (string, error)
 // empty prefix (see Resolve for why). A configuration that parses and simply
 // carries no cloud.prefix returns an empty string.
 func FromClusterConfigurationSecret(ctx context.Context, reader client.Reader) (string, error) {
-	secret := &corev1.Secret{}
-	if err := reader.Get(ctx, types.NamespacedName{
-		Name:      clusterConfigSecretName,
-		Namespace: clusterConfigSecretNamespace,
-	}, secret); err != nil {
-		return "", fmt.Errorf("get cluster-configuration secret: %w", err)
-	}
-
-	raw, ok := secret.Data[clusterConfigSecretKey]
-	if !ok {
-		return "", fmt.Errorf("cluster-configuration secret has no %s key", clusterConfigSecretKey)
-	}
-
-	// The cluster-configuration.yaml value is stored base64-encoded in some
-	// installations; fall back to the raw bytes when it is not (plain YAML is
-	// never valid base64, so this never corrupts an already-decoded document).
-	decoded, err := base64.StdEncoding.DecodeString(string(raw))
+	configuration, err := common.ReadClusterConfiguration(ctx, reader)
 	if err != nil {
-		decoded = raw
+		return "", err
 	}
-
-	var cfg struct {
-		Cloud struct {
-			Prefix string `json:"prefix"`
-		} `json:"cloud"`
-	}
-	if err := sigsyaml.Unmarshal(decoded, &cfg); err != nil {
-		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
-	}
-	return cfg.Cloud.Prefix, nil
+	return configuration.Cloud.Prefix, nil
 }

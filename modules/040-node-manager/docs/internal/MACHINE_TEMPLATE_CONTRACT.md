@@ -5,8 +5,11 @@ description: How a cloud-provider module describes the CAPI machine template tha
 
 This is the single source of truth for `capi/template.yaml`, the file a cloud-provider module
 ships. **If something is not in this document, it is not in the contract**: node-controller gives
-a template nothing beyond what is described here, and widening the contract requires bumping
-`version`.
+a template nothing beyond what is described here. Bump `version` only for an incompatible change;
+document an added field with the Deckhouse release in which it became available.
+
+The cluster-resource contract uses the same data model and sandbox; see
+[`CLUSTER_TEMPLATE_CONTRACT.md`](CLUSTER_TEMPLATE_CONTRACT.md).
 
 ## What node-manager does with your file
 
@@ -105,10 +108,19 @@ Two things follow:
 | `.provider` | map | Your own subtree of the `d8-node-manager-cloud-provider` secret. You no longer spell your provider name inside your own file. |
 | `.zone` | string | The zone this generation is rendered for. |
 | `.nodeGroup.name` | string | NodeGroup name — for tags and labels inside `spec`. |
-| `.cluster` | map | `{uuid, podSubnet}`. |
+| `.cluster` | map | Cluster facts listed below. |
 
 There is no `.Values`, no `.Chart`, no `.Files`, no `.Release`. node-manager is not helm; the v1
 engine emulated a values tree only so that migrated templates would not need rewriting.
+
+### `.cluster` keys
+
+| Key | Type | Since | What it is |
+|---|---|---|---|
+| `.cluster.name` | string | v2 | CAPI Cluster name. |
+| `.cluster.namespace` | string | v2 | Namespace of CAPI resources. |
+| `.cluster.uuid` | string | v2 | Deckhouse cluster UUID. |
+| `.cluster.podSubnet` | string | v2 | Pod network CIDR. |
 
 ### `.provider`, concretely
 

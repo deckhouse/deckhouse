@@ -294,6 +294,7 @@ func openstackCheck(f *Config, k8sVer string) {
 		providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
 		Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
 		Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
+		Expect(len(providerSpecificCAPISecretData["credentials.yaml"].String()) > 0).To(BeTrue())
 		// template.yaml is the whole v2 machine-template contract: the go-template, the list of
 		// InstanceClass fields that recreate machines, and the extra MachineDeployment fields.
 		// It replaced machine-template.yaml + instance-class.checksum + machine-deployment-spec-patch.yaml.
