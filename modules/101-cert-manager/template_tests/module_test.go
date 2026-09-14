@@ -570,6 +570,10 @@ podAntiAffinity:
 			Expect(vpa.Exists()).To(BeTrue())
 			Expect(vpa.Field("spec.targetRef.name").String()).To(Equal("yandex-dns-webhook"))
 			Expect(vpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
+
+			pdb := f.KubernetesResource("PodDisruptionBudget", "d8-cert-manager", "yandex-dns-webhook")
+			Expect(pdb.Exists()).To(BeTrue())
+			Expect(pdb.Field("spec.selector.matchLabels.app").String()).To(Equal("yandex-dns-webhook"))
 		})
 	})
 
