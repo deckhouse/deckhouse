@@ -171,6 +171,21 @@ module does -- `bpf-lb-sock-hostns-only` -- because only then is pod traffic loa
 balanced on the tc hooks, which is what produces the service conntrack entries
 the RevNAT translation needs.
 
+## 014-kernel-verifier-stat.patch
+
+Export `cilium_bpf_progs_complexity_max_verified_insts`: the highest instruction
+count the verifier walked for any loaded `cil_`/`tail_` program. The verifier
+refuses a program past 1,000,000 instructions, and without the gauge that ceiling
+is invisible until a datapath change makes the agent fail to load on some nodes.
+`ebpf.LogLevelStats` also puts the verifier's per-program statistics in the agent
+debug log.
+
+Much smaller than on 1.17: that version also had to replace a
+`bpftool -j prog show` subprocess with a walk over the ebpf API, which upstream
+has since done itself (`bpfVisitor`). Only the metric is left.
+
+Test `~/src/kind/d8-1.20-tests/014-verifier-stat/`
+
 ## Dropped
 
 Patches from the 1.17 stack that are not carried on 1.20, with the evidence:
