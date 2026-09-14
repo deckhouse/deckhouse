@@ -63,6 +63,14 @@ spec:
                   PlacementConstraint encapsulates the placement constraints
                   used within this deployment zone.
                 properties:
+                  datastore:
+                    description: |-
+                      Datastore is the name or inventory path of the datastore in which the
+                      virtual machine is created/located. When set it takes precedence over
+                      VSphereFailureDomain.spec.topology.datastore for VMs bound to this
+                      DeploymentZone -- this allows two DeploymentZones on the same
+                      FailureDomain to place VMs on different datastores.
+                    type: string
                   folder:
                     description: |-
                       Folder is the name or inventory path of the folder in which the
@@ -179,6 +187,14 @@ spec:
                   PlacementConstraint encapsulates the placement constraints
                   used within this deployment zone.
                 properties:
+                  datastore:
+                    description: |-
+                      Datastore is the name or inventory path of the datastore in which the
+                      virtual machine is created/located. When set it takes precedence over
+                      VSphereFailureDomain.spec.topology.datastore for VMs bound to this
+                      DeploymentZone -- this allows two DeploymentZones on the same
+                      FailureDomain to place VMs on different datastores.
+                    type: string
                   folder:
                     description: |-
                       Folder is the name or inventory path of the folder in which the
@@ -292,6 +308,14 @@ spec:
                   PlacementConstraint encapsulates the placement constraints
                   used within this deployment zone.
                 properties:
+                  datastore:
+                    description: |-
+                      Datastore is the name or inventory path of the datastore in which the
+                      virtual machine is created/located. When set it takes precedence over
+                      VSphereFailureDomain.spec.topology.datastore for VMs bound to this
+                      DeploymentZone -- this allows two DeploymentZones on the same
+                      FailureDomain to place VMs on different datastores.
+                    type: string
                   folder:
                     description: |-
                       Folder is the name or inventory path of the folder in which the

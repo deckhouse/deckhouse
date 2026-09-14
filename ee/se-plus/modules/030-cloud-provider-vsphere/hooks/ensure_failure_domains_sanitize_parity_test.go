@@ -85,38 +85,50 @@ func TestSanitizeZoneParity(t *testing.T) {
 		}
 	})
 
-	// Override branch: resourcePool set on InstanceClass → template renders sanitized
-	// "<zone>-<ng>", hook constructs the same via dzNameOverride.
-	t.Run("override_with_resourcePool", func(t *testing.T) {
-		ngNames := []string{
-			"worker-fast",
-			"Worker Fast",
-			"Prod.Sys",
-			"system_a",
-		}
-		for _, zone := range cases {
-			for _, ng := range ngNames {
-				t.Run(zone+"|"+ng, func(t *testing.T) {
-					var buf bytes.Buffer
-					ctx := map[string]any{
-						"zone": zone,
-						"instanceClass": map[string]any{
-							"resourcePool": "/DC/host/cl/Resources/prod",
-						},
-						"nodeGroup": map[string]any{"name": ng},
-					}
-					if err := tmpl.Execute(&buf, ctx); err != nil {
-						t.Fatalf("execute override sprig on zone=%q ng=%q: %v", zone, ng, err)
-					}
-					got := buf.String()
-					want := dzNameOverride(zone, ng)
-					if got != want {
-						t.Fatalf("override sanitization drift on zone=%q ng=%q:\n  sprig = %q\n  go    = %q", zone, ng, got, want)
-					}
-				})
+	// Override branch: resourcePool OR datastore set on InstanceClass → template renders
+	// sanitized "<zone>-<ng>", hook constructs the same via dzNameOverride. Both fields
+	// are exercised individually and together — any one must trigger the compound name.
+	ngNames := []string{
+		"worker-fast",
+		"Worker Fast",
+		"Prod.Sys",
+		"system_a",
+	}
+	branches := []struct {
+		label string
+		spec  map[string]any
+	}{
+		{"resourcePool_only", map[string]any{"resourcePool": "/DC/host/cl/Resources/prod"}},
+		{"datastore_only", map[string]any{"datastore": "/DC/datastore/nvme"}},
+		{"both", map[string]any{
+			"resourcePool": "/DC/host/cl/Resources/prod",
+			"datastore":    "/DC/datastore/nvme",
+		}},
+	}
+	for _, br := range branches {
+		t.Run("override_"+br.label, func(t *testing.T) {
+			for _, zone := range cases {
+				for _, ng := range ngNames {
+					t.Run(zone+"|"+ng, func(t *testing.T) {
+						var buf bytes.Buffer
+						ctx := map[string]any{
+							"zone":          zone,
+							"instanceClass": br.spec,
+							"nodeGroup":     map[string]any{"name": ng},
+						}
+						if err := tmpl.Execute(&buf, ctx); err != nil {
+							t.Fatalf("execute %s sprig on zone=%q ng=%q: %v", br.label, zone, ng, err)
+						}
+						got := buf.String()
+						want := dzNameOverride(zone, ng)
+						if got != want {
+							t.Fatalf("%s sanitization drift on zone=%q ng=%q:\n  sprig = %q\n  go    = %q", br.label, zone, ng, got, want)
+						}
+					})
+				}
 			}
-		}
-	})
+		})
+	}
 }
 
 // readSprigFailureDomainExpr loads template.yaml, yaml-parses it, and returns the raw

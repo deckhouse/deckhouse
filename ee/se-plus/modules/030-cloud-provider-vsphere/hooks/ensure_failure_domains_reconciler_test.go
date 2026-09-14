@@ -75,12 +75,14 @@ func TestDesiredOverrideDZsEmpty(t *testing.T) {
 	}
 }
 
-// An InstanceClass without a resourcePool override contributes nothing: the NG falls back
-// to the baseline DZ that the zone-loop creates elsewhere.
-func TestDesiredOverrideDZsNoResourcePool(t *testing.T) {
+// An InstanceClass without any placement override contributes nothing: the NG falls back
+// to the baseline DZ that the zone-loop creates elsewhere. Both resourcePool and datastore
+// have to be empty for this to hold — the desired-set builder triggers on presence of
+// either.
+func TestDesiredOverrideDZsNoOverride(t *testing.T) {
 	snaps := newSnaps(t, map[string][]any{
 		"vsphere-instance-classes": {
-			instanceClassSnapshot{Name: "worker", ResourcePool: ""},
+			instanceClassSnapshot{Name: "worker"}, // both fields empty
 		},
 		"node-groups": {
 			nodeGroupSnapshot{
@@ -95,7 +97,71 @@ func TestDesiredOverrideDZsNoResourcePool(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(got) != 0 {
-		t.Fatalf("want no overrides when resourcePool is empty, got %v", namesSorted(got))
+		t.Fatalf("want no overrides when both fields are empty, got %v", namesSorted(got))
+	}
+}
+
+// Either resourcePool or datastore alone must trigger an override DZ — presence of the
+// key in the IC is what the compound-failureDomain sprig branch keys on.
+func TestDesiredOverrideDZsDatastoreOnly(t *testing.T) {
+	snaps := newSnaps(t, map[string][]any{
+		"vsphere-instance-classes": {
+			instanceClassSnapshot{Name: "worker-nvme", Datastore: "/DC/datastore/nvme"},
+		},
+		"node-groups": {
+			nodeGroupSnapshot{
+				Name:              "worker-nvme",
+				InstanceClassKind: instanceClassKind,
+				InstanceClassName: "worker-nvme",
+				Zones:             []string{"east"},
+			},
+		},
+	})
+	got, err := desiredOverrideDZs(snaps, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []string{"east-worker-nvme"}
+	if diff := namesSorted(got); !reflect.DeepEqual(diff, want) {
+		t.Fatalf("names diff: got %v, want %v", diff, want)
+	}
+	dz := got["east-worker-nvme"]
+	if dz.Datastore != "/DC/datastore/nvme" {
+		t.Fatalf("datastore = %q; want the IC override", dz.Datastore)
+	}
+	if dz.ResourcePool != "" {
+		t.Fatalf("resourcePool = %q; want empty (IC didn't override it)", dz.ResourcePool)
+	}
+}
+
+func TestDesiredOverrideDZsBothFields(t *testing.T) {
+	snaps := newSnaps(t, map[string][]any{
+		"vsphere-instance-classes": {
+			instanceClassSnapshot{
+				Name:         "worker-full",
+				ResourcePool: "/DC/host/cl/Resources/prod",
+				Datastore:    "/DC/datastore/nvme",
+			},
+		},
+		"node-groups": {
+			nodeGroupSnapshot{
+				Name:              "worker-full",
+				InstanceClassKind: instanceClassKind,
+				InstanceClassName: "worker-full",
+				Zones:             []string{"east"},
+			},
+		},
+	})
+	got, err := desiredOverrideDZs(snaps, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	dz := got["east-worker-full"]
+	if dz.ResourcePool != "/DC/host/cl/Resources/prod" {
+		t.Fatalf("resourcePool = %q", dz.ResourcePool)
+	}
+	if dz.Datastore != "/DC/datastore/nvme" {
+		t.Fatalf("datastore = %q", dz.Datastore)
 	}
 }
 

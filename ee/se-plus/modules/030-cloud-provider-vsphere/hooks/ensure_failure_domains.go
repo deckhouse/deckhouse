@@ -95,12 +95,14 @@ var (
 )
 
 // instanceClassSnapshot is what the VsphereInstanceClass FilterFunc returns per object.
-// Only the InstanceClass name and its resourcePool matter for reconciler logic — an empty
-// resourcePool means "no override" and the InstanceClass falls back to the module-wide
-// baseline DZ.
+// Only the InstanceClass name and its placement fields matter for reconciler logic —
+// empty resourcePool AND empty datastore means "no override" and the InstanceClass
+// falls back to the module-wide baseline DZ. Datastore-on-DZ is a downstream extension
+// of upstream CAPV via patches/003-datastore-on-deployment-zone.patch.
 type instanceClassSnapshot struct {
 	Name         string `json:"name"`
 	ResourcePool string `json:"resourcePool"`
+	Datastore    string `json:"datastore"`
 }
 
 // nodeGroupSnapshot is what the NodeGroup FilterFunc returns per object. Fields are the
@@ -147,10 +149,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 		},
 		{
-			// VsphereInstanceClass provides the resourcePool override. The hook re-runs whenever
-			// an InstanceClass is created, updated (spec.resourcePool set/changed/cleared) or
-			// deleted. FilterFunc surfaces only the name and resourcePool — the rest of the
-			// InstanceClass spec is irrelevant to this reconciler.
+			// VsphereInstanceClass provides the resourcePool and/or datastore override. The hook
+			// re-runs whenever an InstanceClass is created, updated (either override field
+			// set/changed/cleared) or deleted. FilterFunc surfaces only name + resourcePool +
+			// datastore — the rest of the InstanceClass spec is irrelevant to this reconciler.
 			Name:       "vsphere-instance-classes",
 			ApiVersion: "deckhouse.io/v1",
 			Kind:       instanceClassKind,
@@ -182,9 +184,14 @@ func filterVsphereInstanceClass(obj *unstructured.Unstructured) (go_hook.FilterR
 	if err != nil {
 		return nil, fmt.Errorf("read spec.resourcePool of VsphereInstanceClass %q: %w", obj.GetName(), err)
 	}
+	ds, _, err := unstructured.NestedString(obj.Object, "spec", "datastore")
+	if err != nil {
+		return nil, fmt.Errorf("read spec.datastore of VsphereInstanceClass %q: %w", obj.GetName(), err)
+	}
 	return instanceClassSnapshot{
 		Name:         obj.GetName(),
 		ResourcePool: rp,
+		Datastore:    ds,
 	}, nil
 }
 
@@ -289,7 +296,9 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 		dzName := rfc1123SubdomainName(zone)
 
 		fd := buildFailureDomain(fdName, region, regionTagCategory, zone, zoneTagCategory, dd.Datacenter, clusterPath, datastore)
-		dz := buildDeploymentZone(dzName, server, fdName, folder, baselineRP, dzTypeBase, "")
+		// Base DZ leaves placementConstraint.datastore empty on purpose: CAPV then falls
+		// back to FD.topology.datastore for the zone-wide default.
+		dz := buildDeploymentZone(dzName, server, fdName, folder, baselineRP, "", dzTypeBase, "")
 		input.PatchCollector.CreateIfNotExists(fd)
 		input.PatchCollector.CreateIfNotExists(dz)
 		input.Logger.Info("created baseline VSphereFailureDomain and VSphereDeploymentZone",
@@ -313,14 +322,17 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 }
 
 // desiredOverrideDZ describes one override DZ the reconciler wants to exist. Zone and
-// NodeGroup are the identity (a DZ name is derived from them via sanitization); resourcePool
-// is the value written into placementConstraint. The name field is precomputed by
-// dzNameOverride to keep sanitization consolidated.
+// NodeGroup are the identity (a DZ name is derived from them via sanitization);
+// ResourcePool and Datastore are the values written into placementConstraint. Datastore
+// on DZ is a downstream extension of upstream CAPV — see
+// images/capv-controller-manager/patches/003-datastore-on-deployment-zone.patch. The
+// name field is precomputed by dzNameOverride to keep sanitization consolidated.
 type desiredOverrideDZ struct {
 	Name         string
 	Zone         string
 	NodeGroup    string
 	ResourcePool string
+	Datastore    string
 	FDName       string
 }
 
@@ -328,7 +340,7 @@ type desiredOverrideDZ struct {
 // NodeGroup snapshots. A NodeGroup contributes one override DZ per zone iff:
 //   - it references an InstanceClass of kind VsphereInstanceClass;
 //   - the referenced InstanceClass exists in the snapshot;
-//   - the InstanceClass has a non-empty spec.resourcePool.
+//   - the InstanceClass has a non-empty spec.resourcePool OR spec.datastore.
 //
 // pccZones is the fallback zone list for a NodeGroup that leaves spec.cloudInstances.zones
 // empty. Result is keyed by DZ name for O(1) diff.
@@ -337,12 +349,17 @@ func desiredOverrideDZs(snaps sdkpkg.Snapshots, pccZones []string) (map[string]d
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal vsphere-instance-classes snapshot: %w", err)
 	}
-	icByName := map[string]string{} // ic name → resourcePool
+	// ic name → (resourcePool, datastore); one entry per IC that has either override set.
+	type icOverride struct {
+		ResourcePool string
+		Datastore    string
+	}
+	icByName := map[string]icOverride{}
 	for _, ic := range ics {
-		if ic.ResourcePool == "" {
+		if ic.ResourcePool == "" && ic.Datastore == "" {
 			continue
 		}
-		icByName[ic.Name] = ic.ResourcePool
+		icByName[ic.Name] = icOverride{ResourcePool: ic.ResourcePool, Datastore: ic.Datastore}
 	}
 
 	ngs, err := sdkobjectpatch.UnmarshalToStruct[nodeGroupSnapshot](snaps, "node-groups")
@@ -354,7 +371,7 @@ func desiredOverrideDZs(snaps sdkpkg.Snapshots, pccZones []string) (map[string]d
 		if ng.InstanceClassKind != instanceClassKind {
 			continue
 		}
-		rp, has := icByName[ng.InstanceClassName]
+		over, has := icByName[ng.InstanceClassName]
 		if !has {
 			continue
 		}
@@ -367,7 +384,8 @@ func desiredOverrideDZs(snaps sdkpkg.Snapshots, pccZones []string) (map[string]d
 				Name:         dzNameOverride(z, ng.Name),
 				Zone:         z,
 				NodeGroup:    ng.Name,
-				ResourcePool: rp,
+				ResourcePool: over.ResourcePool,
+				Datastore:    over.Datastore,
 				FDName:       fdNamePrefix + rfc1123SubdomainName(z),
 			}
 			desired[dz.Name] = dz
@@ -400,11 +418,12 @@ func reconcileOverrideDZs(
 	}
 
 	for _, dz := range desired {
-		obj := buildDeploymentZone(dz.Name, server, dz.FDName, folder, dz.ResourcePool, dzTypeOverride, dz.NodeGroup)
+		obj := buildDeploymentZone(dz.Name, server, dz.FDName, folder, dz.ResourcePool, dz.Datastore, dzTypeOverride, dz.NodeGroup)
 		input.PatchCollector.CreateOrUpdate(obj)
 		if _, present := existing[dz.Name]; !present {
 			input.Logger.Info("created override VSphereDeploymentZone",
-				"dzName", dz.Name, "zone", dz.Zone, "nodeGroup", dz.NodeGroup, "resourcePool", dz.ResourcePool)
+				"dzName", dz.Name, "zone", dz.Zone, "nodeGroup", dz.NodeGroup,
+				"resourcePool", dz.ResourcePool, "datastore", dz.Datastore)
 		}
 	}
 
@@ -631,13 +650,22 @@ func buildFailureDomain(name, region, regionTagCategory, zone, zoneTagCategory, 
 // reconcileOverrideDZs uses to safely list-and-delete only override DZs without ever
 // touching a base DZ. When dzType is "override", nodeGroup carries the NG identity for
 // operator debugging (kubectl get vspheredeploymentzones --show-labels).
-func buildDeploymentZone(name, server, failureDomain, folder, resourcePool, dzType, nodeGroup string) *unstructured.Unstructured {
+//
+// datastore lands in placementConstraint.datastore. That field is a downstream extension
+// of upstream CAPV added by images/capv-controller-manager/patches/003-datastore-on-
+// deployment-zone.patch: without the patch, the CRD schema rejects it and CAPV
+// overrideFunc ignores it. Empty means "no override" — CAPV falls back to
+// VSphereFailureDomain.spec.topology.datastore.
+func buildDeploymentZone(name, server, failureDomain, folder, resourcePool, datastore, dzType, nodeGroup string) *unstructured.Unstructured {
 	placement := map[string]interface{}{}
 	if folder != "" {
 		placement["folder"] = folder
 	}
 	if resourcePool != "" {
 		placement["resourcePool"] = resourcePool
+	}
+	if datastore != "" {
+		placement["datastore"] = datastore
 	}
 	labels := map[string]interface{}{
 		"heritage":  "deckhouse",
