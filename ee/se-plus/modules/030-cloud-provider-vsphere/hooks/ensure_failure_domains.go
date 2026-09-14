@@ -80,9 +80,9 @@ const (
 	// resourcePool override). Only DZs with dzTypeLabel="override" are eligible for
 	// deletion in the reconcile diff — a stray label mismatch on a base DZ must never
 	// cause a base DZ to be reaped.
-	dzTypeLabel     = "cloud-provider-vsphere.deckhouse.io/dz-type"
-	dzTypeBase      = "base"
-	dzTypeOverride  = "override"
+	dzTypeLabel      = "cloud-provider-vsphere.deckhouse.io/dz-type"
+	dzTypeBase       = "base"
+	dzTypeOverride   = "override"
 	dzNodeGroupLabel = "cloud-provider-vsphere.deckhouse.io/node-group"
 
 	instanceClassKind = "VsphereInstanceClass"
