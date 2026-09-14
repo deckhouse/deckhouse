@@ -141,10 +141,8 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha3.Project) 
 	return nil
 }
 
-// projectTemplateByName fetches the schema-based (v1alpha2) ProjectTemplate — the storage version, so
-// its structured fields and fromParam leaves are visible. The caller decides how to render it:
-// natively (structured fields, see internal/render) or through the legacy helm engine (a template that
-// still carries a resourcesTemplate string).
+// projectTemplateByName fetches the structured (v1alpha2) ProjectTemplate — the storage version, so
+// its structured fields and fromParam leaves are visible to the native render (see internal/render).
 func (m *Manager) projectTemplateByName(ctx context.Context, name string) (*v1alpha2.ProjectTemplate, error) {
 	if name == "" {
 		return new(v1alpha2.ProjectTemplate), nil

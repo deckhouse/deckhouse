@@ -18,7 +18,6 @@ package project
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -34,23 +33,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
 
-	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
-	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
 	"controller/internal/validate"
 	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
 
-func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
-	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), helmClient: helmClient}}
+func Register(runtimeManager manager.Manager) {
+	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient()}}
 	runtimeManager.GetWebhookServer().Register("/validate/v1alpha3/projects", hook)
 }
 
 type validator struct {
-	client     client.Client
-	helmClient *helm.Client
+	client client.Client
 }
 
 func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -151,18 +147,11 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Allowed("").WithWarnings("The project template not found")
 	}
 
-	// validate the project against the template
+	// validate the project parameters against the template schema. The render itself is not
+	// rehearsed here: a structured template renders from its fields and the resolved parameters,
+	// and both are validated on their own -- the fields by the template webhook, the parameters
+	// just above.
 	if err = validate.Project(project, template); err != nil {
-		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
-	}
-
-	// validate helm render
-	if err = v.helmClient.ValidateRender(project, template); err != nil {
-		// warning errors allow deploying the project
-		if errors.Is(err, helm.ErrNamespaceOverride) {
-			return admission.Allowed("").WithWarnings(err.Error())
-		}
-
 		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
 	}
 
@@ -222,14 +211,11 @@ func validateQuotaByteUnits(quota corev1.ResourceList) string {
 	return ""
 }
 
-// projectTemplateByName reads the template and projects it onto the legacy shape the validation and
-// the helm render take.
-//
-// The read is at v1alpha2, the served version. Asking for v1alpha1 -- which this did -- worked only
-// while that version was served: the apiserver converted the stored object on every call, and once
-// v1alpha1 stopped being served the lookup began failing with "no matches for kind ProjectTemplate in
-// version deckhouse.io/v1alpha1", which denied every project write.
-func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
+// projectTemplateByName reads the template at v1alpha2, the served version. Asking for v1alpha1 --
+// which this did -- worked only while that version was served: the apiserver converted the stored
+// object on every call, and once v1alpha1 stopped being served the lookup began failing with "no
+// matches for kind ProjectTemplate in version deckhouse.io/v1alpha1", which denied every project write.
+func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1alpha2.ProjectTemplate, error) {
 	template := new(v1alpha2.ProjectTemplate)
 	if err := v.client.Get(ctx, client.ObjectKey{Name: name}, template); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -238,5 +224,5 @@ func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1
 		return nil, fmt.Errorf("get the '%s' project template: %w", name, err)
 	}
 
-	return projectmanager.LegacyTemplate(template), nil
+	return template, nil
 }

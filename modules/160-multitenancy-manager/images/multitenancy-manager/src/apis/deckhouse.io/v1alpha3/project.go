@@ -31,13 +31,11 @@ const (
 	ProjectStateError    = "Error"
 	ProjectStateDeployed = "Deployed"
 
-	ProjectConditionProjectTemplateFound      = "ProjectTemplateFound"
-	ProjectConditionProjectValidated          = "Validated"
-	ProjectConditionProjectResourcesUpgraded  = "ResourcesUpgraded"
-	ProjectConditionStandardFieldsApplied     = "StandardFieldsApplied"
-	ProjectConditionTemplateResourcesFiltered = "TemplateResourcesFiltered"
-	ProjectConditionTemplateRolesAllowed      = "TemplateRolesAllowed"
-	ProjectConditionHelmOwnership             = "HelmOwnership"
+	ProjectConditionProjectTemplateFound     = "ProjectTemplateFound"
+	ProjectConditionProjectValidated         = "Validated"
+	ProjectConditionProjectResourcesUpgraded = "ResourcesUpgraded"
+	ProjectConditionStandardFieldsApplied    = "StandardFieldsApplied"
+	ProjectConditionHelmOwnership            = "HelmOwnership"
 	// ProjectConditionTemplateRequiresRewrite is False while the project's template carries the
 	// legacy-helm-template mark: the template was a Helm string in v1alpha1, the string is gone, and
 	// rendering the empty structured shape would delete the objects that string produced.
@@ -51,9 +49,6 @@ const (
 
 	ResourceLabelProject  = "projects.deckhouse.io/project"
 	ResourceLabelTemplate = "projects.deckhouse.io/project-template"
-
-	ResourceLabelSkipHeritage = "projects.deckhouse.io/skip-heritage-label"
-	ResourceLabelUnmanaged    = "projects.deckhouse.io/unmanaged"
 
 	ResourceLabelHeritage        = "heritage"
 	ResourceHeritageMultitenancy = "multitenancy-manager"
