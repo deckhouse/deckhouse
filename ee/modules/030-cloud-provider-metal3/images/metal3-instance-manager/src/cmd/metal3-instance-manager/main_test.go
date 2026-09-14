@@ -217,8 +217,39 @@ func TestUpdateBareMetalHostPreservesUnmanagedSpec(t *testing.T) {
 		t.Fatalf("update BMH: changed=%v err=%v", changed, err)
 	}
 	assertNestedMap(t, bmh, map[string]interface{}{}, "spec", "rootDeviceHints")
+	assertNestedBool(t, bmh, true, "spec", "online")
 	assertNestedString(t, bmh, "metadata", "spec", "automatedCleaningMode")
 	assertNestedString(t, bmh, "ipmi://192.0.2.10:623", "spec", "bmc", "address")
+}
+
+func TestUpdateBareMetalHostPreservesClaimedHostOnlineState(t *testing.T) {
+	bmh := &unstructured.Unstructured{Object: map[string]interface{}{
+		"spec": map[string]interface{}{
+			"online": false,
+			"consumerRef": map[string]interface{}{
+				"apiVersion": "infrastructure.cluster.x-k8s.io/v1beta1",
+				"kind":       "Metal3Machine",
+				"name":       "worker-0",
+				"namespace":  "d8-cloud-instance-manager",
+			},
+			"bmc": map[string]interface{}{
+				"address":         "redfish+https://old/redfish/v1/Systems/1",
+				"credentialsName": "old",
+			},
+		},
+	}}
+	changed, err := updateBareMetalHostSpec(bmh, instanceSpec{
+		Online:          true,
+		BootMACAddress:  "f2:4e:c6:e6:af:ac",
+		BMC:             BMCConfig{Insecure: true},
+		RootDeviceHints: map[string]interface{}{},
+	}, ResolvedBMC{Address: "ipmi://192.0.2.10:623"}, "new")
+	if err != nil || !changed {
+		t.Fatalf("update BMH: changed=%v err=%v", changed, err)
+	}
+	assertNestedBool(t, bmh, false, "spec", "online")
+	assertNestedString(t, bmh, "ipmi://192.0.2.10:623", "spec", "bmc", "address")
+	assertNestedString(t, bmh, "new", "spec", "bmc", "credentialsName")
 }
 
 func TestResolveRedfishBySystemUUID(t *testing.T) {
@@ -281,6 +312,14 @@ func assertNestedString(t *testing.T, obj *unstructured.Unstructured, want strin
 	got, found, err := unstructured.NestedString(obj.Object, fields...)
 	if err != nil || !found || got != want {
 		t.Fatalf("field %s: want %q, got %q, found=%v, err=%v", strings.Join(fields, "."), want, got, found, err)
+	}
+}
+
+func assertNestedBool(t *testing.T, obj *unstructured.Unstructured, want bool, fields ...string) {
+	t.Helper()
+	got, found, err := unstructured.NestedBool(obj.Object, fields...)
+	if err != nil || !found || got != want {
+		t.Fatalf("field %s: want %v, got %v, found=%v, err=%v", strings.Join(fields, "."), want, got, found, err)
 	}
 }
 
