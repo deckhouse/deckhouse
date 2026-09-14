@@ -35,6 +35,12 @@ properties:
                 required:
                 - externalInstance
             properties:
+              bmcProbeTimeoutSeconds:
+                type: integer
+                default: 15
+                minimum: 1
+                maximum: 300
+                description: Timeout in seconds for a single BMC protocol probe.
               externalInstance:
                 type: object
                 additionalProperties: false

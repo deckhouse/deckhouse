@@ -34,7 +34,9 @@ import (
 
 func main() {
 	var targetNamespace string
+	var bmcProbeTimeout time.Duration
 	flag.StringVar(&targetNamespace, "target-namespace", "d8-cloud-instance-manager", "namespace where Metal3Instance and generated BareMetalHost resources are stored")
+	flag.DurationVar(&bmcProbeTimeout, "bmc-probe-timeout", 15*time.Second, "timeout for a single BMC protocol probe")
 	flag.Parse()
 
 	zapLogger, err := zap.NewProduction()
@@ -69,7 +71,7 @@ func main() {
 	r := &reconciler{
 		Client:          mgr.GetClient(),
 		targetNamespace: targetNamespace,
-		resolver:        newNetworkBMCResolver(15 * time.Second),
+		resolver:        newNetworkBMCResolver(bmcProbeTimeout),
 	}
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(instance).

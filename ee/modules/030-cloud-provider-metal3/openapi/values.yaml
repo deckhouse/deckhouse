@@ -33,6 +33,11 @@ properties:
                 required:
                 - externalInstance
             properties:
+              bmcProbeTimeoutSeconds:
+                type: integer
+                default: 15
+                minimum: 1
+                maximum: 300
               externalInstance:
                 type: object
                 additionalProperties: false
