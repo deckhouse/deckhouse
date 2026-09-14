@@ -157,11 +157,88 @@ func TestProjectQuotaDropsNestedObjects(t *testing.T) {
 	}
 }
 
-// A ProjectTemplate keeps its fields across the version bump. v1alpha1 is not served -- the
-// structured fields it cannot describe are pruned on the way down and cannot come back, which is why
-// -- but the CRD still declares the conversion and the apiserver still asks for it, so it has to
-// answer. It once did not: removing this hook left a live cluster failing about one conversion a
-// second.
+// v1alpha2 has no resourcesTemplate. A v1alpha1 template that carried a Helm string comes up without
+// it and marked with the legacy-helm-template annotation, so the controller refuses to render the
+// empty structured shape over the release that string built; a template whose string was empty (or
+// whitespace) is not marked -- there was nothing to lose.
+func TestProjectTemplateUpConversionDropsTheHelmString(t *testing.T) {
+	t.Parallel()
+
+	const mark = "projects.deckhouse.io/legacy-helm-template"
+
+	tests := []struct {
+		name     string
+		resource any
+		marked   bool
+	}{
+		{name: "a helm string", resource: "---\napiVersion: v1\nkind: Namespace\n", marked: true},
+		{name: "an empty string", resource: "", marked: false},
+		{name: "whitespace only", resource: "  \n\t", marked: false},
+		{name: "no field at all", resource: nil, marked: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			spec := map[string]any{
+				"description":      "a template",
+				"parametersSchema": map[string]any{"openAPIV3Schema": map[string]any{"type": "object"}},
+			}
+			if tt.resource != nil {
+				spec["resourcesTemplate"] = tt.resource
+			}
+			template := map[string]any{
+				"apiVersion": "deckhouse.io/v1alpha1",
+				"kind":       "ProjectTemplate",
+				"metadata":   map[string]any{"name": "test", "annotations": map[string]any{"keep": "me"}},
+				"spec":       spec,
+			}
+
+			up := convertWith(t, templateConversionHook, "v1alpha1_to_v1alpha2", template)
+			assert.Equal(t, "deckhouse.io/v1alpha2", up["apiVersion"])
+			assert.Nil(t, specField(up, "resourcesTemplate"), "v1alpha2 must not carry the Helm string")
+			assert.Equal(t, "a template", specField(up, "description"))
+			assert.Equal(t, spec["parametersSchema"], specField(up, "parametersSchema"))
+
+			annotations, _ := up["metadata"].(map[string]any)["annotations"].(map[string]any)
+			assert.Equal(t, "me", annotations["keep"], "the other annotations survive")
+			if tt.marked {
+				assert.Equal(t, "true", annotations[mark])
+			} else {
+				assert.NotContains(t, annotations, mark)
+			}
+		})
+	}
+}
+
+// The apiserver keeps asking for the conversion of whatever v1alpha1 objects it holds, and a
+// template with no spec at all is a shape it can hold. The conversion must answer, not fail.
+func TestProjectTemplateConversionSurvivesAMissingSpec(t *testing.T) {
+	t.Parallel()
+
+	bare := map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ProjectTemplate",
+		"metadata":   map[string]any{"name": "test"},
+	}
+
+	up := convertWith(t, templateConversionHook, "v1alpha1_to_v1alpha2", bare)
+	assert.Equal(t, "deckhouse.io/v1alpha2", up["apiVersion"])
+	_, hasSpec := up["spec"]
+	assert.False(t, hasSpec, "a missing spec is not conjured")
+
+	down := convertWith(t, templateConversionHook, "v1alpha2_to_v1alpha1", map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha2",
+		"kind":       "ProjectTemplate",
+		"metadata":   map[string]any{"name": "test"},
+	})
+	assert.Equal(t, "deckhouse.io/v1alpha1", down["apiVersion"])
+	assert.Equal(t, "", specField(down, "resourcesTemplate"), "v1alpha1 requires the field, so it is backfilled")
+}
+
+// A round trip through v1alpha1 keeps what both versions can describe. The Helm string is not among
+// that: it goes down as the empty string v1alpha1 requires and does not come back.
 func TestProjectTemplateVersionBump(t *testing.T) {
 	t.Parallel()
 
@@ -170,20 +247,80 @@ func TestProjectTemplateVersionBump(t *testing.T) {
 		"kind":       "ProjectTemplate",
 		"metadata":   map[string]any{"name": "test"},
 		"spec": map[string]any{
-			"description":       "a template",
-			"resourcesTemplate": "---\napiVersion: v1\nkind: Namespace\n",
-			"parametersSchema":  map[string]any{"openAPIV3Schema": map[string]any{"type": "object"}},
+			"description":      "a template",
+			"parametersSchema": map[string]any{"openAPIV3Schema": map[string]any{"type": "object"}},
 		},
 	}
 
 	down := convertWith(t, templateConversionHook, "v1alpha2_to_v1alpha1", template)
 	assert.Equal(t, "deckhouse.io/v1alpha1", down["apiVersion"])
 	assert.Equal(t, specField(template, "description"), specField(down, "description"))
-	assert.Equal(t, specField(template, "resourcesTemplate"), specField(down, "resourcesTemplate"))
+	assert.Equal(t, "", specField(down, "resourcesTemplate"))
 
 	up := convertWith(t, templateConversionHook, "v1alpha1_to_v1alpha2", down)
 	assert.Equal(t, "deckhouse.io/v1alpha2", up["apiVersion"])
 	assert.Equal(t, template["spec"], up["spec"])
+	annotations, _ := up["metadata"].(map[string]any)["annotations"].(map[string]any)
+	assert.NotContains(t, annotations, "projects.deckhouse.io/legacy-helm-template", "an empty string is not a Helm template")
+}
+
+// status.namespaces is a list of names in v1alpha2 and a list of {name, kind} objects in v1alpha3.
+// A view at either version has to validate against its own schema, so the status is converted with
+// the spec: down to names, up to objects with the kind derived from the project name.
+func TestProjectStatusNamespacesRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	project := map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha3",
+		"kind":       "Project",
+		"metadata":   map[string]any{"name": "backend"},
+		"spec":       map[string]any{"projectTemplateName": "default"},
+		"status": map[string]any{
+			"state": "Deployed",
+			"namespaces": []any{
+				map[string]any{"name": "backend", "kind": "Main"},
+				map[string]any{"name": "backend-cache", "kind": "Additional"},
+			},
+		},
+	}
+
+	down := convert(t, "v1alpha3_to_v1alpha2", project)
+	assert.Equal(t, []any{"backend", "backend-cache"}, statusField(down, "namespaces"))
+	assert.Equal(t, "Deployed", statusField(down, "state"), "the rest of the status is untouched")
+
+	up := convert(t, "v1alpha2_to_v1alpha3", down)
+	assert.Equal(t, project["status"], up["status"])
+}
+
+// The conversion of the status must not depend on there being one, or on there being a spec: the
+// apiserver converts whatever it stored, including a project that never reconciled.
+func TestProjectConversionSurvivesMissingSpecAndStatus(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		function string
+		object   map[string]any
+		want     string
+	}{
+		{"v1alpha1 without spec", "v1alpha1_to_v1alpha2", map[string]any{"apiVersion": "deckhouse.io/v1alpha1"}, "deckhouse.io/v1alpha2"},
+		{"v1alpha2 without spec or status", "v1alpha2_to_v1alpha3", map[string]any{"apiVersion": "deckhouse.io/v1alpha2"}, "deckhouse.io/v1alpha3"},
+		{"v1alpha3 without spec or status", "v1alpha3_to_v1alpha2", map[string]any{"apiVersion": "deckhouse.io/v1alpha3"}, "deckhouse.io/v1alpha2"},
+		{"v1alpha2 with a status but no namespaces", "v1alpha2_to_v1alpha3", map[string]any{"apiVersion": "deckhouse.io/v1alpha2", "status": map[string]any{"state": "Error"}}, "deckhouse.io/v1alpha3"},
+		{"v1alpha3 with an empty namespace list", "v1alpha3_to_v1alpha2", map[string]any{"apiVersion": "deckhouse.io/v1alpha3", "status": map[string]any{"namespaces": []any{}}}, "deckhouse.io/v1alpha2"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tt.object["kind"] = "Project"
+			tt.object["metadata"] = map[string]any{"name": "test"}
+			out := convert(t, tt.function, tt.object)
+			assert.Equal(t, tt.want, out["apiVersion"])
+			_, hasSpec := out["spec"]
+			_, hadSpec := tt.object["spec"]
+			assert.Equal(t, hadSpec, hasSpec, "a missing spec is not conjured")
+		})
+	}
 }
 
 // A structured template has neither of the two fields the v1alpha1 schema requires, and the apiserver
@@ -278,6 +415,12 @@ func specField(object map[string]any, name string) any {
 	spec, _ := object["spec"].(map[string]any)
 
 	return spec[name]
+}
+
+func statusField(object map[string]any, name string) any {
+	status, _ := object["status"].(map[string]any)
+
+	return status[name]
 }
 
 // asAny retypes a literal map the way a decoded JSON document looks, so comparisons are of values

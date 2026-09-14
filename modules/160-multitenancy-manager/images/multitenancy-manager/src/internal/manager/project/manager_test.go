@@ -49,9 +49,11 @@ type fakeHelmClient struct {
 	applyResult    helm.ReleaseOutcome // returned by Upgrade/UpgradeManifests
 	analyzeResult  helm.ReleaseOutcome // returned by Analyze{Manifests,Rendered}
 	analyzeCalls   int
+	upgradeCalls   int
 }
 
 func (f *fakeHelmClient) UpgradeManifests(_ context.Context, project *v1alpha3.Project, _ string) (helm.ReleaseOutcome, error) {
+	f.upgradeCalls++
 	f.seenNamespaces = append([]v1alpha3.NamespaceStatus(nil), project.Status.Namespaces...)
 	return f.applyResult, nil
 }
@@ -120,6 +122,50 @@ func TestUpgradeResourcesReusesApplyOutcome(t *testing.T) {
 	assert.True(t, filtered)
 	assert.Len(t, refs, 1)
 	assert.Equal(t, 0, fh.analyzeCalls, "an applied release must not trigger a second post-render pass")
+}
+
+// A template that came up from v1alpha1 with a Helm resourcesTemplate is marked, and its projects
+// are parked in Error without touching the release: the empty structured shape it now has would
+// otherwise be rendered over the objects the Helm string produced and delete them. Removing the mark
+// -- what an administrator does after rewriting the template -- lets the render proceed.
+func TestHandleTemplateRefusesALegacyHelmTemplate(t *testing.T) {
+	tmpl := &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{
+		Name:        "legacy",
+		Annotations: map[string]string{v1alpha2.TemplateAnnotationLegacyHelm: "true"},
+	}}
+	project := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "legacy"},
+	}
+	m, c := newManager(t, tmpl, project)
+	fh := &fakeHelmClient{}
+	m.helmClient = fh
+	ctx := context.Background()
+
+	done, err := m.handleTemplate(ctx, project)
+	require.NoError(t, err)
+	assert.True(t, done, "the reconcile stops at the template")
+	assert.Equal(t, 0, fh.upgradeCalls, "the release must not be touched")
+	assert.Equal(t, v1alpha3.ProjectStateError, project.Status.State)
+	assert.True(t, project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRequiresRewrite))
+	cond := conditionByType(project, v1alpha3.ProjectConditionTemplateRequiresRewrite)
+	require.NotNil(t, cond)
+	assert.Contains(t, cond.Message, v1alpha2.TemplateAnnotationLegacyHelm)
+
+	stored := new(v1alpha3.Project)
+	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, stored))
+	assert.Equal(t, v1alpha3.ProjectStateError, stored.Status.State, "the refusal is persisted in the status")
+
+	// the administrator rewrote the template and removed the mark
+	tmpl.Annotations = nil
+	require.NoError(t, c.Update(ctx, tmpl))
+	project.ClearConditions()
+
+	done, err = m.handleTemplate(ctx, project)
+	require.NoError(t, err)
+	assert.False(t, done)
+	assert.Equal(t, 1, fh.upgradeCalls, "an unmarked template renders")
+	assert.False(t, project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRequiresRewrite))
 }
 
 var errBoom = errors.New("boom")
