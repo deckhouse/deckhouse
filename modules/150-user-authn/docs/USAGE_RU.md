@@ -21,8 +21,6 @@ spec:
     - id: direct
       masterURI: https://159.89.5.247:6443
       description: "Direct access to kubernetes API"
-    publishAPI:
-      enabled: true
 ```
 
 {% endraw %}
@@ -342,12 +340,15 @@ spec:
 
 Чтобы включить доступ к Kubernetes API с использованием базовой аутентификации (Basic Authentication) по учетным записям LDAP:
 
+{% tabs basic_auth %}
+{% tab "Для DP версии до 1.76 включительно" %}
+
 1. Убедитесь, что в конфигурации модуля `user-authn` включен параметр [`publishAPI`](configuration.html#parameters-publishapi).
 1. Установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) в ресурсе DexProvider для LDAP.
 
 > **Внимание**. В кластере может быть только один провайдер аутентификации с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 
-После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой логин и пароль в LDAP .
+После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой логин и пароль в LDAP.
 
 Пример `kubeconfig` для пользователя:
 
@@ -372,6 +373,43 @@ contexts:
     user: ldap-user
 current-context: default
 ```
+
+{% endtab %}
+{% tab "Для DP версии 1.77 и новее" %}
+
+1. Убедитесь, что в конфигурации модуля `control-plane-manager` включен параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi).
+1. Установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) в ресурсе DexProvider для LDAP.
+
+> **Внимание**. В кластере может быть только один провайдер аутентификации с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+
+После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой логин и пароль в LDAP.
+
+Пример `kubeconfig` для пользователя:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Путь к CA сертификату или insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
+```
+
+{% endtab %}
+{% endtabs %}
 
 #### Kerberos (SPNEGO) SSO для LDAP
 

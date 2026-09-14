@@ -139,6 +139,20 @@ During configuration, you can specify:
 
 By default, a special CA certificate will be generated and a kubeconfig generator will be automatically configured.
 
+### Via Gateway API
+
+If the [`alb`](/modules/alb/) module is enabled in the cluster and a Gateway can be resolved for it (either a default Gateway discovered automatically, or one set explicitly via the `gatewayAPI` settings), the API server is additionally published via the Gateway API: a `ListenerSet` and an `HTTPRoute` are automatically created in the `kube-system` namespace, using the same hostname as for [Ingress](#via-ingress).
+
+This publication method:
+
+* Is controlled by the same [`apiserver.publishAPI.ingress.enabled`](configuration.html#parameters-apiserver-publishapi-ingress) parameter. There is no separate parameter to enable it.
+* Requires the `global.modules.publicDomainTemplate` parameter to be set (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+* Does not depend on whether the Ingress controller is enabled — it works as a fully independent mechanism alongside it.
+
+{% alert level="warning" %}
+If the Ingress controller and the `alb` module (with a resolvable Gateway) are enabled in the cluster at the same time, the API server gets published both via Ingress and via the Gateway API, under the same hostname. Only one of the two will actually be reachable by that name, depending on where its DNS record points. The other stays configured but unused. Don't disable the Ingress controller until you've confirmed that publication via the Gateway API works as expected.
+{% endalert %}
+
 ### Via a Service of type LoadBalancer
 
 By configuring the [`apiserver.publishAPI.loadBalancer`](configuration.html#parameters-apiserver-publishapi-loadbalancer) parameters, you can create a service of type LoadBalancer named `kube-system/d8-control-plane-apiserver`.

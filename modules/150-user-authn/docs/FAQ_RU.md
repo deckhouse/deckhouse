@@ -260,6 +260,9 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
 
 ## Как сгенерировать kubeconfig для доступа к Kubernetes API?
 
+{% tabs kubeconfig %}
+{% tab "Для DP версии до 1.76 включительно" %}
+
 `kubeconfig` для удалённого доступа к кластеру через `kubectl` можно сгенерировать в [веб-интерфейсе `kubeconfigurator`](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
 
 Настройте параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi):
@@ -278,6 +281,14 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
   ```
 
 Имя `kubeconfig` зарезервировано для веб-интерфейса генерации kubeconfig. URL зависит от параметра [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (например, при шаблоне вида `%s.kube.my` веб-интерфейс генерации kubeconfig будет доступен по адресу `kubeconfig.kube.my`, при `%s-kube.company.my` — по адресу `kubeconfig-kube.company.my`).  
+
+{% endtab %}
+{% tab "Для DP версии 1.77 и новее" %}
+
+Для кластера DP версии 1.77 и новее воспользуйтесь разделом [«Как сгенерировать kubeconfig для доступа к Kubernetes API?»](/modules/control-plane-manager/faq.html#как-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) документации модуля `control-plane-manager`.
+
+{% endtab %}
+{% endtabs %}
 
 ### Настройка kube-apiserver
 
@@ -356,6 +367,9 @@ Dex автоматически смонтирует `keytab` и начнёт п�
 
 ## Как настроить базовую аутентификацию для доступа к Kubernetes API через LDAP?
 
+{% tabs api_ldap %}
+{% tab "Для DP версии до 1.76 включительно" %}
+
 1. Включите параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) в конфигурации модуля `user-authn`.
 1. Создайте ресурс [DexProvider](/modules/user-authn/cr.html#dexprovider) типа `LDAP` и установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 1. Настройте [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) для групп, получаемых из LDAP.
@@ -366,6 +380,25 @@ Dex автоматически смонтирует `keytab` и начнёт п�
 {% endalert %}
 
 Подробный пример описан в разделе [Примеры конфигурации](/modules/user-authn/usage.html#настройка-базовой-аутентификации).
+
+{% endtab %}
+{% tab "Для DP версии 1.77 и новее" %}
+
+Для кластера DP версии 1.77 и новее используйте настройки модуля `control-plane-manager`:
+
+1. Включите параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) в конфигурации модуля `control-plane-manager`.
+1. Создайте ресурс [DexProvider](/modules/user-authn/cr.html#dexprovider) типа `LDAP` и установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+1. Настройте [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) для групп, получаемых из LDAP.
+1. Передайте пользователям `kubeconfig` с настроенными параметрами базовой аутентификации (логин и пароль LDAP).
+
+{% alert level="warning" %}
+В кластере может быть только один провайдер аутентификации со включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+{% endalert %}
+
+Подробный пример описан в разделе [Примеры конфигурации](/modules/user-authn/usage.html#настройка-базовой-аутентификации).
+
+{% endtab %}
+{% endtabs %}
 
 ## Как Dex защищен от подбора логина и пароля?
 
