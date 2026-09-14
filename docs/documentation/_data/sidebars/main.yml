@@ -1275,11 +1275,13 @@ entries:
     - title:
         en: Modules
         ru: Модули
-      url: /modules/
+      external_url: /modules/
+      target: _self
     - title:
         en: Guides
         ru: Руководства
-      url: /products/kubernetes-platform/guides/
+      external_url: /products/kubernetes-platform/guides/
+      target: _self
 # ------------- Architecture -------------
     - title:
         en: Architecture
