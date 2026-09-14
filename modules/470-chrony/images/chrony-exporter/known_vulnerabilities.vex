@@ -1,0 +1,51 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-2242893e947042b4a32897f92847dd29ac2726cb66831927700945e4d5c12580",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855"
+      },
+      "timestamp": "2026-09-14T08:27:58Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-56855 (GO-2026-6355) — отказ в обслуживании в golang.org/x/crypto/ssh: после установки SSH-канала пир может прислать сообщения вне RFC 4254 и ввести соединение в дедлок. chrony_exporter не работает по SSH: он опрашивает локальный chronyd по UDP или Unix-сокету и отдаёт метрики по HTTP. Из модуля golang.org/x/crypto в сборку попадают ровно два пакета — bcrypt и blowfish: их тянет github.com/prometheus/exporter-toolkit/web для basic-auth на /metrics (проверено go list -deps ./... в окружении сборки werf.inc.yaml, GOOS=linux GOARCH=amd64). В собранном бинарнике go tool nm не находит ни одного символа ssh или openpgp. Исправление вышло только в golang.org/x/crypto v0.56.0, а она требует go 1.26, тогда как builder/golang-alpine в release-1.73 даёт go 1.25."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662"
+      },
+      "timestamp": "2026-09-14T08:27:58Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-78662 (GO-2026-6354) — отказ в обслуживании в golang.org/x/crypto/ssh: неподтверждённый канал мультиплексора можно завалить запросами через incomingRequests и заблокировать соединение. chrony_exporter SSH-соединений не устанавливает и не принимает. Из модуля golang.org/x/crypto в сборку попадают ровно два пакета — bcrypt и blowfish: их тянет github.com/prometheus/exporter-toolkit/web для basic-auth на /metrics (проверено go list -deps ./... в окружении сборки werf.inc.yaml, GOOS=linux GOARCH=amd64). В собранном бинарнике go tool nm не находит ни одного символа ssh или openpgp. Исправление вышло только в golang.org/x/crypto v0.56.0, а она требует go 1.26, тогда как builder/golang-alpine в release-1.73 даёт go 1.25."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "timestamp": "2026-09-14T08:27:58Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 — рекомендация Go vulndb: пакет golang.org/x/crypto/openpgp не сопровождается и исправленной версии не имеет, так что обновлением модуля не закрывается. chrony_exporter не проверяет подписи и не работает с ключами OpenPGP. Из модуля golang.org/x/crypto в сборку попадают ровно два пакета — bcrypt и blowfish: их тянет github.com/prometheus/exporter-toolkit/web для basic-auth на /metrics (проверено go list -deps ./... в окружении сборки werf.inc.yaml, GOOS=linux GOARCH=amd64). В собранном бинарнике go tool nm не находит ни одного символа ssh или openpgp."
+    }
+  ],
+  "timestamp": "2026-09-14T08:27:58Z"
+}
