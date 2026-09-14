@@ -51,3 +51,8 @@ This is the layer that tracks long-running vCenter clone tasks
 (`VSphereVM.Status.TaskRef`), IP allocation, and MAC address — the equivalent
 of CAPO's `OpenStackServer`. Deleting the CRD sends the manager into CrashLoop
 with a `CacheSyncTimeout` because the CRD is not optional in this flavor.
+
+
+## 003-datastore-on-deployment-zone.patch
+
+Later
