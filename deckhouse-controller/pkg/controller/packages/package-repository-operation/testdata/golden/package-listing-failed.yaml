@@ -47,3 +47,6 @@ status:
     reason: ScanFailed
     status: "False"
     type: LastScanSucceeded
+  message: 'failed to list packages: failed to list tags: assert.AnError general error
+    for testing'
+  phase: Error
