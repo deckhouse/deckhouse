@@ -22,7 +22,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -84,10 +83,14 @@ func TestReconcile_ProjectLabelSelectsAdditionalNamespace(t *testing.T) {
 		if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: ns}}); err != nil {
 			t.Fatalf("reconcile %s: %v", ns, err)
 		}
+		// The catalog object stays (an empty catalog is a fact worth publishing, see
+		// TestReconcile_EmptyCatalogIsKept); what goes is its content.
 		ar := &v1alpha1.AvailableClusterResource{}
-		err := r.Get(ctx, types.NamespacedName{Namespace: ns, Name: "storageclasses"}, ar)
-		if !k8serrors.IsNotFound(err) {
-			t.Fatalf("%s: catalog must go once the Project label is removed, err=%v available=%+v", ns, err, ar.Status.Available)
+		if err := r.Get(ctx, types.NamespacedName{Namespace: ns, Name: "storageclasses"}, ar); err != nil {
+			t.Fatalf("%s: empty catalog must stay as an object: %v", ns, err)
+		}
+		if len(ar.Status.Available) != 0 || ar.Status.Default != "" {
+			t.Fatalf("%s: catalog must empty once the Project label is removed, got %+v", ns, ar.Status)
 		}
 	}
 }

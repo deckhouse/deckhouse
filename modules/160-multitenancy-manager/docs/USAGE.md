@@ -224,7 +224,7 @@ The following stays in the **main** namespace only:
 | `projects.deckhouse.io/project: <project name>` | ✓ | ✓ | Project ownership — the common label of all namespaces of the project. |
 | `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Marks an additional namespace (the name of the ProjectNamespace resource). |
 | `projects.deckhouse.io/project-template: <template name>` | ✓ | ✓ | The project template; the cluster resource availability rules match by it. |
-| `heritage: multitenancy-manager` | ✓ | ✓ | The namespace is managed by the project controller; it cannot be modified manually. |
+| `heritage: multitenancy-manager` | ✓ | ✓ | The namespace is managed by the project controller: its `spec`, finalizers and the labels listed in this table are changed through the Project; other labels and annotations may be changed directly. |
 | `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (inherited) | Policies and features from the project template. |
 
 The common `projects.deckhouse.io/project` label makes it possible to select the project namespaces with a plain `get ns`:
@@ -257,7 +257,11 @@ A namespace created directly (for example, `d8 k create ns my-app`) becomes a pr
 
 System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`, which stays on the virtual `default` project). There is no label that leaves a user namespace without a project. A namespace whose name is longer than 61 characters is also skipped: that is the Project name limit.
 
-Existing RoleBinding and AuthorizationRule objects inside the namespace keep working after adoption. The namespace Admin is **not** copied into `.spec.administrators` and does **not** become `d8:project:admin`: that role additionally manages ProjectRoleBinding resources, which is a wider contract than in-namespace Admin. To make the team lead a project administrator, a platform operator adds them to `.spec.administrators` or creates a ProjectRoleBinding. Namespace Admin never had `update`/`patch`/`delete` on the Namespace object itself (`get`/`list`/`watch` only); after adoption the Namespace is also owned by Helm (`heritage: multitenancy-manager`), so labels and annotations are changed through the Project, not on the Namespace.
+Existing RoleBinding and AuthorizationRule objects inside the namespace keep working after adoption. The namespace Admin is **not** copied into `.spec.administrators` and does **not** become `d8:project:admin`: that role additionally manages ProjectRoleBinding resources, which is a wider contract than in-namespace Admin. To make the team lead a project administrator, a platform operator adds them to `.spec.administrators` or creates a ProjectRoleBinding. Namespace Admin never had `update`/`patch`/`delete` on the Namespace object itself (`get`/`list`/`watch` only); after adoption the Namespace is also owned by Helm (`heritage: multitenancy-manager`).
+
+The labels and annotations the module sets — `heritage`, `projects.deckhouse.io/*`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, the node-selector and tolerations annotations — are changed through the Project and its template; any other label or annotation (`istio-injection`, a Pod Security label, a GitOps tracking annotation) can still be set directly on the Namespace by anyone whose RBAC allows it, and the controller does not touch it. The `spec` and finalizers of the Namespace, and its deletion, stay with the controller.
+
+The `projects.deckhouse.io/project` label itself is set only by the controller: a namespace created by hand with that label is refused, so a namespace cannot be made to look owned by a project it does not belong to.
 
 For example:
 
