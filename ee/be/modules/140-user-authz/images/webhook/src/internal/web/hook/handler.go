@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -67,13 +68,72 @@ type Handler struct {
 
 	// restrictions bounds how often the ordering guard is logged.
 	restrictions decision.RestrictionLog
+
+	// logDecisions says which answered reviews are written to the log in full.
+	logDecisions decisionLogMode
+}
+
+// decisionLogMode selects which SubjectAccessReviews are written to the log with their full body.
+//
+// Every review used to be written - identity, groups, resource, answer - at the default verbosity,
+// with nothing to turn it off: about 125 KB a minute from a 5 rps probe on a stand, and on a
+// master every authorization question in the cluster passes through here. Denials are what an
+// operator looks for in this log; allowed and no-opinion answers are background, and are opt-in.
+type decisionLogMode int
+
+const (
+	// logDenied writes the reviews this webhook denied. The default.
+	logDenied decisionLogMode = iota
+	// logAll writes every review, as before.
+	logAll
+	// logNone writes no review bodies at all.
+	logNone
+)
+
+// DecisionLogEnv names the environment variable that selects the mode: none, denied or all.
+const DecisionLogEnv = "LOG_DECISIONS"
+
+// DecisionLogModeFrom parses the value of DecisionLogEnv. An empty value is the default; anything
+// unknown is the default too, said once in the log so a typo does not pass for a setting.
+func DecisionLogModeFrom(value string, logger *log.Logger) decisionLogMode {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "denied":
+		return logDenied
+	case "all":
+		return logAll
+	case "none":
+		return logNone
+	}
+	logger.Printf("%s=%q is not one of none, denied, all; logging denied reviews", DecisionLogEnv, value)
+	return logDenied
+}
+
+// logs reports whether a review with the given answer is written.
+func (m decisionLogMode) logs(denied bool) bool {
+	switch m {
+	case logAll:
+		return true
+	case logDenied:
+		return denied
+	}
+	return false
+}
+
+func (m decisionLogMode) String() string {
+	switch m {
+	case logAll:
+		return "all"
+	case logNone:
+		return "none"
+	}
+	return "denied"
 }
 
 // NewHandler wires the handler. rulesProvider and bindings are required: without the rules the
 // webhook has no opinion about anybody, and without the bindings it cannot tell a subject nobody
 // limits from a subject whose rule it has not observed yet.
 func NewHandler(logger *log.Logger, discoveryCache cache.Cache, nsLister corev1listers.NamespaceLister, nsSynced kcache.InformerSynced,
-	independentRBAC independentRBACResolver, rulesProvider RulesProvider, bindings RuleBindings) (*Handler, error) {
+	independentRBAC independentRBACResolver, rulesProvider RulesProvider, bindings RuleBindings, logDecisions decisionLogMode) (*Handler, error) {
 	if rulesProvider == nil {
 		return nil, fmt.Errorf("rules provider is required")
 	}
@@ -88,6 +148,7 @@ func NewHandler(logger *log.Logger, discoveryCache cache.Cache, nsLister corev1l
 		independentRBAC: independentRBAC,
 		rules:           rulesProvider,
 		bindings:        bindings,
+		logDecisions:    logDecisions,
 	}, nil
 }
 
@@ -126,7 +187,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.logger.Printf("failed to write response: %v", err)
 	}
 
-	h.logger.Printf("response body: %s", respData)
+	if h.logDecisions.logs(request.Status.Denied) {
+		h.logger.Printf("response body: %s", respData)
+	}
 }
 
 // authorizeRequest asks the shared decision and writes its answer onto the review.

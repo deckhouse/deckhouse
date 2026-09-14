@@ -94,12 +94,16 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
+        # readyz runs two checks in sequence, cache-sync and api-access, each with a 2 s budget of
+        # its own, and the handler does not stop at the first failure. The probe has to outlast
+        # both, or a cold start against an unreachable API server times out before the body says
+        # which check failed.
         readinessProbe:
           httpGet:
             path: /readyz
             port: 9090
           periodSeconds: 5
-          timeoutSeconds: 3
+          timeoutSeconds: 5
           failureThreshold: 3
         resources:
           requests:
