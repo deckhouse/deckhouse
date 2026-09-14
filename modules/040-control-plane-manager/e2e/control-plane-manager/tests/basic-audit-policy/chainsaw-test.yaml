@@ -25,11 +25,18 @@ spec:
       cleanup:
         - description: Always restore original control-plane-manager ModuleConfig
           script:
-            timeout: 5m
+            timeout: 8m
             content: |
               set -eu
               . ./scripts/functions.sh
               restore_moduleconfig "$CPM_E2E_BACKUP_FILE"
+              # restore_moduleconfig's own wait_for_api runs right after the patch,
+              # before control-plane-manager necessarily even started reconciling it,
+              # so it can return "up" before the resulting apiserver restart happens.
+              # Give the restart time to kick in, then wait again, so a chained next
+              # test starts against a genuinely stable API.
+              sleep 30
+              wait_for_api 120
             check:
               ($error == null): true
 
