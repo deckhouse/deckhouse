@@ -1836,6 +1836,10 @@ entries:
                 ru: Обзор
               url: /architecture/network/
             - title:
+                en: Alb module
+                ru: Модуль alb
+              url: /architecture/network/alb.html
+            - title:
                 en: Cni-cilium module
                 ru: Модуль cni-cilium
               url: /architecture/network/cni-cilium.html
