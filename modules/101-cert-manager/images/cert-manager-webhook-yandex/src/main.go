@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -16,7 +17,6 @@ import (
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
 	capi "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	"github.com/cert-manager/cert-manager/pkg/issuer/acme/dns/util"
 	"github.com/pkg/errors"
 	"github.com/yandex-cloud/go-genproto/yandex/cloud/dns/v1"
 	dnssdk "github.com/yandex-cloud/go-sdk/services/dns/v1"
@@ -26,8 +26,12 @@ import (
 	"github.com/yandex-cloud/go-sdk/v2/pkg/options"
 )
 
-func main() {
+const (
+	defaultAPIEndpoint = "api.cloud.yandex.net:443"
+	apiRequestTimeout  = 2 * time.Minute
+)
 
+func main() {
 	if GroupName := os.Getenv("GROUP_NAME"); GroupName == "" {
 		log.Fatal("GROUP_NAME env must be specified")
 	} else {
@@ -42,7 +46,6 @@ func main() {
 			},
 		)
 	}
-
 }
 
 // yandexCloudDNSSolver implements the provider-specific logic needed to
@@ -50,10 +53,8 @@ func main() {
 // To do so, it must implement the `github.com/jetstack/cert-manager/pkg/acme/webhook.Solver`
 // interface.
 type yandexCloudDNSSolver struct {
-	apiEndpoint   string
-	client        *kubernetes.Clientset
-	dnsZoneClient dnssdk.DnsZoneClient
-	folder        string
+	apiEndpoint string
+	client      *kubernetes.Clientset
 }
 
 // yandexCloudDNSConfig is a structure that is used to decode into when
@@ -91,12 +92,15 @@ func (c *yandexCloudDNSSolver) Name() string {
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
 func (c *yandexCloudDNSSolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	err := c.setConfig(ch)
+	ctx, cancel := context.WithTimeout(context.Background(), apiRequestTimeout)
+	defer cancel()
+
+	dnsClient, folder, err := c.buildDNSClient(ctx, ch)
 	if err != nil {
 		return err
 	}
 
-	zone, err := c.getDNSZone(ch.ResolvedZone)
+	zone, err := getDNSZone(ctx, dnsClient, folder, ch.ResolvedZone)
 	if err != nil {
 		return err
 	}
@@ -113,13 +117,13 @@ func (c *yandexCloudDNSSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 		Merges:    []*dns.RecordSet{&record},
 	}
 
-	op, err := c.dnsZoneClient.UpsertRecordSets(context.Background(), &reqUpd)
+	op, err := dnsClient.UpsertRecordSets(ctx, &reqUpd)
 	if err != nil {
 		return err
 	}
 
-	for !op.Done() {
-		time.Sleep(time.Second)
+	if _, err := op.Wait(ctx); err != nil {
+		return errors.Wrap(err, "waiting for UpsertRecordSets (present)")
 	}
 
 	return nil
@@ -132,7 +136,17 @@ func (c *yandexCloudDNSSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
 func (c *yandexCloudDNSSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	zone, err := c.getDNSZone(ch.ResolvedZone)
+	ctx, cancel := context.WithTimeout(context.Background(), apiRequestTimeout)
+	defer cancel()
+
+	// Always rebuild the client: CleanUp may run on another replica or after a
+	// restart, so it must not rely on Present having initialized shared state.
+	dnsClient, folder, err := c.buildDNSClient(ctx, ch)
+	if err != nil {
+		return err
+	}
+
+	zone, err := getDNSZone(ctx, dnsClient, folder, ch.ResolvedZone)
 	if err != nil {
 		return err
 	}
@@ -149,40 +163,52 @@ func (c *yandexCloudDNSSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 		Deletions: []*dns.RecordSet{&record},
 	}
 
-	op, err := c.dnsZoneClient.UpsertRecordSets(context.Background(), &reqDel)
+	op, err := dnsClient.UpsertRecordSets(ctx, &reqDel)
 	if err != nil {
 		return err
 	}
 
-	for !op.Done() {
-		time.Sleep(time.Second)
+	if _, err := op.Wait(ctx); err != nil {
+		return errors.Wrap(err, "waiting for UpsertRecordSets (cleanup)")
 	}
 
 	return nil
 }
 
-func (c *yandexCloudDNSSolver) getDNSZone(zone string) (*dns.DnsZone, error) {
-	resolvedZone, err := util.FindZoneByFqdn(context.Background(), zone, util.RecursiveNameservers)
-	if err != nil {
-		return nil, err
+func getDNSZone(ctx context.Context, dnsClient dnssdk.DnsZoneClient, folder, resolvedZone string) (*dns.DnsZone, error) {
+	// cert-manager already resolved the authoritative zone (SOA recursion) into
+	// ChallengeRequest.ResolvedZone. Do not re-query public NS from the webhook.
+	zoneName := normalizeZone(resolvedZone)
+	if zoneName == "" {
+		return nil, errors.New("resolved zone is empty")
 	}
 
-	req := dns.ListDnsZonesRequest{
-		FolderId: c.folder,
-		Filter:   `zone = "` + resolvedZone + `"`,
-	}
-	resp, err := c.dnsZoneClient.List(context.Background(), &req)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, dnsZone := range resp.DnsZones {
-		if isPublicDnsZone(dnsZone) {
-			return dnsZone, nil
+	pageToken := ""
+	for {
+		req := dns.ListDnsZonesRequest{
+			FolderId:  folder,
+			Filter:    `zone = "` + zoneName + `"`,
+			PageSize:  1000,
+			PageToken: pageToken,
 		}
+		resp, err := dnsClient.List(ctx, &req)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, dnsZone := range resp.DnsZones {
+			if isPublicDnsZone(dnsZone) && normalizeZone(dnsZone.Zone) == zoneName {
+				return dnsZone, nil
+			}
+		}
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		pageToken = resp.NextPageToken
 	}
 
-	return nil, errors.Errorf("no public zone %s found", zone)
+	return nil, errors.Errorf("no public zone %s found", zoneName)
 }
 
 // Initialize will be called when the webhook first starts.
@@ -220,46 +246,46 @@ func loadConfig(cfgJSON *extapi.JSON) (yandexCloudDNSConfig, error) {
 	return cfg, nil
 }
 
-func (c *yandexCloudDNSSolver) setConfig(ch *v1alpha1.ChallengeRequest) error {
-	apiEndpoint := "api.cloud.yandex.net:443"
+func (c *yandexCloudDNSSolver) buildDNSClient(ctx context.Context, ch *v1alpha1.ChallengeRequest) (dnssdk.DnsZoneClient, string, error) {
+	apiEndpoint := defaultAPIEndpoint
 	cfg, err := loadConfig(ch.Config)
 	if err != nil {
-		return err
+		return nil, "", err
+	}
+	if cfg.Folder == "" {
+		return nil, "", errors.New("folder must be specified in solver config")
 	}
 
-	saBytes, err := c.loadSecretData(cfg.ServiceAccountKey, ch.ResourceNamespace)
+	saBytes, err := c.loadSecretData(ctx, cfg.ServiceAccountKey, ch.ResourceNamespace)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	key := &iamkey.Key{}
 	err = key.UnmarshalJSON(saBytes)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	saKey, err := credentials.ServiceAccountKey(key)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	if c.apiEndpoint != "" {
 		apiEndpoint = c.apiEndpoint
 	}
 
-	sdk, err := ycsdk.Build(context.Background(), options.WithCredentials(saKey), options.WithDiscoveryEndpoint(apiEndpoint))
+	sdk, err := ycsdk.Build(ctx, options.WithCredentials(saKey), options.WithDiscoveryEndpoint(apiEndpoint))
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
-	c.dnsZoneClient = dnssdk.NewDnsZoneClient(sdk)
-	c.folder = cfg.Folder
-
-	return nil
+	return dnssdk.NewDnsZoneClient(sdk), cfg.Folder, nil
 }
 
-func (c *yandexCloudDNSSolver) loadSecretData(selector capi.SecretKeySelector, ns string) ([]byte, error) {
-	secret, err := c.client.CoreV1().Secrets(ns).Get(context.TODO(), selector.Name, metav1.GetOptions{})
+func (c *yandexCloudDNSSolver) loadSecretData(ctx context.Context, selector capi.SecretKeySelector, ns string) ([]byte, error) {
+	secret, err := c.client.CoreV1().Secrets(ns).Get(ctx, selector.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to load secret %q", ns+"/"+selector.Name)
 	}
@@ -270,6 +296,17 @@ func (c *yandexCloudDNSSolver) loadSecretData(selector capi.SecretKeySelector, n
 	}
 
 	return data, nil
+}
+
+func normalizeZone(zone string) string {
+	zone = strings.TrimSpace(zone)
+	if zone == "" {
+		return ""
+	}
+	if !strings.HasSuffix(zone, ".") {
+		zone += "."
+	}
+	return zone
 }
 
 func isPublicDnsZone(dnsZone *dns.DnsZone) bool {

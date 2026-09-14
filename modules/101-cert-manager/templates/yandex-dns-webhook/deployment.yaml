@@ -3,7 +3,7 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if and (hasKey .Values.certManager "yandexFolderID") (hasKey .Values.certManager "yandexServiceAccountJSON") }}
+{{- if include "cert_manager.yandex_dns_webhook_ready" . }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
