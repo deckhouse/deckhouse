@@ -70,11 +70,21 @@ var _ = sdk.RegisterFunc(
 	handleImplementation,
 )
 
+// filterLegacyState reads the previous implementation's recorded state, and answers every failure
+// with a state that records no mode rather than with an error.
+//
+// The direction is the reason. A filter error never reaches this hook: on the watch path the
+// platform logs it and drops the event (shell-operator, resource_informer.go `handleWatchEvent`), so
+// the object simply never enters the snapshot — and an object missing from the snapshot is exactly
+// what a cluster with no state at all looks like, which `decide` ADMITS. A Secret that exists and
+// cannot be read has to be refused instead, and the only way to say that is to hand `decide` a state
+// with no mode.
+//
+// `filterModuleConfig` below does return its error, because there the same dropping degrades the
+// other way: a ModuleConfig missing from the snapshot reads as "nothing configured", which refuses.
 func filterLegacyState(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	raw, found, err := unstructured.NestedString(obj.Object, "data", "state")
 	if err != nil || !found {
-		// An unreadable or absent state is reported as "present but empty", which `decide`
-		// refuses: guessing "probably fine" would let a cluster upgrade into an unserved address.
 		return legacyState{}, nil
 	}
 

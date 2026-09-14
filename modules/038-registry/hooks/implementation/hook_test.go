@@ -102,9 +102,10 @@ func TestHandleImplementationTellsAbsenceFromUnreadability(t *testing.T) {
 	})
 }
 
-// TestFilterLegacyStateNormalisesWhatItCannotRead pins the reason the hook's last branch is a
-// backstop: a Secret this filter cannot parse arrives as a state with no mode and no error, so it
-// is refused by the same rule as a state that records no mode.
+// TestFilterLegacyStateNormalisesWhatItCannotRead pins the answer to "why does this filter never
+// return an error": an error would drop the object from the snapshot, which reads downstream as a
+// cluster that has no state at all — and that one is ADMITTED. A Secret that exists and cannot be
+// read has to arrive as a state with no mode, which is refused.
 func TestFilterLegacyStateNormalisesWhatItCannotRead(t *testing.T) {
 	stateSecret := func(data map[string]any) *unstructured.Unstructured {
 		return &unstructured.Unstructured{Object: map[string]any{
