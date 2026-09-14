@@ -358,6 +358,10 @@ dGVzdC1uc3h0LWNhLWJ1bmRsZQ==
 // Provider uses caBundle instead of insecure (mirrors moduleValuesA otherwise).
 const moduleValuesProviderCABundle = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -401,6 +405,10 @@ const moduleValuesProviderCABundle = `
 // Provider uses both caBundle and insecure: true (caBundle must be ignored).
 const moduleValuesProviderCABundleInsecure = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -443,6 +451,10 @@ const moduleValuesProviderCABundleInsecure = `
 
 const moduleValuesProviderWithoutInsecure = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -480,6 +492,10 @@ const moduleValuesProviderWithoutInsecure = `
 
 const moduleValuesNsxtCABundle = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -522,6 +538,10 @@ const moduleValuesNsxtCABundle = `
 // NSX-T uses both caBundle and insecureFlag: true (caBundle must be ignored).
 const moduleValuesNsxtCABundleInsecure = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -564,6 +584,10 @@ const moduleValuesNsxtCABundleInsecure = `
 
 const moduleValuesNsxtWithoutInsecure = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -645,6 +669,7 @@ func vsphereModulesImages() map[string]interface{} {
 		"vsphereCsiPlugin132":       "sha256:csiplugin132digest",
 		"vsphereCsiPluginLegacy":    "sha256:csipluginlegacydigest",
 		"terraformManager":          "sha256:terraformdigest",
+		"capvControllerManager":     "sha256:capvcmdigest",
 	}
 	return images
 }
@@ -1287,7 +1312,8 @@ vcenter:
           "sshKey": "mysshkey1",
           "username": "myuname",
           "vmFolderPath": "dev/test",
-          "zoneTagCategory": "myzonetagcat"
+          "zoneTagCategory": "myzonetagcat",
+          "datacenter": "X1"
         }`, caBundlePEM)
 
 			for _, secretName := range []string{"d8-node-manager-cloud-provider", "d8-node-manager-cloud-provider-vsphere"} {
