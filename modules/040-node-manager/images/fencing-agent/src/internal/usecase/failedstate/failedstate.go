@@ -95,6 +95,7 @@ type Params struct {
 	RetryInterval    time.Duration
 	MaxRetryInterval time.Duration
 	TakeoverDelay    time.Duration
+	FallbackTTL time.Duration
 }
 
 type Deps struct {
@@ -119,6 +120,12 @@ func (i *incident) recorded() {
 	i.retryAfter = time.Time{}
 }
 
+type sighting struct {
+	uid       types.UID
+	heartbeat time.Time
+	at        time.Time
+}
+
 type Writer struct {
 	params Params
 	deps   Deps
@@ -129,7 +136,8 @@ type Writer struct {
 	waiting   map[waitKey]time.Time
 	// deleted remembers the objects this agent has already removed, so a lagging
 	// informer cannot make it delete and announce the same one every pass.
-	deleted map[string]types.UID
+	deleted   map[string]types.UID
+	sightings map[string]sighting
 	// startedAt separates a record left over from an earlier life of this node
 	// from one a peer wrote about the node as it runs now.
 	startedAt      time.Time
@@ -160,6 +168,7 @@ func New(params Params, deps Deps, logger *log.Logger) *Writer {
 		incidents: make(map[string]*incident),
 		waiting:   make(map[waitKey]time.Time),
 		deleted:   make(map[string]types.UID),
+		sightings: make(map[string]sighting),
 		startedAt: deps.Now().Truncate(time.Second),
 	}
 }
@@ -224,6 +233,7 @@ func (w *Writer) reconcile(ctx context.Context) {
 		return
 	}
 
+	w.observe(states)
 	w.clearOwnState(ctx, states)
 
 	if !view.HasQuorum() {
@@ -415,7 +425,7 @@ func (w *Writer) clear(ctx context.Context, view domain.View, state *v1alpha1.Fe
 	var reason string
 
 	switch {
-	case view.IsAlive(state.Name):
+	case view.IsAlive(state.Name) && !w.leftToItsNode(state):
 		reason = "the peer is back in the gossip network"
 	case !expected && w.unexpectedLongEnough(state.Name):
 		reason = "the node is no longer part of this NodeGroup"
@@ -443,6 +453,29 @@ func (w *Writer) clear(ctx context.Context, view domain.View, state *v1alpha1.Fe
 
 	w.logger.Info("fencing state removed", "member", state.Name, "reason", reason)
 	w.deps.Events.Normal(reasonStateCleared, fmt.Sprintf("fencing state of %s removed: %s", state.Name, reason))
+}
+
+func (w *Writer) observe(states []v1alpha1.FencingFailedNodeState) {
+	now := w.deps.Now()
+
+	for i := range states {
+		var heartbeat time.Time
+
+		if fallback := states[i].Status.Fallback; fallback != nil && fallback.LastHeartbeatAt != nil {
+			heartbeat = fallback.LastHeartbeatAt.Time
+		}
+
+		last, seen := w.sightings[states[i].Name]
+		if seen && last.uid == states[i].UID && last.heartbeat.Equal(heartbeat) {
+			continue
+		}
+
+		w.sightings[states[i].Name] = sighting{uid: states[i].UID, heartbeat: heartbeat, at: now}
+	}
+}
+
+func (w *Writer) leftToItsNode(state *v1alpha1.FencingFailedNodeState) bool {
+	return state.Status.Failed == nil && w.deps.Now().Sub(w.sightings[state.Name].at) < w.params.FallbackTTL
 }
 
 func (w *Writer) unexpectedLongEnough(name string) bool {
@@ -477,6 +510,12 @@ func (w *Writer) forgetBeyond(states []v1alpha1.FencingFailedNodeState) {
 	for name := range w.deleted {
 		if _, ok := live[name]; !ok {
 			delete(w.deleted, name)
+		}
+	}
+
+	for name := range w.sightings {
+		if _, ok := live[name]; !ok {
+			delete(w.sightings, name)
 		}
 	}
 }

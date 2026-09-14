@@ -370,3 +370,9 @@ func TestFallbackParamsCarryTheWatchdogTimeout(t *testing.T) {
 		t.Errorf("WatchdogTimeout is %s, want watchdog.timeout (60s)", params.WatchdogTimeout)
 	}
 }
+
+func TestFailedStateParamsCarryTheFallbackTTL(t *testing.T) {
+	if params := testAgent().failedStateParams(); params.FallbackTTL != 4*time.Second {
+		t.Errorf("FallbackTTL is %s, want fallback.ttl (4s)", params.FallbackTTL)
+	}
+}

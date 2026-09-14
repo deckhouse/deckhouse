@@ -94,6 +94,7 @@ func (a *Agent) failedStateParams() failedstate.Params {
 		// The profile's slowest rejoin step doubles as the handover step: a group
 		// that tolerates a slow reaction tolerates a slow handover.
 		TakeoverDelay: a.sla.Rejoin.MaxInterval.Duration,
+		FallbackTTL:   a.sla.Fallback.TTL.Duration,
 	}
 }
 

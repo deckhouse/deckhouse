@@ -38,6 +38,7 @@ import (
 const (
 	nodeGroupSize = 3
 	takeoverDelay = 3 * time.Second
+	fallbackTTL   = 4 * time.Second
 )
 
 type stubAlive struct{ members []string }
@@ -171,6 +172,35 @@ func (s *stubStore) Delete(_ context.Context, name string, uid types.UID) error 
 	return nil
 }
 
+
+func (s *stubStore) beat(name string, stamp time.Time) {
+	for i := range s.states {
+		if s.states[i].Name != name {
+			continue
+		}
+
+		section := &v1alpha1.FencingFailedNodeStateFallback{
+			Active:            true,
+			APIReachable:      true,
+			HeartbeatInterval: metav1.Duration{Duration: time.Second},
+		}
+		if s.states[i].Status.Fallback != nil {
+			section = s.states[i].Status.Fallback.DeepCopy()
+		}
+
+		at := metav1.NewMicroTime(stamp)
+		section.LastHeartbeatAt = &at
+		s.states[i].Status.Fallback = section
+	}
+}
+
+func fallbackRecord(name string, uid types.UID, stamp time.Time) v1alpha1.FencingFailedNodeState {
+	store := newStore(v1alpha1.FencingFailedNodeState{ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid}})
+	store.beat(name, stamp)
+
+	return store.states[0]
+}
+
 type clock struct{ now time.Time }
 
 func (c *clock) Now() time.Time          { return c.now }
@@ -232,6 +262,7 @@ func newHarnessOfSize(t *testing.T, size int, nodeName string, store *stubStore)
 			RetryInterval:    500 * time.Millisecond,
 			MaxRetryInterval: 3 * time.Second,
 			TakeoverDelay:    takeoverDelay,
+			FallbackTTL:      fallbackTTL,
 		},
 		Deps{
 			Alive:    h.alive,
@@ -448,28 +479,98 @@ func TestRecoveredPeerRecordIsRemoved(t *testing.T) {
 	}
 }
 
-func TestFallbackRecordOfAnAlivePeerIsRemoved(t *testing.T) {
-	store := newStore(v1alpha1.FencingFailedNodeState{
-		ObjectMeta: metav1.ObjectMeta{Name: "worker-3", UID: "cr-worker-3"},
-		Status: v1alpha1.FencingFailedNodeStateStatus{
-			Fallback: &v1alpha1.FencingFailedNodeStateFallback{
-				Active:            true,
-				APIReachable:      true,
-				HeartbeatInterval: metav1.Duration{Duration: time.Second},
-			},
+func TestFallbackRecordIsLeftToItsNodeWhileItKeepsChanging(t *testing.T) {
+	const node = "worker-3"
+
+	skew := -time.Hour
+	store := newStore()
+	h := newHarness(t, writerFor(node), store)
+
+	store.states = append(store.states, fallbackRecord(node, "cr-"+node, h.clock.now.Add(skew)))
+
+	for range 10 {
+		h.settle(t.Context())
+		h.clock.advance(time.Second)
+		store.beat(node, h.clock.now.Add(skew))
+	}
+
+	if len(store.calls) != 0 {
+		t.Errorf("calls = %v, want none while the node keeps writing its record", store.calls)
+	}
+}
+
+func TestRecordWithoutAVerdictIsRemovedOnceItStopsChanging(t *testing.T) {
+	const node = "worker-3"
+
+	records := map[string]func(now time.Time) v1alpha1.FencingFailedNodeState{
+		"heartbeat stamped in the future": func(now time.Time) v1alpha1.FencingFailedNodeState {
+			return fallbackRecord(node, "cr-"+node, now.Add(time.Hour))
 		},
-	})
-	h := newHarness(t, writerFor("worker-3"), store)
+		"no status": func(time.Time) v1alpha1.FencingFailedNodeState {
+			return v1alpha1.FencingFailedNodeState{ObjectMeta: metav1.ObjectMeta{Name: node, UID: "cr-" + node}}
+		},
+	}
+
+	for name, record := range records {
+		t.Run(name, func(t *testing.T) {
+			store := newStore()
+			h := newHarness(t, writerFor(node), store)
+
+			store.states = append(store.states, record(h.clock.now))
+
+			h.settle(t.Context())
+			h.clock.advance(fallbackTTL - time.Millisecond)
+			h.settle(t.Context())
+
+			if len(store.calls) != 0 {
+				t.Fatalf("calls = %v, want none before the record has been still for the TTL", store.calls)
+			}
+
+			h.clock.advance(time.Millisecond)
+			h.settle(t.Context())
+
+			if want := []string{"delete:" + node + ":cr-" + node}; !slices.Equal(store.calls, want) {
+				t.Errorf("calls = %v, want %v", store.calls, want)
+			}
+
+			if !slices.Contains(h.events.normal, reasonStateCleared) {
+				t.Errorf("events = %v, want a %s event", h.events.normal, reasonStateCleared)
+			}
+		})
+	}
+}
+
+func TestFailedVerdictIsRemovedAtOnceWhileTheNodeHeartbeats(t *testing.T) {
+	const node = "worker-3"
+
+	store := newStore()
+	h := newHarness(t, writerFor(node), store)
+
+	adopted := fallbackRecord(node, "cr-"+node, h.clock.now)
+	adopted.Status.Failed = &v1alpha1.FencingFailedNodeStateFailed{DetectedBy: h.writer.params.NodeName}
+	store.states = append(store.states, adopted)
 
 	h.settle(t.Context())
 
-	want := []string{"delete:worker-3:cr-worker-3"}
+	want := []string{"delete:" + node + ":cr-" + node}
 	if !slices.Equal(store.calls, want) {
-		t.Errorf("calls = %v, want %v", store.calls, want)
+		t.Fatalf("calls = %v, want the verdict removed at once: %v", store.calls, want)
 	}
 
-	if !slices.Contains(h.events.normal, reasonStateCleared) {
-		t.Errorf("events = %v, want a %s event", h.events.normal, reasonStateCleared)
+	h.clock.advance(time.Second)
+	store.states = append(store.states, v1alpha1.FencingFailedNodeState{
+		ObjectMeta: metav1.ObjectMeta{Name: node, UID: "cr-" + node + "-own"},
+	})
+	h.settle(t.Context())
+
+	for range 5 {
+		h.clock.advance(time.Second)
+		store.beat(node, h.clock.now)
+		h.settle(t.Context())
+	}
+
+	if !slices.Equal(store.calls, want) {
+		t.Errorf("calls = %v, want only the verdict removed, not the record the node writes itself", store.calls)
 	}
 }
 
