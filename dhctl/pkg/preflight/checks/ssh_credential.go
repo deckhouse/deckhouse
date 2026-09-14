@@ -133,6 +133,13 @@ func (*SSHCredentialCheck) RetryPolicy() preflight.RetryPolicy {
 func (c *SSHCredentialCheck) Run(ctx context.Context) (string, error) {
 	nodeInterface, err := c.NodeInterface(ctx)
 	if err != nil {
+		// Resolving the connection is itself a login attempt: the provider starts the client it
+		// hands back, with a retry loop of its own. So a credential the node refuses fails here,
+		// before the probe below, and arriving as a bare lib-connection string is how it used to
+		// reach the operator.
+		if sshNeverConnected(err) {
+			return "", c.loginFailure(nil, err)
+		}
 		return "", err
 	}
 	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
@@ -150,6 +157,16 @@ func (c *SSHCredentialCheck) Run(ctx context.Context) (string, error) {
 		return "", sshLoginFailure(client, err)
 	}
 	return fmt.Sprintf("ssh login works for %s", hostLabelOfClient(client)), nil
+}
+
+// loginFailure words the failure for the machine this check is about. A machine created moments
+// ago and one that has been running for months are refusing for different reasons, and only the
+// second one is refusing for good.
+func (c *SSHCredentialCheck) loginFailure(client libcon.SSHClient, err error) error {
+	if c.FreshlyCreated {
+		return freshMachineLoginFailure(client, err)
+	}
+	return sshLoginFailure(client, err)
 }
 
 // freshMachineBudget is how long a machine the cloud has just created is given to accept a login.
@@ -182,12 +199,19 @@ func awaitFreshMachineLogin(ctx context.Context, client libcon.SSHClient) (strin
 		return fmt.Sprintf("ssh login works for %s", hostLabelOfClient(client)), nil
 	}
 
+	return "", freshMachineLoginFailure(client, err)
+}
+
+// freshMachineLoginFailure says which of the two readings the failure supports, for a machine the
+// cloud created moments ago. client may be nil: the connection can fail before there is one.
+func freshMachineLoginFailure(client libcon.SSHClient, err error) error {
 	label := hostLabelOfClient(client)
+	waited := roundedBudget(freshMachineBudget.attempts, freshMachineBudget.wait)
+
 	if sshNeverConnected(err) {
-		return "", &preflight.Failure{
-			Checked: fmt.Sprintf("ssh login to %s", label),
-			Observed: fmt.Sprintf("the node answers, and it has been refusing the credential for %s",
-				roundedBudget(freshMachineBudget.attempts, freshMachineBudget.wait)),
+		return &preflight.Failure{
+			Checked:  fmt.Sprintf("ssh login to %s", label),
+			Observed: fmt.Sprintf("the node answers, and it kept refusing the credential for %s", waited),
 			Expected: "the login user of the node's image to accept the key",
 			// Deliberately not preflight.Permanent: the runner retrying the whole check would
 			// start the wait again, which is the one thing that must not happen here.
@@ -199,9 +223,9 @@ func awaitFreshMachineLogin(ctx context.Context, client libcon.SSHClient) (strin
 		}
 	}
 
-	return "", &preflight.Failure{
+	return &preflight.Failure{
 		Checked:  fmt.Sprintf("ssh to %s", label),
-		Observed: fmt.Sprintf("%s, for %s", classifyNetworkError(err), roundedBudget(freshMachineBudget.attempts, freshMachineBudget.wait)),
+		Observed: fmt.Sprintf("%s, for %s", classifyNetworkError(err), waited),
 		Expected: "the machine the cloud has just created to accept SSH",
 		Fix: "check in the cloud console that the instance started, and that its security groups " +
 			"allow 22/TCP from this host",

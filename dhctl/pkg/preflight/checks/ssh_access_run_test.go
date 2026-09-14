@@ -15,6 +15,7 @@
 package checks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -25,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
@@ -246,7 +248,7 @@ func TestSSHCredentialAfterInfra(t *testing.T) {
 		require.Error(t, err)
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
-		assert.Contains(t, failure.Observed, "the node answers, and it has been refusing the credential")
+		assert.Contains(t, failure.Observed, "the node answers, and it kept refusing the credential")
 		assert.Contains(t, failure.Observed, "4m", "the wait it sat through is what makes this a verdict")
 		assert.Contains(t, failure.Fix, "--ssh-user")
 		// The other reading has to be there: the operator may have the user right and an image
@@ -294,5 +296,63 @@ func TestSSHCredentialAfterInfra(t *testing.T) {
 
 		require.Error(t, err)
 		assert.True(t, isPermanent(err), "nothing is going to create the user on a machine already running")
+	})
+}
+
+// TestSSHCredentialWhenTheClientCannotBeBuilt is the shape a real bootstrap produced: the SSH
+// provider starts the client it hands back, so a refused credential fails while the connection is
+// being resolved and never reaches the probe. It used to arrive as a bare lib-connection string —
+// "start client after create: Failed to connect to target directly … dial: transient error, may
+// succeed on retry" — which names no remedy and ends by saying a retry might help, when nothing
+// will.
+func TestSSHCredentialWhenTheClientCannotBeBuilt(t *testing.T) {
+	refused := errors.New("start client after create: Failed to connect to target directly " +
+		"(last '89.169.149.45:22' with user 'noubuntu'): Timeout while \"Get SSH client\": last error: " +
+		"ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey], " +
+		"no supported methods remain: dial: transient error, may succeed on retry")
+
+	failing := func(err error) NodeInterfaceFunc {
+		return func(context.Context) (libcon.Interface, error) { return nil, err }
+	}
+
+	t.Run("on a machine the cloud just created", func(t *testing.T) {
+		check := SSHCredentialCheck{NodeInterface: failing(refused), FreshlyCreated: true}
+
+		_, err := check.Run(t.Context())
+
+		require.Error(t, err)
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Fix, "--ssh-user")
+		assert.Contains(t, failure.Fix, "cloud-init")
+		// The raw text names the user and the address, and it has to stay reachable — it is the
+		// only place they appear when there is no client to ask.
+		require.ErrorIs(t, err, refused)
+		assert.False(t, isPermanent(err))
+	})
+
+	t.Run("on a machine that has been running", func(t *testing.T) {
+		check := SSHCredentialCheck{NodeInterface: failing(refused)}
+
+		_, err := check.Run(t.Context())
+
+		require.Error(t, err)
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Fix, "--ssh-user")
+		assert.True(t, isPermanent(err), "no retry makes a rejected key acceptable here")
+	})
+
+	t.Run("a failure that is not about ssh is passed through", func(t *testing.T) {
+		// Not every way of resolving the connection is a login; a configuration error must not
+		// be dressed up as a credential problem.
+		other := errors.New("hosts is empty in session or default config")
+		check := SSHCredentialCheck{NodeInterface: failing(other), FreshlyCreated: true}
+
+		_, err := check.Run(t.Context())
+
+		require.Error(t, err)
+		var failure *preflight.Failure
+		assert.NotErrorAs(t, err, &failure)
 	})
 }

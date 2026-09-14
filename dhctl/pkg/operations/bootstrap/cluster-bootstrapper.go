@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1154,21 +1155,40 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	bctx.masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
 	state.SaveMasterHostsToCache(ctx, bctx.stateCache, bctx.masterAddressesForSSH)
 
-	interactive := isTerminal() && !b.Options.Global.ShowProgress
-	if interactive {
-		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
-		if err != nil {
-			return err
-		}
-		sshClient, err := sshProvider.Client(ctx)
-		if err != nil {
-			return err
-		}
-		sshString := sshClient.Session().String()
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("First master connection string: %s", sshString))
+	if isTerminal() && !b.Options.Global.ShowProgress {
+		dhlog.FromContext(ctx).InfoContext(ctx,
+			fmt.Sprintf("First master connection string: %s", masterConnectionString(connectionConfig, masterOutputs.MasterIPForSSH)))
 	}
 
 	return nil
+}
+
+// masterConnectionString is the ssh command line that reaches the master dhctl has just created.
+//
+// It is built from the configuration rather than from a live client. Asking the provider for one
+// here used to open the connection — Client() starts it — so a machine that had not finished
+// booting, or an --ssh-user the image does not have, failed this phase after fifty attempts two
+// seconds apart. The bootstrap then ended on "Failed: Get SSH client", two minutes before the
+// preflight that exists to explain exactly that had a chance to run.
+//
+// Nothing in the string needs a connection: it is the user, the host, the port and the bastion,
+// all of which are inputs. session.String renders them, so the wording stays in one place.
+func masterConnectionString(connectionConfig *sshconfig.ConnectionConfig, masterIP string) string {
+	input := session.Input{AvailableHosts: []session.Host{{Host: masterIP}}}
+	if connectionConfig != nil && connectionConfig.Config != nil {
+		cfg := connectionConfig.Config
+		input.User = cfg.User
+		input.BastionHost = cfg.BastionHost
+		input.BastionUser = cfg.BastionUser
+		if cfg.Port != nil {
+			input.Port = strconv.Itoa(*cfg.Port)
+		}
+		if cfg.BastionPort != nil {
+			input.BastionPort = strconv.Itoa(*cfg.BastionPort)
+		}
+	}
+
+	return session.NewSession(input).String()
 }
 
 // immutableCloudMasterAddress is the address everything after this phase reaches the first
