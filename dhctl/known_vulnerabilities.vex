@@ -9,14 +9,30 @@
         "name": "CVE-2025-15558"
       },
       "products": [
-        {"@id": "pkg:golang/github.com/docker/cli@v25.0.6+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v27.1.1+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.0.1+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.0.2+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.2.2+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.3.3+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.5.1+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.0.0+incompatible"}
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v25.0.6+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v27.1.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.0.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.0.2+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.2.2+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.3.3+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.5.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.0.0+incompatible"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -28,8 +44,12 @@
         "name": "CVE-2026-24051"
       },
       "products": [
-        {"@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.36.0"},
-        {"@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.39.0"}
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.36.0"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.39.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -136,6 +156,146 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "В OpenTofu github.com/cli/go-gh не используется в рабочем коде продукта, зависимость присутствует только как вспомогательная часть build/tooling и не вызывается при выполнении tofu. В поставке Deckhouse этот код не обрабатывает пользовательские GitHub-хосты и не работает с GitHub-токенами во время выполнения OpenTofu, поэтому условие утечки токена отсутствует.",
       "timestamp": "2026-04-22T11:06:38Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47911"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2025-47911: специально составленный HTML заставляет разбор в пакете golang.org/x/net/html работать слишком долго и занимать процессор. yq из модуля golang.org/x/net использует один пакет, html/charset: он по имени кодировки выбирает декодер для encoding/xml и HTML не разбирает. В бинаре /usr/bin/yq из пакета html есть только инициализатор html.init, самого парсера нет. В образе dhctl/install yq разбирает YAML и JSON.",
+      "timestamp": "2026-09-14T08:32:44Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58190"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2025-58190: на специально составленном HTML разбор в пакете golang.org/x/net/html зацикливается. yq из модуля golang.org/x/net использует один пакет, html/charset: он по имени кодировки выбирает декодер для encoding/xml и HTML не разбирает. В бинаре /usr/bin/yq из пакета html есть только инициализатор html.init, самого парсера нет. В образе dhctl/install yq разбирает YAML и JSON.",
+      "timestamp": "2026-09-14T08:32:44Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-25680: разбор произвольного HTML в пакете golang.org/x/net/html можно довести до отказа в обслуживании. yq из модуля golang.org/x/net использует один пакет, html/charset: он по имени кодировки выбирает декодер для encoding/xml и HTML не разбирает. В бинаре /usr/bin/yq из пакета html есть только инициализатор html.init, самого парсера нет. В образе dhctl/install yq разбирает YAML и JSON.",
+      "timestamp": "2026-09-14T08:32:44Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-25681: разбор в пакете golang.org/x/net/html неправильно обрабатывает символьные ссылки внутри DOCTYPE. yq из модуля golang.org/x/net использует один пакет, html/charset: он по имени кодировки выбирает декодер для encoding/xml и HTML не разбирает. В бинаре /usr/bin/yq из пакета html есть только инициализатор html.init, самого парсера нет. В образе dhctl/install yq разбирает YAML и JSON.",
+      "timestamp": "2026-09-14T08:32:44Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-27136: разбор в пакете golang.org/x/net/html неправильно обрабатывает повторяющиеся атрибуты, из-за чего в страницу может попасть чужой скрипт. yq из модуля golang.org/x/net использует один пакет, html/charset: он по имени кодировки выбирает декодер для encoding/xml и HTML не разбирает. В бинаре /usr/bin/yq из пакета html есть только инициализатор html.init, самого парсера нет. В образе dhctl/install yq разбирает YAML и JSON.",
+      "timestamp": "2026-09-14T08:32:44Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42502: разбор в пакете golang.org/x/net/html неправильно обрабатывает HTML-элементы внутри вставок SVG и MathML. yq из модуля golang.org/x/net использует один пакет, html/charset: он по имени кодировки выбирает декодер для encoding/xml и HTML не разбирает. В бинаре /usr/bin/yq из пакета html есть только инициализатор html.init, самого парсера нет. В образе dhctl/install yq разбирает YAML и JSON.",
+      "timestamp": "2026-09-14T08:32:44Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42506: разбор в пакете golang.org/x/net/html неправильно обрабатывает элементы с пространствами имён внутри вставок SVG и MathML. yq из модуля golang.org/x/net использует один пакет, html/charset: он по имени кодировки выбирает декодер для encoding/xml и HTML не разбирает. В бинаре /usr/bin/yq из пакета html есть только инициализатор html.init, самого парсера нет. В образе dhctl/install yq разбирает YAML и JSON.",
+      "timestamp": "2026-09-14T08:32:44Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-33814: HTTP/2-клиент из пакета golang.org/x/net/http2 зацикливается, если сервер пришлёт некорректный SETTINGS_MAX_FRAME_SIZE. yq из модуля golang.org/x/net использует один пакет, html/charset, а http2 в сборку не попадает. Путь vendor/golang.org/x/net/http2/hpack в бинаре /usr/bin/yq принадлежит копии, которую стандартная библиотека Go держит у себя: она меняется с версией Go, а не с модулем из go.mod.",
+      "timestamp": "2026-09-14T08:32:44Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39821: пакет golang.org/x/net/idna принимает Punycode-метки, которые должен отбраковывать. yq из модуля golang.org/x/net использует один пакет, html/charset, а idna в сборку не попадает. Путь vendor/golang.org/x/net/idna в бинаре /usr/bin/yq принадлежит копии, которую стандартная библиотека Go держит у себя: она меняется с версией Go, а не с модулем из go.mod.",
+      "timestamp": "2026-09-14T08:32:44Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46600: разбор DNS-сообщений в пакете golang.org/x/net/dns/dnsmessage можно довести до отказа в обслуживании. yq из модуля golang.org/x/net использует один пакет, html/charset, а dns/dnsmessage в сборку не попадает. Путь vendor/golang.org/x/net/dns/dnsmessage в бинаре /usr/bin/yq принадлежит копии, которую стандартная библиотека Go держит у себя: она меняется с версией Go, а не с модулем из go.mod.",
+      "timestamp": "2026-09-14T08:36:18Z"
     }
   ],
   "timestamp": "2025-10-10T07:23:24Z"
