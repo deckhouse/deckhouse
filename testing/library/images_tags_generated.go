@@ -624,6 +624,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"which223":                        "imageHash-registrypackages-which223",
 		"xfsprogs670":                     "imageHash-registrypackages-xfsprogs670",
 		"yq4471":                          "imageHash-registrypackages-yq4471",
+		"yq4471VexArtifact":               "imageHash-registrypackages-yq4471VexArtifact",
 	},
 	"serviceWithHealthchecks": map[string]interface{}{
 		"agent":      "imageHash-serviceWithHealthchecks-agent",

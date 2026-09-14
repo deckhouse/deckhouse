@@ -9,14 +9,30 @@
         "name": "CVE-2025-15558"
       },
       "products": [
-        {"@id": "pkg:golang/github.com/docker/cli@v25.0.6+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v27.1.1+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.0.1+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.0.2+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.2.2+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.3.3+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.5.1+incompatible"},
-        {"@id": "pkg:golang/github.com/docker/cli@v28.0.0+incompatible"}
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v25.0.6+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v27.1.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.0.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.0.2+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.2.2+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.3.3+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.5.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v28.0.0+incompatible"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -28,8 +44,12 @@
         "name": "CVE-2026-24051"
       },
       "products": [
-        {"@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.36.0"},
-        {"@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.39.0"}
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.36.0"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.39.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -142,11 +162,13 @@
         "name": "CVE-2025-47911"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Квадратичная сложность разбора в golang.org/x/net/html. yq v4.47.1 импортирует из модуля golang.org/x/net единственный пакет html/charset и использует из него только charset.NewReaderLabel в качестве CharsetReader для encoding/xml; путь до парсера (charset.NewReader -> prescan -> html.NewTokenizer) не вызывается, и в поставляемом бинаре /usr/bin/yq из пакета golang.org/x/net/html присутствует только html.init. В образе dhctl/install yq запускается как локальный CLI над YAML/JSON-файлами конфигурации и HTML не разбирает.",
+      "impact_statement": "Квадратичная сложность разбора HTML. Уязвимый код лежит в пакете golang.org/x/net/html.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset, и вызывает из него одну функцию charset.NewReaderLabel. Она подбирает декодер по имени кодировки и передаётся в encoding/xml как CharsetReader. Разбор HTML при этом не начинается.\n\nПроверено по бинарю /usr/bin/yq: из пакета html в него попал только инициализатор html.init, функций разбора в бинаре нет.\n\nВ образе dhctl/install yq работает локальным CLI над файлами конфигурации в YAML и JSON. HTML на вход yq не подаётся.",
       "timestamp": "2026-09-14T08:32:44Z"
     },
     {
@@ -154,11 +176,13 @@
         "name": "CVE-2025-58190"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Зацикливание разбора в golang.org/x/net/html. yq v4.47.1 импортирует из модуля golang.org/x/net единственный пакет html/charset и использует из него только charset.NewReaderLabel в качестве CharsetReader для encoding/xml; путь до парсера (charset.NewReader -> prescan -> html.NewTokenizer) не вызывается, и в поставляемом бинаре /usr/bin/yq из пакета golang.org/x/net/html присутствует только html.init. В образе dhctl/install yq запускается как локальный CLI над YAML/JSON-файлами конфигурации и HTML не разбирает.",
+      "impact_statement": "Зацикливание разбора HTML. Уязвимый код лежит в пакете golang.org/x/net/html.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset, и вызывает из него одну функцию charset.NewReaderLabel. Она подбирает декодер по имени кодировки и передаётся в encoding/xml как CharsetReader. Разбор HTML при этом не начинается.\n\nПроверено по бинарю /usr/bin/yq: из пакета html в него попал только инициализатор html.init, функций разбора в бинаре нет.\n\nВ образе dhctl/install yq работает локальным CLI над файлами конфигурации в YAML и JSON. HTML на вход yq не подаётся.",
       "timestamp": "2026-09-14T08:32:44Z"
     },
     {
@@ -166,11 +190,13 @@
         "name": "CVE-2026-25680"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Отказ в обслуживании при разборе произвольного HTML в golang.org/x/net/html. yq v4.47.1 импортирует из модуля golang.org/x/net единственный пакет html/charset и использует из него только charset.NewReaderLabel в качестве CharsetReader для encoding/xml; путь до парсера (charset.NewReader -> prescan -> html.NewTokenizer) не вызывается, и в поставляемом бинаре /usr/bin/yq из пакета golang.org/x/net/html присутствует только html.init. В образе dhctl/install yq запускается как локальный CLI над YAML/JSON-файлами конфигурации и HTML не разбирает.",
+      "impact_statement": "Отказ в обслуживании при разборе произвольного HTML. Уязвимый код лежит в пакете golang.org/x/net/html.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset, и вызывает из него одну функцию charset.NewReaderLabel. Она подбирает декодер по имени кодировки и передаётся в encoding/xml как CharsetReader. Разбор HTML при этом не начинается.\n\nПроверено по бинарю /usr/bin/yq: из пакета html в него попал только инициализатор html.init, функций разбора в бинаре нет.\n\nВ образе dhctl/install yq работает локальным CLI над файлами конфигурации в YAML и JSON. HTML на вход yq не подаётся.",
       "timestamp": "2026-09-14T08:32:44Z"
     },
     {
@@ -178,11 +204,13 @@
         "name": "CVE-2026-25681"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Некорректная обработка символьных ссылок в узлах DOCTYPE в golang.org/x/net/html. yq v4.47.1 импортирует из модуля golang.org/x/net единственный пакет html/charset и использует из него только charset.NewReaderLabel в качестве CharsetReader для encoding/xml; путь до парсера (charset.NewReader -> prescan -> html.NewTokenizer) не вызывается, и в поставляемом бинаре /usr/bin/yq из пакета golang.org/x/net/html присутствует только html.init. В образе dhctl/install yq запускается как локальный CLI над YAML/JSON-файлами конфигурации и HTML не разбирает.",
+      "impact_statement": "Некорректная обработка символьных ссылок в узлах DOCTYPE. Уязвимый код лежит в пакете golang.org/x/net/html.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset, и вызывает из него одну функцию charset.NewReaderLabel. Она подбирает декодер по имени кодировки и передаётся в encoding/xml как CharsetReader. Разбор HTML при этом не начинается.\n\nПроверено по бинарю /usr/bin/yq: из пакета html в него попал только инициализатор html.init, функций разбора в бинаре нет.\n\nВ образе dhctl/install yq работает локальным CLI над файлами конфигурации в YAML и JSON. HTML на вход yq не подаётся.",
       "timestamp": "2026-09-14T08:32:44Z"
     },
     {
@@ -190,11 +218,13 @@
         "name": "CVE-2026-27136"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "XSS из-за дублирующихся атрибутов в golang.org/x/net/html. yq v4.47.1 импортирует из модуля golang.org/x/net единственный пакет html/charset и использует из него только charset.NewReaderLabel в качестве CharsetReader для encoding/xml; путь до парсера (charset.NewReader -> prescan -> html.NewTokenizer) не вызывается, и в поставляемом бинаре /usr/bin/yq из пакета golang.org/x/net/html присутствует только html.init. В образе dhctl/install yq запускается как локальный CLI над YAML/JSON-файлами конфигурации и HTML не разбирает.",
+      "impact_statement": "XSS из-за дублирующихся атрибутов. Уязвимый код лежит в пакете golang.org/x/net/html.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset, и вызывает из него одну функцию charset.NewReaderLabel. Она подбирает декодер по имени кодировки и передаётся в encoding/xml как CharsetReader. Разбор HTML при этом не начинается.\n\nПроверено по бинарю /usr/bin/yq: из пакета html в него попал только инициализатор html.init, функций разбора в бинаре нет.\n\nВ образе dhctl/install yq работает локальным CLI над файлами конфигурации в YAML и JSON. HTML на вход yq не подаётся.",
       "timestamp": "2026-09-14T08:32:44Z"
     },
     {
@@ -202,11 +232,13 @@
         "name": "CVE-2026-42502"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Некорректная обработка HTML-элементов в foreign content в golang.org/x/net/html. yq v4.47.1 импортирует из модуля golang.org/x/net единственный пакет html/charset и использует из него только charset.NewReaderLabel в качестве CharsetReader для encoding/xml; путь до парсера (charset.NewReader -> prescan -> html.NewTokenizer) не вызывается, и в поставляемом бинаре /usr/bin/yq из пакета golang.org/x/net/html присутствует только html.init. В образе dhctl/install yq запускается как локальный CLI над YAML/JSON-файлами конфигурации и HTML не разбирает.",
+      "impact_statement": "Некорректная обработка HTML-элементов в foreign content. Уязвимый код лежит в пакете golang.org/x/net/html.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset, и вызывает из него одну функцию charset.NewReaderLabel. Она подбирает декодер по имени кодировки и передаётся в encoding/xml как CharsetReader. Разбор HTML при этом не начинается.\n\nПроверено по бинарю /usr/bin/yq: из пакета html в него попал только инициализатор html.init, функций разбора в бинаре нет.\n\nВ образе dhctl/install yq работает локальным CLI над файлами конфигурации в YAML и JSON. HTML на вход yq не подаётся.",
       "timestamp": "2026-09-14T08:32:44Z"
     },
     {
@@ -214,11 +246,13 @@
         "name": "CVE-2026-42506"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Некорректная обработка элементов с пространствами имён в foreign content в golang.org/x/net/html. yq v4.47.1 импортирует из модуля golang.org/x/net единственный пакет html/charset и использует из него только charset.NewReaderLabel в качестве CharsetReader для encoding/xml; путь до парсера (charset.NewReader -> prescan -> html.NewTokenizer) не вызывается, и в поставляемом бинаре /usr/bin/yq из пакета golang.org/x/net/html присутствует только html.init. В образе dhctl/install yq запускается как локальный CLI над YAML/JSON-файлами конфигурации и HTML не разбирает.",
+      "impact_statement": "Некорректная обработка элементов с пространствами имён в foreign content. Уязвимый код лежит в пакете golang.org/x/net/html.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset, и вызывает из него одну функцию charset.NewReaderLabel. Она подбирает декодер по имени кодировки и передаётся в encoding/xml как CharsetReader. Разбор HTML при этом не начинается.\n\nПроверено по бинарю /usr/bin/yq: из пакета html в него попал только инициализатор html.init, функций разбора в бинаре нет.\n\nВ образе dhctl/install yq работает локальным CLI над файлами конфигурации в YAML и JSON. HTML на вход yq не подаётся.",
       "timestamp": "2026-09-14T08:32:44Z"
     },
     {
@@ -226,11 +260,13 @@
         "name": "CVE-2026-33814"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Зацикливание HTTP/2-транспорта при некорректном SETTINGS_MAX_FRAME_SIZE в пакете golang.org/x/net/http2. yq v4.47.1 импортирует из модуля golang.org/x/net только html/charset, пакет http2 в сборку не попадает: в бинаре /usr/bin/yq присутствует лишь вендоренная стандартной библиотекой копия vendor/golang.org/x/net/http2/hpack, а уязвимый код модуля отсутствует. yq в образе dhctl/install не поднимает сетевых соединений и HTTP/2-клиентом не пользуется.",
+      "impact_statement": "Зацикливание HTTP/2-транспорта при некорректном SETTINGS_MAX_FRAME_SIZE. Уязвимый код лежит в пакете golang.org/x/net/http2.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset. Пакет http2 в сборку не попадает.\n\nВ бинаре /usr/bin/yq есть код по пути vendor/golang.org/x/net/http2/hpack. Это копия, которую стандартная библиотека Go держит внутри себя: она обновляется вместе с версией Go, а не вместе с модулем из go.mod. Кода самого модуля в бинаре нет.\n\nyq в образе dhctl/install читает локальные файлы и сетевых соединений не открывает.",
       "timestamp": "2026-09-14T08:32:44Z"
     },
     {
@@ -238,11 +274,13 @@
         "name": "CVE-2026-39821"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Некорректный приём ASCII-only Punycode-меток в пакете golang.org/x/net/idna. yq v4.47.1 импортирует из модуля golang.org/x/net только html/charset, пакет idna в сборку не попадает: в бинаре /usr/bin/yq присутствует лишь вендоренная стандартной библиотекой копия vendor/golang.org/x/net/idna, а уязвимый код модуля отсутствует. yq в образе dhctl/install не разрешает доменные имена и не обрабатывает URL из недоверенных источников.",
+      "impact_statement": "Некорректный приём ASCII-only Punycode-меток. Уязвимый код лежит в пакете golang.org/x/net/idna.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset. Пакет idna в сборку не попадает.\n\nВ бинаре /usr/bin/yq есть код по пути vendor/golang.org/x/net/idna. Это копия, которую стандартная библиотека Go держит внутри себя: она обновляется вместе с версией Go, а не вместе с модулем из go.mod. Кода самого модуля в бинаре нет.\n\nyq в образе dhctl/install не разрешает доменные имена и не разбирает URL.",
       "timestamp": "2026-09-14T08:32:44Z"
     },
     {
@@ -250,11 +288,13 @@
         "name": "CVE-2026-46600"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Отказ в обслуживании при разборе DNS-сообщений в пакете golang.org/x/net/dns/dnsmessage. yq v4.47.1 импортирует из модуля golang.org/x/net только html/charset, пакет dns/dnsmessage в сборку не попадает: в бинаре /usr/bin/yq присутствует лишь вендоренная стандартной библиотекой копия vendor/golang.org/x/net/dns/dnsmessage, а уязвимый код модуля отсутствует. yq в образе dhctl/install работает с локальными файлами и DNS-запросов не выполняет.",
+      "impact_statement": "Отказ в обслуживании при разборе DNS-сообщений. Уязвимый код лежит в пакете golang.org/x/net/dns/dnsmessage.\n\nyq v4.47.1 берёт из модуля golang.org/x/net ровно один пакет, html/charset. Пакет dns/dnsmessage в сборку не попадает.\n\nВ бинаре /usr/bin/yq есть код по пути vendor/golang.org/x/net/dns/dnsmessage. Это копия, которую стандартная библиотека Go держит внутри себя: она обновляется вместе с версией Go, а не вместе с модулем из go.mod. Кода самого модуля в бинаре нет.\n\nyq в образе dhctl/install работает с локальными файлами и DNS-запросов не делает.",
       "timestamp": "2026-09-14T08:36:18Z"
     }
   ],
