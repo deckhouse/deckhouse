@@ -242,7 +242,18 @@ func TestPayloadRendersAsAValueAndNothingElse(t *testing.T) {
 		},
 	}
 
-	manifests, err := client.renderTemplate(project, shippedTemplate(t, "simple"))
+	// The shape the shipped `simple` template had while it was a Helm string: the parameter lands in
+	// a quoted label value.
+	template := customTemplate("namespace", `---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .projectName }}
+  labels:
+    owner: {{ .parameters.namespace.labels.owner | quote }}
+`)
+
+	manifests, err := client.renderTemplate(project, template)
 	require.NoError(t, err)
 
 	objects, err := canonicalObjects(manifests)

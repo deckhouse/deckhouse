@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 )
 
@@ -38,7 +39,7 @@ func newManager(t *testing.T, objs ...client.Object) (*Manager, client.Client) {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		corev1.AddToScheme, rbacv1.AddToScheme, v1alpha3.AddToScheme,
+		corev1.AddToScheme, rbacv1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)

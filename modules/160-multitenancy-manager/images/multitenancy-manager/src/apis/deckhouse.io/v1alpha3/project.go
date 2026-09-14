@@ -38,6 +38,10 @@ const (
 	ProjectConditionTemplateResourcesFiltered = "TemplateResourcesFiltered"
 	ProjectConditionTemplateRolesAllowed      = "TemplateRolesAllowed"
 	ProjectConditionHelmOwnership             = "HelmOwnership"
+	// ProjectConditionTemplateRequiresRewrite is False while the project's template carries the
+	// legacy-helm-template mark: the template was a Helm string in v1alpha1, the string is gone, and
+	// rendering the empty structured shape would delete the objects that string produced.
+	ProjectConditionTemplateRequiresRewrite = "TemplateRequiresRewrite"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 

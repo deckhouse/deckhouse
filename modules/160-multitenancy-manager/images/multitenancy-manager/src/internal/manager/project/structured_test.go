@@ -61,6 +61,30 @@ func TestLegacyTemplate(t *testing.T) {
 // The built-in templates must be schema-based v1alpha2 documents with no Helm resourcesTemplate, wiring
 // every per-project knob to a fromParam leaf while keeping the parametersSchema as the parameter contract.
 func TestBuiltinTemplatesAreStructured(t *testing.T) {
+	t.Run("simple.yaml", func(t *testing.T) {
+		raw, err := os.ReadFile(filepath.Join("..", "..", "..", "templates", "simple.yaml"))
+		require.NoError(t, err)
+
+		tmpl := new(v1alpha2.ProjectTemplate)
+		require.NoError(t, yaml.Unmarshal(raw, tmpl))
+
+		assert.Equal(t, "deckhouse.io/v1alpha2", tmpl.APIVersion)
+		assert.Empty(t, tmpl.Spec.ResourcesTemplate, "the minimal template must not carry a Helm string")
+		assert.True(t, isStructured(tmpl))
+
+		// the namespace labels and annotations stay per-project parameters
+		require.NotNil(t, tmpl.Spec.NamespaceMetadata)
+		assert.Equal(t, "namespace.labels", tmpl.Spec.NamespaceMetadata.Labels.Ref())
+		assert.Equal(t, "namespace.annotations", tmpl.Spec.NamespaceMetadata.Annotations.Ref())
+		props, ok := tmpl.Spec.ParametersSchema.OpenAPIV3Schema["properties"].(map[string]any)
+		require.True(t, ok)
+		assert.Contains(t, props, "namespace")
+		// the required-requests policy is opt-in here: the template renders the namespace and nothing else
+		required, ok := props["requiredRequests"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, false, required["default"])
+	})
+
 	for _, file := range []string{"default.yaml", "secure.yaml", "secure-with-dedicated-nodes.yaml"} {
 		t.Run(file, func(t *testing.T) {
 			raw, err := os.ReadFile(filepath.Join("..", "..", "..", "templates", file))

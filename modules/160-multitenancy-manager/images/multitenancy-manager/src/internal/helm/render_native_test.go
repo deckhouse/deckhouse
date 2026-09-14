@@ -49,6 +49,7 @@ func TestNativeRender(t *testing.T) {
 		tmplFile string
 		caseDir  string
 	}{
+		{"simple.yaml", "simple_case"},
 		{"default.yaml", "default_case"},
 		{"secure.yaml", "secure_case"},
 		{"secure-with-dedicated-nodes.yaml", "secure_with_dedicated_node_case"},

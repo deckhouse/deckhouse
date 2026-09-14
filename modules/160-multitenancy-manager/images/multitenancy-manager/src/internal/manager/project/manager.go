@@ -269,6 +269,25 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
 	project.SetTemplateGeneration(projectTemplate.Generation)
 
+	// A template stored as v1alpha1 with a Helm resourcesTemplate comes up marked and without the
+	// string (see the conversion webhook). Rendering it as the empty structured template it now looks
+	// like would upgrade the release to a lone Namespace and delete every object the Helm string used
+	// to produce, so the project is parked in Error until an administrator rewrites the template and
+	// removes the mark. The release is left exactly as it is.
+	if projectTemplate.Annotations[v1alpha2.TemplateAnnotationLegacyHelm] == "true" {
+		m.logger.Info("the project template carries the legacy Helm template mark, refusing to render", "project", project.Name, "template", projectTemplate.Name)
+		project.SetState(v1alpha3.ProjectStateError)
+		project.SetConditionFalse(v1alpha3.ProjectConditionTemplateRequiresRewrite, fmt.Sprintf(
+			"The '%s' project template was a Helm resourcesTemplate in v1alpha1, which v1alpha2 does not carry. "+
+				"Rewrite the template with structured fields and remove the %q annotation; the project release is left untouched until then.",
+			projectTemplate.Name, v1alpha2.TemplateAnnotationLegacyHelm))
+		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+			return true, updateErr
+		}
+		return true, nil
+	}
+	project.SetConditionTrue(v1alpha3.ProjectConditionTemplateRequiresRewrite)
+
 	m.logger.Info("validate the project spec", "project", project.Name, "template", projectTemplate.Name)
 	if err = validate.Project(project, LegacyTemplate(projectTemplate)); err != nil {
 		m.logger.Error(err, "failed to validate the project spec", "project", project.Name, "template", projectTemplate.Name)

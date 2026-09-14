@@ -55,36 +55,17 @@ func parseManifest(raw string) (*unstructured.Unstructured, bool, error) {
 	return object, true, nil
 }
 
-// shippedTemplates points the cases that cover a shipped ProjectTemplate at the file that ships,
-// instead of a copy of it under testdata. The copies had drifted: they still carried the unquoted
-// substitution the shipped templates were fixed for, so quoting those changed no golden file and
-// nothing here would have noticed a shipped template regressing to an unquoted one.
-//
-// Only `simple` is here now. The other three shipped templates are structured and are not rendered
-// through Helm at all: TestNativeRender in render_native_test.go reads the same shipped files, runs
-// them through the native renderer against the same golden directories, and additionally refuses a
-// built-in template that carries a resourcesTemplate — so the drift this map guards against is
-// covered for them, by the path that actually renders them.
-var shippedTemplates = map[string]string{
-	"simple_case": "../../templates/simple.yaml",
-}
-
+// Test renders the legacy testdata templates through the Helm engine. No shipped template is among
+// them any more: all four built-in templates are structured and are rendered natively --
+// TestNativeRender in render_native_test.go reads the shipped files and runs them against the
+// golden directories by the path that actually renders them.
 func Test(t *testing.T) {
 	templates, err := parseHelmTemplates("../../helmlib")
 	assert.Nil(t, err)
-	for _, c := range []string{"simple_case", "empty_case", "without_ns_case", "skip_heritage_and_unmanaged_case"} {
+	for _, c := range []string{"empty_case", "without_ns_case", "skip_heritage_and_unmanaged_case"} {
 		t.Run(c, func(t *testing.T) {
 			basePath := filepath.Join("./testdata", c)
-			templatePath := filepath.Join(basePath, "template.yaml")
-			if shipped, ok := shippedTemplates[c]; ok {
-				// Asked for outright: read() answers a missing file with an empty object, so a
-				// renamed template would arrive here as a template with nothing in it and fail as a
-				// golden mismatch rather than as the rename it is.
-				_, statErr := os.Stat(shipped)
-				assert.NoErrorf(t, statErr, "the shipped template %s is gone", shipped)
-				templatePath = shipped
-			}
-			assert.Nil(t, test(templates, basePath, templatePath))
+			assert.Nil(t, test(templates, basePath, filepath.Join(basePath, "template.yaml")))
 		})
 	}
 }

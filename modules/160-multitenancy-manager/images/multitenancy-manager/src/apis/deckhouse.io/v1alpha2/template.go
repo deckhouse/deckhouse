@@ -27,6 +27,14 @@ import (
 const (
 	ProjectTemplateKind     = "ProjectTemplate"
 	ProjectTemplateResource = "projecttemplates"
+
+	// TemplateAnnotationLegacyHelm marks a template that was stored as v1alpha1 with a non-empty Helm
+	// resourcesTemplate. The conversion webhook sets it while dropping the Helm string, which v1alpha2
+	// cannot carry: without the mark the template would read as a structured template with nothing in
+	// it, and rendering that over the existing Helm release would delete every object the Helm string
+	// used to produce. The controller refuses to render the projects of a marked template until the
+	// template is rewritten with structured fields and the annotation is removed.
+	TemplateAnnotationLegacyHelm = "projects.deckhouse.io/legacy-helm-template"
 )
 
 // Pod Security Standard profiles, mirroring the legacy parameters.podSecurityProfile values.
