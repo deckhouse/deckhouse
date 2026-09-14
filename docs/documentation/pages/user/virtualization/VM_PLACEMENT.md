@@ -5,7 +5,7 @@ description: "Controlling virtual machine placement on nodes: nodeSelector, affi
 search: VM placement, nodeSelector, affinity, anti-affinity, tolerations
 ---
 
-Four mechanisms control where exactly a virtual machine starts:
+Four mechanisms control where exactly a virtual machine (VM) starts:
 
 - [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-nodeselector): The simplest way, it selects nodes with the required labels.
 - [`.spec.affinity.nodeAffinity`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-affinity-nodeaffinity): Sets the preferred nodes for placement.
@@ -56,7 +56,7 @@ To view the `taints` on cluster nodes, run the following command:
 d8 k get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints
 ```
 
-For more details:
+To view detailed information about a node, run the following command:
 
 ```bash
 d8 k describe node <NODE_NAME>
@@ -147,7 +147,7 @@ To set "preferences" and "requirements" for the placement of virtual machines in
 `AntiAffinity` is used to prevent VMs from being placed together on nodes. It's useful for fault tolerance or load balancing.
 
 {% alert level="warning" %}
-Be careful with hard requirements in small clusters that have few nodes to run virtual machines (VMs) on. If the `virtualMachineAndPodAntiAffinity` parameter with the `requiredDuringSchedulingIgnoredDuringExecution` type is used for virtual machines, it means that each VM copy has to be placed on a separate node. With a limited number of nodes in the cluster, this can lead to a situation where some VMs can't start because of a lack of available nodes.
+Be careful with hard requirements in small clusters that have few nodes to run virtual machines on. If the `virtualMachineAndPodAntiAffinity` parameter with the `requiredDuringSchedulingIgnoredDuringExecution` type is used for virtual machines, it means that each VM copy has to be placed on a separate node. With a limited number of nodes in the cluster, this can lead to a situation where some VMs can't start because of a lack of available nodes.
 {% endalert %}
 
 The terms `Affinity` and `AntiAffinity` describe the relationships between virtual machines. There's no such antonym for nodes, but you can achieve the same result through `nodeAffinity` with the `NotIn` operator, excluding the nodes you need.

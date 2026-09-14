@@ -5,7 +5,7 @@ description: "Live migration of a virtual machine to another node: how it works,
 search: live migration, VirtualMachineOperation, Migratable
 ---
 
-Live migration of virtual machines is the process of moving a running VM from one physical node to another without shutting it down. This feature plays a key role in managing virtualized infrastructure, keeping applications running during maintenance, load balancing, or updates.
+Live migration of virtual machines (VMs) is the process of moving a running VM from one physical node to another without shutting it down. This feature plays a key role in managing virtualized infrastructure, keeping applications running during maintenance, load balancing, or updates.
 
 ## How live migration works
 
@@ -330,7 +330,7 @@ When the placement rules of a running machine change, DP moves it to a suitable 
 The feature is available in commercial DP editions.
 {% endalert %}
 
-The following example shows the migration mechanism in a cluster with two node groups, `green` and `blue`. Suppose a virtual machine (VM) initially runs on a node of the `green` group, and its configuration has no placement restrictions.
+The following example shows the migration mechanism in a cluster with two node groups, `green` and `blue`. Suppose a virtual machine initially runs on a node of the `green` group, and its configuration has no placement restrictions.
 
 First, add a requirement to be placed in the `green` group to the VM specification:
 

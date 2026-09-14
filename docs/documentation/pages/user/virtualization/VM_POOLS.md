@@ -9,7 +9,7 @@ search: VM pool, VirtualMachinePool, replicas, pool scaling, reclaim
 Available in commercial DP editions.
 {% endalert %}
 
-The [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) resource maintains a given number of identical virtual machines and lets you scale them through the `scale` subresource, HorizontalPodAutoscaler (HPA), or KEDA. The `virtualMachineTemplate.spec` field matches the regular `VirtualMachineSpec`, so a replica is no different from a manually created virtual machine.
+The [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) resource maintains a given number of identical virtual machines (VMs) and lets you scale them through the `scale` subresource, HorizontalPodAutoscaler (HPA), or KEDA. The `virtualMachineTemplate.spec` field matches the regular `VirtualMachineSpec`, so a replica is no different from a manually created virtual machine.
 
 {% alert level="warning" %}
 The `Legacy` OS type isn't supported in a pool, because replicas are differentiated by initialization, which these operating systems don't have, so every replica would be a byte-for-byte copy of one disk, and for Windows guest operating systems that also means the same SID on the network. A pool template with `osType: Legacy` is rejected. Create such virtual machines individually.

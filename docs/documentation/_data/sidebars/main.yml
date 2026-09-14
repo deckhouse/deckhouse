@@ -810,21 +810,9 @@ entries:
                     ru: Обзор
                   url: /admin/configuration/virtualization/
                 - title:
-                    en: Installation and configuration
-                    ru: Установка и настройка
-                  folders:
-                    - title:
-                        en: Requirements and limits
-                        ru: Требования и пределы
-                      url: /admin/configuration/virtualization/requirements.html
-                    - title:
-                        en: Installing and updating the module
-                        ru: Установка и обновление модуля
-                      url: /admin/configuration/virtualization/install.html
-                    - title:
-                        en: Module parameters
-                        ru: Параметры модуля
-                      url: /admin/configuration/virtualization/settings.html
+                    en: Module parameters
+                    ru: Параметры модуля
+                  url: /admin/configuration/virtualization/settings.html
                 - title:
                     en: Images and storage
                     ru: Образы и хранилище

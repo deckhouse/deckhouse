@@ -6,7 +6,7 @@ search: создание ВМ, VirtualMachine, жизненный цикл ВМ,
 lang: ru
 ---
 
-Для создания виртуальной машины используется ресурс [VirtualMachine](/modules/virtualization/cr.html#virtualmachine). Его параметры позволяют сконфигурировать:
+Для создания виртуальной машины (ВМ) используется ресурс [VirtualMachine](/modules/virtualization/cr.html#virtualmachine). Его параметры позволяют сконфигурировать:
 
 - [класс виртуальной машины](../../admin/configuration/virtualization/vm-classes.html);
 - ресурсы, требуемые для работы виртуальной машины (процессор, память, диски и образы);

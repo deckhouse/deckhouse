@@ -6,7 +6,7 @@ search: размещение по узлам, nodeSelector, tolerations, кла�
 lang: ru
 ---
 
-Необязательный блок [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) ограничивает набор узлов, на которых работают виртуальные машины этого класса. Узлы отбираются по лейблам:
+Необязательный блок [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) ограничивает набор узлов, на которых работают виртуальные машины (ВМ) этого класса. Узлы отбираются по лейблам:
 
 ```yaml
 spec:

@@ -5,7 +5,7 @@ description: "VirtualMachineClass rules that limit the choice of nodes for virtu
 search: node placement, nodeSelector, tolerations, virtual machine class
 ---
 
-The optional [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) block limits the set of nodes where virtual machines of this class run. Nodes are selected by labels:
+The optional [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) block limits the set of nodes where virtual machines (VMs) of this class run. Nodes are selected by labels:
 
 ```yaml
 spec:

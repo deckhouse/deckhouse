@@ -5,7 +5,7 @@ description: "Attaching disks and images to a virtual machine through the specif
 search: attaching a disk, VirtualMachineBlockDeviceAttachment, VMBDA, CD-ROM, boot order
 ---
 
-You can attach disks and images to a virtual machine. They're described as block devices (BlockDevices).
+You can attach disks and images to a virtual machine (VM). They're described as block devices (BlockDevices).
 
 Block device types and access modes:
 

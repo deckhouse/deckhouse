@@ -5,7 +5,7 @@ description: "Virtual processor types in VirtualMachineClass and automatic instr
 search: virtual processor, vCPU Discovery, CPU type, instruction set
 ---
 
-A virtual machine class defines which processor and which instruction set the guest system sees.
+A virtual machine (VM) class defines which processor and which instruction set the guest system sees.
 
 ## Virtual processor
 

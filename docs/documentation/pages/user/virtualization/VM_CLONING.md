@@ -5,7 +5,7 @@ description: "Cloning a virtual machine: creating a copy of a running machine an
 search: VM cloning, virtual machine clone, nameReplacements
 ---
 
-A virtual machine clone is created either from an existing VM or from a previously created snapshot of that machine.
+A virtual machine (VM) clone is created either from an existing VM or from a previously created snapshot of that machine.
 
 {% alert level="warning" %}
 The cloned VM gets a new IP address for the cluster network and new MAC addresses for the additional network interfaces (if there are any), so after cloning you have to reconfigure the network parameters of the guest OS.
@@ -115,7 +115,7 @@ spec:
 
 The `nameReplacements` and `customization` parameters are configured in the [`.spec.clone`](/modules/virtualization/cr.html#virtualmachineoperation-v1alpha2-spec-clone) block (general description above).
 
-> During cloning, temporary snapshots are created automatically for the virtual machine and all its disks. The new VM is then assembled from these snapshots. After the cloning process finishes, the temporary snapshots are deleted automatically and you won't see them in the resource list. However, the specification of the cloned disks keeps a reference (`dataSource`) to the corresponding snapshot, even though the snapshot itself no longer exists. This is expected behavior and doesn't indicate a problem, because such references are valid: by the time the clone starts, all the necessary data has already been transferred to the new disks.
+> During cloning, temporary snapshots are created automatically for the virtual machine and all its disks. The new VM is then assembled from these snapshots. After cloning finishes, the temporary snapshots are deleted automatically, so you won't see them in the resource list. The specification of the cloned disks still keeps a reference (`dataSource`) to the corresponding snapshot, even though the snapshot itself no longer exists. This is expected behavior and doesn't indicate a problem, because by the time the clone starts, all the necessary data has already been transferred to the new disks.
 
 The following example shows cloning a VM named `database` and the `database-root` disk attached to it.
 

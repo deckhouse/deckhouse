@@ -11,7 +11,7 @@ Export writes the contents of a disk or its snapshot to a file so that you can m
 
 {% tab "Using the CLI" %}
 
-You can export virtual machine disks and disk snapshots with the `d8` utility (version 0.20.7 and later). For this feature to work, the [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) module has to be enabled.
+You can export virtual machine (VM) disks and disk snapshots with the `d8` utility (version 0.20.7 and later). For this feature to work, the [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) module has to be enabled.
 
 > **Important:** The disk must not be in use at the moment of export. If the disk is attached to a virtual machine, stop the VM first.
 

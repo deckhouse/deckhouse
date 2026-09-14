@@ -124,9 +124,9 @@ mounts:
 The settings described in this section apply only to additional networks. The main network (Main) is configured automatically via cloud-init and does not require manual configuration.
 {% endalert %}
 
-If additional networks are connected to a virtual machine, configure them manually via cloud-init: create configuration files in `write_files` and apply the settings in `runcmd`.
+Additional networks are configured manually via cloud-init. The `write_files` block creates the configuration files, and the `runcmd` block applies the settings.
 
-For more information on connecting additional networks to a virtual machine, see [Additional network interfaces](user/network/virtualization/vm-additional-interfaces.html#additional-network-interfaces).
+Connecting additional networks to a virtual machine is covered in [Additional network interfaces](user/network/virtualization/vm-additional-interfaces.html#additional-network-interfaces).
 
 The following examples cover common ways to configure networking in the guest OS:
 

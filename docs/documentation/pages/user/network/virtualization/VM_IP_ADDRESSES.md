@@ -5,7 +5,7 @@ description: "IP addresses of virtual machines: requesting a specific address, k
 search: VM IP address, VirtualMachineIPAddress, IPAM, main network
 ---
 
-Every virtual machine gets an address in the main cluster network. The sections below cover how to view the assigned address, request a specific one, and keep it in the project.
+Every virtual machine (VM) gets an address in the main cluster network. The sections below cover how to view the assigned address, request a specific one, and keep it in the project.
 
 ## IP addresses of VMs
 

@@ -5,7 +5,7 @@ description: "Virtual machine disks: how storage affects disk behavior, creating
 search: VM disks, VirtualDisk, creating a disk, disk upload, WaitForFirstConsumer
 ---
 
-A disk stores virtual machine data, including the operating system and application files. A disk is described by the [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resource, and its specification consists of two blocks:
+A disk stores virtual machine (VM) data, including the operating system and application files. A disk is described by the [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resource, and its specification consists of two blocks:
 
 - [`persistentVolumeClaim`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim): Storage parameters, that is, the StorageClass and the size.
 - [`dataSource`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-datasource): The data source, which can be an image, another disk, or a snapshot.

@@ -56,6 +56,23 @@ Before installation, ensure the following:
   
 - There is access to the Deckhouse container registry (official `registry.deckhouse.io`, or a mirror).
 
+### Additional requirements for virtualization
+
+If you plan to run virtual machines (VMs) in the cluster, its nodes have to meet additional requirements. Take them into account when planning the cluster, because some of them can't be met after the installation.
+
+{% alert level="warning" %}
+Nodes that run virtual machines have to be physical servers (bare metal). Installation on virtual machines is allowed for demonstration purposes only, requires nested virtualization to be enabled, and isn't covered by technical support.
+{% endalert %}
+
+- Every node that will run VMs needs a CPU supporting Intel-VT (VMX) or AMD-V (SVM) instructions, with hardware virtualization enabled in the BIOS/UEFI settings.
+- All cluster nodes have to run the same Linux kernel version. Version differences lead to incompatible system calls and resource handling, which makes live migration of VMs unstable.
+- Astra Linux nodes require platform version 1.8.3 or higher: earlier versions contain a bug that interferes with virtualization.
+- VM disks and images are created on top of PersistentVolume resources, so the cluster needs one or several [supported storages](../admin/configuration/storage/): local or replicated SDS storage, Ceph, NFS, TATLIN.UNIFIED (Yadro), Huawei Dorado, or HPE 3par. Also set the [default StorageClass](../admin/configuration/storage/supported-storage.html#setting-a-default-storageclass).
+- Choose the subnets that VMs will get IP addresses from in advance. They are set by the `virtualMachineCIDRs` parameter and must not overlap the pod (`podSubnetCIDR`) and service (`serviceSubnetCIDR`) address spaces.
+- A cluster with virtualization is designed for `1000` nodes and `50000` virtual machines.
+
+The hardware requirements for the nodes match the general DKP requirements listed above.
+
 ## Preparing the Configuration
 
 Before installation, you need to prepare the [installation configuration file](#installation-configuration-file) and, if needed, a [post-bootstrap script](#post-bootstrap-script).
@@ -108,7 +125,8 @@ Required and optional objects/resources that may be needed in the installation c
    * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html): Global DKP settings for parameters used by default by all modules and components (DNS name template, StorageClass, module component placement settings, etc.).
    * [`deckhouse`](/modules/deckhouse/configuration.html): Container registry access settings, the desired release channel, and other parameters.
    * [`user-authn`](/modules/user-authn/configuration.html): Unified authentication.
-   * [`cni-cilium`](/modules/cni-cilium/configuration.html): Cluster networking (for example, used when installing DKP on bare metal or in an air-gapped environment).
+   * [`cni-cilium`](/modules/cni-cilium/configuration.html): Cluster networking (for example, used when installing DKP on bare metal or in an air-gapped environment);
+   * [`virtualization`](/modules/virtualization/configuration.html): Running virtual machines in the cluster, [enabled during the installation](#installing-virtualization) or later.
 
    If the cluster is created with nodes dedicated to specific workload types (for example, system or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in module configurations that use persistent storage volumes (for example, in the [`nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector) parameter of the `prometheus` ModuleConfig for the `prometheus` module).
 
@@ -667,6 +685,93 @@ dhctl bootstrap-phase abort
 {% alert level="warning" %}
 The configuration file provided through the `--config` parameter when running the installer must be the same that was used during the initial installation.
 {% endalert %}
+
+## Installing virtualization
+
+Virtualization is enabled by the `virtualization` ModuleConfig resource and deploys its components to the `d8-virtualization` namespace. You can either include the resource in the installation configuration file or apply it in a ready cluster.
+
+{% alert level="warning" %}
+Enabling virtualization restarts kubelet, containerd, and the network module agents on every node that is expected to run virtual machines. This is required to set up connectivity between containerd and the DVCR image storage.
+{% endalert %}
+
+A minimal configuration defines the image storage size and the subnets that virtual machines get addresses from:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  enabled: true
+  version: 1
+  settings:
+    dvcr:
+      storage:
+        type: PersistentVolumeClaim
+        persistentVolumeClaim:
+          size: 50G
+    virtualMachineCIDRs:
+      - 10.66.10.0/24
+```
+
+The other parameters are covered in [Virtualization module parameters](../admin/configuration/virtualization/settings.html) and in the [settings reference](/modules/virtualization/configuration.html).
+
+To check if virtualization is ready, run the following command:
+
+```bash
+d8 k get modules virtualization
+```
+
+Example output:
+
+```console
+NAME             WEIGHT   SOURCE      PHASE   ENABLED   READY
+virtualization   900      deckhouse   Ready   True      True
+```
+
+The module phase should be `Ready`.
+
+### Placement of virtualization components across nodes
+
+How components are distributed across nodes depends on the cluster configuration. A cluster may have only master nodes running both control plane components and workloads; master and worker nodes; master, system, and worker nodes; or other combinations. Worker nodes here are the nodes without restrictions (taints) that would prevent regular workloads from running.
+
+Components are distributed by priority: if the cluster has a suitable node type, the component lands on it. What each component is responsible for is described in [Virtualization subsystem](../architecture/virtualization/).
+
+| Component name                | Node group         | Comment                                                                                      |
+|-------------------------------|--------------------|------------------------------------------------------------------------------------------------|
+| `virt-operator-*`             | system/master      |                                                                                              |
+| `virt-api-*`                  | master             |                                                                                              |
+| `virt-controller-*`           | system/worker      |                                                                                              |
+| `virt-handler-*`              | All cluster nodes  |                                                                                              |
+| `virtualization-api-*`        | master             |                                                                                              |
+| `virtualization-controller-*` | master             |                                                                                              |
+| `dvcr-*`                      | system             | Storage has to be available on the node. With no system nodes, the component lands on a worker node. |
+| `virtualization-audit-*`      | master             | Available in DP EE and Ultimate.                                                             |
+| `virtualization-dra-*`        | Dedicated nodes    | Available in commercial DP editions.                                                         |
+| `vm-route-forge-*`            | All cluster nodes  |                                                                                              |
+
+The `virtualization-dra-*` component runs only on nodes labeled with `virtualization.deckhouse.io/usbip`.
+
+The components that create and upload virtual machine images and disks run only while that work is in progress:
+
+| Component name                                   | Node group    | Comment                                                                     |
+|--------------------------------------------------|---------------|--------------------------------------------------------------------------------|
+| `d8v-vi-importer-*`, `d8v-cvi-importer-*`        | system/worker | Uploads an image from an external source or another resource to the image storage. |
+| `d8v-vi-uploader-*`, `d8v-cvi-uploader-*`        | system/worker | Accepts the file that you upload from the CLI or the web interface.         |
+| `d8v-vd-pvc-importer-*`, `d8v-vi-pvc-importer-*` | system/worker | Moves an image from the image storage to a disk volume.                     |
+| `d8v-pvc-pvc-source-importer-*`                  | system/worker | Serves the data of the source volume over the network when a disk is cloned. |
+| `d8v-pvc-pvc-target-importer-*`                  | system/worker | Receives the data on the target volume when a disk is cloned.               |
+| `d8v-vi-bounder-*`                               | system/worker | Keeps the volume on the required node while an image is created on it.      |
+
+### Cluster with taints on all nodes
+
+Sometimes taints are configured on every cluster node, which is how an administrator explicitly controls where workloads land. In such a configuration, keep the following in mind:
+
+1. When creating a [VirtualDisk](/modules/virtualization/cr.html#virtualdisk), pay attention to the `volumeBindingMode` of the StorageClass. With `Immediate`, the PersistentVolume is created right after the disk is created, before the virtual machine is scheduled. Make sure the storage can create volumes on the nodes allowed for virtual machines by the [placement parameters](../user/virtualization/vm-placement.html), including `nodeSelector`, `tolerations`, and the settings in the `spec` of the virtual machine or the [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass). Otherwise, the disk may end up on a node where the virtual machine can't start. With `WaitForFirstConsumer`, the volume is created on the node the virtual machine is scheduled to, and the problem doesn't occur.
+
+1. [VirtualImage](/modules/virtualization/cr.html#virtualimage) and [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) rely on the temporary components from the table above. They have a toleration for the `dedicated.deckhouse.io=system` taint.
+
+1. The cluster has to have a `system` NodeGroup, or the administrator adds the `dedicated.deckhouse.io=system` taint to selected nodes without creating a NodeGroup. Without such nodes, these components won't be scheduled, and images won't reach the `Ready` phase.
 
 ## Air-gapped environment, working via proxy and using external registries
 

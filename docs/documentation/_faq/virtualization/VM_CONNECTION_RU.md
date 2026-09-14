@@ -5,9 +5,9 @@ subsystems:
 lang: ru
 ---
 
-К ВМ можно подключиться через серийную консоль ([`d8 v console`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-v-console)) или по VNC ([`d8 v vnc`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-v-vnc)).
+К виртуальной машине (ВМ) можно подключиться через серийную консоль ([`d8 v console`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-v-console)) или по VNC ([`d8 v vnc`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-v-vnc)).
 Способы используют разные каналы связи с гостевой ОС и зависят от её настройки.
-Подробнее о подключении описано в разделе [Подключение к виртуальной машине](user/virtualization/vm-access.html#подключение-к-виртуальной-машине).
+Оба способа описаны в разделе [«Подключение к виртуальной машине»](user/virtualization/vm-access.html#подключение-к-виртуальной-машине).
 
 Ниже перечислены типовые ситуации, когда доступен только один из способов подключения.
 

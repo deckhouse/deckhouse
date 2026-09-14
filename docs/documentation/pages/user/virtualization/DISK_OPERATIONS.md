@@ -9,7 +9,7 @@ An existing disk can be expanded or moved to another storage without deleting it
 
 ## Changing the disk size
 
-You can grow a disk even while it's attached to a running virtual machine. You can't shrink a disk.
+You can grow a disk even while it's attached to a running virtual machine (VM). You can't shrink a disk.
 
 {% tabs vd-resize %}
 

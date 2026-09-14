@@ -47,7 +47,7 @@ Below is a typical Windows guest OS installation scenario from an ISO image. Bef
          url: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
    ```
 
-1. Create a virtual machine:
+1. Create a virtual machine (VM):
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2

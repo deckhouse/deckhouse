@@ -9,7 +9,7 @@ You can connect to a running machine from the command line and from the web inte
 
 ## Connecting to a virtual machine
 
-You can connect to a virtual machine in four ways. The first is a remote management protocol such as SSH, which you configure in the guest OS yourself. The second is the serial console. The third is VNC. The fourth is SPICE, if it is enabled for the machine.
+You can connect to a virtual machine (VM) in four ways. The first is a remote management protocol such as SSH, which you configure in the guest OS yourself. The second is the serial console. The third is VNC. The fourth is SPICE, if it is enabled for the machine.
 
 {% tabs vm-connect %}
 

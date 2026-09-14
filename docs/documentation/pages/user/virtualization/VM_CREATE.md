@@ -5,7 +5,7 @@ description: "Creating a virtual machine with the VirtualMachine resource and it
 search: creating a VM, VirtualMachine, VM lifecycle, VM phases
 ---
 
-To create a virtual machine, use the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource. Its parameters let you configure:
+To create a virtual machine (VM), use the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource. Its parameters let you configure:
 
 - the [virtual machine class](../../admin/configuration/virtualization/vm-classes.html);
 - the resources required for the virtual machine to run (CPU, memory, disks, and images);

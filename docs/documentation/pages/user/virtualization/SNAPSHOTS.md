@@ -5,7 +5,7 @@ description: "Snapshots of disks and virtual machines: data consistency, creatin
 search: snapshots, VirtualDiskSnapshot, VirtualMachineSnapshot, restore
 ---
 
-Snapshots let you capture the current state of a resource for later recovery or [cloning](vm-cloning.html). A disk snapshot saves only the data of the selected disk, while a virtual machine snapshot includes the VM parameters and the state of all its disks.
+Snapshots let you capture the current state of a resource for later recovery or [cloning](vm-cloning.html). A disk snapshot saves only the data of the selected disk, while a virtual machine (VM) snapshot includes the VM parameters and the state of all its disks.
 
 ## Consistent snapshots
 

@@ -5,7 +5,7 @@ description: "CPU and memory resources of a virtual machine: core count, the cor
 search: VM cores, coreFraction, VM memory, CPU topology, sizing
 ---
 
-The CPU resources of a machine are defined by the number of cores and the core fraction, and the allowed combinations are limited by the virtual machine class.
+The CPU resources of a machine are defined by the number of cores and the core fraction, and the allowed combinations are limited by the virtual machine (VM) class.
 
 ## Configuring CPU and coreFraction
 
@@ -138,7 +138,7 @@ The more cores there are, the more sockets they're split across, and the larger 
 | `32 < cores ≤ 64`  | 4       | 4           | 9 to 16          |
 | `64 < cores ≤ 248` | 8       | 8           | 9 to 31          |
 
-For example, 20 cores give two sockets of 10 cores, and 80 cores give eight sockets of 10. The maximum for one machine is 248 cores.
+For example, 20 cores give two sockets of 10 cores, and 80 cores give eight sockets of 10. The maximum for one machine is 248 cores and 1024 GB of memory.
 
 DP publishes the calculated topology in the status:
 

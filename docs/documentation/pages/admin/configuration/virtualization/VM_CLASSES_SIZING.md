@@ -5,7 +5,7 @@ description: "The VirtualMachineClass sizing policy: allowed combinations of cor
 search: sizing policy, sizingPolicy, coreFraction, memory per core
 ---
 
-The [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) block defines which combinations of cores, core fraction, and memory are allowed for virtual machines of this class.
+The [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) block defines which combinations of cores, core fraction, and memory are allowed for virtual machines (VMs) of this class.
 
 {% alert level="warning" %}
 Changes to the [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) block affect existing virtual machines.

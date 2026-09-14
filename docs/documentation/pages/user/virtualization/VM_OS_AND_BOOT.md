@@ -5,7 +5,7 @@ description: "Guest operating system type and bootloader of a virtual machine: B
 search: OS type, bootloader, UEFI, BIOS, Secure Boot, osType
 ---
 
-The `osType` parameter defines the operating system type and applies the optimal set of virtual devices and parameters for the VM to work correctly.
+The `osType` parameter defines the operating system type and applies the optimal set of virtual devices and parameters for a virtual machine (VM) to work correctly.
 
 Supported values:
 

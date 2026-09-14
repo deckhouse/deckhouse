@@ -47,7 +47,7 @@ lang: ru
          url: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
    ```
 
-1. Создайте виртуальную машину:
+1. Создайте виртуальную машину (ВМ):
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2

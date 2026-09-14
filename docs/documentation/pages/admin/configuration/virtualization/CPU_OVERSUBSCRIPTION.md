@@ -5,7 +5,7 @@ description: "CPU oversubscription for virtual machines: a fixed core fraction a
 search: CPU oversubscription, coreFraction, CPU overcommit
 ---
 
-Oversubscription lets you give the virtual machines on a node more virtual cores than the node physically has. This makes sense because VMs rarely load the CPU at the same time and at full capacity.
+Oversubscription lets you give the virtual machines (VMs) on a node more virtual cores than the node physically has. This makes sense because VMs rarely load the CPU at the same time and at full capacity.
 
 The degree of oversubscription is controlled by the `coreFraction` parameter of a virtual machine, and you define its allowed values in the sizing policy of the class. The parameter defines the share of a core's capacity guaranteed to a VM. For example, with `coreFraction: 20%`, a VM always gets a fifth of a core, and it can take a whole core when the node has spare resources.
 

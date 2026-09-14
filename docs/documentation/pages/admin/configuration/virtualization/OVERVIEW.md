@@ -16,9 +16,11 @@ DP lets you do the following:
 
 ## Installation and configuration
 
-Virtualization has its own node requirements: hardware support, kernel and software versions, supported guest operating systems and storage. All of them are listed in [Virtualization requirements and limits](requirements.html).
+Virtualization has its own node requirements: hardware virtualization support, the same kernel version everywhere, storage for disks and images, and dedicated subnets for machines. They are listed in [Additional requirements for virtualization](../../../installing/#additional-requirements-for-virtualization), while enabling virtualization and placing its components across nodes is covered in [Installing virtualization](../../../installing/#installing-virtualization).
 
-Virtualization is enabled as a DP module, so preparation comes down to installing and configuring it. How to enable virtualization, where to place its components, and how to switch to another release channel is covered in [Installing and updating the virtualization module](install.html), and the parameters set in the ModuleConfig resource are covered in [Virtualization module parameters](settings.html).
+The parameters set in the ModuleConfig resource are covered in [Virtualization module parameters](settings.html), and the specifics of updating the components are covered in [Updating virtualization](../update/configuration.html#updating-virtualization).
+
+As guest systems, DP supports operating systems running on the `x86` and `x86-64` architectures. For paravirtualization mode, install the `VirtIO` drivers in the guest system. Linux machines are easier to prepare from images with cloud-init support, and Windows machines with an [autounattend](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview) answer file.
 
 ## Storing images and disks
 

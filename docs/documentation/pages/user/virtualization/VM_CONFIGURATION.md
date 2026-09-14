@@ -5,7 +5,7 @@ description: "Changing the configuration of a running virtual machine: which par
 search: changing VM configuration, VM restart, CPU hotplug, memory hotplug
 ---
 
-You can change the machine configuration at any time after creation. On a powered-off machine, the changes apply right away, and on a running one it depends on what exactly you changed.
+You can change the configuration of a virtual machine (VM) at any time after creation. On a powered-off machine, the changes apply right away, and on a running one it depends on what exactly you changed.
 
 | Configuration block                                                                                             | How it applies on a running VM                                                                                                                                                               |
 |-----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

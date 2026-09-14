@@ -17,7 +17,7 @@ The following example shows how to collect such an archive:
 
 {% tab "Using the CLI" %}
 
-The `collect-debug-info` command collects diagnostic data about a VM and all related resources into a single compressed archive.
+The `collect-debug-info` command collects diagnostic data about a virtual machine (VM) and all related resources into a single compressed archive.
 
 The command collects the following information:
 

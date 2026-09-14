@@ -5,7 +5,7 @@ subsystems:
 lang: en
 ---
 
-A golden image is a pre-configured virtual machine image that can be used to quickly create new VMs with pre-installed software and settings.
+A golden image is a pre-configured virtual machine (VM) image that can be used to quickly create new VMs with pre-installed software and settings.
 
 1. Create a virtual machine, install the required software on it, and perform all necessary configurations.
 

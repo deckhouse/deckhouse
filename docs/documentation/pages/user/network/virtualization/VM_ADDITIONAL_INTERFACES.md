@@ -5,7 +5,7 @@ description: "Additional network interfaces of a virtual machine from sdn module
 search: additional interfaces, SDN, ClusterNetwork, IPAddress, project networks
 ---
 
-Besides the main cluster network, a virtual machine can be connected to additional networks of the [`sdn`](/modules/sdn/) module, and its interfaces can be assigned addresses.
+Besides the main cluster network, a virtual machine (VM) can be connected to additional networks of the [`sdn`](/modules/sdn/) module, and its interfaces can be assigned addresses.
 
 ## Additional network interfaces
 
@@ -36,7 +36,7 @@ Specifics and important points of working with additional network interfaces:
 - adding or removing the main network (`type: Main`) still requires a VM reboot, because it's bound to the main network interface of the pod and can't be changed on a running pod;
 - to preserve the order of network interfaces inside the guest operating system, add new networks to the end of the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) list and don't change the order of existing ones;
 - network security policies (NetworkPolicy) don't apply to additional network interfaces;
-- the network parameters (IP addresses, gateways, DNS, and so on) for additional networks are configured manually from inside the guest OS (for example, with Cloud-Init), unless IPAM is configured for the network (for details, see [IPAM for additional network interfaces](#ipam-for-additional-network-interfaces)).
+- the network parameters (IP addresses, gateways, DNS, and so on) for additional networks are configured manually from inside the guest OS (for example, with Cloud-Init), unless IPAM is configured for the network, as covered in [IPAM for additional network interfaces](#ipam-for-additional-network-interfaces).
 
 > When configuring network interfaces in the guest OS, use stable identifiers (predictable `enpXsY` names or binding by MAC address) instead of `ethX` names, as described in [Network interface naming in the guest OS](../../virtualization/vm-block-devices.html#network-interface-naming-in-the-guest-os).
 >

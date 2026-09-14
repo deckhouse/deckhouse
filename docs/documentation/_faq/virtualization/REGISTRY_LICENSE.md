@@ -65,4 +65,4 @@ Applying a NodeGroupConfiguration (NGC) manifest removes the file on the nodes. 
    d8 k delete -f containerd-dvcr-remove-old-config.yaml
    ```
 
-For more information on migration, see [Migrating container runtime to containerd v2](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/migrating.html).
+The migration procedure is covered in [Migrating container runtime to containerd v2](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/migrating.html).

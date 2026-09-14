@@ -6,7 +6,7 @@ search: политика сайзинга, sizingPolicy, coreFraction, памя�
 lang: ru
 ---
 
-Блок [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) задаёт, какие сочетания ядер, доли ядра и памяти разрешены виртуальным машинам этого класса.
+Блок [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) задаёт, какие сочетания ядер, доли ядра и памяти разрешены виртуальным машинам (ВМ) этого класса.
 
 {% alert level="warning" %}
 Изменения в блоке [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) затрагивают уже существующие виртуальные машины.

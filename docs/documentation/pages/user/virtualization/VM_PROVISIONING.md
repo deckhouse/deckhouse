@@ -5,7 +5,7 @@ description: "Initial guest system configuration through cloud-init and Sysprep,
 search: cloud-init, Sysprep, provisioning, guest OS agent, qemu-guest-agent
 ---
 
-On the first boot, the guest system is configured by an initialization script, and after that DP communicates with it through the guest OS agent.
+On the first boot of a virtual machine (VM), the guest system is configured by an initialization script, and after that DP communicates with it through the guest OS agent.
 
 ## VM initialization scripts
 

@@ -5,9 +5,9 @@ subsystems:
 lang: en
 ---
 
-You can connect to a VM via the serial console ([`d8 v console`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-v-console)) or VNC ([`d8 v vnc`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-v-vnc)).
+You can connect to a virtual machine (VM) via the serial console ([`d8 v console`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-v-console)) or VNC ([`d8 v vnc`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-v-vnc)).
 These methods use different communication channels with the guest OS and depend on its configuration.
-For more details on connecting, see the [Connecting to a virtual machine](user/virtualization/vm-access.html#connecting-to-a-virtual-machine) section.
+Both methods are covered in [Connecting to a virtual machine](user/virtualization/vm-access.html#connecting-to-a-virtual-machine).
 
 The sections below describe common situations where only one connection method works.
 

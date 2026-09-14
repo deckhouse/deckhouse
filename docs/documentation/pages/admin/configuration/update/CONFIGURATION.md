@@ -311,3 +311,14 @@ You can manage DKP update windows in the following ways:
               - Tue
               - Sat
   ```
+
+## Updating virtualization
+
+If virtualization is enabled in the cluster, its components fall into two categories that are updated differently:
+
+- the components that manage virtualization resources (the control layer);
+- the components that run virtual machines (the "firmware").
+
+Updating the control layer doesn't affect the virtual machines that are already running, but it drops open VNC and serial console connections while the component restarts.
+
+Updating the "firmware" may require migrating virtual machines to the new version. DKP migrates a machine once, and if the migration fails, the machine owner has to move or restart it manually. To pick a suitable time for such an update, use [update windows](#update-windows) and the [manual mode](#manual-mode-manual).

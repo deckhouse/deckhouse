@@ -10,7 +10,7 @@ lang: ru
 Доступно в коммерческих редакциях DP.
 {% endalert %}
 
-Ресурс [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) поддерживает заданное число одинаковых виртуальных машин и позволяет масштабировать их через субресурс `scale`, HorizontalPodAutoscaler (HPA) или KEDA. Поле `virtualMachineTemplate.spec` совпадает с обычным `VirtualMachineSpec`, поэтому реплика ничем не отличается от вручную созданной виртуальной машины.
+Ресурс [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) поддерживает заданное число одинаковых виртуальных машин (ВМ) и позволяет масштабировать их через субресурс `scale`, HorizontalPodAutoscaler (HPA) или KEDA. Поле `virtualMachineTemplate.spec` совпадает с обычным `VirtualMachineSpec`, поэтому реплика ничем не отличается от вручную созданной виртуальной машины.
 
 {% alert level="warning" %}
 Тип ОС `Legacy` в пуле не поддерживается, потому что реплики различают начальной инициализацией, которой у этих операционных систем нет, поэтому каждая реплика оказалась бы побайтовой копией одного диска — для гостевых ОС семейства Windows это ещё и одинаковый SID в сети. Шаблон пула с `osType: Legacy` отклоняется. Создавайте такие виртуальные машины по отдельности.

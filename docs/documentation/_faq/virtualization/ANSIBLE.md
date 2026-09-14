@@ -5,7 +5,7 @@ subsystems:
 lang: en
 ---
 
-[Ansible](https://docs.ansible.com/ansible/latest/index.html) is an automation tool for running tasks on remote servers over SSH. This example shows how to use Ansible with virtual machines in the `demo-app` project.
+[Ansible](https://docs.ansible.com/ansible/latest/index.html) is an automation tool for running tasks on remote servers over SSH. This example shows how to use Ansible with virtual machines (VMs) in the `demo-app` project.
 
 The example assumes that:
 

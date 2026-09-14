@@ -6,7 +6,7 @@ search: диски ВМ, VirtualDisk, создание диска, загруз�
 lang: ru
 ---
 
-Диск хранит данные виртуальной машины, включая операционную систему и файлы приложений. Описывает диск ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk), а его спецификация состоит из двух блоков:
+Диск хранит данные виртуальной машины (ВМ), включая операционную систему и файлы приложений. Описывает диск ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk), а его спецификация состоит из двух блоков:
 
 - [`persistentVolumeClaim`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim) — параметры хранения, то есть StorageClass и размер;
 - [`dataSource`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-datasource) — источник данных, которым может быть образ, другой диск или снимок.
