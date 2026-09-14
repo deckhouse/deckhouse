@@ -24,9 +24,9 @@ status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to list packages: failed to list tags: assert.AnError general
-      error for testing'
-    reason: ScanFailed
+    message: 'Registry is unavailable: Get "https://registry.example.com/v2/": dial
+      tcp 10.0.0.1:443: connect: connection refused'
+    reason: RegistryUnavailable
     status: "True"
     type: Completed
   startTime: "2025-10-31T12:00:00Z"
@@ -42,11 +42,11 @@ spec:
 status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to list packages: failed to list tags: assert.AnError general
-      error for testing'
-    reason: ScanFailed
+    message: 'Registry is unavailable: Get "https://registry.example.com/v2/": dial
+      tcp 10.0.0.1:443: connect: connection refused'
+    reason: RegistryUnavailable
     status: "False"
     type: LastScanSucceeded
-  message: 'failed to list packages: failed to list tags: assert.AnError general error
-    for testing'
+  message: 'Registry is unavailable: Get "https://registry.example.com/v2/": dial
+    tcp 10.0.0.1:443: connect: connection refused'
   phase: Error

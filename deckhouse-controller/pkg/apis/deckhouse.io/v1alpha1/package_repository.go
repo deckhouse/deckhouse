@@ -27,6 +27,7 @@ const (
 	PackageRepositoryKind     = "PackageRepository"
 
 	PackageRepositoryPhaseActive      = "Active"
+	PackageRepositoryPhaseError       = "Error"
 	PackageRepositoryPhaseTerminating = "Terminating"
 
 	PackageRepositoryFinalizerPackageVersionExists = "packages.deckhouse.io/package-version-exists"
@@ -154,11 +155,13 @@ type PackageRepositoryStatus struct {
 	// +optional
 	PackagesCount int `json:"packagesCount,omitempty"`
 
-	// Current phase of the repository.
+	// Current phase of the repository: `Active` after a successful scan,
+	// `Error` when the last scan failed (see `message` and the `LastScanSucceeded` condition).
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
 	// Human-readable message about the repository status.
+	// Set when the last scan failed, cleared after a successful scan.
 	// +optional
 	Message string `json:"message,omitempty"`
 

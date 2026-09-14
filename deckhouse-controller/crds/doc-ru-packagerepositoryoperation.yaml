@@ -48,7 +48,10 @@ spec:
                     Условия, отражающие последние наблюдения за состоянием операции.
                     Фаза операции определяется по условию `Completed`: пока оно имеет статус `False`,
                     операция находится в одной из промежуточных фаз (`Discover`, `Processing`);
-                    при статусе `True` операция завершена с причиной `Succeeded` или `Failed`.
+                    при статусе `True` операция завершена с причиной `ScanSucceeded`
+                    или с одной из причин провала: `AccessDenied` (хранилище отклонило учётные данные),
+                    `RepositoryNotFound` (по пути пакетов нет репозитория), `RegistryUnavailable`
+                    (хранилище недоступно), `ScanFailed` (любая другая ошибка, подробности в сообщении).
                   items:
                     description: |
                       Условие, описывающее один аспект текущего состояния операции.
@@ -67,7 +70,7 @@ spec:
                         description: |
                           Программный идентификатор причины последнего перехода условия.
                           Для условия `Completed` используются значения: `Discover`, `Processing`,
-                          `Succeeded`, `Failed`.
+                          `ScanSucceeded`, `ScanFailed`, `AccessDenied`, `RepositoryNotFound`, `RegistryUnavailable`.
                       status:
                         description: |
                           Статус условия. Может быть `True`, `False` или `Unknown`.

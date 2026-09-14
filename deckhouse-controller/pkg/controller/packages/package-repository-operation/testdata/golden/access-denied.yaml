@@ -24,9 +24,9 @@ status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to list packages: failed to list tags: assert.AnError general
-      error for testing'
-    reason: ScanFailed
+    message: 'Registry rejected the credentials from spec.registry: check login/password
+      or dockerCfg'
+    reason: AccessDenied
     status: "True"
     type: Completed
   startTime: "2025-10-31T12:00:00Z"
@@ -42,11 +42,11 @@ spec:
 status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to list packages: failed to list tags: assert.AnError general
-      error for testing'
-    reason: ScanFailed
+    message: 'Registry rejected the credentials from spec.registry: check login/password
+      or dockerCfg'
+    reason: AccessDenied
     status: "False"
     type: LastScanSucceeded
-  message: 'failed to list packages: failed to list tags: assert.AnError general error
-    for testing'
+  message: 'Registry rejected the credentials from spec.registry: check login/password
+    or dockerCfg'
   phase: Error
