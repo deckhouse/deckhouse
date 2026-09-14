@@ -36,13 +36,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	v1 "user-authz-controller/api/v1"
 	"user-authz-controller/api/v1alpha1"
 	"user-authz-controller/internal/controller/bindings"
 	"user-authz-controller/internal/controller/dictbindings"
 	"user-authz-controller/internal/controller/managebindings"
+	"user-authz-controller/internal/metrics"
 )
 
 const (
@@ -62,6 +64,12 @@ const (
 	// workers write at full speed; at 100 QPS the adoption of 20 000 bindings takes a few minutes.
 	defaultKubeQPS   = 100
 	defaultKubeBurst = 200
+
+	// The controller is often started right when kube-apiserver restarts (enabling the module makes
+	// control-plane-manager add the authorization webhook to the API server); failing fast would put
+	// the pod into a crash-loop back-off of minutes, so the setup is retried for a while.
+	setupRetryWindow = 2 * time.Minute
+	setupRetryDelay  = 5 * time.Second
 )
 
 func main() {
@@ -70,7 +78,9 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 
-	runtimeManager, err := setupRuntimeManager(ctx, logger)
+	runtimeManager, err := retrySetup(ctx, logger, setupRetryWindow, setupRetryDelay, func() (manager.Manager, error) {
+		return setupRuntimeManager(ctx, logger)
+	})
 	if err != nil {
 		exitOnError(logger, err, "unable to set up runtime manager")
 	}
@@ -83,6 +93,26 @@ func main() {
 func exitOnError(logger logr.Logger, err error, msg string) {
 	logger.Error(err, msg)
 	os.Exit(1)
+}
+
+// retrySetup calls setup until it succeeds, the window is over, or ctx is done.
+func retrySetup(ctx context.Context, logger logr.Logger, window, delay time.Duration, setup func() (manager.Manager, error)) (manager.Manager, error) {
+	deadline := time.Now().Add(window)
+	for {
+		mgr, err := setup()
+		if err == nil {
+			return mgr, nil
+		}
+		if time.Now().After(deadline) {
+			return nil, err
+		}
+		logger.Info("runtime manager setup failed, retrying", "error", err.Error(), "retryIn", delay.String())
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(delay):
+		}
+	}
 }
 
 func setupRuntimeManager(ctx context.Context, logger logr.Logger) (ctrl.Manager, error) {
@@ -111,6 +141,10 @@ func setupRuntimeManager(ctx context.Context, logger logr.Logger) (ctrl.Manager,
 
 	if err = addHealthChecks(runtimeManager); err != nil {
 		return nil, err
+	}
+
+	if err = metrics.Default.Register(ctrlmetrics.Registry); err != nil {
+		return nil, fmt.Errorf("register metrics: %w", err)
 	}
 
 	if err = bindings.Register(ctx, runtimeManager, bindings.Options{
@@ -146,15 +180,23 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 
 	// Leader election is always on: even a single-replica Deployment has two pods during a rolling
 	// update, and two writers of the same bindings would fight over them.
+	//
+	// The lease is renewed against the API server, and controller-runtime exits the process when a
+	// renewal misses RenewDeadline. With the defaults (15 s lease, 10 s renew) every short API-server
+	// absence restarted the pod and threw away a warm cache; these give it a minute to come back.
+	lease, renew, retry := leaseDuration, renewDeadline, retryPeriod
 	opts := manager.Options{
 		LeaderElection:                true,
 		LeaderElectionID:              controllerName,
 		LeaderElectionNamespace:       leaderElectionNamespace,
 		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 &lease,
+		RenewDeadline:                 &renew,
+		RetryPeriod:                   &retry,
 		Scheme:                        scheme,
 		GracefulShutdownTimeout:       &timeout,
 		HealthProbeBindAddress:        ":9090",
-		Metrics: metrics.Options{
+		Metrics: metricsserver.Options{
 			BindAddress: ":9091",
 		},
 		Cache: cache.Options{
@@ -195,8 +237,24 @@ func envInt(logger logr.Logger, name string, def int) int {
 	return value
 }
 
-const cacheSyncCheckTimeout = 2 * time.Second
+const (
+	leaseDuration = 60 * time.Second
+	renewDeadline = 40 * time.Second
+	retryPeriod   = 8 * time.Second
 
+	cacheSyncCheckTimeout = 2 * time.Second
+	// apiAccessCheckTimeout keeps the readiness check inside the probe's own budget (3 s).
+	apiAccessCheckTimeout = 2 * time.Second
+)
+
+// addHealthChecks wires the probes.
+//
+// Liveness is a plain ping: a restart cures nothing this controller can run into - a lost RBAC
+// grant, an unreachable API server - and it throws away a warm cache. Readiness carries the real
+// question, in two parts. cache-sync says the informers have caught up at least once. api-access
+// says the controller can read the API under its own identity right now: the informers stay
+// "synced" after the controller loses access, so with cache-sync alone a controller that created
+// no bindings for a new rule, and logged nothing, kept both probes at 200.
 func addHealthChecks(mgr manager.Manager) error {
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return fmt.Errorf("add healthz check: %w", err)
@@ -204,7 +262,25 @@ func addHealthChecks(mgr manager.Manager) error {
 	if err := mgr.AddReadyzCheck("cache-sync", cacheSyncCheck(mgr.GetCache())); err != nil {
 		return fmt.Errorf("add readyz check: %w", err)
 	}
+	if err := mgr.AddReadyzCheck("api-access", apiAccessCheck(mgr.GetAPIReader())); err != nil {
+		return fmt.Errorf("add readyz check: %w", err)
+	}
 	return nil
+}
+
+// apiAccessCheck reports whether the controller can read the rules it reconciles, bypassing the
+// cache: one list of one object, so the cost is a small request per probe and the answer is about
+// now, not about the last time a watch happened to work.
+func apiAccessCheck(reader client.Reader) healthz.Checker {
+	return func(req *http.Request) error {
+		ctx, cancel := context.WithTimeout(req.Context(), apiAccessCheckTimeout)
+		defer cancel()
+
+		if err := reader.List(ctx, &v1.ClusterAuthorizationRuleList{}, client.Limit(1)); err != nil {
+			return fmt.Errorf("list ClusterAuthorizationRules: %w", err)
+		}
+		return nil
+	}
 }
 
 var errCacheNotSynced = errors.New("informer cache is not synced")

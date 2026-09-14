@@ -221,6 +221,8 @@ spec:
                         Restricts GPU resource usage in pods.
 
                         Pods that request GPU resources are denied unless the namespace has the specified label.
+                        The same check runs on the pod-creating controllers, so a controller whose pod template
+                        requests GPU resources is denied on creation and update.
                         Both `resources.requests` and `resources.limits` of every container, init container,
                         and ephemeral container are inspected.
 

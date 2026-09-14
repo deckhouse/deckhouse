@@ -21,6 +21,7 @@ spec:
     updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     - containerName: apiserver
       minAllowed:
         {{- include "permission_browser_resources" . | nindent 8 }}
@@ -48,16 +49,15 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
 spec:
-  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  # Two replicas rolled one at a time in HA; one replica with the Deployment's default strategy
+  # without it. The default surges the new pod before the old one goes, which is what keeps the
+  # aggregated API served through a rollout: with maxSurge 0 the only pod was removed first and the
+  # APIService had no endpoints for the whole restart.
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: permission-browser-apiserver
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
-      maxSurge: 0
   template:
     metadata:
       labels:
@@ -80,7 +80,6 @@ spec:
         - --secure-port=8443
         - --tls-cert-file=/etc/ssl/permission-browser-apiserver/tls.crt
         - --tls-private-key-file=/etc/ssl/permission-browser-apiserver/tls.key
-        - --user-authz-config=/etc/user-authz-webhook/config.json
         - --authentication-kubeconfig=/etc/kubernetes/kubeconfig.yaml
         - --authorization-kubeconfig=/etc/kubernetes/kubeconfig.yaml
         - --enable-priority-and-fairness=false
@@ -90,9 +89,6 @@ spec:
           name: https
           protocol: TCP
         volumeMounts:
-        - mountPath: /etc/user-authz-webhook/
-          name: user-authz-webhook-config
-          readOnly: true
         - mountPath: /etc/ssl/permission-browser-apiserver
           name: permission-browser-apiserver-certs
           readOnly: true
@@ -119,10 +115,57 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "permission_browser_resources" . | nindent 12 }}
 {{- end }}
+      # The rules metrics are served on the loopback address only; this sidecar is what makes them
+      # reachable for Prometheus. The aggregated API server's own port stays behind the aggregation
+      # layer, which Prometheus cannot scrape.
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4276"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:4277/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: permission-browser-apiserver
+        ports:
+        - containerPort: 4276
+          name: https-metrics
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4276
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4276
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
       volumes:
-      - name: user-authz-webhook-config
-        configMap:
-          name: user-authz-webhook
       - name: permission-browser-apiserver-certs
         secret:
           secretName: permission-browser-apiserver

@@ -24,7 +24,94 @@ In addition to policies that prohibit using parameters different from the set re
 Depending on how pods are created, there are differences in how the API generates messages regarding validation failures (violations of established policies):
 
 - If a pod is created directly, the validation error is returned in the API response indicating a validation failure (policy violation).
-- If pods are created via Deployment, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
+- If pods are created via a Deployment and the pods potentially violate a policy, the creation of such Deployment will be rejected.
+- If pods are created via a Deployment that already existed before the policy was enabled, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
+
+## Controller-level validation
+
+Policies validate pod-creating controllers at `CREATE` and `UPDATE` time. This provides early feedback when a workload is created or updated, before any Pod is launched, and also surfaces creation denials when deploying via CI (CI rarely creates Pods directly, and Pod creation errors from controllers are often not displayed).
+
+The following objects are validated:
+
+| API group | Resource kind                      | Operations                   |
+| --------- | ---------------------------------- |------------------------------|
+| (core)    | Pod                                | `CREATE`, `UPDATE`, `DELETE` |
+| apps      | Deployment, StatefulSet, DaemonSet | `CREATE`, `UPDATE`, `DELETE` |
+| (core)    | ReplicationController              | `CREATE`, `UPDATE`, `DELETE` |
+| batch     | Job, CronJob                       | `CREATE`, `UPDATE`, `DELETE` |
+| (core)    | pods/exec, pods/attach             | `CONNECT`                    |
+
+`DELETE` is intercepted so that a policy can forbid deleting a resource:
+a rule that inspects `input.review.operation` only runs if the request reaches Gatekeeper.
+
+{% alert level="warning" %}
+The webhook uses `failurePolicy: Fail`.
+While Gatekeeper is unavailable, both creating and deleting the resource kinds listed above is blocked.
+To restore operations, bring the `gatekeeper-controller-manager` deployment back up
+or remove the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration.
+{% endalert %}
+
+{% alert level="warning" %}
+Controller-level checks run against the **original pod template** (`spec.template`), not against the manifest that results from all mutations.
+Pod-level validation, in contrast, happens after all mutating actions — for example, after LimitRange adds default `resources`, or a mutating webhook adds `securityContext`.
+Keep this in mind when using security policies.
+{% endalert %}
+
+### labelSelector semantics for controllers
+
+When building policies that are applied based on object labels (`match.labelSelector`), keep in mind that selection is performed against the `metadata.labels` of the reviewed object.
+For Pods these are the pod's labels.
+For controllers (Deployment, StatefulSet, and others) these are the controller's **top-level** `metadata.labels`, not the pod template's `metadata.labels` (`spec.template.metadata.labels`).
+
+As a result, a selector that matches the pods a controller creates does not by itself trigger a controller-level check,
+and an exclusion selector (`NotIn`/`DoesNotExist`) that excludes those pods may not take effect at the controller level.
+In both cases the controller itself must be matched by the `labelSelector`.
+
+This also applies to the `security.deckhouse.io/skip-pss-check` label, which excludes an object from the Pod Security Standards constraints.
+The label is read from the reviewed object's own `metadata.labels`, so a workload that carries it only on the pod template
+(`spec.template.metadata.labels`) is exempt at the Pod level but still checked at the controller level.
+To exempt such a workload completely, set the label on the controller's top-level `metadata.labels` as well.
+Unlike SecurityPolicyException, this cannot be resolved from the pod template: the exclusion is evaluated by Gatekeeper's `match.labelSelector`,
+before any policy code runs.
+
+### SecurityPolicyException label resolution for controllers
+
+For controller kinds, SecurityPolicyException (SPE) labels and annotations are taken from the **pod template's metadata** (`spec.template.metadata`), not from the controller's top-level metadata. This ensures SPEs apply to the pods the controller creates, not to the controller object itself.
+
+### Disabling controller-level validation
+
+Controller-level validation can be disabled using the [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) parameter in the module settings.
+Despite living in the `podSecurityStandards` section, the parameter applies to every constraint that reads a pod spec,
+including the ones generated from OperationPolicy and SecurityPolicy resources.
+
+When `controllerValidation: false`, constraints are applied only to Pods. In this case:
+
+- controllers (Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicationController) are not checked on creation or update;
+- SecurityPolicyException labels on `spec.template.metadata.labels` of controllers are not resolved, since constraints are not applied to controllers;
+- Pods are still validated at launch time, as they are when `true` is set.
+
+### Lenient mode for fields that may be filled in before the pod is created
+
+Some constraints use a **lenient mode** for fields that may be absent from a controller's pod template and still be present on the Pod the controller creates. This prevents denying a workload whose pods would in fact be compliant.
+
+The following constraints skip violations for absent fields when reviewing controllers, while still enforcing them when a field is **explicitly set** to a disallowed value. The decision is made per container: a container that omits the field is treated leniently even if another container in the same pod template sets it.
+
+| Constraint | Skipped fields (when absent on controllers) | What may fill the field in |
+|---|---|---|
+| `D8RequiredResources` | `container.resources` (when neither `limits` nor `requests` is set) | LimitRange |
+| `D8AllowedUsers` | `runAsUser`, `runAsGroup`, `fsGroup`, `supplementalGroups` (with `MustRunAs` / `MustRunAsNonRoot`) | A mutating webhook, including a Gatekeeper `Assign` mutator |
+
+For example, a Deployment without `resources` in its pod template is **not** denied by `D8RequiredResources`, because a LimitRange in the namespace may add default `requests` and `limits`. If `resources` is set partially (for example, only `limits.memory` but not `limits.cpu`), the violation is still enforced.
+
+`D8RequiredResources` relies on an in-tree component. `D8AllowedUsers` does not: in a cluster without a matching mutator it gets no controller-level enforcement of these fields, and the violation surfaces at Pod creation instead. Pod Security Admission is not one of the sources listed above — it only validates and never modifies an object.
+
+`D8AllowedSeccompProfiles` needs no lenient mode: a container that sets no profile in any source is allowed on a Pod as well, so controllers and Pods already behave the same.
+
+### Constraints with limited controller-level coverage
+
+Some checks depend on data that only exists after mutation, so they cannot deny a controller even though they deny its pods.
+
+`D8AutomountServiceAccountToken` detects the token mount either from `spec.automountServiceAccountToken: true` or from a container that mounts `/var/run/secrets/kubernetes.io/serviceaccount`. The ServiceAccount admission plugin adds that mount to the Pod, not to the controller's pod template. A workload that simply omits `automountServiceAccountToken` therefore passes the controller-level check, and the denial appears when its pods are created. To get the denial at the controller level, set `automountServiceAccountToken: false` explicitly in the pod template.
 
 ## Pod validation when policies are modified or new ones are added
 
@@ -273,7 +360,7 @@ The following modes are supported:
 Configuring the policy enforcement mode is done by setting the label `security.deckhouse.io/pod-policy-action=<POLICY_ACTION>` on the corresponding namespace.
 To set the policy enforcement mode globally, use the [`enforcementaction`](configuration.html#parameters-podsecuritystandards-enforcementaction) parameter.
 
-Example of setting the "warn" mode for PSS policies for all pods in the `my-namespace` namespace:
+Example of setting the `warn` mode for PSS policies for all pods in the `my-namespace` namespace:
 
 ```bash
 d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn

@@ -7,42 +7,50 @@ package hook
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"regexp"
 	"strings"
-	"sync"
-	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	kcache "k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/decision"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 
 	"webhook/internal/cache"
 )
 
 const (
-	configPath = "/etc/user-authz-webhook/config.json"
-
-	// Deliberately ambiguous: a user who may not act in a namespace must not be
-	// able to tell an existing namespace from a missing one. Distinct answers
-	// turned the authorizer into a namespace-existence oracle for anyone whose
-	// access is limited by a ClusterAuthorizationRule.
-	noNamespaceAccessReason      = "either you have no access to the namespace or the namespace does not exist"
-	namespaceLimitedAccessReason = "making cluster-scoped requests for namespaced resources is not allowed"
-	internalErrorReason          = "webhook: kubernetes api request error"
+	// The reasons live in the library, which permission-browser answers with too; the local names
+	// keep the tests and the log lines readable.
+	internalErrorReason          = decision.InternalErrorReason
+	noNamespaceAccessReason      = rules.NoNamespaceAccessReason
+	namespaceLimitedAccessReason = rules.NamespaceLimitedAccessReason
 )
 
 var _ http.Handler = (*Handler)(nil)
 
+// RulesProvider hands out the current directory of ClusterAuthorizationRules. Directory is nil until
+// the rules have been listed once; the handler treats that as "the rules are not known", never as
+// "there are no rules".
+type RulesProvider interface {
+	Directory() *rules.Directory
+	HasSynced() bool
+}
+
+// RuleBindings answers which ClusterAuthorizationRules bind a user through the ClusterRoleBindings
+// user-authz-controller created for them. It is the evidence the handler uses to notice that its
+// directory lags behind the controller.
+type RuleBindings interface {
+	RulesFor(username string, groups []string) []string
+}
+
 // Handler is a main entrypoint for the webhook
 type Handler struct {
 	logger *log.Logger
-
-	lastAppliedStat os.FileInfo
 
 	cache cache.Cache
 
@@ -55,18 +63,92 @@ type Handler struct {
 	// filters. See RBACEvaluator for details.
 	independentRBAC independentRBACResolver
 
-	//        [user type] [user name]
-	mu        sync.RWMutex
-	directory map[string]map[string]DirectoryEntry
+	rules    RulesProvider
+	bindings RuleBindings
+
+	// restrictions bounds how often the ordering guard is logged.
+	restrictions decision.RestrictionLog
+
+	// logDecisions says which answered reviews are written to the log in full.
+	logDecisions decisionLogMode
 }
 
-func NewHandler(logger *log.Logger, discoveryCache cache.Cache, nsLister corev1listers.NamespaceLister, nsSynced kcache.InformerSynced, independentRBAC independentRBACResolver) (*Handler, error) {
+// decisionLogMode selects which SubjectAccessReviews are written to the log with their full body.
+//
+// Every review used to be written - identity, groups, resource, answer - at the default verbosity,
+// with nothing to turn it off: about 125 KB a minute from a 5 rps probe on a stand, and on a
+// master every authorization question in the cluster passes through here. Denials are what an
+// operator looks for in this log; allowed and no-opinion answers are background, and are opt-in.
+type decisionLogMode int
+
+const (
+	// logDenied writes the reviews this webhook denied. The default.
+	logDenied decisionLogMode = iota
+	// logAll writes every review, as before.
+	logAll
+	// logNone writes no review bodies at all.
+	logNone
+)
+
+// DecisionLogEnv names the environment variable that selects the mode: none, denied or all.
+const DecisionLogEnv = "LOG_DECISIONS"
+
+// DecisionLogModeFrom parses the value of DecisionLogEnv. An empty value is the default; anything
+// unknown is the default too, said once in the log so a typo does not pass for a setting.
+func DecisionLogModeFrom(value string, logger *log.Logger) decisionLogMode {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "denied":
+		return logDenied
+	case "all":
+		return logAll
+	case "none":
+		return logNone
+	}
+	logger.Printf("%s=%q is not one of none, denied, all; logging denied reviews", DecisionLogEnv, value)
+	return logDenied
+}
+
+// logs reports whether a review with the given answer is written.
+func (m decisionLogMode) logs(denied bool) bool {
+	switch m {
+	case logAll:
+		return true
+	case logDenied:
+		return denied
+	}
+	return false
+}
+
+func (m decisionLogMode) String() string {
+	switch m {
+	case logAll:
+		return "all"
+	case logNone:
+		return "none"
+	}
+	return "denied"
+}
+
+// NewHandler wires the handler. rulesProvider and bindings are required: without the rules the
+// webhook has no opinion about anybody, and without the bindings it cannot tell a subject nobody
+// limits from a subject whose rule it has not observed yet.
+func NewHandler(logger *log.Logger, discoveryCache cache.Cache, nsLister corev1listers.NamespaceLister, nsSynced kcache.InformerSynced,
+	independentRBAC independentRBACResolver, rulesProvider RulesProvider, bindings RuleBindings, logDecisions decisionLogMode) (*Handler, error) {
+	if rulesProvider == nil {
+		return nil, fmt.Errorf("rules provider is required")
+	}
+	if bindings == nil {
+		return nil, fmt.Errorf("rule bindings index is required")
+	}
 	return &Handler{
 		logger:          logger,
 		cache:           discoveryCache,
 		nsLister:        nsLister,
 		nsSynced:        nsSynced,
 		independentRBAC: independentRBAC,
+		rules:           rulesProvider,
+		bindings:        bindings,
+		logDecisions:    logDecisions,
 	}, nil
 }
 
@@ -105,391 +187,142 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.logger.Printf("failed to write response: %v", err)
 	}
 
-	h.logger.Printf("response body: %s", respData)
+	if h.logDecisions.logs(request.Status.Denied) {
+		h.logger.Printf("response body: %s", respData)
+	}
 }
 
-func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *DirectoryEntry) *WebhookRequest {
-	if !hasAnyFilters(entry) {
-		// User has no namespaced restriction.
-		return request
-	}
+// authorizeRequest asks the shared decision and writes its answer onto the review.
+//
+// The sequence lives in go_lib/user-authz/decision, which permission-browser calls with the same
+// inputs. What the API server enforces and what the UI reports are the same question; they used to
+// be two implementations of it, and they drifted.
+func (h *Handler) authorizeRequest(request *WebhookRequest) *WebhookRequest {
+	attrs := request.Spec.ResourceAttributes
 
-	// there are limitNamespaces/namespaceSelectors
-	if !entry.NamespaceFiltersAbsent {
-		// deny all namespaces
+	result := decision.Authorize(decision.Request{
+		User:      request.Spec.User,
+		Groups:    request.Spec.Group,
+		Namespace: attrs.Namespace,
+		Resource:  attrs.Resource,
+		APIGroup:  attrs.Group,
+	}, decision.Sources{
+		Directory:       h.rules.Directory(),
+		Bindings:        h.bindings,
+		NamespaceLabels: h.namespaceLabels,
+		ResourceScope:   h.resourceScope(attrs.Version),
+		IndependentRBAC: func() bool { return h.independentRBACAllows(request) },
+		Logf:            h.logger.Printf,
+		OnRestricted:    h.reportRestricted,
+	})
+
+	if result.Denied() {
 		request.Status.Denied = true
-		request.Status.Reason = noNamespaceAccessReason
-		// check if the target namespace is in limitNamespaces list
-		for _, pattern := range entry.LimitNamespaces {
-			if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
-				request.Status.Denied = false
-				request.Status.Reason = ""
-				break
-			}
-		}
-	} else {
-		// there is no filters - assume a positive outcome
-		request.Status.Denied = false
+		request.Status.Reason = result.Reason
 	}
-
-	if !request.Status.Denied && !entry.AllowAccessToSystemNamespaces {
-		// check if the target namespace is a system one and restricted
-		for _, pattern := range systemNamespacesRegex {
-			if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
-				request.Status.Denied = true
-				request.Status.Reason = noNamespaceAccessReason
-				break
-			}
-		}
-	}
-
-	// if request is still denied - check available namespace selectors if any of them matches the request namespace, doesn't matter a system one or not
-	if request.Status.Denied && len(entry.NamespaceSelectors) > 0 {
-		match, err := h.namespaceLabelsMatchSelector(request.Spec.ResourceAttributes.Namespace, entry.NamespaceSelectors)
-		if err != nil {
-			// The lookup fails for a namespace that does not exist as well as for a
-			// genuine cache problem. Neither may reach the user: `namespaces "x" not
-			// found` as the denial reason disclosed exactly what the deny is meant to
-			// hide. The operator still gets the detail from the log.
-			h.logger.Printf("namespace selector check for %q failed: %v", request.Spec.ResourceAttributes.Namespace, err)
-		} else if match {
-			request.Status.Denied = false
-			request.Status.Reason = ""
-		}
-	}
-
-	// The namespace is outside the user's CAR scope, but the request may be
-	// explicitly granted by CAR-independent RBAC: a RoleBinding in the
-	// namespace (including RoleBindings rendered from AuthorizationRules) or
-	// a ClusterRoleBinding not generated from a CAR. Such grants exist
-	// regardless of any CAR and must not be denied here; the final decision
-	// is still made by the RBAC authorizer after this webhook.
-	if request.Status.Denied && h.independentRBACAllows(request) {
-		request.Status.Denied = false
-		request.Status.Reason = ""
-	}
-
 	return request
+}
+
+// resourceScope asks discovery what a resource is. It returns an error only when the question could
+// not be answered; a resource discovery reports as nonexistent comes back as a scope with Absent
+// set, so the caller lets RBAC reply and the API server produces the 404 the caller is owed rather
+// than a 403 about a resource that was never there.
+//
+// requestedVersion is the version from the review. The API server always fills it for real traffic;
+// a SubjectAccessReview written by hand may leave it out, and then the preferred one is resolved.
+func (h *Handler) resourceScope(requestedVersion string) decision.ResourceScopeFunc {
+	return func(group, resource string) (rules.ResourceScope, error) {
+		apiVersion := requestedVersion
+		if apiVersion == "" || apiVersion == "*" {
+			if group == "" {
+				apiVersion = "v1"
+			} else {
+				preferred, err := h.cache.GetPreferredVersion(group, resource)
+				if err != nil {
+					if absent(err) {
+						return rules.ResourceScope{Absent: true}, nil
+					}
+					return rules.ResourceScope{}, err
+				}
+				apiVersion = preferred
+			}
+		}
+
+		apiGroup := apiVersion
+		if group != "" {
+			apiGroup = group + "/" + apiVersion
+		}
+
+		namespaced, err := h.cache.Get(apiGroup, resource)
+		if err != nil && group != "" && namesAVersion(requestedVersion) {
+			// The request named a version the cluster no longer serves: a client with a stale
+			// discovery snapshot, or one generated against the previous version of a CRD, goes on
+			// asking about it long after that version is retired. Answering "absent" would be wrong
+			// twice over. What is being asked here is whether the resource is namespaced, and no
+			// two versions of a resource disagree about that. And the answer reaches the user as
+			// "you have no access" rather than "that version is gone" -- authorization runs on the
+			// request path before the version is resolved, so even a plain read of a retired
+			// version comes back as 403 instead of 404. Resolve the scope through the version the
+			// cluster serves; a resource the cluster has never heard of stays absent.
+			if preferred, preferredErr := h.cache.GetPreferredVersion(group, resource); preferredErr == nil && preferred != apiVersion {
+				namespaced, err = h.cache.Get(group+"/"+preferred, resource)
+			}
+		}
+		if err != nil {
+			if absent(err) {
+				return rules.ResourceScope{Absent: true}, nil
+			}
+			return rules.ResourceScope{}, err
+		}
+		return rules.ResourceScope{Known: true, Namespaced: namespaced}, nil
+	}
 }
 
 // namesAVersion reports whether the request pinned an API version itself, rather than leaving the
 // webhook to resolve the preferred one.
-func namesAVersion(request *WebhookRequest) bool {
-	version := request.Spec.ResourceAttributes.Version
-
+func namesAVersion(version string) bool {
 	return version != "" && version != "*"
 }
 
-func (h *Handler) fillDenyRequest(request *WebhookRequest, reason, logEntry string) *WebhookRequest {
-	if logEntry != "" {
-		h.logger.Println(logEntry)
-	}
-
-	request.Status.Denied = true
-	request.Status.Reason = reason
-
-	return request
+// absent reports whether the error means discovery answered and the resource is not there: the API
+// server 404'd the group, or a successful listing of it does not carry the resource.
+func absent(err error) bool {
+	return errors.Is(err, cache.ErrNotFound) || errors.Is(err, cache.ErrResourceAbsent)
 }
 
-func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *DirectoryEntry) *WebhookRequest {
-	// if resource is not nil and namespace is nil
-	apiVersion := request.Spec.ResourceAttributes.Version
-	group := request.Spec.ResourceAttributes.Group
-	resource := request.Spec.ResourceAttributes.Resource
-	var apiGroup string
-
-	if apiVersion == "" || apiVersion == "*" {
-		if group != "" {
-			var err error
-			apiVersion, err = h.cache.GetPreferredVersion(group, resource)
-			if err != nil {
-				// could not check whether resource is namespaced or not (from cache) - deny access
-				return h.fillDenyRequest(request, internalErrorReason, err.Error())
-			}
-		} else {
-			k8sCoreResources, err := h.cache.GetCoreResources()
-			if err != nil {
-				return h.fillDenyRequest(request, internalErrorReason, err.Error())
-			}
-			// if subjected resource has no group, check if it belongs to the core k8s resources, and if it isn't,
-			// permit the request for an unknown (non-existent) resource to let the RBAC decide
-			if _, found := k8sCoreResources[resource]; !found {
-				return request
-			}
-
-			// apiVersion and group both empty, which means that this is a core Kubernetes resource
-			apiVersion = "v1"
-		}
-	}
-
-	if group != "" {
-		apiGroup = group + "/" + apiVersion
-	} else {
-		apiGroup = apiVersion
-	}
-
-	namespaced, err := h.cache.Get(apiGroup, resource)
-	if err != nil && group != "" && namesAVersion(request) {
-		// The request named a version the cluster no longer serves: a client with a stale discovery
-		// snapshot, or one generated against the previous version of a CRD, goes on asking about it
-		// long after that version is retired. Denying is wrong twice over. What is being asked here
-		// is whether the resource is namespaced, and no two versions of a resource disagree about
-		// that. And the denial reaches the user as "you have no access" rather than "that version is
-		// gone" -- authorization runs on the request path before the version is resolved, so even a
-		// plain read of a retired version comes back as 403 instead of 404.
-		if preferred, preferredErr := h.cache.GetPreferredVersion(group, resource); preferredErr == nil {
-			namespaced, err = h.cache.Get(group+"/"+preferred, resource)
-		}
-	}
-
-	if err != nil {
-		// could not check whether resource is namespaced or not (from cache) - deny access
-		h.fillDenyRequest(request, internalErrorReason, err.Error())
-	} else if namespaced && hasAnyFilters(entry) {
-		// Cluster-scoped access to a namespaced resource granted by a non-CAR
-		// ClusterRoleBinding is a deliberate cluster-wide grant; do not deny it.
-		if !h.independentRBACAllows(request) {
-			// we should not allow cluster-scoped requests for the namespaced objects if access to the namespaces is limited
-			h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
-		}
-	}
-
-	return request
-}
-
-func (h *Handler) authorizeRequest(request *WebhookRequest) *WebhookRequest {
-	dirEntriesAffected := h.affectedDirs(request)
-	if len(dirEntriesAffected) == 0 {
-		return request
-	}
-
-	var combinedDir DirectoryEntry
-
-	// Combine dirs for the current request. Users may have more than one rule attached to their groups or usernames.
-	for _, dirEntry := range dirEntriesAffected {
-		if !combinedDir.AllowAccessToSystemNamespaces {
-			combinedDir.AllowAccessToSystemNamespaces = dirEntry.AllowAccessToSystemNamespaces
-		}
-
-		// Aggregate namespace selectors and limitNamespaces into a single set of rules
-		if len(dirEntry.NamespaceSelectors) > 0 {
-			combinedDir.NamespaceSelectors = append(combinedDir.NamespaceSelectors, dirEntry.NamespaceSelectors...)
-		}
-		if len(dirEntry.LimitNamespaces) > 0 {
-			combinedDir.LimitNamespaces = append(combinedDir.LimitNamespaces, dirEntry.LimitNamespaces...)
-		}
-		combinedDir.NamespaceFiltersAbsent = combinedDir.NamespaceFiltersAbsent || dirEntry.NamespaceFiltersAbsent
-	}
-
-	if request.Spec.ResourceAttributes.Namespace != "" {
-		return h.authorizeNamespacedRequest(request, &combinedDir)
-	}
-
-	if request.Spec.ResourceAttributes.Resource != "" {
-		return h.authorizeClusterScopedRequest(request, &combinedDir)
-	}
-
-	return request
-}
-
-// renewDirectories reads the configuration file (actually it is a json file with all CRs from the cluster) and composes
-// rules for users, groups, and service accounts.
-func (h *Handler) renewDirectories() {
-	fileStat, err := os.Stat(configPath)
-	if err != nil {
-		h.logger.Printf("cannot reload the config: %v", err)
+// reportRestricted logs the ordering guard, as often as it is worth saying and no more. When that
+// is - once when a rule starts restricting, hourly while it goes on, again when it happens afresh
+// - belongs with the guard itself, so it lives in the library and both consumers share it.
+func (h *Handler) reportRestricted(username, rule string) {
+	if !h.restrictions.Allow(rule) {
 		return
 	}
-
-	if os.SameFile(h.lastAppliedStat, fileStat) {
-		return
-	}
-
-	var config UserAuthzConfig
-
-	configRawData, err := os.ReadFile(configPath)
-	if err != nil {
-		h.logger.Printf("cannot read the config %s: %v", configPath, err)
-		return
-	}
-
-	if err := json.Unmarshal(configRawData, &config); err != nil {
-		h.logger.Printf("cannot unmarshal the config %s: %v", configPath, err)
-		return
-	}
-
-	directory := map[string]map[string]DirectoryEntry{
-		"User":           make(map[string]DirectoryEntry),
-		"Group":          make(map[string]DirectoryEntry),
-		"ServiceAccount": make(map[string]DirectoryEntry),
-	}
-
-	// fill limited namespaces by subjects kinds/names
-	for _, crd := range config.CRDs {
-		for _, subject := range crd.Spec.Subjects {
-			name := subject.Name
-			namespace := subject.Namespace
-			kind := subject.Kind
-
-			if kind == "ServiceAccount" {
-				name = "system:serviceaccount:" + namespace + ":" + name
-			}
-
-			dirEntry, ok := directory[kind][name]
-			if !ok {
-				dirEntry = DirectoryEntry{}
-			}
-
-			// If there are neither LimitNamespaces nor NamespaceSelector options, it means all non-system namespaces are allowed.
-			// We need to know whether we have at least one such a CR for the user in a cluster.
-			dirEntry.NamespaceFiltersAbsent = dirEntry.NamespaceFiltersAbsent || (len(crd.Spec.LimitNamespaces) == 0 && !isLabelSelectorApplied(crd.Spec.NamespaceSelector))
-
-			// if the NamespaceSelector field is empty - take the limitNamespaces entries and check the allowAccessToSystemNamespaces flag
-			if crd.Spec.NamespaceSelector == nil {
-				// This is an important thing! All regular expressions is wrapped in the ^...$
-				for _, ln := range crd.Spec.LimitNamespaces {
-					r, err := regexp.Compile(wrapRegex(ln))
-					if err != nil {
-						h.logger.Printf("cannot compile limitNamespaces pattern %q from ClusterAuthorizationRule %q: %v", ln, crd.Name, err)
-						return
-					}
-					dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, r)
-				}
-
-				if !dirEntry.AllowAccessToSystemNamespaces {
-					dirEntry.AllowAccessToSystemNamespaces = crd.Spec.AllowAccessToSystemNamespaces
-				}
-				// if the NamespaceSelector field isn't empty - ignore limitNamespaces and allowAccessToSystemNamespaces in this entry
-			} else {
-				dirEntry.NamespaceSelectors = append(dirEntry.NamespaceSelectors, crd.Spec.NamespaceSelector)
-			}
-
-			directory[kind][name] = dirEntry
-		}
-	}
-
-	h.mu.Lock()
-	h.directory = directory
-	h.lastAppliedStat = fileStat
-	h.mu.Unlock()
-	h.logger.Println("configuration was reloaded successfully")
+	h.logger.Printf("rule %q binds subjects the webhook has not observed it naming (first seen for %q; rules synced: %v); restricting them until the rule arrives", rule, username, h.rules.HasSynced())
 }
 
-func isLabelSelectorApplied(namespaceSelector *NamespaceSelector) bool {
-	if namespaceSelector != nil && namespaceSelector.LabelSelector != nil {
-		return true
-	}
-
-	return false
-}
-
-// StartRenewConfigLoop periodically reads new config file from the file system and composes directories.
-func (h *Handler) StartRenewConfigLoop(stopCh <-chan struct{}) {
-	h.renewDirectories()
-
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			h.renewDirectories()
-		case <-stopCh:
-			h.logger.Println("renew directories stopped")
-			return
-		}
-	}
-}
-
-// affectedDirs checks that User/Group/ServiceAccount from the review request has corresponding ClusterAuthorizationRules
-func (h *Handler) affectedDirs(r *WebhookRequest) []DirectoryEntry {
-	var dirEntriesAffected []DirectoryEntry
-
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	if dirEntry, ok := h.directory["User"][r.Spec.User]; ok {
-		dirEntriesAffected = append(dirEntriesAffected, dirEntry)
-	}
-
-	if dirEntry, ok := h.directory["ServiceAccount"][r.Spec.User]; ok {
-		dirEntriesAffected = append(dirEntriesAffected, dirEntry)
-	}
-
-	for _, group := range r.Spec.Group {
-		if dirEntry, ok := h.directory["Group"][group]; ok {
-			dirEntriesAffected = append(dirEntriesAffected, dirEntry)
-		}
-	}
-
-	return dirEntriesAffected
-}
-
-// checks if labels of a namespace match provided labelselector
-func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSelectors []*NamespaceSelector) (bool, error) {
+// namespaceLabels returns the labels of a namespace for the namespaceSelector check.
+//
+// It refuses while the namespace cache is still filling. An empty cache answers "no such
+// namespace" for every name, which is indistinguishable from a namespace that genuinely has no
+// labels - and a selector like DoesNotExist matches that, so a selector would open namespaces it
+// was never evaluated against. The error denies instead. permission-browser's engine has always
+// checked this; the webhook stored the predicate and never consulted it.
+func (h *Handler) namespaceLabels(namespaceName string) (labels.Set, error) {
 	if h.nsLister == nil {
-		return false, fmt.Errorf("namespace lister is not initialized")
+		return nil, fmt.Errorf("namespace lister is not initialized")
+	}
+	if h.nsSynced != nil && !h.nsSynced() {
+		return nil, fmt.Errorf("namespace cache is not synced yet")
 	}
 
 	namespace, err := h.nsLister.Get(namespaceName)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	labelsSet := labels.Set(namespace.GetLabels())
-	if labelsSet == nil {
-		labelsSet = labels.Set{}
+	set := labels.Set(namespace.GetLabels())
+	if set == nil {
+		set = labels.Set{}
 	}
-
-	for _, namespaceSelector := range namespaceSelectors {
-		if namespaceSelector.LabelSelector != nil {
-			selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
-			if err != nil {
-				return false, err
-			}
-			if selector.Matches(labelsSet) {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
-// checks if an entry has any namespace-related filters
-func hasAnyFilters(entry *DirectoryEntry) bool {
-	// check for MatchAny field of any namespace selector which permits literally any namespace
-	for _, namespaceSelector := range entry.NamespaceSelectors {
-		if namespaceSelector.MatchAny {
-			return false
-		}
-	}
-
-	if entry.NamespaceFiltersAbsent {
-		// The limitNamespaces option has a priority over the allowAccessToSystemNamespaces option.
-		// If limited namespaces are not specified, check whether access to system namespaces is limited.
-		// If it is not - user has no limited namespaces.
-		return !entry.AllowAccessToSystemNamespaces
-	}
-
-	for _, regex := range entry.LimitNamespaces {
-		switch regex.String() {
-		// Special regexp cases that allow every namespace. Do not need to forbid cluster scoped requests.
-		case "^.*$", "^.+$":
-			return !entry.AllowAccessToSystemNamespaces
-		}
-	}
-
-	return true
-}
-
-func wrapRegex(ln string) string {
-	if !strings.HasPrefix(ln, "^") {
-		ln = "^" + ln
-	}
-
-	if !strings.HasSuffix(ln, "$") {
-		ln += "$"
-	}
-
-	return ln
+	return set, nil
 }

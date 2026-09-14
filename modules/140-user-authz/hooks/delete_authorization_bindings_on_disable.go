@@ -18,6 +18,8 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -26,6 +28,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -40,10 +44,23 @@ outside the module and would keep granting access indefinitely. When the chart r
 bindings, the release uninstall removed them; this hook restores that behaviour after the
 controller's Deployment is gone, so the two do not race.
 
-Re-enabling the module makes the controller recreate every binding from the rules.
+The rules themselves stay (their CRDs are not removed), so their status is rewritten too: a
+`Ready=True` left over from the controller would claim the bindings exist while they were just
+removed. Re-enabling the module makes the controller recreate every binding from the rules and
+report `Ready=True` again.
 */
 
-const deleteBindingsWorkers = 16
+const (
+	deleteBindingsWorkers = 16
+
+	conditionReady       = "Ready"
+	reasonModuleDisabled = "ModuleDisabled"
+)
+
+var ruleResources = []schema.GroupVersionResource{
+	{Group: "deckhouse.io", Version: "v1", Resource: "clusterauthorizationrules"},
+	{Group: "deckhouse.io", Version: "v1alpha1", Resource: "authorizationrules"},
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:             internal.Queue("delete-authorization-bindings"),
@@ -63,10 +80,53 @@ func deleteAuthorizationBindingsOnDisable(ctx context.Context, input *go_hook.Ho
 		return fmt.Errorf("delete authorization bindings: %w", err)
 	}
 
+	marked, err := markRulesModuleDisabled(ctx, dynClient, deleteBindingsWorkers, time.Now())
+	if err != nil {
+		return fmt.Errorf("update the status of the authorization rules: %w", err)
+	}
+
 	input.Logger.Info("removed the authorization bindings of the disabled module",
-		slog.Int("count", deleted), slog.Duration("took", time.Since(started)))
+		slog.Int("count", deleted), slog.Int("rules_marked", marked), slog.Duration("took", time.Since(started)))
 
 	return nil
+}
+
+// markRulesModuleDisabled sets Ready=False/ModuleDisabled with zero bindings on every rule, so that
+// the status does not keep claiming the bindings exist. Returns how many rules were patched.
+func markRulesModuleDisabled(ctx context.Context, dynClient dynamic.Interface, workers int, now time.Time) (int, error) {
+	total := 0
+	var errs []error
+	for _, gvr := range ruleResources {
+		n, err := forEachResourceParallel(ctx, dynClient, gvr, workers, func(ctx context.Context, namespace, name string, generation int64) error {
+			patch, err := json.Marshal(map[string]any{
+				"status": map[string]any{
+					"bindings":           0,
+					"observedGeneration": generation,
+					"conditions": []map[string]any{{
+						"type":               conditionReady,
+						"status":             "False",
+						"reason":             reasonModuleDisabled,
+						"message":            "the user-authz module is disabled; the bindings of the rule were removed",
+						"observedGeneration": generation,
+						"lastTransitionTime": now.UTC().Format(time.RFC3339),
+					}},
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("marshal status patch: %w", err)
+			}
+			_, err = dynClient.Resource(gvr).Namespace(namespace).Patch(ctx, name, types.MergePatchType, patch, metav1.PatchOptions{}, "status")
+			if err != nil && !apierrors.IsNotFound(err) {
+				return fmt.Errorf("patch status of %s %s/%s: %w", gvr.Resource, namespace, name, err)
+			}
+			return nil
+		})
+		total += n
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return total, errors.Join(errs...)
 }
 
 // deleteRuleBindings removes every rule binding of the module and returns how many were deleted.

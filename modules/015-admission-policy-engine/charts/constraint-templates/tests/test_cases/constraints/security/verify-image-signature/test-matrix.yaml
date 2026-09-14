@@ -31,6 +31,18 @@ spec:
           containers:
             - image: nginx:latest
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+                - image: nginx
+                  name: nginx
   namedExceptions: {}
   blocks:
     - name: security-policy
@@ -138,3 +150,27 @@ spec:
                 ephemeralContainers:
                   - image: busybox:latest
                     name: debugger
+    - name: pss-controller-deployment
+      gatorBlock: pss-controller-deployment
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: controller-verify-image-signature
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.containers[].image
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-verify-image-signature
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx

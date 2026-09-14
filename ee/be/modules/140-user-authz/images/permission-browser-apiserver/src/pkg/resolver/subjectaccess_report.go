@@ -216,9 +216,9 @@ func (b *reportBuilder) expand(scope *scopeAccumulator, origin grantOrigin, rule
 // isKnownClusterScoped reports whether discovery has seen this resource and says
 // it is cluster-scoped. An unknown resource answers false.
 func (b *reportBuilder) isKnownClusterScoped(group, resource string) bool {
-	namespaced, known := b.scopeCache.Scope(group, resource)
+	scope := b.scopeCache.ScopeOf(group, resource)
 
-	return known && !namespaced
+	return scope.Known && !scope.Namespaced
 }
 
 // resourceTarget is one row a rule expands to.

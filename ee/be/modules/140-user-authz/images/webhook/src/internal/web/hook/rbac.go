@@ -6,9 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"fmt"
 	"log"
-	"slices"
-	"strings"
 	"sync"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -16,6 +15,8 @@ import (
 	"k8s.io/client-go/informers"
 	rbaclisters "k8s.io/client-go/listers/rbac/v1"
 	kcache "k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
 )
 
 // independentRBACResolver reports whether a request is allowed by RBAC grants
@@ -24,26 +25,202 @@ type independentRBACResolver interface {
 	AllowsIndependently(spec *WebhookResourceSpec) bool
 }
 
-// carManagedCRBPrefix is the name prefix of ClusterRoleBindings rendered from
-// ClusterAuthorizationRules by the user-authz module (see
-// modules/140-user-authz/templates/cluster-role-bindings.yaml:
-// "user-authz:<car-name>:<postfix>").
-const carManagedCRBPrefix = "user-authz:"
-
 // isCARManagedClusterRoleBinding reports whether the ClusterRoleBinding was
-// generated from a ClusterAuthorizationRule by the user-authz module.
+// generated from a ClusterAuthorizationRule by the user-authz module (by its
+// Helm chart in earlier releases, by user-authz-controller now); the naming
+// contract lives in go_lib/user-authz/binding.
 //
 // Such bindings are cluster-wide by construction, but their intended scope is
 // the CAR's multi-tenancy options (limitNamespaces etc.), which is exactly
 // what this webhook enforces. They must therefore be excluded when we check
 // whether the user has access *independently* of any CAR - otherwise the
 // CAR's accessLevel would leak into namespaces outside its limitNamespaces.
-func isCARManagedClusterRoleBinding(binding *rbacv1.ClusterRoleBinding) bool {
-	if !strings.HasPrefix(binding.Name, carManagedCRBPrefix) {
-		return false
+func isCARManagedClusterRoleBinding(crb *rbacv1.ClusterRoleBinding) bool {
+	return binding.IsRuleBinding(crb.Name, crb.GetLabels())
+}
+
+// crbSubjectKey is a subject a ClusterRoleBinding names, in the form the request is matched
+// against: a username (a User subject, or the canonical name of a ServiceAccount subject) or a
+// group name.
+type crbSubjectKey struct {
+	isGroup bool
+	name    string
+}
+
+// crbSubjectKeys returns the keys under which the binding has to be found. It mirrors
+// subjectsMatch with an empty default namespace, which is what a ClusterRoleBinding gets.
+func crbSubjectKeys(subjects []rbacv1.Subject) []crbSubjectKey {
+	keys := make([]crbSubjectKey, 0, len(subjects))
+	for _, subject := range subjects {
+		switch subject.Kind {
+		case rbacv1.UserKind:
+			keys = append(keys, crbSubjectKey{name: subject.Name})
+		case rbacv1.GroupKind:
+			keys = append(keys, crbSubjectKey{isGroup: true, name: subject.Name})
+		case rbacv1.ServiceAccountKind:
+			// A ClusterRoleBinding has no namespace to default to, so the subject's own namespace
+			// is the only one; an empty one yields a name no request can carry, as before.
+			keys = append(keys, crbSubjectKey{name: fmt.Sprintf("system:serviceaccount:%s:%s", subject.Namespace, subject.Name)})
+		}
 	}
-	bindingLabels := binding.GetLabels()
-	return bindingLabels["heritage"] == "deckhouse" && bindingLabels["module"] == "user-authz"
+	return keys
+}
+
+// independentCRBIndex maps a subject to the CAR-independent ClusterRoleBindings that name it.
+//
+// Without it every request the multi-tenancy filters would deny costs a full scan of every
+// ClusterRoleBinding in the cluster, and a cluster with a few thousand rules has tens of thousands
+// of them. The index is maintained incrementally from the ClusterRoleBinding informer's events, so
+// a change costs work proportional to the subjects of the one binding that changed and a lookup
+// costs one map access per subject of the request. Nothing here needs debouncing: there is no
+// rebuild to coalesce.
+//
+// CAR-generated bindings are left out entirely (see isCARManagedClusterRoleBinding): they are the
+// bindings whose scope this webhook enforces, so they must never answer "granted independently".
+type independentCRBIndex struct {
+	mu sync.RWMutex
+	// bySubject maps a subject to the bindings naming it, keyed by binding name so an update
+	// replaces rather than duplicates.
+	bySubject map[crbSubjectKey]map[string]*rbacv1.ClusterRoleBinding
+	// keysOf records what each binding contributed, so an update or a delete can withdraw exactly
+	// the previous contribution.
+	keysOf map[string][]crbSubjectKey
+}
+
+func newIndependentCRBIndex() *independentCRBIndex {
+	return &independentCRBIndex{
+		bySubject: make(map[crbSubjectKey]map[string]*rbacv1.ClusterRoleBinding),
+		keysOf:    make(map[string][]crbSubjectKey),
+	}
+}
+
+// upsert indexes the binding, replacing whatever it contributed before. A CAR-generated binding is
+// withdrawn instead: a binding that gains the module's labels stops being an independent grant.
+func (i *independentCRBIndex) upsert(crb *rbacv1.ClusterRoleBinding) {
+	if crb == nil {
+		return
+	}
+	if isCARManagedClusterRoleBinding(crb) {
+		i.deleteByName(crb.Name)
+		return
+	}
+
+	keys := crbSubjectKeys(crb.Subjects)
+
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	i.withdrawLocked(crb.Name)
+	if len(keys) == 0 {
+		return
+	}
+	for _, key := range keys {
+		bindings := i.bySubject[key]
+		if bindings == nil {
+			bindings = make(map[string]*rbacv1.ClusterRoleBinding, 1)
+			i.bySubject[key] = bindings
+		}
+		bindings[crb.Name] = crb
+	}
+	i.keysOf[crb.Name] = keys
+}
+
+// deleteByName withdraws the binding from the index.
+func (i *independentCRBIndex) deleteByName(name string) {
+	if name == "" {
+		return
+	}
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.withdrawLocked(name)
+}
+
+// withdrawLocked removes every contribution of the binding. The caller holds the write lock.
+func (i *independentCRBIndex) withdrawLocked(name string) {
+	for _, key := range i.keysOf[name] {
+		bindings := i.bySubject[key]
+		if bindings == nil {
+			continue
+		}
+		delete(bindings, name)
+		if len(bindings) == 0 {
+			delete(i.bySubject, key)
+		}
+	}
+	delete(i.keysOf, name)
+}
+
+// forRequest returns the CAR-independent ClusterRoleBindings that name the user or any of their
+// groups, each at most once.
+func (i *independentCRBIndex) forRequest(username string, groups []string) []*rbacv1.ClusterRoleBinding {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	var (
+		out  []*rbacv1.ClusterRoleBinding
+		seen map[string]struct{}
+	)
+	collect := func(key crbSubjectKey) {
+		for name, crb := range i.bySubject[key] {
+			if seen == nil {
+				seen = make(map[string]struct{})
+			}
+			if _, dup := seen[name]; dup {
+				continue
+			}
+			seen[name] = struct{}{}
+			out = append(out, crb)
+		}
+	}
+
+	collect(crbSubjectKey{name: username})
+	for _, group := range groups {
+		collect(crbSubjectKey{isGroup: true, name: group})
+	}
+
+	return out
+}
+
+// len reports how many bindings the index holds; it exists for the tests.
+func (i *independentCRBIndex) len() int {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	return len(i.keysOf)
+}
+
+// eventHandler keeps the index in step with the ClusterRoleBinding informer.
+func (i *independentCRBIndex) eventHandler() kcache.ResourceEventHandler {
+	return kcache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if crb, ok := obj.(*rbacv1.ClusterRoleBinding); ok {
+				i.upsert(crb)
+			}
+		},
+		UpdateFunc: func(_, newObj interface{}) {
+			if crb, ok := newObj.(*rbacv1.ClusterRoleBinding); ok {
+				i.upsert(crb)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			switch v := obj.(type) {
+			case *rbacv1.ClusterRoleBinding:
+				i.deleteByName(v.Name)
+			case kcache.DeletedFinalStateUnknown:
+				// The informer reports a delete it could not observe directly as a tombstone. Its
+				// Obj is usually the last known object, but it is not guaranteed to be one, and
+				// dropping the event then leaves the binding in the index for the life of the
+				// process. A stale entry here claims a CAR-independent grant that no longer
+				// exists, and that claim OVERRIDES the multi-tenancy denial - so this has to fail
+				// towards forgetting. ClusterRoleBindings are cluster-scoped, so the tombstone
+				// key is the name. The rule-bindings index in the library does the same.
+				if crb, ok := v.Obj.(*rbacv1.ClusterRoleBinding); ok {
+					i.deleteByName(crb.Name)
+					return
+				}
+				i.deleteByName(v.Key)
+			}
+		},
+	}
 }
 
 // RBACEvaluator checks requests against RBAC objects from informer caches.
@@ -58,20 +235,13 @@ func isCARManagedClusterRoleBinding(binding *rbacv1.ClusterRoleBinding) bool {
 type RBACEvaluator struct {
 	logger *log.Logger
 
-	roleLister               rbaclisters.RoleLister
-	roleBindingLister        rbaclisters.RoleBindingLister
-	clusterRoleLister        rbaclisters.ClusterRoleLister
-	clusterRoleBindingLister rbaclisters.ClusterRoleBindingLister
+	roleLister        rbaclisters.RoleLister
+	roleBindingLister rbaclisters.RoleBindingLister
+	clusterRoleLister rbaclisters.ClusterRoleLister
 
-	// bindingsBySubject answers "which cluster-wide bindings name this
-	// subject" without walking the cluster. The check runs on the
-	// authorization path -- every cluster-scoped request of a tenant user
-	// reaches it -- and a Deckhouse cluster carries hundreds of
-	// ClusterRoleBindings before the first user is created.
-	bindingsBySubject *subjectIndex
-	// Serializes the listing that feeds the index, so a burst of requests on a
-	// cold process does not turn into a burst of full listings.
-	indexing sync.Mutex
+	// clusterRoleBindings indexes the CAR-independent ClusterRoleBindings by subject, so a request
+	// does not pay for a scan of every binding in the cluster.
+	clusterRoleBindings *independentCRBIndex
 
 	synced []kcache.InformerSynced
 }
@@ -79,7 +249,12 @@ type RBACEvaluator struct {
 // NewRBACEvaluator registers RBAC informers in the factory and returns an
 // evaluator backed by their listers. The caller is responsible for starting
 // the factory and waiting for cache sync.
-func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInformerFactory) *RBACEvaluator {
+//
+// The ClusterRoleBinding index is fed by an event handler, which has to be registered before the
+// factory starts; a failure to register it is fatal, because an index that never fills would report
+// every request as not granted independently and the webhook would deny access that
+// RoleBindings and non-CAR ClusterRoleBindings do grant.
+func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInformerFactory) (*RBACEvaluator, error) {
 	rbacInformers := informerFactory.Rbac().V1()
 
 	roles := rbacInformers.Roles()
@@ -87,141 +262,29 @@ func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInform
 	clusterRoles := rbacInformers.ClusterRoles()
 	clusterRoleBindings := rbacInformers.ClusterRoleBindings()
 
-	evaluator := &RBACEvaluator{
-		logger:                   logger,
-		roleLister:               roles.Lister(),
-		roleBindingLister:        roleBindings.Lister(),
-		clusterRoleLister:        clusterRoles.Lister(),
-		clusterRoleBindingLister: clusterRoleBindings.Lister(),
-		bindingsBySubject:        newSubjectIndex(),
+	index := newIndependentCRBIndex()
+	indexSynced, err := clusterRoleBindings.Informer().AddEventHandler(index.eventHandler())
+	if err != nil {
+		return nil, fmt.Errorf("register the independent ClusterRoleBinding index: %w", err)
+	}
+
+	return &RBACEvaluator{
+		logger:              logger,
+		roleLister:          roles.Lister(),
+		roleBindingLister:   roleBindings.Lister(),
+		clusterRoleLister:   clusterRoles.Lister(),
+		clusterRoleBindings: index,
 		synced: []kcache.InformerSynced{
 			roles.Informer().HasSynced,
 			roleBindings.Informer().HasSynced,
 			clusterRoles.Informer().HasSynced,
 			clusterRoleBindings.Informer().HasSynced,
+			// The informer reports synced once the initial list has been popped; the handler that
+			// fills the index is fed from a separate queue. Answering from a half-filled index
+			// would deny requests that a non-CAR ClusterRoleBinding grants.
+			indexSynced.HasSynced,
 		},
-	}
-
-	// Rebuilding the whole index on every event is O(bindings), and bindings
-	// change when a module is deployed, not when a request arrives. Tracking
-	// deltas would buy nothing here and would have to get subject removal on
-	// update exactly right.
-	//
-	// While the informer is still filling, events are the initial listing --
-	// one per binding -- and rebuilding on each of them would make the sync
-	// itself quadratic. Those are skipped; the first read after the sync builds
-	// the index once (see indexedBindings).
-	synced := clusterRoleBindings.Informer().HasSynced
-	rebuild := func() {
-		if !synced() {
-			return
-		}
-
-		evaluator.reindex()
-	}
-
-	if _, err := clusterRoleBindings.Informer().AddEventHandler(kcache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { rebuild() },
-		UpdateFunc: func(any, any) { rebuild() },
-		DeleteFunc: func(any) { rebuild() },
-	}); err != nil {
-		// Without the handler the index stays empty and every check answers
-		// "not granted independently" -- the multi-tenancy deny stays in place,
-		// which is the safe direction, but say it out loud.
-		logger.Printf("independent RBAC check: failed to watch ClusterRoleBindings, cluster-wide grants will not be seen: %v", err)
-	}
-
-	return evaluator
-}
-
-// subjectIndex maps a subject to the cluster-wide bindings naming it.
-//
-// ServiceAccount subjects are stored in the "system:serviceaccount:<ns>:<name>"
-// form the request carries, so a lookup never formats a string.
-type subjectIndex struct {
-	mu      sync.RWMutex
-	built   bool
-	byUser  map[string][]*rbacv1.ClusterRoleBinding
-	byGroup map[string][]*rbacv1.ClusterRoleBinding
-}
-
-func newSubjectIndex() *subjectIndex {
-	return &subjectIndex{
-		byUser:  map[string][]*rbacv1.ClusterRoleBinding{},
-		byGroup: map[string][]*rbacv1.ClusterRoleBinding{},
-	}
-}
-
-func (i *subjectIndex) rebuild(bindings []*rbacv1.ClusterRoleBinding) {
-	byUser := make(map[string][]*rbacv1.ClusterRoleBinding, len(bindings))
-	byGroup := make(map[string][]*rbacv1.ClusterRoleBinding, len(bindings))
-
-	for _, binding := range bindings {
-		// CAR-managed bindings are excluded once, at index time: the hot path
-		// should not re-derive what the cluster already told us.
-		if isCARManagedClusterRoleBinding(binding) {
-			continue
-		}
-
-		for _, subject := range binding.Subjects {
-			switch subject.Kind {
-			case rbacv1.UserKind:
-				byUser[subject.Name] = append(byUser[subject.Name], binding)
-			case rbacv1.GroupKind:
-				byGroup[subject.Name] = append(byGroup[subject.Name], binding)
-			case rbacv1.ServiceAccountKind:
-				if subject.Namespace == "" {
-					// A ClusterRoleBinding has no namespace to default to, so
-					// such a subject grants nothing and upstream ignores it.
-					continue
-				}
-				name := serviceAccountUsername(subject.Namespace, subject.Name)
-				byUser[name] = append(byUser[name], binding)
-			}
-		}
-	}
-
-	i.mu.Lock()
-	i.byUser = byUser
-	i.byGroup = byGroup
-	i.built = true
-	i.mu.Unlock()
-}
-
-// built reports whether the index holds a listing rather than its zero value.
-// An empty cluster and an unbuilt index look the same from bindingsFor, and
-// the difference decides whether a subject is denied.
-func (i *subjectIndex) isBuilt() bool {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-
-	return i.built
-}
-
-// bindingsFor returns the bindings naming the user or any of the groups. The
-// same binding can name both, so the caller may see it twice -- evaluating a
-// rule set twice is cheaper than deduplicating on every request.
-func (i *subjectIndex) bindingsFor(user string, groups []string) []*rbacv1.ClusterRoleBinding {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-
-	matched := i.byUser[user]
-	for _, group := range groups {
-		if bindings := i.byGroup[group]; len(bindings) > 0 {
-			if matched == nil {
-				matched = bindings
-
-				continue
-			}
-			matched = append(slices.Clip(matched), bindings...)
-		}
-	}
-
-	return matched
-}
-
-func serviceAccountUsername(namespace, name string) string {
-	return "system:serviceaccount:" + namespace + ":" + name
+	}, nil
 }
 
 // Synced reports whether all RBAC informer caches have synced.
@@ -263,48 +326,10 @@ func (e *RBACEvaluator) AllowsIndependently(spec *WebhookResourceSpec) bool {
 	return false
 }
 
-// reindex rebuilds the subject index from the current listing.
-func (e *RBACEvaluator) reindex() {
-	e.indexing.Lock()
-	defer e.indexing.Unlock()
-
-	e.buildIndex()
-}
-
-// reindexOnce builds the index if nothing has built it yet.
-//
-// The event handler ignores the initial listing, so on a fresh process the
-// first request is what puts the index together. Doing it here rather than in
-// Synced keeps the two independent: an index that failed to build must not
-// hold back readiness of a webhook whose other paths work.
-func (e *RBACEvaluator) reindexOnce() {
-	e.indexing.Lock()
-	defer e.indexing.Unlock()
-
-	if e.bindingsBySubject.isBuilt() {
-		return
-	}
-
-	e.buildIndex()
-}
-
-func (e *RBACEvaluator) buildIndex() {
-	bindings, err := e.clusterRoleBindingLister.List(labels.Everything())
-	if err != nil {
-		// The index keeps its previous contents; a stale answer is closer to
-		// the truth than an empty one.
-		e.logger.Printf("independent RBAC check: failed to index ClusterRoleBindings: %v", err)
-
-		return
-	}
-
-	e.bindingsBySubject.rebuild(bindings)
-}
-
 func (e *RBACEvaluator) clusterRoleBindingsAllow(spec *WebhookResourceSpec) bool {
-	e.reindexOnce()
-
-	for _, binding := range e.bindingsBySubject.bindingsFor(spec.User, spec.Group) {
+	// Only the bindings that name the request's user or one of its groups can grant anything, and
+	// the index already excludes the CAR-generated ones.
+	for _, binding := range e.clusterRoleBindings.forRequest(spec.User, spec.Group) {
 		role, err := e.clusterRoleLister.Get(binding.RoleRef.Name)
 		if err != nil {
 			continue
@@ -457,4 +482,9 @@ func resourceNameMatches(ruleNames []string, name string) bool {
 		}
 	}
 	return false
+}
+
+// serviceAccountUsername builds the username the API server puts on requests of a service account.
+func serviceAccountUsername(namespace, name string) string {
+	return "system:serviceaccount:" + namespace + ":" + name
 }

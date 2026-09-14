@@ -11,7 +11,7 @@ Deckhouse Kubernetes Platform (DKP) использует возможности 
 - Удаляются из кластера узлы, отсутствующие в облаке;
 - Обновляются метаданные узлов в соответствии с текущей конфигурацией;
 - Заказываются диски для узлов через CSI;
-- Подключается необходимая CNI-сеть (используется simple bridge);
+- Подключается необходимая CNI-сеть (используется [`cni-cilium`](/modules/cni-cilium/));
 - Становятся доступны описания виртуальных машин в [формате AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) для последующего использования в [NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference).
 
 {% alert level="info" %}

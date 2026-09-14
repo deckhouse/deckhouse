@@ -148,6 +148,8 @@ spec:
                       properties:
                         apiHost:
                           type: string
+                        clusterID:
+                          type: string
                         networkName:
                           type: string
                         ingressGateways:

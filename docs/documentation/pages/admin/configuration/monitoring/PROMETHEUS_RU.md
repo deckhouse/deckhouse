@@ -5,27 +5,27 @@ description: "Настройка сбора и хранения метрик Pro
 lang: ru
 ---
 
-{% alert %}
+{% alert level="info" %}
 Начиная с версии 1.71, в Deckhouse Kubernetes Platform используется [Deckhouse Prom++](/products/prompp/) вместо Prometheus.
 {% endalert %}
 
-## Что делает Prometheus?
+## Назначение Prometheus
 
 Prometheus собирает метрики и выполняет правила:
 
-* Для каждого *target* (цели мониторинга) с заданной периодичностью `scrape_interval` Prometheus выполняет HTTP-запрос на этот *target*, получает в ответ метрики в [собственном формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md) и сохраняет их в свою базу данных.
-* Каждый `evaluation_interval` обрабатывает правила (*rules*), на основании чего:
+* Для каждой цели мониторинга с заданной периодичностью `scrape_interval` Prometheus выполняет HTTP-запрос, получает в ответ метрики в [собственном формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md) и сохраняет их в свою базу данных.
+* Каждый `evaluation_interval` обрабатывает правила Prometheus, на основании чего:
   * отправляет алерты;
   * или сохраняет новые метрики (результат выполнения правил) в свою базу данных.
 
-## Как работает Prometheus?
+## Принцип работы Prometheus
 
 Prometheus устанавливается [модулем `prometheus`](/modules/prometheus/) DKP, который выполняет следующие функции:
 - определяет следующие кастомные ресурсы:
   - `Prometheus` — определяет инсталляцию (кластер) *Prometheus*.
   - `ServiceMonitor` — определяет, как собирать метрики с сервисов.
   - `Alertmanager` — определяет кластер *Alertmanager*'ов.
-  - `PrometheusRule` — определяет список *Prometheus rules*.
+  - `PrometheusRule` — определяет список правил Prometheus.
 - следит за этими ресурсами, а также:
   - генерирует `StatefulSet` с самим *Prometheus*.
   - создает секреты с необходимыми для работы Prometheus конфигурационными файлами (`prometheus.yaml` — конфигурация Prometheus, и `configmaps.json` — конфигурация для `prometheus-config-reloader`).
@@ -53,5 +53,17 @@ spec:
       operator: Equal
       value: monitoring
 ```
+
+## Использование параметра `global.modules.storageClass` для Prometheus
+
+Этот модуль использует глобальный параметр [`global.modules.storageClass`](../../../reference/api/global.html#parameters-modules-storageclass) как StorageClass по умолчанию при создании PersistentVolumeClaim (если в конфигурации модуля не указан параметр `storageClass`).
+
+**Изменение глобального параметра** не приводит к пересозданию существующих дисков — модуль продолжает использовать существующий PVC и его StorageClass.
+
+Чтобы использовать другой StorageClass для этого модуля, переопределите параметр `storageClass` или `longtermStorageClass` в конфигурации модуля Prometheus.
+
+{% alert level="warning" %}
+При изменении параметра `storageClass` или `longtermStorageClass` в конфигурации модуля существующий PVC будет удалён и создан заново. Все данные будут удалены. Перед изменением создайте резервную копию данных.
+{% endalert %}
 
 Полное описание всех настроек доступно [в документации модуля `prometheus`](/modules/prometheus/configuration.html).

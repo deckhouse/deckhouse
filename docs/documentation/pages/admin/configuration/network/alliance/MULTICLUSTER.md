@@ -27,6 +27,10 @@ Available only in DKP Enterprise Edition (EE).
   > The intersection of subnets of services and pods is not recommended ([source](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
   > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
 
+{% alert level="warning" %}
+Only sidecar-mode workloads can take part in a multicluster. For details, refer to [Ambient mesh limitations](/modules/istio/#ambient-mesh-limitations).
+{% endalert %}
+
 ### General principles
 
 <div data-presentation="../../../../presentations/istio/multicluster_common_principles_en.pdf"></div>

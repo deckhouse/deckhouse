@@ -192,6 +192,7 @@ status:
   metadataCache:
     private:
       apiHost: istio-api-1.example.com
+      clusterID: xxx-cluster-id
       networkName: network-xxx-123
     public:
       clusterUUID: aaa-bbb-m1
@@ -373,6 +374,7 @@ status:
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.spiffeEndpoint").String()).To(Equal("https://some-proper-host/public/spiffe-bundle-endpoint"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.apiHost").String()).To(Equal("istio-api-0.example.com"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.networkName").String()).To(Equal("network-qqq-123"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.clusterID").String()).To(Equal("qqq-123"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.metadataExporterCA").String()).To(Equal("custom-metadata-ca-m0"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.clusterUUID").String()).To(Equal("aaa-bbb-m0"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.rootCA").String()).To(Equal("abc-m0"))
@@ -388,6 +390,7 @@ status:
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.spiffeEndpoint").String()).To(Equal("https://some-proper-host/public/spiffe-bundle-endpoint"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.apiHost").String()).To(Equal("istio-api-1.example.com"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.networkName").String()).To(Equal("network-xxx-123"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.clusterID").String()).To(Equal("xxx-cluster-id"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.metadataExporterCA").String()).To(Equal(""))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.clusterUUID").String()).To(Equal("aaa-bbb-m1"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.rootCA").String()).To(Equal("abc-m1"))
@@ -1046,7 +1049,8 @@ status:
       ingressGateways:
       - {"address": "test-gateway", "port": 443}
       apiHost: test-cluster.example.com
-      networkName: test-network
+      clusterID: test-cluster-id
+      networkName: network-test-cluster-id
     public:
       clusterUUID: test-cluster-uuid
       rootCA: test-ca
@@ -1064,7 +1068,7 @@ status:
 			Expect(apiJWT).ToNot(BeEmpty())
 
 			// Verify the token is valid
-			validationResult := validateJWTToken(apiJWT)
+			validationResult := validateJWTToken(apiJWT, "test-cluster-uuid")
 			Expect(validationResult.NeedReissue).To(BeFalse())
 		})
 
@@ -1117,11 +1121,11 @@ metadata:
   name: istio-remote-secret-test-cluster
   namespace: d8-istio
   annotations:
-    networking.istio.io/cluster: test-cluster
+    networking.istio.io/cluster: test-cluster-id
   labels:
     istio/multiCluster: "true"
 data:
-  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(validKubeconfig)) + `
+  test-cluster-id: ` + base64.StdEncoding.EncodeToString([]byte(validKubeconfig)) + `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -1136,7 +1140,8 @@ status:
       ingressGateways:
       - {"address": "test-gateway", "port": 443}
       apiHost: test-cluster.example.com
-      networkName: test-network
+      clusterID: test-cluster-id
+      networkName: network-test-cluster-id
     public:
       clusterUUID: test-cluster-uuid
       rootCA: test-ca
@@ -1203,11 +1208,11 @@ metadata:
   name: istio-remote-secret-test-cluster
   namespace: d8-istio
   annotations:
-    networking.istio.io/cluster: test-cluster
+    networking.istio.io/cluster: test-cluster-id
   labels:
     istio/multiCluster: "true"
 data:
-  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(expiredKubeconfig)) + `
+  test-cluster-id: ` + base64.StdEncoding.EncodeToString([]byte(expiredKubeconfig)) + `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -1222,7 +1227,8 @@ status:
       ingressGateways:
       - {"address": "test-gateway", "port": 443}
       apiHost: test-cluster.example.com
-      networkName: test-network
+      clusterID: test-cluster-id
+      networkName: network-test-cluster-id
     public:
       clusterUUID: test-cluster-uuid
       rootCA: test-ca
@@ -1241,7 +1247,7 @@ status:
 			Expect(apiJWT).ToNot(BeEmpty())
 
 			// Verify the new token is valid
-			validationResult := validateJWTToken(apiJWT)
+			validationResult := validateJWTToken(apiJWT, "test-cluster-uuid")
 			Expect(validationResult.NeedReissue).To(BeFalse())
 		})
 
@@ -1293,11 +1299,11 @@ metadata:
   name: istio-remote-secret-test-cluster
   namespace: d8-istio
   annotations:
-    networking.istio.io/cluster: test-cluster
+    networking.istio.io/cluster: test-cluster-id
   labels:
     istio/multiCluster: "true"
 data:
-  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(validKubeconfig)) + `
+  test-cluster-id: ` + base64.StdEncoding.EncodeToString([]byte(validKubeconfig)) + `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -1312,7 +1318,8 @@ status:
       ingressGateways:
       - {"address": "test-gateway", "port": 443}
       apiHost: test-cluster.example.com
-      networkName: test-network
+      clusterID: test-cluster-id
+      networkName: network-test-cluster-id
     public:
       clusterUUID: test-cluster-uuid
       rootCA: test-ca
@@ -1331,8 +1338,210 @@ status:
 			Expect(apiJWT).ToNot(BeEmpty())
 
 			// Verify the new token is valid and has sufficient TTL
-			validationResult := validateJWTToken(apiJWT)
+			validationResult := validateJWTToken(apiJWT, "test-cluster-uuid")
 			Expect(validationResult.NeedReissue).To(BeFalse())
+		})
+
+		It("Checking that the existing-token lookup is keyed on the peer's cluster ID, not the CR name.", func() {
+			signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte("secret")}, nil)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			futureTime := time.Now().Add(35 * 24 * time.Hour).Unix()
+			claims := map[string]interface{}{
+				"exp":   futureTime,
+				"iat":   time.Now().Unix(),
+				"sub":   "test-user",
+				"iss":   "d8-istio",
+				"aud":   "test-cluster-uuid",
+				"scope": "api",
+			}
+			payload, err := json.Marshal(claims)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			token, err := signer.Sign(payload)
+			Expect(err).ShouldNot(HaveOccurred())
+			staleKeyedToken, err := token.CompactSerialize()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			legacyKubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://test-cluster.example.com
+  name: test-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+current-context: test-context
+users:
+- name: test-user
+  user:
+    token: %s
+`, staleKeyedToken)
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio-remote-secret-test-cluster
+  namespace: d8-istio
+  annotations:
+    networking.istio.io/cluster: test-cluster
+  labels:
+    istio/multiCluster: "true"
+data:
+  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(legacyKubeconfig)) + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: network-test-cluster-id
+      clusterID: test-cluster-id
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.clusterID").String()).To(Equal("test-cluster-id"))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).ToNot(BeEmpty())
+			Expect(apiJWT).ToNot(Equal(staleKeyedToken))
+			Expect(validateJWTToken(apiJWT, "test-cluster-uuid").NeedReissue).To(BeFalse())
+		})
+
+		It("Checking that a token minted for another peer isn't reused.", func() {
+			signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte("secret")}, nil)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			futureTime := time.Now().Add(35 * 24 * time.Hour).Unix()
+			claims := map[string]interface{}{
+				"exp":   futureTime,
+				"iat":   time.Now().Unix(),
+				"sub":   "test-user",
+				"iss":   "d8-istio",
+				"aud":   "some-other-cluster-uuid",
+				"scope": "api",
+			}
+			payload, err := json.Marshal(claims)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			token, err := signer.Sign(payload)
+			Expect(err).ShouldNot(HaveOccurred())
+			foreignToken, err := token.CompactSerialize()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			foreignKubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://test-cluster.example.com
+  name: test-cluster-id
+contexts:
+- context:
+    cluster: test-cluster-id
+    user: test-user
+  name: test-context
+current-context: test-context
+users:
+- name: test-user
+  user:
+    token: %s
+`, foreignToken)
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio-remote-secret-test-cluster
+  namespace: d8-istio
+  annotations:
+    networking.istio.io/cluster: test-cluster-id
+  labels:
+    istio/multiCluster: "true"
+data:
+  test-cluster-id: ` + base64.StdEncoding.EncodeToString([]byte(foreignKubeconfig)) + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      clusterID: test-cluster-id
+      networkName: network-test-cluster-id
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).ToNot(BeEmpty())
+			Expect(apiJWT).ToNot(Equal(foreignToken))
+			Expect(validateJWTToken(apiJWT, "test-cluster-uuid").NeedReissue).To(BeFalse())
+		})
+
+		It("Checking that a peer that reports no cluster ID falls back to deriving it from its networkName.", func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: network-test-cluster-id
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.multiclusters").Array()).To(HaveLen(1))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.clusterID").String()).To(Equal("test-cluster-id"))
 		})
 	})
 })

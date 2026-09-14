@@ -119,7 +119,8 @@ help:
 
 TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
-GATOR_VERSION = 3.22.0
+# Keep in sync with the Gatekeeper version in modules/015-admission-policy-engine/oss.yaml
+GATOR_VERSION = 3.22.2
 OPA_VERSION = 1.15.1
 GH_VERSION = 2.83.2
 TESTS_TIMEOUT="15m"
@@ -648,7 +649,7 @@ CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
 GOTESTSUM_VERSION ?= v1.13.0
 ## Pinned lib-helm version, mirrored from helm_lib/Chart.yaml by "make update-lib-helm".
-LIB_HELM_VERSION ?= 1.72.19
+LIB_HELM_VERSION ?= 1.72.21
 
 ## Generate werf
 .PHONY: generate-werf

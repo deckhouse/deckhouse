@@ -374,7 +374,7 @@ func TestReport_UnknownResourceSurvivesAPartialSnapshot(t *testing.T) {
 
 	resolver := setupSubjectAccessResolver(t, objs, nil)
 	resolver.scopeCache.mu.Lock()
-	resolver.scopeCache.partial = true
+	resolver.scopeCache.unavailableGroups = map[string]struct{}{"flapping.example.com": {}}
 	resolver.scopeCache.mu.Unlock()
 
 	status, err := resolver.Report(context.Background(), userRequest("alice"))

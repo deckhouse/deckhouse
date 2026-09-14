@@ -55,7 +55,7 @@ func describeNamespaceFilter(filter *multitenancy.DirectoryEntry) string {
 	if !filter.NamespaceFiltersAbsent && len(filter.LimitNamespaces) > 0 {
 		patterns := make([]string, 0, len(filter.LimitNamespaces))
 		for _, pattern := range filter.LimitNamespaces {
-			patterns = append(patterns, pattern.String())
+			patterns = append(patterns, pattern.Entry())
 		}
 		parts = append(parts, "limitNamespaces: "+strings.Join(patterns, ", "))
 	}

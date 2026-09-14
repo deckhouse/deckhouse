@@ -66,6 +66,238 @@ spec:
 
 ## Можно ли использовать упрощённую и гранулярную ролевые модели одновременно?
 
+## Как обновление на релиз с контроллером влияет на биндинги?
+
+Ничего не создаётся заново, доступ не прерывается. Компонент `user-authz-controller` принимает под управление биндинги, которые раньше создавал Helm-чарт: те же объекты с теми же именами, к ним добавляется `ownerReference` на правило.
+
+Спланируйте релиз, в котором выполняется миграция: он один раз обрабатывает все существующие биндинги, поэтому идёт дольше обычного. На последующие релизы это не влияет.
+
+| Биндинги в релизе | Чего ожидать |
+|---|---|
+| До 5000 | Релиз идёт дольше обычного и завершается сам |
+| Больше 5000 | Релиз может не уложиться в 20-минутный таймаут модуля и завершиться с ошибкой |
+
+Посчитайте биндинги перед обновлением. Для получения количества кластерных биндингов используйте команду:
+
+```bash
+d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+```
+
+Для получения количества namespaced-биндингов используйте команду:
+
+```bash
+d8 k get rolebindings -A -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+```
+
+Если их больше 5000, на время обновления увеличьте таймаут релиза или переключитесь на предыдущий движок раскатки, а после обновления верните настройку:
+
+Чтобы увеличить таймаут релиза, используйте команду:
+
+```bash
+d8 k -n d8-system set env deploy/deckhouse HELM_TIMEOUT=60m
+```
+
+Чтобы переключиться на предыдущий движок, используйте команду:
+
+```bash
+d8 k -n d8-system set env deploy/deckhouse USE_NELM=false
+```
+
+Если миграция не смогла подготовить все биндинги, релиз не стартует, а биндинги остаются в прежнем состоянии.
+
+## Как проверить, что контроллер поддерживает биндинги в актуальном состоянии?
+
+Компонент `user-authz-controller` синхронизирует ClusterRoleBinding и RoleBinding каждого ClusterAuthorizationRule и AuthorizationRule, выдачу `d8:use:dict` в экспериментальной ролевой модели и проекции manage-ролей в use-RoleBinding'и неймспейсов. О его состоянии говорят три источника (статус объекта, метрики и алерты).
+
+**Статус объекта.** У каждого правила есть условие `Ready` и число созданных для него ClusterRoleBinding и RoleBinding:
+
+Чтобы получить список всех ClusterAuthorizationRule в кластере, выполните команду:
+
+```bash
+d8 k get clusterauthorizationrules
+```
+
+Пример вывода:
+
+```console
+NAME        ACCESS LEVEL   READY   BINDINGS   AGE
+my-rule     Admin          True    3          5d
+```
+
+Чтобы получить список всех AuthorizationRule во всех неймспейсах кластера, выполните команду:
+
+```bash
+d8 k get authorizationrules -A
+```
+
+Пример вывода:
+
+```console
+NAMESPACE   NAME       ACCESS LEVEL   READY   BINDINGS   AGE
+default     app-rule   Editor         True    2          3d
+team-a      dev-rule   User           False   0          1h
+```
+
+Чтобы получить только массив conditions указанного ClusterAuthorizationRule, выполните команду:
+
+```bash
+d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
+```
+
+Пример вывода:
+
+```json
+[
+  {
+    "lastTransitionTime": "2026-09-11T10:00:00Z",
+    "message": "3 bindings applied",
+    "observedGeneration": 1,
+    "reason": "BindingsApplied",
+    "status": "True",
+    "type": "Ready"
+  }
+]
+```
+
+`Ready=True` с причиной `BindingsApplied` означает, что биндинги соответствуют правилу. `Ready=False` называет проблему: `InvalidSpec` (правило нельзя превратить в биндинги, в сообщении сказано почему) или `ApplyError` (API-сервер отклонил запись; в сообщении указаны биндинг и ошибка). На правиле записываются события с теми же причинами.
+
+**Метрики.** Контроллер отдаёт их на порту `metrics` своего пода, собирает их `PodMonitor` `user-authz-controller` (нужен включённый модуль `operator-prometheus`). Лейбл `kind` принимает значения `ClusterAuthorizationRule`, `AuthorizationRule`, `dict` и `manage`.
+
+| Метрика | Описание |
+|---|---|
+| `d8_user_authz_authorization_rules{kind}` | Известные контроллеру объекты данного вида |
+| `d8_user_authz_bindings_desired{kind}` | Биндинги, которые должны быть у объектов данного вида |
+| `d8_user_authz_bindings_actual{kind}` | Существующие биндинги данного вида |
+| `d8_user_authz_bindings_drift{kind,reason}` | Биндинги, не приведённые к желаемому состоянию на последнем reconcile; `reason` — `missing`, `extra` или `changed`. Больше нуля только пока контроллеру не удаётся сойтись |
+| `d8_user_authz_bindings_apply_total{kind,op,result}` | Операции записи контроллера (`op`: `create`, `update`, `delete`; `result`: `success`, `error`) |
+| `d8_user_authz_authorization_rules_invalid{kind,reason}` | Правила с условием `Ready=False` по виду и причине |
+| `d8_user_authz_authorization_rule_invalid{kind,name,rule_namespace,reason}` | `1` для каждого такого правила (по имени экспортируется не более 50 правил; агрегат выше всегда полный) |
+| `d8_user_authz_custom_cluster_roles{level}` | Кастомные ClusterRole (с аннотацией `user-authz.deckhouse.io/access-level`) по уровням доступа |
+| `d8_user_authz_custom_aggregation_missing{level}` | `1`, если у агрегированной ClusterRole `user-authz:<level>:custom` нет правил, хотя кастомные роли для неё существуют |
+| `d8_user_authz_bindings_keep_stamped_total`, `d8_user_authz_keep_stamp_duration_seconds` | Работа миграционного хука, защищающего созданные чартом биндинги от удаления релизом: сколько объектов помечено и длительность последнего прогона |
+| `controller_runtime_reconcile_total`, `controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` | Стандартные метрики controller-runtime по каждому контроллеру (лейбл `controller`: `clusterauthorizationrule-bindings`, `authorizationrule-bindings`, `dict-bindings`, `manage-bindings`) |
+
+**Алерты** (в правилах Prometheus `d8_user_authz`):
+
+- `D8UserAuthzControllerUnavailable` и `D8UserAuthzControllerTargetDown` — у контроллера недоступные реплики или его метрики не собираются 5 минут;
+- `D8UserAuthzControllerReconcileErrorsHigh` — устойчивый поток ошибок reconcile;
+- `D8UserAuthzBindingsDrift` — биндинги какого-то вида 15 минут не приводятся к желаемому состоянию;
+- `D8UserAuthzAuthorizationRulesInvalid` и `D8UserAuthzAuthorizationRuleInvalid` — число и имена правил, биндинги которых не применяются 10 минут;
+- `D8UserAuthzCustomRolesNotAggregated` — агрегированная ClusterRole уровня доступа остаётся пустой, хотя кастомные роли для неё есть.
+
+Если правило остаётся в `Ready=False` с `ApplyError` из-за того, что у биндинга вручную изменили `roleRef`, удалите этот биндинг: `roleRef` неизменяем, контроллер пересоздаст биндинг с правильным.
+
+## Как проверить, что вебхук авторизации знает актуальные правила?
+
+Вебхук авторизации и Permission Browser читают параметры мультитенантности из ClusterAuthorizationRules (`limitNamespaces`, `namespaceSelector`, `allowAccessToSystemNamespaces`) напрямую из API, поэтому изменение доходит до них за несколько секунд.
+
+Чтобы проверить, что поды вебхука запущены, выполните команду:
+
+```bash
+d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+```
+
+Пример вывода (по одному поду на каждый master, в сети узла; готовы должны быть оба контейнера):
+
+```console
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE       NOMINATED NODE   READINESS GATES
+user-authz-webhook-qrm2n   2/2     Running   0          2d    10.0.0.11    master-0   <none>           <none>
+user-authz-webhook-h6jbh   2/2     Running   0          2d    10.0.0.12    master-1   <none>           <none>
+user-authz-webhook-97fvs   2/2     Running   0          2d    10.0.0.13    master-2   <none>           <none>
+```
+
+Чтобы вывести последние 100 строк логов контейнера вебхука из всех таких подов, выполните команду:
+
+```bash
+d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
+```
+
+Пример вывода:
+
+```console
+2026/09/11 10:00:00 server is starting to listen on  127.0.0.1:40443 ...
+2026/09/11 10:00:01 rules source: directory rebuilt from 12 rules (18 subjects, 0 quarantined) in 4.2ms
+```
+
+Строка `rules source: directory rebuilt from N rules` показывает, что informer получил список правил, и сколько их в каталоге; `quarantined` — число правил, у которых не скомпилировались шаблоны `limitNamespaces`.
+
+Экземпляр, который ещё не прочитал правила, неготов и отвечает на запросы авторизации ошибкой, а не запретом. В те секунды, пока созданное правило не дошло до вебхука, его субъектам закрыты все неймспейсы.
+
+Метрики вебхук отдаёт через сайдкар-контейнер `kube-rbac-proxy`; их собирает PodMonitor `user-authz-webhook`, для этого должен быть включён модуль `operator-prometheus`. На каждый master-узел приходится своя серия.
+
+| Метрика | Описание |
+|---|---|
+| `user_authz_webhook_rules_informer_synced` | `1`, если экземпляр хотя бы раз прочитал ClusterAuthorizationRules |
+| `user_authz_webhook_rules_observed` | Правила, которые экземпляр использует сейчас |
+| `user_authz_webhook_rules_subjects` | Число различных субъектов в этих правилах |
+| `user_authz_webhook_rules_max_resource_version` | Наибольший `resourceVersion` среди прочитанных правил. Сравните его с кластером, чтобы измерить отставание |
+| `user_authz_webhook_rules_quarantined` | Правила, которые экземпляр не смог использовать полностью: не компилируется паттерн `limitNamespaces` или `namespaceSelector` либо правило не удалось прочитать |
+| `user_authz_webhook_rules_directory_updated_timestamp_seconds` | Время последнего обновления правил |
+| `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Число обновлений правил и их длительность |
+| `user_authz_webhook_rules_watch_errors_total` | Ошибки list и watch при чтении правил |
+
+Permission Browser отдаёт те же метрики с префиксом `user_authz_permission_browser`; их собирает PodMonitor `permission-browser-apiserver`.
+
+Для обоих компонентов модуль поставляет следующие алерты:
+
+| Алерт | Когда срабатывает |
+|---|---|
+| `D8UserAuthzWebhookTargetDown` | Prometheus 5 минут не может собрать метрики хотя бы с одного экземпляра вебхука |
+| `D8UserAuthzWebhookRulesQuarantined` | Правило 10 минут не компилируется |
+| `D8UserAuthzWebhookRulesWatchErrors` | Вебхук 10 минут не может следить за изменениями правил |
+| `D8UserAuthzWebhookDirectoryDiverged` | Экземпляры 10 минут используют разные наборы правил, поэтому на один и тот же запрос приходит разный ответ в зависимости от master-узла, на который он попал |
+| `D8UserAuthzRulePropagationLag` | Один экземпляр час не обновлял правила, а другой обновлял |
+| `D8UserAuthzPermissionBrowserUnavailable` | У Permission Browser есть недоступные реплики |
+
+## Почему изменение ClusterAuthorizationRule применяется до 30 секунд?
+
+API-сервер кеширует ответы вебхука авторизации. В ресурсе AuthorizationConfiguration, который создаёт `control-plane-manager`, для вебхука заданы `authorizedTTL: 5m`, `unauthorizedTTL: 30s` и `timeout: 3s`. Ключ кеша — весь SubjectAccessReview, поэтому ответ на повторный идентичный запрос приходит из кеша.
+
+Вебхук никогда не разрешает запрос: он либо запрещает его, либо не имеет мнения, и оба ответа API-сервер кеширует на `unauthorizedTTL`, то есть на 30 секунд. Поэтому создание правила или его сужение применяется к конкретному запросу в течение 30 секунд с момента последнего идентичного запроса:
+
+```bash
+d8 k auth can-i --as=user@example.com get pods -n other-namespace
+sleep 30
+d8 k auth can-i --as=user@example.com get pods -n other-namespace
+```
+
+Сбросить кеш без перезапуска `kube-apiserver` нельзя.
+
+Для ресурса только что установленного CRD, задержка достигает 40 секунд. Вебхук узнаёт из discovery, принадлежит ли ресурс неймспейсу, и запрашивает discovery не чаще раза в 10 секунд, после чего API-сервер кеширует ответ ещё на 30 секунд.
+
+В эти секунды ограничения по неймспейсам к такому ресурсу не применяются: вебхук о нём ещё не знает, мнения не имеет, и отвечает один только RBAC — поэтому субъект, которого правило ограничивает несколькими неймспейсами, может запросить новый ресурс по всему кластеру. Установка CRD требует куда больших прав, чем даёт это окно, поэтому discovery и запрашивается с ограниченной частотой, а не на каждый запрос. У Permission Browser есть такое же по порядку окно для его отчёта — до 30 секунд.
+
+## Почему правило требует мультитенантности?
+
+Параметры `limitNamespaces`, `namespaceSelector` и `allowAccessToSystemNamespaces` применяет вебхук авторизации, а он разворачивается, только если включён параметр [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy). Правило, в котором эти параметры заданы при выключенной мультитенантности, применяется без них: субъекты правила получают его уровень доступа во **всех** неймспейсах кластера, включая системные.
+
+Считаются только параметры, которые задают ограничение. Правило с `allowAccessToSystemNamespaces: false` или с пустым списком `limitNamespaces` в метрики не попадает.
+
+О ситуации сообщают две метрики:
+
+| Метрика | Описание |
+|---|---|
+| `d8_user_authz_rule_needs_multitenancy{name,options}` | Одна серия на каждое затронутое правило, не более 50, с параметрами, которые не применятся |
+| `d8_user_authz_rules_needing_multitenancy` | Общее число затронутых правил, включая те, что не попали в первые 50 |
+
+Алерт `D8UserAuthzRuleNeedsMultiTenancy` называет отдельное правило, а `D8UserAuthzRulesNeedMultiTenancy` срабатывает, когда затронутых правил больше, чем называет первый алерт. Оба входят в группу `D8UserAuthzMisconfigured`.
+
+Чтобы устранить ситуацию, включите мультитенантность или уберите параметры из правил.
+
+Чтобы посмотреть, включена ли мультитенантность, используйте команду:
+
+```bash
+d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
+```
+
+Чтобы получить имена ClusterAuthorizationRule, которые ограничивают доступ по неймспейсу или разрешают доступ к системным неймспейсам, используйте команду:
+
+```bash
+d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limitNamespaces // [] | length > 0) or (.spec.namespaceSelector != null) or (.spec.allowAccessToSystemNamespaces == true)) | .metadata.name'
+```
+
+## Как расширить роли или создать новую?
+
 Да. Обе модели в итоге сводятся к стандартному механизму RBAC Kubernetes, а RBAC — разрешающая модель: права из всех источников **суммируются**. Если действие разрешено хотя бы одним источником — ClusterAuthorizationRule, AuthorizationRule, RoleBinding на роль гранулярной модели или ProjectRoleBinding, — оно будет разрешено. Ничего специально «переключать» не нужно: можно оставить существующие ClusterAuthorizationRule и постепенно добавлять привязки ролей гранулярной модели.
 
 Единственное исключение — режим мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)). Если у пользователя есть ClusterAuthorizationRule с ограничением неймспейсов (`limitNamespaces` или `namespaceSelector`), это ограничение работает как **жёсткая граница**: запросы в неймспейсы вне списка отклоняются, даже если там у пользователя есть RoleBinding. Подробнее — [в описании модуля](./#rolebinding-car). Если пользователю нужен комбинированный доступ, используйте AuthorizationRule вместо ClusterAuthorizationRule или не задавайте ограничение пространств имён в CAR.

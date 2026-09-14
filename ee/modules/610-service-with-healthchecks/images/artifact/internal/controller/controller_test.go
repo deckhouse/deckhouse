@@ -254,3 +254,33 @@ func TestIsMetadataForServiceEqual(t *testing.T) {
 		})
 	}
 }
+
+func TestReconcileKeepsRequeueingItself(t *testing.T) {
+	scheme := newTestScheme(t)
+	swh := newTestSWH(nil, nil)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(swh).
+		WithStatusSubresource(&networkv1alpha1.ServiceWithHealthchecks{}).
+		Build()
+
+	reconciler := &ServiceWithHealthchecksReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Logger: log.NewNop(),
+	}
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Name: testName, Namespace: testNamespace}}
+
+	// The second pass changes nothing and must still requeue: clearNotUsedEPS only runs on
+	// reconciliation, and nothing watches Nodes, so a controller that stops requeueing keeps
+	// the EndpointSlices of removed nodes published.
+	for _, pass := range []string{"first", "second"} {
+		result, err := reconciler.Reconcile(context.Background(), request)
+		if err != nil {
+			t.Fatalf("%s reconcile failed: %v", pass, err)
+		}
+		if result.RequeueAfter != resyncPeriod {
+			t.Errorf("%s reconcile: RequeueAfter = %v, want %v", pass, result.RequeueAfter, resyncPeriod)
+		}
+	}
+}

@@ -12,18 +12,25 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 )
 
 // staticResourceScope is a test ResourceScope. Missing keys are unknown, and
 // an empty map stands for a snapshot discovery never filled.
 type staticResourceScope map[string]bool
 
-func (s staticResourceScope) Scope(group, resource string) (namespaced, known bool) {
-	namespaced, known = s[group+"/"+resource]
-	return namespaced, known
+// ScopeOf mirrors the production derivation, which now lives in the cache rather than in the
+// caller: a key present is an answer; a key absent is an answer only if there is a snapshot at all.
+// The fixture is a complete snapshot, so nothing here is missing because a group could not be read.
+func (s staticResourceScope) ScopeOf(group, resource string) rules.ResourceScope {
+	if namespaced, known := s[group+"/"+resource]; known {
+		return rules.ResourceScope{Known: true, Namespaced: namespaced}
+	}
+	return rules.ResourceScope{Absent: len(s) > 0}
 }
-
-func (s staticResourceScope) HasData() bool { return len(s) > 0 }
 
 func coreResourceScope() staticResourceScope {
 	return staticResourceScope{
@@ -58,7 +65,7 @@ const (
 
 func engineWithKnownScopes(t *testing.T, config string) *Engine {
 	t.Helper()
-	e, err := NewEngine(writeConfigJSON(t, config), nil, nil, coreResourceScope())
+	e, err := NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), nil, nil, coreResourceScope())
 	require.NoError(t, err)
 	return e
 }
@@ -229,12 +236,42 @@ func authorizeGroupedResource(t *testing.T, e *Engine, userName, group, resource
 	return decision
 }
 
-func TestEngine_Authorize_UnknownGroupedResourceIsDenied(t *testing.T) {
+// A resource that discovery says does not exist is left to RBAC, whether or not it has an API
+// group. The API server then answers 404, which is what the caller is owed; denying it told a
+// SuperAdmin they lacked permission for something that was never there.
+func TestEngine_Authorize_UnknownGroupedResourceIsLeftToRBAC(t *testing.T) {
 	editor := engineWithKnownScopes(t, editorCARConfig)
 
 	got := authorizeGroupedResource(t, editor, "editor@example.io", "example.io", "doesnotexist")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got,
+		"a resource the snapshot does not carry does not exist, so RBAC answers and the API server 404s")
+}
+
+// The other side of it: when the group could not be read, the resource is missing from the
+// snapshot because nobody looked, and that must keep failing closed.
+func TestEngine_Authorize_UnreadableGroupStillDenies(t *testing.T) {
+	scope := unavailableGroupScope{staticResourceScope: coreResourceScope(), unavailable: "example.io"}
+	editor, err := NewEngine(mttest.LegacyJSON(t, editorCARConfig), mttest.NoBindings(), nil, nil, scope)
+	require.NoError(t, err)
+
+	got := authorizeGroupedResource(t, editor, "editor@example.io", "example.io", "doesnotexist")
 	assert.Equal(t, authorizer.DecisionDeny, got,
-		"a grouped resource absent from the scope snapshot must not fail-open")
+		"a hole in the snapshot is not an answer; a cluster-wide list must not slip through it")
+}
+
+// unavailableGroupScope is a snapshot with one group the last refresh could not read. A resource
+// missing from such a group is missing because nobody looked, so it is neither known nor absent.
+type unavailableGroupScope struct {
+	staticResourceScope
+	unavailable string
+}
+
+func (s unavailableGroupScope) ScopeOf(group, resource string) rules.ResourceScope {
+	scope := s.staticResourceScope.ScopeOf(group, resource)
+	if !scope.Known && group == s.unavailable {
+		scope.Absent = false
+	}
+	return scope
 }
 
 // TestEngine_Authorize_UnknownCoreResourceMatchesWebhook locks parity with
@@ -253,7 +290,7 @@ func TestEngine_Authorize_UnknownCoreResourceMatchesWebhook(t *testing.T) {
 // of that carve-out: with no snapshot at all we cannot tell a missing
 // resource from missing discovery, and the webhook denies too.
 func TestEngine_Authorize_EmptySnapshotDeniesCoreResource(t *testing.T) {
-	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, staticResourceScope{})
+	editor, err := NewEngine(mttest.LegacyJSON(t, editorCARConfig), mttest.NoBindings(), nil, nil, staticResourceScope{})
 	require.NoError(t, err)
 
 	got := authorizeGroupedResource(t, editor, "editor@example.io", "", "pods")
@@ -262,7 +299,7 @@ func TestEngine_Authorize_EmptySnapshotDeniesCoreResource(t *testing.T) {
 }
 
 func TestEngine_Authorize_NilScopeIsDenied(t *testing.T) {
-	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, nil)
+	editor, err := NewEngine(mttest.LegacyJSON(t, editorCARConfig), mttest.NoBindings(), nil, nil, nil)
 	require.NoError(t, err)
 
 	got := authorizeResource(t, editor, "editor@example.io", "list", "pods", "")

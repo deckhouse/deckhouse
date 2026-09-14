@@ -362,7 +362,7 @@ Currently, the multi-tenancy mode (namespace-based authorization) is implemented
 
 If a [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) Custom Resource contains the `namespaceSelector` field, neither `limitNamespaces` nor `allowAccessToSystemNamespaces`are taken into consideration.
 
-The `allowAccessToSystemNamespaces`, `namespaceSelector` and `limitNamespaces` options in the custom resource will no longer be applied if the authorization system's webhook is unavailable for some reason. As a result, users will have access to all namespaces. After the webhook availability is restored, the options will become relevant again.
+If the authorization webhook becomes unavailable, requests are **denied**, not allowed: the webhook runs before RBAC and is configured with `failurePolicy: Deny`, so a request it cannot answer does not reach RBAC. The exception is the identities listed in `matchConditions` of the AuthorizationConfiguration: control-plane components, kubelets, and the service accounts of the `kube-system` and `d8-*` namespaces bypass the webhook, so the cluster keeps running and Deckhouse can restore the webhook.
 
 ### Default access list for each role
 
@@ -550,6 +550,8 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
+get,patch:
+    - pods/resize
 write:
     - apps/deployments
     - apps/statefulsets
@@ -597,6 +599,8 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
+create:
+    - serviceaccounts/token
 create,patch,update:
     - pods
 delete,deletecollection:
@@ -732,6 +736,8 @@ read-write:
     - nodes/pods
     - nodes/proxy
     - nodes/stats
+update:
+    - namespaces/finalize
 write:
     - cilium.io/ciliumclusterwidenetworkpolicies
     - cilium.io/ciliumnetworkpolicies

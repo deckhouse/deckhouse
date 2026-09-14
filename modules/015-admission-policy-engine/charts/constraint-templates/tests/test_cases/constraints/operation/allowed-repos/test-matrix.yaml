@@ -7,7 +7,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
@@ -17,91 +17,127 @@ spec:
           namespace: testns
         spec:
           containers:
-            - image: nginx
-              name: nginx
+          - image: nginx
+            name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
-    - name: operation-policy
-      gatorBlock: operation-policy
-      defaultObjectBase: ""
-      template: ../../templates/operation/allowed-repos.yaml
-      constraint: constraints/policy_1.yaml
-      cases:
-        - name: example-allowed
-          violations: "no"
-          assertionMessage: ""
-          fields:
-            - path: spec.containers[].image
-              scenario: positive
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: allowed
+  - name: operation-policy
+    gatorBlock: operation-policy
+    defaultObjectBase: ''
+    template: ../../templates/operation/allowed-repos.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: example-allowed
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].image
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed
+          spec:
+            containers:
+            - name: foo
+              image: my.repo/app:v1
+    - name: example-disallowed
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].image
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed
+          spec:
+            containers:
+            - name: foo
+              image: gcr.io/app:v1
+    - name: example-allowed-init-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].image
+        scenario: initContainer
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-init-container
+          spec:
+            containers:
+            - name: foo
+              image: my.repo/app:v1
+            initContainers:
+            - name: init
+              image: my.repo/init:v1
+    - name: example-disallowed-ephemeral-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].image
+        scenario: ephemeralContainer
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-ephemeral-container
+          spec:
+            containers:
+            - name: foo
+              image: my.repo/app:v1
+            ephemeralContainers:
+            - name: eph
+              image: docker.io/bad/app:v1
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: controller-allowed-allowed-repos
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].image
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-allowed-repos
+          spec:
+            template:
               spec:
                 containers:
-                  - name: foo
-                    image: my.repo/app:v1
-        - name: example-disallowed
-          violations: "yes"
-          assertionMessage: ""
-          fields:
-            - path: spec.containers[].image
-              scenario: negative
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: disallowed
-              spec:
-                containers:
-                  - name: foo
-                    image: gcr.io/app:v1
-        - name: example-allowed-init-container
-          violations: "no"
-          assertionMessage: ""
-          fields:
-            - path: spec.containers[].image
-              scenario: initContainer
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: allowed-init-container
-              spec:
-                containers:
-                  - name: foo
-                    image: my.repo/app:v1
-                initContainers:
-                  - name: init
-                    image: my.repo/init:v1
-        - name: example-disallowed-ephemeral-container
-          violations: "yes"
-          assertionMessage: ""
-          fields:
-            - path: spec.containers[].image
-              scenario: ephemeralContainer
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: disallowed-ephemeral-container
-              spec:
-                containers:
-                  - name: foo
-                    image: my.repo/app:v1
-                ephemeralContainers:
-                  - name: eph
-                    image: docker.io/bad/app:v1
+                - image: my.repo/nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''

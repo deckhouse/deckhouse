@@ -68,7 +68,10 @@ func newBenchRBACEvaluator(b *testing.B) *RBACEvaluator {
 
 	client := fake.NewSimpleClientset(benchRBACObjects()...)
 	informerFactory := informers.NewSharedInformerFactory(client, 0)
-	evaluator := NewRBACEvaluator(log.New(io.Discard, "", 0), informerFactory)
+	evaluator, err := NewRBACEvaluator(log.New(io.Discard, "", 0), informerFactory)
+	if err != nil {
+		b.Fatalf("build the RBAC evaluator: %v", err)
+	}
 
 	stopCh := make(chan struct{})
 	b.Cleanup(func() { close(stopCh) })

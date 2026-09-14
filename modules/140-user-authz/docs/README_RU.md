@@ -5,7 +5,7 @@ description: "Авторизация и управление доступом п
 
 Модуль отвечает за генерацию объектов ролевой модели доступа, основанной на базе стандартного механизма RBAC Kubernetes. Модуль создает набор кластерных ролей (ClusterRole), подходящий для большинства задач по управлению доступом пользователей и групп.
 
-Биндинги, которые выдают пользователям уровни доступа из ClusterAuthorizationRule и AuthorizationRule, поддерживает компонент `user-authz-controller`: он следит за правилами, синхронизирует их ClusterRoleBinding и RoleBinding и записывает результат в `status` каждого правила (`kubectl get clusterauthorizationrules` показывает колонки `READY` и `BINDINGS`). Правило с неподдерживаемым `accessLevel` получает `Ready=False` с причиной `InvalidSpec`, а не ломает модуль.
+Биндинги, которые выдают пользователям уровни доступа из ClusterAuthorizationRule и AuthorizationRule, поддерживает компонент `user-authz-controller`: он следит за правилами, синхронизирует их ClusterRoleBinding и RoleBinding и записывает результат в `status` каждого правила (`d8 k get clusterauthorizationrules` показывает колонки `READY` и `BINDINGS`). Правило с неподдерживаемым `accessLevel` получает `Ready=False` с причиной `InvalidSpec`, а не ломает модуль. Контроллер отдаёт метрики: сколько правил он видит, какие биндинги для них нужны, какие есть на самом деле и где между этим расхождение, а модуль поставляет алерты о недоступности контроллера, устойчивом расхождении и правилах, биндинги которых не применяются (подробнее — в [FAQ](faq.html#как-проверить-что-контроллер-поддерживает-биндинги-в-актуальном-состоянии)).
 
 {% alert level="warning" %}
 В модуле реализованы две ролевые модели: [гранулярная](#гранулярная-ролевая-модель) (рекомендуется к использованию) и [упрощённая](#упрощённая-ролевая-модель), построенная на ресурсах ClusterAuthorizationRule и AuthorizationRule (поддержка будет прекращена в будущих релизах).
@@ -370,7 +370,7 @@ d8 k get clusterrolebindings,rolebindings -A -o json \
 
 В случае, если в [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)-ресурсе используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
 
-Если вебхук, который реализовывает систему авторизации, по какой-то причине будет недоступен, опции `allowAccessToSystemNamespaces`, `namespaceSelector` и `limitNamespaces` в custom resource перестанут применяться и пользователи будут иметь доступ во все пространства имён. После восстановления доступности вебхука опции продолжат работать.
+Если вебхук авторизации станет недоступен, запросы будут **запрещаться**, а не разрешаться: вебхук стоит перед RBAC и настроен с `failurePolicy: Deny`, поэтому запрос, на который он не смог ответить, до RBAC не доходит. Исключение — идентичности, перечисленные в `matchConditions` ресурса AuthorizationConfiguration: компоненты control plane, kubelet'ы и сервисные аккаунты неймспейсов `kube-system` и `d8-*` webhook не проходят, поэтому кластер продолжает работать, а Deckhouse может восстановить вебхук.
 
 ### Список доступа для каждой роли модуля по умолчанию
 
@@ -558,6 +558,8 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
+get,patch:
+    - pods/resize
 write:
     - apps/deployments
     - apps/statefulsets
@@ -605,6 +607,8 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
+create:
+    - serviceaccounts/token
 create,patch,update:
     - pods
 delete,deletecollection:
@@ -740,6 +744,8 @@ read-write:
     - nodes/pods
     - nodes/proxy
     - nodes/stats
+update:
+    - namespaces/finalize
 write:
     - cilium.io/ciliumclusterwidenetworkpolicies
     - cilium.io/ciliumnetworkpolicies

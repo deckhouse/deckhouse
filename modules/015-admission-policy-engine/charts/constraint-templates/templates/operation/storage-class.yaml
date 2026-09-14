@@ -25,16 +25,20 @@ spec:
                 type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          storageClass := input.review.object.spec.storageClassName
-          not contains(input.parameters.storageClassNames, storageClass)
-          msg := sprintf("PersistentVolumeClaim <%v> has invalid storage class: %v, allowed: %v", [input.review.object.metadata.name, storageClass, input.parameters.storageClassNames])
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                storageClass := input.review.object.spec.storageClassName
+                not list_contains(input.parameters.storageClassNames, storageClass)
+                msg := sprintf("PersistentVolumeClaim <%v> has invalid storage class: %v, allowed: %v", [input.review.object.metadata.name, storageClass, input.parameters.storageClassNames])
+              }
 
-        contains(list, elem) {
-          list[_] = elem
-        }
+              list_contains(list, elem) if {
+                list[_] == elem
+              }
