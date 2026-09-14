@@ -1,0 +1,61 @@
+- name: d8.kubelet-checkpoint-state-reset
+  rules:
+    - alert: D8KubeletCheckpointStateReset
+      expr: |
+        max by (node, manager, reason) (
+          increase(kubelet_checkpoint_state_reset_total{job="kubelet"}[1h])
+        ) > 0
+      for: 5m
+      labels:
+        tier: cluster
+        severity_level: "6"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Kubelet on Node {{ $labels.node }} reset the {{ $labels.manager }} manager checkpoint.
+        description: |
+          Within the last hour, kubelet on Node `{{ $labels.node }}` found the `{{ $labels.manager }}` manager checkpoint unusable (reason `{{ $labels.reason }}`) and reset it instead of refusing to start.
+
+          Running containers that held exclusive CPUs or NUMA memory zones in the reset state were stopped, so kubelet recreates them and assigns the resources again. Expect restarts of Guaranteed Pods on this Node.
+
+          A reset right after a Node reboot is expected, for example, because of per-NUMA memory drift. Repeated resets, or resets on many Nodes at once, may indicate a kubelet configuration problem.
+
+          To find the affected Pods:
+
+          ```shell
+          d8 k get events -A --field-selector reason=NUMACheckpointReset
+          ```
+
+          The details are also stored on the Node in `/var/lib/kubelet/d8-numa-selfheal.json`.
+
+    - alert: D8KubeletCheckpointStateResetStopFailed
+      expr: |
+        max by (node, manager) (
+          kubelet_checkpoint_state_reset_stop_failures_total{job="kubelet"}
+        ) > 0
+      for: 5m
+      labels:
+        tier: cluster
+        severity_level: "4"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Kubelet on Node {{ $labels.node }} failed to stop containers after a {{ $labels.manager }} manager checkpoint reset.
+        description: |
+          After resetting the `{{ $labels.manager }}` manager checkpoint on Node `{{ $labels.node }}`, kubelet failed to stop some containers that held exclusive CPUs or NUMA memory zones.
+
+          Such a container is still running, while the reset state considers its CPUs or memory zone free. A new Guaranteed Pod on this Node may be assigned the same resources.
+
+          To find the affected Pods:
+
+          ```shell
+          d8 k get events -A --field-selector reason=NUMACheckpointResetFailed
+          ```
+
+          The details are also stored on the Node in `/var/lib/kubelet/d8-numa-selfheal.json`.
+
+          Delete the affected Pods or drain the Node, so their containers are recreated with new assignments. The alert is resolved after kubelet restarts on the Node:
+
+          ```shell
+          systemctl restart kubelet
+          ```
