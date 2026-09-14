@@ -19,6 +19,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
@@ -283,4 +285,19 @@ func TestCloudMasterCredentialIsCheckedFirst(t *testing.T) {
 		t.Errorf("the credential is checked at position %d, after a check that tunnels through it at %d",
 			credentialAt, firstOverSSHAt)
 	}
+}
+
+// TestCloudAPIDependsOnTheCredential: the cloud API check used to wait for the master to answer
+// before doing anything of its own. That wait now belongs to ssh-credential, which runs first — so
+// the dependency is declared rather than left implicit, and a reader of the report sees the cloud
+// API check blocked by the credential rather than failing on its own account.
+func TestCloudAPIDependsOnTheCredential(t *testing.T) {
+	for _, check := range NewPostCloudSuite(PostCloudDeps{}).Checks() {
+		if check.Name != checks.CloudAPICheckName {
+			continue
+		}
+		assert.Contains(t, check.DependsOn, checks.SSHCredentialCheckName)
+		return
+	}
+	t.Fatalf("%s is not in the cloud suite", checks.CloudAPICheckName)
 }

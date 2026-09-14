@@ -37,6 +37,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
@@ -207,23 +209,28 @@ func TestCloudAPIWhenTheProxyRefuses(t *testing.T) {
 	assert.ErrorAs(t, err, &permanent)
 }
 
-// TestCloudAPIWhenTheMasterNeverAnswers: the check runs before the phase that waits for SSH, so on
-// a fresh VM it is the first thing to talk to the master. When that fails it has to say so as an
-// SSH problem rather than as a cloud API one.
-func TestCloudAPIWhenTheMasterNeverAnswers(t *testing.T) {
-	_, meta := cloudAPIServer(t, func(http.ResponseWriter, *http.Request) {}, "", nil)
+// TestCloudAPIDoesNotProbeTheConnectionItself: the check used to wait for the master to answer
+// before doing anything, because nothing else in this phase did. ssh-credential goes first now and
+// carries that wait, so probing again re-proved a connection that had just been proven — and put a
+// second "Waiting for SSH connection" box in the middle of the report, which read as though the
+// wait were happening twice.
+func TestCloudAPIDoesNotProbeTheConnectionItself(t *testing.T) {
+	requireTunnelPortFree(t)
 
-	client := newFakeSSHClient("127.0.0.1:1")
-	client.reachErr = errors.New("timed out waiting for the host")
+	server, meta := cloudAPIServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}, "", nil)
+
+	client := newFakeSSHClient(server.Listener.Addr().String())
+	// An availability probe would fail on this; the check must never ask for one.
+	client.onAwait = func(retry.Params) { t.Error("the connection is proven by ssh-credential, not here") }
+	client.reachErr = errors.New("the probe must not be reached")
+
 	check := CloudAPICheck{MetaConfig: meta, SSHProviderInitializer: sourceOf(client)}
 
 	_, err := check.Run(context.Background())
 
-	require.Error(t, err)
-	var failure *preflight.Failure
-	require.ErrorAs(t, err, &failure)
-	assert.Contains(t, failure.Checked, "ssh login to ubuntu@10.0.0.5")
-	assert.Contains(t, failure.Fix, "22/TCP")
+	require.NoError(t, err)
 }
 
 // exitError returns a real *exec.ExitError with the given status, which is what the clissh backend
@@ -241,9 +248,9 @@ func exitError(t *testing.T, status int) error {
 // every message the operator got was about something else — the last of them advising them to
 // check AllowTcpForwarding on a machine they had never logged in to.
 //
-// ssh exits 255 for every reason it could not open a session, so the check cannot know it was the
-// user. What it can do is name the connection it tried — the user included — and put the
-// credential first among the causes.
+// ssh-credential answers this first now and stops the phase, so this is the path left when it was
+// turned off by name. The check cannot know it was the user — ssh does not say — but it can name
+// the connection it tried, the user included, and put the credential first among the causes.
 func TestCloudAPIWithTheWrongSSHUser(t *testing.T) {
 	assertPointsAtTheCredential := func(t *testing.T, err error) {
 		t.Helper()
@@ -259,20 +266,9 @@ func TestCloudAPIWithTheWrongSSHUser(t *testing.T) {
 			"sshd's forwarding settings are about a session that was never opened")
 	}
 
-	t.Run("the availability probe is what fails", func(t *testing.T) {
-		_, meta := cloudAPIServer(t, func(http.ResponseWriter, *http.Request) {}, "", nil)
-
-		client := newFakeSSHClient("127.0.0.1:1")
-		client.reachErr = exitError(t, 255)
-		check := CloudAPICheck{MetaConfig: meta, SSHProviderInitializer: sourceOf(client)}
-
-		_, err := check.Run(context.Background())
-
-		assertPointsAtTheCredential(t, err)
-	})
-
-	t.Run("the tunnel is what fails", func(t *testing.T) {
-		// The reported shape: the probe passed and opening the forward is where ssh gave up.
+	t.Run("the legacy backend gives only an exit status", func(t *testing.T) {
+		// The reported shape: opening the forward is where ssh gave up, with exit 255 and
+		// nothing else to go on.
 		_, meta := cloudAPIServer(t, func(http.ResponseWriter, *http.Request) {}, "", nil)
 
 		client := newFakeSSHClient("127.0.0.1:1")
@@ -284,12 +280,12 @@ func TestCloudAPIWithTheWrongSSHUser(t *testing.T) {
 		assertPointsAtTheCredential(t, err)
 	})
 
-	t.Run("an explicit authentication failure is permanent", func(t *testing.T) {
-		// The gossh backend says so in words, and then there is nothing to retry.
+	t.Run("the default backend says so in words", func(t *testing.T) {
+		// gossh reports what x/crypto produced, and then there is nothing to retry.
 		_, meta := cloudAPIServer(t, func(http.ResponseWriter, *http.Request) {}, "", nil)
 
 		client := newFakeSSHClient("127.0.0.1:1")
-		client.reachErr = errors.New("ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey]")
+		client.tunnelErr = errors.New("ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey]")
 		check := CloudAPICheck{MetaConfig: meta, SSHProviderInitializer: sourceOf(client)}
 
 		_, err := check.Run(context.Background())

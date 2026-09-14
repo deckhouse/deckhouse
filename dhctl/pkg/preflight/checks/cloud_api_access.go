@@ -20,11 +20,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -34,16 +31,6 @@ import (
 )
 
 const CloudAPICheckName preflight.CheckName = "cloud-api-accessibility"
-
-// masterReachableBudget is how long the check waits for the master to answer SSH before giving
-// up. This node runs in the post-infra phase, which the tree places before the phase that waits
-// for SSH on the master, so on a freshly created VM the first attempt races the boot. The wait
-// belongs here rather than in the tree: reordering the phases changes what --skip-phase means
-// and how Commander accounts for them.
-var masterReachableBudget = struct {
-	attempts int
-	wait     time.Duration
-}{attempts: 60, wait: 2 * time.Second}
 
 // sshClientSource is the part of the SSH provider initializer this check needs: the client to
 // run the request from, and which backend it is, since clissh and gossh spell a port-forward
@@ -154,7 +141,16 @@ func (c CloudAPICheck) endpoint() (*cca.CloudAPIConfig, error) {
 }
 
 // masterClient resolves the SSH client now, rather than reusing one captured before the master
-// existed, and waits for the machine to answer.
+// existed.
+//
+// It does not wait for the machine any more. It used to, because nothing else in this phase did:
+// the phase runs between creating the master and the bootstrap's own wait for SSH on it. ssh-
+// credential now goes first and carries that wait, so a second one here probed a connection that
+// had just been proven — 50 milliseconds, and a "Waiting for SSH connection" box in the middle of
+// the report that read as though the wait were happening twice.
+//
+// If the connection is broken anyway — ssh-credential turned off by name — the failure surfaces at
+// the tunnel below, and tunnelFailure classifies it the same way.
 func (c CloudAPICheck) masterClient(ctx context.Context) (libcon.SSHClient, error) {
 	sshProvider, err := c.SSHProviderInitializer.GetSSHProvider(ctx)
 	if err != nil {
@@ -166,17 +162,6 @@ func (c CloudAPICheck) masterClient(ctx context.Context) (libcon.SSHClient, erro
 		return nil, fmt.Errorf("no SSH connection to the master node: %w", err)
 	}
 
-	if err := sshClient.Check().WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
-		retry.WithWait(masterReachableBudget.wait),
-		retry.WithAttempts(masterReachableBudget.attempts),
-		retry.WithLogger(dhlog.FromContext(ctx)),
-	)); err != nil {
-		// A machine that is still booting and a machine that turns the credentials down look
-		// alike from here — both are "ssh did not work" — and they are opposite problems. Sending
-		// an operator who mistyped --ssh-user to the security groups costs them the whole wait
-		// again.
-		return nil, sshLoginFailure(sshClient, err)
-	}
 	return sshClient, nil
 }
 
