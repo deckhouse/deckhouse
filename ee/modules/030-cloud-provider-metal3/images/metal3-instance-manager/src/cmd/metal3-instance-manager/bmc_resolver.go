@@ -52,24 +52,22 @@ type BMCResolver interface {
 }
 
 type networkBMCResolver struct {
-	timeout time.Duration
+	probeTimeout time.Duration
 }
 
-func newNetworkBMCResolver(timeout time.Duration) BMCResolver {
-	return &networkBMCResolver{timeout: timeout}
-}
-
-func (r *networkBMCResolver) Resolve(ctx context.Context, config BMCConfig, username, password string) (ResolvedBMC, error) {
-	probeTimeout := r.timeout / 3
+func newNetworkBMCResolver(probeTimeout time.Duration) BMCResolver {
 	if probeTimeout <= 0 {
 		probeTimeout = time.Second
 	}
+	return &networkBMCResolver{probeTimeout: probeTimeout}
+}
 
-	redfish, redfishErr := r.resolveRedfish(ctx, config, username, password, probeTimeout)
+func (r *networkBMCResolver) Resolve(ctx context.Context, config BMCConfig, username, password string) (ResolvedBMC, error) {
+	redfish, redfishErr := r.resolveRedfish(ctx, config, username, password, r.probeTimeout)
 	if redfishErr == nil {
 		return redfish, nil
 	}
-	ipmiCtx, cancel := context.WithTimeout(ctx, probeTimeout)
+	ipmiCtx, cancel := context.WithTimeout(ctx, r.probeTimeout)
 	defer cancel()
 	ipmi, ipmiErr := r.resolveIPMI(ipmiCtx, config, username, password)
 	if ipmiErr == nil {

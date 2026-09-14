@@ -4,6 +4,7 @@ positive:
   - nodes:
       parameters:
         ironic:
+          bmcProbeTimeoutSeconds: 30
           provisioningNetwork:
             interface: eno2
             ipAddress: 172.22.0.20
@@ -31,6 +32,18 @@ positive:
                 key: ca.crt
 negative:
   configValues:
+  - nodes:
+      parameters:
+        ironic:
+          bmcProbeTimeoutSeconds: 0
+          provisioningNetwork:
+            interface: eno2
+            ipAddress: 172.22.0.20
+          dhcp:
+            internal:
+              networkCIDR: 172.22.0.0/24
+              rangeBegin: 172.22.0.100
+              rangeEnd: 172.22.0.200
   - nodes:
       parameters:
         ironic:

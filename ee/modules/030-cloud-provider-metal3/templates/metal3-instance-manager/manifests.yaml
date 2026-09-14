@@ -99,6 +99,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "metal3InstanceManager") }}
         args:
         - --target-namespace=d8-cloud-instance-manager
+        - --bmc-probe-timeout={{ dig "bmcProbeTimeoutSeconds" 15 $ironic }}s
         resources:
           requests:
             cpu: 10m

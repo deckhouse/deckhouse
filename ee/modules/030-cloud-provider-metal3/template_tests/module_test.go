@@ -171,6 +171,7 @@ dhcp:
 			Expect(instanceManager.Exists()).To(BeTrue())
 			instanceManagerArgs := instanceManager.Field("spec.template.spec.containers.0.args").String()
 			Expect(instanceManagerArgs).To(ContainSubstring("--target-namespace=d8-cloud-instance-manager"))
+			Expect(instanceManagerArgs).To(ContainSubstring("--bmc-probe-timeout=15s"))
 			Expect(instanceManagerArgs).NotTo(ContainSubstring("--default-online"))
 			Expect(instanceManagerArgs).NotTo(ContainSubstring("--default-disable-automated-cleaning"))
 
@@ -194,6 +195,17 @@ dhcp:
 			capm3MutatingWebhook := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "capm3-mutating-webhook-configuration")
 			Expect(capm3MutatingWebhook.Exists()).To(BeTrue())
 			Expect(capm3MutatingWebhook.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("capm3-ca"))))
+		})
+
+		It("renders custom BMC probe timeout for Metal3Instance manager", func() {
+			f.ValuesSet("cloudProviderMetal3.nodes.parameters.ironic.bmcProbeTimeoutSeconds", 30)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			instanceManager := f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "metal3-instance-manager")
+			Expect(instanceManager.Exists()).To(BeTrue())
+			instanceManagerArgs := instanceManager.Field("spec.template.spec.containers.0.args").String()
+			Expect(instanceManagerArgs).To(ContainSubstring("--bmc-probe-timeout=30s"))
 		})
 	})
 
