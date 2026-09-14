@@ -8,14 +8,14 @@ positive:
 
   # only tolerations
   - tolerations:
-    - {"key":"dedicated.deckhouse.io","operator":"equal","value":"cert-manager"}
-    - {"key":"dedicated.deckhouse.io","operator":"equal","value":"system"}
+    - {"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"}
+    - {"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}
 
   # node selector with tolerations
   - nodeSelector: {"disk-type": "ssd"}
     tolerations:
-      - { "key": "dedicated.deckhouse.io","operator": "equal","value": "cert-manager" }
-      - { "key": "dedicated.deckhouse.io","operator": "equal","value": "system" }
+      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "cert-manager" }
+      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "system" }
 
   # cloudflare settings
   - cloudflareGlobalAPIKey: "key"
@@ -39,8 +39,8 @@ positive:
   # all in
   - nodeSelector: { "disk-type": "ssd" }
     tolerations:
-      - { "key": "dedicated.deckhouse.io","operator": "equal","value": "cert-manager" }
-      - { "key": "dedicated.deckhouse.io","operator": "equal","value": "system" }
+      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "cert-manager" }
+      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "system" }
     cloudflareGlobalAPIKey: "key"
     cloudflareEmail: "example@example.com"
     route53AccessKeyID: "key id"
@@ -69,3 +69,7 @@ negative:
   - cloudflareEmail: "not email"
   - cloudDNSServiceAccount: "must be base64 encoded json-string with 'project_id' field"
   - yandexServiceAccountJSON: "must be base64 encoded json"
+  - yandexFolderID: ""
+    yandexServiceAccountJSON: "eyJpZCI6ImFqZSIsInNlcnZpY2VfYWNjb3VudF9pZCI6ImFqZSJ9"
+  - yandexFolderID: "b1gabcdefghijklmnopq"
+    yandexServiceAccountJSON: ""

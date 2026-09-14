@@ -40,7 +40,10 @@ properties:
 
       yandexWebhookCert:
         type: object
-        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
         properties:
           crt:
             type: string

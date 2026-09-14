@@ -1,4 +1,4 @@
-{{- if and (hasKey .Values.certManager "yandexFolderID") (hasKey .Values.certManager "yandexServiceAccountJSON") }}
+{{- if include "cert_manager.yandex_dns_configured" . }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -8,14 +8,38 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
-  name: d8:cert-manager:yandex-dns-webhook:secrets-reader
+  name: yandex-dns-webhook:secrets-reader
+  namespace: d8-cert-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources: ["secrets"]
+  resourceNames: ["yandex"]
   verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: yandex-dns-webhook:secrets-reader
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: yandex-dns-webhook:secrets-reader
+subjects:
+- kind: ServiceAccount
+  name: yandex-dns-webhook
+  namespace: d8-cert-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:yandex-dns-webhook:flowcontrol
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+rules:
 - apiGroups: ["flowcontrol.apiserver.k8s.io"]
   resources: ["flowschemas", "prioritylevelconfigurations"]
   verbs: ["list", "watch"]
@@ -23,12 +47,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:cert-manager:yandex-dns-webhook:secrets-reader
+  name: d8:cert-manager:yandex-dns-webhook:flowcontrol
   {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:cert-manager:yandex-dns-webhook:secrets-reader
+  name: d8:cert-manager:yandex-dns-webhook:flowcontrol
 subjects:
 - kind: ServiceAccount
   name: yandex-dns-webhook

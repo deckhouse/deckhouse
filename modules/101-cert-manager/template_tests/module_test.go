@@ -533,6 +533,17 @@ podAntiAffinity:
 
 			deployment := f.KubernetesResource("Deployment", "d8-cert-manager", "yandex-dns-webhook")
 			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(MatchJSON(`[
+				"--tls-cert-file=/tls/tls.crt",
+				"--tls-private-key-file=/tls/tls.key",
+				"--secure-port=6443"
+			]`))
+			Expect(deployment.Field("spec.template.spec.containers.0.env.0.name").String()).To(Equal("GROUP_NAME"))
+			Expect(deployment.Field("spec.template.spec.containers.0.env.0.value").String()).To(Equal("acme.cloud.yandex.com"))
+			Expect(deployment.Field("spec.template.spec.containers.0.livenessProbe.httpGet.path").String()).To(Equal("/healthz"))
+			Expect(deployment.Field("spec.template.spec.containers.0.readinessProbe.httpGet.path").String()).To(Equal("/healthz"))
+			Expect(deployment.Field("spec.template.spec.containers.0.livenessProbe.httpGet.scheme").String()).To(Equal("HTTPS"))
+			Expect(deployment.Field("spec.template.spec.serviceAccountName").String()).To(Equal("yandex-dns-webhook"))
 
 			service := f.KubernetesResource("Service", "d8-cert-manager", "yandex-dns-webhook")
 			Expect(service.Exists()).To(BeTrue())
@@ -542,6 +553,53 @@ podAntiAffinity:
 			Expect(apiService.Field("spec.group").String()).To(Equal("acme.cloud.yandex.com"))
 			Expect(apiService.Field("spec.service.name").String()).To(Equal("yandex-dns-webhook"))
 			Expect(apiService.Field("spec.service.namespace").String()).To(Equal("d8-cert-manager"))
+
+			saSecretRole := f.KubernetesResource("Role", "d8-cert-manager", "yandex-dns-webhook:secrets-reader")
+			Expect(saSecretRole.Exists()).To(BeTrue())
+			Expect(saSecretRole.Field("rules.0.resources.0").String()).To(Equal("secrets"))
+			Expect(saSecretRole.Field("rules.0.resourceNames.0").String()).To(Equal("yandex"))
+			Expect(saSecretRole.Field("rules.0.verbs.0").String()).To(Equal("get"))
+
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:cert-manager:yandex-dns-webhook:secrets-reader").Exists()).To(BeFalse())
+
+			flowcontrolRole := f.KubernetesGlobalResource("ClusterRole", "d8:cert-manager:yandex-dns-webhook:flowcontrol")
+			Expect(flowcontrolRole.Exists()).To(BeTrue())
+			Expect(flowcontrolRole.Field("rules.0.apiGroups.0").String()).To(Equal("flowcontrol.apiserver.k8s.io"))
+
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-cert-manager", "yandex-dns-webhook")
+			Expect(vpa.Exists()).To(BeTrue())
+			Expect(vpa.Field("spec.targetRef.name").String()).To(Equal("yandex-dns-webhook"))
+			Expect(vpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
+		})
+	})
+
+	Context("Yandex DNS without webhook TLS values", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", `
+yandexFolderID: b1gabcdefghijklmnopq
+yandexServiceAccountJSON: eyJpZCI6ImFqZSIsInNlcnZpY2VfYWNjb3VudF9pZCI6ImFqZSJ9
+internal:
+  enableCAInjector: true
+  selfSignedCA:
+    cert: string
+    key: string
+  webhookCert:
+    ca: string
+    key: string
+    crt: string
+`)
+			f.HelmRender()
+		})
+
+		It("Must render issuer/secret but skip webhook until TLS is ready", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Secret", "d8-cert-manager", "yandex").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ClusterIssuer", "d8-cert-manager", "yandex").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-cert-manager", "yandex-dns-webhook").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("APIService", "v1alpha1.acme.cloud.yandex.com").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "d8-cert-manager", "yandex-dns-webhook-tls").Exists()).To(BeFalse())
 		})
 	})
 
