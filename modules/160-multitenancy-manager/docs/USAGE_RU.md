@@ -224,7 +224,7 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 | `projects.deckhouse.io/project: <имя проекта>` | ✓ | ✓ | Принадлежность к проекту — общий лейбл всех неймспейсов проекта. |
 | `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Признак дополнительного неймспейса (имя ресурса ProjectNamespace). |
 | `projects.deckhouse.io/project-template: <имя шаблона>` | ✓ | ✓ | Шаблон проекта; по нему применяются правила доступности кластерных ресурсов. |
-| `heritage: multitenancy-manager` | ✓ | ✓ | Неймспейс управляется контроллером проектов: его `spec`, финализаторы и лейблы из этой таблицы меняются через Project; остальные лейблы и аннотации можно менять напрямую. |
+| `heritage: multitenancy-manager` | ✓ | ✓ | Неймспейс управляется контроллером проектов: его `spec`, поле `finalizers` и лейблы из этой таблицы меняются через Project; остальные лейблы и аннотации можно менять напрямую. |
 | `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (наследуются) | Политики и фичи из шаблона проекта. |
 
 Общий лейбл `projects.deckhouse.io/project` позволяет выбирать неймспейсы проекта с помощью команды `get ns`. Примеры:
@@ -261,7 +261,7 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 
 Уже существующие RoleBinding и AuthorizationRule внутри неймспейса после перехода в проект продолжают работать. Namespace Admin **не** копируется в `.spec.administrators` и **не** становится `d8:project:admin`: эта роль ещё управляет ProjectRoleBinding, а это шире, чем Admin внутри одного неймспейса. Чтобы руководитель команды стал администратором проекта, оператор платформы добавляет его в `.spec.administrators` или создаёт ProjectRoleBinding. У Namespace Admin и раньше не было `update`/`patch`/`delete` на сам объект Namespace (только `get`/`list`/`watch`); после перехода в проект Namespace ещё и принадлежит Helm (`heritage: multitenancy-manager`).
 
-Лейблы и аннотации, которые ставит модуль, — `heritage`, `projects.deckhouse.io/*`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, аннотации node-selector и tolerations — меняются через Project и его шаблон; любой другой лейбл или аннотацию (`istio-injection`, лейбл Pod Security, служебную аннотацию GitOps-инструмента) можно по-прежнему поставить прямо на Namespace, если это позволяет RBAC, и контроллер их не трогает. `spec` и финализаторы Namespace, как и его удаление, остаются за контроллером.
+Лейблы и аннотации, которые ставит модуль, — `heritage`, `projects.deckhouse.io/*`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, аннотации node-selector и tolerations — меняются через Project и его шаблон; любой другой лейбл или аннотацию (`istio-injection`, лейбл Pod Security, служебную аннотацию GitOps-инструмента) можно по-прежнему поставить прямо на Namespace, если это позволяет RBAC, и контроллер их не трогает. `spec` и поле `finalizers` объекта Namespace, как и его удаление, остаются за контроллером.
 
 Сам лейбл `projects.deckhouse.io/project` ставит только контроллер: неймспейс, созданный вручную с этим лейблом, отклоняется, поэтому нельзя сделать так, чтобы неймспейс выглядел принадлежащим чужому проекту.
 
@@ -337,7 +337,7 @@ spec:
 
 При создании привязок действуют следующие проверки:
 
-- **Защита от повышения привилегий**: создать привязку может только пользователь, у которого есть право привязывать (`bind`) указанную роль; право проверяется по имени роли. У администратора проекта (`d8:project:admin`) есть `bind` ровно на восемь ролей: `d8:project:viewer`, `d8:project:user`, `d8:project:manager`, `d8:project:admin`, `d8:namespace:viewer`, `d8:namespace:user`, `d8:namespace:manager` и `d8:namespace:admin`. Привязка к любой другой роли — кастомной `d8:custom:*`, capability, `d8:project:superadmin` — для администратора проекта отклоняется, даже если роль уже его собственных полномочий, потому что право `bind` на это имя ему никто не выдал. Такие привязки создаёт администратор кластера, либо он отдельной ClusterRole выдаёт администраторам проекта право `bind` на кастомную роль.
+- **Защита от повышения привилегий**: создать привязку может только пользователь, у которого есть право привязывать (`bind`) указанную роль; право проверяется по имени роли. У администратора проекта (`d8:project:admin`) есть `bind` ровно на восемь ролей: `d8:project:viewer`, `d8:project:user`, `d8:project:manager`, `d8:project:admin`, `d8:namespace:viewer`, `d8:namespace:user`, `d8:namespace:manager` и `d8:namespace:admin`. Привязка к любой другой роли — кастомной `d8:custom:*`, capability, `d8:project:superadmin` — для администратора проекта отклоняется, даже если роль уже его собственных полномочий, потому что право `bind` на это имя ему никто не выдал. Такие привязки создаёт администратор кластера, либо он отдельной ClusterRole выдаёт администраторам проекта право `bind` на собственную роль.
 - Роль должна существовать: привязка к несуществующей роли отклоняется.
 - ServiceAccount в качестве субъекта ProjectRoleBinding должен принадлежать неймспейсу этого же проекта.
 - Системные и подсистемные роли (`d8:system:*`, `d8:subsystem:*`), а также произвольные роли вне перечисленных префиксов через проектные привязки выдать нельзя.
@@ -427,7 +427,7 @@ spec:
 
 ### Параметризация шаблона
 
-Параметром можно сделать двенадцать полей шаблона: `podSecurityStandard`, `networkPolicy.mode`, `features.monitoring`, `features.vulnerabilityScanning`, `logShipping.clusterDestinationRef`, `nodeSelector`, `tolerations`, `allowedUIDs`, `allowedGIDs`, `runtimeAudit.enabled`, `namespaceMetadata.labels` и `namespaceMetadata.annotations`. Вместо конкретного значения укажите `{fromParam: <имя параметра>}` и объявите параметр в `parametersSchema`. Значение не обязательно должно быть скалярным: параметром может быть и словарь (`nodeSelector`, `namespaceMetadata.labels`), и список (`tolerations`), и объект (`allowedUIDs`). Остальные поля — `title`, `description`, `resources`, `grantPolicies` и сам `parametersSchema` — принимают только литеральные значения. Тогда каждый проект задаёт своё значение в `.spec.parameters`, а если значение не задано — используется `default` из схемы.
+Параметром можно сделать двенадцать полей шаблона: `podSecurityStandard`, `networkPolicy.mode`, `features.monitoring`, `features.vulnerabilityScanning`, `logShipping.clusterDestinationRef`, `nodeSelector`, `tolerations`, `allowedUIDs`, `allowedGIDs`, `runtimeAudit.enabled`, `namespaceMetadata.labels` и `namespaceMetadata.annotations`. Вместо конкретного значения укажите `{fromParam: <имя параметра>}` и объявите параметр в `parametersSchema`. Значение не обязательно должно быть скалярным: параметром может быть и словарь (`nodeSelector`, `namespaceMetadata.labels`), и список (`tolerations`), и объект (`allowedUIDs`). Остальные поля — `title`, `description`, `resources`, `grantPolicies` и сам `parametersSchema` — принимают только конкретные значения. Тогда каждый проект задаёт своё значение в `.spec.parameters`, а если значение не задано — используется `default` из схемы.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -475,7 +475,7 @@ spec:
 
 - Шаблон, который используется хотя бы одним проектом, нельзя удалить.
 - Изменение шаблона автоматически применяется ко всем проектам, созданным из него.
-- Версия `deckhouse.io/v1alpha1` ресурса ProjectTemplate с текстовым полем `resourcesTemplate` (Helm-шаблонизация) больше не обслуживается, а в `v1alpha2` такого поля нет. Шаблон, сохранённый как `v1alpha1` с непустым `resourcesTemplate`, читается в `v1alpha2` без Helm-текста и с аннотацией `projects.deckhouse.io/legacy-helm-template: "true"`. Проекты такого шаблона контроллер не рендерит: они переходят в состояние `Error` с условием `TemplateRequiresRewrite`, а их объекты остаются ровно такими, какими были. Чтобы вернуть их в работу, перепишите шаблон структурированными полями и снимите аннотацию.
+- Версия `deckhouse.io/v1alpha1` ресурса ProjectTemplate с текстовым полем `resourcesTemplate` (Helm-шаблонизация) больше не обслуживается, а в `v1alpha2` такого поля нет. Шаблон, сохранённый как `v1alpha1` с непустым `resourcesTemplate`, читается в `v1alpha2` без Helm-текста и с аннотацией `projects.deckhouse.io/legacy-helm-template: "true"`. Проекты такого шаблона контроллер не применяет: они переходят в состояние `Error` с условием `TemplateRequiresRewrite`, а их объекты остаются ровно такими, какими были. Чтобы вернуть их в работу, перепишите шаблон структурированными полями и снимите аннотацию.
 
 ## Создание собственного шаблона для проекта
 
