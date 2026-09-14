@@ -280,22 +280,23 @@ func providerFixtures() []providerFixture {
 				"mainNetwork":  "VM Network",
 			},
 			rolloutExceptions: map[string]string{
-				// datastore stays out of rolloutFields: CAPV overrides VSphereVM.spec.Datastore
-				// from VSphereFailureDomain.spec.topology.datastore, which is one per zone and
-				// immutable via the FD webhook — a per-NG datastore override isn't reachable
-				// without recreating the FD. resourcePool, in contrast, IS in rolloutFields now:
-				// the ensure_failure_domains hook creates a per-NG VSphereDeploymentZone when the
-				// InstanceClass carries spec.resourcePool, and CAPV's overrideFunc reads
-				// PlacementConstraint.ResourcePool from that DZ.
-				"datastore/set": "CAPV overrides from VSphereFailureDomain.spec.topology.datastore",
-				// Optional string/list fields: v1 checksum wrapped them in `if $ic.<field>` (truthy
-				// guards), so an empty-string / empty-list mutation left the checksum unchanged.
-				// v2 declares them in rolloutFields and treats any mutation as a change, which is
-				// stricter and safer — but the strictness is a deliberate contract shift, not a
-				// regression, so the individual empty-mutations are pinned as exceptions here.
+				// Both resourcePool and datastore live in rolloutFields now: the
+				// ensure_failure_domains hook creates a per-NG VSphereDeploymentZone whenever
+				// either is set on the InstanceClass, and CAPV's overrideFunc reads both from
+				// PlacementConstraint (the datastore branch requires the images/capv-
+				// controller-manager/patches/003-datastore-on-deployment-zone.patch downstream
+				// patch — upstream only reads datastore from FD topology).
+				//
+				// Optional string/list fields: v1 checksum wrapped them in `if $ic.<field>`
+				// (truthy guards), so an empty-string / empty-list mutation left the checksum
+				// unchanged. v2 declares them in rolloutFields and treats any mutation as a
+				// change, which is stricter and safer — but the strictness is a deliberate
+				// contract shift, not a regression, so the individual empty-mutations are
+				// pinned as exceptions here.
 				"template/empty":           "v1 checksum skipped empty template via `if $ic.template`; v2 rolls on any mutation",
 				"additionalNetworks/empty": "v1 checksum skipped empty list via `if $ic.additionalNetworks`; v2 rolls on any mutation",
 				"resourcePool/empty":       "v1 checksum skipped empty via `or $ic.resourcePool $defaults.resourcePoolPath`; v2 rolls on any mutation because the hook uses the key presence to select DZ",
+				"datastore/empty":          "v1 checksum skipped empty via `or $ic.datastore $defaults.datastore`; v2 rolls on any mutation because the hook uses the key presence to select DZ",
 			},
 		},
 	}

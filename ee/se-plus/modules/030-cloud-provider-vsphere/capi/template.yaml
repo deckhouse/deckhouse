@@ -10,13 +10,14 @@ rolloutFields:
   - additionalNetworks
   - disableTimesync
   - runtimeOptions
-  # resourcePool is a rollout-relevant field again because the hook creates a per-NG
-  # VSphereDeploymentZone for InstanceClasses that carry it, and the MachineDeployment's
-  # failureDomain string encodes the NG identity for that DZ lookup. Changing the value
-  # requires new nodes to pick up the override — datastore is intentionally omitted:
-  # CAPV can only override datastore via VSphereFailureDomain.spec.topology.datastore,
-  # which is immutable and shared across NodeGroups in the zone.
+  # resourcePool and datastore are both rollout-relevant: the ensure_failure_domains hook
+  # creates a per-NG VSphereDeploymentZone whenever either is set on the InstanceClass, and
+  # the MachineDeployment's failureDomain string encodes the NG identity for that DZ lookup.
+  # datastore on DZ is a downstream CAPV extension (patches/003-datastore-on-deployment-zone
+  # .patch): the patched overrideFunc reads placementConstraint.datastore first and only
+  # falls back to VSphereFailureDomain.spec.topology.datastore when it is empty.
   - resourcePool
+  - datastore
 
 # failureDomain sits on the generic MachineDeployment node-controller builds — the provider
 # template renders the machine template only. Replaces v1 machine-deployment-spec-patch.yaml,
@@ -26,17 +27,19 @@ rolloutFields:
 #
 # There are two shapes for the string:
 #
-#   1. Zone-baseline "<sanZone>": for InstanceClasses that do NOT override resourcePool.
+#   1. Zone-baseline "<sanZone>": for InstanceClasses that do NOT override placement.
 #      hook creates a single "dz-<sanZone>" per zone with resourcePool derived from
-#      providerDiscoveryData.resourcePoolPath (module-wide default).
+#      providerDiscoveryData.resourcePoolPath (module-wide default) and datastore inherited
+#      from FD.topology.datastore.
 #
-#   2. NG-override "<sanZone>-<sanNG>": for InstanceClasses that carry spec.resourcePool.
-#      hook creates an extra DZ named "<sanZone>-<sanNG>" for every (NG that uses that IC,
-#      zone) pair, pointing at the same FD as the baseline but with placementConstraint
-#      .resourcePool = IC.spec.resourcePool. CAPV's overrideFunc reads .PlacementConstraint
-#      .ResourcePool from DZ; datastore is deliberately not overridable this way because
-#      CAPV reads datastore from VSphereFailureDomain.spec.topology, which is one per zone
-#      and immutable via the FD webhook.
+#   2. NG-override "<sanZone>-<sanNG>": for InstanceClasses that carry spec.resourcePool
+#      OR spec.datastore. hook creates an extra DZ named "<sanZone>-<sanNG>" for every
+#      (NG that uses that IC, zone) pair, pointing at the same FD as the baseline but with
+#      placementConstraint.resourcePool = IC.spec.resourcePool and .datastore =
+#      IC.spec.datastore. CAPV's overrideFunc reads both from PlacementConstraint (the
+#      datastore branch requires the images/capv-controller-manager/patches/003-datastore-
+#      on-deployment-zone.patch downstream patch — upstream only reads datastore from the
+#      FD topology).
 #
 # Names go through DNS-1123 sanitization on both sides. The raw vSphere tag "E2E Zone 1"
 # and the raw NG name "Worker Fast" would both fail Kubernetes object-name validation with
@@ -51,7 +54,7 @@ machineDeployment:
       {{- $sanZone := lower .zone | replace " " "-" -}}
       {{- $sanZone = regexReplaceAll "[^a-z0-9.-]" $sanZone "" -}}
       {{- $sanZone = trimAll "-." $sanZone -}}
-      {{- if hasKey .instanceClass "resourcePool" -}}
+      {{- if or (hasKey .instanceClass "resourcePool") (hasKey .instanceClass "datastore") -}}
         {{- $sanNG := lower .nodeGroup.name | replace " " "-" -}}
         {{- $sanNG = regexReplaceAll "[^a-z0-9.-]" $sanNG "" -}}
         {{- $sanNG = trimAll "-." $sanNG -}}
