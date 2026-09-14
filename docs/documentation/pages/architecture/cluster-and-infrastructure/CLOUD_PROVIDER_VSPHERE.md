@@ -50,7 +50,7 @@ The module consists of the following components:
 
 1. **CSI driver (vsphere)**: It is an implementation of the CSI driver for VMware vSphere. To study the `cloud-provider-vsphere` CSI driver architecture, refer to [the corresponding documentation](../../storage/csi-drivers/csi-driver-vsphere.html) section.
 
-   CSI driver (vsphere) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) sidecar container.
+   CSI driver (vsphere) supports volume snapshots, so the `csi-controller` Pod includes the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) sidecar container. To create snapshots, enable the [`snapshot-controller`](/modules/snapshot-controller/) module. It adds VolumeSnapshot resources to the cluster, and the `cloud-provider-vsphere` module creates a VolumeSnapshotClass named `vsphere` for them.
 
 ## Module interactions
 

@@ -4,16 +4,16 @@ permalink: ru/admin/integrations/virtualization/vsphere/services.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform интегрируется с инфраструктурой VMware vSphere и использует [ресурсы VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) для описания характеристик виртуальных машин, создаваемых в составе кластера Kubernetes.
+Deckhouse Kubernetes Platform интегрируется с инфраструктурой VMware vSphere. Характеристики виртуальных машин, создаваемых в составе кластера, описывает ресурс [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а параметры облачной инфраструктуры кластера задаёт ресурс [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration).
 
 Основные возможности:
 
-- Заказ и удаление виртуальных машин через vCenter API;
+- Заказ и удаление виртуальных машин через vCenter API. Заказ и удаление виртуальных машин через vCenter API для разных типов узлов описано в разделе [«Управление ресурсами vSphere»](#управление-ресурсами-vsphere);
 - Размещение узлов кластера в разных кластерах ([`zones`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-zones)) и датацентрах ([`region`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-region));
-- Использование шаблонов виртуальных машин с `cloud-init`;
-- Поддержка сетей с DHCP, статической адресацией и дополнительными интерфейсами;
-- Работа с хранилищем: заказ root-дисков и PVC на базе Datastore или CNS-дисков;
-- Поддержка механизмов балансировки входящего трафика:
+- Использование шаблонов виртуальных машин с `cloud-init`. Требования к образу и подготовка шаблона описаны в разделе [«Подключение и авторизация в VMware vSphere»](authorization.html#подготовка-образа-виртуальной-машины);
+- Поддержка сетей с DHCP, статической адресацией и дополнительными интерфейсами. Схема размещения ресурсов приведена в разделе [«Схема размещения Standard»](layout.html#standard);
+- Работа с хранилищем. Заказ root-дисков и томов PersistentVolume на базе Datastore и дисков CNS описан в разделе [«Хранилище»](storage.html#хранилище);
+- Поддержка механизмов балансировки входящего трафика, описанных в разделе [«Балансировка нагрузки»](storage.html#балансировка-нагрузки):
   - через внешние балансировщики;
   - через MetalLB (в режиме BGP).
 
@@ -22,6 +22,19 @@ DKP поддерживает гибридную интеграцию с VMware v
 {% endalert %}
 
 ## Управление ресурсами vSphere
+
+В кластере на базе vSphere используются узлы четырёх типов:
+
+- [CloudEphemeral](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) — платформа заказывает, создаёт и удаляет такие узлы автоматически. Их количество задаёт ресурс [NodeGroup](/modules/node-manager/cr.html#nodegroup), а параметры виртуальных машин описывает ресурс [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+- [CloudPermanent](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) — постоянные узлы, конфигурация которых берётся из секции [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups) ресурса VsphereClusterConfiguration. Изменения применяются командой `dhctl converge`. К этому типу относятся master-узлы кластера.
+- [CloudStatic](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) — виртуальные машины vSphere, созданные вручную или сторонними инструментами и подключённые к кластеру. Ими управляет `cloud-controller-manager`, поэтому такие узлы получают метаданные о регионе и зоне, а при удалении виртуальной машины из vSphere соответствующий объект Node удаляется из кластера.
+- [Static](../../../../architecture/cluster-and-infrastructure/node-management/static-nodes.html) — узлы на серверах bare metal или на виртуальных машинах, которые не управляются облачным провайдером.
+
+Как добавлять узлы, изменять их количество и удалять их, описано в разделах [«Основы управления узлами в Deckhouse»](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html) и [«Добавление и управление облачными узлами»](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html). Пример группы узлов для vSphere приведён в разделе [«Создание группы узлов»](/modules/cloud-provider-vsphere/examples.html#создание-группы-узлов).
+
+Примеры манифестов для vSphere собраны в разделе [«Примеры»](/modules/cloud-provider-vsphere/examples.html) документации модуля.
+
+Ниже описаны действия, которые выполняются только в кластерах на vSphere.
 
 ### Удаление CloudPermanent-узлов в vSphere
 

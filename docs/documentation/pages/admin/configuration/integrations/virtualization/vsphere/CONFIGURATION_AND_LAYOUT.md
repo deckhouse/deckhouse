@@ -30,10 +30,10 @@ provider:
   username: '<USERNAME>'
   password: '<PASSWORD>'
 vmFolderPath: dev
+internalNetworkCIDR: 192.168.199.0/24
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
 region: X1
-internalNetworkCIDR: 192.168.199.0/24
 masterNodeGroup:
   replicas: 1
   zones:
@@ -64,12 +64,16 @@ zones:
 
 Required parameters for the [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) resource:
 
+- `layout`: Placement layout name. Only `Standard` is supported.
+- `provider`: vCenter connection parameters.
 - `region`: Tag assigned to the Datacenter object.
 - `zoneTagCategory` and `regionTagCategory`: Tag categories used to identify regions and zones.
-- `internalNetworkCIDR`: Subnet for assigning internal IP addresses.
+- `zones`: List of zones available for node placement.
+- `masterNodeGroup`: Parameters of the master node group.
 - `vmFolderPath`: Path to the folder where cluster virtual machines will be placed.
 - `sshPublicKey`: Public SSH key used to access the nodes.
-- `zones`: List of zones available for node placement.
+
+The `internalNetworkCIDR` parameter is required if the configuration contains `nodeGroups`. The installer validates it when creating static nodes and fails without it. It is also required when `masterNodeGroup.instanceClass` defines `additionalNetworks`. In that case, DKP assigns master node addresses from this subnet starting with the tenth address. If there are no `nodeGroups` and the master nodes use a single network, omit the parameter.
 
 {% alert level="info" %}
 All nodes placed in different zones must have access to shared datastores with matching zone tags.
@@ -77,299 +81,151 @@ All nodes placed in different zones must have access to shared datastores with m
 
 ## List of required privileges
 
+The role for the platform account includes the privileges listed below. They are grouped by the operations that the platform performs in vSphere.
+
+To create the role and assign it to a user, refer to [Creating and assigning a role in vSphere Client](authorization.html#creating-and-assigning-a-role-in-vsphere-client) and [Creating and assigning a role with govc](authorization.html#creating-and-assigning-a-role-with-govc).
+
+### Basic access
+
+vSphere assigns these privileges automatically when any role is created. They give the platform components read access to vSphere Inventory objects.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| — | `System.Anonymous` | Calling vCenter methods that require no authorization |
+| — | `System.Read` | Reading the state and settings of objects |
+| — | `System.View` | Viewing inventory objects |
+
+### Region and zone tags
+
+The platform uses tags to identify the Datacenter, Cluster, and Datastore objects available to it, and to mark the virtual machines it manages.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Global tag | `Global.GlobalTag` | Working with vCenter global tags |
+| System tag | `Global.SystemTag` | Working with vCenter system tags |
+| Assign or Unassign vSphere Tag | `InventoryService.Tagging.AttachTag` | Reading region and zone tags and tagging the cluster virtual machines |
+| Assign or Unassign vSphere Tag on Object | `InventoryService.Tagging.ObjectAttachable` | Assigning a tag to a particular inventory object |
+| Create vSphere Tag | `InventoryService.Tagging.CreateTag` | Creating the tags that mark the cluster virtual machines |
+| Create vSphere Tag Category | `InventoryService.Tagging.CreateCategory` | Creating the `deckhouse-cluster-name` and `deckhouse-node-role` categories for those tags |
+| Delete vSphere Tag | `InventoryService.Tagging.DeleteTag` | Deleting the tags created by the platform |
+| Delete vSphere Tag Category | `InventoryService.Tagging.DeleteCategory` | Deleting the categories created by the platform |
+| Edit vSphere Tag | `InventoryService.Tagging.EditTag` | Editing the tags created by the platform |
+| Edit vSphere Tag Category | `InventoryService.Tagging.EditCategory` | Editing the categories created by the platform |
+| Modify UsedBy Field for Category | `InventoryService.Tagging.ModifyUsedByForCategory` | Changing the internal UsedBy field of a category |
+| Modify UsedBy Field for Tag | `InventoryService.Tagging.ModifyUsedByForTag` | Changing the internal UsedBy field of a tag |
+
+### Storage
+
+These privileges are required to place virtual machine disks, provision PersistentVolumes dynamically, and read SPBM storage policies.
+
 {% alert level="info" %}
-To create a role and assign it to a user, refer to [Configuration in vSphere Client](authorization.html#configuration-in-vsphere-client) and [Configuration with govc](authorization.html#configuration-with-govc) sections.
+In vSphere 7, the `StorageProfile.View` privilege is located in the "Profile-driven storage" section of the interface.
 {% endalert %}
 
-A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Searchable | `Cns.Searchable` | Searching for CNS disks across the whole vCenter during resource discovery |
+| Allocate space | `Datastore.AllocateSpace` | Allocating space for node disks and PersistentVolume volumes |
+| Browse datastore | `Datastore.Browse` | Browsing files on a Datastore |
+| Low level file operations | `Datastore.FileManagement` | Operations with disk files on a Datastore |
+| View VM storage policies | `StorageProfile.View` | Reading SPBM storage policies to create StorageClasses |
 
-<table>
-  <thead>
-    <tr>
-      <th>Privilege category in UI</th>
-      <th>Privileges in UI</th>
-      <th>Privileges in API</th>
-      <th>Purpose in Deckhouse</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>—</td>
-      <td>— (assigned by default when creating a role)</td>
-      <td>
-        <code>System.Anonymous</code><br/>
-        <code>System.Read</code><br/>
-        <code>System.View</code>
-      </td>
-      <td>Basic access to vSphere Inventory objects required for all Deckhouse vSphere integration components.</td>
-    </tr>
-    <tr>
-      <td>Cns</td>
-      <td>Searchable</td>
-      <td><code>Cns.Searchable</code></td>
-      <td>Search and mapping of Container Native Storage objects when the CSI driver works with Kubernetes volumes.</td>
-    </tr>
-    <tr>
-      <td>Datastore</td>
-      <td>
-        Allocate space,<br/>
-        Browse datastore,<br/>
-        Low level file operations
-      </td>
-      <td>
-        <code>Datastore.AllocateSpace</code><br/>
-        <code>Datastore.Browse</code><br/>
-        <code>Datastore.FileManagement</code>
-      </td>
-      <td>Disk provisioning when creating virtual machines and ordering <code>PersistentVolumes</code> in the cluster.</td>
-    </tr>
-    <tr>
-      <td>Folder</td>
-      <td>
-        Create folder,<br/>
-        Delete folder,<br/>
-        Move folder,<br/>
-        Rename folder
-      </td>
-      <td>
-        <code>Folder.Create</code><br/>
-        <code>Folder.Delete</code><br/>
-        <code>Folder.Move</code><br/>
-        <code>Folder.Rename</code>
-      </td>
-      <td>Grouping a Deckhouse Kubernetes Platform cluster in a single <code>Folder</code> in vSphere Inventory.</td>
-    </tr>
-    <tr>
-      <td>Global</td>
-      <td>
-        Global tag,<br/>
-        System tag
-      </td>
-      <td>
-        <code>Global.GlobalTag</code><br/>
-        <code>Global.SystemTag</code>
-      </td>
-      <td>Access to global and system tags used by Deckhouse Kubernetes Platform when working with vSphere objects.</td>
-    </tr>
-    <tr>
-      <td>vSphere Tagging</td>
-      <td>
-        Assign or Unassign vSphere Tag,<br/>
-        Assign or Unassign vSphere Tag on Object,<br/>
-        Create vSphere Tag,<br/>
-        Create vSphere Tag Category,<br/>
-        Delete vSphere Tag,<br/>
-        Delete vSphere Tag Category,<br/>
-        Edit vSphere Tag,<br/>
-        Edit vSphere Tag Category,<br/>
-        Modify UsedBy Field for Category,<br/>
-        Modify UsedBy Field for Tag
-      </td>
-      <td>
-        <code>InventoryService.Tagging.AttachTag</code><br/>
-        <code>InventoryService.Tagging.ObjectAttachable</code><br/>
-        <code>InventoryService.Tagging.CreateTag</code><br/>
-        <code>InventoryService.Tagging.CreateCategory</code><br/>
-        <code>InventoryService.Tagging.DeleteTag</code><br/>
-        <code>InventoryService.Tagging.DeleteCategory</code><br/>
-        <code>InventoryService.Tagging.EditTag</code><br/>
-        <code>InventoryService.Tagging.EditCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForTag</code>
-      </td>
-      <td>Deckhouse Kubernetes Platform uses tags to identify the <code>Datacenter</code>, <code>Cluster</code>, and <code>Datastore</code> objects available to it, as well as to identify the virtual machines under its control.</td>
-    </tr>
-    <tr>
-      <td>Network</td>
-      <td>Assign network</td>
-      <td><code>Network.Assign</code></td>
-      <td>Connecting networks and port groups to Deckhouse Kubernetes Platform cluster virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Resource</td>
-      <td>
-        Assign virtual machine to resource pool,<br/>
-        Create resource pool,<br/>
-        Modify resource pool,<br/>
-        Remove resource pool,<br/>
-        Rename resource pool
-      </td>
-      <td>
-        <code>Resource.AssignVMToPool</code><br/>
-        <code>Resource.CreatePool</code><br/>
-        <code>Resource.DeletePool</code><br/>
-        <code>Resource.EditPool</code><br/>
-        <code>Resource.RenamePool</code>
-      </td>
-      <td>Placement of Deckhouse Kubernetes Platform cluster virtual machines into the target resource pool and management of this pool.</td>
-    </tr>
-    <tr>
-      <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> in vSphere 7)</td>
-      <td>View VM storage policies (<em>Profile-driven storage view</em> in vSphere 7)</td>
-      <td><code>StorageProfile.View</code></td>
-      <td>Viewing storage policies used when creating virtual machines and dynamically provisioning volumes in the cluster.</td>
-    </tr>
-    <tr>
-      <td>vApp</td>
-      <td>
-        Add virtual machine,<br/>
-        Assign resource pool,<br/>
-        Create,<br/>
-        Delete,<br/>
-        Import,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        View OVF Environment,<br/>
-        vApp application configuration,<br/>
-        vApp instance configuration,<br/>
-        vApp resource configuration
-      </td>
-      <td>
-        <code>VApp.ApplicationConfig</code><br/>
-        <code>VApp.AssignResourcePool</code><br/>
-        <code>VApp.AssignVM</code><br/>
-        <code>VApp.Create</code><br/>
-        <code>VApp.Delete</code><br/>
-        <code>VApp.ExtractOvfEnvironment</code><br/>
-        <code>VApp.Import</code><br/>
-        <code>VApp.InstanceConfig</code><br/>
-        <code>VApp.PowerOff</code><br/>
-        <code>VApp.PowerOn</code><br/>
-        <code>VApp.ResourceConfig</code>
-      </td>
-      <td>Managing operations related to deployment and configuration of vApp and OVF templates used when creating virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Change Configuration</td>
-      <td>
-        Add existing disk,<br/>
-        Add new disk,<br/>
-        Add or remove device,<br/>
-        Advanced configuration,<br/>
-        Set annotation,<br/>
-        Change CPU count,<br/>
-        Toggle disk change tracking,<br/>
-        Extend virtual disk,<br/>
-        Acquire disk lease,<br/>
-        Modify device settings,<br/>
-        Configure managedBy,<br/>
-        Change Memory,<br/>
-        Query unowned files,<br/>
-        Configure Raw device,<br/>
-        Reload from path,<br/>
-        Remove disk,<br/>
-        Rename,<br/>
-        Reset guest information,<br/>
-        Change resource,<br/>
-        Change Settings,<br/>
-        Change Swapfile placement,<br/>
-        Upgrade virtual machine compatibility
-      </td>
-      <td>
-        <code>VirtualMachine.Config.AddExistingDisk</code><br/>
-        <code>VirtualMachine.Config.AddNewDisk</code><br/>
-        <code>VirtualMachine.Config.AddRemoveDevice</code><br/>
-        <code>VirtualMachine.Config.AdvancedConfig</code><br/>
-        <code>VirtualMachine.Config.Annotation</code><br/>
-        <code>VirtualMachine.Config.CPUCount</code><br/>
-        <code>VirtualMachine.Config.ChangeTracking</code><br/>
-        <code>VirtualMachine.Config.DiskExtend</code><br/>
-        <code>VirtualMachine.Config.DiskLease</code><br/>
-        <code>VirtualMachine.Config.EditDevice</code><br/>
-        <code>VirtualMachine.Config.ManagedBy</code><br/>
-        <code>VirtualMachine.Config.Memory</code><br/>
-        <code>VirtualMachine.Config.QueryUnownedFiles</code><br/>
-        <code>VirtualMachine.Config.RawDevice</code><br/>
-        <code>VirtualMachine.Config.ReloadFromPath</code><br/>
-        <code>VirtualMachine.Config.RemoveDisk</code><br/>
-        <code>VirtualMachine.Config.Rename</code><br/>
-        <code>VirtualMachine.Config.ResetGuestInfo</code><br/>
-        <code>VirtualMachine.Config.Resource</code><br/>
-        <code>VirtualMachine.Config.Settings</code><br/>
-        <code>VirtualMachine.Config.SwapPlacement</code><br/>
-        <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
-      </td>
-      <td>Managing the lifecycle of Deckhouse Kubernetes Platform cluster virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Edit Inventory</td>
-      <td>
-        Create new,<br/>
-        Create from existing,<br/>
-        Remove,<br/>
-        Move
-      </td>
-      <td>
-        <code>VirtualMachine.Inventory.Create</code><br/>
-        <code>VirtualMachine.Inventory.CreateFromExisting</code><br/>
-        <code>VirtualMachine.Inventory.Delete</code><br/>
-        <code>VirtualMachine.Inventory.Move</code>
-      </td>
-      <td>Creating, deleting, and moving Deckhouse Kubernetes Platform cluster virtual machines in vSphere Inventory.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Guest Operations</td>
-      <td>Guest Operation Queries</td>
-      <td><code>VirtualMachine.GuestOperations.Query</code></td>
-      <td>Retrieving information from the guest operating system of virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Interaction</td>
-      <td>
-        Answer question,<br/>
-        Device connection,<br/>
-        Guest operating system management by VIX API,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        Reset,<br/>
-        Configure CD media,<br/>
-        Install VMware Tools
-      </td>
-      <td>
-        <code>VirtualMachine.Interact.AnswerQuestion</code><br/>
-        <code>VirtualMachine.Interact.DeviceConnection</code><br/>
-        <code>VirtualMachine.Interact.GuestControl</code><br/>
-        <code>VirtualMachine.Interact.PowerOff</code><br/>
-        <code>VirtualMachine.Interact.PowerOn</code><br/>
-        <code>VirtualMachine.Interact.Reset</code><br/>
-        <code>VirtualMachine.Interact.SetCDMedia</code><br/>
-        <code>VirtualMachine.Interact.ToolsInstall</code>
-      </td>
-      <td>Managing virtual machine power state, device connections, and interaction with the guest operating system.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Provisioning</td>
-      <td>
-        Clone virtual machine,<br/>
-        Customize guest,<br/>
-        Deploy template,<br/>
-        Allow virtual machine download,<br/>
-        Allow virtual machine files upload,<br/>
-        Read customization specifications
-      </td>
-      <td>
-        <code>VirtualMachine.Provisioning.Clone</code><br/>
-        <code>VirtualMachine.Provisioning.Customize</code><br/>
-        <code>VirtualMachine.Provisioning.DeployTemplate</code><br/>
-        <code>VirtualMachine.Provisioning.GetVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
-      </td>
-      <td>Cloning virtual machine templates, customizing them, and deploying them when creating Deckhouse Kubernetes Platform cluster nodes.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Snapshot Management</td>
-      <td>
-        Create snapshot,<br/>
-        Remove Snapshot,<br/>
-        Rename Snapshot
-      </td>
-      <td>
-        <code>VirtualMachine.State.CreateSnapshot</code><br/>
-        <code>VirtualMachine.State.RemoveSnapshot</code><br/>
-        <code>VirtualMachine.State.RenameSnapshot</code>
-      </td>
-      <td>Managing snapshots of virtual machines and volumes in scenarios where this functionality is used by platform components.</td>
-    </tr>
-  </tbody>
-</table>
+### Virtual machine placement
+
+The platform groups the cluster virtual machines in a dedicated directory, places them in a resource pool, and connects them to networks.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Create folder | `Folder.Create` | Creating the folder at the path from the [`vmFolderPath`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-vmfolderpath) parameter |
+| Delete folder | `Folder.Delete` | Deleting that folder together with the cluster |
+| Move folder | `Folder.Move` | Moving the folder when the path changes |
+| Rename folder | `Folder.Rename` | Renaming the folder when the path changes |
+| Assign virtual machine to resource pool | `Resource.AssignVMToPool` | Placing virtual machines in a resource pool |
+| Create resource pool | `Resource.CreatePool` | Creating a nested resource pool in every zone |
+| Modify resource pool | `Resource.EditPool` | Changing the settings of that pool |
+| Remove resource pool | `Resource.DeletePool` | Deleting the pool together with the cluster |
+| Rename resource pool | `Resource.RenamePool` | Renaming the pool |
+| Assign network | `Network.Assign` | Connecting virtual machines to the networks from the [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) and [`additionalNetworks`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-additionalnetworks) parameters |
+
+### Creating virtual machines
+
+Virtual machines are created by cloning a prepared template and are registered in the vSphere inventory.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Clone virtual machine | `VirtualMachine.Provisioning.Clone` | Cloning the template from the [`template`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-template) parameter |
+| Deploy template | `VirtualMachine.Provisioning.DeployTemplate` | Deploying a virtual machine from a template |
+| Customize guest | `VirtualMachine.Provisioning.Customize` | Customizing the guest operating system during cloning |
+| Read customization specifications | `VirtualMachine.Provisioning.ReadCustSpecs` | Reading guest operating system customization specifications |
+| Allow virtual machine download | `VirtualMachine.Provisioning.GetVmFiles` | Reading virtual machine files |
+| Allow virtual machine files upload | `VirtualMachine.Provisioning.PutVmFiles` | Writing virtual machine files |
+| Create new | `VirtualMachine.Inventory.Create` | Creating a virtual machine in the inventory |
+| Create from existing | `VirtualMachine.Inventory.CreateFromExisting` | Creating a virtual machine from an existing one |
+| Remove | `VirtualMachine.Inventory.Delete` | Deleting a virtual machine when the number of nodes is reduced |
+| Move | `VirtualMachine.Inventory.Move` | Moving a virtual machine to the cluster folder |
+
+### Configuring virtual machines
+
+The platform sets the virtual machine parameters at creation time and changes them when a node group or an instance class is modified.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Add new disk | `VirtualMachine.Config.AddNewDisk` | Creating the root disk of a virtual machine |
+| Add existing disk | `VirtualMachine.Config.AddExistingDisk` | Attaching an existing disk |
+| Remove disk | `VirtualMachine.Config.RemoveDisk` | Detaching a disk |
+| Extend virtual disk | `VirtualMachine.Config.DiskExtend` | Growing the disk to the size from the [`rootDiskSize`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-rootdisksize) parameter and expanding volumes |
+| Acquire disk lease | `VirtualMachine.Config.DiskLease` | Acquiring a disk lease for the duration of operations with it |
+| Toggle disk change tracking | `VirtualMachine.Config.ChangeTracking` | Managing changed block tracking for a disk |
+| Configure Raw device | `VirtualMachine.Config.RawDevice` | Configuring raw device mappings (RDM) |
+| Change CPU count | `VirtualMachine.Config.CPUCount` | Setting the number of vCPUs from the [`numCPUs`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-numcpus) parameter |
+| Change Memory | `VirtualMachine.Config.Memory` | Setting the memory size from the [`memory`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-memory) parameter |
+| Change resource | `VirtualMachine.Config.Resource` | Reserving memory from the [`memoryReservation`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-runtimeoptions-memoryreservation) parameter and limiting resources |
+| Change Swapfile placement | `VirtualMachine.Config.SwapPlacement` | Choosing the swap file location |
+| Add or remove device | `VirtualMachine.Config.AddRemoveDevice` | Adding and removing devices, including network adapters |
+| Modify device settings | `VirtualMachine.Config.EditDevice` | Changing device settings |
+| Change Settings | `VirtualMachine.Config.Settings` | Changing general virtual machine settings |
+| Advanced configuration | `VirtualMachine.Config.AdvancedConfig` | Passing the `cloud-init` configuration through `guestinfo` |
+| Set annotation | `VirtualMachine.Config.Annotation` | Writing notes for a virtual machine |
+| Rename | `VirtualMachine.Config.Rename` | Renaming a virtual machine |
+| Configure managedBy | `VirtualMachine.Config.ManagedBy` | Marking a virtual machine as managed by the platform |
+| Reset guest information | `VirtualMachine.Config.ResetGuestInfo` | Resetting the information received from the guest operating system |
+| Query unowned files | `VirtualMachine.Config.QueryUnownedFiles` | Checking files that do not belong to the virtual machine |
+| Reload from path | `VirtualMachine.Config.ReloadFromPath` | Reloading the virtual machine configuration from a file |
+| Upgrade virtual machine compatibility | `VirtualMachine.Config.UpgradeVirtualHardware` | Upgrading the virtual machine hardware version |
+
+### Managing virtual machine state
+
+These privileges are required to power virtual machines on and off, connect devices, read information from the guest operating system, and work with snapshots. Snapshots are ordered if the [`snapshot-controller`](/modules/snapshot-controller/) module is enabled in the cluster.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Power On | `VirtualMachine.Interact.PowerOn` | Powering on a virtual machine |
+| Power Off | `VirtualMachine.Interact.PowerOff` | Powering off a virtual machine |
+| Reset | `VirtualMachine.Interact.Reset` | Resetting a virtual machine |
+| Answer question | `VirtualMachine.Interact.AnswerQuestion` | Answering vSphere questions that block the machine |
+| Device connection | `VirtualMachine.Interact.DeviceConnection` | Connecting and disconnecting devices of a running machine |
+| Configure CD media | `VirtualMachine.Interact.SetCDMedia` | Attaching an image to the CD/DVD drive |
+| Install VMware Tools | `VirtualMachine.Interact.ToolsInstall` | Installing VMware Tools |
+| Guest operating system management by VIX API | `VirtualMachine.Interact.GuestControl` | Managing the guest operating system through the VIX API |
+| Guest Operation Queries | `VirtualMachine.GuestOperations.Query` | Reading the state of the guest operating system |
+| Create snapshot | `VirtualMachine.State.CreateSnapshot` | Creating a snapshot |
+| Remove Snapshot | `VirtualMachine.State.RemoveSnapshot` | Removing a snapshot |
+| Rename Snapshot | `VirtualMachine.State.RenameSnapshot` | Renaming a snapshot |
+
+### vApp
+
+Operations with vApp and OVF templates. Required if the virtual machine templates or the machines themselves belong to a vApp.
+
+| Privilege in UI | Privilege in API | Purpose in DKP |
+| --- | --- | --- |
+| Create | `VApp.Create` | Creating a vApp |
+| Delete | `VApp.Delete` | Deleting a vApp |
+| Import | `VApp.Import` | Importing an OVF or OVA into a vApp |
+| Add virtual machine | `VApp.AssignVM` | Adding a virtual machine to a vApp |
+| Assign resource pool | `VApp.AssignResourcePool` | Assigning a resource pool to a vApp |
+| Power On | `VApp.PowerOn` | Powering on a vApp |
+| Power Off | `VApp.PowerOff` | Powering off a vApp |
+| vApp application configuration | `VApp.ApplicationConfig` | Changing vApp application settings |
+| vApp instance configuration | `VApp.InstanceConfig` | Changing vApp instance settings |
+| vApp resource configuration | `VApp.ResourceConfig` | Changing vApp resource settings |
+| View OVF Environment | `VApp.ExtractOvfEnvironment` | Reading the OVF environment of a virtual machine |

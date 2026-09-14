@@ -43,6 +43,8 @@ spec:
                     Root disk size in GiB to use in vSphere VirtualMachines.
 
                     The disk will be automatically enlarged if its size in the template is less than specified.
+
+                    A value smaller than the template disk size is not allowed. Cloning fails with the `disk name disk0 must be at least the same size of source when cloning` error.
                   x-doc-examples: [20]
                   x-doc-default: 20
                   type: integer
@@ -97,7 +99,7 @@ spec:
                   properties:
                     nestedHardwareVirtualization:
                       description: |
-                        Whether to enable or disable nested [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html).
+                        Whether to enable or disable nested [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevsphere-vm-admin/configure-virtual-machine-cpu-resourcesvsphere-vm-admin/expose-hardware-assisted-virtualizationvsphere-vm-admin.html).
                       type: boolean
                     cpuShares:
                       description: |

@@ -23,8 +23,8 @@ Set environment variables for vCenter access:
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
@@ -52,14 +52,14 @@ To link Cluster and Datacenter objects, follow these steps:
 1. Attach the region tag to the Datacenter:
 
    ```shell
-   govc tags.attach -c k8s-region test-region /<DatacenterName>
+   govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
    ```
 
 1. Attach zone tags to Cluster objects:
 
    ```shell
-   govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-   govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+   govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+   govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
    ```
 
 ## Datastore configuration
@@ -71,11 +71,11 @@ For dynamic PersistentVolume provisioning, each Datastore must be reachable from
 Attach region and zone tags to Datastore objects so the module can create StorageClass resources automatically:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 ## Create and assign the role
@@ -98,5 +98,5 @@ govc role.create deckhouse \
 Grant the role on the `vCenter` root object:
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```

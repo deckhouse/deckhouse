@@ -20,10 +20,10 @@ provider:
   password: '<PASSWORD>'
   insecure: true
 vmFolderPath: dev
+internalNetworkCIDR: 192.168.199.0/24
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
 region: X1
-internalNetworkCIDR: 192.168.199.0/24
 masterNodeGroup:
   replicas: 1
   zones:
