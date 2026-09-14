@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -337,6 +338,10 @@ func TestDefaults_FillEmpty(t *testing.T) {
 	if len(patches) != 1 || patches[0]["path"] != "/spec/loadBalancerClass" || patches[0]["value"] != "internal" {
 		t.Fatalf("unexpected patch: %v", patches)
 	}
+	// Filling an empty field is what the author expects; no warning.
+	if len(resp.Warnings) != 0 {
+		t.Fatalf("FillEmpty must not warn, got %v", resp.Warnings)
+	}
 }
 
 func TestDefaults_NoOverrideOnUpdate(t *testing.T) {
@@ -359,6 +364,10 @@ func TestDefaults_Coerce(t *testing.T) {
 	}
 	if len(patches) != 1 || patches[0]["path"] != "/spec/loadBalancerClass" || patches[0]["value"] != "internal" {
 		t.Fatalf("expected coercion to internal, got: %v", patches)
+	}
+	// The author is told what happened: the value they wrote, the value they got, the project.
+	if len(resp.Warnings) != 1 || !strings.Contains(resp.Warnings[0], `"forbidden"`) || !strings.Contains(resp.Warnings[0], `"internal"`) || !strings.Contains(resp.Warnings[0], `"proj"`) {
+		t.Fatalf("a coercion must come with a warning naming both values and the project, got %v", resp.Warnings)
 	}
 	// An already-available value is left untouched.
 	good := raw(t, map[string]any{"apiVersion": "v1", "kind": "Service", "metadata": map[string]any{"name": "s", "namespace": "proj"},

@@ -168,7 +168,7 @@ The behavior when an object is created depends on the mode configured in [Granta
 
 * `None`: The value is checked for availability but is not assigned automatically.
 * `FillEmpty`: If no value is specified, the project default is assigned.
-* `Coerce`: If no value is specified or the specified cluster-wide resource is unavailable to the project, the project default is assigned.
+* `Coerce`: If no value is specified or the specified cluster-wide resource is unavailable to the project, the project default is assigned. Replacing a specified value is reported as an admission warning in the response to the request.
 
 The project default is determined in the following order:
 

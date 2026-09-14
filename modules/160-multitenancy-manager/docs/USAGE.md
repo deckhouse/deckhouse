@@ -696,7 +696,7 @@ spec:
 
 When a PersistentVolumeClaim is created without a value in `spec.storageClassName`, `fast-ssd` is automatically assigned to this field. If a StorageClass that is not in the allowed list is specified, the PersistentVolumeClaim is rejected.
 
-StorageClass uses the [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting) default assignment mode. If the built-in Kubernetes admission controller has already assigned a default class to `spec.storageClassName` that is unavailable to the project, the value is replaced with `fast-ssd` instead of rejecting the PersistentVolumeClaim.
+StorageClass uses the [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting) default assignment mode. If the built-in Kubernetes admission controller has already assigned a default class to `spec.storageClassName` that is unavailable to the project, the value is replaced with `fast-ssd` instead of rejecting the PersistentVolumeClaim. The replacement is reported as an admission warning in the response to the request, so the `d8 k` output shows both the original value and the substituted one.
 
 To check which StorageClasses are available to the project, run the following command:
 
@@ -776,6 +776,12 @@ The policy additionally allows the following ClusterRoles:
 - ClusterRoles matching the `shared: "true"` selector
 
 ClusterRoles with the `rbac.deckhouse.io/delegatable` label remain available.
+
+The `rbac.deckhouse.io/delegatable: "true"` label is required on every ClusterRole the policy names: the `clusterroles` registration excludes roles without it from all projects, and an exclusion takes precedence over `allowed` and `allowedSelector`. A policy entry that names a role without the label grants nothing. The controller reports this in the `AllowedEffective` condition of the ClusterResourceGrantPolicy status, with the role name in the message:
+
+```shell
+d8 k get clusterresourcegrantpolicy extra-roles -o jsonpath='{.status.conditions[?(@.type=="AllowedEffective")]}'
+```
 
 When a RoleBinding is created or modified, the ClusterRole specified in it is checked for availability to the project. No ClusterRole value is assigned automatically.
 

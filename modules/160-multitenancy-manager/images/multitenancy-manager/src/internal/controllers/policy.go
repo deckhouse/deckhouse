@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/api/v1alpha1"
+	"controller/internal/resolve"
 )
 
 // PolicyConditionSelectorsValid is the ClusterResourceGrantPolicy condition that says every label
@@ -36,40 +37,109 @@ import (
 // finds out.
 const PolicyConditionSelectorsValid = "SelectorsValid"
 
+// PolicyConditionAllowedEffective says that every name a policy allows can actually be granted.
+// The registration of a resource may exclude objects from every project -- the clusterroles
+// registration excludes every ClusterRole not marked rbac.deckhouse.io/delegatable=true -- and an
+// exclusion wins over an allow-list, so a policy that allows such a name grants nothing and nobody
+// told the author. This condition tells them, with the name and the reason.
+const PolicyConditionAllowedEffective = "AllowedEffective"
+
 // PolicyReconciler keeps the status of a ClusterResourceGrantPolicy honest about its own spec.
 type PolicyReconciler struct {
 	client.Client
+	// Mapper resolves the granted resources of the definitions the policy names; the same resolver
+	// the webhooks use answers whether an allowed name would be granted.
+	Mapper apimeta.RESTMapper
 }
 
-// Reconcile validates the selectors of the policy and records the outcome as a condition.
+// Reconcile validates the policy and records the outcome as conditions.
 func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	policy := &v1alpha1.ClusterResourceGrantPolicy{}
 	if err := r.Get(ctx, req.NamespacedName, policy); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	problems := invalidSelectors(policy)
-	cond := metav1.Condition{Type: PolicyConditionSelectorsValid, ObservedGeneration: policy.Generation}
-	if len(problems) == 0 {
-		cond.Status = metav1.ConditionTrue
-		cond.Reason = "Valid"
-		cond.Message = "Every label selector of the policy compiles."
+	selectors := metav1.Condition{Type: PolicyConditionSelectorsValid, ObservedGeneration: policy.Generation}
+	if problems := invalidSelectors(policy); len(problems) == 0 {
+		selectors.Status = metav1.ConditionTrue
+		selectors.Reason = "Valid"
+		selectors.Message = "Every label selector of the policy compiles."
 	} else {
-		cond.Status = metav1.ConditionFalse
-		cond.Reason = "InvalidSelector"
-		cond.Message = strings.Join(problems, "; ") + ". A selector that does not compile matches nothing, so the projects get less than the policy intends."
+		selectors.Status = metav1.ConditionFalse
+		selectors.Reason = "InvalidSelector"
+		selectors.Message = strings.Join(problems, "; ") + ". A selector that does not compile matches nothing, so the projects get less than the policy intends."
+	}
+
+	effective := metav1.Condition{Type: PolicyConditionAllowedEffective, ObservedGeneration: policy.Generation}
+	ineffective, err := r.ineffectiveAllowed(ctx, policy)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("check allowed names: %w", err)
+	}
+	if len(ineffective) == 0 {
+		effective.Status = metav1.ConditionTrue
+		effective.Reason = "Effective"
+		effective.Message = "Every allowed name can be granted."
+	} else {
+		effective.Status = metav1.ConditionFalse
+		effective.Reason = "ExcludedByDefinition"
+		effective.Message = strings.Join(ineffective, "; ")
 	}
 
 	before := policy.Status.DeepCopy()
 	policy.Status.ObservedGeneration = policy.Generation
-	apimeta.SetStatusCondition(&policy.Status.Conditions, cond)
-	if before.ObservedGeneration == policy.Status.ObservedGeneration && conditionUnchanged(before.Conditions, policy.Status.Conditions, PolicyConditionSelectorsValid) {
+	apimeta.SetStatusCondition(&policy.Status.Conditions, selectors)
+	apimeta.SetStatusCondition(&policy.Status.Conditions, effective)
+	if before.ObservedGeneration == policy.Status.ObservedGeneration &&
+		conditionUnchanged(before.Conditions, policy.Status.Conditions, PolicyConditionSelectorsValid) &&
+		conditionUnchanged(before.Conditions, policy.Status.Conditions, PolicyConditionAllowedEffective) {
 		return ctrl.Result{}, nil
 	}
 	if err := r.Status().Update(ctx, policy); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update policy status: %w", err)
 	}
 	return ctrl.Result{}, nil
+}
+
+// ineffectiveAllowed names every allowed entry the resolver would refuse anyway: the registration
+// excludes it. Entries whose definition is missing are the binding reconciler's business and are
+// left alone here; a value-backed definition has no objects to exclude.
+func (r *PolicyReconciler) ineffectiveAllowed(ctx context.Context, policy *v1alpha1.ClusterResourceGrantPolicy) ([]string, error) {
+	if r.Mapper == nil {
+		return nil, nil
+	}
+	var out []string
+	for i := range policy.Spec.Resources {
+		entry := policy.Spec.Resources[i]
+		if len(entry.Allowed) == 0 {
+			continue
+		}
+		def := &v1alpha1.GrantableClusterResourceDefinition{}
+		if err := r.Get(ctx, client.ObjectKey{Name: entry.ResourceName}, def); err != nil {
+			if client.IgnoreNotFound(err) == nil {
+				continue
+			}
+			return nil, err
+		}
+		if def.IsValueBacked() || len(def.Spec.Excluded) == 0 {
+			continue
+		}
+		resolved, err := resolve.Resolve(ctx, r.Client, r.Mapper, def, []v1alpha1.GrantResource{entry})
+		if err != nil {
+			// The granted kind is not served (its CRD is absent): nothing can be said about the names.
+			continue
+		}
+		for _, name := range entry.Allowed {
+			if resolved.Decide(name) {
+				continue
+			}
+			reason := "it is excluded by the GrantableClusterResourceDefinition"
+			if def.Spec.GrantedResource != nil && def.Spec.GrantedResource.Kind == "ClusterRole" {
+				reason = "the ClusterRole is not marked rbac.deckhouse.io/delegatable=true, so it cannot be granted to projects"
+			}
+			out = append(out, fmt.Sprintf("spec.resources[%d].allowed (%s): %q grants nothing: %s", i, entry.ResourceName, name, reason))
+		}
+	}
+	return out, nil
 }
 
 // invalidSelectors names every selector of the policy that does not compile, in the words the
