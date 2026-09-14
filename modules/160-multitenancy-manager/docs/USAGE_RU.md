@@ -34,7 +34,7 @@ title: "Модуль multitenancy-manager: примеры использован
   - `dedicatedNodes.nodeSelector` — селектор узлов проекта. Селектор узла у создаваемого пода **заменяется** на это значение.
   - `dedicatedNodes.defaultTolerations` — tolerations в формате `spec.tolerations` пода. **Добавляются** к создаваемым подам проекта.
 
-Шаблоны `default`, `secure` и `secure-with-dedicated-nodes` описаны в [структурированном виде](#структурированные-шаблоны) (`deckhouse.io/v1alpha2`); шаблон `simple` — минимальный устаревший (`v1alpha1`) шаблон.
+Шаблоны `default`, `secure` и `secure-with-dedicated-nodes` описаны в [структурированном виде](#структурированные-шаблоны) (`deckhouse.io/v1alpha2`); шаблон `simple` — минимальный структурированный шаблон, который создаёт только неймспейс и задаёт его лейблы и аннотации из параметров проекта.
 
 Точный набор параметров смотрите в шаблоне, установленном в вашем кластере, — он соответствует версии платформы:
 
@@ -88,7 +88,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o yaml
    {% endraw %}
 
    {% alert level="info" %}
-   API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Старые манифесты `v1alpha1`/`v1alpha2` продолжают работать: webhook конвертации автоматически переносит `parameters.administrators` и `parameters.resourceQuota` в стандартные поля `.spec.administrators` и `.spec.quota`.
+   API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Манифесты `v1alpha2` продолжают работать: вебхук конвертации автоматически переносит `parameters.administrators` и `parameters.resourceQuota` в стандартные поля `.spec.administrators` и `.spec.quota`. Версия `deckhouse.io/v1alpha1` больше не обслуживается: API-сервер отклоняет манифест с `apiVersion: deckhouse.io/v1alpha1`, поэтому перед применением замените `apiVersion` на `deckhouse.io/v1alpha3` и перенесите `parameters.administrators` и `parameters.resourceQuota` в стандартные поля.
    {% endalert %}
 
    {% raw %}
@@ -257,6 +257,8 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 
 Системные неймспейсы (`d8-*`, `kube-*`, `upmeter-*`, `default` и всё с лейблом `heritage: deckhouse` или `heritage: upmeter`) в проекты не превращаются: их учитывает виртуальный проект `deckhouse` (кроме `default`, он остаётся в виртуальном `default`). Лейбла, который оставляет пользовательский неймспейс без проекта, нет. Неймспейс длиннее 61 символа тоже пропускается: это лимит имени Project.
 
+Неймспейс, который уже принадлежит другому Helm-релизу (его аннотация `meta.helm.sh/release-name` указывает не на релиз проекта), не перехватывается: проект получает условие `HelmOwnership` с именем чужого релиза и повторяет попытку, а неймспейс остаётся как есть. Чтобы проект продолжил работу, удалите чужой релиз или его аннотации владения.
+
 Уже существующие RoleBinding и AuthorizationRule внутри неймспейса после перехода в проект продолжают работать. Namespace Admin **не** копируется в `.spec.administrators` и **не** становится `d8:project:admin`: эта роль ещё управляет ProjectRoleBinding, а это шире, чем Admin внутри одного неймспейса. Чтобы руководитель команды стал администратором проекта, оператор платформы добавляет его в `.spec.administrators` или создаёт ProjectRoleBinding. У Namespace Admin и раньше не было `update`/`patch`/`delete` на сам объект Namespace (только `get`/`list`/`watch`); после перехода в проект Namespace ещё и принадлежит Helm (`heritage: multitenancy-manager`).
 
 Лейблы и аннотации, которые ставит модуль, — `heritage`, `projects.deckhouse.io/*`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, аннотации node-selector и tolerations — меняются через Project и его шаблон; любой другой лейбл или аннотацию (`istio-injection`, лейбл Pod Security, служебную аннотацию GitOps-инструмента) можно по-прежнему поставить прямо на Namespace, если это позволяет RBAC, и контроллер их не трогает. `spec` и финализаторы Namespace, как и его удаление, остаются за контроллером.
@@ -335,7 +337,7 @@ spec:
 
 При создании привязок действуют следующие проверки:
 
-- **Защита от повышения привилегий**: создать привязку может только пользователь, у которого есть право привязывать (`bind`) указанную роль. Например, администратор проекта (`d8:project:admin`) может выдавать встроенные роли `d8:project:*` и `d8:namespace:*`, но не может выдать роль шире своих полномочий.
+- **Защита от повышения привилегий**: создать привязку может только пользователь, у которого есть право привязывать (`bind`) указанную роль; право проверяется по имени роли. У администратора проекта (`d8:project:admin`) есть `bind` ровно на восемь ролей: `d8:project:viewer`, `d8:project:user`, `d8:project:manager`, `d8:project:admin`, `d8:namespace:viewer`, `d8:namespace:user`, `d8:namespace:manager` и `d8:namespace:admin`. Привязка к любой другой роли — кастомной `d8:custom:*`, capability, `d8:project:superadmin` — для администратора проекта отклоняется, даже если роль уже его собственных полномочий, потому что право `bind` на это имя ему никто не выдал. Такие привязки создаёт администратор кластера, либо он отдельной ClusterRole выдаёт администраторам проекта право `bind` на кастомную роль.
 - Роль должна существовать: привязка к несуществующей роли отклоняется.
 - ServiceAccount в качестве субъекта ProjectRoleBinding должен принадлежать неймспейсу этого же проекта.
 - Системные и подсистемные роли (`d8:system:*`, `d8:subsystem:*`), а также произвольные роли вне перечисленных префиксов через проектные привязки выдать нельзя.
@@ -425,7 +427,7 @@ spec:
 
 ### Параметризация шаблона
 
-Любое поле шаблона, которое хранит значение, а не вложенную структуру, можно сделать параметром: вместо конкретного значения укажите `{fromParam: <имя параметра>}` и объявите параметр в `parametersSchema`. Значение не обязательно должно быть скалярным: параметром может быть и словарь (`nodeSelector`, `labels`), и список (`tolerations`), и объект (`allowedUIDs`). Тогда каждый проект задаёт своё значение в `.spec.parameters`, а если значение не задано — используется `default` из схемы.
+Параметром можно сделать двенадцать полей шаблона: `podSecurityStandard`, `networkPolicy.mode`, `features.monitoring`, `features.vulnerabilityScanning`, `logShipping.clusterDestinationRef`, `nodeSelector`, `tolerations`, `allowedUIDs`, `allowedGIDs`, `runtimeAudit.enabled`, `namespaceMetadata.labels` и `namespaceMetadata.annotations`. Вместо конкретного значения укажите `{fromParam: <имя параметра>}` и объявите параметр в `parametersSchema`. Значение не обязательно должно быть скалярным: параметром может быть и словарь (`nodeSelector`, `namespaceMetadata.labels`), и список (`tolerations`), и объект (`allowedUIDs`). Остальные поля — `title`, `description`, `resources`, `grantPolicies` и сам `parametersSchema` — принимают только литеральные значения. Тогда каждый проект задаёт своё значение в `.spec.parameters`, а если значение не задано — используется `default` из схемы.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -473,7 +475,7 @@ spec:
 
 - Шаблон, который используется хотя бы одним проектом, нельзя удалить.
 - Изменение шаблона автоматически применяется ко всем проектам, созданным из него.
-- Устаревшие шаблоны `deckhouse.io/v1alpha1` с текстовым полем `resourcesTemplate` (Helm-шаблонизация) продолжают работать, но признаны устаревшими — новые шаблоны создавайте в структурированном виде. Ресурсы ResourceQuota и AuthorizationRule из таких шаблонов отфильтровываются при рендеринге (подробнее — в разделе [«Стандартные поля проекта»](#стандартные-поля-проекта)).
+- Версия `deckhouse.io/v1alpha1` ресурса ProjectTemplate с текстовым полем `resourcesTemplate` (Helm-шаблонизация) больше не обслуживается, а в `v1alpha2` такого поля нет. Шаблон, сохранённый как `v1alpha1` с непустым `resourcesTemplate`, читается в `v1alpha2` без Helm-текста и с аннотацией `projects.deckhouse.io/legacy-helm-template: "true"`. Проекты такого шаблона контроллер не рендерит: они переходят в состояние `Error` с условием `TemplateRequiresRewrite`, а их объекты остаются ровно такими, какими были. Чтобы вернуть их в работу, перепишите шаблон структурированными полями и снимите аннотацию.
 
 ## Создание собственного шаблона для проекта
 
@@ -581,8 +583,8 @@ data:
 Для этого используются следующие ресурсы:
 
 1. ValidatingAdmissionPolicy — определяет правила валидации:
-   - Операции: `UPDATE` и `DELETE`;
-   - Проверка: разрешены только операции от имени service account контроллера;
+   - Операции: `CREATE`, `UPDATE` и `DELETE`; группа `system:masters` исключением не является;
+   - Проверка: разрешены только операции от имени service account контроллера. Для неймспейса проекта также разрешено обновление, меняющее только лейблы и аннотации вне ключей, которыми управляет модуль (подробнее — в разделе [«Автоматическое создание проекта для неймспейса»](#автоматическое-создание-проекта-для-неймспейса));
    - Применяется ко всем ресурсам и API группам.
 
 1. ValidatingAdmissionPolicyBinding — определяет на какие объекты распространяется валидация:
@@ -605,7 +607,7 @@ data:
        resourceRules:
          - apiGroups:   ["*"]
            apiVersions: ["*"]
-           operations:  ["UPDATE", "DELETE"]
+           operations:  ["CREATE", "UPDATE", "DELETE"]
            resources:   ["*"]
            scope: "*"
      validations:
@@ -672,6 +674,8 @@ data:
 ### Для администраторов кластера
 
 Ниже приведены примеры настройки доступа проектов к cluster-wide-ресурсам с помощью ClusterResourceGrantPolicy.
+
+Селектор `projectSelector` сопоставляется с объединением лейблов объекта Project и лейблов каждого неймспейса проекта; если один и тот же ключ задан и там, и там, побеждает значение неймспейса. Лейбл на Project выбирает основной и все дополнительные неймспейсы проекта, а лейбл, заданный на одном неймспейсе через шаблон или ProjectNamespace, — только этот неймспейс. В примерах ниже лейбл стоит на Project.
 
 #### Ограничение StorageClass для проекта
 
