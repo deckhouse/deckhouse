@@ -53,6 +53,17 @@ func (p Param[T]) IsZero() bool { return p.value == nil && p.fromParam == "" }
 // Ref returns the referenced parameter name, or "" when the Param is a literal or empty.
 func (p Param[T]) Ref() string { return p.fromParam }
 
+// Literal returns the literal value and true when the Param holds one; a reference or an empty Param
+// answers false. Admission uses it to check a literal against the values the field accepts, which
+// a reference cannot be checked against until the project supplies the parameter.
+func (p Param[T]) Literal() (T, bool) {
+	var zero T
+	if p.value == nil {
+		return zero, false
+	}
+	return *p.value, true
+}
+
 func (p *Param[T]) UnmarshalJSON(data []byte) error {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 || string(data) == "null" {
