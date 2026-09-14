@@ -224,7 +224,7 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 | `projects.deckhouse.io/project: <имя проекта>` | ✓ | ✓ | Принадлежность к проекту — общий лейбл всех неймспейсов проекта. |
 | `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Признак дополнительного неймспейса (имя ресурса ProjectNamespace). |
 | `projects.deckhouse.io/project-template: <имя шаблона>` | ✓ | ✓ | Шаблон проекта; по нему применяются правила доступности кластерных ресурсов. |
-| `heritage: multitenancy-manager` | ✓ | ✓ | Неймспейс управляется контроллером проектов; вручную его менять нельзя. |
+| `heritage: multitenancy-manager` | ✓ | ✓ | Неймспейс управляется контроллером проектов: его `spec`, финализаторы и лейблы из этой таблицы меняются через Project; остальные лейблы и аннотации можно менять напрямую. |
 | `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (наследуются) | Политики и фичи из шаблона проекта. |
 
 Общий лейбл `projects.deckhouse.io/project` позволяет выбирать неймспейсы проекта с помощью команды `get ns`. Примеры:
@@ -257,7 +257,11 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 
 Системные неймспейсы (`d8-*`, `kube-*`, `upmeter-*`, `default` и всё с лейблом `heritage: deckhouse` или `heritage: upmeter`) в проекты не превращаются: их учитывает виртуальный проект `deckhouse` (кроме `default`, он остаётся в виртуальном `default`). Лейбла, который оставляет пользовательский неймспейс без проекта, нет. Неймспейс длиннее 61 символа тоже пропускается: это лимит имени Project.
 
-Уже существующие RoleBinding и AuthorizationRule внутри неймспейса после перехода в проект продолжают работать. Namespace Admin **не** копируется в `.spec.administrators` и **не** становится `d8:project:admin`: эта роль ещё управляет ProjectRoleBinding, а это шире, чем Admin внутри одного неймспейса. Чтобы руководитель команды стал администратором проекта, оператор платформы добавляет его в `.spec.administrators` или создаёт ProjectRoleBinding. У Namespace Admin и раньше не было `update`/`patch`/`delete` на сам объект Namespace (только `get`/`list`/`watch`); после перехода в проект Namespace ещё и принадлежит Helm (`heritage: multitenancy-manager`), поэтому лейблы и аннотации меняются через Project, а не на Namespace.
+Уже существующие RoleBinding и AuthorizationRule внутри неймспейса после перехода в проект продолжают работать. Namespace Admin **не** копируется в `.spec.administrators` и **не** становится `d8:project:admin`: эта роль ещё управляет ProjectRoleBinding, а это шире, чем Admin внутри одного неймспейса. Чтобы руководитель команды стал администратором проекта, оператор платформы добавляет его в `.spec.administrators` или создаёт ProjectRoleBinding. У Namespace Admin и раньше не было `update`/`patch`/`delete` на сам объект Namespace (только `get`/`list`/`watch`); после перехода в проект Namespace ещё и принадлежит Helm (`heritage: multitenancy-manager`).
+
+Лейблы и аннотации, которые ставит модуль, — `heritage`, `projects.deckhouse.io/*`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, аннотации node-selector и tolerations — меняются через Project и его шаблон; любой другой лейбл или аннотацию (`istio-injection`, лейбл Pod Security, служебную аннотацию GitOps-инструмента) можно по-прежнему поставить прямо на Namespace, если это позволяет RBAC, и контроллер их не трогает. `spec` и финализаторы Namespace, как и его удаление, остаются за контроллером.
+
+Сам лейбл `projects.deckhouse.io/project` ставит только контроллер: неймспейс, созданный вручную с этим лейблом, отклоняется, поэтому нельзя сделать так, чтобы неймспейс выглядел принадлежащим чужому проекту.
 
 Например:
 

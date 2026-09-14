@@ -74,6 +74,12 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{}, fmt.Errorf("get namespace: %w", err)
 	}
+	// A namespace on its way out takes its catalog with it; writing into it only produces
+	// "unable to create new content in namespace ... because it is being terminated" and a retry.
+	if ns.DeletionTimestamp != nil {
+		clearViolations(ns.Name)
+		return ctrl.Result{}, nil
+	}
 	// Only project namespaces (carrying the project label) get a catalog. Any other namespace —
 	// the default namespace, system namespaces, namespaces of "virtual" projects — must not, even
 	// when a registration's defaultAvailability is All. Clean up any catalog that lingers there.
@@ -130,10 +136,11 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 			return err
 		}
 		available := resolved.Available()
-		if len(available) == 0 {
-			// Nothing available here: ensure no stale catalog object lingers.
-			_ = r.Delete(ctx, &v1alpha1.AvailableClusterResource{ObjectMeta: metav1.ObjectMeta{Name: reg.Name, Namespace: ns.Name}})
-			continue
+		if available == nil {
+			// An empty catalog is kept as an object with an empty list: a reader (the Console
+			// among them) can then tell "nothing is available here" from "not reconciled yet",
+			// which a missing object could not say.
+			available = []v1alpha1.AvailableObject{}
 		}
 		kind := ""
 		if reg.Spec.GrantedResource != nil {
