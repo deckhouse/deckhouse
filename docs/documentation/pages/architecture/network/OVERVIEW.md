@@ -12,14 +12,15 @@ This subsection describes the architecture of the Network subsystem of Deckhouse
 The Network subsystem includes the following modules:
 
 * [`kube-dns`](/modules/kube-dns/): Installs CoreDNS components for DNS management in the Kubernetes cluster.
-* [`node-local-dns`](/modules/node-local-dns/): Deploys a caching DNS server on each cluster node and exports DNS metrics to Prometheus for analyzing DNS operation in the cluster on the [Grafana dashboard](/modules/node-local-dns/#grafana-dashboard). The architecture of the caching DNS server is described on the [corresponding page](dns-caching.html) of this subsection.
+* [`node-local-dns`](/modules/node-local-dns/): Deploys a caching DNS server on each cluster node and exports DNS metrics to Prometheus for analyzing DNS operation in the cluster on the [Grafana dashboard](/modules/node-local-dns/#grafana-dashboard).
 * [`kube-proxy`](/modules/kube-proxy/): Manages the kube-proxy components responsible for networking and load balancing within the cluster.
 * [`cni-cilium`](/modules/cni-cilium/): Provides cluster networking using the CNI Cilium plugin.
 * [`cilium-hubble`](/modules/cilium-hubble/): Provides visualization of the cluster network stack if the Cilium CNI is enabled.
-* [`ingress-nginx`](/modules/ingress-nginx/): Installs and manages the [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) using custom resources. The module architecture is described on the [corresponding page](ingress-nginx.html) of this subsection.
+* [`ingress-nginx`](/modules/ingress-nginx/): Installs and manages the [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) using custom resources.
 * [`metallb`](/modules/metallb/): Implements the LoadBalancer mechanism for Services in bare-metal clusters.
-* [`istio`](/modules/istio/): Implements a Service Mesh based on Istio for centralized management of network traffic in the cluster. The module architecture is described on the [corresponding page](istio.html) of this subsection.
-* [`alb`](/modules/alb/): Implements an Application Load Balancer (ALB) based on the [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/). The module architecture is described on the [corresponding page](alb.html) of this subsection.
+* [`istio`](/modules/istio/): Implements a Service Mesh based on Istio for centralized management of network traffic in the cluster.
+* [`alb`](/modules/alb/): Implements an Application Load Balancer (ALB) based on the [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/).
+* [`sdn`](/modules/sdn/): Provides software-defined networking (SDN) functions in the cluster — node network interface configuration, additional networks for pods and VMs, underlay networks, and system networks.
 
 The subsection also describes:
 
