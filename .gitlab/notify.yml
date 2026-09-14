@@ -1,0 +1,158 @@
+.notify_send_msg: &send_msg |
+  send_msg(){
+    curl -f -L -X POST "${LOOP_API}" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer ${LOOP_TOKEN}" \
+      --data "{\"channel_id\": \"${LOOP_CHANNEL_ID}\",\"message\":\"${message}\"}"
+  }
+.notify_after_scripts:
+  notify_reproducibility: 
+    - *send_msg
+    - |
+      # after_script runs in a fresh shell; restore values (SLOW, DURATION_HUMAN,
+      # JOB_URL, COMPARE_RESULT) computed during the script: phase before notify runs.
+      if [[ -f measure.env ]]; then
+        set -a
+        source measure.env
+        set +a
+      else export CI_JOB_STATUS='failed'
+      fi
+      
+      WORKFLOW_URL="${CI_PIPELINE_URL}"
+
+      message=''
+      # Priority order: a slow (but successful) rebuild is checked first so it
+      # does not clash with the failure/mismatch conditions below.
+
+      if [[ "$COMPARE_RESULT" == "failure" ]]; then
+        message+="🛑Build reproducibility check failed🛑\nReason: digest mismatch on rebuild (build is not reproducible)\nSHA: ${RESOLVED_SHA}\n[URL](${WORKFLOW_URL})\n"
+        else 
+          if [[ "$SLOW" == "true" ]]; then
+            message+="🐢Build reproducibility rebuild is slow🐢\nBuild FE job took ${DURATION_HUMAN} (threshold 5m)\nSHA: ${RESOLVED_SHA}\n[URL](${CI_PIPELINE_URL})\n"
+          fi
+      fi   
+
+      if [[ "$BUILD_MAIN_RESULT" == "failure" || "$BUILD_DEV_RESULT" == "failure" ]]; then
+        message+="🛑Build reproducibility check failed🛑\nReason: FE rebuild failed\nSHA: ${RESOLVED_SHA}\n[URL](${WORKFLOW_URL})\n"
+      fi
+
+      if [[ "$RESOLVE_RESULT" == "failure" ]]; then
+        message+="🛑Build reproducibility check failed🛑\nReason: failed to resolve baseline / workflow error\nSHA: ${RESOLVED_SHA}\n[URL](${WORKFLOW_URL})\n"
+      fi
+
+      if [ -n "${message}" ]; then
+        send_msg
+      else 
+        echo "Nothing to alert about (build succeeded within the time budget)."
+        exit 0
+      fi
+
+  notify_failure:
+    - *send_msg
+    - |
+      if [ "${CI_JOB_STATUS}" == "failed" ]; then
+        message="🛑 Workflow: **${CI_PIPELINE_SCHEDULE_DESCRIPTION:-CI_PIPELINE_SOURCE}** Job: **${CI_JOB_NAME}** failed! 🛑\n[URL](${CI_PIPELINE_URL})"
+        send_msg
+      fi
+
+  notify_timing_report:
+    - *send_msg
+    - |
+      # after_script runs in a fresh shell; restore AVG_BUILD_TIME computed during the script: phase.
+      timing_report_shell_file="${TIMING_REPORT_SHELL_FILE:-timing_report.shell.env}"
+      if [[ ! -f "${timing_report_shell_file}" ]]; then
+        echo "ERROR: Timing report shell state file '${timing_report_shell_file}' was not found; skip notification with empty AVG_BUILD_TIME." >&2
+        export CI_JOB_STATUS='failed'
+      fi
+
+      set -a
+      source "${timing_report_shell_file}"
+      set +a
+
+      if [[ -z "${AVG_BUILD_TIME:-}" ]]; then
+        echo "ERROR: AVG_BUILD_TIME is empty after sourcing '${timing_report_shell_file}'; skip timing report notification." >&2
+        export CI_JOB_STATUS='failed'
+      fi
+
+      message=":passport_control: **Average build time on the same commit is [${AVG_BUILD_TIME}](${CI_PIPELINE_SCHEDULE_DESCRIPTION:-CI_PIPELINE_SOURCE})** :passport_control:"
+      send_msg
+
+.notify-base:
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    LOOP_SERVICE_NOTIFICATIONS:
+      token: $VAULT_ID_TOKEN
+      file: false
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop/webhook_url@projects
+    LOOP_TOKEN:
+      token: $VAULT_ID_TOKEN
+      file: false
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop/token@projects
+    LOOP_API:
+      token: $VAULT_ID_TOKEN
+      file: false
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop/posts_api_url@projects
+    LOOP_CHANNEL_ID:
+      token: $VAULT_ID_TOKEN
+      file: false
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop/channel_id@projects
+
+# override channel to system-notifications
+.notify-system:
+  secrets:
+    LOOP_CHANNEL_ID:
+      token: $VAULT_ID_TOKEN
+      file: false
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop/system_notifications_channel_id@projects
+
+# TEST use for testing notifications
+.notify-test:
+  secrets:
+    LOOP_CHANNEL_ID:
+      token: $VAULT_ID_TOKEN
+      file: false
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop/test_channel_id@projects
+
+
+# info complicated notification job
+.notify-reproducibility:
+  extends:
+    - .notify-base
+  after_script:
+    - !reference [.notify_after_scripts, notify_reproducibility]
+    - !reference [.notify_after_scripts, notify_failure]
+
+.notify-reproducibility-test:
+  extends:
+    - .notify-reproducibility
+    - .notify-test
+
+.notify-timing-report:
+  extends:
+    - .notify-base
+    - .notify-system
+  after_script:
+    - !reference [.notify_after_scripts, notify_timing_report]
+    - !reference [.notify_after_scripts, notify_failure]
+
+.notify-timing-report-test:
+  extends:
+    - .notify-timing-report
+    - .notify-test
+
+# failure
+.notify-failure:
+  extends:
+    - .notify-base
+  after_script:
+    - !reference [.notify_after_scripts, notify_failure]
+
+.notify-failure-test:
+  extends:
+    - .notify-failure
+    - .notify-test
