@@ -93,10 +93,10 @@ spec:
                 description: |-
                   Settings for determining the cluster-wide resource used by default.
 
-                  The resource is identified by the presence of the specified annotation and is used as the default value if one is not specified using ClusterResourceGrantPolicy.
+                  The resource is identified by the specified annotation carrying the value `true` (compared case-insensitively; `false` marks a resource that is not the default, as the Kubernetes convention for `storageclass.kubernetes.io/is-default-class` does) and is used as the default value if one is not specified using ClusterResourceGrantPolicy. When more than one resource carries `true`, there is no default.
                 properties:
                   annotationKey:
-                    description: Key of the annotation that marks the cluster-wide resource used by default.
+                    description: Key of the annotation that marks the cluster-wide resource used by default; only the value `true` counts.
                     type: string
                 type: object
               enforcement:

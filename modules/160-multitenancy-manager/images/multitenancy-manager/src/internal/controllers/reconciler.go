@@ -31,11 +31,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/api/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/jsonpath"
 	"controller/internal/namespaces"
 	"controller/internal/naming"
@@ -104,7 +107,7 @@ func (r *ProjectReconciler) cleanupCatalog(ctx context.Context, ns string) error
 // reconcileCatalog upserts an AvailableClusterResource per registration for the namespace, deleting
 // catalogs that became empty.
 func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Namespace, project string) error {
-	grants, err := resolve.GrantsForLabels(ctx, r.Client, ns.Labels)
+	grants, err := resolve.GrantsForNamespace(ctx, r.Client, ns)
 	if err != nil {
 		return err
 	}
@@ -197,6 +200,35 @@ func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&v1alpha1.ClusterResourceGrantPolicy{}, enqueueProjectNamespaces).
 		Watches(&v1alpha1.GrantableClusterResourceDefinition{}, enqueueProjectNamespaces).
 		Watches(&v1alpha1.GrantableClusterResourceReference{}, enqueueProjectNamespaces).
+		// The policies are matched against the union of Project and namespace labels, so a label
+		// change on the Project has to re-evaluate its namespaces; nothing else about a Project
+		// matters here, hence the label predicate.
+		Watches(&v1alpha3.Project{}, handler.EnqueueRequestsFromMapFunc(r.namespacesOfProject),
+			builder.WithPredicates(predicate.LabelChangedPredicate{})).
 		Named("project-grants").
 		Complete(r)
+}
+
+// namespacesOfProject maps a Project to the reconcile requests of its namespaces: every namespace
+// labelled with the project, plus the one named after it (the main namespace carries the label as
+// well, but a project whose namespace is still being created does not have it yet).
+func (r *ProjectReconciler) namespacesOfProject(ctx context.Context, obj client.Object) []reconcile.Request {
+	nsList := &corev1.NamespaceList{}
+	if err := r.List(ctx, nsList, client.MatchingLabels{naming.ProjectLabel: obj.GetName()}); err != nil {
+		return nil
+	}
+	reqs := make([]reconcile.Request, 0, len(nsList.Items)+1)
+	seen := map[string]struct{}{}
+	for i := range nsList.Items {
+		name := nsList.Items[i].Name
+		if namespaces.IsSystem(name) {
+			continue
+		}
+		seen[name] = struct{}{}
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
+	}
+	if _, ok := seen[obj.GetName()]; !ok && !namespaces.IsSystem(obj.GetName()) {
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.GetName()}})
+	}
+	return reqs
 }

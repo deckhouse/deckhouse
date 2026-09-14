@@ -151,7 +151,7 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	}
 	project := resolve.ProjectName(ns)
 
-	grants, err := resolve.GrantsForLabels(ctx, v.cl, ns.Labels)
+	grants, err := resolve.GrantsForNamespace(ctx, v.cl, ns)
 	if err != nil {
 		return nil, fmt.Errorf("applicable grants: %w", err)
 	}
