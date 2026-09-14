@@ -26,6 +26,9 @@
     not affected.
  - Creating a `Group` or a `User`, or renaming an existing one, so that `Group.spec.name` matches a group subject or `User.spec.email` matches a user subject of an existing AuthorizationRule or ClusterAuthorizationRule is now rejected, preventing an unintended privilege grant. The email is compared after lowercasing, since that is the form that reaches the token. Set the `user-authz.deckhouse.io/allow-authorization-rule-collision` annotation to `"true"` on the object if the collision is intentional. Already existing objects keep working and only produce a warning. Any declarative flow that manages both the rule and the identity is affected, not only one that deletes and recreates the identity: a first-time apply denies the `Group` or `User` whenever the rule happens to be applied first, and nothing guarantees the order. Add the annotation to such objects before upgrading. Deleting a `Group` or a `User` whose name is still a subject of a rule now produces a warning, since the rule keeps granting that name.
  - During migration to the new Go-based implementation of apiserver-proxy, connection flaps to the API server may occur. This change exposes a new hostPort `6480` for health checks and upstreams statistics.
+ - During the first `user-authz` release after the update the per-role bindings are protected from the release engine, the aggregated ones are created, and the per-role bindings are deleted right after the release. Permissions granted through annotated ClusterRoles stay in place throughout.
+    The `user-authz.deckhouse.io/access-level` label is now set automatically on annotated ClusterRoles.
+    In audit logs, access granted through annotated ClusterRoles is attributed to `user-authz:<level>:custom` instead of the individual ClusterRole.
  - Endpoints for pods in a terminal phase (Failed/Succeeded) are no longer published. In DVP clusters this prevents traffic from being routed to a VirtualMachine IP that has been reused by another pod. Pods being deleted are now published with the serving and terminating conditions, which enables the graceful shutdown flow for consumers. Pod readiness is derived from the PodReady condition, and stale probe results are reset when a pod becomes not ready, is recreated, or changes its IP.
  - Fixes recreation of all CloudEphemeral nodes on upgrade to 1.76.9. The MachineDeployment
     replica count was dropped and the MachineDeployment was scaled to zero.
@@ -653,6 +656,10 @@
     the load balancer controller applies them and may assign a different address to the service, which causes a short interruption of the connections.
  - **[service-with-healthchecks]** Bump Go dependencies in the service-with-healthchecks image to fix known CVEs. [#21592](https://github.com/deckhouse/deckhouse/pull/21592)
     The service-with-healthchecks components (controller, agent) will restart after the update.
+ - **[service-with-healthchecks]** Fixed a load balancer losing all its endpoints for good after a target pod was replaced. [#22980](https://github.com/deckhouse/deckhouse/pull/22980)
+    The `service-with-healthchecks` controller and agent are restarted.
+    A `ServiceWithHealthchecks` that was left in `NotAllEndpointsAreReady` with no EndpointSlice
+    recovers automatically once the updated agent starts, no manual action is needed.
  - **[service-with-healthchecks]** Fixed an API server overload issue ("status storm"), resolved validation errors for ClusterIP services, corrected pod readiness evaluation logic, and improved code quality. [#19455](https://github.com/deckhouse/deckhouse/pull/19455)
     The `service-with-healthchecks` status logic was heavily refactored to reduce API and etcd load. If you rely on `lastProbeTime` observability on every probe, explicitly enable `verboseStatus` in the module configuration.
  - **[service-with-healthchecks]** Stopped publishing terminated pods in EndpointSlices and started publishing pods being deleted as terminating endpoints. [#22879](https://github.com/deckhouse/deckhouse/pull/22879)
@@ -671,6 +678,7 @@
  - **[user-authn]** Disable implicit flow due to security concerns. [#18288](https://github.com/deckhouse/deckhouse/pull/18288)
  - **[user-authn]** Drop the dead per-DexAuthenticator redirect URI from the privileged kubernetes OAuth2 client. [#22369](https://github.com/deckhouse/deckhouse/pull/22369)
  - **[user-authn]** Fix Dex token refresh with upstream providers that rotate refresh tokens (GitLab), which logged users out every `idTokenTTL`. [#21687](https://github.com/deckhouse/deckhouse/pull/21687)
+ - **[user-authn]** Fixed DexAuthenticator pod creation under ResourceQuota by setting init container CPU/memory limits to the sum of main container limits. [#22998](https://github.com/deckhouse/deckhouse/pull/22998)
  - **[user-authn]** Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior. [#20089](https://github.com/deckhouse/deckhouse/pull/20089)
  - **[user-authn]** Issue a dedicated OAuth2 client secret per DexAuthenticator instead of reusing the shared cluster client secret. [#22369](https://github.com/deckhouse/deckhouse/pull/22369)
     On upgrade, every DexAuthenticator that carries the
@@ -726,6 +734,11 @@
     bound to the subject with a RoleBinding in the same namespace, or with a ClusterRole and a ClusterRoleBinding to grant it cluster-wide.
  - **[user-authz]** Extend cluster-admin clusterrole  with kubelet-api-admin rights. [#19888](https://github.com/deckhouse/deckhouse/pull/19888)
  - **[user-authz]** Fix multi-tenancy namespace visibility for users without ClusterAuthorizationRules [#18689](https://github.com/deckhouse/deckhouse/pull/18689)
+ - **[user-authz]** Grant custom ClusterRoles (annotated with `user-authz.deckhouse.io/access-level`) through one aggregated ClusterRole per access level, so the number of bindings per ClusterAuthorizationRule/AuthorizationRule no longer depends on the number of such roles. [#22968](https://github.com/deckhouse/deckhouse/pull/22968)
+    During the first `user-authz` release after the update the per-role bindings are protected from the release engine, the aggregated ones are created, and the per-role bindings are deleted right after the release. Permissions granted through annotated ClusterRoles stay in place throughout.
+    The `user-authz.deckhouse.io/access-level` label is now set automatically on annotated ClusterRoles.
+    In audit logs, access granted through annotated ClusterRoles is attributed to `user-authz:<level>:custom` instead of the individual ClusterRole.
+ - **[user-authz]** Group the module alerts under a group named apart from the alerts themselves, so the incident shelf accepts them. [#22999](https://github.com/deckhouse/deckhouse/pull/22999)
  - **[user-authz]** Honor CAR-independent RBAC in webhook and permission-browser [#21373](https://github.com/deckhouse/deckhouse/pull/21373)
     With enableMultiTenancy, effective access is now the union of CAR (within its limitNamespaces/namespaceSelector), AuthorizationRules, and plain RoleBindings/ClusterRoleBindings. Previously the webhook denied requests outside the CAR scope even when RBAC explicitly granted them: such existing bindings for subjects with a CAR silently become effective after the upgrade — review them. The CAR access level still does not apply outside its namespace limits. AccessibleNamespaces reflects the same union.
  - **[user-authz]** Reject local Group names and User emails that collide with a subject already granted privileges by an authorization rule. [#22359](https://github.com/deckhouse/deckhouse/pull/22359)
@@ -783,6 +796,7 @@
  - **[deckhouse-controller]** Updated addon-operator to v1.21.18. [#21174](https://github.com/deckhouse/deckhouse/pull/21174)
  - **[deckhouse-controller]** Updated version of shell-operator. [#18648](https://github.com/deckhouse/deckhouse/pull/18648)
  - **[deckhouse-controller]** bump nelm to v1.27.2 [#21530](https://github.com/deckhouse/deckhouse/pull/21530)
+ - **[deckhouse-controller]** bump nelm v1.30.3 [#23001](https://github.com/deckhouse/deckhouse/pull/23001)
  - **[deckhouse-controller]** convert MPO CRD v1alpha1 to not served. [#18010](https://github.com/deckhouse/deckhouse/pull/18010)
  - **[deckhouse]** Add settings check. [#19116](https://github.com/deckhouse/deckhouse/pull/19116)
  - **[deckhouse]** Allow ClusterAdmin manage ModuleSettingsDefinitions with RBAC. [#21753](https://github.com/deckhouse/deckhouse/pull/21753)
@@ -831,6 +845,8 @@
  - **[node-manager]** Fix cloud providers linter warnings. [#18650](https://github.com/deckhouse/deckhouse/pull/18650)
  - **[node-manager]** update cluster-api version in caps to v1.11.5 [#17936](https://github.com/deckhouse/deckhouse/pull/17936)
  - **[openvpn]** open source components versions migrated from werf.inc.yaml to oss.yaml [#18117](https://github.com/deckhouse/deckhouse/pull/18117)
+ - **[prometheus]** Pin goyacc build dependency to a Go 1.25-compatible version to fix the image build. [#22983](https://github.com/deckhouse/deckhouse/pull/22983)
+    prometheus
  - **[registry]** Changed the CODEOWNERS for the registry module. [#19410](https://github.com/deckhouse/deckhouse/pull/19410)
  - **[registry]** Update dependencies to fix CVEs [#18600](https://github.com/deckhouse/deckhouse/pull/18600)
  - **[upmeter]** fix go lint warning [#17909](https://github.com/deckhouse/deckhouse/pull/17909)
