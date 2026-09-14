@@ -5214,13 +5214,6 @@ jobs:
       - name: Run Deckhouse images CVE tests on "${{ steps.scan_type.outputs.tag }}"
         id: scan
         uses: deckhouse/modules-actions/cve_scan@main
-        env:
-          # Forward the changed-images allow-list to cve_scan.sh. GitHub Actions
-          # propagates step-level env into the composite action's inner steps, so
-          # `cve_scan.sh` reads ${ONLY_IMAGES} directly from the environment (see
-          # the ONLY_IMAGES_SET block in /home/nikmor/Flant/GitLab/SSDLC-tools/cve-scan/cve_scan.sh).
-          # Empty "[]" makes the script fall back to full scan — no extra glue.
-          ONLY_IMAGES: ${{ needs.build_fe.outputs.changed_compact }}
         with:
           prod_registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           prod_registry_user: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -5234,6 +5227,13 @@ jobs:
           scan_several_latest_releases: "${{ steps.scan_type.outputs.scan_several_latest_releases }}"
           latest_releases_amount: "${{ steps.scan_type.outputs.latest_releases_amount }}"
           role_name: "${{ steps.split.outputs.name }}"
+          # Forward the changed-images allow-list as a composite-action *input*, not a
+          # step-level env var: GitHub Actions does NOT propagate env set on the step
+          # that calls a composite action into that action's own inner steps, so the
+          # previous `env: ONLY_IMAGES: ...` here was silently discarded and every PR
+          # scan ran full-scan regardless. `cve_scan.sh` (v2.0) reads this as
+          # CS_ONLY_IMAGES; empty "[]" makes it fall back to full scan.
+          only_images: ${{ needs.build_fe.outputs.changed_compact }}
       # </template: cve_scan_deckhouse_images>
 
       # <template: cve_tests_upload_reports_artifacts>
