@@ -134,6 +134,7 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	availByDef := map[string]map[string]bool{}
 
 	var patches []jsonPatchOperation
+	var warnings []string
 	for _, mr := range refs {
 		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version)
 		if !ok {
@@ -183,6 +184,13 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 			(fp.Defaulting == v1alpha1.DefaultingCoerce && !availByDef[def.Name][value])
 		if shouldDefault {
 			patches = append(patches, jsonPatchOperation{Op: "add", Path: jsonPointer(segs), Value: defName})
+			if value != "" {
+				// The author asked for something and got something else; say so on the response the
+				// author reads (kubectl prints admission warnings), the way USAGE describes Coerce.
+				warnings = append(warnings, fmt.Sprintf(
+					"[multitenancy] %s %q: %s %q is not available to project %q and was replaced with the project default %q",
+					req.Kind.Kind, req.Name, fp.Path, value, resolve.ProjectName(ns), defName))
+			}
 		}
 	}
 
@@ -196,6 +204,7 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	resp := allowedResponse(req.UID)
 	resp.Patch = patchBytes
 	resp.PatchType = ptr.To(admissionv1.PatchTypeJSONPatch)
+	resp.Warnings = warnings
 	return resp, nil
 }
 

@@ -700,7 +700,7 @@ spec:
 
 При создании PersistentVolumeClaim без значения `spec.storageClassName` в это поле автоматически подставляется `fast-ssd`. Если указан StorageClass, которого нет в списке разрешённых, создание PersistentVolumeClaim отклоняется.
 
-Для StorageClass используется режим подстановки значения по умолчанию [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting). Если встроенный admission-контроллер Kubernetes уже подставил в `spec.storageClassName` класс по умолчанию, недоступный проекту, значение заменяется на `fast-ssd`, а создание PersistentVolumeClaim не отклоняется.
+Для StorageClass используется режим подстановки значения по умолчанию [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting). Если встроенный admission-контроллер Kubernetes уже подставил в `spec.storageClassName` класс по умолчанию, недоступный проекту, значение заменяется на `fast-ssd`, а создание PersistentVolumeClaim не отклоняется. О замене сообщается предупреждением (admission warning) в ответе на запрос, поэтому в выводе `d8 k` видны и исходное значение, и подставленное.
 
 Чтобы проверить, какие StorageClass доступны проекту, выполните следующую команду:
 
@@ -780,6 +780,12 @@ spec:
 - ClusterRole, соответствующие селектору `shared: "true"`.
 
 ClusterRole с лейблом `rbac.deckhouse.io/delegatable` при этом остаются доступными.
+
+Лейбл `rbac.deckhouse.io/delegatable: "true"` обязателен для каждой ClusterRole, указанной в политике: регистрация `clusterroles` исключает роли без него из всех проектов, а исключение имеет приоритет над `allowed` и `allowedSelector`. Запись политики, указывающая роль без лейбла, ничего не предоставляет. Контроллер сообщает об этом в условии `AllowedEffective` статуса ClusterResourceGrantPolicy, указывая имя роли в сообщении:
+
+```shell
+d8 k get clusterresourcegrantpolicy extra-roles -o jsonpath='{.status.conditions[?(@.type=="AllowedEffective")]}'
+```
 
 При создании или изменении RoleBinding указанная в нём ClusterRole проверяется на доступность проекту. Значение ClusterRole автоматически не подставляется.
 

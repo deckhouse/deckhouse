@@ -21,8 +21,10 @@ import (
 	"strings"
 	"testing"
 
+	rbacv1 "k8s.io/api/rbac/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -82,5 +84,67 @@ func TestPolicy_InvalidSelectorIsReported(t *testing.T) {
 	cond = policyCondition(t, r, "good")
 	if cond.Status != metav1.ConditionTrue {
 		t.Fatalf("a valid policy must be True, got %s: %s", cond.Status, cond.Message)
+	}
+}
+
+func rolesMapper() apimeta.RESTMapper {
+	m := apimeta.NewDefaultRESTMapper([]schema.GroupVersion{{Group: "rbac.authorization.k8s.io", Version: "v1"}})
+	m.Add(schema.GroupVersionKind{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}, apimeta.RESTScopeRoot)
+	return m
+}
+
+// TestPolicy_NonDelegatableRoleIsReported: the clusterroles registration excludes every ClusterRole
+// not marked delegatable, and an exclusion wins over an allow-list, so a policy that allows such a
+// role grants nothing. USAGE told administrators to write exactly that policy; the condition now
+// tells them why nothing happened.
+func TestPolicy_NonDelegatableRoleIsReported(t *testing.T) {
+	def := &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "clusterroles"},
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+			GrantedResource:     &v1alpha1.GrantedResource{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole"},
+			DefaultAvailability: v1alpha1.AvailabilityAll,
+			Excluded: []v1alpha1.ResourceFilter{{MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key: "rbac.deckhouse.io/delegatable", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"true"},
+			}}}},
+		},
+	}
+	delegatable := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "team-viewer", Labels: map[string]string{"rbac.deckhouse.io/delegatable": "true"}}}
+	plain := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "team-editor"}}
+	policy := &v1alpha1.ClusterResourceGrantPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "roles", Generation: 1},
+		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
+			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+			Resources:       []v1alpha1.GrantResource{{ResourceName: "clusterroles", Allowed: []string{"team-viewer", "team-editor"}}},
+		},
+	}
+	r := &PolicyReconciler{Client: buildClientWithStatus(t, def, delegatable, plain, policy), Mapper: rolesMapper()}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "roles"}}); err != nil {
+		t.Fatal(err)
+	}
+	got := &v1alpha1.ClusterResourceGrantPolicy{}
+	if err := r.Get(context.Background(), types.NamespacedName{Name: "roles"}, got); err != nil {
+		t.Fatal(err)
+	}
+	cond := apimeta.FindStatusCondition(got.Status.Conditions, PolicyConditionAllowedEffective)
+	if cond == nil || cond.Status != metav1.ConditionFalse {
+		t.Fatalf("expected AllowedEffective=False, got %+v", cond)
+	}
+	if !strings.Contains(cond.Message, `"team-editor"`) || !strings.Contains(cond.Message, "delegatable") || strings.Contains(cond.Message, `"team-viewer"`) {
+		t.Fatalf("message must name the non-delegatable role only, got %q", cond.Message)
+	}
+
+	// Marking the role delegatable clears the condition on the next reconcile.
+	plain.Labels = map[string]string{"rbac.deckhouse.io/delegatable": "true"}
+	if err := r.Update(context.Background(), plain); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "roles"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Get(context.Background(), types.NamespacedName{Name: "roles"}, got); err != nil {
+		t.Fatal(err)
+	}
+	if cond := apimeta.FindStatusCondition(got.Status.Conditions, PolicyConditionAllowedEffective); cond == nil || cond.Status != metav1.ConditionTrue {
+		t.Fatalf("expected AllowedEffective=True once the role is delegatable, got %+v", cond)
 	}
 }
