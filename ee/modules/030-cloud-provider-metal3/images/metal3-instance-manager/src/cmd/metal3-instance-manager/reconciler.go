@@ -291,13 +291,18 @@ func updateBareMetalHostSpec(bmh *unstructured.Unstructured, spec instanceSpec, 
 		}
 		updated = updated || changed
 	}
+	claimed := hasBareMetalHostConsumerRef(bmh)
 	for _, field := range []struct {
 		value bool
 		path  []string
+		skip  bool
 	}{
-		{spec.Online, []string{"spec", "online"}},
-		{spec.BMC.Insecure, []string{"spec", "bmc", "disableCertificateVerification"}},
+		{spec.Online, []string{"spec", "online"}, claimed},
+		{spec.BMC.Insecure, []string{"spec", "bmc", "disableCertificateVerification"}, false},
 	} {
+		if field.skip {
+			continue
+		}
 		changed, err := setNestedBool(bmh, field.value, field.path...)
 		if err != nil {
 			return false, err
@@ -310,6 +315,11 @@ func updateBareMetalHostSpec(bmh *unstructured.Unstructured, spec instanceSpec, 
 	}
 	updated = updated || changed
 	return updated, nil
+}
+
+func hasBareMetalHostConsumerRef(bmh *unstructured.Unstructured) bool {
+	name, _, _ := unstructured.NestedString(bmh.Object, "spec", "consumerRef", "name")
+	return name != ""
 }
 
 func setNestedString(obj *unstructured.Unstructured, value string, fields ...string) (bool, error) {
