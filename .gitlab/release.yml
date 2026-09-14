@@ -1,0 +1,196 @@
+# Promote to prod registry, and deploy release tags by release channel.
+#
+# Manual jobs on tag pipelines only (stage: deploy). Mirrors the GitHub
+# Actions promote_image.yml / deploy-<channel>.yml workflows:
+#   - promote:tag       -> stage registry to prod registry, per edition.
+#   - deploy:<channel>  -> republish a release tag under a channel tag
+#                          (alpha/beta/early-access/stable/rock-solid),
+#                          per edition.
+#
+# Deploying to early-access, stable or rock-solid requires first running
+# check_release_operator:<channel>, which fails if the person approving the
+# deploy is the same person who pushed the release tag.
+#
+# Outside the deckhouse/deckhouse project (forks/test projects), images are
+# published to this project's built-in registry ($CI_REGISTRY) instead of
+# the prod registry — see .gitlab/scripts/{promote-image,deploy-channel}.sh.
+
+.release_base:
+  stage: deploy
+  tags:
+    - vm-intteam-cloud-d8-ssdlc-runner
+  needs: []
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    DECKHOUSE_REGISTRY_STAGE_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_REGISTRY_STAGE_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_STAGE_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_STAGE_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_HOST:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry_host/DECKHOUSE_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry-write/deckhouse-admin/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry-write/deckhouse-admin/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_READ_REGISTRY_HOST:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry_host/DECKHOUSE_READ_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_READ_REGISTRY_USER:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_READ_REGISTRY_PASSWORD:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  before_script:
+    - !reference [.scripts, docker_config_isolation]
+    - !reference [.scripts, read_werf_version]
+    - !reference [.scripts, install_werf]
+    - !reference [.scripts, login_stage_registry]
+    - !reference [.scripts, login_write_registry]
+    - !reference [.scripts, login_read_registry]
+
+promote:tag:
+  extends:
+    - .release_base
+    - .rules:on_tag_manual
+  parallel:
+    matrix:
+      - WERF_ENV: [CE, EE, FE, BE, SE, SE-plus]
+  script:
+    - bash .gitlab/scripts/promote-image.sh
+
+# ---------------------------------------------------------------------------
+# Self-review gate: required before deploying to a channel above EarlyAccess.
+# ---------------------------------------------------------------------------
+
+.check_release_operator_base:
+  stage: deploy
+  tags:
+    - vm-intteam-cloud-d8-ssdlc-runner
+  needs: []
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    FOX_TOKEN:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN/foxtoken@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - bash .gitlab/scripts/check-release-operator.sh
+
+check_release_operator:early-access:
+  extends:
+    - .check_release_operator_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: early-access
+
+check_release_operator:stable:
+  extends:
+    - .check_release_operator_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: stable
+
+check_release_operator:rock-solid:
+  extends:
+    - .check_release_operator_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: rock-solid
+
+# ---------------------------------------------------------------------------
+# Deploy a release tag by release channel, per edition.
+# ---------------------------------------------------------------------------
+
+deploy:alpha:
+  extends:
+    - .release_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: alpha
+  parallel:
+    matrix:
+      - WERF_ENV: [CE, EE, FE, BE, SE, SE-plus]
+  script:
+    - bash .gitlab/scripts/deploy-channel.sh
+
+deploy:beta:
+  extends:
+    - .release_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: beta
+  parallel:
+    matrix:
+      - WERF_ENV: [CE, EE, FE, BE, SE, SE-plus]
+  script:
+    - bash .gitlab/scripts/deploy-channel.sh
+
+deploy:early-access:
+  extends:
+    - .release_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: early-access
+  needs:
+    - job: check_release_operator:early-access
+  parallel:
+    matrix:
+      - WERF_ENV: [CE, EE, FE, BE, SE, SE-plus]
+  script:
+    - bash .gitlab/scripts/deploy-channel.sh
+
+deploy:stable:
+  extends:
+    - .release_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: stable
+  needs:
+    - job: check_release_operator:stable
+  parallel:
+    matrix:
+      - WERF_ENV: [CE, EE, FE, BE, SE, SE-plus]
+  script:
+    - bash .gitlab/scripts/deploy-channel.sh
+
+deploy:rock-solid:
+  extends:
+    - .release_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: rock-solid
+  needs:
+    - job: check_release_operator:rock-solid
+  parallel:
+    matrix:
+      - WERF_ENV: [CE, EE, FE, BE, SE, SE-plus]
+  script:
+    - bash .gitlab/scripts/deploy-channel.sh

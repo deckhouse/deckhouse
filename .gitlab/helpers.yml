@@ -82,6 +82,12 @@
         --username "${DECKHOUSE_REGISTRY_USER}" --password-stdin
     fi
 
+  login_read_registry: |
+    if [[ -n "${DECKHOUSE_READ_REGISTRY_HOST:-}" ]]; then
+      echo "${DECKHOUSE_READ_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_READ_REGISTRY_HOST}" \
+        --username "${DECKHOUSE_READ_REGISTRY_USER}" --password-stdin
+    fi
+
   setup_ssh: |
     eval "$(ssh-agent -s)"
     if [[ -n "${SOURCE_REPO_SSH_KEY:-}" ]]; then

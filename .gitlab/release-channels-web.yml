@@ -1,0 +1,78 @@
+# Update the release-channels ConfigMap consumed by the deckhouse-web site/API
+# on the deckhouse-web clusters, once a release channel has been fully
+# deployed (deploy:<channel> succeeded for every edition).
+#
+# KUBECONFIG_BASE64_PROD_25 / KUBECONFIG_BASE64_DEV come from Vault (same
+# secret engine as DOC_API_KEY in .gitlab/web.yml); a cluster whose secret is
+# empty is skipped, not failed — see .gitlab/scripts/patch-channel-configmap.sh.
+
+.release_web_base:
+  stage: deploy
+  tags:
+    - vm-intteam-cloud-d8-ssdlc-runner
+  needs: []
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    KUBECONFIG_BASE64_PROD_25:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/KUBECONFIG_BASE64_PROD_25@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    KUBECONFIG_BASE64_DEV:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/KUBECONFIG_BASE64_DEV@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  before_script:
+    - !reference [.scripts, read_werf_version]
+    - !reference [.scripts, install_werf]
+  script:
+    - bash .gitlab/scripts/patch-channel-configmap.sh
+
+deploy_channels_web:alpha:
+  extends:
+    - .release_web_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: alpha
+  needs:
+    - job: deploy:alpha
+
+deploy_channels_web:beta:
+  extends:
+    - .release_web_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: beta
+  needs:
+    - job: deploy:beta
+
+deploy_channels_web:early-access:
+  extends:
+    - .release_web_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: early-access
+  needs:
+    - job: deploy:early-access
+
+deploy_channels_web:stable:
+  extends:
+    - .release_web_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: stable
+  needs:
+    - job: deploy:stable
+
+deploy_channels_web:rock-solid:
+  extends:
+    - .release_web_base
+    - .rules:on_tag_manual
+  variables:
+    RELEASE_CHANNEL: rock-solid
+  needs:
+    - job: deploy:rock-solid
