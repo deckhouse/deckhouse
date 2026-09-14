@@ -22,7 +22,7 @@ When multiple pipelines share a single ServiceAccount, audit logs will not conta
 To configure token-based authentication for ServiceAccount, the following requirements must be met:
 
 - Cluster access with permissions to create ServiceAccounts and Secrets.
-- For external access: [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) or direct API access via VPN.
+- For external access: [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module, or direct API access via VPN.
 
 ### Create ServiceAccount and a long-lived token
 
@@ -103,7 +103,7 @@ EOF
 When using publishAPI:
 
 ```shell
-API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+API_HOST=$(d8 k -n kube-system get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
 echo "API endpoint: https://${API_HOST}"
 ```
 
@@ -193,7 +193,7 @@ Only one DexProvider in the cluster can have `enableBasicAuth: true`.
 
 The following requirements must be met to configure Basic Auth:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) enabled.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module enabled.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) configured for IdP.
 
 ### Enable
@@ -282,7 +282,7 @@ DKP/Dex does not receive the user password. How `IDP_TOKEN` is obtained depends 
 
 The following requirements must be met to configure Token Exchange:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) enabled.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module enabled.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) configured as **OIDC type**.
 
 {% alert level="warning" %}

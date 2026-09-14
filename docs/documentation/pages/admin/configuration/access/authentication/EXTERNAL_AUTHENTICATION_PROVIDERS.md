@@ -97,8 +97,23 @@ If the parameter is not specified, no group-based filtering will be applied.
          - id: direct
            masterURI: https://159.89.5.247:6443
            description: "Direct access to kubernetes API"
-         publishAPI:
-           enabled: true
+     ```
+
+   - To publish the Kubernetes API via an Ingress controller, enable the [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) parameter in the `control-plane-manager` module settings:
+
+     ```yaml
+     apiVersion: deckhouse.io/v1alpha1
+     kind: ModuleConfig
+     metadata:
+       name: control-plane-manager
+     spec:
+       version: 3
+       enabled: true
+       settings:
+         apiserver:
+           publishAPI:
+             ingress:
+               enabled: true
      ```
 
 After setting up integration in the cluster with an external authentication provider, authentication through it will become possible in the platform's web interfaces. Information on setting up authentication for user applications can be found in the section [Usage → IAM → Authentication](../../../../user/access/authentication.html).

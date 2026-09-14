@@ -23,7 +23,7 @@ description: "Настройка доступа CI/CD к API Kubernetes в Deckh
 Для настройки аутентификации через токен для ServiceAccount должны быть соблюдены следующие требования:
 
 - Доступ к кластеру с правами на создание ServiceAccount и секретов.
-- Для внешнего доступа: опубликованный через Ingress API-сервер Kubernetes (для публикации используется параметр [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi)) или прямой доступ к API через VPN.
+- Для внешнего доступа: опубликованный через Ingress API-сервер Kubernetes (для публикации используется параметр [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`) или прямой доступ к API через VPN.
 
 ### Создание ServiceAccount и долгоживущего токена
 
@@ -104,7 +104,7 @@ EOF
 При использовании publishAPI:
 
 ```shell
-API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+API_HOST=$(d8 k -n kube-system get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
 echo "API endpoint: https://${API_HOST}"
 ```
 
@@ -194,7 +194,7 @@ d8 k --server=$KUBE_SERVER --token=$KUBE_TOKEN get ns
 
 Для настройки Basic Auth должны быть соблюдены следующие требования:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) включён.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager` включён.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) настроен для IdP.
 
 ### Включение
@@ -283,7 +283,7 @@ DKP/Dex не получает пароль пользователя. Спосо�
 
 Для настройки Token Exchange должны быть соблюдены следующие требования:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) включён.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager` включён.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) настроен как **тип OIDC**.
 
 {% alert level="warning" %}

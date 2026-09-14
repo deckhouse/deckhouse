@@ -5,7 +5,10 @@ properties:
     type: object
     x-doc-deprecated: true
     default: {}
-    description: 'Settings for exposing the API server using Ingress.'
+    description: |
+      Settings for exposing the API server using Ingress.
+
+      > **Important.** Starting with version DP 1.77, use the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module to publish the Kubernetes API server.
     properties:
       enabled:
         type: boolean
