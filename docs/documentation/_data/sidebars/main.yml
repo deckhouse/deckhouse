@@ -1852,6 +1852,10 @@ entries:
                 ru: Модуль metallb
               url: /architecture/network/metallb.html
             - title:
+                en: Sdn module
+                ru: Модуль sdn
+              url: /architecture/network/sdn.html
+            - title:
                 en: DNS modules
                 ru: Модули управления DNS
               url: /architecture/network/dns-modules.html
