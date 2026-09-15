@@ -321,6 +321,7 @@
  - **[candi]** kube-apiserver no longer caches watches for `ManifestCheckpointContentChunk` resources from `state-snapshotter`. [#21223](https://github.com/deckhouse/deckhouse/pull/21223)
     kube-apiserver static pod is reconfigured and restarts on the next control-plane sync.
  - **[cert-manager]** Disable SecurityPolicyExceptions for cert-manager namespace [#19184](https://github.com/deckhouse/deckhouse/pull/19184)
+ - **[chrony]** Fixed the unit-detection condition in the `disable-ntp-on-node.sh` node step. [#23035](https://github.com/deckhouse/deckhouse/pull/23035)
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend  by bumping OpenTelemetry Go to v1.41.0 [#20250](https://github.com/deckhouse/deckhouse/pull/20250)
  - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18657](https://github.com/deckhouse/deckhouse/pull/18657)
  - **[cilium-hubble]** Fixed CVE-2026-41520 in hubble-ui-backend [#20360](https://github.com/deckhouse/deckhouse/pull/20360)
@@ -378,6 +379,7 @@
  - **[cloud-provider-yandex]** fix CVEs in cloud-provider-yandex [#18291](https://github.com/deckhouse/deckhouse/pull/18291)
  - **[cloud-provider-zvirt]** Fixed CVEs in `cloud-provider-zvirt`. [#18115](https://github.com/deckhouse/deckhouse/pull/18115)
  - **[cloud-provider-zvirt]** Prevent capz-controller-manager from crashlooping without diagnostics when zVirt tags cannot be created. [#22458](https://github.com/deckhouse/deckhouse/pull/22458)
+ - **[cloud-provider-zvirt]** Resize the boot disk of a recreated VM, let a replaced VM actually power off, and recreate the VM when customNetworkConfig changes. [#22955](https://github.com/deckhouse/deckhouse/pull/22955)
  - **[cloud-provider-zvirt]** fix CSI token refresh patch apply [#18449](https://github.com/deckhouse/deckhouse/pull/18449)
  - **[cloud-provider-zvirt]** fix CVEs in cloud-provider-zvirt [#18257](https://github.com/deckhouse/deckhouse/pull/18257)
  - **[cni-cilium]** Bump Go dependencies and backport upstream cilium security patches to fix known CVEs. [#21507](https://github.com/deckhouse/deckhouse/pull/21507)
