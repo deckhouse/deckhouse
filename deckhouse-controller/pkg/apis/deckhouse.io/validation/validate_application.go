@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -413,7 +414,7 @@ func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.A
 	newSettings := app.Spec.Settings.GetMap()
 	validation.ApplyDefaults(oldSettings, settingsSchema)
 	validation.ApplyDefaults(newSettings, settingsSchema)
-	dropUnsetGrants(settingsSchema, oldSettings, newSettings)
+	dropUnsetGrants(settingsSchema, oldSettings, newSettings, oldApp.Spec.Settings.GetMap())
 
 	errs := packageschema.CheckImmutable(settingsSchema, oldSettings, newSettings)
 	if len(errs) == 0 {
@@ -452,11 +453,12 @@ func effectiveSettings(app *v1alpha1.Application) (map[string]any, error) {
 	return settings, nil
 }
 
-// dropUnsetGrants removes from oldSettings every grantable field the new manifest leaves
-// empty. The controller fills those from the project, so the effective old side holds a
-// value the manifest never spelled out: compared as-is, an edit to an unrelated field
-// would read as a change to a field nobody touched. An explicit value still compares.
-func dropUnsetGrants(settingsSchema *spec.Schema, oldSettings, newSettings map[string]any) {
+// dropUnsetGrants removes from oldSettings every grantable field that neither manifest
+// spells out. The controller fills those from the project, so the effective old side
+// holds a value the manifest never named: compared as-is, an edit to an unrelated field
+// would read as a change to a field nobody touched. oldManifest is spec.settings as the
+// user last wrote it, undefaulted, which is the only place an explicit choice shows.
+func dropUnsetGrants(settingsSchema *spec.Schema, oldSettings, newSettings, oldManifest map[string]any) {
 	refs, err := packageschema.CollectGrantRefs(settingsSchema)
 	if err != nil {
 		return
@@ -464,9 +466,20 @@ func dropUnsetGrants(settingsSchema *spec.Schema, oldSettings, newSettings map[s
 
 	for _, ref := range refs {
 		// Absent and empty are one case: the grant transformer fills both.
-		if value := valueAtPath(newSettings, ref.Path); value == nil || value == "" {
-			deleteAtPath(oldSettings, ref.Path)
+		newValue := valueAtPath(newSettings, ref.Path)
+		if newValue != nil && newValue != "" {
+			continue
 		}
+
+		// What the stored settings hold here was resolved by the controller, not chosen
+		// by the user, so it may be dropped only while the manifest keeps saying what it
+		// said before. An empty string is a choice like any other: it cancels out against
+		// an empty string, never against a value the update is deleting.
+		if !reflect.DeepEqual(valueAtPath(oldManifest, ref.Path), newValue) {
+			continue
+		}
+
+		deleteAtPath(oldSettings, ref.Path)
 	}
 }
 

@@ -182,8 +182,10 @@ Behavior:
 - An update that changes a marked field is rejected by the validating webhook, naming the field.
 - The web console renders a marked field read-only in the edit form of an installed application, and editable in
   the install form.
-- Comparison happens after schema defaults are applied: leaving a marked key out of the manifest keeps the value the
-  application already runs with, so removing the key from the manifest is not by itself a change.
+- Comparison happens after schema defaults are applied, so leaving a marked key out of the manifest is allowed only
+  when the key has a `default` that restores the value the application already runs with. Removing a key without a
+  default is rejected, and so is removing a block that contains marked fields: defaults never reach inside a block the
+  manifest no longer has, so the frozen values would be lost.
 - The mark is not inherited into array elements or map entries that the update adds — a new element has no previous
   value to be frozen against.
 

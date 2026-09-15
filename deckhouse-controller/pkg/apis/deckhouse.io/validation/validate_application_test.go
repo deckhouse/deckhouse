@@ -552,6 +552,26 @@ func (s *applicationValidationHandlerSuite) TestImmutableSettingsFieldCannotChan
 			wantAllowed: true,
 		},
 		{
+			// The manifest chose the class itself, so dropping the key deletes a value
+			// the user picked — the project default that replaces it is a new value.
+			name:        "UPDATE deleting an explicitly granted field is rejected",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"replicas": float64(3)},
+			oldSettings: map[string]any{"grantedClass": "fast-ssd"},
+			oldApplied:  map[string]any{"grantedClass": "fast-ssd"},
+			wantMessage: "grantedClass",
+		},
+		{
+			// Both manifests leave the choice to the project in the same words, so the
+			// resolved value behind them is the controller's business, not a change.
+			name:        "UPDATE keeping a granted field empty is allowed",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"grantedClass": "", "replicas": float64(3)},
+			oldSettings: map[string]any{"grantedClass": "", "replicas": float64(1)},
+			oldApplied:  map[string]any{"grantedClass": "fast-ssd", "replicas": float64(1)},
+			wantAllowed: true,
+		},
+		{
 			name:        "UPDATE overriding the granted field is rejected",
 			operation:   "UPDATE",
 			newSettings: map[string]any{"grantedClass": "cheap-hdd"},
