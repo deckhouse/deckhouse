@@ -989,8 +989,8 @@ status: {}
 						Response: `{
 						  "ingressGateways": [{"address": "1.2.3.4", "port": 111}],
 						  "ambientGateways": [
-						    {"address": "lb.example.com", "port": 15008},
-						    {"address": "999.999.999.999", "port": 15008},
+						    {"address": "lb_1.example.com", "port": 15008},
+						    {"address": "*.example.com", "port": 15008},
 						    {"address": "10.0.0.1", "port": 0}
 						  ],
 						  "apiHost": "api-host-ua",
@@ -1005,8 +1005,9 @@ status: {}
 						Response: `{
 						  "ingressGateways": [{"address": "1.2.3.4", "port": 111}],
 						  "ambientGateways": [
-						    {"address": "not-an-address", "port": 15008},
-						    {"address": "::ffff:10.0.0.2", "port": 15008}
+						    {"address": "not_an_address", "port": 15008},
+						    {"address": "::ffff:10.0.0.2", "port": 15008},
+						    {"address": "Ambient.LB.Example.COM.", "port": 15008}
 						  ],
 						  "apiHost": "api-host-ma",
 						  "networkName": "network-name-ma"
@@ -1069,16 +1070,22 @@ status: {}
 			Expect(json.Unmarshal([]byte(mc.Field("status.conditions").String()), &conditions)).To(Succeed())
 			Expect(discoveryConditionsByType(conditions)["PrivateMetadataExchangeReady"].Status).To(Equal("True"))
 
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("dropping ambient gateway endpoints the ambient data plane cannot use"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("lb.example.com:15008, 999.999.999.999:15008, 10.0.0.1:0"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("dropping ambient gateway endpoints that cannot be rendered into a Gateway"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("lb_1.example.com:15008, *.example.com:15008, 10.0.0.1:0"))
 		})
 
+		// A DNS name is kept alongside an IP - ztunnel resolves a hostname-addressed
+		// east-west gateway itself - and both arrive in the one spelling the rendered
+		// Gateway can carry.
 		It("Keeps the usable addresses of a peer that published both, canonicalised", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "mixed-ambient").
 				Field("status.metadataCache.private.ambientGateways").String()).To(MatchJSON(`
-			  [{"address": "10.0.0.2", "port": 15008}]
+			  [
+			    {"address": "10.0.0.2", "port": 15008},
+			    {"address": "ambient.lb.example.com", "port": 15008}
+			  ]
 			`))
 		})
 	})
@@ -1109,18 +1116,37 @@ func TestSanitizeAmbientGateways(t *testing.T) {
 			wantKept: list(gw("10.0.0.1", 15008), gw("2001:db8::1", 15008)),
 		},
 		{
-			// The ambient path writes the address straight into a Workload for ztunnel and
-			// never resolves it, so a DNS name is not a lesser address but a wrong one.
-			name:        "a DNS name is dropped",
-			in:          list(gw("lb.example.com", 15008)),
-			wantDropped: []string{"lb.example.com:15008"},
+			// istiod synthesizes a Workload keyed by this hostname for ztunnel to find, and
+			// ztunnel resolves it with its own resolver on each connection - so a DNS name
+			// is an address in its own right, not a lesser spelling of one.
+			name:     "a DNS name is kept",
+			in:       list(gw("lb.example.com", 15008)),
+			wantKept: list(gw("lb.example.com", 15008)),
 		},
 		{
-			// Address-shaped but not an address: the octets are out of range. This is the
-			// case a regex in the template got wrong.
-			name:        "an out-of-range IPv4 is dropped",
-			in:          list(gw("999.999.999.999", 15008)),
-			wantDropped: []string{"999.999.999.999:15008"},
+			// The Gateway API's Hostname type is a lowercase RFC 1123 subdomain, so this is
+			// the only spelling the rendered object can carry.
+			name:     "a DNS name is lowercased and loses its root dot",
+			in:       list(gw("LB.Example.COM.", 15008)),
+			wantKept: list(gw("lb.example.com", 15008)),
+		},
+		{
+			// A peer is on the other side of a trust boundary: a value the Gateway CRD
+			// would reject has to be dropped here rather than fail the whole release.
+			name:        "a name the Gateway API cannot carry is dropped",
+			in:          list(gw("lb_1.example.com", 15008), gw("*.example.com", 15008)),
+			wantDropped: []string{"lb_1.example.com:15008", "*.example.com:15008"},
+		},
+		{
+			// Address-shaped but not an address: the octets are out of range. It is a
+			// well-formed DNS-1123 subdomain, so it is kept as one - a name that will not
+			// resolve, which is no different from any other name a peer gets wrong, and
+			// not a class of mistake this check can tell apart. The operator's own typo is
+			// caught by the config schema, which rejects it in advertise; see
+			// openapi-case-tests.yaml.
+			name:     "an out-of-range IPv4 is kept as the name it is shaped like",
+			in:       list(gw("999.999.999.999", 15008)),
+			wantKept: list(gw("999.999.999.999", 15008)),
 		},
 		{
 			// Colons alone made it past the template's IPv6 matcher, and would then be
@@ -1148,9 +1174,9 @@ func TestSanitizeAmbientGateways(t *testing.T) {
 		},
 		{
 			name:        "one bad address does not cost the peer its good ones",
-			in:          list(gw("lb.example.com", 15008), gw("10.0.0.1", 15008)),
+			in:          list(gw("lb_1.example.com", 15008), gw("10.0.0.1", 15008)),
 			wantKept:    list(gw("10.0.0.1", 15008)),
-			wantDropped: []string{"lb.example.com:15008"},
+			wantDropped: []string{"lb_1.example.com:15008"},
 		},
 		{
 			// The networkName goes on the Gateway as a label value, so an unusable one
@@ -1167,6 +1193,20 @@ func TestSanitizeAmbientGateways(t *testing.T) {
 			name:        "an unusable networkName alone is not this check's business",
 			networkName: "network-" + strings.Repeat("a", 62),
 			in:          nil,
+		},
+		{
+			// Canonicalising is what makes these collide, so the collapse belongs with it:
+			// one endpoint kept twice renders as two Gateways, and istiod keys a network
+			// gateway by network, address and port - two objects, one key.
+			name:     "spellings that canonicalise onto one endpoint are collapsed",
+			in:       list(gw("LB.Example.com", 15008), gw("lb.example.com.", 15008), gw("::ffff:10.0.0.2", 15008), gw("10.0.0.2", 15008)),
+			wantKept: list(gw("lb.example.com", 15008), gw("10.0.0.2", 15008)),
+		},
+		{
+			// A duplicate is not an unusable address: nothing is reported, unlike a drop.
+			name:     "the same address at another port is another endpoint, not a duplicate",
+			in:       list(gw("lb.example.com", 15008), gw("lb.example.com", 15009)),
+			wantKept: list(gw("lb.example.com", 15008), gw("lb.example.com", 15009)),
 		},
 	}
 

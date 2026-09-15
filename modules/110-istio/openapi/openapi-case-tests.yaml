@@ -108,6 +108,58 @@ positive:
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
 
+  # A DNS name for the ambient gateway, which is what a load balancer class that
+  # hands out names gives you. Peer ztunnels resolve it themselves.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ambientGateway:
+          advertise:
+          - address: somehost.example.com
+            port: 15008
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # The same name as an operator is liable to write it: the spelling is normalised
+  # on the way out, so neither the case nor the root dot has to be got right here.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ambientGateway:
+          advertise:
+          - address: SomeHost.Example.COM.
+            port: 15008
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # ... and one load balancer fronting both gateways under a single name, each at
+  # its own port.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ingressGateway:
+          advertise:
+          - address: istio-ew.example.com
+            port: 15443
+        ambientGateway:
+          advertise:
+          - address: istio-ew.example.com
+            port: 15008
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
   # ambient multicluster with the NodePort inlet: each east-west gateway gets a
   # static node port of its own.
     - ambient:
@@ -255,15 +307,36 @@ negative:
           advertise:
           - address: 172.16.0.5
 
-  # A DNS name cannot be advertised for the ambient gateway: the ambient data
-  # plane writes the address straight into a Workload and never resolves it.
+  # A DNS name has to be a fully qualified one - a peer resolves it with its own
+  # resolver, where a short name means something else or nothing - and has to be a
+  # name the Gateway object carrying it can hold.
     - alliance:
         ambientGateway:
           advertise:
-          - address: somehost.example.com
+          - address: somehost
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: lb_1.example.com
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: "*.example.com"
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: -somehost.example.com
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: somehost..example.com
             port: 15008
 
-  # ... nor the IPv4-in-IPv6 notation: write the plain IPv4 address instead.
+  # The IPv4-in-IPv6 notation cannot be advertised: write the plain IPv4 address instead.
     - alliance:
         ambientGateway:
           advertise:

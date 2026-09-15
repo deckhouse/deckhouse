@@ -96,7 +96,7 @@ properties:
         type: array
         default: []
         x-examples:
-        - [{"name": "aaa", "clusterUUID": "uuid-aaa", "spiffeEndpoint": "ccc", "rootCA": "---ROOT CA---", "metadataExporterCA": "---METADATA CA---", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "network-a-b-c-1-2-3", "clusterID": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}], "ambientGateways": [{"address": "1.2.3.4", "port": 15008}]}]
+        - [{"name": "aaa", "clusterUUID": "uuid-aaa", "spiffeEndpoint": "ccc", "rootCA": "---ROOT CA---", "metadataExporterCA": "---METADATA CA---", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "network-a-b-c-1-2-3", "clusterID": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}], "ambientGateways": [{"address": "1.2.3.4", "addressType": "IPAddress", "port": 15008}]}]
       remotePublicMetadata:
         type: object
         default: {}

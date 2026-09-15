@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -321,38 +322,25 @@ func (exp *Exporter) startInformers(ctx context.Context) {
 	go exp.trackAmbientGatewayState(ctx)
 }
 
-type lbAddressChoice bool
-
-const (
-	firstIngressEntry lbAddressChoice = false
-	anyEntryWithIP    lbAddressChoice = true
-)
-
-func loadBalancerAddress(ingresses []v1.LoadBalancerIngress, choice lbAddressChoice) string {
-	var hostname string
-
+func loadBalancerAddress(ingresses []v1.LoadBalancerIngress) string {
 	for _, ingress := range ingresses {
 		if ingress.IP != "" {
 			return ingress.IP
 		}
 
-		if hostname == "" {
-			hostname = ingress.Hostname
-		}
-
-		if choice == firstIngressEntry {
-			break
+		if ingress.Hostname != "" {
+			return ingress.Hostname
 		}
 	}
 
-	return hostname
+	return ""
 }
 
-func extractLoadBalancerInfo(services *v1.ServiceList, portName string, choice lbAddressChoice) []Gateway {
+func extractLoadBalancerInfo(services *v1.ServiceList, portName string) []Gateway {
 	var gateways = make([]Gateway, 0, len(services.Items))
 
 	for _, svc := range services.Items {
-		address := loadBalancerAddress(svc.Status.LoadBalancer.Ingress, choice)
+		address := loadBalancerAddress(svc.Status.LoadBalancer.Ingress)
 
 		var port int32
 		for _, p := range svc.Spec.Ports {
@@ -477,7 +465,7 @@ func (exp *Exporter) ingressGateways() ([]Gateway, error) {
 
 	switch exp.ingressGatewayInlet {
 	case "LoadBalancer":
-		ingressGatewaysLoadBalancer := extractLoadBalancerInfo(serviceList, ingressGatewayPortName, firstIngressEntry)
+		ingressGatewaysLoadBalancer := extractLoadBalancerInfo(serviceList, ingressGatewayPortName)
 		fmt.Printf("ingressGatewaysLoadBalancer=%+v\n", ingressGatewaysLoadBalancer)
 		ingressGateways = append(ingressGateways, ingressGatewaysLoadBalancer...)
 
@@ -528,7 +516,7 @@ func (exp *Exporter) ambientGateways() ([]Gateway, error) {
 	case len(advertised) > 0:
 		gateways = advertised
 	case exp.ambientGatewayInlet == "LoadBalancer":
-		gateways = extractLoadBalancerInfo(&v1.ServiceList{Items: serviceList}, ambientGatewayPortName, anyEntryWithIP)
+		gateways = extractLoadBalancerInfo(&v1.ServiceList{Items: serviceList}, ambientGatewayPortName)
 	case exp.ambientGatewayInlet == "NodePort":
 		podsList := &v1.PodList{Items: listFromStore[v1.Pod](exp.ambientGatewayPodInformer)}
 		nodesList := &v1.NodeList{Items: listFromStore[v1.Node](exp.nodeInformer)}
@@ -540,13 +528,13 @@ func (exp *Exporter) ambientGateways() ([]Gateway, error) {
 		return nil, fmt.Errorf("unknown ambient gateway inlet type: %q", exp.ambientGatewayInlet)
 	}
 
-	gateways, dropped := keepIPAddresses(gateways)
+	gateways, dropped := keepDialableAddresses(gateways)
 	if len(gateways) == 0 {
 		if len(dropped) == 0 {
 			return nil, fmt.Errorf("service %s has no external address and no node is running a gateway pod; check that the gateway pods are scheduled (alliance.ambientGateway.nodeSelector and .tolerations) and that the inlet can assign an address", service.Name)
 		}
 
-		return nil, fmt.Errorf("no address of service %s is an IP address the ambient path can use (%s); set alliance.ambientGateway.advertise to an IP address or use a load balancer that assigns one", service.Name, addressList(dropped))
+		return nil, fmt.Errorf("no address of service %s is an IP address or DNS name peers can dial (%s); set alliance.ambientGateway.advertise to one", service.Name, addressList(dropped))
 	}
 
 	sortGateways(gateways)
@@ -597,21 +585,44 @@ func (exp *Exporter) advertisedGateways(informer cache.SharedInformer) ([]Gatewa
 	return advertised, nil
 }
 
-func keepIPAddresses(gateways []Gateway) ([]Gateway, []Gateway) {
+func keepDialableAddresses(gateways []Gateway) ([]Gateway, []Gateway) {
 	kept := make([]Gateway, 0, len(gateways))
 	dropped := make([]Gateway, 0, len(gateways))
+	seen := make(map[Gateway]struct{}, len(gateways))
 
 	for _, gw := range gateways {
-		ip := net.ParseIP(gw.Address)
-		if ip == nil {
+		address, ok := canonicalAmbientGatewayAddress(gw.Address)
+		if !ok {
 			dropped = append(dropped, gw)
 			continue
 		}
-		gw.Address = ip.String()
+
+		gw.Address = address
+		if _, duplicate := seen[gw]; duplicate {
+			continue
+		}
+
+		seen[gw] = struct{}{}
 		kept = append(kept, gw)
 	}
 
 	return kept, dropped
+}
+
+// Keep in sync with the function of the same name in ee/modules/110-istio/hooks/ee/multicluster_discovery.go.
+func canonicalAmbientGatewayAddress(address string) (string, bool) {
+	address = strings.TrimSpace(address)
+
+	if ip := net.ParseIP(address); ip != nil {
+		return ip.String(), true
+	}
+
+	host := strings.ToLower(strings.TrimSuffix(address, "."))
+	if host == "" || len(validation.IsDNS1123Subdomain(host)) > 0 {
+		return "", false
+	}
+
+	return host, true
 }
 
 func addressList(gateways []Gateway) string {
