@@ -12,17 +12,28 @@ lang: ru
 
 Адрес машины в основной сети кластера описывают два ресурса, аренда адреса в кластере и закреплённый за проектом адрес.
 
-{% tabs vmip-list %}
-
-{% tab "В командной строке" %}
-
-Блок [`.spec.settings.virtualMachineCIDRs`](../../../admin/configuration/network/vm-network.html) в настройках модуля задаёт подсети, из которых машины получают IP-адреса. Доступны все адреса подсети, кроме первого и последнего.
+Блок [`.spec.settings.virtualMachineCIDRs`](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) в настройках модуля задаёт подсети, из которых машины получают IP-адреса. Доступны все адреса подсети, кроме первого и последнего.
 
 Если в модуле [`sdn`](/modules/sdn/) для основной сети кластера настроен пул адресов, адресом машины в этой сети управляет общий IPAM этого модуля, то есть тот же ресурс IPAddress, что и для дополнительных сетей. Адрес запрашивается автоматически, а существующие машины переходят на общий IPAM без смены адресов и без перезапуска.
 
-> **Важно:** В кластере с общим IPAM ресурсы [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) и [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease), а также параметр [`.spec.virtualMachineIPAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineipaddressname) устарели. Они продолжают работать и описаны в разделах ниже, но адресом основной сети новых машин управляет общий IPAM, о котором рассказывает раздел [IPAM для основной сети](#ipam-для-основной-сети).
+{% alert level="warning" %}
+В кластере с общим IPAM ресурсы [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) и [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease), а также параметр [`.spec.virtualMachineIPAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineipaddressname) устарели. Они продолжают работать и описаны в разделах ниже, но адресом основной сети новых машин управляет общий IPAM, о котором рассказывает раздел [IPAM для основной сети](#ipam-для-основной-сети).
+{% endalert %}
 
-Ресурс [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) (`vmipl`) — кластерный ресурс, который управляет арендой IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
+Кластерный ресурс [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) (`vmipl`) управляет арендой IP-адресов из общего пула, указанного в `virtualMachineCIDRs`, а проектный ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) отвечает за резервирование арендованных адресов и их привязку к машинам. Адрес закреплён за машиной, когда ресурс переходит в фазу `Attached`. Остальные фазы описаны в поле [`.status.phase`](/modules/virtualization/cr.html#virtualmachineipaddress-v1alpha2-status-phase).
+
+По умолчанию Deckhouse Platform (DP) назначает машине адрес сам и держит его закреплённым до удаления машины. Происходит это так:
+
+- Вы создаёте виртуальную машину с именем `<VM_NAME>`.
+- DP создаёт ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) с именем `<VM_NAME>-<HASH>`, чтобы запросить IP-адрес и связать его с виртуальной машиной.
+- Для этого ресурса создаётся аренда [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease), которая выбирает случайный IP-адрес из общего пула.
+- Как только ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) создан, виртуальная машина получает назначенный IP-адрес.
+
+После удаления машины ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) тоже удаляется, но сам адрес какое-то время остаётся закреплённым за проектом, и его можно запросить повторно.
+
+{% tabs vmip-list %}
+
+{% tab "В командной строке" %}
 
 Чтобы посмотреть список аренд IP-адресов (`vmipl`), используйте команду:
 
@@ -40,11 +51,7 @@ ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-Ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) — проектный ресурс, который отвечает за резервирование арендованных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по явному запросу.
-
-Адрес закреплён за машиной, когда ресурс переходит в фазу `Attached`. Остальные фазы описаны в поле [`.status.phase`](/modules/virtualization/cr.html#virtualmachineipaddress-v1alpha2-status-phase).
-
-По умолчанию Deckhouse Platform (DP) назначает машине адрес сам и держит его закреплённым до удаления машины. Посмотреть назначенный адрес можно командой:
+Посмотреть адрес, назначенный машине, можно командой:
 
 ```shell
 d8 k get vmip
@@ -59,17 +66,6 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
-
-Алгоритм автоматического присвоения IP-адреса виртуальной машине выглядит следующим образом:
-
-- Пользователь создаёт виртуальную машину с именем `<VM_NAME>`.
-- DP автоматически создаёт ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) с именем `<VM_NAME>-<HASH>`, чтобы запросить IP-адрес и связать его с виртуальной машиной.
-- Для этого [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) создаётся ресурс аренды [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease), который выбирает случайный IP-адрес из общего пула.
-- Как только ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) создан, виртуальная машина получает назначенный IP-адрес.
-
-После удаления машины ресурс [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) тоже удаляется, но сам адрес какое-то время остаётся закреплённым за проектом, и его можно запросить повторно.
-
-Все параметры этих ресурсов описаны в [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) и [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease).
 
 {% endtab %}
 

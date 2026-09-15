@@ -15,7 +15,7 @@ To make passthrough work, provide the following:
 
 - [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) 1.34 or later with the DRA feature gates required by your cluster configuration.
 - The `GPU` feature gate in the module settings.
-- A GPU DRA provider installed in the cluster that publishes devices with the `gpu.deckhouse.io` attributes.
+- The enabled [`gpu`](/modules/gpu/) module in the DRA mode, which is set by the [`dra.enabled` parameter](/modules/gpu/configuration.html#parameters-dra).
 - A `GPUClass` resource that selects devices of the model you need. The `gpu` module creates a DeviceClass resource with the same name from it, and the device is allocated to a machine through that class.
 
 To enable the feature gate, add it to the module settings:

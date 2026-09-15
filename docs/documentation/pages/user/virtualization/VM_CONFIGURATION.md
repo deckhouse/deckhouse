@@ -128,7 +128,7 @@ spec:
 
 You can change the number of cores of a running machine without rebooting it, if the change is applicable through live migration. Within the current CPU topology, you can both add and remove cores.
 
-The feature is disabled by default. To enable it, an administrator adds `HotplugCPUWithLiveMigration` to the [`.spec.settings.featureGates`](../../admin/configuration/virtualization/settings.html) parameter:
+The feature is disabled by default. To enable it, an administrator adds `HotplugCPUWithLiveMigration` to the [`.spec.settings.featureGates`](/modules/virtualization/configuration.html#parameters-featuregates) parameter:
 
 ```yaml
 kind: ModuleConfig
@@ -193,7 +193,7 @@ When you reduce the number of cores within the current topology, the distributio
 
 You can increase the amount of memory of a running machine without rebooting it. Reducing it requires a restart.
 
-The feature is disabled by default. To enable it, an administrator adds `HotplugMemoryWithLiveMigration` to the [`.spec.settings.featureGates`](../../admin/configuration/virtualization/settings.html) parameter:
+The feature is disabled by default. To enable it, an administrator adds `HotplugMemoryWithLiveMigration` to the [`.spec.settings.featureGates`](/modules/virtualization/configuration.html#parameters-featuregates) parameter:
 
 ```yaml
 kind: ModuleConfig

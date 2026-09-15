@@ -35,17 +35,15 @@ lang: ru
 
 ## Подключение через спецификацию ВМ
 
-Устройства, перечисленные в спецификации машины, подключаются при её запуске и остаются на месте всё время работы.
-
-{% tabs bd-spec %}
-
-{% tab "В командной строке" %}
-
-Список блочных устройств задаётся в поле [`.spec.blockDeviceRefs`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-blockdevicerefs) ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).
+Устройства, перечисленные в спецификации машины, подключаются при её запуске и остаются на месте всё время работы. Их список задаёт поле [`.spec.blockDeviceRefs`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-blockdevicerefs) ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).
 
 Порядок загрузки по умолчанию совпадает с порядком устройств в списке, а задать его явно позволяет необязательное поле `bootOrder` (меньшее значение — выше приоритет). Если `bootOrder` указан хотя бы у одного устройства, в цепочку загрузки попадают только устройства с заданным `bootOrder`. Допустимы целые числа от 1 и выше, уникальные в пределах списка. При удалении устройства из списка порядок загрузки пересчитывается для оставшихся устройств.
 
 Изменение порядка устройств в списке или значений `bootOrder` вступает в силу после перезагрузки ВМ. Например, можно подключить ISO-образ для установки ОС с нужным приоритетом загрузки, а после установки удалить его из списка. Если у ВМ отключена паравиртуализация (`enableParavirtualization: false`), правки в [`.spec.blockDeviceRefs`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-blockdevicerefs) у работающей ВМ, в том числе с ISO-образом, применяются после перезагрузки ВМ.
+
+{% tabs bd-spec %}
+
+{% tab "В командной строке" %}
 
 Фрагмент конфигурации виртуальной машины с блочными устройствами и явным порядком загрузки:
 
@@ -96,13 +94,13 @@ spec:
 
 ## Подключение через VirtualMachineBlockDeviceAttachment
 
-Отдельный ресурс подключает устройство к машине, не затрагивая её спецификацию.
+Ресурс [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) подключает и отключает блочное устройство у ВМ, не затрагивая её спецификацию. Он подходит для автоматизации и для случаев, когда у пользователя нет прав на редактирование машины.
+
+Устройство подключено, когда ресурс переходит в фазу `Attached`. Остальные фазы описаны в поле [`.status.phase`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-phase), а причину задержки показывает блок [`.status.conditions`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-conditions).
 
 {% tabs bd-vmbda %}
 
 {% tab "В командной строке" %}
-
-Ресурс [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) подключает и отключает блочное устройство у ВМ без изменения её спецификации. Подходит для автоматизации и сценариев, когда у пользователя нет прав на редактирование ВМ.
 
 Создайте ресурс, который подключит пустой диск `blank-disk` к виртуальной машине `linux-vm`:
 
@@ -119,8 +117,6 @@ spec:
   virtualMachineName: linux-vm
 EOF
 ```
-
-Устройство подключено, когда ресурс переходит в фазу `Attached`. Остальные фазы описаны в поле [`.status.phase`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-phase), а причину задержки показывает блок [`.status.conditions`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-conditions).
 
 Проверьте состояние вашего ресурса:
 

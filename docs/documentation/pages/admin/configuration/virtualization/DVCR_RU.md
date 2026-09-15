@@ -19,7 +19,9 @@ lang: ru
 ## Очистка хранилища образов
 
 Когда образы и диски удаляются из кластера, их данные какое-то время остаются в DVCR. Чтобы хранилище не заполнялось неактуальными данными, DP запускает сборку мусора по расписанию.
-По умолчанию она выполняется ежедневно в 02:00. Задать своё расписание можно параметром [`.spec.settings.dvcr.gc.schedule`](/modules/virtualization/configuration.html#parameters-dvcr-gc-schedule) в [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) `virtualization`:
+По умолчанию она выполняется ежедневно в 02:00. Задать своё расписание можно параметром [`.spec.settings.dvcr.gc.schedule`](/modules/virtualization/configuration.html#parameters-dvcr-gc-schedule) в [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) `virtualization`.
+
+Пока идёт сборка мусора, хранилище работает в режиме «только чтение», поэтому создание образов и дисков в это время откладывается до её завершения.
 
 {% tabs dvcr-gc %}
 
@@ -40,8 +42,6 @@ spec:
         schedule: "0 20 * * *"
   # ...
 ```
-
-Пока идёт сборка мусора, хранилище работает в режиме «только чтение», поэтому создание образов и дисков в это время откладывается до её завершения.
 
 Посмотреть, сколько места занято и какие данные будут удалены при следующей сборке, можно командой:
 

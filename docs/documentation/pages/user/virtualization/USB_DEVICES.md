@@ -56,13 +56,19 @@ The `Attached` condition shows whether the device is attached to a virtual machi
 
 ## Attaching a USB device to a VM
 
-A device is attached to and detached from a machine without stopping it.
+A device is attached to and detached from a machine without stopping it. A USB device is automatically passed through over the network (USBIP) to the node where the machine runs, so you don't have to place the machine on the node with the device manually.
+
+{% alert level="warning" %}
+During a VM migration, the USB device briefly disconnects and reconnects on the new node at the moment the machine switches over. If the migration fails, the device stays on the old node.
+{% endalert %}
+
+Infrastructure requirements, USBIP port limits, and device discovery on nodes are described in [USB devices in virtual machines](../../admin/configuration/virtualization/usb-devices.html).
 
 {% tabs usb-attach %}
 
 {% tab "Using the CLI" %}
 
-Once a [USBDevice](/modules/virtualization/cr.html#usbdevice) resource appears in the namespace, you can attach it to a virtual machine. To do this, add the device to the [`.spec.usbDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-usbdevices) parameter of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource:
+Add the device to the [`.spec.usbDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-usbdevices) parameter of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -78,14 +84,6 @@ EOF
 ```
 
 After the VM is created or updated, the USB device is attached to the specified virtual machine.
-
-> The USB device is automatically passed through over the network (USBIP) to the node where the virtual machine runs. You don't have to place the VM manually on the same node as the device.
->
-> **Important:** During a VM migration, the USB device briefly disconnects and reconnects on the new node at the moment the VM switches over. If the migration fails, the device stays on the old node.
-
-You can attach a USB device to a running VM and detach it without stopping the machine.
-
-Infrastructure requirements, USBIP port limits, and device discovery on nodes are described in [USB devices in virtual machines](../../admin/configuration/virtualization/usb-devices.html).
 
 {% endtab %}
 

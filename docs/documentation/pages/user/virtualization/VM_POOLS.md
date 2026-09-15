@@ -145,13 +145,21 @@ An image is attached to existing replicas the same way as any other device, and 
 
 ## Scaling the pool
 
-The number of replicas in a pool changes either manually or automatically, by an autoscaler.
+The number of replicas in a pool changes either manually or automatically, by an autoscaler. A pool supports the standard `scale` subresource and publishes `status.selector`, so HPA reads CPU and memory metrics straight from the replicas without extra plumbing.
+
+Besides CPU and memory, the pool works with custom metrics (`Pods`/`External` through `custom.metrics.k8s.io`/`external.metrics.k8s.io`) and with KEDA, for example to scale by the length of an external queue.
+
+The `spec.scaleDownPolicy` field determines which replica is deleted on an unaddressed scale-down:
+
+- `NewestFirst`: The youngest replicas are deleted first.
+- `OldestFirst`: The oldest replicas are deleted first.
+- `Explicit`: An unaddressed scale-down is forbidden; replicas can be removed only by name. Use it when only the caller knows which replica can be safely removed (for example, an idle one).
+
+With `scaleDownPolicy: Explicit`, an autoscaler can only increase the number of replicas, and an unaddressed scale-down through the `scale` subresource is rejected.
 
 {% tabs pool-scale %}
 
 {% tab "Using the CLI" %}
-
-A pool supports the standard `scale` subresource, compatible with manual replica count changes and with autoscalers.
 
 To change the number of replicas manually, run the following command:
 
@@ -159,7 +167,7 @@ To change the number of replicas manually, run the following command:
 d8 k scale virtualmachinepool/runners -n ci --replicas=8
 ```
 
-The pool publishes `status.selector`, so HPA reads CPU and memory metrics straight from the replicas without extra plumbing:
+Here is an example of HPA configuration for a pool:
 
 ```yaml
 apiVersion: autoscaling/v2
@@ -182,14 +190,6 @@ spec:
           type: Utilization
           averageUtilization: 70
 ```
-
-Besides CPU and memory, the pool works with custom metrics (`Pods`/`External` through `custom.metrics.k8s.io`/`external.metrics.k8s.io`) and with KEDA, for example to scale by the length of an external queue. With `scaleDownPolicy: Explicit`, an autoscaler can only increase the number of replicas, an unaddressed scale-down through the `scale` subresource is rejected, and replicas are removed by name.
-
-The `spec.scaleDownPolicy` field determines which replica is deleted on an unaddressed scale-down:
-
-- `NewestFirst`: The youngest replicas are deleted first.
-- `OldestFirst`: The oldest replicas are deleted first.
-- `Explicit`: An unaddressed scale-down is forbidden; replicas can be removed only by name. Use it when only the caller knows which replica can be safely removed (for example, an idle one).
 
 {% endtab %}
 

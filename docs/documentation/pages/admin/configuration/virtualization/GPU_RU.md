@@ -16,7 +16,7 @@ DP подключает физические GPU-устройства к вир�
 
 - [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) версии не ниже 1.34 с feature gates DRA, которые нужны конфигурации вашего кластера.
 - Feature gate `GPU` в настройках модуля.
-- Установленный в кластере DRA-провайдер GPU, который публикует устройства с атрибутами `gpu.deckhouse.io`.
+- Включённый модуль [`gpu`](/modules/gpu/) в режиме DRA, который задаёт [параметр `dra.enabled`](/modules/gpu/configuration.html#parameters-dra).
 - Ресурс `GPUClass`, отбирающий устройства нужной модели. Модуль `gpu` создаёт по нему ресурс DeviceClass с таким же именем, через который устройство и выделяется машине.
 
 Чтобы включить feature gate, добавьте его в настройки модуля:

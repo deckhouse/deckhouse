@@ -34,17 +34,15 @@ While a live migration of the machine is preparing the target node, a disk can b
 
 ## Attaching through the VM specification
 
-The devices listed in the machine specification are attached at startup and stay in place for the whole run.
-
-{% tabs bd-spec %}
-
-{% tab "Using the CLI" %}
-
-The list of block devices is set in the [`.spec.blockDeviceRefs`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-blockdevicerefs) field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
+The devices listed in the machine specification are attached at startup and stay in place for the whole run. Their list is set in the [`.spec.blockDeviceRefs`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-blockdevicerefs) field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
 By default, the boot order matches the order of the devices in the list, and the optional `bootOrder` field lets you set it explicitly (a lower value means a higher priority). If `bootOrder` is specified for at least one device, only the devices with a set `bootOrder` get into the boot chain. Integers from 1 and up are allowed, unique within the list. When a device is removed from the list, the boot order is recalculated for the remaining devices.
 
 A change to the order of devices in the list or to the `bootOrder` values takes effect after the VM reboots. For example, you can attach an ISO image for OS installation with the boot priority you need, and remove it from the list after the installation. If the VM has paravirtualization disabled (`enableParavirtualization: false`), edits to [`.spec.blockDeviceRefs`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-blockdevicerefs) on a running VM, including ones with an ISO image, apply after the VM reboots.
+
+{% tabs bd-spec %}
+
+{% tab "Using the CLI" %}
 
 A fragment of the virtual machine configuration with block devices and an explicit boot order:
 
@@ -95,13 +93,13 @@ To detach a disk, remove it from the list. With `enableParavirtualization: false
 
 ## Attaching through VirtualMachineBlockDeviceAttachment
 
-A separate resource attaches a device to a machine without touching its specification.
+The [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource attaches and detaches a block device on a VM without touching its specification. It suits automation and the cases where the user doesn't have the rights to edit the machine.
+
+The device is attached when the resource moves to the `Attached` phase. The other phases are described in the [`.status.phase`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-phase) field, and the [`.status.conditions`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-conditions) block shows the reason for a delay.
 
 {% tabs bd-vmbda %}
 
 {% tab "Using the CLI" %}
-
-The [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource attaches and detaches a block device on a VM without changing its specification. It suits automation and scenarios where the user doesn't have the rights to edit the VM.
 
 Create a resource that attaches the empty `blank-disk` disk to the `linux-vm` virtual machine:
 
@@ -118,8 +116,6 @@ spec:
   virtualMachineName: linux-vm
 EOF
 ```
-
-The device is attached when the resource moves to the `Attached` phase. The other phases are described in the [`.status.phase`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-phase) field, and the [`.status.conditions`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-conditions) block shows the reason for a delay.
 
 Check the state of your resource:
 

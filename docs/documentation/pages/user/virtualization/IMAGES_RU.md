@@ -170,7 +170,7 @@ EOF
    EOF
    ```
 
-   Если параметр [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) не указан, DP возьмёт StorageClass по умолчанию на уровне кластера либо класс, заданный для образов в [настройках модуля](../../admin/configuration/virtualization/storage-classes.html).
+   Если параметр [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) не указан, DP возьмёт StorageClass по умолчанию на уровне кластера либо класс, заданный для образов в [настройках модуля](/modules/virtualization/configuration.html#parameters-virtualimages-storageclassname).
 
 1. Проверьте, что образ создан:
 

@@ -714,7 +714,7 @@ spec:
       - 10.66.10.0/24
 ```
 
-The other parameters are covered in [Virtualization module parameters](../admin/configuration/virtualization/settings.html) and in the [settings reference](/modules/virtualization/configuration.html).
+The other parameters are covered in the [module settings reference](/modules/virtualization/configuration.html).
 
 To check if virtualization is ready, run the following command:
 

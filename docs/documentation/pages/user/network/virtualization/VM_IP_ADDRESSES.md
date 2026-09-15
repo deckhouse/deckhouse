@@ -11,17 +11,28 @@ Every virtual machine (VM) gets an address in the main cluster network. The sect
 
 Two resources describe the address of a machine in the main cluster network, the cluster-wide address lease and the address reserved for the project.
 
-{% tabs vmip-list %}
-
-{% tab "Using the CLI" %}
-
-The [`.spec.settings.virtualMachineCIDRs`](../../../admin/configuration/network/vm-network.html) block in the module settings defines the subnets that machines get IP addresses from. All addresses of a subnet are available except the first and the last one.
+The [`.spec.settings.virtualMachineCIDRs`](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) block in the module settings defines the subnets that machines get IP addresses from. All addresses of a subnet are available except the first and the last one.
 
 If an address pool is configured for the main cluster network in the [`sdn`](/modules/sdn/) module, the address of a machine in that network is managed by the shared IPAM of that module, that is, by the same IPAddress resource as for additional networks. The address is requested automatically, and existing machines switch to the shared IPAM without changing their addresses and without a restart.
 
-> **Important:** In a cluster with the shared IPAM, the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) and [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) resources, as well as the [`.spec.virtualMachineIPAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineipaddressname) parameter, are deprecated. They keep working and are described in the sections below, but the main network address of new machines is managed by the shared IPAM, covered in [IPAM for the main network](#ipam-for-the-main-network).
+{% alert level="warning" %}
+In a cluster with the shared IPAM, the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) and [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) resources, as well as the [`.spec.virtualMachineIPAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-virtualmachineipaddressname) parameter, are deprecated. They keep working and are described in the sections below, but the main network address of new machines is managed by the shared IPAM, covered in [IPAM for the main network](#ipam-for-the-main-network).
+{% endalert %}
 
-The [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) (`vmipl`) resource is a cluster-wide resource that manages leases of IP addresses from the shared pool specified in `virtualMachineCIDRs`.
+The cluster-wide [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) (`vmipl`) resource manages leases of IP addresses from the shared pool specified in `virtualMachineCIDRs`, while the project [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) resource reserves leased addresses and binds them to machines. An address is assigned to a machine when the resource moves to the `Attached` phase. The other phases are described in the [`.status.phase`](/modules/virtualization/cr.html#virtualmachineipaddress-v1alpha2-status-phase) field.
+
+By default, Deckhouse Platform (DP) assigns an address to the machine itself and keeps it assigned until the machine is deleted. This works as follows:
+
+- You create a virtual machine named `<VM_NAME>`.
+- DP creates a [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource named `<VM_NAME>-<HASH>` to request an IP address and bind it to the virtual machine.
+- For that resource, a [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) lease is created, which picks a random IP address from the shared pool.
+- As soon as the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource is created, the virtual machine gets the assigned IP address.
+
+After the machine is deleted, the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource is deleted too, but the address itself stays assigned to the project for a while, and you can request it again.
+
+{% tabs vmip-list %}
+
+{% tab "Using the CLI" %}
 
 To view the list of IP address leases (`vmipl`), run the following command:
 
@@ -39,11 +50,7 @@ ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-The [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) resource is a project resource responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or on explicit request.
-
-An address is assigned to a machine when the resource moves to the `Attached` phase. The other phases are described in the [`.status.phase`](/modules/virtualization/cr.html#virtualmachineipaddress-v1alpha2-status-phase) field.
-
-By default, Deckhouse Platform (DP) assigns an address to the machine itself and keeps it assigned until the machine is deleted. To view the assigned address, run the following command:
+To view the address assigned to a machine, run the following command:
 
 ```shell
 d8 k get vmip
@@ -58,17 +65,6 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
-
-The algorithm for automatically assigning an IP address to a virtual machine looks like this:
-
-- The user creates a virtual machine named `<VM_NAME>`.
-- DP automatically creates a [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource named `<VM_NAME>-<HASH>` to request an IP address and bind it to the virtual machine.
-- For this [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress), a [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) lease resource is created, which picks a random IP address from the shared pool.
-- As soon as the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource is created, the virtual machine gets the assigned IP address.
-
-After the machine is deleted, the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource is deleted too, but the address itself stays assigned to the project for a while, and you can request it again.
-
-All parameters of these resources are described in [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) and [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease).
 
 {% endtab %}
 

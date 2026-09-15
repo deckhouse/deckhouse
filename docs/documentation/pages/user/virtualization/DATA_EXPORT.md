@@ -5,15 +5,17 @@ description: "Exporting the contents of a virtual machine disk or its snapshot t
 search: disk export, data export, DataExport, d8 data export
 ---
 
-Export writes the contents of a disk or its snapshot to a file so that you can move the data outside the cluster.
+Export writes the contents of a virtual machine (VM) disk or its snapshot to a file so that you can move the data outside the cluster. For this feature to work, the [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) module has to be enabled, and the command line requires the `d8` utility version 0.20.7 or later.
+
+{% alert level="warning" %}
+The disk must not be in use at the moment of export. If the disk is attached to a virtual machine, stop the VM first.
+{% endalert %}
+
+To import a downloaded disk back into the cluster, upload it as an [image](images.html#uploading-an-image-from-the-command-line) or as a [disk](disks.html#uploading-a-disk-from-the-command-line).
 
 {% tabs data-export %}
 
 {% tab "Using the CLI" %}
-
-You can export virtual machine (VM) disks and disk snapshots with the `d8` utility (version 0.20.7 and later). For this feature to work, the [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) module has to be enabled.
-
-> **Important:** The disk must not be in use at the moment of export. If the disk is attached to a virtual machine, stop the VM first.
 
 An example of exporting a disk, with the command run on a cluster node:
 
@@ -28,8 +30,6 @@ d8 data export download -n <NAMESPACE> vds/<VD_SNAPSHOT_NAME> -o file.img
 ```
 
 If you export data from somewhere other than a cluster node (for example, from your local machine), use the `--publish` flag.
-
-> To import a downloaded disk back into the cluster, upload it as an [image](images.html#uploading-an-image-from-the-command-line) or as a [disk](disks.html#uploading-a-disk-from-the-command-line).
 
 {% endtab %}
 

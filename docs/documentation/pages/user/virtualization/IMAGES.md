@@ -169,7 +169,7 @@ To create disks from an image faster, store it in a PVC. DP can then clone the v
    EOF
    ```
 
-   If the [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) parameter isn't set, DP uses the cluster-wide default StorageClass or the class set for images in the [module settings](../../admin/configuration/virtualization/storage-classes.html).
+   If the [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) parameter isn't set, DP uses the cluster-wide default StorageClass or the class set for images in the [module settings](/modules/virtualization/configuration.html#parameters-virtualimages-storageclassname).
 
 1. Verify that the image is created:
 

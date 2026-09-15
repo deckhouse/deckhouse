@@ -18,7 +18,9 @@ After the volume is created, you can't reduce its size or change its storage cla
 ## Cleaning up image storage
 
 When images and disks are deleted from the cluster, their data remains in DVCR for some time. To keep the storage from filling up with stale data, DP runs garbage collection on a schedule.
-By default, it runs daily at 02:00. To set your own schedule, use the [`.spec.settings.dvcr.gc.schedule`](/modules/virtualization/configuration.html#parameters-dvcr-gc-schedule) parameter in the `virtualization` [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig):
+By default, it runs daily at 02:00. To set your own schedule, use the [`.spec.settings.dvcr.gc.schedule`](/modules/virtualization/configuration.html#parameters-dvcr-gc-schedule) parameter in the `virtualization` [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig).
+
+While garbage collection is running, the storage works in read-only mode, so creating images and disks is postponed until it completes.
 
 {% tabs dvcr-gc %}
 
@@ -39,8 +41,6 @@ spec:
         schedule: "0 20 * * *"
   # ...
 ```
-
-While garbage collection is running, the storage works in read-only mode, so creating images and disks is postponed until it completes.
 
 To see how much space is occupied and which data will be removed during the next collection, run:
 

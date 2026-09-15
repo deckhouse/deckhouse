@@ -28,32 +28,29 @@ When recovering from such a snapshot, file system integrity problems are possibl
 
 ## Creating disk snapshots
 
-A disk snapshot saves the disk data at the moment of creation and serves as a source for new disks.
+A disk snapshot saves the disk data at the moment of creation and serves as a source for new disks, for example to clone or recover information. A snapshot is described by the [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) resource.
+
+Data integrity is guaranteed when a snapshot is created in one of the following cases:
+
+- The disk isn't attached to any virtual machine.
+- The VM is powered off.
+- The VM is running, qemu-guest-agent is installed in the guest OS, and the file system was successfully frozen (the fsfreeze operation).
+
+If data consistency isn't required (for example, for test scenarios), set the [`.spec.requiredConsistency`](/modules/virtualization/cr.html#virtualdisksnapshot-v1alpha2-spec-requiredconsistency) parameter of the snapshot to `false`. The snapshot is then created on a running VM without freezing the file system, including when the disk is attached to it.
+
+A disk snapshot goes through the following phases:
+
+- `Pending`: Waiting for all dependent resources required to create the snapshot to become ready.
+- `InProgress`: The virtual disk snapshot is being created.
+- `Ready`: The snapshot was created successfully and the virtual disk snapshot is available for use.
+- `Failed`: An error occurred while creating the virtual disk snapshot.
+- `Terminating`: The resource is being deleted.
+
+The [`.status.conditions`](/modules/virtualization/cr.html#virtualdisksnapshot-v1alpha2-status-conditions) block shows the reason for a problem with the resource.
 
 {% tabs snap-disk-create %}
 
 {% tab "Using the CLI" %}
-
-To create snapshots of virtual disks, use the [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) resource. These snapshots can serve as a data source when creating new disks, for example to clone or recover information.
-
-To guarantee data integrity, you can create a disk snapshot in the following cases:
-
-- The disk isn't attached to any virtual machine.
-- The VM is powered off.
-- The VM is running, but qemu-guest-agent is installed in the guest OS.
-  The file system was successfully frozen (the fsfreeze operation).
-
-If data consistency isn't required (for example, for test scenarios), you can create a snapshot:
-
-- On a running VM without freezing the file system.
-- Even if the disk is attached to an active VM.
-
-To do this, specify the following in the [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) manifest:
-
-```yaml
-spec:
-  requiredConsistency: false
-```
 
 Here is an example manifest for creating a disk snapshot:
 
@@ -85,19 +82,7 @@ linux-vm-root-snapshot Ready     true         3m2s
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-The `CONSISTENT` field with the `true` value means that the snapshot is consistent (`false`). The value is determined automatically from the snapshot creation conditions and can't be changed.
-
-After creation, a [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) can be in the following states (phases):
-
-- `Pending`: Waiting for all dependent resources required to create the snapshot to become ready.
-- `InProgress`: The virtual disk snapshot is being created.
-- `Ready`: The snapshot was created successfully and the virtual disk snapshot is available for use.
-- `Failed`: An error occurred while creating the virtual disk snapshot.
-- `Terminating`: The resource is being deleted.
-
-The [`.status.conditions`](/modules/virtualization/cr.html#virtualdisksnapshot-v1alpha2-status-conditions) block shows the reason for a problem with the resource.
-
-For a full description of the [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) resource configuration parameters, see [the resource documentation](/modules/virtualization/cr.html#virtualdisksnapshot).
+The `true` value in the `CONSISTENT` column means that the snapshot is consistent. It's determined automatically from the snapshot creation conditions and isn't changed manually.
 
 {% endtab %}
 
@@ -135,7 +120,7 @@ metadata:
 spec:
   # Disk storage parameters.
   persistentVolumeClaim:
-    # Specify a size larger than the value.
+    # Specify a size no smaller than the size of the source disk.
     size: 10Gi
     # Specify the name of your StorageClass.
     storageClassName: rv-thin-r2
@@ -174,27 +159,22 @@ A virtual machine snapshot is the saved state of a virtual machine at a certain 
 Detach all images ([VirtualImage](/modules/virtualization/cr.html#virtualimage)/ClusterVirtualImage) from a virtual machine before taking its snapshot. Disk images aren't saved along with the VM snapshot, and their absence in the cluster during recovery can leave the virtual machine unable to start, in the Pending state, waiting for the image to become available.
 {% endalert %}
 
-The following example shows how to create a virtual machine snapshot:
-
-{% tabs snap-vm-create %}
-
-{% tab "Using the CLI" %}
-
 Creating a virtual machine snapshot fails if at least one of the following conditions is met:
 
 - not all dependent devices of the virtual machine are ready;
 - one of the dependent devices is a disk that is being resized.
 
-> **Important:** If the virtual machine has changes pending a restart at the moment the snapshot is taken, the updated configuration goes into the snapshot.
+{% alert level="warning" %}
+If the virtual machine has changes pending a restart at the moment the snapshot is taken, the updated configuration goes into the snapshot.
+{% endalert %}
 
-When a snapshot is created, the dynamic IP address of the VM is automatically converted to a static one and saved for recovery.
+When a snapshot is created, the dynamic IP address of the VM is automatically converted to a static one and saved for recovery. If you don't need the conversion and the reuse of the old address, set the [`.spec.keepIPAddress`](/modules/virtualization/cr.html#virtualmachinesnapshot-v1alpha2-spec-keepipaddress) parameter to `Never`, and the address type stays as it is (`Auto` or `Static`).
 
-If you don't need the conversion and the reuse of the old virtual machine IP address, you can set the corresponding policy to `Never`. In that case, the address type is used without conversion (`Auto` or `Static`).
+The following example shows how to create a virtual machine snapshot:
 
-```yaml
-spec:
-  keepIPAddress: Never
-```
+{% tabs snap-vm-create %}
+
+{% tab "Using the CLI" %}
 
 Here is an example manifest for creating a virtual machine snapshot:
 
@@ -211,7 +191,7 @@ spec:
 EOF
 ```
 
-After the snapshot is created successfully, its status reflects the list of resources saved in the snapshot.
+After the snapshot is created successfully, its status reflects the list of saved resources.
 
 Example output:
 
@@ -251,7 +231,28 @@ status:
 
 ## Recovering a VM
 
-Recovery returns a machine and its disks to the state saved in a snapshot.
+Recovery returns a machine and its disks to the state saved in a snapshot. It's started by a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `restore` type, which has three modes:
+
+- `DryRun`: A dry run of the recovery operation, needed to check for possible conflicts, which are shown in the resource status (`status.resources`).
+- `Strict`: The strict recovery mode, when the VM has to be recovered exactly as in the snapshot; missing external dependencies can leave the VM in `Pending` after recovery.
+- `BestEffort`: Missing external dependencies ([ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage), [VirtualImage](/modules/virtualization/cr.html#virtualimage)) are ignored and removed from the VM configuration.
+
+Recovering a virtual machine from a snapshot is possible only when all of the following conditions are met:
+
+- The VM being recovered is present in the cluster (the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource exists and its `.metadata.uid` matches the identifier used when the snapshot was created).
+- The disks being recovered (identified by name) either aren't attached to other VMs or are absent from the cluster.
+- The IP address being recovered either isn't taken by another VM or is absent from the cluster.
+- The MAC addresses being recovered either aren't used by other VMs or are absent from the cluster.
+
+The disks of the machine are recovered along with it, so the disk specification contains the `dataSource` parameter with a reference to the disk snapshot needed.
+
+{% alert level="warning" %}
+If some resources the VM depends on (for example, [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass), [VirtualImage](/modules/virtualization/cr.html#virtualimage), [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage)) are absent from the cluster but existed at the moment the snapshot was created, the VM stays in the `Pending` state after recovery. In that case, edit the VM configuration manually and update or remove the missing dependencies.
+{% endalert %}
+
+{% alert level="warning" %}
+Don't cancel a recovery operation from a snapshot, that is, don't delete the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource in the `InProgress` phase, because this can leave the virtual machine being recovered in an inconsistent state.
+{% endalert %}
 
 {% tabs snap-vm-restore %}
 
@@ -272,31 +273,11 @@ spec:
     virtualMachineSnapshotName: <VM_SNAPSHOT_NAME>
 ```
 
-You can use one of three modes for this operation:
-
-- `DryRun`: A dry run of the recovery operation, needed to check for possible conflicts, which are shown in the resource status (`status.resources`).
-- `Strict`: The strict recovery mode, when the VM has to be recovered exactly as in the snapshot; missing external dependencies can leave the VM in `Pending` after recovery.
-- `BestEffort`: Missing external dependencies ([ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage), [VirtualImage](/modules/virtualization/cr.html#virtualimage)) are ignored and removed from the VM configuration.
-
-Recovering a virtual machine from a snapshot is possible only when all of the following conditions are met:
-
-- The VM being recovered is present in the cluster (the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource exists and its `.metadata.uid` matches the identifier used when the snapshot was created).
-- The disks being recovered (identified by name) either aren't attached to other VMs or are absent from the cluster.
-- The IP address being recovered either isn't taken by another VM or is absent from the cluster.
-- The MAC addresses being recovered either aren't used by other VMs or are absent from the cluster.
-
-> **Important:** If some resources the VM depends on (for example, [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass), [VirtualImage](/modules/virtualization/cr.html#virtualimage), [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage)) are absent from the cluster but existed at the moment the snapshot was created, the VM stays in the `Pending` state after recovery.
-> In that case, edit the VM configuration manually and update or remove the missing dependencies.
-
 To view information about conflicts when recovering a VM from a snapshot, check the resource status:
 
 ```shell
 d8 k get vmop <VMOP_NAME> -o json | jq '.status.resources'
 ```
-
-> **Important:** Don't cancel a recovery operation from a snapshot, that is, don't delete the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource in the `InProgress` phase, because this can leave the virtual machine being recovered in an inconsistent state.
->
-> When a VM is recovered from a snapshot, the disks related to it are also recovered from the corresponding snapshots, so the disk specification contains the `dataSource` parameter with a reference to the disk snapshot needed.
 
 {% endtab %}
 

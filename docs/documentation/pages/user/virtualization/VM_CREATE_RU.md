@@ -97,7 +97,7 @@ lang: ru
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-   IP-адрес машина получает автоматически из диапазона, заданного администратором в [настройках модуля](../../admin/configuration/network/vm-network.html).
+   IP-адрес машина получает автоматически из диапазона, заданного администратором в [настройках модуля](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs).
 
 {% endtab %}
 

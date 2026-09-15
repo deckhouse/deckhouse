@@ -100,13 +100,11 @@ After creation, you can reach the machine by the `http.default.svc` name.
 
 ## Service of the ClusterIP type
 
-A service of this type gives the machine application a stable address inside the cluster.
+`ClusterIP` is the standard service type that provides an internal IP address for accessing the service inside the cluster. This IP address is used to route traffic between different system components and lets virtual machines interact with each other through a predictable and stable address.
 
 {% tabs svc-clusterip %}
 
 {% tab "Using the CLI" %}
-
-`ClusterIP` is the standard service type that provides an internal IP address for accessing the service inside the cluster. This IP address is used to route traffic between different system components. `ClusterIP` lets virtual machines interact with each other through a predictable and stable IP address, which simplifies internal communication in the cluster.
 
 Here is an example of a `ClusterIP` configuration:
 
@@ -138,15 +136,11 @@ EOF
 
 ## Service of the NodePort type
 
-A service of this type opens the machine application on a port of every cluster node.
+`NodePort` is an extension of the `ClusterIP` service that provides access to the service through a specified port on all cluster nodes. This makes the service reachable from outside the cluster through the combination of a node IP address and a port, and it suits the cases where an external load balancer isn't needed.
 
 {% tabs svc-nodeport %}
 
 {% tab "Using the CLI" %}
-
-`NodePort` is an extension of the `ClusterIP` service that provides access to the service through a specified port on all cluster nodes. This makes the service reachable from outside the cluster through the combination of a node IP address and a port.
-
-`NodePort` suits scenarios where you need direct access to the service from outside the cluster without an external load balancer.
 
 Create the following service:
 
@@ -194,13 +188,11 @@ If you don't specify the `nodePort` value explicitly, an arbitrary port is assig
 
 ## Service of the LoadBalancer type
 
-A service of this type gives the application an external address through a load balancer.
+`LoadBalancer` is a service type that automatically creates an external load balancer with a permanent IP address. This balancer distributes incoming traffic among virtual machines, making the service available from the internet.
 
 {% tabs svc-lb %}
 
 {% tab "Using the CLI" %}
-
-`LoadBalancer` is a service type that automatically creates an external load balancer with a permanent IP address. This balancer distributes incoming traffic among virtual machines, making the service available from the internet.
 
 ```shell
 d8 k apply -f - <<EOF
@@ -242,13 +234,11 @@ EOF
 
 ## Publishing VM services with Ingress
 
-Ingress opens the machine application by a domain name and handles TLS termination.
+`Ingress` lets you manage incoming HTTP/HTTPS requests and route them to different servers within your cluster. This is the most suitable method if you want to use domain names and SSL termination to access your virtual machines.
 
 {% tabs svc-ingress %}
 
 {% tab "Using the CLI" %}
-
-`Ingress` lets you manage incoming HTTP/HTTPS requests and route them to different servers within your cluster. This is the most suitable method if you want to use domain names and SSL termination to access your virtual machines.
 
 To publish a virtual machine service through `Ingress`, create the following resources:
 

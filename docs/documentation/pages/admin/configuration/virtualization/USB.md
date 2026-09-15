@@ -106,6 +106,10 @@ After that, the project owner attaches the device to a virtual machine.
 
 Full details about a device and its current state are available in the resource status.
 
+{% alert level="info" %}
+When a device is physically disconnected from the node, the `Attached` condition gets the `False` value, and the `Ready` condition gets the `NotFound` reason. The same is reflected in the status of the [USBDevice](/modules/virtualization/cr.html#usbdevice) resource in the project namespace.
+{% endalert %}
+
 {% tabs usb-view %}
 
 {% tab "Using the CLI" %}
@@ -130,8 +134,6 @@ Example output:
 ```console
 Logitech Webcam C920 (046d:082d)
 ```
-
-> When a device is physically disconnected from the node, the `Attached` condition gets the `False` value, and the `Ready` condition gets the `NotFound` reason. The same is reflected in the status of the [USBDevice](/modules/virtualization/cr.html#usbdevice) resource in the project namespace.
 
 {% endtab %}
 

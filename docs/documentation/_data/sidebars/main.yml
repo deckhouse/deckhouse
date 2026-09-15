@@ -810,10 +810,6 @@ entries:
                     ru: Обзор
                   url: /admin/configuration/virtualization/
                 - title:
-                    en: Module parameters
-                    ru: Параметры модуля
-                  url: /admin/configuration/virtualization/settings.html
-                - title:
                     en: Images and storage
                     ru: Образы и хранилище
                   folders:

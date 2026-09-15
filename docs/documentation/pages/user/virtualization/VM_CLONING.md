@@ -74,15 +74,13 @@ d8 k get vmsop <VMSOP_NAME> -o json | jq '.status.resources'
 
 A clone is assembled from temporary snapshots of a machine, so you don't have to stop it.
 
-{% tabs vm-clone %}
+A VM is cloned using the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource with the `Clone` operation type, both for powered-off and for running virtual machines. When a running VM is cloned, a consistent snapshot is created automatically, and the clone is then built from it.
 
-{% tab "Using the CLI" %}
+During cloning, temporary snapshots are created automatically for the virtual machine and all its disks, and the new VM is assembled from them. After cloning finishes, the temporary snapshots are deleted, so you won't see them in the resource list. The specification of the cloned disks still keeps a reference (`dataSource`) to the corresponding snapshot, even though the snapshot itself no longer exists. This is expected behavior and doesn't indicate a problem, because by the time the clone starts, all the necessary data has already been transferred to the new disks.
 
-A VM is cloned using the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource with the `Clone` operation type.
-
-Cloning is supported both for powered-off and for running virtual machines. When a running VM is cloned, a consistent snapshot is created automatically, and the clone is then built from it.
-
-> Set the `.spec.runPolicy: AlwaysOff` parameter in the configuration of the VM being cloned to prevent the clone from starting automatically. This is because the clone inherits the behavior of the parent VM.
+{% alert level="warning" %}
+Set the `.spec.runPolicy: AlwaysOff` parameter in the configuration of the VM being cloned to prevent the clone from starting automatically: the clone inherits the behavior of the parent VM.
+{% endalert %}
 
 Before cloning, prepare the guest OS to avoid conflicts of unique identifiers and network settings.
 
@@ -96,6 +94,10 @@ Linux:
 Windows:
 
 - run generalization with `sysprep` using the `/generalize` parameter, or use tools to clear unique identifiers (SID, hostname, and so on).
+
+{% tabs vm-clone %}
+
+{% tab "Using the CLI" %}
 
 To create a VM clone, use the following resource:
 
@@ -113,9 +115,7 @@ spec:
     customization: {}
 ```
 
-The `nameReplacements` and `customization` parameters are configured in the [`.spec.clone`](/modules/virtualization/cr.html#virtualmachineoperation-v1alpha2-spec-clone) block (general description above).
-
-> During cloning, temporary snapshots are created automatically for the virtual machine and all its disks. The new VM is then assembled from these snapshots. After cloning finishes, the temporary snapshots are deleted automatically, so you won't see them in the resource list. The specification of the cloned disks still keeps a reference (`dataSource`) to the corresponding snapshot, even though the snapshot itself no longer exists. This is expected behavior and doesn't indicate a problem, because by the time the clone starts, all the necessary data has already been transferred to the new disks.
+The `nameReplacements` and `customization` parameters are set in the [`.spec.clone`](/modules/virtualization/cr.html#virtualmachineoperation-v1alpha2-spec-clone) block.
 
 The following example shows cloning a VM named `database` and the `database-root` disk attached to it.
 

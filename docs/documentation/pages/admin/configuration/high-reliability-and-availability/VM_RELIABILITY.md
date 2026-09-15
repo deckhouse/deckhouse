@@ -11,14 +11,16 @@ Node load changes over time, and nodes sometimes fail. Deckhouse Platform (DP) b
 
 Over time, the distribution of virtual machines across nodes stops being even. The [`descheduler`](/modules/descheduler/) module restores the balance by moving VMs with live migration, without interrupting them. Enable this module, and the distribution is maintained without your involvement.
 
-{% tabs descheduler %}
-
-{% tab "Using the CLI" %}
-
 Rebalancing solves two tasks:
 
 - It evens out the load. DP tracks how much CPU is reserved on each node and, when a node reserves more than 80%, moves some VMs to less loaded nodes.
 - It restores correct placement. DP checks whether the current node meets the VM requirements and the rules of mutual VM placement. For example, if the rules forbid keeping certain VMs on the same node, the extra ones are moved.
+
+{% tabs descheduler %}
+
+{% tab "Using the CLI" %}
+
+Create a [Descheduler](/modules/descheduler/cr.html#descheduler) resource and enable the strategies you need in it. The strategy parameters are covered in [Pod eviction](../app-scaling/pod-eviction/scheduler.html).
 
 {% endtab %}
 

@@ -9,27 +9,17 @@ Besides the main cluster network, a virtual machine (VM) can be connected to add
 
 ## Additional network interfaces
 
-Besides the main cluster network, a machine can connect to additional networks, both project and cluster ones.
+Besides the main cluster network, a machine can connect to additional networks, both project ones (Network) and cluster ones (ClusterNetwork). You list the networks you need in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) block, and if that block isn't set, the machine works only in the main cluster network.
 
 {% alert level="info" %}
 To work with additional networks, the `sdn` module has to be enabled.
 {% endalert %}
 
-The following example shows how to connect a virtual machine to an additional network:
+{% alert level="warning" %}
+You don't have to specify the main cluster network (`type: Main`), and a machine can work only in additional networks. But if the main network is specified, it has to be first in the list.
+{% endalert %}
 
-{% tabs vm-networks %}
-
-{% tab "Using the CLI" %}
-
-Virtual machines can be connected to additional networks, either project ones (Network) or cluster ones (ClusterNetwork).
-
-To do this, list the networks you need in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) block. If this block isn't set (which is the default), the VM uses only the main cluster network.
-
-> You don't have to specify the main cluster network (`type: Main`) in [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks). If you don't need a connection to the main cluster network, you can use only additional networks (`Network` or `ClusterNetwork`).
->
-> However, if the main network is specified, it has to be first in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) list.
-
-Specifics and important points of working with additional network interfaces:
+Specifics of additional network interfaces:
 
 - the order of networks in [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) determines the order in which interfaces are attached inside the virtual machine;
 - adding or removing an additional network (`Network` or `ClusterNetwork`) on a running VM applies without a reboot. The ACPI indexes of existing interfaces are preserved when adding or removing, so interface names in the guest OS stay stable;
@@ -38,28 +28,28 @@ Specifics and important points of working with additional network interfaces:
 - network security policies (NetworkPolicy) don't apply to additional network interfaces;
 - the network parameters (IP addresses, gateways, DNS, and so on) for additional networks are configured manually from inside the guest OS (for example, with Cloud-Init), unless IPAM is configured for the network, as covered in [IPAM for additional network interfaces](#ipam-for-additional-network-interfaces).
 
-> When configuring network interfaces in the guest OS, use stable identifiers (predictable `enpXsY` names or binding by MAC address) instead of `ethX` names, as described in [Network interface naming in the guest OS](../../virtualization/vm-block-devices.html#network-interface-naming-in-the-guest-os).
->
-> On a Linux guest system with several interfaces in the same subnet, the ARP flux problem can occur, where the kernel answers ARP requests through an arbitrary interface rather than the one the request arrived on, which leads to an unstable connection and packet loss because of an incorrect MAC address in the router caches.
->
-> To fix this, set the parameters that make the system answer requests strictly through the interface with the target IP and use the correct source address:
->
-> ```shell
-> sysctl -w net.ipv4.conf.all.arp_ignore=1
-> sysctl -w net.ipv4.conf.all.arp_announce=2
-> ```
->
-> Example for cloud-init:
->
-> ```yaml
-> write_files:
-> - path: /etc/sysctl.d/90-arp-strict.conf
-> content: |
-> net.ipv4.conf.all.arp_ignore=1
-> net.ipv4.conf.all.arp_announce=2
-> ```
->
-> The parameter values are described in the [IP sysctl documentation](https://docs.kernel.org/networking/ip-sysctl.html).
+For each additional network interface, a unique MAC address is created and reserved automatically, which prevents MAC address collisions. The [VirtualMachineMACAddress](/modules/virtualization/cr.html#virtualmachinemacaddress) (`vmmac`) and [VirtualMachineMACAddressLease](/modules/virtualization/cr.html#virtualmachinemacaddresslease) (`vmmacl`) resources are used for this.
+
+A MAC address is generated at random from a pool of allowed ranges.
+
+- Ranges: `x2-xx-xx-xx-xx-xx`, `x6-xx-xx-xx-xx-xx`, `xA-xx-xx-xx-xx-xx`, `xE-xx-xx-xx-xx-xx`.
+- The first three octets (OUI) are formed from the cluster UUID, and the last three (NIC) are picked at random from 16 million possible combinations.
+
+The cluster-wide [VirtualMachineMACAddressLease](/modules/virtualization/cr.html#virtualmachinemacaddresslease) (`vmmacl`) resource manages leases of addresses from the shared pool, while the project [VirtualMachineMACAddress](/modules/virtualization/cr.html#virtualmachinemacaddress) (`vmmac`) resource reserves leased addresses and binds them to machines. An address stays assigned to the machine until it's deleted.
+
+When a network is removed from the VM configuration:
+
+- The MAC address of the interface is released.
+- The related [VirtualMachineMACAddress](/modules/virtualization/cr.html#virtualmachinemacaddress) and [VirtualMachineMACAddressLease](/modules/virtualization/cr.html#virtualmachinemacaddresslease) resources are deleted automatically.
+- The allocated `IPAddress` resource is deleted automatically (if IPAM was used).
+
+The following example shows how to connect a virtual machine to an additional network:
+
+{% tabs vm-networks %}
+
+{% tab "Using the CLI" %}
+
+List the networks you need in the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) block of the machine specification.
 
 Here is an example of connecting a VM to the main cluster network and the `user-net` project network:
 
@@ -108,15 +98,6 @@ status:
       macAddress: aa:bb:cc:dd:ee:02
 ```
 
-For each additional network interface, a unique MAC address is created and reserved automatically, which prevents MAC address collisions. The [VirtualMachineMACAddress](/modules/virtualization/cr.html#virtualmachinemacaddress) (`vmmac`) and [VirtualMachineMACAddressLease](/modules/virtualization/cr.html#virtualmachinemacaddresslease) (`vmmacl`) resources are used for this.
-
-A MAC address is generated at random from a pool of allowed ranges.
-
-- Ranges: `x2-xx-xx-xx-xx-xx`, `x6-xx-xx-xx-xx-xx`, `xA-xx-xx-xx-xx-xx`, `xE-xx-xx-xx-xx-xx`.
-- The first three octets (OUI) are formed from the cluster UUID, and the last three (NIC) are picked at random from 16 million possible combinations.
-
-The [VirtualMachineMACAddressLease](/modules/virtualization/cr.html#virtualmachinemacaddresslease) (`vmmacl`) resource is a cluster-wide resource that manages leases of MAC addresses from the shared MAC address pool.
-
 To view the list of MAC address leases (`vmmacl`), run the following command:
 
 ```shell
@@ -135,10 +116,6 @@ mac-5e-e6-19-54-f9-be   {"name":"vm-01-5jqxg","namespace":"pr-sdn"}   Bound    4
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-The [VirtualMachineMACAddress](/modules/virtualization/cr.html#virtualmachinemacaddress) (`vmmac`) resource is a project resource responsible for reserving leased MAC addresses and binding them to virtual machines.
-
-A MAC address is assigned automatically to each additional interface from the shared address pool and stays assigned to the machine until it's deleted.
-
 To check the assigned MAC addresses, run the following command:
 
 ```shell
@@ -156,12 +133,6 @@ vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
-
-When a network is removed from the VM configuration:
-
-- The MAC address of the interface is released.
-- The related [VirtualMachineMACAddress](/modules/virtualization/cr.html#virtualmachinemacaddress) and [VirtualMachineMACAddressLease](/modules/virtualization/cr.html#virtualmachinemacaddresslease) resources are deleted automatically.
-- The allocated `IPAddress` resource is deleted automatically (if IPAM was used).
 
 {% endtab %}
 
@@ -188,15 +159,34 @@ To create a project network:
 
 {% endtabs %}
 
+### Interface naming and ARP flux in the guest OS
+
+When configuring network interfaces in the guest OS, use stable identifiers (predictable `enpXsY` names or binding by MAC address) instead of `ethX` names, as described in [Network interface naming in the guest OS](../../virtualization/vm-block-devices.html#network-interface-naming-in-the-guest-os).
+
+On a Linux guest system with several interfaces in the same subnet, the ARP flux problem can occur, where the kernel answers ARP requests through an arbitrary interface rather than the one the request arrived on, which leads to an unstable connection and packet loss because of an incorrect MAC address in the router caches.
+
+To fix this, set the parameters that make the system answer requests strictly through the interface with the target IP and use the correct source address:
+
+```shell
+sysctl -w net.ipv4.conf.all.arp_ignore=1
+sysctl -w net.ipv4.conf.all.arp_announce=2
+```
+
+Example for cloud-init:
+
+```yaml
+write_files:
+- path: /etc/sysctl.d/90-arp-strict.conf
+  content: |
+    net.ipv4.conf.all.arp_ignore=1
+    net.ipv4.conf.all.arp_announce=2
+```
+
+The parameter values are described in the [IP sysctl documentation](https://docs.kernel.org/networking/ip-sysctl.html).
+
 ## IPAM for additional network interfaces
 
-Deckhouse Platform (DP) can hand out addresses in an additional network itself, if an administrator has configured an address pool for that network.
-
-{% tabs net-ipam %}
-
-{% tab "Using the CLI" %}
-
-If IPAM is configured for an additional network [in the `sdn` module](/modules/sdn/) (an IP address pool bound to the network through [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref)), DP can automatically allocate IP addresses for the additional VM interfaces and deliver them to the guest OS over DHCP.
+Deckhouse Platform (DP) can hand out addresses in an additional network itself, if an administrator has configured an address pool for that network ([`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) in the [`sdn`](/modules/sdn/) module). DP then allocates addresses for the additional VM interfaces and delivers them to the guest OS over DHCP.
 
 Two modes are supported:
 
@@ -204,7 +194,19 @@ Two modes are supported:
 
 - **Static**: If the [`ipAddressName` field](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks-ipaddressname) is specified in [`.spec.networks[]`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks), the controller uses the IPAddress resource provided by the user (of the `Static` type, `network.deckhouse.io/v1alpha1`). The address is defined by the user and doesn't change automatically.
 
-If an additional network has no IPAM pool configured, the IPAM feature isn't enabled, the interface works in L2-only mode, and IP addressing has to be configured manually in the guest OS.
+If an additional network has no IPAM pool configured, the IPAM feature isn't enabled. The interface works in L2-only mode, and IP addressing has to be configured manually in the guest OS.
+
+{% alert level="warning" %}
+If an IPAM pool is configured for an additional network, don't configure a static IP address on the additional interface in the guest OS manually (through Cloud-Init). Use the automatic (DHCP) or static (`ipAddressName`) mode to avoid address conflicts.
+{% endalert %}
+
+{% alert level="info" %}
+If an additional network has an IPAM pool but the IPAddress resource isn't allocated yet or is in the `Pending` state (for example, because the address pool is exhausted), the interface is temporarily skipped. The VM starts without it, and the `NetworkReady` condition reports the error. Once an IP address becomes available, the interface is attached automatically.
+{% endalert %}
+
+{% tabs net-ipam %}
+
+{% tab "Using the CLI" %}
 
 Here is an example VM configuration with automatic IP address allocation for an additional network:
 
@@ -259,10 +261,6 @@ status:
       virtualMachineMACAddressName: vm-01-rxzd6
       ipAddress: 192.168.200.4               # IP address of the additional network (from IPAM).
 ```
-
-> **Important:** If an IPAM pool is configured for an additional network, don't configure a static IP address on the additional interface in the guest OS manually (through Cloud-Init). Use the automatic (DHCP) or static (`ipAddressName`) mode to avoid address conflicts.
->
-> If an additional network has an IPAM pool but the IPAddress resource isn't allocated yet or is in the `Pending` state (for example, because the address pool is exhausted), the interface is temporarily skipped, the VM starts without it, and the `NetworkReady` condition reports the error. Once an IP address becomes available, the interface is attached automatically on the fly.
 
 {% endtab %}
 

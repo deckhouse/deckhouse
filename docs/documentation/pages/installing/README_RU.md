@@ -728,7 +728,7 @@ spec:
       - 10.66.10.0/24
 ```
 
-Остальные параметры описаны в разделе [«Параметры модуля виртуализации»](../admin/configuration/virtualization/settings.html) и в [справочнике настроек](/modules/virtualization/configuration.html).
+Остальные параметры описаны в [справочнике настроек модуля](/modules/virtualization/configuration.html).
 
 Чтобы отследить готовность виртуализации, выполните команду:
 

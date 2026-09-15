@@ -96,7 +96,7 @@ The following steps show how to start an Ubuntu 24.04 virtual machine on the dis
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-   The machine gets an IP address automatically from the range that the administrator sets in the [module settings](../../admin/configuration/network/vm-network.html).
+   The machine gets an IP address automatically from the range that the administrator sets in the [module settings](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs).
 
 {% endtab %}
 

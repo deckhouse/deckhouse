@@ -129,7 +129,7 @@ spec:
 
 Число ядер работающей машины можно менять, не перезагружая её, если изменение применимо через живую миграцию. В пределах текущей топологии CPU ядра можно и добавлять, и убирать.
 
-Возможность выключена по умолчанию. Чтобы её включить, администратор добавляет `HotplugCPUWithLiveMigration` в параметр [`.spec.settings.featureGates`](../../admin/configuration/virtualization/settings.html):
+Возможность выключена по умолчанию. Чтобы её включить, администратор добавляет `HotplugCPUWithLiveMigration` в параметр [`.spec.settings.featureGates`](/modules/virtualization/configuration.html#parameters-featuregates):
 
 ```yaml
 kind: ModuleConfig
@@ -194,7 +194,7 @@ EOF
 
 Объём памяти работающей машины можно увеличивать, не перезагружая её. Уменьшение требует перезапуска.
 
-Возможность выключена по умолчанию. Чтобы её включить, администратор добавляет `HotplugMemoryWithLiveMigration` в параметр [`.spec.settings.featureGates`](../../admin/configuration/virtualization/settings.html):
+Возможность выключена по умолчанию. Чтобы её включить, администратор добавляет `HotplugMemoryWithLiveMigration` в параметр [`.spec.settings.featureGates`](/modules/virtualization/configuration.html#parameters-featuregates):
 
 ```yaml
 kind: ModuleConfig

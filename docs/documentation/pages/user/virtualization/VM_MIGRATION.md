@@ -42,7 +42,7 @@ A live migration doesn't always succeed. The following is what has to match on t
 **Attaching and detaching disks.** While a migration is preparing the target node, disks can be neither attached to the machine with a [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource nor detached by deleting one. An attachment stays in the `Pending` phase with the `BlockedByMigration` reason in the `Attached` condition, and a deleted one stays in the `Terminating` phase, until the migration completes. While the migration is still queued and the target node isn't being prepared yet, for example when it waits for the project quota to free up, attaching and detaching work as usual. The reverse is also true, a migration waits for an attach or detach request that has already been sent, and all that time the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource stays in the `Pending` phase with the `WaitingForBlockDeviceAttachment` reason. If the request doesn't complete within 5 minutes, the operation fails.
 <!-- markdownlint-enable MD013 -->
 
-**Network bandwidth.** The slower the network, the more memory synchronization iterations the migration goes through and the longer the VM downtime at the final stage, and in the worst case the migration doesn't fit into the timeout. The [`.spec.liveMigrationPolicy`](#configuring-the-migration-policy) policy controls how the migration runs, and the [AutoConverge](#migrations-with-insufficient-network-bandwidth) mechanism helps with a slow network.
+**Network bandwidth.** The slower the network, the more memory synchronization iterations the migration goes through and the longer the VM downtime at the final stage, and in the worst case the migration doesn't fit into the timeout. The [migration policy](#configuring-the-migration-policy) controls how the migration runs, and the [AutoConverge](#migrations-with-insufficient-network-bandwidth) mechanism helps with a slow network.
 
 **Kernel versions.** All cluster nodes have to run the same Linux kernel version. Differences in versions lead to incompatible interfaces, system calls, and resource handling, which breaks the migration.
 
@@ -100,7 +100,15 @@ A few specifics of the condition that matter when planning maintenance and readi
 
 ## Starting a live migration
 
-A migration is started by the `Evict` operation, which you create manually or with a `d8` command.
+A migration is started by the `Migrate` operation of the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource, which you create manually or with a `d8` command. You can interrupt the migration while it's in the `Pending` or `InProgress` phase by deleting that resource.
+
+{% alert level="info" %}
+Targeted migration to a specific node is available in commercial DP editions.
+{% endalert %}
+
+{% alert level="warning" %}
+To keep the virtual machine schedulable, the node selector must not conflict with other placement rules, such as the virtual machine affinity, node selectors, and the node selector rules of the virtual machine class.
+{% endalert %}
 
 {% tabs vm-live-migrate %}
 
@@ -166,11 +174,7 @@ spec:
 EOF
 ```
 
-> To prevent the virtual machine from becoming unschedulable, the node selector must not conflict with other placement rules, such as the virtual machine affinity, node selectors, and the node selector rules of the virtual machine class.
->
-> Targeted migration to a specific node is available in commercial DP editions.
->
-> If you don't need to specify target node parameters, you can omit the `migrate` field or evict the virtual machine to another suitable node using the `d8 v evict` command or by creating a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `Evict` type.
+If you don't need to specify target node parameters, you can omit the `migrate` field or evict the virtual machine to another suitable node using the `d8 v evict` command or by creating a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `Evict` type.
 
 To track the virtual machine migration right after the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource is created, run the following command:
 
@@ -190,8 +194,6 @@ linux-vm   Running     79m      virtlab-pt-2   10.66.10.14   79m
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
-
-You can interrupt any live migration while it's in the `Pending` or `InProgress` phase by deleting the corresponding VirtualMachineOperations resource.
 
 {% endtab %}
 
@@ -283,13 +285,13 @@ DP starts some migrations itself, by creating a [VirtualMachineOperation](/modul
 | A change of the core count or memory size without a restart      | `hotplug-resources-`    |
 | Moving disks to another storage                                  | `volume-migration-`     |
 
+The migration has completed successfully when the resource moves to the `Completed` phase. The other phases are described in the [`.status.phase`](/modules/virtualization/cr.html#virtualmachineoperation-v1alpha2-status-phase) field, and to cancel a migration you delete the resource.
+
 The following example shows how to view the list of such operations:
 
 {% tabs vmop-list %}
 
 {% tab "Using the CLI" %}
-
-The migration has completed successfully when the resource moves to the `Completed` phase. The other phases are described in the [`.status.phase`](/modules/virtualization/cr.html#virtualmachineoperation-v1alpha2-status-phase) field.
 
 To view the active operations, run the following command:
 
@@ -306,8 +308,6 @@ firmware-update-fnbk2   Completed   100%       Evict   linux-vm         1m
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
-
-To cancel a migration, delete the corresponding resource.
 
 {% endtab %}
 

@@ -11,15 +11,7 @@ If a machine doesn't behave as expected, collect its state and the state of the 
 The `collect-debug-info` command requires `d8` v0.27.0 or later.
 {% endalert %}
 
-The following example shows how to collect such an archive:
-
-{% tabs vm-debug %}
-
-{% tab "Using the CLI" %}
-
-The `collect-debug-info` command collects diagnostic data about a virtual machine (VM) and all related resources into a single compressed archive.
-
-The command collects the following information:
+The archive contains the following information:
 
 - the virtual machine configuration;
 - operations on the virtual machine;
@@ -30,7 +22,15 @@ The command collects the following information:
 - events for all related resources;
 - the XML configuration of the VM domain.
 
-The command result is written to a compressed archive (tar.gz) that goes to stdout. To save the archive, redirect the output to a file.
+The collected data is stored in the archive in YAML format (for resources) and in text files (for logs). You can send such an archive to technical support to analyze a problem.
+
+The following example shows how to collect such an archive:
+
+{% tabs vm-debug %}
+
+{% tab "Using the CLI" %}
+
+The `collect-debug-info` command collects diagnostic data about a virtual machine and all related resources into a compressed archive (tar.gz) that goes to stdout, so the output has to be redirected to a file.
 
 Usage example:
 
@@ -45,9 +45,7 @@ d8 v collect-debug-info linux-vm -n mynamespace > debug-info.tar.gz
 d8 v collect-debug-info linux-vm.mynamespace > debug-info.tar.gz
 ```
 
-> **Important:** The command can't print data directly to the terminal. Be sure to redirect the output to a file, otherwise the command fails.
-
-After the command runs, you get the `debug-info.tar.gz` archive, which contains all the collected data in YAML format (for resources) and text files (for logs). You can send this archive to technical support to analyze problems.
+Without the output redirected to a file, the command fails, and on success you get the `debug-info.tar.gz` archive.
 
 {% endtab %}
 

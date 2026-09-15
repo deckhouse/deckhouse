@@ -107,6 +107,10 @@ logitech-webcam   node-2   True    True       True       my-project   15m
 
 Полные сведения об устройстве и его текущее состояние доступны в статусе ресурса.
 
+{% alert level="info" %}
+Когда устройство физически отключают от узла, условие `Attached` принимает значение `False`, а условие `Ready` получает причину `NotFound`. То же самое отражается в статусе ресурса [USBDevice](/modules/virtualization/cr.html#usbdevice) в проектном неймспейсе.
+{% endalert %}
+
 {% tabs usb-view %}
 
 {% tab "В командной строке" %}
@@ -131,8 +135,6 @@ d8 k get nodeusbdevice <DEVICE_NAME> \
 ```console
 Logitech Webcam C920 (046d:082d)
 ```
-
-> Когда устройство физически отключают от узла, условие `Attached` принимает значение `False`, а условие `Ready` получает причину `NotFound`. То же самое отражается в статусе ресурса [USBDevice](/modules/virtualization/cr.html#usbdevice) в проектном неймспейсе.
 
 {% endtab %}
 
