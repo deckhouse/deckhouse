@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -43,6 +44,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/confighandler"
+	modulesettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/module"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -56,8 +59,11 @@ import (
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -91,7 +97,7 @@ type Controller struct {
 }
 
 // Build assembles the manager, the package runtime and the shared containers; it starts nothing.
-func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
+func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, operator *addonoperator.AddonOperator, logger *log.Logger) (*Controller, error) {
 	scheme, err := buildSchema()
 	if err != nil {
 		return nil, fmt.Errorf("build schema: %w", err)
@@ -140,6 +146,18 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, ms)
 
+	conversionsStore := conversion.NewConversionsStore()
+
+	settingsCh := make(chan addonutils.Values, 1)
+	configHandler := confighandler.New(runtime.GetClient(), conversionsStore, settingsCh)
+	operator.SetupKubeConfigManager(configHandler)
+
+	edition, err := edition.Parse("dev")
+	if err != nil {
+		return nil, err
+	}
+	exts := extenders.NewExtendersStack(edition, func() (bool, error) { return true, nil }, logger.Named("extenders"))
+
 	err = metrics.RegisterDeckhouseControllerMetrics(ms)
 	if err != nil {
 		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
@@ -163,6 +181,11 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 	err = module.RegisterController(synced, runtime, manager, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module controller: %w", err)
+	}
+
+	err = modulesettings.RegisterController(synced, runtime, operator.ModuleManager, manager, conversionsStore, edition, configHandler, operator.MetricStorage, exts, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register module settings controller: %w", err)
 	}
 
 	err = application.RegisterController(runtime, manager, nil, logger)
@@ -189,8 +212,6 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 	if err != nil {
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
-
-	settingsCh := make(chan addonutils.Values, 1)
 
 	return &Controller{
 		ctrl: runtime,
