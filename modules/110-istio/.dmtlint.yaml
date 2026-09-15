@@ -1,9 +1,6 @@
 linters-settings:
   container:
     exclude-rules:
-      read-only-root-filesystem:
-        - kind: Deployment
-          name: kiali
       readiness-probe:
         - kind: Deployment
           name: operator-1x25
