@@ -47,17 +47,19 @@ The following simplifications are made in the diagrams:
 
 * Base module functionality (control plane, CNI, ingress gateway, Kiali, config-analyzer):
 
-  ![Istio module architecture](../../images/architecture/network/c4-l2-istio.en.svg)
+  ![Istio module architecture](../../images/architecture/network/c4-l2-istio.svg)
 
 * Ambient mode (ztunnel, waypoint-controller; available only in the Enterprise Edition, disabled by default — the diagram shows only the differences from the base configuration):
 
-  ![Istio module architecture in ambient mode](../../images/architecture/network/c4-l2-istio-ambient.en.svg)
+  ![Istio module architecture in ambient mode](../../images/architecture/network/c4-l2-istio-ambient.svg)
 
 * Federation and multicluster configuration (available only in the Enterprise Edition, disabled by default — the diagram shows only the differences from the base configuration):
 
-  ![Istio module architecture in federation/multicluster configuration](../../images/architecture/network/c4-l2-istio-multicluster.en.svg)
+  ![Istio module architecture in federation/multicluster configuration](../../images/architecture/network/c4-l2-istio-multicluster.svg)
 
 ## Module components
+
+### Main module components
 
 The module consists of the following components:
 
@@ -112,6 +114,10 @@ The module consists of the following components:
    * **istio-config-analyzer**: Main container.
    * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC, providing secure access to metrics.
 
+### Ambient mode components
+
+The following additional components are created when Istio runs in ambient mode:
+
 1. **Istio-cni-node** (DaemonSet): Istio component that installs the CNI plugin on each cluster node and, in Istio ambient mode, sets up traffic interception for pods.
 
    The component prepares the `istio-cni` binary and appends it as an additional plugin to the first CNI config found in the `/etc/cni/net.d/` directory on each cluster node. In the standard DKP configuration this is the `05-cilium.conflist` file, created by the Cilium CNI plugin of the [`cni-cilium`](/modules/cni-cilium/) module. When creating each pod, kubelet (via containerd) calls both CNI plugins in sequence — first cilium, then istio-cni. The result produced by the first plugin is passed to the second.
@@ -156,6 +162,14 @@ The module consists of the following components:
    It consists of a single container:
 
    * **istio-proxy**: Main container that receives configuration via xDS from the istiod controller.
+
+### Federation or multicluster mode components
+
+{% alert level="warning" %}
+Cross-cluster interaction ([federation](/modules/istio/#federation) or [multicluster](/modules/istio/#multicluster)) is only available between DKP clusters, since DKP installs a modified version of Istio that is not compatible with vanilla Istio in other clusters.
+{% endalert %}
+
+The following additional components are created when Istio runs in federation or multicluster mode:
 
 1. **Metadata-exporter** (Deployment): component that provides public cluster metadata (the CA root certificate, public keys, endpoint addresses) to remote clusters for configuring cross-cluster interaction ([federation](/modules/istio/#federation) or [multicluster](/modules/istio/#multicluster)).
 
@@ -239,6 +253,7 @@ The following external components interact with the module:
    * Mutates pods to add init and sidecar containers.
 
 1. **Prometheus-main**: Collects metrics from all module components.
+1. **Containerd**: Runs the plugin binary.
 1. **Load balancer**: Balances incoming traffic to ingress-gateway-controller.
 1. **Controller nginx**: Forwards the authenticated user request to the Kiali web interface.
 1. **Remote DKP cluster**:
