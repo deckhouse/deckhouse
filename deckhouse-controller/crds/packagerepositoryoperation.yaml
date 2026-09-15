@@ -95,10 +95,7 @@ spec:
                   Conditions reflecting the latest observations of the operation state.
                   The operation phase is determined by the `Completed` condition: while its status is `False`,
                   the operation is in one of the intermediate phases (`Discover`, `Processing`);
-                  when the status is `True`, the operation has finished with reason `ScanSucceeded`
-                  or with one of the failure reasons: `AccessDenied` (the registry rejected the credentials),
-                  `RepositoryNotFound` (no repository at the packages path), `RegistryUnavailable`
-                  (the registry could not be reached), `ScanFailed` (any other error, see the message).
+                  when the status is `True`, the operation has finished with reason `Succeeded` or `Failed`.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -137,11 +134,8 @@ spec:
                       x-doc-examples:
                       - Discover
                       - Processing
-                      - ScanSucceeded
-                      - ScanFailed
-                      - AccessDenied
-                      - RepositoryNotFound
-                      - RegistryUnavailable
+                      - Succeeded
+                      - Failed
                     status:
                       description: status of the condition, one of True, False, Unknown.
                       enum:

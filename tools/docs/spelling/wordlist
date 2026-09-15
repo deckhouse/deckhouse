@@ -616,6 +616,8 @@ PV
 PVCs
 PVs
 PWD
+PackageRepository
+PackageRepositoryOperation
 PagerDuty
 PagerDutyConfig
 Passthrough
@@ -2461,6 +2463,7 @@ zoneTagCategory
 пересборке
 пересборку
 пересборок
+пересканирует
 пересоберется
 пересоберётся
 пересобирает
