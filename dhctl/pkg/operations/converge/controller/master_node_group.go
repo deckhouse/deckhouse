@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/name212/govalue"
 
@@ -364,6 +365,10 @@ func (c *MasterNodeGroupController) rememberConvergeUserNode(ctx *context.Contex
 	}
 
 	c.convergeState.ConvergeUserNodes = append(c.convergeState.ConvergeUserNodes, nodeName)
+
+	// The same lifetime masterCloudConfig bakes into the account, measured from a moment
+	// just after it: the record must not die before the accounts it names.
+	c.convergeState.ConvergeUserExpiry = time.Now().UTC().Add(convergeUserLifetime)
 
 	if err := ctx.SetConvergeState(c.convergeState); err != nil {
 		return fmt.Errorf("save converge state with node %s: %w", nodeName, err)

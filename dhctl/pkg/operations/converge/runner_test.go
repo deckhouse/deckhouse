@@ -110,7 +110,7 @@ func TestConvergeDeletesTheStateOnlyAfterCleanupSucceeded(t *testing.T) {
 			// The last statement of the very block the cleanup guards: anywhere else the
 			// deletion runs on paths the cleanup never ran on, and a call whose error is
 			// dropped reports a converge that kept its state as a converge that cleaned up.
-			require.Equal(t, "return ctx.DeleteConvergeState()", text(block.List[len(block.List)-1]),
+			require.Equal(t, "return ctx.DeleteConvergeStateIfUserGone()", text(block.List[len(block.List)-1]),
 				"the block that removes the converge user must end by returning the state deletion")
 		}
 

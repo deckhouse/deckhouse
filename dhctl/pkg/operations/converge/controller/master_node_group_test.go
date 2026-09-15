@@ -378,6 +378,23 @@ func TestRememberConvergeUserNodeIsIdempotent(t *testing.T) {
 	require.Equal(t, []string{"cluster-master-0"}, controller.convergeState.ConvergeUserNodes)
 }
 
+// A name recorded without the expiry of the account it stands for is dropped by the very
+// next converge: DeleteConvergeStateIfUserGone reads a missing expiry as long past.
+func TestRememberConvergeUserNodeRecordsTheAccountExpiry(t *testing.T) {
+	convergeCtx := context.NewContext(t.Context(), context.Params{KubeProvider: unreachableKubeProvider{}})
+
+	controller := NewMasterNodeGroupController(
+		NewNodeGroupController("master", state.NodeGroupInfrastructureState{}, nil, nil), false)
+	controller.convergeState = &context.State{}
+
+	// The cluster is unreachable, so the save fails; what it was about to save is the point.
+	require.Error(t, controller.rememberConvergeUserNode(convergeCtx, "cluster-master-0"))
+
+	require.Equal(t, []string{"cluster-master-0"}, controller.convergeState.ConvergeUserNodes)
+	require.True(t, controller.convergeState.ConvergeUserExpiry.After(time.Now().Add(24*time.Hour)),
+		"the recorded expiry outlives no account: %s", controller.convergeState.ConvergeUserExpiry)
+}
+
 // The scale dance of a destructive single-master plan creates two masters with the
 // converge user and deletes them again. Left in the state, they send the cleanup to
 // machines that no longer exist, and every later consumer has to re-derive liveness.

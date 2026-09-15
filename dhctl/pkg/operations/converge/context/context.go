@@ -17,13 +17,16 @@ package context
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -278,19 +281,30 @@ func (c *Context) ConvergeState() (*State, error) {
 	return c.stateStore.GetState(c)
 }
 
-// DeleteConvergeState drops the state a finished converge kept in the cluster: the phase it
-// may have had to resume and the masters it built with the converge user. A master still
-// listed keeps the whole state alive — the list is the only record of accounts nobody has
-// removed yet, and a cleanup skipped in commander or sshless mode reports no error.
-func (c *Context) DeleteConvergeState() error {
+// DeleteConvergeStateIfUserGone drops the state a finished converge kept in the cluster:
+// the phase it may have had to resume and the masters it built with the converge user. A
+// master still listed keeps the whole state alive — the list is the only record of accounts
+// nobody has removed yet, and a cleanup skipped in commander or sshless mode reports no
+// error. Past their expiry those accounts accept no login from anyone, and a list of them
+// only sends the next converge logging in as a user that is gone.
+func (c *Context) DeleteConvergeStateIfUserGone() error {
 	state, err := c.ConvergeState()
 	if err != nil {
 		return fmt.Errorf("read the converge state before deleting it: %w", err)
 	}
 
-	if len(state.ConvergeUserNodes) > 0 {
+	if len(state.ConvergeUserNodes) == 0 {
+		return c.stateStore.Delete(c)
+	}
+
+	if time.Now().Before(state.ConvergeUserExpiry) {
 		return nil
 	}
+
+	dhlog.FromContext(c.ctx).WarnContext(c.ctx, fmt.Sprintf(
+		"%s was never removed from %s, and the accounts there are past the expiry they were created with. "+
+			"Dropping the record: nothing can log in as them any more",
+		global.ConvergeUserName, strings.Join(state.ConvergeUserNodes, ", ")))
 
 	return c.stateStore.Delete(c)
 }

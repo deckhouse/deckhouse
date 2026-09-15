@@ -496,7 +496,7 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 
 		// Nothing else deletes it: kept, the phase and the node list of a finished converge
 		// are read as unfinished business by the next one.
-		return ctx.DeleteConvergeState()
+		return ctx.DeleteConvergeStateIfUserGone()
 	}
 
 	return nil

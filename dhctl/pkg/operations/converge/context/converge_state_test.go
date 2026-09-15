@@ -16,24 +16,50 @@ package context
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
 // The node list is the only record of converge-user accounts nobody has taken off the
 // masters yet, and a cleanup skipped in commander or sshless mode reports no error to say
-// so. Dropped with the state, those accounts live to their expiry date untracked.
-func TestConvergeStateOutlivesNodesNobodyCleanedUp(t *testing.T) {
-	store := &fakeStateStore{state: &State{ConvergeUserNodes: []string{"cluster-master-2"}}}
+// so. It stops being a record at the expiry those accounts were created with: past it the
+// names would only send the next converge logging in as a user that is gone.
+func TestConvergeStateOutlivesNodesNobodyCleanedUpUntilTheirExpiry(t *testing.T) {
+	deleteWith := func(t *testing.T, state *State) bool {
+		t.Helper()
 
-	ctx := NewContext(t.Context(), Params{})
-	ctx.stateStore = store
+		store := &fakeStateStore{state: state}
 
-	require.NoError(t, ctx.DeleteConvergeState())
-	require.False(t, store.deleted, "the state was deleted while it still named a node carrying the converge user")
+		ctx := NewContext(t.Context(), Params{})
+		ctx.stateStore = store
 
-	store.state = &State{}
+		require.NoError(t, ctx.DeleteConvergeStateIfUserGone())
 
-	require.NoError(t, ctx.DeleteConvergeState())
-	require.True(t, store.deleted, "a converge that cleaned up after itself must leave no state behind")
+		return store.deleted
+	}
+
+	t.Run("a node still carrying a live account keeps the whole state", func(t *testing.T) {
+		require.False(t, deleteWith(t, &State{
+			ConvergeUserNodes:  []string{"cluster-master-2"},
+			ConvergeUserExpiry: time.Now().Add(time.Hour),
+		}))
+	})
+
+	t.Run("accounts past their expiry take the record with them", func(t *testing.T) {
+		require.True(t, deleteWith(t, &State{
+			ConvergeUserNodes:  []string{"cluster-master-2"},
+			ConvergeUserExpiry: time.Now().Add(-time.Minute),
+		}))
+	})
+
+	// A state written before the expiry was recorded is older than any account it names:
+	// nothing that lives at most two days survives an upgrade of dhctl.
+	t.Run("a list with no expiry at all is an expired one", func(t *testing.T) {
+		require.True(t, deleteWith(t, &State{ConvergeUserNodes: []string{"cluster-master-2"}}))
+	})
+
+	t.Run("a converge that cleaned up after itself leaves no state behind", func(t *testing.T) {
+		require.True(t, deleteWith(t, &State{}))
+	})
 }
