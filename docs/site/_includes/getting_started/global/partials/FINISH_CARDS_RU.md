@@ -76,40 +76,101 @@
 <h2 class="cards-blocks__title text_h2">
 Деплой первого приложения
 </h2>
+<p class="cards-blocks__lead">Кластер готов и пока пуст. Ниже — способы выкатить в него приложение: от одной команды в терминале до полноценного GitOps. Если просто хотите убедиться, что всё работает, начните с первого.</p>
 <div class="cards-blocks__cards">
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-⟳ <span class="cards-item__title-text">Настройка CI/CD-системы</span>
+⌨ <span class="cards-item__title-text">Начните здесь: обычные манифесты</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-[Создайте](/modules/user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер, и выделите ему права.
+Устанавливать дополнительные утилиты не нужно — всё необходимое уже есть в `d8`. Команда `d8 k` — это встроенный `kubectl`: примените манифесты приложения, и через минуту оно работает в кластере.
 
-Результатом станет `kubeconfig`, который можно использовать во всех системах деплоя в Kubernetes.
+<!-- TODO: ссылка -->
+[Развернуть первое приложение](#TODO)
 </div>
 </div>
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔀 <span class="cards-item__title-text">Направляем трафик на приложение</span>
+🧩 <span class="cards-item__title-text">Приложение из Marketplace</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Создайте `Service` и `Ingress` для вашего приложения.
+Выберите готовое приложение в каталоге и поставьте в свой namespace — искать чарты и разбираться с их параметрами не придётся. Каталог наполняет администратор кластера, Marketplace доступен с DKP 1.76.
 
-[Подробнее](/modules/ingress-nginx/) о возможностях `ingress-nginx`
-модуля.
+<!-- TODO: ссылка -->
+[Подробнее о Marketplace](/products/kubernetes-platform/documentation/latest/admin/configuration/marketplace/)
 </div>
 </div>
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔍 <span class="cards-item__title-text">Мониторинг приложения</span>
+🗄 <span class="cards-item__title-text">Управляемые сервисы</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
-Service'у.
+Поднимите PostgreSQL, Kafka, ClickHouse, RabbitMQ, OpenSearch или другой сервис модулями Deckhouse — масштабирование, резервное копирование и обновления платформа возьмёт на себя.
 
-[Подробнее](/modules/monitoring-custom/) о модуле `monitoring-custom`.
+<!-- TODO: ссылка -->
+[Подробнее об управляемых сервисах](/products/kubernetes-platform/features/managed-services/)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+🚢 <span class="cards-item__title-text">Сборка и доставка своего приложения</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Соберите образы, опубликуйте их в реестр и разверните приложение в кластере — одним инструментом `d8 delivery-kit`, а не тремя.
+
+<!-- TODO: ссылка -->
+[Подробнее о Delivery Kit](/products/delivery-kit/)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+🔁 <span class="cards-item__title-text">GitOps: деплой с помощью Argo CD</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Держите манифесты приложения в Git — Argo CD приведёт кластер к описанному состоянию. Сам Argo CD разворачивает и обслуживает платформа, ставить его руками не нужно.
+
+<!-- TODO: ссылка -->
+[Подробнее о модуле operator-argo](/products/kubernetes-platform/documentation/latest/admin/configuration/delivery/argocd/)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+⎈ <span class="cards-item__title-text">Helm-чарты без <code>helm install</code></span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Добавьте Helm- или OCI-репозиторий, выберите чарт и версию — платформа сама поставит релиз и будет обслуживать его.
+
+<!-- TODO: ссылка -->
+[Подробнее о модуле operator-helm](/modules/operator-helm/stable/)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+⟳ <span class="cards-item__title-text">Интеграция с существующей CI/CD-системой</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Создайте ServiceAccount с правами на деплой в кластер — получите `kubeconfig`, который подойдёт любой системе доставки в Kubernetes.
+
+[Подробнее о сервисном доступе в кластер](/modules/user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+🖥 <span class="cards-item__title-text">Legacy-приложение в виртуальной машине</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Приложение нельзя контейнеризовать? Запустите его в виртуальной машине в этом же кластере: тот же API, те же права, те же практики, что и у контейнеров.
+
+<!-- TODO: ссылка -->
+[Подробнее о Deckhouse Virtualization Platform](/products/virtualization-platform/documentation/)
 </div>
 </div>
 
