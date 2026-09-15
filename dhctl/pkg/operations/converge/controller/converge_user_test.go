@@ -34,6 +34,7 @@ import (
 	ssh "github.com/deckhouse/lib-gossh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
 func TestConvergeAuthorizedKeys(t *testing.T) {
@@ -271,7 +272,7 @@ runcmd:
 
 		after := render(t, string(payload))
 		require.Equal(t, "default", after["users"].([]any)[0])
-		require.Equal(t, convergeUserName, convergeUser(t, after)["name"])
+		require.Equal(t, global.ConvergeUserName, convergeUser(t, after)["name"])
 
 		delete(after, "users")
 		require.Equal(t, before, after)

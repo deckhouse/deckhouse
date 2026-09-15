@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
@@ -237,7 +238,7 @@ runcmd:
 
 		user, ok := users[len(users)-1].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, convergeUserName, user["name"])
+		require.Equal(t, global.ConvergeUserName, user["name"])
 
 		require.Equal(t, []any{"/var/lib/bashible/bootstrap.sh"}, doc["runcmd"],
 			"the bashible payload must survive the render")

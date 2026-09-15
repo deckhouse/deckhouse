@@ -332,10 +332,6 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 	// than from the group's bashible secret: registering it as an SSH host and waiting
 	// for that secret to list it would both stall on something that never happens.
 	if len(masterIPForSSHList) > 0 && !c.immutable {
-		if err := c.addNewNodesToSSH(ctx, masterIPForSSHList); err != nil {
-			return err
-		}
-
 		if err := c.loadCloudConfig(ctx, nodeInternalIPList...); err != nil {
 			return err
 		}
@@ -398,29 +394,6 @@ func (c *MasterNodeGroupController) beforeUpdateNodes(ctx *context.Context) erro
 	}
 
 	return c.switchClientToNotFirstMaster(ctx)
-}
-
-func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, masterIPForSSHList []session.Host) error {
-	if ctx.CommanderMode() {
-		return nil
-	}
-	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
-	if err != nil {
-		return err
-	}
-
-	sshCl, err := sshProvider.Client(ctx.Ctx())
-	if err != nil {
-		return err
-	}
-
-	if govalue.IsNil(sshCl) {
-		return fmt.Errorf("NodeInterface is not ssh")
-	}
-
-	sshCl.Session().AddAvailableHosts(masterIPForSSHList...)
-
-	return nil
 }
 
 // sshProviderForHooks builds the provider the control-plane hooks reach nodes with.

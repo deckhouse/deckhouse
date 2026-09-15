@@ -34,11 +34,11 @@ import (
 	ssh "github.com/deckhouse/lib-gossh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 )
 
 const (
-	convergeUserName = "d8-converge"
 	// bashible's 000_add_node_users.sh.tpl deletes every local user whose GECOS is
 	// "created by deckhouse" and that is absent from its NodeUser list, so ours
 	// must carry a different one.
@@ -200,13 +200,13 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 			continue
 		}
 
-		if named["name"] == convergeUserName {
+		if named["name"] == global.ConvergeUserName {
 			return cloudConfigB64, nil
 		}
 	}
 
 	doc["users"] = append(users, map[string]any{
-		"name":                convergeUserName,
+		"name":                global.ConvergeUserName,
 		"gecos":               convergeUserGecos,
 		"expiredate":          expire.Format(time.DateOnly),
 		"lock_passwd":         true,

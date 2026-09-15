@@ -23,6 +23,11 @@ const (
 	ConvergeNodeUserName = "d8-dhctl-converger"
 	ConvergeNodeUserUID  = 64536
 
+	// ConvergeUserName is the account converge bakes into a new master's cloud-config
+	// and logs in as. Unrelated to ConvergeNodeUserName, which destroy static delivers
+	// as a NodeUser through bashible.
+	ConvergeUserName = "d8-converge"
+
 	ConvergerNodeUserAnnotation = "node.deckhouse.io/has-converger-nodeuser"
 	NodeGroupLabel              = "node.deckhouse.io/group"
 

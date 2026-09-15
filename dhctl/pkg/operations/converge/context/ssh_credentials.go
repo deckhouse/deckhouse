@@ -15,7 +15,13 @@
 package context
 
 import (
+	"fmt"
+	"slices"
+	"strings"
+
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
 // sshCredentials is how dhctl introduces itself to a set of hosts. One session
@@ -24,6 +30,85 @@ type sshCredentials struct {
 	User       string
 	Keys       []session.AgentPrivateKey
 	BecomePass string
+}
+
+// credentialsFor says who dhctl logs in as on the given nodes. The masters this converge
+// built answer to the converge user, the ones that predate it to the user dhctl started
+// with. Keys are the caller's: the same keys open both, only the account differs.
+func (s *KubeClientSwitcher) credentialsFor(nodes []string) (sshCredentials, error) {
+	if len(nodes) == 0 {
+		return sshCredentials{}, fmt.Errorf("pick ssh credentials: no nodes given")
+	}
+
+	convergeState, err := s.ctx.ConvergeState()
+	if err != nil {
+		return sshCredentials{}, fmt.Errorf("get converge state: %w", err)
+	}
+
+	var thisConverge, older []string
+
+	for _, node := range nodes {
+		if slices.Contains(convergeState.ConvergeUserNodes, node) {
+			thisConverge = append(thisConverge, node)
+			continue
+		}
+
+		older = append(older, node)
+	}
+
+	if len(thisConverge) > 0 && len(older) > 0 {
+		return sshCredentials{}, fmt.Errorf(
+			"pick ssh credentials: %s answer to %s and %s to the user dhctl started with, and one session carries one user",
+			strings.Join(thisConverge, ", "), global.ConvergeUserName, strings.Join(older, ", "),
+		)
+	}
+
+	if len(older) > 0 {
+		return s.operatorCredentials()
+	}
+
+	// No password at all: the converge user's sudo is NOPASSWD.
+	return sshCredentials{User: global.ConvergeUserName}, nil
+}
+
+// operatorCredentials are the ones dhctl was started with. They come from the connection
+// configuration rather than the live client, which converge moves to another user as it
+// recreates masters.
+func (s *KubeClientSwitcher) operatorCredentials() (sshCredentials, error) {
+	connection := s.ctx.SSHProviderInitializer.GetConfig()
+	if connection == nil || connection.Config == nil {
+		return sshCredentials{}, fmt.Errorf("read the ssh user dhctl started with: no connection configuration")
+	}
+
+	if connection.Config.User == "" {
+		return sshCredentials{}, fmt.Errorf("read the ssh user dhctl started with: it is empty")
+	}
+
+	return sshCredentials{User: connection.Config.User, BecomePass: connection.Config.SudoPassword}, nil
+}
+
+// switchSession is the session the client moves to: the hosts and the user change,
+// everything the operator configured about how to reach them does not.
+func switchSession(settings *session.Session, creds sshCredentials, hosts []session.Host) *session.Session {
+	return session.NewSession(session.Input{
+		User:           creds.User,
+		Port:           settings.Port,
+		BastionHost:    settings.BastionHost,
+		BastionPort:    settings.BastionPort,
+		BastionUser:    settings.BastionUser,
+		ExtraArgs:      settings.ExtraArgs,
+		AvailableHosts: hosts,
+		BecomePass:     creds.BecomePass,
+	})
+}
+
+func hostNames(hosts []session.Host) []string {
+	names := make([]string, 0, len(hosts))
+	for _, host := range hosts {
+		names = append(names, host.Name)
+	}
+
+	return names
 }
 
 func selectMasterStates(first *NodeState, others []*NodeState, keep func(name string) bool) map[string][]byte {
