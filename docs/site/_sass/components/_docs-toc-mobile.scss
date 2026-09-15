@@ -1,0 +1,76 @@
+// Содержание документации на узком экране.
+//
+// Раньше это делала шапка: скрипт клонировал сайдбар страницы внутрь своего
+// пункта меню и запускал на копии navgoco. Остров такого места не даёт — и не
+// должен: содержание принадлежит странице, а не шапке. Поэтому сайдбар
+// показывается там, где он и лежит, а шапка о нём больше ничего не знает.
+
+@use "components/common/_variables.scss";
+@use "components/common/_breakpoints.scss";
+
+$toc-font: 400 14px/21px Onest, sans-serif;
+
+@include breakpoints.max-w(l) {
+  .docs-toc {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0;
+    padding: 10px 16px;
+    border: 2px solid variables.$color-alt;
+    background: transparent;
+    color: variables.$color-alt;
+    font: $toc-font;
+    letter-spacing: 0.14px;
+    cursor: pointer;
+  }
+
+  .docs-toc__arrow {
+    width: 0;
+    height: 0;
+    border: 5px solid transparent;
+    border-bottom: 0;
+    border-top-color: currentcolor;
+  }
+
+  // Этот селектор обязан перевесить `.layout-sidebar:has(div.docs)
+  // .layout-sidebar__sidebar` из `docs.scss`, который прячет сайдбар на этой
+  // ширине. У того вес (0,3,1) — `:has()` считается по своему аргументу
+  // `div.docs`. Ровно столько же весила первая версия этого правила, а
+  // `docs.css` подключается после `site.css`, поэтому ничья решалась в его
+  // пользу и панель не открывалась вовсе. `html` в начале добавляет тег и
+  // делает вес (0,3,2) — этого достаточно, и `!important` не нужен.
+  html body.docs-toc-open .layout-sidebar .layout-sidebar__sidebar {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: 16px 20px 20px;
+    overflow-y: auto;
+    background: variables.$white;
+  }
+
+  .docs-toc-close {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    float: right;
+    padding: 8px 14px;
+    border: 0;
+    background: variables.$color-alt;
+    color: variables.$white;
+    font: $toc-font;
+    cursor: pointer;
+  }
+}
+
+// На широком экране сайдбар — обычная колонка раскладки, а этих двух кнопок
+// нет вовсе.
+@include breakpoints.min-w(l) {
+  .docs-toc,
+  .docs-toc-close {
+    display: none;
+  }
+}

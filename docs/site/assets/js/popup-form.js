@@ -61,6 +61,11 @@ document.addEventListener("DOMContentLoaded", function () {
       openButtons.forEach(button => {
         button.addEventListener('click', this.openModal.bind(this));
       })
+
+      // Кнопка внутри острова печатается не этим шаблоном и не может нести
+      // чужой атрибут: остров сообщает о нажатии всплывающим событием. Этот
+      // обход собирает кнопки один раз при загрузке и такую бы не увидел.
+      document.addEventListener(`ik:${this.modalAttr}`, this.openModal.bind(this));
     }
 
     submitForm(e) {
@@ -298,25 +303,37 @@ document.addEventListener("DOMContentLoaded", function () {
       e.preventDefault();
       this.wrapper.style.display = 'flex';
       document.body.classList.add('modal-opened');
-      document.addEventListener('keydown', this.closeModalOnEscape.bind(this));
+
+      // Один слушатель на всё время жизни, а не новый на каждое открытие.
+      // `.bind()` каждый раз возвращает новую функцию, поэтому снять прежний
+      // было нечем и они накапливались. Открыть модалку раньше можно было
+      // только ссылкой в шапке, теперь ещё и событием острова — накапливались
+      // бы быстрее.
+      if (!this.escapeHandler) {
+        this.escapeHandler = this.closeModalOnEscape.bind(this);
+      }
+      document.addEventListener('keydown', this.escapeHandler);
     }
 
     closeModal(e) {
       e.preventDefault();
+      this.hideModal();
+    }
+
+    closeModalOnEscape(e) {
+      if (e.key === 'Escape') {
+        this.hideModal();
+      }
+    }
+
+    hideModal() {
       this.wrapper.style.display = 'none';
       this.intro.style.display = 'block';
       this.success.style.display = 'none';
       this.error.style.display = 'none';
       document.body.classList.remove('modal-opened');
-    }
-
-    closeModalOnEscape(e) {
-      if (e.key === 'Escape') {
-        this.wrapper.style.display = 'none';
-        this.intro.style.display = 'block';
-        this.success.style.display = 'none';
-        this.error.style.display = 'none';
-        document.body.classList.remove('modal-opened');
+      if (this.escapeHandler) {
+        document.removeEventListener('keydown', this.escapeHandler);
       }
     }
 

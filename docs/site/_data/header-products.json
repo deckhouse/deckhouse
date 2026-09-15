@@ -1,0 +1,168 @@
+{
+  "ru": [
+    {
+      "title": "Kubernetes Platform",
+      "url": "/products/kubernetes-platform/",
+      "description": "Создание идентичных Kubernetes-кластеров и&nbsp;управление ими",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "kubernetes-platform-icon"
+      }
+    },
+    {
+      "title": "Virtualization Platform",
+      "url": "/products/virtualization-platform/",
+      "description": "Управление виртуальными машинами",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "virtualization-platform-icon"
+      }
+    },
+    {
+      "title": "Observability Platform",
+      "url": "/products/observability-platform/",
+      "description": "Мониторинг и&nbsp;журналирование инфраструктуры и&nbsp;приложений",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "observability-platform-icon"
+      }
+    },
+    {
+      "title": "Stronghold",
+      "url": "/products/stronghold/",
+      "description": "Безопасное управление жизненным циклом секретов",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "stronghold-icon"
+      }
+    },
+    {
+      "title": "Delivery Kit",
+      "url": "/products/delivery-kit/",
+      "description": "Сборка и&nbsp;доставка контейнеризованного ПО",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "delivery-icon"
+      }
+    },
+    {
+      "title": "Commander",
+      "url": "/products/commander/",
+      "description": "Центр управления парком кластеров",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "commander-icon"
+      }
+    },
+    {
+      "title": "Prom++",
+      "url": "/products/prompp/",
+      "description": "Open Source-система мониторинга",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "prompp-icon"
+      }
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "description": "Управление разработкой через&nbsp;единое окно",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "code-icon"
+      }
+    },
+    {
+      "title": "Development Platform",
+      "url": "/products/development-platform/",
+      "description": "Непрерывная разработка и&nbsp;управление жизненным циклом ПО",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "development-platform-icon"
+      }
+    }
+  ],
+  "en": [
+    {
+      "title": "Kubernetes Platform",
+      "url": "/products/kubernetes-platform/",
+      "description": "Creating identical Kubernetes clusters and&nbsp;managing them",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "kubernetes-platform-icon"
+      }
+    },
+    {
+      "title": "Virtualization Platform",
+      "url": "/products/virtualization-platform/",
+      "description": "Managing virtual machines",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "virtualization-platform-icon"
+      }
+    },
+    {
+      "title": "Observability Platform",
+      "url": "/products/observability-platform/",
+      "description": "Infrastructure-wide centralized observability",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "observability-platform-icon"
+      }
+    },
+    {
+      "title": "Stronghold",
+      "url": "/products/stronghold/",
+      "description": "Securely managing lifecycle of&nbsp;secrets",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "stronghold-icon"
+      }
+    },
+    {
+      "title": "Delivery Kit",
+      "url": "/products/delivery-kit/",
+      "description": "Building and&nbsp;delivering containerized software",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "delivery-icon"
+      }
+    },
+    {
+      "title": "Commander",
+      "url": "/products/commander/",
+      "description": "Cluster control center",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "commander-icon"
+      }
+    },
+    {
+      "title": "Prom++",
+      "url": "/products/prompp/",
+      "description": "Open Source monitoring system",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "prompp-icon"
+      }
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "description": "Continuous development and software lifecycle management",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "code-icon"
+      }
+    },
+    {
+      "title": "Development Platform",
+      "url": "/products/development-platform/",
+      "description": "Centralized development workflow management",
+      "icon": {
+        "sprite": "/images/sprite.svg?v2",
+        "symbol": "development-platform-icon"
+      }
+    }
+  ]
+}

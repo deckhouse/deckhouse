@@ -1,0 +1,365 @@
+// Оформление шапки-острова.
+//
+// Здесь только значения: библиотека объявляет их как `var(--ik-*, дефолт)`,
+// поэтому объявление на `:root` доходит до компонента и не спорит с ним по
+// весу. Классы библиотеки не переопределяются — кроме блока в конце, где
+// собрано то, для чего переменной пока нет.
+//
+// Значения сняты замером с работающей шапки (`getComputedStyle`), а не
+// вычитаны из `_header.scss`: у сайта своя палитра, и она не совпадает с той,
+// что у первого потребителя. Дробные числа ниже — именно замеры, а не чьи-то
+// решения: прежняя шапка получала их из процентов и em, и совпадение с ней
+// проверяется на шести ширинах.
+//
+// Границы ступеней берутся из миксинов сайта (`_breakpoints.scss`), чтобы
+// шапка ехала по той же лестнице, что и всё остальное: l = 1024, xl = 1200,
+// xxl = 1440, xxxl = 1664, m = 728.
+
+@use "components/common/_variables.scss";
+@use "components/common/_breakpoints.scss";
+
+// Цвета, которых в палитре сайта нет отдельными переменными.
+$header-ink: #262429; // текст пунктов меню и ряда продукта
+$header-row2-bg: #f6fafe; // подложка второго ряда
+$header-accent-hover: #0040cc; // залитая кнопка под курсором
+$sheet-link-color: #3b426d; // ссылки в мобильном листе
+$sheet-desc-color: #787fa7; // подписи под ними
+
+// Вертикальные отступы ряда продукта, по ступеням. Числа дробные, потому что
+// у прежней шапки это проценты от размера шрифта.
+$row2-pad-xxxl: 20px;
+$row2-pad-base: 18.512px;
+$row2-pad-xxl: 18.288px;
+$row2-pad-xl: 20.576px;
+$row2-pad-l: 19.648px;
+$row2-pad-m: 18px;
+
+// Кегль подписей на средних ступенях — тоже замер, а не круглое число.
+$nav-font-size-narrow: 11.9px;
+$button-font-size-xl: 10.16px;
+
+:root {
+  // Общий уровень: типографика и цвета сайта.
+  --ik-font-family: Onest, sans-serif;
+  --ik-font-size-base: 14px;
+  --ik-line-height: 1.3;
+  --ik-fg-default: #{variables.$color-main};
+  --ik-fg-accent: #{variables.$color-alt};
+  --ik-bg-accent: #{variables.$color-alt};
+  --ik-bg-accent-hover: #{$header-accent-hover};
+
+  // Первый ряд.
+  --ik-header-bg: #{variables.$white};
+  --ik-header-container-padding-x: 48px;
+  --ik-header-row1-padding-y: 12px;
+  --ik-header-row1-padding-y-wide: 16px;
+  --ik-header-left-gap: 40px;
+  --ik-header-right-gap: 16px;
+  --ik-header-actions-gap: 16px;
+  --ik-header-logo-width: 165px;
+  --ik-header-logo-height: 30px;
+
+  --ik-header-nav-gap: 12px;
+  --ik-header-nav-font-size: 15px;
+  --ik-header-nav-line-height: 20px;
+  --ik-header-nav-color: #{$header-ink};
+  --ik-header-nav-color-hover: #{variables.$color-alt};
+
+  // Стрелка раскрывающегося пункта.
+  //
+  // Прежняя шапка рисует её фоном псевдоэлемента: «галочка» обводкой 10×6,
+  // прижатая к правому краю ссылки, внутри её же padding-right. Библиотека по
+  // умолчанию рисует залитый треугольник на бордерах — это только дефолт, и
+  // весь глиф объявлен переменными, для того они и есть. На `:root` их
+  // объявлять можно: правило 4 запрещает объявлять переменную компонента на
+  // его собственном классе, а не в общем месте.
+  //
+  // Глиф взят с работающей шапки как есть, вместе с цветом: он вшит в сам SVG,
+  // поэтому под курсором не меняется — ровно как в прежней шапке.
+  --ik-select-arrow-width: 10px;
+  --ik-select-arrow-height: 6px;
+  --ik-select-arrow-border: 0;
+  --ik-select-arrow: url("data:image/svg+xml,%3Csvg width='13' height='8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m11.02 1.5-5 5-5-5' stroke='%23222A5D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat 50% 100% / contain;
+
+  // Место, которое пункт со стрелкой занимает сверх подписи. У прежней шапки
+  // это padding-right, и он меняется по ступеням: 19 от 1440, 14 от 1200, 12
+  // от 1024 (снято из её CSS, не подбором ширин). У острова стрелка — реальный
+  // флекс-элемент, поэтому то же расстояние складывается из зазора и её
+  // ширины: отступ = слот − 10.
+  --ik-menu-trigger-gap: 9px;
+
+  // Панель «Продукты». Числа снятые: прежняя шапка раскладывает девять
+  // продуктов в три колонки по 290px от 1200 и в две по 300px ниже. Число
+  // колонок библиотека держит переменной именно поэтому — `auto-fit`
+  // переложил бы их «почти правильно», а дизайн фиксирует и количество, и
+  // ширину.
+  --ik-menu-grid-columns: repeat(3, 290px);
+  --ik-menu-grid-gap: 16px;
+  --ik-menu-list-padding: 17.6px 20px;
+  --ik-menu-card-gap: 5.6px 8px;
+
+  // Кнопки правого блока.
+  --ik-button-font-size: 14px;
+  --ik-button-font-weight: 400;
+  --ik-button-radius: 0;
+  --ik-button-border-width: 2px;
+  --ik-button-padding: 8px 12px;
+  --ik-button-primary-bg: #{variables.$color-alt};
+  --ik-button-primary-bg-hover: #{$header-accent-hover};
+  --ik-button-secondary-bg: transparent;
+  --ik-button-secondary-color: #{variables.$color-alt};
+  --ik-button-secondary-border-color: #{variables.$color-alt};
+
+  // Второй ряд.
+  --ik-header-row2-bg: #{$header-row2-bg};
+  --ik-header-row2-padding: #{$row2-pad-base} 0;
+  --ik-header-row2-gap: 20px 34.08px;
+  --ik-header-row2-nav-gap: 13.12px 16px;
+  --ik-header-product-font-size: 18px;
+  --ik-header-product-font-weight: 400;
+  --ik-header-product-color: #{$header-ink};
+  --ik-header-row2-link-font-size: 15px;
+  --ik-header-row2-link-line-height: 20px;
+  --ik-header-row2-link-color: #{$header-ink};
+
+  // Мобильный лист. Дерево навигации на этом сайте существует только внутри
+  // него, поэтому переменные объявлены здесь, а не под медиавыражением.
+  //
+  // Значения сняты с прежнего меню: заголовок раздела набран прописными
+  // обычного веса, а не полужирным строчными, и ссылки в списке темнее общего
+  // акцента. Иконки в этом списке прежнее меню не показывает, хотя на широком
+  // экране показывает те же самые, — библиотека для такого случая и завела
+  // `--ik-nav-tree-icon-display`, чтобы не вычищать иконки из данных.
+  --ik-nav-tree-section-font-weight: 400;
+  --ik-nav-tree-section-color: #{$header-ink};
+  --ik-nav-tree-section-text-transform: uppercase;
+  --ik-nav-tree-color: #{$sheet-link-color};
+  --ik-nav-tree-icon-display: none;
+
+  // Карточка продукта в листе: название, под ним подпись, оба от одного края.
+  //
+  // Одна колонка здесь обязательна именно потому, что иконка скрыта. По
+  // умолчанию строка — грид `auto 1fr`: иконка в первой колонке, название во
+  // второй, подпись под ними через `grid-column: 2 / -1`. Скрытая иконка
+  // выпадает из грида целиком, название переезжает в первую колонку, а
+  // подпись остаётся прибита ко второй — и встаёт сбоку от названия, а не под
+  // ним. Поэтому колонка одна, и подпись занимает её всю.
+  --ik-nav-tree-card-columns: 1fr;
+  --ik-nav-tree-description-column: 1 / -1;
+  --ik-nav-tree-card-gap: 2.4px 0;
+  --ik-nav-tree-description-font-size: 13px;
+  --ik-nav-tree-description-color: #{$sheet-desc-color};
+  --ik-nav-tree-description-max-width: none;
+
+  // Свёрнутый второй ряд: у прежней шапки от текста до стрелки 7px.
+  --ik-header-row2-trigger-gap: 7px;
+}
+
+// Самая просторная ступень.
+@include breakpoints.min-w(xxxl) {
+  :root {
+    // На самой просторной ступени прежняя шапка разводит пункты на 20px.
+    --ik-header-nav-gap: 20px;
+    --ik-header-nav-font-size: 16px;
+    --ik-header-row2-link-font-size: 16px;
+    --ik-header-row2-nav-gap: 12px 24px;
+    --ik-header-row2-padding: #{$row2-pad-xxxl} 0;
+    --ik-button-padding: 10px 16px;
+  }
+}
+
+// 1200–1439: мельче подписи и кнопки.
+@include breakpoints.max-w(xxl) {
+  :root {
+    --ik-header-left-gap: 24px;
+    --ik-header-nav-font-size: #{$nav-font-size-narrow};
+    --ik-menu-trigger-gap: 4px; // слот 14 − стрелка 10
+    --ik-header-row2-padding: #{$row2-pad-xxl} 0;
+    --ik-header-row2-link-font-size: #{$nav-font-size-narrow};
+    --ik-header-product-font-size: 16px;
+    --ik-button-font-size: 12px;
+    --ik-button-padding: 8px 10px;
+  }
+}
+
+// 1024–1199: сужаются отступы контейнера и весь правый блок.
+@include breakpoints.max-w(xl) {
+  :root {
+    --ik-header-container-padding-x: 32px;
+    --ik-header-row1-padding-y-wide: 12px;
+    --ik-header-nav-gap: 12px 16px;
+    --ik-menu-trigger-gap: 2px; // слот 12 − стрелка 10
+    // Ниже 1200 панель продуктов складывается в две колонки пошире.
+    --ik-menu-grid-columns: repeat(2, 300px);
+    --ik-menu-grid-gap: 24px;
+    --ik-header-right-gap: 8px;
+    --ik-header-actions-gap: 8px;
+    --ik-header-row2-padding: #{$row2-pad-xl} 0;
+    --ik-header-row2-gap: 20px 33.6px;
+    --ik-header-row2-nav-gap: 12px 20px;
+    --ik-button-font-size: #{$button-font-size-xl};
+    --ik-button-padding: 4px 6.4px;
+  }
+}
+
+// Ниже 1024 остров сам уводит верхний ряд и кнопки в лист, поэтому значения
+// кнопок здесь — это значения кнопок внутри листа.
+@include breakpoints.max-w(l) {
+  :root {
+    --ik-header-container-padding-x: 32px;
+    --ik-header-row2-padding: #{$row2-pad-l} 0;
+    --ik-header-product-font-size: 16px;
+    --ik-button-font-size: 14px;
+    --ik-button-padding: 10.5px 21px;
+
+    // Панель свёрнутого второго ряда. У прежней шапки три состояния, снятые
+    // замером: от 728 карточка 307px с отступом 32 от правого края, ниже 728
+    // тот же размер с отступом 16, и только ниже 400 она разворачивается во
+    // всю ширину без скругления. Здесь — самое широкое состояние, ниже два
+    // сужения.
+    //
+    // ЕДИНИЦЫ ОБЯЗАТЕЛЬНЫ, включая ноль. Библиотека считает
+    // `max-width: calc(100% - 2 * var(--ik-header-row2-panel-inset))`, и от
+    // безразмерного `0` выражение становится «проценты минус число» —
+    // недопустимым. Тогда объявление отбрасывается целиком, `max-width`
+    // становится `none`, панель разрастается по `max-content` и уезжает
+    // левым краем за экран.
+    --ik-header-row2-panel-inset: 32px;
+    --ik-header-row2-panel-min-width: 307px;
+    --ik-header-row2-panel-offset: 0px;
+    --ik-header-row2-panel-padding: 20px;
+    --ik-header-row2-panel-radius: 4px;
+    --ik-header-row2-panel-shadow:
+      0 4px 8px -2px rgba(16, 24, 40, 0.1),
+      0 2px 4px -2px rgba(16, 24, 40, 0.06);
+    --ik-header-row2-item-max-width: none;
+    --ik-header-row2-nav-gap: 20px 32px;
+  }
+}
+
+// Ниже 728: бейдж продукта и отступы ещё мельче.
+@include breakpoints.max-w(m) {
+  :root {
+    --ik-header-container-padding-x: 20px;
+    --ik-header-row2-padding: #{$row2-pad-m} 0;
+    --ik-header-product-font-size: 14px;
+    --ik-header-row2-panel-inset: 16px;
+  }
+}
+
+// Ниже 400 панель второго ряда занимает всю ширину и теряет скругление.
+//
+// Медиавыражение написано числом, а не миксином, потому что 400 — граница
+// прежней шапки, а не ступень этого сайта: в его лестнице (728, 1024, 1200,
+// 1440, 1664) такого значения нет. Заводить ради одного правила шестую
+// ступень значило бы соврать про масштаб сайта.
+@media (max-width: 399px) {
+  :root {
+    --ik-header-row2-panel-inset: 0px;
+    --ik-header-row2-panel-min-width: 100%;
+    --ik-header-row2-panel-radius: 0px;
+  }
+}
+
+// Второй канал: то, для чего у библиотеки нет переменной.
+//
+// Правило хоста весит столько же, сколько правило библиотеки, и выигрывает
+// порядком подключения — этот файл едет в `site.css`, который подключается
+// после бандла. Каждая строка здесь — заявка на переменную в библиотеке:
+// `--ik-button-letter-spacing`, `--ik-button-line-height`,
+// `--ik-header-product-icon-size`, `--ik-header-product-line-height` и радиус
+// залитой кнопки отдельно от контурной. Пока их нет, оформление держится на
+// именах классов, и переименование класса сломает его молча.
+
+.ik-button {
+  letter-spacing: 0.14px;
+  line-height: 21px;
+}
+
+.ik-button--primary {
+  border-radius: 1px;
+}
+
+.ik-header__product .ik-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.ik-header__product-title {
+  line-height: 19px;
+}
+
+// Заявка на переменную: `--ik-header-row2-trigger-align`.
+//
+// У триггера свёрнутого второго ряда `align-items: flex-end` объявлен в
+// компоненте без переменной, и стрелка прижимается низом к нижней границе
+// строки — заметно ниже букв.
+//
+// Равняем не на прежнюю шапку: у неё центр стрелки стоит на 3.8px **ниже**
+// базовой линии, и это видно глазом. Центрирование по строке ставит центр
+// стрелки в 0.14px от оптического центра строчных букв (базовая линия минус
+// половина x-высоты) — замерено на живой странице.
+.ik-header__row2-trigger {
+  align-items: center;
+}
+
+// Заявка на переменную: `--ik-header-row2-panel-width`.
+//
+// Библиотека объявляет панели `width: max-content`, а переменной даёт только
+// минимум. Поэтому в покое ширина верная, но стоит раскрыть внутри список с
+// длинными подписями — панель разъезжается: на 600px с 307 до 445. Прежняя
+// шапка держит ширину и переносит подписи; все её замеры — 400, 480, 520,
+// 600, 728, 768, 1000 — дали ровно 307, в том числе с раскрытыми детьми.
+//
+// Значение берём из той же переменной, что и минимум: ниже 400 там 100%, и
+// панель остаётся во всю ширину без второго правила.
+@include breakpoints.max-w(l) {
+  .ik-header__row2-nav {
+    width: var(--ik-header-row2-panel-min-width, 307px);
+  }
+}
+
+// НЕ КРАСИМ подложку, хотя прежняя шапка притемняет за открытой панелью на
+// 50%. Это нельзя сделать на стороне хоста, и вот почему.
+//
+// Библиотека печатает подложку внутри `.ik-header__row2`, то есть внутри
+// `.ik-header` — а белый фон лежит на самом `.ik-header` (у `row1` своего
+// фона нет). Фон предка всегда красится под потомками, поэтому окрашенная
+// подложка затемняет и шапку; `z-index` на `row1` этого не меняет, потому что
+// красить там нечего. Приглушённая шапка отличается от прежней сильнее, чем
+// неприглушённая страница, — поэтому оставляем как библиотека отдаёт:
+// подложка ловит клик и не видна.
+//
+// Чинится в библиотеке: подложку печатать вне шапки (или переносить в body) и
+// завести `--ik-header-row2-backdrop-bg`. У прежней шапки её оверлей —
+// сосед шапки на уровне body, поэтому у неё этой беды нет.
+
+@include breakpoints.max-w(xxl) {
+  .ik-button {
+    line-height: 18px;
+  }
+}
+
+@include breakpoints.max-w(xl) {
+  .ik-button {
+    line-height: 15.24px;
+  }
+
+  .ik-header__product .ik-icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@include breakpoints.max-w(l) {
+  .ik-button {
+    line-height: 21px;
+  }
+}
+
+@include breakpoints.max-w(m) {
+  .ik-header__product-title {
+    line-height: 18.2px;
+  }
+}

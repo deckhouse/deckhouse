@@ -99,7 +99,25 @@
             &.show {
                 display: flex;
                 transform: translateX(0);
+
+                .filter__close {
+                    display: block;
+                }
             }
+        }
+
+        // Своя кнопка закрытия вместо кнопки-гамбургера шапки: та принадлежит
+        // острову и больше не отзывается на класс show, который вешал фильтр.
+        .filter__close {
+            display: none;
+            align-self: flex-end;
+            margin-bottom: 12px;
+            padding: 8px 14px;
+            border: 0;
+            background: #004df2;
+            color: #fff;
+            font: 400 14px/21px Onest, sans-serif;
+            cursor: pointer;
         }
 
         &--apply {
