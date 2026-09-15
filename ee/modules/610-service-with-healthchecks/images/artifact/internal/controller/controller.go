@@ -109,6 +109,10 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	// The owner reference is part of the desired state as much as the spec is: a Service left
 	// over from a version that did not set it, or one whose reference was stripped, has to be
 	// adopted here, otherwise nothing ever collects it.
+	//
+	// IsControlledBy compares the UID, unlike the ownership check above, and that is deliberate:
+	// this is not asking whose object it is but whether it already looks the way it should. A
+	// reference left over from a parent recreated under the same name still has to be rewritten.
 	case err == nil && metav1.IsControlledBy(&service, serviceWithHC) &&
 		IsSpecForServiceEqual(service, serviceWithHC) && IsMetadataForServiceEqual(service, serviceWithHC):
 		r.Logger.Debug("no need to update child Service", "name", req.Name, "namespace", req.Namespace)
@@ -258,7 +262,7 @@ func childServiceConflict(service *corev1.Service, shc *networkv1alpha1.ServiceW
 		cause = fmt.Sprintf("is owned by another resource, %s %q", ref.Kind, ref.Name)
 	// A Service the module did not create is adopted only when it already looks exactly like the
 	// one the module would have created, so that adoption never changes what the Service does.
-	case !metav1.IsControlledBy(service, shc) && !IsSpecForServiceEqual(*service, shc):
+	case !kubernetes.IsOwnedByServiceWithHealthchecks(service, shc.Name) && !IsSpecForServiceEqual(*service, shc):
 		cause = "already existed and its spec differs from the spec of the ServiceWithHealthchecks"
 	default:
 		return nil
@@ -266,8 +270,9 @@ func childServiceConflict(service *corev1.Service, shc *networkv1alpha1.ServiceW
 	return &childServiceProblem{
 		reason: "ChildServiceConflict",
 		message: fmt.Sprintf("the Service %q %s, so it is not managed by this resource: it is left untouched and no owner "+
-			"reference is set on it. The EndpointSlices are still published for it, so the healthchecks stay in effect. "+
-			"Either delete the Service, or rename the ServiceWithHealthchecks", shc.Name, cause),
+			"reference is set on it. No EndpointSlices are published under this name while the clash lasts, because "+
+			"kube-proxy would balance over them together with the endpoints of that Service. Either delete the Service, "+
+			"or rename the ServiceWithHealthchecks", shc.Name, cause),
 	}
 }
 

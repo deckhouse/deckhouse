@@ -479,15 +479,30 @@ func (r *ServiceWithHealthchecksReconciler) mayPublishEPS(ctx context.Context, s
 }
 
 // deleteEPSForNode removes the EndpointSlice this node maintains for the resource, if any.
+//
+// The slice is read from the cache first, for two reasons. A name clash means somebody else's
+// objects are around, and a slice that is not ours is not ours to delete. And in the steady state
+// there is nothing to delete at all — for a resource with no pods on this node, or one stuck in a
+// conflict — so without the lookup every node would issue a DELETE on every resync.
 func (r *ServiceWithHealthchecksReconciler) deleteEPSForNode(ctx context.Context, svc networkv1alpha1.ServiceWithHealthchecks) error {
 	name := endpointSliceNameForNode(svc.GetName(), r.nodeName)
-	eps := &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: svc.GetNamespace(),
-		},
+
+	var existing discoveryv1.EndpointSlice
+	err := r.Get(ctx, client.ObjectKey{Namespace: svc.GetNamespace(), Name: name}, &existing)
+	if errors.IsNotFound(err) {
+		return nil
 	}
-	if err := r.Delete(ctx, eps); err != nil && !errors.IsNotFound(err) {
+	if err != nil {
+		r.logger.Error("could not get EndpointSlice", log.Err(err), "name", name)
+		return err
+	}
+	if existing.Labels[endpointControllerLabelKey] != controllerName {
+		r.logger.Info("leaving an EndpointSlice of another controller alone", "name", name,
+			"managed_by", existing.Labels[endpointControllerLabelKey])
+		return nil
+	}
+
+	if err := r.Delete(ctx, &existing); err != nil && !errors.IsNotFound(err) {
 		r.logger.Error("could not delete EndpointSlice", log.Err(err), "name", name)
 		return err
 	}

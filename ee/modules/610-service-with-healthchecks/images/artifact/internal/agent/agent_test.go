@@ -883,3 +883,26 @@ func TestDeleteEPSForNodeWithdrawsTheSlice(t *testing.T) {
 		t.Errorf("expected a missing slice to be fine, got %v", err)
 	}
 }
+
+// A name clash means somebody else's objects are around, and a slice that is not ours is not ours
+// to delete.
+func TestDeleteEPSForNodeLeavesForeignSliceAlone(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+
+	foreign := r.BuildEndpointSlice(endpointSliceNameForNode(testSWHName, testNodeName), swh)
+	foreign.Labels[endpointControllerLabelKey] = "endpointslice-controller"
+	foreign.OwnerReferences = nil
+	foreign.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&foreign).Build()
+
+	if err := r.deleteEPSForNode(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var remaining discoveryv1.EndpointSlice
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: foreign.Name}, &remaining); err != nil {
+		t.Errorf("expected the slice of another controller to be kept, got %v", err)
+	}
+}

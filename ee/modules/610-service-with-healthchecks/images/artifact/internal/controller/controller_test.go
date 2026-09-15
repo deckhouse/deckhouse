@@ -823,3 +823,29 @@ func TestReconcileClearsAddressStatusInConflict(t *testing.T) {
 			updated.Status.LoadBalancer)
 	}
 }
+
+// A parent recreated under the same name leaves a reference with a stale UID on its own Service.
+// That is the module's object, not somebody else's, and it has to be repaired rather than reported
+// as a clash — otherwise the conflict path refuses to touch it and nothing ever fixes it.
+func TestReconcileRepairsOwnServiceWithStaleOwnerReferenceAndSpec(t *testing.T) {
+	swh := newTestSWH(nil, nil)
+
+	stale := ownedChildService("10.96.0.7")
+	stale.OwnerReferences[0].UID = types.UID("00000000-0000-0000-0000-000000000000")
+	stale.Spec.Ports[0].Port = 90
+
+	fakeClient := reconcileWith(t, swh, stale)
+
+	if condition := childServiceCondition(t, fakeClient); condition.Status != metav1.ConditionTrue {
+		t.Errorf("expected the module to repair its own Service, got %s/%s: %s",
+			condition.Status, condition.Reason, condition.Message)
+	}
+
+	service := getChildService(t, fakeClient)
+	if !metav1.IsControlledBy(service, swh) {
+		t.Errorf("expected the stale owner reference to be replaced, got %+v", service.OwnerReferences)
+	}
+	if service.Spec.Ports[0].Port != 80 {
+		t.Errorf("expected the spec to be brought back in line, got port %d", service.Spec.Ports[0].Port)
+	}
+}
