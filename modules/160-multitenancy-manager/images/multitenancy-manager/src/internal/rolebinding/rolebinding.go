@@ -46,6 +46,10 @@ const (
 	// into a custom role.
 	AnnotationDisabledForProjects = "rbac.deckhouse.io/disabled-for-direct-use-in-projects"
 
+	// AnnotationDeprecatedReplacedBy names the role a deprecated one was replaced with; user-authz sets
+	// it on its compat aliases, and the binding webhooks quote it in the refusal.
+	AnnotationDeprecatedReplacedBy = "rbac.deckhouse.io/deprecated-replaced-by"
+
 	// ControllerServiceAccount/DeckhouseServiceAccount are the privileged identities recognised
 	// across the module (binding/project/template/protect webhooks and main wiring). They live here,
 	// the lowest shared package, so the value is defined once and cannot drift between callers.
