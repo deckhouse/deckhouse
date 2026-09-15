@@ -24,8 +24,8 @@ import (
 	"sync"
 
 	"github.com/gohugoio/hugo/common/herrors"
+	"github.com/gohugoio/hugo/common/hmaps"
 	"github.com/gohugoio/hugo/common/hugo"
-	"github.com/gohugoio/hugo/common/maps"
 	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/hugolib"
@@ -310,7 +310,7 @@ func (b *hugoBuilder) loadConfig() error {
 	}
 	cfg.Set("environment", b.flags.Environment)
 
-	cfg.Set("internal", maps.Params{
+	cfg.Set("internal", hmaps.Params{
 		"running": false,
 		"watch":   false,
 		"verbose": b.c.isVerbose(),

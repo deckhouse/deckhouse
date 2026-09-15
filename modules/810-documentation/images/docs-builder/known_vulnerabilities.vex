@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-e5d5b4bf60ab357b345e3dafa971ef72d4f11c15379269c12e2376f62e4d93e4",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -157,8 +157,36 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "mime: отказ в обслуживании при декодировании специально сформированного MIME-заголовка с множеством некорректных encoded-words. docs-builder не декодирует недоверенные MIME-заголовки, поэтому уязвимый код не задействован. Обновление до Go 1.25.11 невозможно, так как сборка выполняется на Go 1.25.7.",
       "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-c3wq-j5vh-68rc"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gohugoio/hugo"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "hugo: mount confinement bypass via a symlink in os.ReadFile, caused by RootMappingFs.statRoot calling Stat instead of Lstat. The vulnerable path is unreachable: docs-builder mounts no themes and declares no module.mounts, its templates use neither resources.Get, readFile nor os.ReadFile, and the module documentation extractor (internal/docs/upload.go) accepts only tar.TypeDir and tar.TypeReg entries and fails on any other type, symlinks included, so a symlink cannot be planted in the content tree.",
+      "timestamp": "2026-09-15T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-q76j-gcg9-vxc6"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gohugoio/hugo"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "hugo: XSS via unescaped code-fence language in the default code block renderer. The unescaped value reaches the class and data-lang attributes only in the unknown-lexer branch (markup/highlight/highlight.go, lexer == nil). docs-builder overrides the code block renderer with its own hook, layouts/_markup/render-codeblock.html: the info-string language is passed to the highlighter only after a transform.CanHighlight check, i.e. only when chroma has such a lexer, and for an unknown language a hardcoded \"plaintext\" is used instead. The info-string value controlled by the documentation author never reaches the attributes, so the vulnerable code is not in the execute path.",
+      "timestamp": "2026-09-15T00:00:00Z"
     }
   ],
   "timestamp": "2026-07-23T00:00:00Z",
-  "last_updated": "2026-07-23T00:00:00Z"
+  "last_updated": "2026-09-15T00:00:00Z"
 }
