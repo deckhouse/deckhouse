@@ -278,6 +278,37 @@ runcmd:
 		require.Equal(t, before, after)
 	})
 
+	// DVP does not merge the payload in HCL, it appends its own block to it, and
+	// #cloud-config is a YAML comment: both end up in one document. A second users key
+	// there wins over ours and the account never reaches the node.
+	t.Run("the dvp templates keep the converge user", func(t *testing.T) {
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), keys, expire)
+		require.NoError(t, err)
+
+		rendered, err := base64.StdEncoding.DecodeString(out)
+		require.NoError(t, err)
+
+		const modules = "../../../../../modules/030-cloud-provider-dvp/candi/terraform-modules/"
+
+		for _, tmpl := range []string{
+			modules + "master/templates/cloudinit.tftpl",
+			modules + "static-node/templates/cloudinit.tftpl",
+		} {
+			content, err := os.ReadFile(tmpl)
+			require.NoError(t, err)
+
+			userData := strings.NewReplacer(
+				"${user_data}", string(rendered),
+				"${host_name}", "cluster-master-0",
+				"${ssh_public_key}", "ssh-ed25519 AAAAC3 dvp@example",
+			).Replace(string(content))
+
+			var doc map[string]any
+			require.NoError(t, yaml.Unmarshal([]byte(userData), &doc), tmpl)
+			require.Equal(t, global.ConvergeUserName, convergeUser(t, doc)["name"], tmpl)
+		}
+	})
+
 	t.Run("applying twice changes nothing", func(t *testing.T) {
 		once, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), keys, expire)
 		require.NoError(t, err)
