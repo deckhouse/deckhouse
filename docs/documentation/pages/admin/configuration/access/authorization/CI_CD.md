@@ -22,7 +22,7 @@ When multiple pipelines share a single ServiceAccount, audit logs will not conta
 To configure token-based authentication for ServiceAccount, the following requirements must be met:
 
 - Cluster access with permissions to create ServiceAccounts and Secrets.
-- For external access: [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) or direct API access via VPN.
+- For external access: [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module, or direct API access via VPN.
 
 ### Create ServiceAccount and a long-lived token
 
@@ -102,19 +102,37 @@ EOF
 
 When using publishAPI:
 
+{% tabs api_publish_type %}
+{% tab "When the API server is published via Ingress" %}
+
+When the API server is published via Ingress, use the following commands:
+
 ```shell
-API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+API_HOST=$(d8 k -n kube-system get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
 echo "API endpoint: https://${API_HOST}"
 ```
+
+{% endtab %}
+{% tab "When the API server is published via Gateway API (`alb`)" %}
+
+When the API server is published via Gateway API (the [`alb`](/modules/alb/) module), use the following commands:
+
+```shell
+API_HOST=$(d8 k -n kube-system get httproute kubernetes-api -o jsonpath='{.spec.hostnames[0]}')
+echo "API endpoint: https://${API_HOST}"
+```
+
+{% endtab %}
+{% endtabs %}
 
 {% alert level="info" %}
 If the API certificate is signed by a public CA (Let's Encrypt), the `--certificate-authority` parameter is not required.
 {% endalert %}
 
-For private CA:
+For a private CA (self-signed, the default mode — shared between both publication methods):
 
 ```shell
-d8 k -n d8-user-authn get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/ca.crt
+d8 k -n kube-system get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/ca.crt
 ```
 
 ### Create kubeconfig
@@ -193,7 +211,7 @@ Only one DexProvider in the cluster can have `enableBasicAuth: true`.
 
 The following requirements must be met to configure Basic Auth:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) enabled.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module enabled.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) configured for IdP.
 
 ### Enable
@@ -282,7 +300,7 @@ DKP/Dex does not receive the user password. How `IDP_TOKEN` is obtained depends 
 
 The following requirements must be met to configure Token Exchange:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) enabled.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module enabled.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) configured as **OIDC type**.
 
 {% alert level="warning" %}
