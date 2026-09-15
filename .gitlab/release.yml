@@ -105,12 +105,13 @@ promote:tag:
 
 # ---------------------------------------------------------------------------
 # Self-review gate: required before deploying to a channel above EarlyAccess.
+# Runs on the default k8s executor (tools/curl image, same as
+# e2e-ensure-build in .gitlab/e2e.yml) — just curl + jq against the GitLab API.
 # ---------------------------------------------------------------------------
 
 .check_release_operator_base:
   stage: deploy
-  tags:
-    - vm-intteam-cloud-d8-ssdlc-runner
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/curl:${CI_IMAGES_TAG}
   needs: []
   variables:
     VAULT_AUTH_PATH: fox

@@ -5,11 +5,14 @@
 # KUBECONFIG_BASE64_PROD_25 / KUBECONFIG_BASE64_DEV come from Vault (same
 # secret engine as DOC_API_KEY in .gitlab/web.yml); a cluster whose secret is
 # empty is skipped, not failed — see .gitlab/scripts/patch-channel-configmap.sh.
+#
+# Runs on the default k8s executor (tools/golang-tools image, same as
+# k8s-autoupdate.yml) — werf is installed inline via the shared
+# read_werf_version/install_werf script references, same as on VM runners.
 
 .release_web_base:
   stage: deploy
-  tags:
-    - vm-intteam-cloud-d8-ssdlc-runner
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
   needs: []
   variables:
     VAULT_AUTH_PATH: fox
