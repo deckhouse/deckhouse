@@ -169,7 +169,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "hugo: обход границ монтирования по символьной ссылке в os.ReadFile: RootMappingFs.statRoot вызывает Stat вместо Lstat. Уязвимый путь недостижим: docs-builder не подключает темы и не описывает module.mounts, шаблоны не используют resources.Get, readFile и os.ReadFile, а распаковщик документации модуля (internal/docs/upload.go) принимает только записи tar.TypeDir и tar.TypeReg и завершается ошибкой на любом другом типе, включая символьные ссылки, поэтому symlink невозможно поместить в дерево контента. Обновление до 0.163.1 невозможно: hugo начиная с 0.163 требует Go 1.26, а сборка релиза 1.75 выполняется на Go 1.25.13.",
+      "impact_statement": "hugo: mount confinement bypass via a symlink in os.ReadFile, caused by RootMappingFs.statRoot calling Stat instead of Lstat. The vulnerable path is unreachable: docs-builder mounts no themes and declares no module.mounts, its templates use neither resources.Get, readFile nor os.ReadFile, and the module documentation extractor (internal/docs/upload.go) accepts only tar.TypeDir and tar.TypeReg entries and fails on any other type, symlinks included, so a symlink cannot be planted in the content tree.",
       "timestamp": "2026-09-15T00:00:00Z"
     },
     {
@@ -183,7 +183,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "hugo: XSS через неэкранированный язык code-fence в стандартном рендерере блоков кода. Неэкранированное значение попадает в атрибуты class и data-lang только в ветке с неизвестным лексером (markup/highlight/highlight.go, lexer == nil). docs-builder переопределяет рендерер блоков кода собственным хуком layouts/_markup/render-codeblock.html: язык из info-string передаётся в подсветку только после проверки transform.CanHighlight (то есть когда такой лексер есть в chroma), а для неизвестного языка жёстко подставляется \"plaintext\". Значение info-string, контролируемое автором документации, в атрибуты не попадает, поэтому уязвимый код не задействован.",
+      "impact_statement": "hugo: XSS via unescaped code-fence language in the default code block renderer. The unescaped value reaches the class and data-lang attributes only in the unknown-lexer branch (markup/highlight/highlight.go, lexer == nil). docs-builder overrides the code block renderer with its own hook, layouts/_markup/render-codeblock.html: the info-string language is passed to the highlighter only after a transform.CanHighlight check, i.e. only when chroma has such a lexer, and for an unknown language a hardcoded \"plaintext\" is used instead. The info-string value controlled by the documentation author never reaches the attributes, so the vulnerable code is not in the execute path.",
       "timestamp": "2026-09-15T00:00:00Z"
     }
   ],
