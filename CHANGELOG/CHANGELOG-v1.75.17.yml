@@ -1,0 +1,30 @@
+ci:
+  fixes:
+    - summary: change users for Yandex and opestack e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22185
+    - summary: Add REGCTL_CONFIG
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22708
+    - summary: Fix regctl in 1.75 build.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22812
+deckhouse:
+  fixes:
+    - summary: validate the hardlink target when extracting module and package images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22645
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Re-derive the module release chain and align the from-to gap check with the release updater so
+        intermediate releases are created instead of the chain freezing
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22240
+docs:
+  fixes:
+    - summary: >-
+        Clarify which integrity control mechanisms are available in which DKP editions and correct the
+        DKP module integrity description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22126
+    - summary: Add InPlaceOrRecreate to VPA modes list and move Auto to a warning alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22517
+istio:
+  fixes:
+    - summary: Restore Istiod pod anti-affinity for Istio 1.25 installations managed by the Sail Operator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22169
