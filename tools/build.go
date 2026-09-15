@@ -69,6 +69,7 @@ var testsExcludes = []string{
 var defaultModulesExcludes = []string{
 	"docs",
 	"README.md",
+	"*-threat-model.md",
 	"images",
 	"hooks/**/*.go",
 	"hooks/*.go",
