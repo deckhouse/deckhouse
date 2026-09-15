@@ -456,9 +456,6 @@ func effectiveSettings(app *v1alpha1.Application) (map[string]any, error) {
 // empty. The controller fills those from the project, so the effective old side holds a
 // value the manifest never spelled out: compared as-is, an edit to an unrelated field
 // would read as a change to a field nobody touched. An explicit value still compares.
-//
-// ponytail: grants are the only controller-resolved settings today. Another source of
-// them would need the same exclusion here.
 func dropUnsetGrants(settingsSchema *spec.Schema, oldSettings, newSettings map[string]any) {
 	refs, err := packageschema.CollectGrantRefs(settingsSchema)
 	if err != nil {
