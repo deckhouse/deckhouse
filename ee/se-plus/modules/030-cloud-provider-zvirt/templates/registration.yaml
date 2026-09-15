@@ -1,7 +1,6 @@
 {{- $providerID := "zvirt" }}
 {{- define "registration_values" }}
 {{- $context := index . 0 }}
-{{- $providerClusterConfiguration := $context.Values.cloudProviderZvirt.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 {{- $providerDiscoveryData := $context.Values.cloudProviderZvirt.internal.providerDiscoveryData | required "internal.providerDiscoveryData is required" }}
 {{- $zones :=  $providerDiscoveryData.zones }}
 {{- $region := "default" }}
@@ -21,16 +20,16 @@ capiClusterName: {{ b64enc "zvirt" | quote }}
 capiMachineTemplateKind: {{ b64enc "ZvirtMachineTemplate" | quote }}
 capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1" | quote }}
 capiMachineTemplateAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
-sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
+sshPublicKey: {{ $context.Values.cloudProviderZvirt.nodes.parameters.sshPublicKey | b64enc | quote }}
 
 {{- $zvirtValues := dict }}
 
-{{- $_ := set $zvirtValues "sshPublicKey" $providerClusterConfiguration.sshPublicKey }}
-{{- $_ := set $zvirtValues "server" $providerClusterConfiguration.provider.server }}
-{{- $_ := set $zvirtValues "username" $providerClusterConfiguration.provider.username }}
-{{- $_ := set $zvirtValues "password" $providerClusterConfiguration.provider.password }}
-{{- $_ := set $zvirtValues "insecure" $providerClusterConfiguration.provider.insecure }}
-{{- $_ := set $zvirtValues "clusterID" $providerClusterConfiguration.clusterID }}
+{{- $_ := set $zvirtValues "sshPublicKey" $context.Values.cloudProviderZvirt.nodes.parameters.sshPublicKey }}
+{{- $_ := set $zvirtValues "server" $context.Values.cloudProviderZvirt.provider.parameters.server }}
+{{- $_ := set $zvirtValues "username" (include "zvirt_credential_secret" (list $context "d8-credentials" "identity")) }}
+{{- $_ := set $zvirtValues "password" (include "zvirt_credential_secret" (list $context "d8-credentials" "secret")) }}
+{{- $_ := set $zvirtValues "insecure" (dig "provider" "parameters" "insecure" false $context.Values.cloudProviderZvirt) }}
+{{- $_ := set $zvirtValues "clusterID" $context.Values.cloudProviderZvirt.provider.parameters.clusterID }}
 
 zvirt: {{ $zvirtValues | toJson | b64enc | quote }}
 {{- end }}

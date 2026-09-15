@@ -18,7 +18,7 @@
 - name: csi-controller-config-volume
   secret:
     secretName: csi-controller-manager
-  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
+  {{- if dig "provider" "parameters" "caBundle" "" .Values.cloudProviderZvirt }}
 - name: csi-controller-ca-volume
   secret:
     secretName: csi-controller-manager-ca
@@ -32,7 +32,7 @@
 - name: csi-controller-config-volume
   mountPath: /etc/cloud
   readOnly: true
-  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
+  {{- if dig "provider" "parameters" "caBundle" "" .Values.cloudProviderZvirt }}
 - name: csi-controller-ca-volume
   mountPath: /etc/cloud/ca
   readOnly: true
@@ -62,7 +62,7 @@
 - name: csi-node-config-volume
   secret:
     secretName: csi-controller-manager
-  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
+  {{- if dig "provider" "parameters" "caBundle" "" .Values.cloudProviderZvirt }}
 - name: csi-controller-ca-volume
   secret:
     secretName: csi-controller-manager-ca
@@ -76,7 +76,7 @@
 - mountPath: /etc/cloud
   name: csi-node-config-volume
   readOnly: true
-  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
+  {{- if dig "provider" "parameters" "caBundle" "" .Values.cloudProviderZvirt }}
 - name: csi-controller-ca-volume
   mountPath: /etc/cloud/ca
   readOnly: true
@@ -87,7 +87,7 @@
 {{- end }}
 
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . "zvirtCsiDriver") }}
-{{- if $csiControllerImage }}
+{{- if and $csiControllerImage (not (default false (dig "storage" "disabled" false .Values.cloudProviderZvirt))) }}
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}

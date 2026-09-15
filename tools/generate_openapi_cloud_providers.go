@@ -17,3 +17,4 @@ limitations under the License.
 package main
 
 //go:generate sh -c "cd ../modules/030-cloud-provider-dvp/tools && go run ./openapigen --module-root .."
+//go:generate sh -c "cd ../ee/se-plus/modules/030-cloud-provider-zvirt/tools && go run ./openapigen --module-root .."
