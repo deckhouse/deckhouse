@@ -16,15 +16,11 @@ package packagerepositoryoperation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
-	"net/url"
 	"sort"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation/operations"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/deckhouse/pkg/registry"
 )
 
 const (
@@ -204,7 +199,7 @@ func hasPackageRepositoryOwnerRef(op *v1alpha1.PackageRepositoryOperation) bool 
 //	    Reason=Processing        → handleProcessingState
 //
 //	Terminal (Status=True) — routed uniformly via op.IsCompleted():
-//	    Reason=ScanSucceeded (OK) or a failure reason (KO)  → handleCleanupState
+//	    Reason=ScanSucceeded (OK) or Reason=ScanFailed (KO) → handleCleanupState
 //
 // Each active pre-terminal handler advances the condition and requeues, so a full run
 // performs one state transition per reconcile — the condition IS the durable checkpoint.
@@ -418,10 +413,10 @@ func (r *reconciler) setCompletedConditionFalse(op *v1alpha1.PackageRepositoryOp
 	})
 }
 
-// failOperation marks op terminally failed with a reason and message from
-// classifyScanFailure, patches status, and mirrors the failure to the parent
-// PackageRepository. All pre-terminal handlers funnel errors here so the
-// terminate-as-failed sequence has one authoritative implementation.
+// failOperation marks op terminally Failed, patches status, and mirrors the failure
+// to the parent PackageRepository's LastScanSucceeded condition. All pre-terminal
+// handlers funnel errors here so the terminate-as-failed sequence has one
+// authoritative implementation.
 //
 // The patch baseline is captured inside the helper (DeepCopy of op on entry), which
 // implies callers MUST call this before mutating op — any prior mutations are in the
@@ -438,11 +433,9 @@ func (r *reconciler) failOperation(ctx context.Context, op *v1alpha1.PackageRepo
 
 	original := op.DeepCopy()
 
-	reason, message := classifyScanFailure(cause)
-
 	now := metav1.Now()
 	op.Status.CompletionTime = &now
-	r.setCompletedConditionTrue(op, reason, message)
+	r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonScanFailed, cause.Error())
 
 	if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, err
@@ -456,52 +449,12 @@ func (r *reconciler) failOperation(ctx context.Context, op *v1alpha1.PackageRepo
 	return ctrl.Result{}, nil
 }
 
-// classifyScanFailure names why the scan failed and gives the user a short message
-// saying what to check. Causes it does not know stay ScanFailed with the full error
-// text: there is nothing shorter to say about them. The full text is always logged.
-func classifyScanFailure(cause error) (string, string) {
-	switch {
-	case errors.Is(cause, registry.ErrAccessDenied):
-		return v1alpha1.PackageRepositoryOperationReasonAccessDenied,
-			"Registry rejected the credentials from spec.registry: check login/password or dockerCfg"
-	case errors.Is(cause, registry.ErrRepositoryNotFound):
-		return v1alpha1.PackageRepositoryOperationReasonRepositoryNotFound,
-			"Registry has no repository at spec.registry.repo: check the path"
-	}
-
-	// The registry answered, but with a server error.
-	var transportErr *transport.Error
-	if errors.As(cause, &transportErr) && transportErr.StatusCode >= http.StatusInternalServerError {
-		message := fmt.Sprintf("Registry is unavailable: HTTP %d", transportErr.StatusCode)
-		if transportErr.Request != nil {
-			message += " from " + transportErr.Request.URL.String()
-		}
-
-		return v1alpha1.PackageRepositoryOperationReasonRegistryUnavailable, message
-	}
-
-	// No answer at all: DNS, connection, TLS or timeout. The url.Error text is
-	// short and names the request that failed.
-	var urlErr *url.Error
-	if errors.As(cause, &urlErr) {
-		return v1alpha1.PackageRepositoryOperationReasonRegistryUnavailable, "Registry is unavailable: " + urlErr.Error()
-	}
-
-	if errors.Is(cause, context.DeadlineExceeded) {
-		return v1alpha1.PackageRepositoryOperationReasonRegistryUnavailable, "Registry is unavailable: request timed out"
-	}
-
-	return v1alpha1.PackageRepositoryOperationReasonScanFailed, cause.Error()
-}
-
 // updatePackageRepositoryCondition mirrors the operation's terminal Completed condition
-// onto the parent PackageRepository, so consumers watching only the repository can
-// tell whether the most recent scan succeeded:
-//   - LastScanSucceeded carries the operation's reason and message;
-//   - phase is Active after a successful scan and Error after a failed one;
-//   - message repeats the failure message and is empty after success.
+// onto the parent PackageRepository's LastScanSucceeded condition, so consumers watching
+// only the repository can tell whether the most recent scan succeeded.
 //
-// Missing repository (NotFound) is treated as a silent no-op - the operation has
+// Mapping: operation Reason=ScanFailed → LastScanSucceeded=False; any other reason → True.
+// Missing repository (NotFound) is treated as a silent no-op — the operation has
 // outlived its parent and cascade deletion will clean it up.
 func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) error {
 	repo := new(v1alpha1.PackageRepository)
@@ -518,11 +471,9 @@ func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, op *v
 		return nil
 	}
 
-	succeeded := cond.Reason == v1alpha1.PackageRepositoryOperationReasonScanSucceeded
-
-	status := metav1.ConditionFalse
-	if succeeded {
-		status = metav1.ConditionTrue
+	status := metav1.ConditionTrue
+	if cond.Reason == v1alpha1.PackageRepositoryOperationReasonScanFailed {
+		status = metav1.ConditionFalse
 	}
 
 	original := repo.DeepCopy()
@@ -535,14 +486,6 @@ func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, op *v
 		ObservedGeneration: repo.Generation,
 		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
 	})
-
-	if succeeded {
-		repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
-		repo.Status.Message = ""
-	} else {
-		repo.Status.Phase = v1alpha1.PackageRepositoryPhaseError
-		repo.Status.Message = cond.Message
-	}
 
 	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("update package repository status: %w", err)
