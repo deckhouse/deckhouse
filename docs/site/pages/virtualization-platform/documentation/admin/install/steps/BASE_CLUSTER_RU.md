@@ -240,20 +240,25 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 {% offtopic title="Список флагов пропуска проверок..." %}
 
 - `--preflight-skip-all-checks` — пропуск всех предварительных проверок.
-- `--preflight-skip-ssh-forward-check`  — пропуск проверки проброса SSH.
-- `--preflight-skip-availability-ports-check` — пропуск проверки доступности необходимых портов.
-- `--preflight-skip-resolving-localhost-check` — пропуск проверки `localhost`.
-- `--preflight-skip-deckhouse-version-check` — пропуск проверки версии Deckhouse.
-- `--preflight-skip-registry-through-proxy` — пропуск проверки доступа к registry через прокси-сервер.
-- `--preflight-skip-public-domain-template-check`  — пропуск проверки шаблона `publicDomain`.
-- `--preflight-skip-ssh-credentials-check`   — пропуск проверки учетных данных SSH-пользователя.
-- `--preflight-skip-registry-credential` — пропуск проверки учетных данных для доступа к registry.
-- `--preflight-skip-containerd-exist` — пропуск проверки наличия containerd.
-- `--preflight-skip-python-checks` — пропуск проверки наличия Python.
-- `--preflight-skip-sudo-allowed` — пропуск проверки прав доступа для выполнения команды `sudo`.
-- `--preflight-skip-system-requirements-check` — пропуск проверки системных требований.
-- `--preflight-skip-one-ssh-host` — пропуск проверки количества указанных SSH-хостов.
-  
+- `--preflight-skip-check=<имя>` — пропуск одной проверки по имени. Флаг можно указывать несколько раз или передать список через запятую. Чаще всего здесь используются:
+  - `static-ssh-tunnel` — проверка проброса SSH;
+  - `ports-availability` — проверка доступности необходимых портов;
+  - `resolve-localhost` — проверка разрешения `localhost`;
+  - `dhctl-edition` — проверка соответствия редакции установщика и редакции образа Deckhouse;
+  - `registry-access-through-proxy` — проверка доступа к хранилищу образов через прокси-сервер;
+  - `public-domain-template` — проверка значения `publicDomainTemplate`;
+  - `ssh-credential` — проверка того, что SSH-пользователь может войти на узел;
+  - `registry-credentials` — проверка учетных данных для доступа к хранилищу образов;
+  - `python-modules` — проверка наличия Python;
+  - `sudo-allowed` — проверка прав доступа для выполнения команды `sudo`;
+  - `static-system-requirements` — проверка системных требований;
+  - `static-single-ssh-host` — проверка количества указанных SSH-хостов.
+- `--preflight-fail-fast` — остановиться на первой же ошибке, не выполняя остальные проверки фазы.
+- `--preflight-no-cache` — выполнить все проверки заново, не используя результаты, запомненные в предыдущем запуске.
+
+Полный список имен проверок выводит `dhctl bootstrap --help`. Отдельные флаги прежних релизов
+(`--preflight-skip-ssh-forward-check` и остальные) заменены на `--preflight-skip-check`.
+
 Пример применения флага пропуска:
 
 ```shell

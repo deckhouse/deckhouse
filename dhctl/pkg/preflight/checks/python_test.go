@@ -99,26 +99,30 @@ func TestCheckPythonAndItsModules(t *testing.T) {
 					mni.On("Command", "command", []string{"-v", binary}).Return(cmd)
 				}
 			},
-			expectedError: "Python was not found under any of the expected names",
+			expectedError: "none of them is on PATH",
 		},
 		{
+			// Every module set is probed, not just the first: they are installed together, and
+			// reporting them one per run costs a bootstrap attempt each.
 			name: "python available but missing required modules",
 			setupMock: func(mni *mocks.MockNodeInterface) {
-				// Mock python3 available
 				cmdPython3 := &mocks.MockCommand{}
 				cmdPython3.On("Run", mock.Anything).Return(nil)
 				mni.On("Command", "command", []string{"-v", "python3"}).Return(cmdPython3)
 
-				// Mock first module set missing
-				cmdModule1 := &mocks.MockCommand{}
-				cmdModule1.On("Run", mock.Anything).Return(&exec.ExitError{})
-				mni.On("Command", "python3", []string{"-c", "import urllib.request"}).Return(cmdModule1)
-
-				cmdModule2 := &mocks.MockCommand{}
-				cmdModule2.On("Run", mock.Anything).Return(&exec.ExitError{})
-				mni.On("Command", "python3", []string{"-c", "import urllib2"}).Return(cmdModule2)
+				for _, module := range []string{
+					"urllib.request", "urllib2",
+					"urllib.error",
+					"configparser", "ConfigParser",
+					"http.server", "SimpleHTTPServer",
+					"SocketServer",
+				} {
+					missing := &mocks.MockCommand{}
+					missing.On("Run", mock.Anything).Return(&exec.ExitError{})
+					mni.On("Command", "python3", []string{"-c", "import " + module}).Return(missing)
+				}
 			},
-			expectedError: "Please install at least one of the following python modules",
+			expectedError: "urllib.request or urllib2",
 		},
 	}
 
@@ -127,8 +131,8 @@ func TestCheckPythonAndItsModules(t *testing.T) {
 			mockNode := &mocks.MockNodeInterface{}
 			tt.setupMock(mockNode)
 
-			check := PythonCheck{NodeInterface: mockNode}
-			err := check.Run(t.Context())
+			check := PythonCheck{NodeInterface: FixedNodeInterface(mockNode)}
+			_, err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

@@ -59,12 +59,21 @@ func providerMasterNodeDiskNames(prefix, nodeIndex string) []string {
 	}
 }
 
+// dvpDiskNames follows DVP's own template: prefix, node group, the role, the index and a hash.
+// DVP was missing from the switch entirely, so a prefix too long for it passed here and the
+// cluster API rejected the disk during base infrastructure instead.
+func dvpDiskNames(prefix, nodeIndex string) []string {
+	return []string{
+		fmt.Sprintf("%s-master-kubernetes-data-%s-00000000", prefix, nodeIndex),
+	}
+}
+
 type CloudDiskNameLengthCheck struct {
 	MetaConfig *config.MetaConfig
 }
 
 func (CloudDiskNameLengthCheck) Description() string {
-	return "validate that cluster prefix does not cause disk names to exceed the length limit"
+	return "the cluster prefix keeps generated disk names within the length limit"
 }
 
 func (CloudDiskNameLengthCheck) Phase() preflight.Phase {
@@ -72,12 +81,12 @@ func (CloudDiskNameLengthCheck) Phase() preflight.Phase {
 }
 
 func (CloudDiskNameLengthCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.RetryPolicy{Attempts: 1}
+	return preflight.NoRetry
 }
 
-func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
+func (c CloudDiskNameLengthCheck) Run(_ context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return fmt.Errorf("meta config is nil")
+		return "", fmt.Errorf("meta config is nil")
 	}
 
 	prefix := c.MetaConfig.ClusterPrefix
@@ -95,20 +104,34 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 		diskNames = vcdDiskNames(prefix, nodeIndex)
 	case "zvirt", "dynamix":
 		diskNames = providerMasterNodeDiskNames(prefix, nodeIndex)
+	case "dvp":
+		diskNames = dvpDiskNames(prefix, nodeIndex)
 	default:
-		return nil
+		return "", preflight.NotApplicable("the disk naming of provider %q is not known to this installer", provider)
 	}
 
+	longest := ""
 	for _, diskName := range diskNames {
-		if len(diskName) > maxDiskNameLength {
-			return fmt.Errorf(
-				"disk name %q exceeds %d characters (got %d); use a shorter cluster prefix",
-				diskName, maxDiskNameLength, len(diskName),
-			)
+		if len(diskName) > len(longest) {
+			longest = diskName
 		}
 	}
 
-	return nil
+	if len(longest) > maxDiskNameLength {
+		// The suffix is what the provider appends; what the operator controls is the prefix, so
+		// the message says how many characters they have to give back.
+		suffix := len(longest) - len(prefix)
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  fmt.Sprintf("the disk names %s generates from the cluster prefix %q", provider, prefix),
+			Observed: fmt.Sprintf("%q is %d characters, the limit is %d", longest, len(longest), maxDiskNameLength),
+			Expected: fmt.Sprintf("every generated disk name within %d characters", maxDiskNameLength),
+			Fix: fmt.Sprintf("shorten ClusterConfiguration.cloud.prefix (or the prefix in the %q ModuleConfig) "+
+				"to at most %d characters; it is %d now, and the suffix %q takes %d",
+				"global", maxDiskNameLength-suffix, len(prefix), longest[len(prefix):], suffix),
+		})
+	}
+
+	return fmt.Sprintf("the longest %s disk name %q is %d of %d characters", provider, longest, len(longest), maxDiskNameLength), nil
 }
 
 func CloudDiskNameLength(metaConfig *config.MetaConfig) preflight.Check {
@@ -118,6 +141,7 @@ func CloudDiskNameLength(metaConfig *config.MetaConfig) preflight.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Cacheable:   true,
 		Run:         check.Run,
 	}
 }

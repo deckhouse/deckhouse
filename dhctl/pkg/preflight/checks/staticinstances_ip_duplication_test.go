@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
 func TestCheckSIIPIntersection(t *testing.T) {
@@ -59,11 +60,14 @@ spec:
 			wantErr: assert.NoError,
 		},
 		{
-			name: "happy path: no instances",
+			// Nothing to look at is not the same as having looked and approved.
+			name: "no resources at all is not applicable",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ResourcesYAML: ``,
 			}},
-			wantErr: assert.NoError,
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
+				return assert.ErrorIs(t, err, preflight.ErrNotApplicable)
+			},
 		},
 		{
 			name: "happy path: single instance",
@@ -128,7 +132,23 @@ spec:
 `,
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "Duplicate address")
+				return assert.ErrorContains(t, err, "10.128.0.22: static-0 and static-3")
+			},
+		},
+		{
+			// A document an operator can plausibly write, and which used to panic the check:
+			// result["spec"].(map[string]any) on a StaticInstance that has no spec.
+			name: "a StaticInstance without a spec is an error, not a panic",
+			fields: fields{metaConfig: &config.MetaConfig{
+				ResourcesYAML: `---
+apiVersion: deckhouse.io/v1alpha2
+kind: StaticInstance
+metadata:
+  name: static-0
+`,
+			}},
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
+				return assert.ErrorContains(t, err, "spec.address is missing")
 			},
 		},
 	}
@@ -138,7 +158,7 @@ spec:
 				MetaConfig: tt.fields.metaConfig,
 			}
 
-			err := check.Run(t.Context())
+			_, err := check.Run(t.Context())
 
 			tt.wantErr(t, err, "StaticInstancesIPDuplicationCheck.Run()")
 		})

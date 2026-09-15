@@ -166,6 +166,14 @@ func ParseConfig(
 		content = content + "\n\n---\n\n" + string(fileContent)
 	}
 
+	// Every problem in the file, not the first one. This is the path an operator takes with a
+	// config they wrote: three mistakes in it used to cost three runs, each finding one — and on
+	// a cloud cluster a run that gets past this creates infrastructure.
+	//
+	// Commander already asked for this explicitly; the caller that passes it again is harmless,
+	// since the option is idempotent.
+	opts = append(opts, ValidateOptionCollectAllErrors(true))
+
 	return ParseConfigFromData(ctx, content, validatorProvider, globalOptions, opts...)
 }
 
@@ -343,7 +351,10 @@ func parseDocument(ctx context.Context, doc string, metaConfig *MetaConfig, sche
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found ModuleConfig in config file %s", moduleConfig.Name))
 
 		if !options.skipSchemaValidation {
-			_, err = schemaStore.Validate(&docData, opts...)
+			// omitDocInError: the numbered copy below is the one worth reading, and without this
+			// the document is printed twice — once raw by the validator and once here with line
+			// numbers, which is how a three-document config produced screens of YAML.
+			_, err = schemaStore.Validate(&docData, append(opts, ValidateOptionOmitDocInError(true))...)
 			if err != nil {
 				if errors.Is(err, ErrSchemaNotFound) {
 					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Schema not found for module %s", moduleConfig.Name))
@@ -358,7 +369,9 @@ func parseDocument(ctx context.Context, doc string, metaConfig *MetaConfig, sche
 	}
 
 	if !options.skipSchemaValidation {
-		_, err = schemaStore.Validate(&docData, opts...)
+		// Same here: the caller prints the document with line numbers, so the validator must not
+		// print it again without them.
+		_, err = schemaStore.Validate(&docData, append(opts, ValidateOptionOmitDocInError(true))...)
 		if err != nil {
 			if errors.Is(err, ErrSchemaNotFound) {
 				return false, nil

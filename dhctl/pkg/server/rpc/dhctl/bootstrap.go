@@ -184,12 +184,15 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	ctx = initDhctlLoggerCtx(ctx, p)
 
-	opts := newRequestOptions(
+	opts, err := newRequestOptions(
 		s.params.CacheDir,
-		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.CommonOptions,
 		p.request.Options.ResourcesTimeout.AsDuration(),
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
+	if err != nil {
+		return &pb.BootstrapResult{Err: err.Error()}
+	}
 
 	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()

@@ -40,7 +40,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -96,6 +95,13 @@ func (b *ClusterBootstrapper) printCollectedKubeconfig(ctx context.Context, bctx
 
 // detectImmutableMaster decides how the very first node is created, so it runs
 // before anything touches the infrastructure.
+//
+// The guards here are deliberately not preflight checks. They were taken out of preflight because
+// every check was skippable then and --preflight-skip-all-checks turned the guards off with the
+// rest; preflight has a non-skippable class now (Check.CannotBeSkipped), but this still runs
+// earlier than any preflight phase does, which is what a decision about how the first node is
+// created needs. The non-skippable class is for the guards that genuinely belong in a suite —
+// immutable-supported-provider and immutable-registry-mode.
 func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
 	immutableMaster, err := immutable.IsImmutableMaster(ctx, bctx.metaConfig)
 	if err != nil {
@@ -361,28 +367,96 @@ func isStaticImmutableCluster(bctx *bootstrapContext) bool {
 	return bctx.metaConfig.ClusterType != config.CloudClusterType
 }
 
-// applyImmutablePreflights adds the checks that only apply to an immutable
-// master. Which checks a static one is left with is decided by the suite it is
-// built from, in preflightSuites, and not by a list of names subtracted here.
-func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflight, bctx *bootstrapContext) {
+// disableChecksImmutableMasterCannotAnswer turns off the checks that cannot mean anything on a
+// master with no sshd. Which checks an immutable master is left with is decided by the suites
+// preflightSuites builds, and not by a list of names subtracted here; this is only for the ones
+// that travel inside a suite shared with every other cloud bootstrap.
+func (b *ClusterBootstrapper) disableChecksImmutableMasterCannotAnswer(runner *preflight.Preflight, bctx *bootstrapContext) {
 	if bctx.immutable == nil {
 		return
 	}
 
-	runner.AddSuite(suites.NewImmutableSuite(suites.ImmutableDeps{
-		MetaConfig:    bctx.metaConfig,
-		BootstrapOpts: &b.Options.Bootstrap,
-		GlobalOpts:    &b.Options.Global,
-		CommanderMode: b.CommanderMode,
-		MachinesAvailability: func(ctx context.Context) error {
-			return b.checkMachinesAreAvailable(ctx, bctx)
-		},
-	}))
+	// An immutable machine runs no sshd. Every check that reaches it over SSH — and the cloud API
+	// check, which tunnels through it — has nothing to ask and no way to ask it. They are named
+	// rather than dropped from a suite because the cloud suites are shared with every other cloud
+	// bootstrap, and each reason travels with its name so the record says who turned it off: a
+	// line indistinguishable from one the operator skipped themselves would have them hunting for
+	// a flag they never passed.
+	const reason = "an immutable master runs no sshd for dhctl to ask this over"
 
-	// The cloud API check tunnels through the master host; there is no sshd
-	// there to tunnel with. Named rather than dropped from a suite because the
-	// cloud suites are shared with every other cloud bootstrap.
-	runner.DisableCheck(checks.CloudAPICheckName.String())
+	runner.DisableCheckWithReason(
+		checks.CloudAPICheckName.String(),
+		"an immutable master has no sshd to tunnel the cloud API request through",
+	)
+	for _, name := range []preflight.CheckName{
+		checks.BastionAvailabilityCheckName,
+		// In the cloud suite since the credential had to be checked before anything tunnels
+		// through it — which an immutable master has no sshd to do.
+		checks.SSHCredentialCheckName,
+		checks.SudoInstalledCheckName,
+		checks.SudoAllowedCheckName,
+		checks.DeckhouseUserCheckName,
+		checks.PythonCheckName,
+		checks.LocalhostDomainCheckName,
+		checks.TimeDriftCheckName,
+		checks.HostNetworkCIDRIntersectionCheckName,
+		checks.NodeHostnameCheckName,
+		checks.NodeLeftoversCheckName,
+		checks.NodeCRIRequirementsCheckName,
+		checks.NodeKernelModulesCheckName,
+		checks.NodeSELinuxToolsCheckName,
+		checks.NodeDiskSpaceCheckName,
+		checks.StaticFreeDiskSpaceCheckName,
+		checks.NodeInternalNetworkCheckName,
+		checks.NodeOSSupportedCheckName,
+		checks.NodeXFSFtypeCheckName,
+		checks.NodeResolveHostnameCheckName,
+		checks.NodeSystemRequirementsCheckName,
+		checks.RegistryFromMasterCheckName,
+		checks.CloudKubeDataDeviceCheckName,
+	} {
+		runner.DisableCheckWithReason(name.String(), reason)
+	}
+}
+
+// disableChecksWithoutSSHHost turns off the checks that need an SSH connection when dhctl was
+// given no host to make one to.
+//
+// That is the local mode of a static bootstrap: the operator ran dhctl on the machine that is
+// about to become the master and confirmed "bootstrap the cluster on the current host". There is
+// no SSH connection to check, and helper.GetNodeInterface hands back a local interface — so the
+// checks about the connection itself have nothing to ask, while the checks about the machine are
+// asking about the right machine and stay.
+//
+// Naming them here is what makes the difference visible. Left to themselves they each reported
+// not-applicable with their own wording, which is the same sentence six times; and the ones that
+// did not — anything that probes the node interface without noticing it is local — would have
+// examined the installer's own container and printed a ✓ about it.
+func (b *ClusterBootstrapper) disableChecksWithoutSSHHost(ctx context.Context, runner *preflight.Preflight, bctx *bootstrapContext) {
+	// An immutable master has no sshd either, and is handled by its own function with its own
+	// reason; a cloud cluster gets its hosts from the infrastructure it is about to create.
+	if bctx.immutable != nil || bctx.metaConfig == nil || bctx.metaConfig.ClusterType == config.CloudClusterType {
+		return
+	}
+	if b.SSHProviderInitializer.CheckHosts(ctx) {
+		return
+	}
+
+	const reason = "dhctl was given no --ssh-host and is bootstrapping the machine it runs on"
+
+	for _, name := range []preflight.CheckName{
+		checks.SSHConnectivityCheckName,
+		checks.SSHCredentialCheckName,
+		checks.SSHTunnelCheckName,
+		checks.SingleSSHHostCheckName,
+		checks.BastionAvailabilityCheckName,
+		checks.StaticInstancesSSHAccessCheckName,
+		checks.RegistryProxyCheckName,
+		checks.RegistryFromMasterCheckName,
+		checks.CloudKubeDataDeviceCheckName,
+	} {
+		runner.DisableCheckWithReason(name.String(), reason)
+	}
 }
 
 // checkMachinesAreAvailable is the preflight body: every machine named with

@@ -46,7 +46,7 @@ func TestCheckAvailabilityPorts(t *testing.T) {
 			name:          "port check failed with exit error",
 			executeError:  &exec.ExitError{Stderr: []byte("Port 6443 is already in use")},
 			executeOutput: []byte("Port check failed"),
-			expectedError: "required ports check failed:",
+			expectedError: "Port check failed on ",
 			setupMock: func(mni *mocks.MockNodeInterface, msc *mocks.MockScript) {
 				mni.On("UploadScript", mock.AnythingOfType("string"), mock.AnythingOfType("[]string")).Return(msc)
 				exitErr := &exec.ExitError{Stderr: []byte("Port 6443 is already in use")}
@@ -57,7 +57,7 @@ func TestCheckAvailabilityPorts(t *testing.T) {
 			name:          "generic execution error",
 			executeError:  errors.New("network error"),
 			executeOutput: []byte(""),
-			expectedError: "Could not execute a script to check if all necessary ports are open on the node:",
+			expectedError: "cannot check that the required ports are free on ",
 			setupMock: func(mni *mocks.MockNodeInterface, msc *mocks.MockScript) {
 				mni.On("UploadScript", mock.AnythingOfType("string"), mock.AnythingOfType("[]string")).Return(msc)
 				msc.On("Execute", mock.Anything).Return([]byte(""), errors.New("network error"))

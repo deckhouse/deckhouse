@@ -16,12 +16,6 @@ package checks
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"os/exec"
-	"strings"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -29,7 +23,9 @@ import (
 )
 
 type DeckhouseUserCheck struct {
-	NodeInterface libcon.Interface
+	// NodeInterface is resolved when the check runs, not when its suite is built: see
+	// NodeInterfaceFunc.
+	NodeInterface NodeInterfaceFunc
 	globalOptions *options.GlobalOptions
 }
 
@@ -44,38 +40,37 @@ func (DeckhouseUserCheck) Phase() preflight.Phase {
 }
 
 func (DeckhouseUserCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NoRetry
 }
 
 func (c DeckhouseUserCheck) Run(ctx context.Context) error {
+	nodeInterface, err := c.NodeInterface(ctx)
+	if err != nil {
+		return err
+	}
+
 	file, err := template.RenderAndSavePreflightCheckDeckhouseUserScript(ctx, c.globalOptions)
 	if err != nil {
 		return err
 	}
 
-	cmd := c.NodeInterface.UploadScript(file)
+	cmd := nodeInterface.UploadScript(file)
 	out, err := cmd.Execute(ctx)
 	if err != nil {
-		outMsg := strings.TrimSpace(string(out))
-		if outMsg != "" {
-			return fmt.Errorf("Deckhouse user check failed: %s", outMsg)
-		}
-		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
-			return fmt.Errorf("Deckhouse user check failed: %w, %s", err, string(ee.Stderr))
-		}
-		return fmt.Errorf("Could not execute a script to check deckhouse user and group aren't present on the node: %w", err)
+		return scriptFailure("check the deckhouse user and group", nodeInterface, out, err)
 	}
 
 	return nil
 }
 
-func DeckhouseUser(nodeInterface libcon.Interface, globalOptions *options.GlobalOptions) preflight.Check {
+func DeckhouseUser(nodeInterface NodeInterfaceFunc, globalOptions *options.GlobalOptions) preflight.Check {
 	check := DeckhouseUserCheck{NodeInterface: nodeInterface, globalOptions: globalOptions}
 	return preflight.Check{
 		Name:        DeckhouseUserCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Run:         check.Run,
+		Timeout:     preflight.NodeCheckTimeout,
+		Run:         preflight.Detailless(check.Run),
 	}
 }

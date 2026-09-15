@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -42,12 +43,11 @@ type BastionAvailabilityCheck struct {
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 }
 
-func (c BastionAvailabilityCheck) Description() string {
-	connCfg := c.SSHProviderInitializer.GetConfig()
-	if connCfg == nil || !bastionConfigured(connCfg.Config) {
-		return "no bastion configured, skipping bastion availability check"
-	}
-
+// Description is the assertion that holds when the check passes. It used to describe its own
+// absence ("no bastion configured, skipping…") when there was no bastion, which printed a ✓ over
+// a sentence saying nothing had been checked — and cached it. The absence is now reported by the
+// body as a not-applicable outcome, which is neither a pass nor remembered.
+func (BastionAvailabilityCheck) Description() string {
 	return "ssh connection to the bastion host is possible"
 }
 
@@ -78,24 +78,31 @@ func bastionPort(cfg *sshconfig.Config) string {
 	return cfg.BastionPortString()
 }
 
-func (c BastionAvailabilityCheck) Run(ctx context.Context) error {
+func (c BastionAvailabilityCheck) Run(ctx context.Context) (string, error) {
 	connCfg := c.SSHProviderInitializer.GetConfig()
 	if connCfg == nil || !bastionConfigured(connCfg.Config) {
-		// No bastion configured: nothing to validate, pass silently.
-		return nil
+		return "", preflight.NotApplicable("no --ssh-bastion-host")
 	}
 
 	sshCfg := connCfg.Config
 	addr := net.JoinHostPort(sshCfg.BastionHost, bastionPort(sshCfg))
+	user := sshCfg.BastionUser
 
 	authMethods, cleanup, err := bastionAuthMethods(sshCfg)
 	if err != nil {
-		return fmt.Errorf("cannot prepare ssh auth for bastion host %s: %w", addr, err)
+		// No key, no agent and no password: nothing about that changes on a second attempt.
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  fmt.Sprintf("the credentials for bastion %s", addr),
+			Observed: err.Error(),
+			Expected: "a private key, an ssh-agent identity or a password for the bastion",
+			Fix:      "pass --ssh-agent-private-keys, run an ssh-agent, or pass --ask-bastion-pass",
+			Err:      err,
+		})
 	}
 	defer cleanup()
 
 	clientCfg := &ssh.ClientConfig{
-		User:            sshCfg.BastionUser,
+		User:            user,
 		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         bastionDialTimeout,
@@ -104,7 +111,13 @@ func (c BastionAvailabilityCheck) Run(ctx context.Context) error {
 	// 1. TCP reachability check, honouring context cancellation.
 	conn, err := (&net.Dialer{Timeout: bastionDialTimeout}).DialContext(ctx, "tcp", addr)
 	if err != nil {
-		return fmt.Errorf("cannot reach bastion host %s: %w", addr, err)
+		return "", &preflight.Failure{
+			Checked:  fmt.Sprintf("tcp connection to bastion %s", addr),
+			Observed: classifyNetworkError(err),
+			Expected: "the bastion to answer",
+			Fix:      "check --ssh-bastion-host and --ssh-bastion-port, and that the port is open from this host",
+			Err:      err,
+		}
 	}
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(bastionDialTimeout))
@@ -122,11 +135,43 @@ func (c BastionAvailabilityCheck) Run(ctx context.Context) error {
 	// handshake validates exactly what we rely on, nothing more.
 	sshConn, chans, reqs, err := ssh.NewClientConn(conn, addr, clientCfg)
 	if err != nil {
-		return fmt.Errorf("cannot authenticate to bastion host %s as %q: %w", addr, sshCfg.BastionUser, err)
+		failure := &preflight.Failure{
+			Checked:  fmt.Sprintf("ssh login to bastion %s as %q", addr, user),
+			Observed: "the bastion rejected every authentication method offered",
+			Expected: "the bastion user to be authorized",
+			Fix: "check --ssh-bastion-user (it defaults to --ssh-user), make sure one of " +
+				"--ssh-agent-private-keys is authorized for it on the bastion, or pass --ask-bastion-pass",
+			Err: err,
+		}
+		if isSSHAuthError(err) {
+			return "", preflight.Permanent(failure)
+		}
+		failure.Observed = classifyNetworkError(err)
+		return "", failure
 	}
-	ssh.NewClient(sshConn, chans, reqs).Close()
+	client := ssh.NewClient(sshConn, chans, reqs)
+	defer client.Close()
 
-	return nil
+	// 3. The forward itself, which is the only thing dhctl actually asks of a bastion. A bastion
+	// with AllowTcpForwarding no authenticates perfectly and is still useless, and that used to
+	// surface minutes later as a failure to reach the master.
+	if forwarded, err := client.Dial("tcp", net.JoinHostPort("127.0.0.1", "22")); err != nil {
+		if strings.Contains(err.Error(), "administratively prohibited") {
+			return "", preflight.Permanent(&preflight.Failure{
+				Checked:  fmt.Sprintf("a direct-tcpip forward through bastion %s", addr),
+				Observed: "the bastion refused to forward (administratively prohibited)",
+				Expected: "the bastion to forward TCP connections",
+				Fix:      "set AllowTcpForwarding yes in sshd_config on the bastion",
+				Err:      err,
+			})
+		}
+		// Anything else here is about the address behind the bastion, which this check does not
+		// own; the handshake it does own has already succeeded.
+	} else {
+		_ = forwarded.Close()
+	}
+
+	return fmt.Sprintf("ssh handshake with bastion %s as %q succeeded", addr, user), nil
 }
 
 // bastionAuthMethods builds the ssh auth methods used to reach the bastion:
@@ -203,6 +248,20 @@ func BastionAvailability(sshProviderInitializer *providerinitializer.SSHProvider
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.DefaultPreflightCheckTimeout,
 		Run:         check.Run,
 	}
+}
+
+// BastionAvailabilityAfterInfra is the same check, asked again once the infrastructure exists.
+//
+// On the cloud layouts that create one — OpenStack standard, VCD with-nat, AWS withNAT — the
+// bastion is not in the configuration at all until base infrastructure has been applied, so the
+// pre-infra instance finds no --ssh-bastion-host and reports itself not applicable. Without a
+// second look, a wrong --ssh-bastion-user or key becomes 250 one-second attempts at reaching the
+// master, in which the bastion is never mentioned.
+func BastionAvailabilityAfterInfra(sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
+	check := BastionAvailability(sshProviderInitializer)
+	check.Phase = preflight.PhasePostInfra
+	return check
 }

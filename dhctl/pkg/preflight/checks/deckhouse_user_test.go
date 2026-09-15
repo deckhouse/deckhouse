@@ -46,7 +46,7 @@ func TestChecker_CheckDeckhouseUser(t *testing.T) {
 			name:          "deckhouse user check failed with exit error",
 			executeError:  &exec.ExitError{Stderr: []byte("deckhouse user exists")},
 			executeOutput: []byte("User check failed"),
-			expectedError: "Deckhouse user existence check failed:",
+			expectedError: "User check failed on ",
 			setupMock: func(mni *mocks.MockNodeInterface, msc *mocks.MockScript) {
 				mni.On("UploadScript", mock.AnythingOfType("string"), mock.AnythingOfType("[]string")).Return(msc)
 				exitErr := &exec.ExitError{Stderr: []byte("deckhouse user exists")}
@@ -57,7 +57,7 @@ func TestChecker_CheckDeckhouseUser(t *testing.T) {
 			name:          "generic execution error",
 			executeError:  errors.New("network error"),
 			executeOutput: []byte(""),
-			expectedError: "Could not execute a script to check deckhouse user and group aren't present on the node:",
+			expectedError: "cannot check the deckhouse user and group on ",
 			setupMock: func(mni *mocks.MockNodeInterface, msc *mocks.MockScript) {
 				mni.On("UploadScript", mock.AnythingOfType("string"), mock.AnythingOfType("[]string")).Return(msc)
 				msc.On("Execute", mock.Anything).Return([]byte(""), errors.New("network error"))
@@ -72,7 +72,7 @@ func TestChecker_CheckDeckhouseUser(t *testing.T) {
 			tt.setupMock(mockNode, mockScript)
 
 			check := DeckhouseUserCheck{
-				NodeInterface: mockNode,
+				NodeInterface: FixedNodeInterface(mockNode),
 				globalOptions: candiOptionsFor(t, "check_deckhouse_user.sh.tpl"),
 			}
 			err := check.Run(t.Context())

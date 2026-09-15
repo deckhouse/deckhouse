@@ -181,12 +181,15 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 
 	ctx = initDhctlLoggerCtx(ctx, p)
 
-	opts := newRequestOptions(
+	opts, err := newRequestOptions(
 		s.params.CacheDir,
-		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.CommonOptions,
 		p.request.Options.ResourcesTimeout.AsDuration(),
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
+	if err != nil {
+		return &pb.DestroyResult{Err: err.Error()}
+	}
 
 	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
@@ -285,12 +288,13 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		TmpDir:       s.params.TmpDir,
-		Logger:       dhlog.FromContext(ctx),
-		IsDebug:      s.params.IsDebug,
-		SSHProvider:  sshProvider,
-		KubeProvider: kubeProvider,
-		Options:      opts,
+		TmpDir:                 s.params.TmpDir,
+		Logger:                 dhlog.FromContext(ctx),
+		IsDebug:                s.params.IsDebug,
+		SSHProvider:            sshProvider,
+		SSHProviderInitializer: sshProviderInitializer,
+		KubeProvider:           kubeProvider,
+		Options:                opts,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

@@ -19,6 +19,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
 )
 
@@ -233,5 +237,84 @@ spec:
 		if !strings.Contains(err.Error(), "SSHCredentials cred-bad:") {
 			t.Fatalf("expected wrapped error with name, got: %v", err)
 		}
+	})
+}
+
+// TestStaticInstanceSession pins how a StaticInstance is reached. Deckhouse adopts these machines
+// from the master node, so the check has to take the same route — and the route is the part of
+// this check that nothing exercised.
+func TestStaticInstanceSession(t *testing.T) {
+	cred := &v1alpha2.SSHCredentialsSpec{User: "caretaker", SSHPort: 2222}
+
+	masterWith := func(input session.Input) *session.Session {
+		sess := session.NewSession(input)
+		if len(input.AvailableHosts) == 0 {
+			sess.AddAvailableHosts(session.Host{Host: "master-0.example.com"})
+		}
+		return sess
+	}
+
+	t.Run("a local run reaches the instance directly", func(t *testing.T) {
+		// dhctl running on a machine that already has the hosts in reach: there is no
+		// master connection to borrow, and inventing a hop would only fail.
+		got := staticInstanceSession("10.0.0.10", cred, nil)
+
+		assert.Equal(t, "10.0.0.10", got.Host())
+		assert.Equal(t, "caretaker", got.User)
+		assert.Equal(t, "2222", got.Port)
+		assert.Empty(t, got.BastionHost)
+	})
+
+	t.Run("the master becomes the hop", func(t *testing.T) {
+		master := masterWith(session.Input{User: "ubuntu", Port: "22"})
+
+		got := staticInstanceSession("10.0.0.10", cred, master)
+
+		assert.Equal(t, "master-0.example.com", got.BastionHost)
+		assert.Equal(t, "ubuntu", got.BastionUser)
+		assert.Equal(t, "22", got.BastionPort)
+		// The instance's own credentials are unaffected by whose machine the hop is.
+		assert.Equal(t, "caretaker", got.User)
+		assert.Equal(t, "2222", got.Port)
+	})
+
+	t.Run("an existing bastion is kept", func(t *testing.T) {
+		// The master is behind a bastion, so everything behind the master is too. Replacing
+		// it with the master would name a host this process cannot reach.
+		master := masterWith(session.Input{
+			User:            "ubuntu",
+			Port:            "22",
+			BastionHost:     "bastion.example.com",
+			BastionPort:     "2200",
+			BastionUser:     "jump",
+			BastionPassword: "bastion-secret",
+		})
+
+		got := staticInstanceSession("10.0.0.10", cred, master)
+
+		assert.Equal(t, "bastion.example.com", got.BastionHost)
+		assert.Equal(t, "2200", got.BastionPort)
+		assert.Equal(t, "jump", got.BastionUser)
+		assert.Equal(t, "bastion-secret", got.BastionPassword)
+	})
+
+	t.Run("the sudo password is not offered to the hop as an SSH password", func(t *testing.T) {
+		// --ask-become-pass puts the sudo password in BecomePass. It used to be copied into
+		// BastionPassword when the master became the hop, which offers the operator's sudo
+		// password to the master's sshd as a password attempt. The master is reached by key;
+		// there is no SSH password to carry over.
+		master := masterWith(session.Input{User: "ubuntu", Port: "22", BecomePass: "sudo-secret"})
+
+		got := staticInstanceSession("10.0.0.10", cred, master)
+
+		assert.Empty(t, got.BastionPassword)
+	})
+
+	t.Run("the instance carries its own sudo password", func(t *testing.T) {
+		withSudo := &v1alpha2.SSHCredentialsSpec{User: "caretaker", SSHPort: 22, SudoPasswordEncoded: "instance-sudo"}
+
+		got := staticInstanceSession("10.0.0.10", withSudo, nil)
+
+		assert.Equal(t, "instance-sudo", got.BecomePass)
 	})
 }

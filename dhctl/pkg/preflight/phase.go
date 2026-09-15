@@ -17,14 +17,18 @@ package preflightnew
 type Phase string
 
 const (
-	PhasePreInfra            Phase = "pre-infra"
-	PhasePostInfra           Phase = "post-infra"
-	PhaseProviderConfigCheck Phase = "provider-config-check"
+	PhasePreInfra  Phase = "pre-infra"
+	PhasePostInfra Phase = "post-infra"
 )
 
+// phaseFormats is the title of the process box. It names what the phase looks at, and carries
+// the --skip-phase spelling in parentheses so the box and the flag that skips it can be matched
+// without consulting the documentation. The previous titles — "Settings preflights" and "Infra
+// preflights" — matched neither the flag nor, on a static cluster, the truth: "Infra preflights"
+// ran with no infrastructure between it and the phase before.
 var phaseFormats = map[Phase]string{
-	PhasePreInfra:  "Settings preflights",
-	PhasePostInfra: "Infra preflights",
+	PhasePreInfra:  "Preflight checks: configuration (PreInfraPreflights)",
+	PhasePostInfra: "Preflight checks: nodes (PostInfraPreflights)",
 }
 
 func (p Phase) String() string {

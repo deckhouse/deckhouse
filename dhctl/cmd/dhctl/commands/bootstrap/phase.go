@@ -43,6 +43,9 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 	app.DefineDeckhouseFlags(cmd, &opts.Bootstrap)
 	app.DefineDeckhouseInstallFlags(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
+	// The registry checks run before the Deployment is created, so their skip flags belong here
+	// too.
+	app.DefinePreflight(cmd, &opts.Preflight)
 
 	forceVerboseLogging(cmd, opts)
 
@@ -128,6 +131,10 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 	// state cache and finds no record of the cluster it is meant to abort.
 	app.DefineImmutableHostsFlags(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
+	// Abort runs the static abort suite, but registered the flags nowhere: DisabledChecks() was
+	// always empty here, so the two checks that stand between the operator and a cleanup could
+	// not be skipped from the command line at all, while the gRPC path could skip them.
+	app.DefinePreflight(cmd, &opts.Preflight)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -183,6 +190,10 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineDropCacheFlags(cmd, &opts.Cache)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
+	// This command creates the cloud infrastructure, so the configuration checks run ahead of it
+	// the same way they do in a full bootstrap — and the flags that turn them off have to exist
+	// here too, or a check the operator can skip in `dhctl bootstrap` becomes unskippable here.
+	app.DefinePreflight(cmd, &opts.Preflight)
 
 	forceVerboseLogging(cmd, opts)
 

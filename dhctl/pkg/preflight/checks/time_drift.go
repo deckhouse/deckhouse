@@ -33,7 +33,9 @@ const maxTimeDriftSeconds int64 = 600 // 10 minutes
 var timestampRegexp = regexp.MustCompile(`^(\d+)$`)
 
 type TimeDriftCheck struct {
-	NodeInterface libcon.Interface
+	// NodeInterface is resolved when the check runs, not when its suite is built: see
+	// NodeInterfaceFunc.
+	NodeInterface NodeInterfaceFunc
 }
 
 const TimeDriftCheckName preflight.CheckName = "time-drift"
@@ -47,13 +49,22 @@ func (TimeDriftCheck) Phase() preflight.Phase {
 }
 
 func (TimeDriftCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NoRetry
 }
 
-func (c TimeDriftCheck) Run(ctx context.Context) error {
-	remote, err := getRemoteTimeStamp(ctx, c.NodeInterface)
+func (c TimeDriftCheck) Run(ctx context.Context) (string, error) {
+	nodeInterface, err := c.NodeInterface(ctx)
 	if err != nil {
-		return nil
+		return "", err
+	}
+
+	// The error used to be discarded and the check reported as passed: a node where `date` could
+	// not be run at all — no shell, no sudo, a broken connection — was indistinguishable from one
+	// whose clock is correct, on a check whose whole point is that a wrong clock breaks the
+	// certificates issued during bootstrap.
+	remote, err := getRemoteTimeStamp(ctx, nodeInterface)
+	if err != nil {
+		return "", scriptFailure("read the clock", nodeInterface, nil, err)
 	}
 	local := time.Now().Unix()
 
@@ -62,12 +73,16 @@ func (c TimeDriftCheck) Run(ctx context.Context) error {
 		diff = -diff
 	}
 	if diff > maxTimeDriftSeconds {
-		localTime := time.Unix(local, 0).Format(time.RFC3339)
-		remoteTime := time.Unix(remote, 0).Format(time.RFC3339)
-		drift := time.Duration(diff) * time.Second
-		return fmt.Errorf("time drift between local (%s) and remote server (%s) is too high: (%s)", localTime, remoteTime, drift.String())
+		// A clock is not going to correct itself between two attempts of the same check.
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  fmt.Sprintf("the clock on %s against this host", hostPhrase(nodeInterface)),
+			Observed: fmt.Sprintf("%s on the node, %s here: %s apart", time.Unix(remote, 0).Format(time.RFC3339), time.Unix(local, 0).Format(time.RFC3339), time.Duration(diff)*time.Second),
+			Expected: fmt.Sprintf("the two clocks within %s of each other", time.Duration(maxTimeDriftSeconds)*time.Second),
+			Fix:      "sync the clocks (enable NTP or chrony on the node); certificates issued during bootstrap are dated by these clocks",
+		})
 	}
-	return nil
+
+	return fmt.Sprintf("the clock on %s is within %s of this host", hostPhrase(nodeInterface), time.Duration(diff)*time.Second), nil
 }
 
 func getRemoteTimeStamp(ctx context.Context, nodeInterface libcon.Interface) (int64, error) {
@@ -88,13 +103,14 @@ func getRemoteTimeStamp(ctx context.Context, nodeInterface libcon.Interface) (in
 	return timeStamp, nil
 }
 
-func TimeDrift(nodeInterface libcon.Interface) preflight.Check {
+func TimeDrift(nodeInterface NodeInterfaceFunc) preflight.Check {
 	check := TimeDriftCheck{NodeInterface: nodeInterface}
 	return preflight.Check{
 		Name:        TimeDriftCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
 }
