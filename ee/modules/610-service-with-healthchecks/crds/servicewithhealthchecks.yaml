@@ -582,8 +582,6 @@ spec:
               clusterIP:
                 description: |-
                   The address of the child Service: the one requested in `spec.clusterIP`, or the one the cluster allocated.
-
-                  The address is reported here and is never written back into the spec.
                 type: string
               clusterIPs:
                 description: |-
