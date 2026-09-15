@@ -99,7 +99,7 @@ If the parameter is not specified, no group-based filtering will be applied.
            description: "Direct access to kubernetes API"
      ```
 
-   - To publish the Kubernetes API via an Ingress controller, enable the [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) parameter in the `control-plane-manager` module settings:
+   - To publish the Kubernetes API via an Ingress controller or Gateway API, enable the [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) parameter in the `control-plane-manager` module settings:
 
      ```yaml
      apiVersion: deckhouse.io/v1alpha1
@@ -115,6 +115,8 @@ If the parameter is not specified, no group-based filtering will be applied.
              ingress:
                enabled: true
      ```
+
+   For more information on how to expose the Kubernetes API, see [the `control-plane-manager` module documentation](/modules/control-plane-manager/#exposing-the-kubernetes-api).
 
 After setting up integration in the cluster with an external authentication provider, authentication through it will become possible in the platform's web interfaces. Information on setting up authentication for user applications can be found in the section [Usage → IAM → Authentication](../../../../user/access/authentication.html).
 

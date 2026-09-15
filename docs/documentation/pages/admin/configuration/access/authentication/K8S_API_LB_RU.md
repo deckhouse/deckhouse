@@ -50,7 +50,7 @@ lang: ru
 
 ## Как работает защита доступа к Kubernetes API
 
-В Deckhouse Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера, сохранив контроль над доступом. Публикация API настраивается через [модуль `control-plane-manager`](/modules/control-plane-manager/), а аутентификация — через [модуль `user-authn`](/modules/user-authn/). Вы можете настроить:
+В Deckhouse Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера или Gateway API, сохранив контроль над доступом (подробнее о способах публикации Kubernetes API — [в документации модуля `control-plane-manager`](/modules/control-plane-manager/#публикация-api-kubernetes)). Публикация API настраивается через [модуль `control-plane-manager`](/modules/control-plane-manager/), а аутентификация — через [модуль `user-authn`](/modules/user-authn/). Вы можете настроить:
 
 - список доверенных сетевых адресов и подсетей, которым разрешён доступ;
 - Ingress-контроллер, через который будет осуществляться доступ.

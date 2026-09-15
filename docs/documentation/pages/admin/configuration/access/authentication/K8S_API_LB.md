@@ -57,7 +57,7 @@ To configure access, follow these steps:
 
 ## How API access protection works in Kubernetes
 
-In Deckhouse Kubernetes Platform, you can safely expose the Kubernetes API externally using an Ingress controller while maintaining access control.
+In Deckhouse Kubernetes Platform, you can safely expose the Kubernetes API externally using an Ingress controller or Gateway API while maintaining access control (for more information on how to expose the Kubernetes API, see [the `control-plane-manager` module documentation](/modules/control-plane-manager/#exposing-the-kubernetes-api)).
 API exposure is configured via the [`control-plane-manager`](/modules/control-plane-manager/) module, while authentication is handled via the [`user-authn`](/modules/user-authn/) module. You can configure:
 
 - A list of trusted IP addresses or networks allowed to access the API.

@@ -102,19 +102,37 @@ EOF
 
 When using publishAPI:
 
+{% tabs api_publish_type %}
+{% tab "When the API server is published via Ingress" %}
+
+When the API server is published via Ingress, use the following commands:
+
 ```shell
 API_HOST=$(d8 k -n kube-system get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
 echo "API endpoint: https://${API_HOST}"
 ```
 
+{% endtab %}
+{% tab "When the API server is published via Gateway API (`alb`)" %}
+
+When the API server is published via Gateway API (the [`alb`](/modules/alb/) module), use the following commands:
+
+```shell
+API_HOST=$(d8 k -n kube-system get httproute kubernetes-api -o jsonpath='{.spec.hostnames[0]}')
+echo "API endpoint: https://${API_HOST}"
+```
+
+{% endtab %}
+{% endtabs %}
+
 {% alert level="info" %}
 If the API certificate is signed by a public CA (Let's Encrypt), the `--certificate-authority` parameter is not required.
 {% endalert %}
 
-For private CA:
+For a private CA (self-signed, the default mode — shared between both publication methods):
 
 ```shell
-d8 k -n d8-user-authn get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/ca.crt
+d8 k -n kube-system get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/ca.crt
 ```
 
 ### Create kubeconfig

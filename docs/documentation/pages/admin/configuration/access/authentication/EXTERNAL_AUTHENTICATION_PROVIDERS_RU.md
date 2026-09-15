@@ -94,7 +94,7 @@ DKP поддерживает подключение следующих внеш�
            description: "Direct access to kubernetes API"
      ```
 
-   - Чтобы опубликовать Kubernetes API через Ingress-контроллер, включите параметр [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в настройках модуля `control-plane-manager`:
+   - Чтобы опубликовать Kubernetes API через Ingress-контроллер или Gateway API, включите параметр [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в настройках модуля `control-plane-manager`:
 
      ```yaml
      apiVersion: deckhouse.io/v1alpha1
@@ -110,6 +110,8 @@ DKP поддерживает подключение следующих внеш�
              ingress:
                enabled: true
      ```
+
+   Подробнее о способах публикации Kubernetes API — [в документации модуля `control-plane-manager`](/modules/control-plane-manager/#публикация-api-kubernetes).
 
 После настройки интеграции в кластере с внешним провайдером аутентификации, аутентификация через него станет возможна в веб-интерфейсах платформы. О настройке аутентификации для пользовательских приложений можно узнать в разделе [Использование → IAM → Аутентификация](../../../../user/access/authentication.html).
 
