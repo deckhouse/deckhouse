@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
@@ -78,7 +77,7 @@ func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 		configured = connCfg.Config.PrivateKeys
 	}
 
-	held, err := heldPublicKeys(configured)
+	held, err := heldPublicKeys(configured, authSockOf(c.SSHProviderInitializer))
 	if err != nil {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  "the private keys given with --ssh-agent-private-keys",
@@ -97,8 +96,8 @@ func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 	declaredAuthorized := ssh.MarshalAuthorizedKey(declared)
 	for _, key := range held {
 		if string(ssh.MarshalAuthorizedKey(key.publicKey)) == string(declaredAuthorized) {
-			return fmt.Sprintf("%s matches %sClusterConfiguration.sshPublicKey (%s)",
-				key.source, c.MetaConfig.ProviderName, ssh.FingerprintSHA256(declared)), nil
+			return fmt.Sprintf("%s matches %s.sshPublicKey (%s)",
+				key.source, providerDocumentKind(c.MetaConfig.ProviderName), ssh.FingerprintSHA256(declared)), nil
 		}
 	}
 
@@ -107,13 +106,54 @@ func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 		offered = append(offered, fmt.Sprintf("%s (%s)", ssh.FingerprintSHA256(key.publicKey), key.source))
 	}
 
+	document := providerDocumentKind(c.MetaConfig.ProviderName)
+	named := len(configured) > 0
+
+	expected := "dhctl to hold the private key of the public key the cloud installs"
+	fix := fmt.Sprintf("pass the private key of sshPublicKey with --ssh-agent-private-keys, "+
+		"or set %s.sshPublicKey to the public key of the key you are passing", document)
+	if named {
+		// The operator named a key. A running agent may hold the right one as well, and the
+		// connection would offer both — but the key they asked for is still the wrong one, and
+		// each wrong key offered spends one of the few authentication attempts the node allows.
+		expected = "the key named with --ssh-agent-private-keys to be the one the cloud installs"
+		fix = fmt.Sprintf("pass the private key of %s.sshPublicKey with --ssh-agent-private-keys "+
+			"(drop the flag to use the keys your ssh-agent holds), or set %s.sshPublicKey to the "+
+			"public key of the key you are passing", document, document)
+	}
+
 	return "", preflight.Permanent(&preflight.Failure{
-		Checked:  fmt.Sprintf("%sClusterConfiguration.sshPublicKey against the private keys dhctl holds", c.MetaConfig.ProviderName),
+		Checked:  fmt.Sprintf("%s.sshPublicKey against the private keys dhctl will offer", document),
 		Observed: fmt.Sprintf("the cloud will install %s; dhctl holds %s", ssh.FingerprintSHA256(declared), strings.Join(offered, ", ")),
-		Expected: "dhctl to hold the private key of the public key the cloud installs",
-		Fix: "pass the private key of sshPublicKey with --ssh-agent-private-keys, " +
-			"or set sshPublicKey in the <Provider>ClusterConfiguration to the public key of the key you are passing",
+		Expected: expected,
+		Fix:      fix,
 	})
+}
+
+// providerDocumentKind names the document the key came from the way the operator wrote it.
+// MetaConfig.ProviderName is lowercased while the configuration is parsed, so printing it raw
+// produced "yandexClusterConfiguration" — a document nobody has.
+func providerDocumentKind(providerName string) string {
+	if kind, ok := providerDocumentKinds[strings.ToLower(providerName)]; ok {
+		return kind
+	}
+	return "<Provider>ClusterConfiguration"
+}
+
+// providerDocumentKinds mirrors config.cloudProviderToProviderKind, keyed by the lowercased name
+// this side has. It is a copy rather than an import: pkg/config imports the preflight packages.
+var providerDocumentKinds = map[string]string{
+	"openstack":   "OpenStackClusterConfiguration",
+	"aws":         "AWSClusterConfiguration",
+	"gcp":         "GCPClusterConfiguration",
+	"yandex":      "YandexClusterConfiguration",
+	"vsphere":     "VsphereClusterConfiguration",
+	"azure":       "AzureClusterConfiguration",
+	"vcd":         "VCDClusterConfiguration",
+	"zvirt":       "ZvirtClusterConfiguration",
+	"huaweicloud": "HuaweiCloudClusterConfiguration",
+	"dynamix":     "DynamixClusterConfiguration",
+	"dvp":         "DVPClusterConfiguration",
 }
 
 // heldKey is a public key dhctl can authenticate with, and where it came from — the source is what
@@ -124,17 +164,26 @@ type heldKey struct {
 	source    string
 }
 
-// heldPublicKeys collects every key dhctl could offer the master: the ones given with
-// --ssh-agent-private-keys, and the ones a running ssh-agent has loaded.
+// heldPublicKeys collects the keys this configuration says the master will be reached with.
 //
-// The agent half is what makes this check useful rather than usually not applicable. Passing keys
-// by path is the minority case — most operators have theirs in an agent — and the check used to
-// give up whenever no path was given, which is exactly when the mismatch goes unnoticed until the
-// infrastructure exists and the master will not accept a login.
-func heldPublicKeys(configured []sshconfig.AgentPrivateKey) ([]heldKey, error) {
+// Named keys win outright: --ssh-agent-private-keys is the operator saying which key to use, and
+// if the one they named is not the one the cloud installs, that is worth reporting even when a
+// running agent happens to hold a match. It was the union once, and the union let exactly this
+// through — a wrong key on the flag, the right one in the agent, the check green and the bootstrap
+// failing on the master minutes later. The connection does offer both, so a union is not wrong in
+// principle; what it is not is what the operator asked for, and in practice the extra wrong key
+// spends one of the server's few permitted authentication attempts.
+//
+// The agent is read only when no key was named. That is the common case — most operators keep
+// theirs in an agent — and it is what makes this check apply at all rather than give up.
+func heldPublicKeys(configured []sshconfig.AgentPrivateKey, authSock string) ([]heldKey, error) {
 	signers, err := bastionSigners(configured)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(signers) == 0 {
+		return agentPublicKeys(authSock), nil
 	}
 
 	held := make([]heldKey, 0, len(signers))
@@ -146,13 +195,24 @@ func heldPublicKeys(configured []sshconfig.AgentPrivateKey) ([]heldKey, error) {
 		held = append(held, heldKey{publicKey: signer.PublicKey(), source: source})
 	}
 
-	return append(held, agentPublicKeys()...), nil
+	return held, nil
 }
 
-// agentPublicKeys asks the running ssh-agent what it holds. A missing or unreachable agent is not
-// an error: it only means there is nothing to add.
-func agentPublicKeys() []heldKey {
-	socket := os.Getenv("SSH_AUTH_SOCK")
+// authSockOf is the agent socket dhctl will use, which is not always the one in the environment:
+// the settings carry an explicit path that overrides it. Reading the environment directly was
+// wrong — the check would consult an agent the connection never talks to, and pass on a key that
+// is never offered.
+func authSockOf(initializer *providerinitializer.SSHProviderInitializer) string {
+	sett := initializer.GetSettings()
+	if sett == nil {
+		return ""
+	}
+	return sett.AuthSock()
+}
+
+// agentPublicKeys asks the ssh-agent at socket what it holds. A missing or unreachable agent is
+// not an error: it only means there is nothing to add.
+func agentPublicKeys(socket string) []heldKey {
 	if socket == "" {
 		return nil
 	}
