@@ -52,7 +52,7 @@ type State struct {
 	// ConvergeUserExpiry is when the accounts on those masters stop accepting logins. A
 	// name carries no age of its own, and a cleanup skipped in commander or sshless mode
 	// never prunes the list. A zero value is an expired one: it predates this field.
-	ConvergeUserExpiry time.Time `json:"convergeUserExpiry,omitempty"`
+	ConvergeUserExpiry time.Time `json:"convergeUserExpiry,omitzero"`
 }
 
 type stateStore interface {

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -106,7 +107,17 @@ func (s *fakeStateStore) Delete(*Context) error {
 
 // switcherWithConvergeUserNodes builds a switcher whose converge state names the given
 // masters as built by this converge, with "ubuntu" as the user dhctl was started with.
+// The accounts are live: an expired list reads empty to every consumer.
 func switcherWithConvergeUserNodes(t *testing.T, connection *sshconfig.ConnectionConfig, nodes ...string) *KubeClientSwitcher {
+	t.Helper()
+
+	return switcherWithConvergeUserState(t, connection, &State{
+		ConvergeUserNodes:  nodes,
+		ConvergeUserExpiry: time.Now().Add(time.Hour),
+	})
+}
+
+func switcherWithConvergeUserState(t *testing.T, connection *sshconfig.ConnectionConfig, state *State) *KubeClientSwitcher {
 	t.Helper()
 
 	initializer := providerinitializer.NewSSHProviderInitializer(
@@ -115,9 +126,34 @@ func switcherWithConvergeUserNodes(t *testing.T, connection *sshconfig.Connectio
 	)
 
 	ctx := NewContext(t.Context(), Params{SSHProviderInitializer: initializer, Cache: cache.NewTestCache()})
-	ctx.stateStore = &fakeStateStore{state: &State{ConvergeUserNodes: nodes}}
+	ctx.stateStore = &fakeStateStore{state: state}
 
 	return NewKubeClientSwitcher(ctx, nil, KubeClientSwitcherParams{})
+}
+
+// The expiry is what keeps an unfinished cleanup from repeating itself for ever: the names
+// reach the credentials pick, the generation split and the cleanup alike, and a login as a
+// dead account fails the cleanup, which keeps the list, which fails the next cleanup.
+func TestAnExpiredRecordReachesNoConsumer(t *testing.T) {
+	expired := &State{
+		ConvergeUserNodes:  []string{"cluster-master-0"},
+		ConvergeUserExpiry: time.Now().Add(-time.Minute),
+	}
+
+	switcher := switcherWithConvergeUserState(t, operatorConnection(), expired)
+
+	creds, err := switcher.credentialsFor([]string{"cluster-master-0"})
+	require.NoError(t, err)
+	require.Equal(t, "ubuntu", creds.User, "a node whose converge user has expired is still reached as that user")
+
+	host := session.Host{Host: "10.12.1.1", Name: "cluster-master-0"}
+	kept, err := switcher.hostsOfOneGeneration([]session.Host{host})
+	require.NoError(t, err)
+	require.Equal(t, []session.Host{host}, kept, "the expired generation is still told apart from the operator's")
+
+	// Nothing to remove: the accounts died on their own, and the ssh provider here opens
+	// no connection, so a cleanup that still tried would fail instead of returning nil.
+	require.NoError(t, switcher.removeConvergeUser(t.Context(), nil))
 }
 
 func operatorConnection() *sshconfig.ConnectionConfig {

@@ -66,6 +66,10 @@ type Context struct {
 	stateChecker          infrastructure.StateChecker
 	clientSwitcher        MultiMasterClientSwitcher
 
+	// convergeUserForgotten keeps the warning about an expired node list to one per run:
+	// every switch, every credentials pick and the cleanup read that list.
+	convergeUserForgotten sync.Once
+
 	providerGetter infrastructure.CloudProviderGetter
 
 	opts *options.GlobalOptions
@@ -277,34 +281,46 @@ func (c *Context) SetConvergeState(state *State) error {
 	return c.stateStore.SetState(c, state)
 }
 
+// ConvergeState is what this converge recorded about itself. A node list older than the
+// accounts it names comes back empty: past their expiry nothing can log in as them, and
+// the names would only send a switch, the control-plane hook or the cleanup to a user
+// that is gone — which fails the cleanup, which keeps the list, run after run.
 func (c *Context) ConvergeState() (*State, error) {
-	return c.stateStore.GetState(c)
+	state, err := c.stateStore.GetState(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(state.ConvergeUserNodes) == 0 || time.Now().Before(state.ConvergeUserExpiry) {
+		return state, nil
+	}
+
+	c.convergeUserForgotten.Do(func() {
+		dhlog.FromContext(c.ctx).WarnContext(c.ctx, fmt.Sprintf(
+			"%s was never removed from %s, and the accounts there are past the expiry they were created with. "+
+				"Forgetting them: nothing can log in as them any more",
+			global.ConvergeUserName, strings.Join(state.ConvergeUserNodes, ", ")))
+	})
+
+	state.ConvergeUserNodes = nil
+
+	return state, nil
 }
 
 // DeleteConvergeStateIfUserGone drops the state a finished converge kept in the cluster:
 // the phase it may have had to resume and the masters it built with the converge user. A
 // master still listed keeps the whole state alive — the list is the only record of accounts
 // nobody has removed yet, and a cleanup skipped in commander or sshless mode reports no
-// error. Past their expiry those accounts accept no login from anyone, and a list of them
-// only sends the next converge logging in as a user that is gone.
+// error. An expired list is no record at all and reads empty, so it holds nothing back.
 func (c *Context) DeleteConvergeStateIfUserGone() error {
 	state, err := c.ConvergeState()
 	if err != nil {
 		return fmt.Errorf("read the converge state before deleting it: %w", err)
 	}
 
-	if len(state.ConvergeUserNodes) == 0 {
-		return c.stateStore.Delete(c)
-	}
-
-	if time.Now().Before(state.ConvergeUserExpiry) {
+	if len(state.ConvergeUserNodes) > 0 {
 		return nil
 	}
-
-	dhlog.FromContext(c.ctx).WarnContext(c.ctx, fmt.Sprintf(
-		"%s was never removed from %s, and the accounts there are past the expiry they were created with. "+
-			"Dropping the record: nothing can log in as them any more",
-		global.ConvergeUserName, strings.Join(state.ConvergeUserNodes, ", ")))
 
 	return c.stateStore.Delete(c)
 }
