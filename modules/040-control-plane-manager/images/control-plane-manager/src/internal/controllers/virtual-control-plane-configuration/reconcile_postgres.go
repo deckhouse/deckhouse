@@ -24,6 +24,7 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,12 +33,13 @@ import (
 )
 
 const (
-	datastoreReadyRequeue = 5 * time.Second
-	datastoreManifestKey  = "datastore.yaml.tpl"
+	datastoreReadyRequeue  = 5 * time.Second
+	datastoreManifestKey   = "datastore.yaml.tpl"
+	datastoreHAManifestKey = "datastore-ha.yaml.tpl"
 )
 
 func (r *reconciler) reconcilePostgres(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, configSecret *corev1.Secret) (reconcile.Result, error) {
-	target, err := buildTargetPostgres(configSecret, vcp.Namespace)
+	target, err := buildTargetPostgres(configSecret, vcp)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -65,6 +67,19 @@ func (r *reconciler) reconcilePostgres(ctx context.Context, vcp *controlplanev1a
 		}
 	}
 
+	shapeBase := current.DeepCopy()
+	shapeChanged, err := syncPostgresShape(current, target)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if shapeChanged {
+		if err := r.client.Patch(ctx, current, client.MergeFrom(shapeBase)); err != nil {
+			return reconcile.Result{}, fmt.Errorf("patch Postgres shape: %w", err)
+		}
+		// Resizing the datastore takes a while; come back instead of declaring it Available.
+		return reconcile.Result{RequeueAfter: datastoreReadyRequeue}, nil
+	}
+
 	if !isPostgresAvailable(current) {
 		return reconcile.Result{RequeueAfter: datastoreReadyRequeue}, nil
 	}
@@ -79,19 +94,72 @@ func postgres() *unstructured.Unstructured {
 	return obj
 }
 
-func buildTargetPostgres(configSecret *corev1.Secret, namespace string) (*unstructured.Unstructured, error) {
-	raw, ok := configSecret.Data[datastoreManifestKey]
+// datastoreManifestKeyFor picks the datastore template. Two of them, because the operator's CEL
+// forbids spec.cluster on a Standalone and the Replacer has no conditionals.
+func datastoreManifestKeyFor(vcp *controlplanev1alpha1.VirtualControlPlane) string {
+	if vcp.Spec.HighAvailability {
+		return datastoreHAManifestKey
+	}
+	return datastoreManifestKey
+}
+
+func buildTargetPostgres(configSecret *corev1.Secret, vcp *controlplanev1alpha1.VirtualControlPlane) (*unstructured.Unstructured, error) {
+	key := datastoreManifestKeyFor(vcp)
+	raw, ok := configSecret.Data[key]
 	if !ok {
-		return nil, fmt.Errorf("config Secret missing %q", datastoreManifestKey)
+		return nil, fmt.Errorf("config Secret missing %q", key)
 	}
 
 	obj := &unstructured.Unstructured{}
 	if err := yaml.Unmarshal(raw, obj); err != nil {
 		return nil, fmt.Errorf("decode datastore manifest: %w", err)
 	}
-	obj.SetNamespace(namespace)
+	obj.SetNamespace(vcp.Namespace)
 
 	return obj, nil
+}
+
+// syncPostgresShape reconciles spec.type and spec.cluster, and nothing else: the operator's webhook
+// generates spec.users[].password, so comparing the whole spec would patch it away every reconcile
+// and rotate the datastore credentials.
+func syncPostgresShape(current, target *unstructured.Unstructured) (bool, error) {
+	targetType, _, err := unstructured.NestedString(target.Object, "spec", "type")
+	if err != nil {
+		return false, fmt.Errorf("read target spec.type: %w", err)
+	}
+	currentType, _, err := unstructured.NestedString(current.Object, "spec", "type")
+	if err != nil {
+		return false, fmt.Errorf("read current spec.type: %w", err)
+	}
+
+	targetCluster, targetHasCluster, err := unstructured.NestedMap(target.Object, "spec", "cluster")
+	if err != nil {
+		return false, fmt.Errorf("read target spec.cluster: %w", err)
+	}
+	currentCluster, currentHasCluster, err := unstructured.NestedMap(current.Object, "spec", "cluster")
+	if err != nil {
+		return false, fmt.Errorf("read current spec.cluster: %w", err)
+	}
+
+	if currentType == targetType &&
+		currentHasCluster == targetHasCluster &&
+		equality.Semantic.DeepEqual(currentCluster, targetCluster) {
+		return false, nil
+	}
+
+	if err := unstructured.SetNestedField(current.Object, targetType, "spec", "type"); err != nil {
+		return false, fmt.Errorf("set spec.type: %w", err)
+	}
+	// The operator's CEL forbids spec.cluster on a Standalone, so the block is removed, not blanked.
+	if targetHasCluster {
+		if err := unstructured.SetNestedMap(current.Object, targetCluster, "spec", "cluster"); err != nil {
+			return false, fmt.Errorf("set spec.cluster: %w", err)
+		}
+	} else {
+		unstructured.RemoveNestedField(current.Object, "spec", "cluster")
+	}
+
+	return true, nil
 }
 
 func isPostgresAvailable(obj *unstructured.Unstructured) bool {
