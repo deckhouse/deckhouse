@@ -354,22 +354,12 @@ spec:
   make violations visible in the audit and in Grafana, never to block a system component.
 
   Namespaces that opted into enforcement with `security.deckhouse.io/enable-security-policy-check`
-  are excluded, because the constraint below already covers them with the configured action.
-  When that constraint is not rendered for this standard, the exclusion is dropped so that opted-in
-  namespaces still get the warning.
+  are excluded, because the constraint below always covers them with the configured action.
 
   The block does not depend on the enforcement action, so it is rendered on the iteration of the
   default action, which is always present in internal.podSecurityStandards.enforcementActions.
   That keeps it at one object per standard instead of one per action.
 */}}
-{{/*
-  The restricted enforcing constraint is rendered for every defaultPolicy. Gating it on
-  `defaultPolicy != Restricted`, as the baseline one still is, used to disable the strictest
-  constraint exactly when the strictest default policy was configured: a system namespace labeled
-  both `security.deckhouse.io/pod-policy: restricted` and `enable-security-policy-check: "true"`
-  was then enforced against baseline and only warned against restricted.
-*/}}
-{{- $d8EnforceRendered := or (and (eq $standard "baseline") (ne $defaultPolicy "privileged")) (eq $standard "restricted") }}
 {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
@@ -393,18 +383,29 @@ spec:
         - key: gatekeeper.sh/operation
           operator: NotIn
           values: ["webhook"]
-  {{- if $d8EnforceRendered }}
     namespaceSelector:
       matchExpressions:
         - { key: security.deckhouse.io/enable-security-policy-check, operator: NotIn, values: [ "true" ] }
-  {{- end }}
   {{- if $parameters }}
   parameters:
     {{ $parameters | toYaml | nindent 4 }}
   {{- end }}
 {{- end }}
+{{/*
+  Pod Security Standards at the configured action for system namespaces that opted into
+  enforcement with `security.deckhouse.io/enable-security-policy-check: "true"`.
+
+  Rendered for both standards and for every defaultPolicy, which applies to non-system namespaces
+  only. Gating it on defaultPolicy, as it once was, disabled a standard exactly where the namespace
+  had asked for it: with `defaultPolicy: Restricted` the restricted constraint was dropped, and with
+  `defaultPolicy: Privileged` the baseline one, leaving the namespace enforced against the weaker
+  standard and only warned about the stronger.
+
+  The workloads this reaches carry a SecurityPolicyException wherever they need one, and
+  `defaultPolicy: Baseline` has been the default since v1.55, so most clusters already enforce both
+  standards in these namespaces.
+*/}}
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
-{{- if $d8EnforceRendered }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: {{ $policyCRDName }}
@@ -447,8 +448,7 @@ spec:
   {{- if $parameters }}
   parameters:
     {{ $parameters | toYaml | nindent 4 }}
-  {{- end }} 
-{{- end }} 
+  {{- end }}
 {{/* #### end of TODO */}}
 {{- end }}
 {{- end }}
