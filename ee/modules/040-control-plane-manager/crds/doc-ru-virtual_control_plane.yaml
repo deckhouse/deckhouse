@@ -136,7 +136,7 @@ spec:
                 properties:
                   type:
                     description: |
-                      Как публикуется Kubernetes API тенанта.
+                      Публикация Kubernetes API тенанта.
 
                       Пока поддерживается только `LoadBalancer` (per-VCP ALB использует inlet типа `LoadBalancer`).
           status:
