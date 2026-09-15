@@ -71,10 +71,32 @@
     - !reference [.scripts, login_write_registry]
     - !reference [.scripts, login_read_registry]
 
+# Same WERF_ENV values as build_*:tag in .gitlab/build.yml. Those jobs aren't
+# a parallel:matrix themselves (each edition is its own named job), so this
+# stays a plain static needs list — every promote:tag instance waits for all
+# of them, not just its own edition.
+.needs_build_tag: &needs_build_tag
+  - job: build_fe:tag
+  - job: build_ce:tag
+  - job: build_ee:tag
+  - job: build_be:tag
+  - job: build_se:tag
+  - job: build_se_plus:tag
+
+# promote:tag IS a WERF_ENV parallel:matrix job, so deploy:<channel> below can
+# depend on the matching edition instance via a matrix expression
+# (GitLab 18.6+, https://docs.gitlab.com/ci/yaml/matrix_expressions).
+.needs_promote_tag: &needs_promote_tag
+  job: promote:tag
+  parallel:
+    matrix:
+      - WERF_ENV: ['$[[ matrix.WERF_ENV ]]']
+
 promote:tag:
   extends:
     - .release_base
     - .rules:on_tag_manual
+  needs: *needs_build_tag
   parallel:
     matrix:
       - WERF_ENV: [CE, EE, FE, BE, SE, SE-plus]
@@ -135,6 +157,8 @@ deploy:alpha:
     - .rules:on_tag_manual
   variables:
     RELEASE_CHANNEL: alpha
+  needs:
+    - *needs_promote_tag
   parallel:
     matrix:
       - WERF_ENV: [CE, EE, FE, BE, SE, SE-plus]
@@ -147,6 +171,8 @@ deploy:beta:
     - .rules:on_tag_manual
   variables:
     RELEASE_CHANNEL: beta
+  needs:
+    - *needs_promote_tag
   parallel:
     matrix:
       - WERF_ENV: [CE, EE, FE, BE, SE, SE-plus]
@@ -160,6 +186,7 @@ deploy:early-access:
   variables:
     RELEASE_CHANNEL: early-access
   needs:
+    - *needs_promote_tag
     - job: check_release_operator:early-access
   parallel:
     matrix:
@@ -174,6 +201,7 @@ deploy:stable:
   variables:
     RELEASE_CHANNEL: stable
   needs:
+    - *needs_promote_tag
     - job: check_release_operator:stable
   parallel:
     matrix:
@@ -188,6 +216,7 @@ deploy:rock-solid:
   variables:
     RELEASE_CHANNEL: rock-solid
   needs:
+    - *needs_promote_tag
     - job: check_release_operator:rock-solid
   parallel:
     matrix:
