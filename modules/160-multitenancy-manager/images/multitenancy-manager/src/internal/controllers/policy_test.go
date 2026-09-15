@@ -133,6 +133,15 @@ func TestPolicy_NonDelegatableRoleIsReported(t *testing.T) {
 		t.Fatalf("message must name the non-delegatable role only, got %q", cond.Message)
 	}
 
+	// A ClusterRole label change is what heals the condition, so the label watch must enqueue
+	// this policy, and until then the reconciler asks to be re-run on the catalog cadence.
+	if reqs := r.policiesAllowing(context.Background(), plain); len(reqs) != 1 || reqs[0].Name != "roles" {
+		t.Fatalf("a ClusterRole change must enqueue the allow-list policy, got %v", reqs)
+	}
+	if res, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "roles"}}); err != nil || res.RequeueAfter != ResyncInterval {
+		t.Fatalf("an ineffective policy must requeue after %s, got %+v %v", ResyncInterval, res, err)
+	}
+
 	// Marking the role delegatable clears the condition on the next reconcile.
 	plain.Labels = map[string]string{"rbac.deckhouse.io/delegatable": "true"}
 	if err := r.Update(context.Background(), plain); err != nil {
@@ -146,5 +155,8 @@ func TestPolicy_NonDelegatableRoleIsReported(t *testing.T) {
 	}
 	if cond := apimeta.FindStatusCondition(got.Status.Conditions, PolicyConditionAllowedEffective); cond == nil || cond.Status != metav1.ConditionTrue {
 		t.Fatalf("expected AllowedEffective=True once the role is delegatable, got %+v", cond)
+	}
+	if res, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "roles"}}); err != nil || res.RequeueAfter != 0 {
+		t.Fatalf("an effective policy must not requeue, got %+v %v", res, err)
 	}
 }

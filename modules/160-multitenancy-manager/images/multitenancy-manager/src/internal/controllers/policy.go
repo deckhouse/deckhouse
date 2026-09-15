@@ -21,10 +21,16 @@ import (
 	"fmt"
 	"strings"
 
+	rbacv1 "k8s.io/api/rbac/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/api/v1alpha1"
 	"controller/internal/resolve"
@@ -85,6 +91,14 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		effective.Message = strings.Join(ineffective, "; ")
 	}
 
+	// An ineffective entry depends on objects this reconciler does not own (a label on a
+	// ClusterRole, an excluded filter on a definition); besides the watches below, re-check it on
+	// the catalog's cadence so the condition heals even when no event reaches us.
+	result := ctrl.Result{}
+	if len(ineffective) > 0 {
+		result.RequeueAfter = ResyncInterval
+	}
+
 	before := policy.Status.DeepCopy()
 	policy.Status.ObservedGeneration = policy.Generation
 	apimeta.SetStatusCondition(&policy.Status.Conditions, selectors)
@@ -92,12 +106,31 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if before.ObservedGeneration == policy.Status.ObservedGeneration &&
 		conditionUnchanged(before.Conditions, policy.Status.Conditions, PolicyConditionSelectorsValid) &&
 		conditionUnchanged(before.Conditions, policy.Status.Conditions, PolicyConditionAllowedEffective) {
-		return ctrl.Result{}, nil
+		return result, nil
 	}
 	if err := r.Status().Update(ctx, policy); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update policy status: %w", err)
 	}
-	return ctrl.Result{}, nil
+	return result, nil
+}
+
+// policiesAllowing enqueues every policy with an allow-list: the object whose labels changed may be
+// one of the allowed names, and policies are few enough that filtering by name is not worth it.
+func (r *PolicyReconciler) policiesAllowing(ctx context.Context, _ client.Object) []reconcile.Request {
+	policies := &v1alpha1.ClusterResourceGrantPolicyList{}
+	if err := r.List(ctx, policies); err != nil {
+		return nil
+	}
+	var out []reconcile.Request
+	for i := range policies.Items {
+		for _, entry := range policies.Items[i].Spec.Resources {
+			if len(entry.Allowed) > 0 {
+				out = append(out, reconcile.Request{NamespacedName: types.NamespacedName{Name: policies.Items[i].Name}})
+				break
+			}
+		}
+	}
+	return out
 }
 
 // ineffectiveAllowed names every allowed entry the resolver would refuse anyway: the registration
@@ -183,5 +216,10 @@ func (r *PolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ClusterResourceGrantPolicy{}).
 		Named("grant-policy-status").
+		// A definition's excluded filter or a ClusterRole's delegatable label decides whether an
+		// allowed name grants anything; both change without touching the policy.
+		Watches(&v1alpha1.GrantableClusterResourceDefinition{}, handler.EnqueueRequestsFromMapFunc(r.policiesAllowing)).
+		Watches(&rbacv1.ClusterRole{}, handler.EnqueueRequestsFromMapFunc(r.policiesAllowing),
+			builder.WithPredicates(predicate.LabelChangedPredicate{})).
 		Complete(r)
 }

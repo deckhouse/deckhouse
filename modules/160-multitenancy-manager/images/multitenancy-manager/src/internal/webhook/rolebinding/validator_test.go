@@ -197,6 +197,27 @@ func TestValidate_DisabledForProjects(t *testing.T) {
 	assert.Contains(t, resp.Result.Message, "disabled")
 }
 
+// TestValidate_DisabledAliasOutsidePrefixes: a compat alias (d8:use:role:*) is outside the granted
+// prefixes, and the prefix refusal used to win, so the author never saw the deprecation hint. The
+// alias is refused with the message that names its replacement.
+func TestValidate_DisabledAliasOutsidePrefixes(t *testing.T) {
+	c := newClient(t, clusterRole("d8:use:role:admin", nil, map[string]string{
+		rolebinding.AnnotationDisabledForProjects:  "true",
+		rolebinding.AnnotationDeprecatedReplacedBy: "d8:namespace:admin",
+	}))
+	resp := Validate(context.Background(), c, request(admissionv1.Create, "alice"),
+		Input{RoleRefKind: "ClusterRole", RoleRefName: "d8:use:role:admin"})
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "disabled for direct use in projects")
+	assert.Contains(t, resp.Result.Message, `"d8:namespace:admin"`)
+
+	// A missing role outside the prefixes is still the prefix refusal, for everyone.
+	resp = Validate(context.Background(), c, request(admissionv1.Create, ControllerServiceAccount),
+		Input{RoleRefKind: "ClusterRole", RoleRefName: "cluster-admin"})
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "cannot be granted via a project role binding")
+}
+
 func TestValidate_CustomRoleLabels(t *testing.T) {
 	// custom role without the required kind label is rejected
 	c := newClient(t, clusterRole("d8:custom:bad", nil, nil))
