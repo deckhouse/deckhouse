@@ -22,9 +22,8 @@ import (
 )
 
 // The node list is the only record of converge-user accounts nobody has taken off the
-// masters yet, and a cleanup skipped in commander or sshless mode reports no error to say
-// so. It stops being a record at the expiry those accounts were created with: past it the
-// names would only send the next converge logging in as a user that is gone.
+// masters yet. It stops being one at the expiry those accounts were created with: past it
+// the names only send the next converge logging in as a user that is gone.
 func TestConvergeStateOutlivesNodesNobodyCleanedUpUntilTheirExpiry(t *testing.T) {
 	deleteWith := func(t *testing.T, state *State) bool {
 		t.Helper()

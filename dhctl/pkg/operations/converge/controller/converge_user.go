@@ -68,10 +68,9 @@ func masterCloudConfig(ctx gocontext.Context, metaConfig *config.MetaConfig, key
 	return withConvergeUser(cloudConfigB64, authorized, time.Now().UTC().Add(convergeUserLifetime))
 }
 
-// operatorPrivateKeys are the keys dhctl was started with. They are read from the
-// connection config and never from the live SSH client: converge switches that client to
-// a user of its own before a master is rendered, and the public half of the key it
-// generates for that user must not reach a new master's authorized_keys.
+// operatorPrivateKeys are the keys dhctl was started with, read from the connection config
+// and never from the live SSH client: converge switches that client to a user of its own,
+// whose generated public key must not reach a new master's authorized_keys.
 func operatorPrivateKeys(ctx *context.Context) []sshconfig.AgentPrivateKey {
 	connection := ctx.SSHProviderInitializer.GetConfig()
 	if connection == nil || connection.Config == nil {

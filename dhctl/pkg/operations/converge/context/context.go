@@ -282,9 +282,8 @@ func (c *Context) SetConvergeState(state *State) error {
 }
 
 // ConvergeState is what this converge recorded about itself. A node list older than the
-// accounts it names comes back empty: past their expiry nothing can log in as them, and
-// the names would only send a switch, the control-plane hook or the cleanup to a user
-// that is gone — which fails the cleanup, which keeps the list, run after run.
+// accounts it names comes back empty: past their expiry the names would only send a switch,
+// a hook or the cleanup to a user that is gone, failing the cleanup that would drop them.
 func (c *Context) ConvergeState() (*State, error) {
 	state, err := c.stateStore.GetState(c)
 	if err != nil {
@@ -307,11 +306,9 @@ func (c *Context) ConvergeState() (*State, error) {
 	return state, nil
 }
 
-// DeleteConvergeStateIfUserGone drops the state a finished converge kept in the cluster:
-// the phase it may have had to resume and the masters it built with the converge user. A
-// master still listed keeps the whole state alive — the list is the only record of accounts
-// nobody has removed yet, and a cleanup skipped in commander or sshless mode reports no
-// error. An expired list is no record at all and reads empty, so it holds nothing back.
+// DeleteConvergeStateIfUserGone drops the state a finished converge kept in the cluster: the
+// phase it may have had to resume and the masters it built with the converge user. A master
+// still listed keeps the state alive — it is the only record of an account nobody removed.
 func (c *Context) DeleteConvergeStateIfUserGone() error {
 	state, err := c.ConvergeState()
 	if err != nil {

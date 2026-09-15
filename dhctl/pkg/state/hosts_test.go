@@ -23,9 +23,8 @@ import (
 )
 
 // A master a converge created is kept out of the live session on purpose — one session
-// carries one generation of users — so the hosts cache is the only place its address
-// lives. Dropping it maps the node to an empty address, and the readiness check refuses
-// to go on with one.
+// carries one generation of users — so the hosts cache is the only place its address lives.
+// Dropping it maps the node to an empty address, which the readiness check refuses.
 func TestMergeMasterHosts(t *testing.T) {
 	sessionHosts := []session.Host{
 		{Host: "10.0.0.1", Name: "cluster-master-0"},

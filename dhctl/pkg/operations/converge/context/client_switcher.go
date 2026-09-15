@@ -67,10 +67,9 @@ func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params K
 	}
 }
 
-// CleanupConvergeUser removes the account this converge baked into the masters it built.
-// A node left uncleaned is not a converge failure: the rollout is over by the time this
-// runs and the account expires on its own, while failing here would report a finished
-// converge as broken. The error is for the caller to keep the state with, not to abort on.
+// CleanupConvergeUser removes the account this converge baked into the masters it built. A
+// node left uncleaned is not a converge failure: the rollout is over and the account expires
+// on its own. The error is for the caller to keep the state with, not to abort on.
 func (s *KubeClientSwitcher) CleanupConvergeUser(ctx context.Context) error {
 	const action = "Remove the converge user from the nodes this converge built"
 
@@ -146,6 +145,9 @@ func (s *KubeClientSwitcher) removeConvergeUser(ctx context.Context, sshProvider
 
 	var failures *multierror.Error
 
+	// Both sides of the comparison inside must name the node the same way: the cache holds
+	// MasterIPForSSH and the session the address it dialled, which under a bastion is the
+	// internal IP. Where a provider exposes both, the live node is no longer ordered last.
 	for _, node := range cleanupOrder(convergeState.ConvergeUserNodes, addresses, sshCl.Session().Host()) {
 		address := addresses[node]
 
