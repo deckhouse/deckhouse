@@ -161,7 +161,7 @@ properties:
             alertSeverity: 4
       globalVersion:
         type: string
-        x-examples: ["1.25"] # must be real
+        x-examples: ["1.27"] # must be real
       isGlobalVersionIstiodReady:
         type: boolean
         default: false
