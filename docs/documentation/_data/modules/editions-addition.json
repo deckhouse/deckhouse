@@ -1,7 +1,14 @@
 {
   "ce": {
-    "name": "CE",
-    "title": "Community Edition"
+    "name": "Open, CE",
+    "title": "Open/Community Edition"
+  },
+  "core": {
+    "name": "Core",
+    "title": "Core Edition",
+    "includeModules": [
+      "admission-policy-engine"
+    ]
   },
   "be": {
     "name": "BE",
@@ -20,8 +27,8 @@
     "title": "Standard Edition"
   },
   "ee": {
-    "name": "EE",
-    "title": "Enterprise Edition"
+    "name": "Ultimate, EE",
+    "title": "Ultimate/Enterprise Edition"
   },
   "cse-lite": {
     "name": "CSE Lite",

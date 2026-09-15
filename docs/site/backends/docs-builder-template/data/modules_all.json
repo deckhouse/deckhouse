@@ -13,8 +13,15 @@
     ]
   },
   "alb": {
+    "extensions": [
+      "advanced_networking",
+      "billing",
+      "cluster_union",
+      "multitenancy"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -26,7 +33,15 @@
       "ssdlc"
     ]
   },
+  "ai-inference": {
+    "extensions": [
+      "ai_inference"
+    ]
+  },
   "ai-models": {
+    "extensions": [
+      "ai_inference"
+    ],
     "editions": [
       "ee"
     ],
@@ -70,6 +85,10 @@
     ]
   },
   "commander": {
+    "extensions": [
+      "billing",
+      "cluster_union"
+    ],
     "editions": [
       "ce",
       "be",
@@ -99,6 +118,9 @@
     ]
   },
   "commander-agent": {
+    "extensions": [
+      "billing"
+    ],
     "editions": [
       "ce",
       "be",
@@ -133,6 +155,9 @@
     ]
   },
   "csi-ceph": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ce",
       "se",
@@ -148,6 +173,9 @@
     ]
   },
   "csi-hpe": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee"
     ],
@@ -167,6 +195,9 @@
     ]
   },
   "csi-huawei": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee"
     ],
@@ -187,6 +218,9 @@
     ]
   },
   "csi-netapp": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee"
     ],
@@ -207,6 +241,9 @@
     ]
   },
   "csi-nfs": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ce",
       "se",
@@ -222,6 +259,9 @@
     ]
   },
   "csi-s3": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee"
     ],
@@ -231,6 +271,9 @@
     ]
   },
   "csi-scsi-generic": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee",
       "cse-lite",
@@ -243,6 +286,9 @@
     ]
   },
   "csi-yadro-tatlin-unified": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee",
       "cse-lite",
@@ -295,6 +341,10 @@
     ]
   },
   "ingress-nginx": {
+    "extensions": [
+      "billing",
+      "cluster_union"
+    ],
     "editions": [
       "ce",
       "be",
@@ -311,6 +361,9 @@
     ]
   },
   "gpu": {
+    "extensions": [
+      "gpu_management"
+    ],
     "editions": [
       "ee"
     ],
@@ -350,6 +403,9 @@
     ]
   },
   "managed-cassandra": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -368,6 +424,9 @@
     ]
   },
   "managed-hive-metastore": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -377,6 +436,9 @@
     ]
   },
   "managed-kafka": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -386,6 +448,9 @@
     ]
   },
   "managed-memcached": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee",
       "se",
@@ -406,6 +471,9 @@
     ]
   },
   "managed-postgres": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee",
       "se",
@@ -428,6 +496,9 @@
     ]
   },
   "managed-trino": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -437,6 +508,9 @@
     ]
   },
   "managed-valkey": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee",
       "se",
@@ -479,6 +553,9 @@
     ]
   },
   "monitoring-kubernetes": {
+    "extensions": [
+      "billing"
+    ],
     "editions": [
       "ce",
       "be",
@@ -510,6 +587,9 @@
     ]
   },
   "monitoring-kubernetes": {
+    "extensions": [
+      "billing"
+    ],
     "editions": [
       "ce",
       "be",
@@ -629,6 +709,9 @@
     ]
   },
   "operator-prometheus": {
+    "extensions": [
+      "billing"
+    ],
     "editions": [
       "ce",
       "be",
@@ -647,6 +730,9 @@
     ]
   },
   "operator-trivy": {
+    "extensions": [
+      "advanced_security"
+    ],
     "editions": [
       "ee",
       "cse-lite",
@@ -700,6 +786,9 @@
     ]
   },
   "prometheus": {
+    "extensions": [
+      "billing"
+    ],
     "editions": [
       "ce",
       "be",
@@ -747,6 +836,9 @@
     ]
   },
   "runtime-audit-engine": {
+    "extensions": [
+      "advanced_security"
+    ],
     "editions": [
       "ee",
       "cse-lite",
@@ -769,6 +861,31 @@
     ]
   },
   "sdn": {
+    "extensions": [
+      "advanced_networking",
+      "cluster_union",
+      "multitenancy",
+      "network_security"
+    ],
+    "extensionsWithRestrictions": [
+      "advanced_networking",
+      "multitenancy",
+      "network_security"
+    ],
+    "extensionsWithRestrictionsComments": {
+      "advanced_networking": {
+        "en": "Only BGP, eBPF, VxLAN integration, Network Security, WAF, Network Policies, DLP, multitenancy",
+        "ru": "Только интеграция по BGP, eBPF, VxLAN, Network Security, WAF, Network Policies, DLP, мультитенантность"
+      },
+      "multitenancy": {
+        "en": "Only BGP, eBPF, VxLAN integration, Network Security, WAF, Network Policies, DLP, multitenancy",
+        "ru": "Только интеграция по BGP, eBPF, VxLAN, Network Security, WAF, Network Policies, DLP, мультитенантность"
+      },
+      "network_security": {
+        "en": "Only BGP, eBPF, VxLAN integration, Network Security, WAF, Network Policies, DLP, multitenancy",
+        "ru": "Только интеграция по BGP, eBPF, VxLAN, Network Security, WAF, Network Policies, DLP, мультитенантность"
+      }
+    },
     "editions": [
       "ce",
       "be",
@@ -791,6 +908,9 @@
     ]
   },
   "sds-elastic": {
+    "extensions": [
+      "advanced_storage"
+    ],
     "editions": [
       "ee"
     ],
@@ -800,8 +920,12 @@
     ]
   },
   "sds-local-volume": {
+    "extensions": [
+      "storage"
+    ],
     "editions": [
       "ce",
+      "core",
       "se",
       "se-plus",
       "ee",
@@ -809,7 +933,8 @@
       "cse-pro"
     ],
     "editionsWithRestrictions": [
-      "ce"
+      "ce",
+      "core"
     ],
     "editionsWithRestrictionsComments": {
       "all": {
@@ -824,6 +949,10 @@
     ]
   },
   "sds-node-configurator": {
+    "extensions": [
+      "advanced_storage",
+      "storage"
+    ],
     "editions": [
       "ce",
       "se",
@@ -839,6 +968,9 @@
     ]
   },
   "sds-object": {
+    "extensions": [
+      "advanced_storage"
+    ],
     "editions": [
       "ee"
     ],
@@ -848,6 +980,9 @@
     ]
   },
   "sds-replicated-volume": {
+    "extensions": [
+      "storage"
+    ],
     "editions": [
       "ce",
       "be",
@@ -886,6 +1021,11 @@
     ]
   },
   "snapshot-controller": {
+    "extensions": [
+      "advanced_storage",
+      "storage",
+      "storage_integration"
+    ],
     "editions": [
       "ce",
       "be",
@@ -912,6 +1052,11 @@
     ]
   },
   "storage-foundation": {
+    "extensions": [
+      "advanced_storage",
+      "storage",
+      "storage_integration"
+    ],
     "editions": [
       "ce",
       "be",
@@ -925,6 +1070,11 @@
     ]
   },
   "storage-volume-data-manager": {
+    "extensions": [
+      "advanced_storage",
+      "storage",
+      "storage_integration"
+    ],
     "editions": [
       "ee"
     ],
@@ -935,6 +1085,11 @@
     ]
   },
   "state-snapshotter": {
+    "extensions": [
+      "advanced_storage",
+      "storage",
+      "storage_integration"
+    ],
     "editions": [
       "ce",
       "be",
@@ -948,6 +1103,18 @@
     ]
   },
   "stronghold": {
+    "extensions": [
+      "secrets_management"
+    ],
+    "extensionsWithRestrictions": [
+      "secrets_management"
+    ],
+    "extensionsWithRestrictionsComments": {
+      "secrets_management": {
+        "en": "EE functionality only",
+        "ru": "Только функциональность, доступная в EE"
+      }
+    },
     "editionsWithRestrictions": [
       "ce",
       "be",

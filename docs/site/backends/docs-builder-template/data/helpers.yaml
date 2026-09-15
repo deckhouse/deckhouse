@@ -24,30 +24,34 @@ moduleAllowedStages:
 # It is used for sorting editions (e.g. to calculate editions list from minimal available one)
 editions:
   - id: "ce"
-    name: "CE"
-    title: "Community Edition"
+    name: "Open, CE"
+    title: "Open/Community Edition"
     weight: 1
   - id: "be"
     name: "BE"
     title: "Basic Edition"
-    weight: 2
+    weight: 3
+  - id: "core"
+    name: "Core"
+    title: "Core Edition"
+    weight: 5
   - id: "se"
     name: "SE"
     title: "Standard Edition"
-    weight: 3
+    weight: 7
   - id: "se-plus"
     name: "SE+"
     title: "Standard Edition+"
-    weight: 4
+    weight: 9
   - id: "ee"
-    name: "EE"
-    title: "Enterprise Edition"
-    weight: 7
+    name: "Ultimate, EE"
+    title: "Ultimate/Enterprise Edition"
+    weight: 11
   - id: "cse-lite"
-    name: "CSE Lite"
-    name_version: "CSE Lite (1.73)"
-    title: "Certified Security Edition Lite (1.73)"
-    title_version: "Certified Security Edition Lite"
+    name: "CSE Lite/Core"
+    name_version: "CSE Lite/Core (1.73)"
+    title: "Certified Security Edition Lite/Core (1.73)"
+    title_version: "Certified Security Edition Lite/Core"
     weight: 14
     languages:
       - "ru"
@@ -59,3 +63,61 @@ editions:
     weight: 15
     languages:
       - "ru"
+
+extensions:
+  storage:
+    title:
+      en: Core Storage
+      ru: Хранение данных
+  advanced_storage:
+    title:
+      en: Advanced Storage
+      ru: Продвинутое хранение данных
+  storage_integration:
+    title:
+      en: Storage Integration
+      ru: Интеграция с системами хранения данных
+  managed_services:
+    title:
+      en: Managed Services
+      ru: Управляемые сервисы обработки данных
+  billing:
+    title:
+      en: Billing
+      ru: Биллинг
+  cluster_union:
+    title:
+      en: Cluster Union
+      ru: Продвинутое межкластерное взаимодействие
+  multitenancy:
+    title:
+      en: Multitenancy
+      ru: Мультиарендность
+  advanced_security:
+    title:
+      en: Advanced Infrastructure Security
+      ru: Продвинутая защита инфраструктуры
+  secrets_management:
+    title:
+      en: Secrets Management
+      ru: Безопасное управление секретами
+  advanced_networking:
+    title:
+      en: Advanced Networking
+      ru: Продвинутые сетевые возможности
+  network_security:
+    title:
+      en: Network Security
+      ru: Сетевая безопасность
+  on_prem_iaas:
+    title:
+      en: On-prem IaaS
+      ru: Интеграция с провайдерами для частной инфраструктуры
+  gpu_management:
+    title:
+      en: GPU Management
+      ru: Управление GPU
+  ai_inference:
+    title:
+      en: AI Inference
+      ru: Сервисы ИИ-инференса

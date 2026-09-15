@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const urlSearch = 'search';
   const urlEdition = 'edition';
+  const urlExtension = 'extension';
   const urlStage = 'stage';
   const urlTag = 'tag';
   const urlCertification = 'certification';
@@ -51,14 +52,21 @@ document.addEventListener('DOMContentLoaded', () => {
   let fullResetHandler = null;
 
   const editionTitles = {
-    'ce': 'Community Edition',
+    'ce': 'Open/Community Edition',
+    'core': 'Core Edition',
     'be': 'Basic Edition',
     'se': 'Standard Edition',
     'se-plus': 'Standard Edition+',
-    'ee': 'Enterprise Edition',
-    'cse-lite': 'CSE Lite',
+    'ee': 'Ultimate/Enterprise Edition',
+    'cse-lite': 'CSE Lite/Core',
     'cse-pro': 'CSE Pro'
   };
+
+  // Extension titles are localized in the sidebar markup (data/helpers.yaml -> extensions), so they are taken from the labels.
+  function getExtensionTitle(value) {
+    const label = document.querySelector(`.filter__container--extensions label[for="extension-${value}"]`);
+    return label ? label.textContent.trim() : value;
+  }
 
   const stageTitles = {
     'experimental': 'Experimental',
@@ -189,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const availableTags = new Set();
     const availableStages = new Set();
     const availableEditions = new Set();
+    const availableExtensions = new Set();
     const availableCertifications = new Set();
 
     Array.from(articles).forEach(article => {
@@ -224,6 +233,16 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       }
+
+      const extensions = (article.dataset.extensions || '').trim().toLowerCase();
+      if (extensions) {
+        extensions.split(',').forEach(extension => {
+          const trimmedExtension = extension.trim();
+          if (trimmedExtension) {
+            availableExtensions.add(trimmedExtension);
+          }
+        });
+      }
     });
 
     document.querySelectorAll('.filter__container input[type="checkbox"]').forEach(checkbox => {
@@ -238,6 +257,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isAvailable = availableTags.has(checkbox.value);
       } else if (container?.classList.contains('filter__container--editions')) {
         isAvailable = availableEditions.has((checkbox.value || '').trim().toLowerCase());
+      } else if (container?.classList.contains('filter__container--extensions')) {
+        isAvailable = availableExtensions.has((checkbox.value || '').trim().toLowerCase());
       } else if (container?.classList.contains('filter__container--stages')) {
         isAvailable = availableStages.has(checkbox.value);
       } else if (container?.classList.contains('filter__container--certification')) {
@@ -354,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     appendSectionParams('.filter__container--editions', urlEdition);
+    appendSectionParams('.filter__container--extensions', urlExtension);
     appendSectionParams('.filter__container--certification', urlCertification);
     appendSectionParams('.filter__container--stages', urlStage);
     appendSectionParams('.filter__container--tags', urlTag);
@@ -375,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyFiltersFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    if (!params.has(urlSearch) && !params.has(urlEdition) && !params.has(urlCertification) && !params.has(urlStage) && !params.has(urlTag)) {
+    if (!params.has(urlSearch) && !params.has(urlEdition) && !params.has(urlExtension) && !params.has(urlCertification) && !params.has(urlStage) && !params.has(urlTag)) {
       return;
     }
 
@@ -392,6 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const wantedEditions = parseSectionValues(urlEdition, value => value.trim().toLowerCase());
+    const wantedExtensions = parseSectionValues(urlExtension, value => value.trim().toLowerCase());
     const wantedCertifications = parseSectionValues(urlCertification, value => value.trim());
     const wantedStages = parseSectionValues(urlStage, value => value.trim());
     const wantedTags = parseSectionValues(urlTag, value => value.trim());
@@ -416,6 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     applySectionParams('.filter__container--editions', wantedEditions, value => value.trim().toLowerCase());
+    applySectionParams('.filter__container--extensions', wantedExtensions, value => value.trim().toLowerCase());
     applySectionParams('.filter__container--certification', wantedCertifications, value => value.trim());
     applySectionParams('.filter__container--stages', wantedStages, value => value.trim());
     applySectionParams('.filter__container--tags', wantedTags, value => value.trim());
@@ -474,6 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
       groupedFilters.forEach((entry, filterName) => {
         const filterContainer = entry.checkboxes[0]?.closest('.filter__container');
         const isEditionsFilter = filterContainer?.classList.contains('filter__container--editions');
+        const isExtensionsFilter = filterContainer?.classList.contains('filter__container--extensions');
         const isCertificationFilter = filterContainer?.classList.contains('filter__container--certification');
         const isStagesFilter = filterContainer?.classList.contains('filter__container--stages');
         const isTagsFilter = filterContainer?.classList.contains('filter__container--tags');
@@ -487,6 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
           valuesText = `${selectedCount} ${texts.values}`;
         } else if (isEditionsFilter) {
           valuesText = Array.from(entry.values).map(code => editionTitles[code] || code).join(', ');
+        } else if (isExtensionsFilter) {
+          valuesText = Array.from(entry.values).map(value => getExtensionTitle(value)).join(', ');
         } else if (isCertificationFilter) {
           valuesText = Array.from(entry.values).map(value => getCertificationTitle(value)).join(', ');
         } else if (isStagesFilter) {
@@ -532,6 +559,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkboxesEditionlChecked = document.querySelectorAll('.filter__container--editions input[type="checkbox"]:checked:not([data-select-all="true"])');
     const selectedEditions = Array.from(checkboxesEditionlChecked).map(checkbox => checkbox.value);
 
+    const checkboxesExtensionsChecked = document.querySelectorAll('.filter__container--extensions input[type="checkbox"]:checked:not([data-select-all="true"])');
+    const selectedExtensions = Array.from(checkboxesExtensionsChecked).map(checkbox => checkbox.value);
+
     const checkboxesCertificationChecked = document.querySelectorAll('.filter__container--certification input[type="checkbox"]:checked:not([data-select-all="true"])');
     const selectedCertifications = Array.from(checkboxesCertificationChecked).map(checkbox => checkbox.value);
 
@@ -560,6 +590,20 @@ document.addEventListener('DOMContentLoaded', () => {
           return articleEditions.includes(normalizedSelected);
         });
         if(!matchesEditions) {
+          return false;
+        }
+      }
+
+      if(selectedExtensions.length > 0) {
+        const articleExtensionsStr = (article.dataset.extensions || '').trim().toLowerCase();
+        const articleExtensions = articleExtensionsStr
+          ? articleExtensionsStr.split(',').map(e => e.trim()).filter(e => e)
+          : [];
+        const matchesExtensions = selectedExtensions.some(selectedExtension => {
+          const normalizedSelected = (selectedExtension || '').trim().toLowerCase();
+          return articleExtensions.includes(normalizedSelected);
+        });
+        if(!matchesExtensions) {
           return false;
         }
       }

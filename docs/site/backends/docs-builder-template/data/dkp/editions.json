@@ -7,8 +7,7 @@
       "aws",
       "azure",
       "gcp",
-      "yandex",
-      "kubernetes"
+      "yandex"
     ],
     "skipFixingImports": true,
     "buildIncludes": {
@@ -81,7 +80,10 @@
     "name": "CSE",
     "versionMapFile": "ee/cse/candi/version_map.yml",
     "modulesDir": "ee/cse/modules",
-    "AvailableModules": [
+    "excludeEditions": [
+      "FE"
+    ],
+    "availableModules": [
       "admission-policy-engine",
       "cert-manager",
       "chrony",
@@ -98,18 +100,14 @@
       "kube-dns",
       "local-path-provisioner",
       "log-shipper",
-      "loki",
       "metallb",
-      "monitoring-deckhouse",
-      "monitoring-ping",
+      "monitoring-custom",
+      "monitoring-kubernetes",
       "multitenancy-manager",
       "namespace-configurator",
       "node-local-dns",
       "node-manager",
-      "operator-prometheus",
       "priority-class",
-      "prometheus",
-      "prometheus-metrics-adapter",
       "registry",
       "registrypackages",
       "registry-packages-proxy",
@@ -117,9 +115,17 @@
       "secret-copier",
       "service-with-healthchecks",
       "terraform-manager",
+      "upmeter",
       "user-authn",
       "user-authz",
       "vertical-pod-autoscaler"
+    ]
+  },
+  "core": {
+    "name": "CORE",
+    "title": "Core Edition",
+    "includeModules": [
+      "admission-policy-engine"
     ]
   },
   "cse-lite": {
@@ -168,6 +174,8 @@
       "operator-prometheus",
       "operator-trivy",
       "prometheus",
+      "prometheus-metrics-adapter",
+      "prompp",
       "registry",
       "registry-packages-proxy",
       "registrypackages",
@@ -181,6 +189,7 @@
       "storage-volume-data-manager",
       "stronghold",
       "terraform-manager",
+      "upmeter",
       "user-authn",
       "user-authz",
       "vertical-pod-autoscaler"
@@ -246,6 +255,7 @@
       "storage-volume-data-manager",
       "stronghold",
       "terraform-manager",
+      "upmeter",
       "user-authn",
       "user-authz",
       "vertical-pod-autoscaler",
