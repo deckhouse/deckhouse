@@ -111,6 +111,12 @@ pilotV1x29x6: "pilot-1-29"
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.fullVersion").String()).To(Equal("1.27.8"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsOperator").Bool()).To(BeTrue())
 		})
+
+		It("supports ambient but not ambient multicluster", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsAmbient").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsAmbientMulticluster").Bool()).To(BeFalse())
+		})
 	})
 
 	Context("SupportsOperator boundary version 1.27.9", func() {
@@ -124,6 +130,12 @@ pilotV1x29x6: "pilot-1-29"
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.fullVersion").String()).To(Equal("1.27.9"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsOperator").Bool()).To(BeFalse())
+		})
+
+		It("supports ambient but not ambient multicluster", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsAmbient").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsAmbientMulticluster").Bool()).To(BeFalse())
 		})
 	})
 
@@ -140,8 +152,8 @@ pilotV1x29x6: "pilot-1-29"
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.revision").String()).To(Equal("v1x29"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.imageSuffix").String()).To(Equal("V1x29x6"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsAmbient").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsAmbientMulticluster").Bool()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsOperator").Bool()).To(BeFalse())
 		})
 	})
-
 })

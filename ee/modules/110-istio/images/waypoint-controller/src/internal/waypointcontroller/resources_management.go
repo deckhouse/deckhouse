@@ -28,7 +28,7 @@ const (
 	defaultVPACPUMin                    = "100m"
 	defaultVPACPUMax                    = "1000m"
 	defaultVPAMemoryMin                 = "128Mi"
-	defaultVPAMemoryMax                 = "2000Mi"
+	defaultVPAMemoryMax                 = "2048Mi"
 	waypointProxyContainerName          = "istio-proxy"
 )
 

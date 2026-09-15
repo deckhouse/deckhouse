@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +21,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
@@ -286,6 +289,10 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			continue
 		}
 
+		if dropped, reason := sanitizeAmbientGateways(&privateMetadata); len(dropped) > 0 {
+			input.Logger.Warn("dropping ambient gateway endpoints that cannot be rendered into a Gateway", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), slog.String("reason", reason), slog.String("dropped", strings.Join(dropped, ", ")))
+		}
+
 		multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 0)
 		err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
@@ -354,4 +361,81 @@ func checkMulticlusterRemoteAPIServer(client http.Client, apiHost, bearerToken s
 		return metav1.ConditionFalse, "RemoteAPIUnexpectedResponse", fmt.Sprintf("GET %s: expected kind APIVersions, got %q", url, parsed.Kind)
 	}
 	return metav1.ConditionTrue, "RemoteAPIReachable", fmt.Sprintf("GET %s returned HTTP %d with kind APIVersions", url, code)
+}
+
+// sanitizeAmbientGateways drops the ambient endpoints of a peer that this cluster
+// cannot render into an istio-remote Gateway, and reports what went wrong and why.
+//
+// Only the ambient half of a peer is validated here. Sidecar multicluster
+// should be validated in the future too. Right now this requires breaking
+// potentially working setups due to currently unconstrained networkName.
+func sanitizeAmbientGateways(pm *eeCrd.MulticlusterPrivateMetadata) ([]string, string) {
+	if pm.AmbientGateways == nil {
+		return nil, ""
+	}
+
+	if errs := validation.IsValidLabelValue(pm.NetworkName); len(errs) > 0 {
+		dropped := make([]string, 0, len(*pm.AmbientGateways))
+		for _, gw := range *pm.AmbientGateways {
+			dropped = append(dropped, formatAmbientGateway(gw))
+		}
+		pm.AmbientGateways = nil
+
+		return dropped, fmt.Sprintf("networkName %q cannot be a topology.istio.io/network label value: %s", pm.NetworkName, strings.Join(errs, "; "))
+	}
+
+	var dropped []string
+
+	kept := make([]eeCrd.MulticlusterIngressGateways, 0, len(*pm.AmbientGateways))
+	seen := make(map[eeCrd.MulticlusterIngressGateways]struct{}, len(*pm.AmbientGateways))
+
+	for _, gw := range *pm.AmbientGateways {
+		address, ok := canonicalAmbientGatewayAddress(gw.Address)
+		if !ok || gw.Port == 0 || gw.Port > 65535 {
+			dropped = append(dropped, formatAmbientGateway(gw))
+			continue
+		}
+
+		gw.Address = address
+
+		if _, duplicate := seen[gw]; duplicate {
+			continue
+		}
+
+		seen[gw] = struct{}{}
+		kept = append(kept, gw)
+	}
+
+	if len(kept) == 0 {
+		pm.AmbientGateways = nil
+
+		return dropped, ambientGatewayAddressDropReason
+	}
+
+	pm.AmbientGateways = &kept
+
+	return dropped, ambientGatewayAddressDropReason
+}
+
+const ambientGatewayAddressDropReason = "not a usable IP address or DNS name, or the port is out of range"
+
+// Keep in sync with the function of the same name in ee/modules/110-istio/images/metadata-exporter/src/exporter.go.
+func canonicalAmbientGatewayAddress(address string) (string, bool) {
+	address = strings.TrimSpace(address)
+
+	if ip := net.ParseIP(address); ip != nil {
+		return ip.String(), true
+	}
+
+	host := strings.ToLower(strings.TrimSuffix(address, "."))
+	if host == "" || len(validation.IsDNS1123Subdomain(host)) > 0 {
+		return "", false
+	}
+
+	return host, true
+}
+
+func formatAmbientGateway(gw eeCrd.MulticlusterIngressGateways) string {
+	// JoinHostPort, not "%s:%d", so a colon-bearing address stays readable.
+	return net.JoinHostPort(gw.Address, strconv.FormatUint(uint64(gw.Port), 10))
 }

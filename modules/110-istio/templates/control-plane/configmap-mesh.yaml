@@ -1,8 +1,38 @@
+{{- define "istioProxyBootstrapConfig" -}}
+  {{- $ := index . 0 -}}
+  {{- $revision := index . 1 -}}
+  {{- $supportsAmbient := index . 2 -}}
+  {{- $telemetryAPI := $.Values.istio.telemetryAPI | default dict -}}
+meshId: d8-istio-mesh
+discoveryAddress: istiod-{{ $revision }}.d8-{{ $.Chart.Name }}.svc:15012
+proxyMetadata:
+  CLOUD_PLATFORM: {{ include "istioCloudPlatform" $ }}
+  ISTIO_META_DNS_AUTO_ALLOCATE: "true"
+  ISTIO_META_DNS_CAPTURE: "true"
+  {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
+  ISTIO_META_ENABLE_HBONE: "true"
+  {{- end }}
+  ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
+  PROXY_CONFIG_XDS_AGENT: "true"
+holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
+{{- if and $.Values.istio.tracing.enabled (not $telemetryAPI.enabled) }}
+{{- with $.Values.istio.tracing.collector.zipkin }}
+{{- with .address }}
+tracing:
+  sampling: {{ $.Values.istio.tracing.sampling }}
+  zipkin:
+    address: {{ . | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
   {{- if not (get $versionInfo "supportsOperator") }}
   {{- $revision := get $versionInfo "revision" }}
   {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
+  {{- $supportsAmbientMulticluster := get $versionInfo "supportsAmbientMulticluster" }}
   {{- $telemetryAPI := $.Values.istio.telemetryAPI | default dict }}
   {{- $globalVersionInfo := get $.Values.istio.internal.versionMap $.Values.istio.internal.globalVersion }}
   {{- $operatorFreeControlPlane := not (get $globalVersionInfo "supportsOperator") }}
@@ -73,29 +103,17 @@ data:
     outboundTrafficPolicy:
     {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
       mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}
+    {{- if and $supportsAmbientMulticluster (include "istioAmbientMulticlusterEnabled" $) }}
+    serviceScopeConfigs:
+    - servicesSelector:
+        matchExpressions:
+        - key: istio.io/global
+          operator: In
+          values: ["true"]
+      scope: GLOBAL
+    {{- end }}
     defaultConfig:
-      meshId: d8-istio-mesh
-      discoveryAddress: istiod-{{ $revision }}.d8-{{ $.Chart.Name }}.svc:15012
-      proxyMetadata:
-        CLOUD_PLATFORM: {{ include "istioCloudPlatform" $ }}
-        ISTIO_META_DNS_AUTO_ALLOCATE: "true"
-        ISTIO_META_DNS_CAPTURE: "true"
-        {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
-        ISTIO_META_ENABLE_HBONE: "true"
-        {{- end }}
-        ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
-        PROXY_CONFIG_XDS_AGENT: "true"
-      holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
-    {{- if and $.Values.istio.tracing.enabled (not $telemetryAPI.enabled) }}
-    {{- with $.Values.istio.tracing.collector.zipkin }}
-    {{- with .address }}
-      tracing:
-        sampling: {{ $.Values.istio.tracing.sampling }}
-        zipkin:
-          address: {{ . | quote }}
-    {{- end }}
-    {{- end }}
-    {{- end }}
+      {{- include "istioProxyBootstrapConfig" (list $ $revision $supportsAmbient) | nindent 6 }}
     {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
     caCertificates:
     {{- range $federation := $.Values.istio.internal.federations }}

@@ -22,3 +22,22 @@
           1. Ensure DNS resolves the new target `(<publicDomainTemplate> + istio-metadata)`.
           2. Update `spec.metadataEndpoint` to use the new domain name. Keep the path `/metadata/` unchanged.
           3. Verify remote metadata fetch and alliance health after the change.
+
+    - alert: D8IstioAllianceAmbientGatewayAddressUnusable
+      expr: max(d8_istio_alliance_metadata_exporter_ambient_gateway_address_unusable) > 0
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_alliance_ambient_multicluster_unreachable: D8IstioAllianceAmbientMulticlusterUnreachable,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_alliance_ambient_multicluster_unreachable: D8IstioAllianceAmbientMulticlusterUnreachable,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: The ambient east-west gateway has no address peers can dial.
+        description: |
+          The ambient east-west gateway is deployed in this cluster, but publishes no address peer clusters can dial: either it has no external address at all, or every address it has is neither an IP address nor a usable DNS name. The `metadata-exporter` pod logs in `d8-istio` say which.
+
+          Ambient-mode workloads in peer clusters therefore cannot reach services here. Sidecar-mode multicluster is unaffected.
+
+          To fix, set `alliance.ambientGateway.advertise` to the IP address or DNS name peers should dial. Or make the load balancer assign an address (`alliance.ambientGateway.loadBalancerClass`, `.serviceAnnotations`). Or switch `alliance.ambientGateway.inlet` to `NodePort` and check that gateway pods are scheduled (`.nodeSelector`, `.tolerations`). Or turn `ambient.multicluster.enabled` off if ambient multicluster is not needed here.
