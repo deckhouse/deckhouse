@@ -497,13 +497,14 @@ func immutableSettingsAPV(app *v1alpha1.Application) *v1alpha1.ApplicationPackag
 // extractOldApplication → validateAppSettings → checkImmutableSettings.
 func (s *applicationValidationHandlerSuite) TestImmutableSettingsFieldCannotChangeOnUpdate() {
 	tests := []struct {
-		name        string
-		operation   string
-		newSettings map[string]any
-		oldSettings map[string]any
-		oldApplied  map[string]any
-		wantAllowed bool
-		wantMessage string
+		name         string
+		operation    string
+		newSettings  map[string]any
+		oldSettings  map[string]any
+		oldApplied   map[string]any
+		neverApplied bool
+		wantAllowed  bool
+		wantMessage  string
 	}{
 		{
 			name:        "UPDATE changing the immutable field is rejected",
@@ -558,6 +559,16 @@ func (s *applicationValidationHandlerSuite) TestImmutableSettingsFieldCannotChan
 			oldApplied:  map[string]any{"grantedClass": "fast-ssd"},
 			wantMessage: "grantedClass",
 		},
+		{
+			// Nothing was ever applied, so nothing is frozen: an install wedged by a
+			// typo in its immutable field can still be corrected in place.
+			name:         "UPDATE of an application that never applied may change the immutable field",
+			operation:    "UPDATE",
+			newSettings:  map[string]any{"storageClass": "slow"},
+			oldSettings:  map[string]any{"storageClass": "fast"},
+			neverApplied: true,
+			wantAllowed:  true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -569,6 +580,11 @@ func (s *applicationValidationHandlerSuite) TestImmutableSettingsFieldCannotChan
 			if tt.oldSettings != nil {
 				oldApp = newApplication("repo", "pkg", "1.0.0")
 				oldApp.Spec.Settings = v1alpha1.MakeMappedFields(tt.oldSettings)
+				// A version in the status is what marks the install as applied, and so
+				// as holding values an immutable field is frozen at.
+				if !tt.neverApplied {
+					oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "1.0.0"}
+				}
 			}
 
 			if tt.oldApplied != nil {

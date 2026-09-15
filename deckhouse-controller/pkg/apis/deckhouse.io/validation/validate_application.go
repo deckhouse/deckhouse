@@ -52,16 +52,16 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			return nil, fmt.Errorf("expect Application as unstructured, got %T", obj)
 		}
 
+		// no sense to check already deleted app
+		if !app.DeletionTimestamp.IsZero() {
+			return allowResult(nil)
+		}
+
 		// The previously stored object is what immutable settings fields are frozen
 		// against. It is only present on UPDATE; on CREATE every field is still free.
 		oldApp, err := extractOldApplication(review)
 		if err != nil {
 			return nil, err
-		}
-
-		// no sense to check already deleted app
-		if !app.DeletionTimestamp.IsZero() {
-			return allowResult(nil)
 		}
 
 		if len(app.Name) > maxApplicationNameLength {
@@ -394,6 +394,13 @@ func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.A
 		return nil
 	}
 
+	// An application that has never applied runs nothing, so it has frozen nothing: the
+	// install-time choice is still open. Without this, an install that never came up
+	// because its immutable field held a typo could only be deleted and recreated.
+	if oldApp.Status.CurrentVersion == nil || oldApp.Status.CurrentVersion.Version == "" {
+		return nil
+	}
+
 	oldSettings, err := effectiveSettings(oldApp)
 	if err != nil {
 		return err
@@ -424,9 +431,11 @@ func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.A
 // effectiveSettings returns the settings the application actually runs with, which is
 // what an immutable field is frozen at: status.lastAppliedConfiguration, written by the
 // controller after every successful apply with the schema defaults and the project's
-// grant defaults already merged in. spec.settings is the fallback for installs that have
-// not been applied since that field was introduced; it is the weaker side, because
-// values the controller resolves never appear there.
+// grant defaults already merged in.
+//
+// Only an applied install reaches here, so an absent lastAppliedConfiguration means the
+// install predates that field. spec.settings is the fallback for it: weaker, because
+// values the controller resolves never appear there, but it is all such an install has.
 func effectiveSettings(app *v1alpha1.Application) (map[string]any, error) {
 	raw := app.Status.LastAppliedConfiguration.Raw
 	if len(raw) == 0 {
