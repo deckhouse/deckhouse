@@ -22,10 +22,17 @@ source /shell_lib.sh
 # objects can stop being readable. Removing the hook made every such request fail: a live cluster
 # answered about one a second, all of them counted as conversion failures.
 #
-# The conversion is the version bump and nothing else. Both versions name description,
-# parametersSchema and resourcesTemplate identically, and the structured fields v1alpha2 added exist
-# only there -- they are pruned on the way down and cannot come back, which is precisely why v1alpha1
-# is not served: no client can write a template back through it and erase them.
+# Up: the version bump, minus resourcesTemplate. v1alpha2 describes a template with structured fields
+# and has no Helm string; a v1alpha1 template that carried one is marked with the
+# projects.deckhouse.io/legacy-helm-template annotation instead, so the controller refuses to render
+# its projects rather than render the empty structured shape over the release the Helm string built
+# -- that render would delete every object the string produced. The mark is set on the way up only:
+# the stored object is v1alpha1 (the apiserver asks for the conversion because that is what it
+# reads), and it stays marked until an administrator rewrites the template and removes the mark.
+#
+# Down: the structured fields v1alpha2 added exist only there -- they are pruned on the way down and
+# cannot come back, which is precisely why v1alpha1 is not served: no client can write a template
+# back through it and erase them.
 function __config__() {
   cat <<EOF
 configVersion: v1
@@ -45,7 +52,13 @@ EOF
 
 function __on_conversion::v1alpha1_to_v1alpha2() {
   if converted=$(context::jq -rc '.review.request.objects//[] | map(
-     if .apiVersion == "deckhouse.io/v1alpha1" then .apiVersion = "deckhouse.io/v1alpha2" else . end
+     if .apiVersion == "deckhouse.io/v1alpha1" then
+       .apiVersion = "deckhouse.io/v1alpha2" |
+       (if (((.spec // {}).resourcesTemplate // "") | tostring | test("\\S")) then
+          .metadata.annotations["projects.deckhouse.io/legacy-helm-template"] = "true"
+        else . end) |
+       (if .spec then del(.spec.resourcesTemplate) else . end)
+     else . end
   )'); then
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
 {"convertedObjects": $converted}
@@ -57,9 +70,9 @@ EOF
   fi
 }
 
-# The two fields the v1alpha1 schema requires are backfilled when a structured template omits them:
-# the apiserver validates what a conversion returns, and a template that never had a resourcesTemplate
-# would otherwise come back as an object v1alpha1 cannot describe.
+# The two fields the v1alpha1 schema requires are backfilled: v1alpha2 has no resourcesTemplate at
+# all and a template may omit parametersSchema, while the apiserver validates what a conversion
+# returns, so the object would otherwise come back as one v1alpha1 cannot describe.
 function __on_conversion::v1alpha2_to_v1alpha1() {
   if converted=$(context::jq -rc '.review.request.objects//[] | map(
      if .apiVersion == "deckhouse.io/v1alpha2" then

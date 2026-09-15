@@ -327,13 +327,6 @@ spec:
                         x-kubernetes-preserve-unknown-fields: true
                       description: |
                         OpenAPI specification used to check the validity of the parameters passed when creating a new project.
-                resourcesTemplate:
-                  description: |
-                    Legacy Helm template string.
-
-                    Deprecated: kept for backward compatibility with `v1alpha1`. The structured path is used only
-                    when `resourcesTemplate` is empty; a non-empty Helm string still wins.
-                  type: string
             status:
               type: object
               properties:

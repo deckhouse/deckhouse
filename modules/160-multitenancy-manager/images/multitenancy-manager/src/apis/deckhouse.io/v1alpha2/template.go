@@ -27,6 +27,14 @@ import (
 const (
 	ProjectTemplateKind     = "ProjectTemplate"
 	ProjectTemplateResource = "projecttemplates"
+
+	// TemplateAnnotationLegacyHelm marks a template that was stored as v1alpha1 with a non-empty Helm
+	// resourcesTemplate. The conversion webhook sets it while dropping the Helm string, which v1alpha2
+	// cannot carry: without the mark the template would read as a structured template with nothing in
+	// it, and rendering that over the existing Helm release would delete every object the Helm string
+	// used to produce. The controller refuses to render the projects of a marked template until the
+	// template is rewritten with structured fields and the annotation is removed.
+	TemplateAnnotationLegacyHelm = "projects.deckhouse.io/legacy-helm-template"
 )
 
 // Pod Security Standard profiles, mirroring the legacy parameters.podSecurityProfile values.
@@ -105,10 +113,11 @@ func (p *ProjectTemplate) DeepCopyInto(newObj *ProjectTemplate) {
 	p.Status.DeepCopyInto(&newObj.Status)
 }
 
-// ProjectTemplateSpec describes a project template as a set of structured, declarative fields
-// instead of a Helm string. The cluster-resource availability fields (Resources, GrantPolicies)
-// are materialized into ClusterResourceGrantPolicy objects; the remaining fields are rendered into
-// per-namespace objects when a Project references the template.
+// ProjectTemplateSpec describes a project template as a set of structured, declarative fields.
+// The cluster-resource availability fields (Resources, GrantPolicies) are materialized into
+// ClusterResourceGrantPolicy objects; the remaining fields are rendered into per-namespace objects
+// when a Project references the template. The Helm resourcesTemplate of v1alpha1 has no place here:
+// a v1alpha1 template that carried one comes up marked with TemplateAnnotationLegacyHelm instead.
 type ProjectTemplateSpec struct {
 	// Title is a short human-readable name of the template.
 	Title string `json:"title,omitempty"`
@@ -160,15 +169,6 @@ type ProjectTemplateSpec struct {
 
 	// ParametersSchema is the OpenAPI v3 schema validating Project.spec.parameters.
 	ParametersSchema ParametersSchema `json:"parametersSchema,omitempty"`
-
-	// ResourcesTemplate is the legacy Helm template string.
-	//
-	// Deprecated: kept for backward compatibility with v1alpha1. When the structured fields above
-	// are set, the controller uses them and ignores ResourcesTemplate.
-	//
-	// The yaml tag is required: the helm renderer maps the spec to values via structs.Map (yaml
-	// tag name), and helmlib reads .Values.projectTemplate.resourcesTemplate.
-	ResourcesTemplate string `json:"resourcesTemplate,omitempty" yaml:"resourcesTemplate,omitempty"`
 }
 
 // ParamRef pairs a structured field path (for diagnostics) with the parameter it references.
