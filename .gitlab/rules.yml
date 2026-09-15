@@ -49,6 +49,11 @@ workflow:
     - *skip_e2e_run
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
 
+.rules:on_schedule_codeql:
+  rules:
+    - *skip_e2e_run
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_CODEQL_ENABLE == "true"
+
 .rules:on_schedule_cve_scans:
   rules:
     - *skip_e2e_run
