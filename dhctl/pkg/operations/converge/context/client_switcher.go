@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
@@ -37,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
 
@@ -104,6 +107,128 @@ func (s *KubeClientSwitcher) CleanupNodeUser() error {
 		defer cancel()
 		return entity.DeleteNodeUser(c, s.ctx, global.ConvergeNodeUserName)
 	})
+}
+
+// CleanupConvergeUser removes the account this converge baked into the masters it built.
+// Not gated on the switch being enabled: DHCTL_CLI_NO_SWITCH_TO_NODE_USER keeps dhctl from
+// logging in as that account, it does not keep a new master from booting with it.
+func (s *KubeClientSwitcher) CleanupConvergeUser(ctx context.Context) error {
+	const action = "Remove the converge user from the nodes this converge built"
+
+	if s.inCommander(action) {
+		return nil
+	}
+
+	if s.sshless(action) {
+		return nil
+	}
+
+	s.debugStartOperation(action)
+
+	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
+		sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return err
+		}
+
+		return s.removeConvergeUser(ctx, sshProvider)
+	})
+}
+
+// removeConvergeUser deletes the account node by node. One machine refusing must not save
+// the account on the others, so the failures are collected and reported together.
+func (s *KubeClientSwitcher) removeConvergeUser(ctx context.Context, sshProvider libcon.SSHProvider) error {
+	convergeState, err := s.ctx.ConvergeState()
+	if err != nil {
+		return fmt.Errorf("get converge state: %w", err)
+	}
+
+	// An immutable control plane is never given the account, and neither is a converge
+	// that rebuilt no master.
+	if len(convergeState.ConvergeUserNodes) == 0 {
+		s.debug("No node was built with %s, nothing to remove", global.ConvergeUserName)
+		return nil
+	}
+
+	standalone, ok := sshProvider.(libcon.StandaloneClientProvider)
+	if !ok {
+		return fmt.Errorf("remove %s: the ssh provider opens no per-node connection", global.ConvergeUserName)
+	}
+
+	sshCl, err := sshProvider.Client(ctx)
+	if err != nil {
+		return fmt.Errorf("get ssh client: %w", err)
+	}
+
+	addresses, err := s.masterAddresses(sshCl.Session())
+	if err != nil {
+		return err
+	}
+
+	var failures *multierror.Error
+
+	for _, node := range convergeState.ConvergeUserNodes {
+		host := session.Host{Host: addresses[node], Name: node}
+
+		if err := removeConvergeUserOn(ctx, standalone, sshCl, host); err != nil {
+			failures = multierror.Append(failures, err)
+		}
+	}
+
+	return failures.ErrorOrNil()
+}
+
+// masterAddresses is every master dhctl has an address for. A master this converge built is
+// deliberately kept out of the session — that carries one generation of users — so its
+// address comes from the hosts cache, rewritten as each master is created.
+func (s *KubeClientSwitcher) masterAddresses(sess *session.Session) (map[string]string, error) {
+	cached, err := dstate.GetMasterHostsIPs(s.ctx.Ctx(), s.ctx.StateCache())
+	if err != nil {
+		return nil, fmt.Errorf("read master addresses from the cache: %w", err)
+	}
+
+	addresses := make(map[string]string, len(cached))
+
+	for _, host := range sess.AvailableHosts() {
+		addresses[host.Name] = host.Host
+	}
+
+	for _, host := range cached {
+		addresses[host.Name] = host.Host
+	}
+
+	return addresses, nil
+}
+
+// removeConvergeUserOn deletes the account while logged in as it. -f is what makes that
+// work: userdel refuses a user that owns a running process, and the ssh session running
+// the command is one. The account also carries an expiry date, in case this never runs.
+func removeConvergeUserOn(ctx context.Context, provider libcon.StandaloneClientProvider, source libcon.SSHClient, host session.Host) error {
+	if host.Host == "" {
+		return fmt.Errorf("remove %s on %s: no ssh address known for the node", global.ConvergeUserName, host.Name)
+	}
+
+	key := "converge-user-cleanup/" + host.Name
+	creds := sshCredentials{User: global.ConvergeUserName}
+	sess := switchSession(source.Session(), creds, []session.Host{host})
+
+	client, err := provider.StandaloneClientFor(ctx, key, sess, source.PrivateKeys())
+	if err != nil {
+		return fmt.Errorf("connect to %s as %s: %w", host.Name, global.ConvergeUserName, err)
+	}
+
+	// Nothing else stops a keyed client, and this one logs in with an account that is
+	// about to be gone.
+	defer provider.StopStandaloneClientFor(ctx, key)
+
+	cmd := client.Command("userdel", "-f", "-r", global.ConvergeUserName)
+	cmd.Sudo(ctx)
+
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf("remove %s on %s: %w; stderr: %s", global.ConvergeUserName, host.Name, err, string(cmd.StderrBytes()))
+	}
+
+	return nil
 }
 
 func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {

@@ -491,6 +491,12 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 	}
 
 	if kubeClientSwitched {
+		// Before CleanupNodeUser: it deletes the converge state, and that state is the
+		// list of nodes carrying the converge user.
+		if err := r.switcher.CleanupConvergeUser(ctx.Ctx()); err != nil {
+			return err
+		}
+
 		return r.switcher.CleanupNodeUser()
 	}
 

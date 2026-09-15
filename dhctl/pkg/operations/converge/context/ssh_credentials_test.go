@@ -28,7 +28,9 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func TestSelectMasterStates(t *testing.T) {
@@ -89,7 +91,7 @@ func switcherWithConvergeUserNodes(t *testing.T, connection *sshconfig.Connectio
 		connection,
 	)
 
-	ctx := NewContext(t.Context(), Params{SSHProviderInitializer: initializer})
+	ctx := NewContext(t.Context(), Params{SSHProviderInitializer: initializer, Cache: cache.NewTestCache()})
 	ctx.stateStore = &fakeStateStore{state: &State{ConvergeUserNodes: nodes}}
 
 	return NewKubeClientSwitcher(ctx, nil, KubeClientSwitcherParams{})
@@ -249,5 +251,126 @@ func TestHostsOfOneGeneration(t *testing.T) {
 		kept, err := switcher.hostsOfOneGeneration([]session.Host{older, rebuilt})
 		require.NoError(t, err)
 		require.Equal(t, []session.Host{older, rebuilt}, kept)
+	})
+}
+
+// standaloneRecorder notes who connected where: a keyed standalone client keeps its
+// session to itself, and the account the cleanup logs in as is half of what it does.
+type standaloneRecorder struct {
+	*testssh.SSHProvider
+	usersByHost map[string]string
+	stoppedKeys []string
+}
+
+func (p *standaloneRecorder) StandaloneClientFor(ctx gocontext.Context, key string, sess *session.Session, keys []session.AgentPrivateKey, opts ...libcon.StandaloneClientOpt) (libcon.SSHClient, error) {
+	p.usersByHost[sess.Host()] = sess.User
+
+	return p.SSHProvider.StandaloneClientFor(ctx, key, sess, keys, opts...)
+}
+
+func (p *standaloneRecorder) StopStandaloneClientFor(ctx gocontext.Context, key string) {
+	p.stoppedKeys = append(p.stoppedKeys, key)
+
+	p.SSHProvider.StopStandaloneClientFor(ctx, key)
+}
+
+func TestCleanupConvergeUser(t *testing.T) {
+	const (
+		rebuilt     = "10.0.0.1"
+		preExisting = "10.0.0.2"
+	)
+
+	userdel := []string{"userdel", "-f", "-r", global.ConvergeUserName}
+
+	// A master this converge built is kept out of the session, which carries one
+	// generation of users, and its address is in the hosts cache alone.
+	cachedHosts := map[string]string{"cluster-master-0": rebuilt, "cluster-master-1": preExisting}
+
+	newRecorder := func(failing string) (*standaloneRecorder, map[string][]string) {
+		ran := make(map[string][]string)
+
+		base := session.NewSession(session.Input{
+			User:           "ubuntu",
+			Port:           "22",
+			AvailableHosts: []session.Host{{Host: preExisting, Name: "cluster-master-1"}},
+		})
+
+		recorder := &standaloneRecorder{
+			SSHProvider: testssh.NewSSHProvider(base, true),
+			usersByHost: make(map[string]string),
+		}
+
+		for _, host := range []string{rebuilt, preExisting} {
+			recorder.AddCommandProvider(host, func(_ testssh.Bastion, name string, args ...string) *testssh.Command {
+				cmd := testssh.NewCommand(nil)
+
+				if host == failing {
+					cmd = cmd.
+						WithStdErr([]byte("userdel: user d8-converge is currently used by process 1")).
+						WithErr(errors.New("exit status 8"))
+				}
+
+				return cmd.WithRun(func() { ran[host] = append([]string{name}, args...) })
+			})
+		}
+
+		return recorder, ran
+	}
+
+	newSwitcher := func(t *testing.T, nodes ...string) *KubeClientSwitcher {
+		t.Helper()
+
+		switcher := switcherWithConvergeUserNodes(t, operatorConnection(), nodes...)
+		require.NoError(t, dstate.SaveMasterHosts(t.Context(), switcher.ctx.StateCache(), cachedHosts))
+
+		return switcher
+	}
+
+	t.Run("runs on the nodes of this converge only", func(t *testing.T) {
+		switcher := newSwitcher(t, "cluster-master-0")
+		recorder, ran := newRecorder("")
+
+		require.NoError(t, switcher.removeConvergeUser(t.Context(), recorder))
+
+		// -f is the point: the ssh session running userdel belongs to the very account it
+		// removes, and without it userdel refuses to remove a user that owns a process.
+		require.Equal(t, userdel, ran[rebuilt])
+		require.NotContains(t, ran, preExisting, "a master this converge did not build never got the user")
+
+		require.Equal(t, global.ConvergeUserName, recorder.usersByHost[rebuilt])
+		require.Len(t, recorder.stoppedKeys, 1, "the connection outlives the account it logs in with")
+	})
+
+	t.Run("a converge that built no master touches nothing", func(t *testing.T) {
+		switcher := newSwitcher(t)
+		recorder, ran := newRecorder("")
+
+		require.NoError(t, switcher.removeConvergeUser(t.Context(), recorder))
+		require.Empty(t, ran)
+	})
+
+	t.Run("one failing host does not stop the rest", func(t *testing.T) {
+		switcher := newSwitcher(t, "cluster-master-0", "cluster-master-1")
+		recorder, ran := newRecorder(rebuilt)
+
+		err := switcher.removeConvergeUser(t.Context(), recorder)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cluster-master-0")
+		require.Contains(t, err.Error(), "currently used by process")
+		require.NotContains(t, err.Error(), "cluster-master-1")
+
+		require.Equal(t, userdel, ran[preExisting], "the host after the failing one is cleaned up too")
+		require.Len(t, ran, 2)
+	})
+
+	t.Run("a node with no known address is reported, the rest are cleaned", func(t *testing.T) {
+		switcher := newSwitcher(t, "cluster-master-0", "cluster-master-9")
+		recorder, ran := newRecorder("")
+
+		err := switcher.removeConvergeUser(t.Context(), recorder)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cluster-master-9")
+
+		require.Equal(t, userdel, ran[rebuilt])
 	})
 }
