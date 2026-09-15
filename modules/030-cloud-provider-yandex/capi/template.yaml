@@ -20,7 +20,7 @@ rolloutFields:
   - additionalLabels
   - networkType
 
-# Оptional fields are read with `get`: the sandbox runs with missingkey=error, so a direct path to
+# Optional fields are read with `get`: the sandbox runs with missingkey=error, so a direct path to
 # an absent key fails the render on purpose. `get` returns an empty value instead, which keeps the
 # `| default` chains behaving exactly as they did under v1. cores and memory are required by the
 # CRD and read directly.
