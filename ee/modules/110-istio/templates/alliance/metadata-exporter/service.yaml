@@ -11,6 +11,7 @@ spec:
   - name: http
     protocol: TCP
     port: 8080
+    targetPort: http
   selector:
     app: metadata-exporter
 {{- end }}

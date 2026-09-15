@@ -11,6 +11,7 @@ spec:
   - name: https
     protocol: TCP
     port: 4443
+    targetPort: https
   selector:
     app: api-proxy
 {{- end }}

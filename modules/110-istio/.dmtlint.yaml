@@ -19,23 +19,6 @@ linters-settings:
         - kind: DaemonSet
           name: istio-cni-node
           container: install-cni
-  templates:
-    exclude-rules:
-      service-port:
-        - name: istiod
-          port: http-monitoring
-        - name: istiod
-          port: grpc-xds
-        - name: istiod
-          port: https-dns
-        - name: istiod
-          port: https-webhook
-        - name: ingressgateway
-          port: tls
-        - name: metadata-exporter
-          port: http
-        - name: api-proxy
-          port: https
   module:
     conversions:
       disable: true

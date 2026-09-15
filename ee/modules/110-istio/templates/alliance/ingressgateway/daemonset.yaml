@@ -156,6 +156,7 @@ spec:
         - containerPort: 15021
           protocol: TCP
         - containerPort: 15443
+          name: tls
           protocol: TCP
         - containerPort: 15012
           protocol: TCP
