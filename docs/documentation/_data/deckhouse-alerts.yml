@@ -2046,7 +2046,7 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with the remote cluster `{{$labels.cluster_id}}`.
+        {{ if $labels.multicluster_name }}The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with the remote cluster described by IstioMulticluster `{{$labels.multicluster_name}}` (cluster ID `{{$labels.cluster_id}}`).{{ else }}The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with the remote cluster `{{$labels.cluster_id}}`.{{ end }}
 
         Possible causes:
 
@@ -2055,8 +2055,20 @@ alerts:
         - The remote ServiceAccount token is invalid or expired.
         - There is a TLS or certificate issue between the clusters.
         - Remote and local Istio versions mismatch.
+
+        {{ if $labels.multicluster_name }}Inspect the resource:
+
+        ```bash
+        d8 k describe istiomulticluster {{$labels.multicluster_name}}
+        ```
+
+        `Root CA` should be set, `Public Last Fetch Timestamp` should be recent, and `Ingress Gateways` should list the remote cluster's IngressGateway addresses.
+
+        If there is no such resource, this cluster was registered by the secret `{{$labels.secret}}` alone — check the API address and the token in the kubeconfig it stores.
+        {{ else }}No IstioMulticluster resource registered this cluster, so check the API address and the token in the kubeconfig stored in the secret `{{$labels.secret}}`.
+        {{ end }}
       summary: |
-        Istio remote cluster {{$labels.cluster_id}} is not synchronized.
+        {{ if $labels.multicluster_name }}IstioMulticluster {{ $labels.multicluster_name }} is not synchronized.{{ else }}Istio remote cluster {{ $labels.cluster_id }} is not synchronized.{{ end }}
       severity: "4"
       markupFormat: markdown
     - name: D8IstioReservedUIDConflict
@@ -3968,6 +3980,137 @@ alerts:
         user-authn idTokenTTL is {{ $labels.id_token_ttl }}, which is too long.
       severity: "6"
       markupFormat: markdown
+    - name: D8UserAuthzAuthorizationRuleInvalid
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        `user-authz-controller` cannot apply the bindings of {{ $labels.kind }} `{{ if $labels.rule_namespace }}{{ $labels.rule_namespace }}/{{ end }}{{ $labels.name }}`; the `Ready` condition of the object is `False` with the reason `{{ $labels.reason }}`.
+
+        - `InvalidSpec`: the rule cannot be rendered into bindings (unsupported `accessLevel`, an `accessLevel` not allowed for a namespaced rule, an `additionalRoles` entry that is not a ClusterRole or has an invalid name). Fix the object.
+        - `ApplyError`: the API server rejected a write. The message of the condition names the binding and the error; a binding whose `roleRef` was changed by hand has to be deleted so that the controller recreates it.
+
+        ```bash
+        d8 k {{ if $labels.rule_namespace }}-n {{ $labels.rule_namespace }} {{ end }}get {{ $labels.kind }} {{ $labels.name }} -o jsonpath='{.status.conditions}'
+        ```
+      summary: |
+        The bindings of {{ $labels.kind }} {{ if $labels.rule_namespace }}{{ $labels.rule_namespace }}/{{ end }}{{ $labels.name }} cannot be applied ({{ $labels.reason }}).
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzAuthorizationRulesInvalid
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        `user-authz-controller` reports {{ $value }} {{ $labels.kind }} objects whose bindings cannot be applied, reason `{{ $labels.reason }}`. Up to 50 of them are named by the `D8UserAuthzAuthorizationRuleInvalid` alerts; a large number with the reason `ApplyError` points at a cluster-wide cause (an admission webhook, API server errors) rather than at the objects.
+
+        ```bash
+        d8 k get {{ $labels.kind }} -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,READY:'.status.conditions[?(@.type=="Ready")].status',REASON:'.status.conditions[?(@.type=="Ready")].reason' | grep -v True
+        d8 k -n d8-user-authz logs deploy/user-authz-controller --all-pods=true
+        ```
+      summary: |
+        {{ $value }} {{ $labels.kind }} objects cannot be applied ({{ $labels.reason }}).
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzBindingsDrift
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 15 minutes some bindings of `{{ $labels.kind }}` objects differ from the state `user-authz-controller` wants (missing, superfluous, or with different subjects, roleRef, labels or owner). The controller reports drift only while its writes fail, so users may be missing access or keep access they should have lost.
+
+        Find the objects and the reason:
+
+        ```bash
+        d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,READY:'.status.conditions[?(@.type=="Ready")].status',REASON:'.status.conditions[?(@.type=="Ready")].reason',MESSAGE:'.status.conditions[?(@.type=="Ready")].message'
+        d8 k get authorizationrules -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,READY:'.status.conditions[?(@.type=="Ready")].status',MESSAGE:'.status.conditions[?(@.type=="Ready")].message'
+        d8 k -n d8-user-authz logs deploy/user-authz-controller --all-pods=true
+        ```
+      summary: |
+        user-authz-controller cannot converge the bindings of {{ $labels.kind }}.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzControllerReconcileErrorsHigh
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Controller `{{ $labels.controller }}` of `user-authz-controller` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
+
+        Check logs:
+
+        ```bash
+        d8 k -n d8-user-authz logs deploy/user-authz-controller --all-pods=true
+        ```
+      summary: |
+        user-authz-controller reconcile errors are high for {{ $labels.controller }}.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8UserAuthzControllerTargetDown
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Prometheus cannot scrape metrics from `user-authz-controller` in the `d8-user-authz` namespace.
+
+        The controller is down, not Ready (its informer cache has not synced), or the PodMonitor is missing. Access rules are not reconciled while it is down.
+
+        Check:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-controller
+        d8 k -n d8-user-authz describe pods -l app=user-authz-controller
+        d8 k -n d8-monitoring get podmonitor user-authz-controller
+        ```
+      summary: |
+        Prometheus is unable to scrape user-authz-controller.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzControllerUnavailable
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Deckhouse has detected unavailable replicas in the `user-authz-controller` deployment in the `d8-user-authz` namespace.
+
+        While this alert is active, changes to ClusterAuthorizationRule and AuthorizationRule objects are not applied to their ClusterRoleBindings and RoleBindings, and `d8:use:dict` grants and manage-role projections are not updated. Existing bindings keep working.
+
+        Check deployment and pod states:
+
+        ```bash
+        d8 k -n d8-user-authz get deploy user-authz-controller
+        d8 k -n d8-user-authz get pods -l app=user-authz-controller
+        d8 k -n d8-user-authz logs deploy/user-authz-controller --all-pods=true
+        ```
+      summary: |
+        user-authz-controller has unavailable replicas.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzCustomRolesNotAggregated
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Custom ClusterRoles annotated with `user-authz.deckhouse.io/access-level` are granted to users through the aggregated ClusterRole `user-authz:<level>:custom`, which `kube-controller-manager` fills from the roles labelled with the level. For more than 10 minutes the aggregated role of the `{{ $labels.level }}` level has no rules while custom roles it must aggregate exist, so users of that level (and every level above it) have none of the custom permissions.
+
+        Check that the aggregated role exists and that the `clusterrole-aggregation` controller of `kube-controller-manager` is running:
+
+        ```bash
+        d8 k get clusterrole -l user-authz.deckhouse.io/access-level
+        d8 k get clusterrole -o name | grep 'user-authz:.*:custom' | xargs -n1 d8 k get -o yaml
+        d8 k -n kube-system logs -l component=kube-controller-manager --tail=200 | grep -i aggregat
+        ```
+      summary: |
+        The aggregated ClusterRole of the {{ $labels.level }} access level has no rules although custom roles for it exist.
+      severity: "6"
+      markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
       moduleUrl: 140-user-authz
@@ -3998,7 +4141,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -4013,6 +4156,188 @@ alerts:
         ```
       summary: |
         Permission Browser API server has unavailable replicas.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzReleaseSlow
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/release-duration.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Applying the `user-authz` Helm release took more than 5 minutes on average over the last hour, and it was applied at least twice in that hour, so this is not the single slow pass of a cluster bootstrap or of the one-time migration to `user-authz-controller`. A release that does not finish within the module release timeout (20 minutes) fails, changes to ClusterAuthorizationRule and AuthorizationRule objects stop being applied and platform updates stall (the `D8DeckhouseCouldNotRunModule` alert fires in that case).
+
+        The release itself no longer grows with the number of rules: bindings are managed by `user-authz-controller`, and custom ClusterRoles are aggregated. A slow release therefore points outside the module: an API server that answers slowly, an object stuck with a finalizer, a Deckhouse Pod short of CPU, or the release engine itself. Check what the release is waiting on:
+
+        ```bash
+        d8 s queue list
+        d8 k -n d8-system logs deploy/deckhouse | grep '"module":"user-authz"'
+        ```
+
+        If the cluster has just been updated to the release that moved the bindings to the controller, one slow pass is expected and does not raise this alert by itself; if it fires anyway, the pass is being retried. It is proportional to the number of bindings and can exceed the timeout on clusters with more than 5000 of them; the module FAQ describes what to do in that case.
+      summary: |
+        The user-authz module release repeatedly takes more than 5 minutes.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzRenderSlow
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/release-duration.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Rendering the templates of the `user-authz` module took more than 30 seconds on average over the last 30 minutes, across at least three renders; normally one render takes about a second. Rendering is CPU work inside the Deckhouse Pod and does not depend on the number of ClusterAuthorizationRule or AuthorizationRule objects, so the cause is the node, not the module: most often the Deckhouse Pod is short of CPU (CPU steal on a virtual machine, a node running at its limits, a bootstrap that starts every module at once).
+
+        A single slow render during a cluster bootstrap does not raise this alert by itself. If it fires, compare the module with the others and look at the node:
+
+        ```promql
+        topk(10, increase(deckhouse_helm_operation_seconds_sum{operation="template"}[30m]) / increase(deckhouse_helm_operation_seconds_count{operation="template"}[30m]))
+        rate(node_cpu_seconds_total{mode="steal"}[5m])
+        ```
+
+        ```bash
+        d8 k -n d8-system logs deploy/deckhouse | grep '"module":"user-authz"'
+        ```
+      summary: |
+        Rendering the user-authz module templates repeatedly takes more than 30 seconds.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzRuleNeedsMultiTenancy
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/multitenancy-misconfigured.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The `ClusterAuthorizationRule` `{{ $labels.name }}` sets `{{ $labels.options }}`, but `userAuthz.enableMultiTenancy` is off, so the authorization webhook that enforces those options is not deployed.
+
+        The rule is not partially applied. It is applied without its limits: the subjects named in it hold its access level in **every** namespace of the cluster, the system ones included.
+
+        Either enable multi-tenancy, or remove the options from the rule:
+
+        ```bash
+        d8 k get clusterauthorizationrule {{ $labels.name }} -o yaml
+        d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
+        ```
+      summary: |
+        A ClusterAuthorizationRule asks for namespace limits that nothing enforces.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzRulePropagationLag
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        One instance of `user-authz-webhook` has not updated its rules for more than an hour while another instance has. The rules are changing in the cluster and this instance does not see the changes.
+
+        Find the instance and check its log:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
+        ```
+
+        An instance whose watch keeps failing becomes not ready, so check the readiness of the Pod as well.
+      summary: |
+        One user-authz webhook instance stopped picking up rule changes.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzRulesNeedMultiTenancy
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/multitenancy-misconfigured.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while `userAuthz.enableMultiTenancy` is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first 50 of them; this alert accounts for the rest.
+
+        None of those rules is partially applied: the subjects named in each of them hold its access level in **every** namespace of the cluster, the system ones included.
+
+        Check whether multi-tenancy was meant to be enabled, and list the affected rules:
+
+        ```bash
+        d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
+        d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limitNamespaces // [] | length > 0) or (.spec.namespaceSelector != null) or (.spec.allowAccessToSystemNamespaces == true)) | .metadata.name'
+        ```
+      summary: |
+        More ClusterAuthorizationRules ask for namespace limits than the per-rule alert names.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookDirectoryDiverged
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Instances of `user-authz-webhook` have been using different sets of `ClusterAuthorizationRules` for 10 minutes.
+
+        Each master node authorizes the requests that reach it, so the same request is answered differently depending on the node: a user can be inside their namespace limits on one node and outside them on another.
+
+        Find the instance that is behind and look at why:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100 | grep -i 'list/watch'
+        ```
+
+        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at rules that are no longer updated. Deleting the lagging Pod is the last resort: the DaemonSet recreates it, and on a cluster with a single master node every request in the cluster is denied while the Pod restarts.
+      summary: |
+        The masters disagree about the multi-tenancy rules.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookRulesQuarantined
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 10 minutes the `user-authz-webhook` has quarantined at least one `ClusterAuthorizationRule`: its `limitNamespaces` pattern or `namespaceSelector` does not compile, or the rule cannot be read at all.
+
+        A rule with a broken filter is applied without that filter, so its subjects get a narrower scope than written and are denied where the filter was meant to allow. A rule that cannot be read is not applied at all, and its subjects are denied every namespace.
+
+        Find the rule:
+
+        ```bash
+        d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,LIMIT:.spec.limitNamespaces,SELECTOR:.spec.namespaceSelector
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100 | grep -i quarantin
+        ```
+      summary: |
+        A ClusterAuthorizationRule cannot be compiled by the webhook.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookRulesWatchErrors
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 10 minutes the `user-authz-webhook` rules informer has been failing to watch the `ClusterAuthorizationRules` (a non-zero rate of watch errors). New or changed rules may not be reaching the webhook, so multi-tenancy decisions can lag behind what users configure.
+
+        Check the webhook's access to the API and its logs:
+
+        ```bash
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
+        d8 k auth can-i watch clusterauthorizationrules.deckhouse.io --as=system:serviceaccount:d8-user-authz:webhook
+        ```
+      summary: |
+        The user-authz webhook cannot watch the ClusterAuthorizationRules.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookTargetDown
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Prometheus cannot collect metrics from at least one instance of `user-authz-webhook` in the `d8-user-authz` namespace. One instance without metrics is enough for the alert to fire.
+
+        If the instance is running and only its metrics are unreachable, it keeps answering authorization requests, but the other alerts of the module cannot see its state. If it is not running or has not read the rules yet, it answers `503` to every authorization request, and the API server denies the request, because the webhook is configured with `failurePolicy: Deny`.
+
+        Check the DaemonSet, its metrics sidecar and the scrape target:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c kube-rbac-proxy --tail=50
+        ```
+      summary: |
+        Prometheus is unable to scrape the user-authz webhook.
       severity: "6"
       markupFormat: markdown
     - name: D8UsingFeatureGateWillBeDeprecated
@@ -5101,6 +5426,21 @@ alerts:
       summary: |
         NodeGroup {{ $labels.node_group }} has unavailable instances.
       severity: "8"
+      markupFormat: markdown
+    - name: NodeGroupUsesDeprecatedInCoreGPU
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-deprecate.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        NodeGroup `{{ $labels.name }}` has [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) configured while the `gpu` module is disabled.
+        As a result, GPU nodes in the NodeGroup use the built-in GPU support,
+        which is deprecated and will be removed in a future DKP release.
+
+        To use the supported GPU implementation, enable the [`gpu`](/modules/gpu/) module.
+      summary: |
+        NodeGroup {{ $labels.name }} uses the deprecated built-in GPU support.
+      severity: "9"
       markupFormat: markdown
     - name: NodeRequiresDisruptionApprovalForUpdate
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml

@@ -12,7 +12,7 @@
     "meshID": "d8-istio-mesh",
     "network": {{ include "istioNetworkName" $ | quote }},
     "multiCluster": {
-      "clusterName": {{ printf "%s-%s" ($.Values.global.discovery.clusterDomain | replace "." "-") ($.Values.global.discovery.clusterUUID | adler32sum) | quote }}
+      "clusterName": {{ include "istioClusterID" $ | quote }}
     },
     "externalIstiod": false,
     "jwtPolicy": {{ include "istioJWTPolicy" $ | quote }},

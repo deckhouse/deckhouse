@@ -17,8 +17,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_legacy_rbacv2_custom_roles: "D8UserAuthzLegacyRBACv2CustomRoleFound,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_legacy_rbacv2_custom_roles: "D8UserAuthzLegacyRBACv2CustomRoleFound,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_legacy_rbacv2_custom_roles: "D8UserAuthzLegacyRBACv2CustomRoles,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_legacy_rbacv2_custom_roles: "D8UserAuthzLegacyRBACv2CustomRoles,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: A legacy RBACv2 custom role is present in the cluster.
       description: |-
         The ClusterRole `{{ $labels.name }}` is a custom role or capability created with the legacy experimental RBACv2 scheme. Such roles have a `custom:*` name and use either the `rbac.deckhouse.io/kind: manage` or `use` labels, or aggregation selectors based on these labels.

@@ -66,6 +66,8 @@ var systemBypassUsernames = []string{
 	"system:apiserver",
 	"system:serviceaccount:d8-system:deckhouse",
 	"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager",
+	// user-authz-controller writes the RoleBindings of AuthorizationRules into project namespaces.
+	"system:serviceaccount:d8-user-authz:controller",
 }
 
 var systemBypassGroups = []string{

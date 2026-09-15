@@ -1,6 +1,6 @@
 # E2E Commander Autoclean jobs.
 include:
-  - '.gitlab/notify-failure.yml'
+  - '.gitlab/notify.yml'
 
 .scripts:
   e2e_cmd: |
@@ -37,4 +37,4 @@ e2e-autocleaner:
     - .rules:on_schedule_e2e_autocleaner
     - .e2e-base-common
     - .e2e-variables
-    - .notify
+    - .notify-failure

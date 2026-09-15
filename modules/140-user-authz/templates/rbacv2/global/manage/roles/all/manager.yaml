@@ -8,6 +8,9 @@ metadata:
     rbac.deckhouse.io/use-role: user
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: all
+    user-authz.deckhouse.io/can-assign-basic-max: ClusterAdmin
+    user-authz.deckhouse.io/can-assign-scope: system
+    user-authz.deckhouse.io/can-assign-max-level: admin
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:

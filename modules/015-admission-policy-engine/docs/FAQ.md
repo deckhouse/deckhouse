@@ -657,8 +657,9 @@ Key data and checks available when validating `CONNECT` operations:
 ## How do I restrict GPU resource usage in namespaces?
 
 The `gpuResourceRestriction` policy in [OperationPolicy](cr.html#operationpolicy)
-denies the pods that request GPU resources when the namespace has no label allowing GPU usage.
-The check runs on pod creation and update, including when an ephemeral container is added.
+denies the workloads that request GPU resources when the namespace has no label allowing GPU usage.
+The check runs on creation and update of a pod, including when an ephemeral container is added,
+and on creation and update of the controllers that create pods.
 Both `resources.requests` and `resources.limits` of every container, init container,
 and ephemeral container are inspected. A resource with a quantity of `0` is not treated as a GPU request.
 
@@ -708,8 +709,9 @@ After that, the pods that request GPU resources are allowed only in the namespac
 with the `gpu.deckhouse.io/enabled: "true"` label.
 
 {% alert level="warning" %}
-The policy is applied to pods. A Deployment or another controller that requests GPU resources
-is created successfully, and the denial is reported in the ReplicaSet events.
+The policy is applied to pods and to the pod-creating controllers,
+so a Deployment whose pod template requests GPU resources is denied on creation.
+To leave controllers unchecked, set the [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) parameter to `false`.
 
 The namespace label is read from the Gatekeeper cache. While a namespace is missing from that cache,
 for example when the namespace and the pod are applied together and the namespace has not been cached yet,

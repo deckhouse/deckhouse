@@ -237,7 +237,6 @@ class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
         self.assert_allowed_without_warnings(out)
 
 
-@unittest.skipUnless(shutil.which("jq"), "jq is required to execute the hook's jqFilter programs")
 class TestPlatformIdentitiesAreExempt(unittest.TestCase):
     """
     The installer applies the initial rule and the User it names from one manifest, and on a
@@ -319,6 +318,7 @@ class TestPlatformIdentitiesAreExempt(unittest.TestCase):
                              len(identity_collision.EXEMPT_USERS) + len(identity_collision.EXEMPT_GROUPS))
 
 
+@unittest.skipUnless(shutil.which("jq"), "jq is required to execute the hook's jqFilter programs")
 class TestSnapshotJQFilters(unittest.TestCase):
     """
     Run the jqFilter programs from CONFIG the way shell-operator would.

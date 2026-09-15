@@ -27,7 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-func getPackage(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePackage {
+func getModulePackage(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePackage {
 	t.Helper()
 
 	pkg := new(v1alpha1.ModulePackage)
@@ -46,7 +46,7 @@ func TestSyncModulePackages(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		pkg := getPackage(t, cl, "echo")
+		pkg := getModulePackage(t, cl, "echo")
 		assert.Equal(t, map[string]string{"heritage": "deckhouse"}, pkg.Labels)
 		assert.Empty(t, pkg.OwnerReferences, "no owner: no repository offers an embedded package")
 		assert.Empty(t, pkg.Status.AvailableRepositories, "the entry stays empty until a scan fills it")
@@ -69,18 +69,18 @@ func TestSyncModulePackages(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir, existing)
 		require.NoError(t, s.sync(ctx))
 
-		pkg := getPackage(t, cl, "echo")
+		pkg := getModulePackage(t, cl, "echo")
 		assert.Equal(t, map[string]string{"user": "label"}, pkg.Labels)
 		assert.Equal(t, []string{"deckhouse-modules"}, pkg.Status.AvailableRepositories)
 	})
 
 	t.Run("a release stub creates no package", func(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
-			testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
+			testModuleRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
 		)
 
 		require.NoError(t, s.sync(ctx))
 
-		assert.Empty(t, listModulePackageNames(t, cl), "the repository scan builds the catalog of sourced packages")
+		assert.Empty(t, listModulePackageNamesExceptGlobal(t, cl), "the repository scan builds the catalog of sourced packages")
 	})
 }

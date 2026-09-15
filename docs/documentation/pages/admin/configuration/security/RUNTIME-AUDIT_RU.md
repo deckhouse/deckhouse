@@ -285,7 +285,7 @@ spec:
               Check your events journal for more details.
             summary: Falco detected a critical security incident.
           expr: |
-            sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
+            sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority_raw="critical"}[5m]) > 0)
 ```
 
 {% endraw %}
@@ -298,6 +298,19 @@ spec:
 d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
   curl -s "http://127.0.0.1:9090/api/v1/query?query=falcosecurity_falcosidekick_falco_events_total" | jq
 ```
+
+Уровень важности события передаётся двумя лейблами: `priority` содержит числовое значение, а `priority_raw` — название уровня строчными буквами. Для фильтрации событий по уровню важности используйте лейбл `priority_raw`:
+
+| `priority` | `priority_raw` |
+|---|---|
+| `8` | `emergency` |
+| `7` | `alert` |
+| `6` | `critical` |
+| `5` | `error` |
+| `4` | `warning` |
+| `3` | `notice` |
+| `2` | `informational` |
+| `1` | `debug` |
 
 ## Отладка и эмуляция событий
 

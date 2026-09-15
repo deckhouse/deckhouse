@@ -31,9 +31,6 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	BeforeEach(func() {
-		Skip("legacy helm-render specs are isolated after constraint test runner migration")
-	})
 
 	f := SetupHelmConfig(`
 global:
@@ -263,6 +260,42 @@ admissionPolicyEngine:
 				expectConstraintAction(spec, expectedAction)
 				expectConstraintSelector(spec, expectedSelector)
 				expectConstraintParameters(spec, nil)
+			}
+		})
+
+		It("Pod-scoped operation policy constraints must also match pod-creating controllers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Constraints that read a pod spec go through the `workload_kinds` helper,
+			// so they must match Pods and the controllers that create them. Constraints
+			// scoped to other resources (D8IngressClass, D8StorageClass, D8ReplicaLimits,
+			// D8RevisionHistoryLimit, D8RequiredLabels, D8RequiredAnnotations) keep their
+			// own kind lists and are intentionally absent from this list.
+			podScopedConstraints := []string{
+				"D8AllowedRepos",
+				"D8RequiredResources",
+				"D8DisallowedTags",
+				"D8RequiredProbes",
+				"D8ImagePullPolicy",
+				"D8PriorityClass",
+				"D8DNSPolicy",
+				"D8ContainerDuplicates",
+				"D8DisallowedTolerations",
+				"D8GpuResourceRestriction",
+			}
+
+			for _, constraintKind := range podScopedConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				Expect(constraint.Exists()).To(BeTrue(), "%s constraint should exist", constraintKind)
+
+				spec := getConstraintSpecMap(constraint)
+				match, ok := spec["match"].(map[string]interface{})
+				Expect(ok).To(BeTrue(), "%s spec.match should exist", constraintKind)
+
+				kinds, ok := match["kinds"].([]interface{})
+				Expect(ok).To(BeTrue(), "%s spec.match.kinds should be a list", constraintKind)
+
+				validateKinds(kinds, true, constraintKind)
 			}
 		})
 	})

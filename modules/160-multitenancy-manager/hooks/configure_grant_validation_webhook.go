@@ -69,6 +69,12 @@ var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 		Expression: `request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"`,
 	},
 	{
+		// user-authz-controller writes the RoleBindings of AuthorizationRules into project namespaces,
+		// the very objects the chart used to apply as the deckhouse-controller.
+		Name:       "exclude-user-authz-controller",
+		Expression: `request.userInfo.username != "system:serviceaccount:d8-user-authz:controller"`,
+	},
+	{
 		Name:       "exclude-system-serviceaccounts",
 		Expression: `!request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system")`,
 	},

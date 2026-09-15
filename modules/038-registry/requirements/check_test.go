@@ -25,8 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-// getter reads what the module recorded, which is what the release check reads in a
-// running cluster.
+// getter reads what the module recorded, the same way the release check reads it in a cluster.
 type getter struct{}
 
 func (getter) Get(key string) (any, bool) { return requirements.GetValue(key) }
@@ -41,9 +40,8 @@ func TestCheck(t *testing.T) {
 		assert.True(t, ok)
 	})
 
-	// The case the whole check exists for: the release that removes the legacy
-	// implementation must not land on a cluster that still needs it to configure its
-	// nodes.
+	// The case the check exists for: the release that removes the legacy implementation must not
+	// land on a cluster that still needs it to configure its nodes.
 	t.Run("a cluster still running the legacy implementation", func(t *testing.T) {
 		requirements.RemoveValue(ImplementationKey)
 		requirements.SaveValue(ImplementationKey, "Legacy")
@@ -51,17 +49,15 @@ func TestCheck(t *testing.T) {
 		ok, err := check("V2", getter{})
 		require.Error(t, err)
 		assert.False(t, ok)
-		// The advice has to name something an operator can actually do. There is no
-		// `implementation` setting to select — the module's configuration says so outright — so
-		// the message points at the one lever there is: the previous implementation's mode.
+		// The advice has to name something an operator can act on, and no setting selects an
+		// implementation — so the message points at the previous implementation's mode.
 		assert.Contains(t, err.Error(), "Unmanaged")
 		assert.NotContains(t, err.Error(), "implementation: V2",
 			"nothing accepts that setting, and telling an operator to set it sends them looking")
 	})
 
-	// Passing rather than blocking. A cluster with no recorded value is one whose
-	// registry module has not reported yet, and stranding it on missing information
-	// would be worse than letting the update through.
+	// Passing rather than blocking: a cluster with no recorded value has not reported yet, and
+	// stranding it on missing information would be worse than letting the update through.
 	t.Run("a cluster that has recorded nothing", func(t *testing.T) {
 		requirements.RemoveValue(ImplementationKey)
 

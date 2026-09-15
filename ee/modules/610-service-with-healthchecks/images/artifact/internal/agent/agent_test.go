@@ -6,13 +6,19 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package agent
 
 import (
+	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -526,4 +532,147 @@ func TestEndpointsAreEqualKeepsArgumentsIntact(t *testing.T) {
 
 func ptrTo[T any](v T) *T {
 	return &v
+}
+
+// lbSelectorKey mimics the label a DVP cloud provider puts on the load balancer targets.
+const lbSelectorKey = "dvp.deckhouse.io/aabdc1ef544fa4272ac805a88ffa698b"
+
+func specWithSelector(selector map[string]string) networkv1alpha1.ServiceWithHealthchecksSpec {
+	return networkv1alpha1.ServiceWithHealthchecksSpec{
+		ServiceSpec: corev1.ServiceSpec{Selector: selector},
+	}
+}
+
+func newTargetPod(name string) corev1.Pod {
+	pod := newPod(name, corev1.PodRunning, true, testPodIP)
+	pod.Spec.NodeName = testNodeName
+	pod.Labels = map[string]string{lbSelectorKey: "loadbalancer"}
+	return pod
+}
+
+// storeNonMatchingSWHs fills the internal map with unrelated ServiceWithHealthchecks, as a
+// namespace hosting several load balancers does.
+func storeNonMatchingSWHs(r *ServiceWithHealthchecksReconciler, count int) {
+	for i := 0; i < count; i++ {
+		name := fmt.Sprintf("other-%d", i)
+		r.servicesWithHealthchecks.Store(
+			types.NamespacedName{Namespace: testNamespace, Name: name},
+			specWithSelector(map[string]string{"dvp.deckhouse.io/" + name: "loadbalancer"}),
+		)
+	}
+}
+
+func TestGetExposedServiceWithHCForPodEnqueuesMatchBehindNonMatchingEntries(t *testing.T) {
+	r := newTestReconciler()
+	matching := types.NamespacedName{Namespace: testNamespace, Name: testSWHName}
+	r.servicesWithHealthchecks.Store(matching, specWithSelector(map[string]string{lbSelectorKey: "loadbalancer"}))
+	storeNonMatchingSWHs(r, 9)
+
+	pod := newTargetPod("virt-launcher-worker-rvtjp-dz8lg")
+
+	// sync.Map.Range visits the entries in a randomized order, so a handler that stops the
+	// iteration at the first non-matching entry loses the request only part of the time.
+	// Repeating makes the failure certain instead of flaky.
+	for i := 0; i < 100; i++ {
+		requests := r.getExposedServiceWithHCForPod(context.Background(), &pod)
+		if len(requests) != 1 || requests[0].NamespacedName != matching {
+			t.Fatalf("run %d: got %v, want exactly one request for %s", i, requests, matching)
+		}
+	}
+}
+
+func TestGetExposedServiceWithHCForPodEnqueuesEveryMatch(t *testing.T) {
+	r := newTestReconciler()
+	first := types.NamespacedName{Namespace: testNamespace, Name: testSWHName}
+	second := types.NamespacedName{Namespace: testNamespace, Name: testSWHName + "-https"}
+	r.servicesWithHealthchecks.Store(first, specWithSelector(map[string]string{lbSelectorKey: "loadbalancer"}))
+	r.servicesWithHealthchecks.Store(second, specWithSelector(map[string]string{lbSelectorKey: "loadbalancer"}))
+	storeNonMatchingSWHs(r, 8)
+
+	pod := newTargetPod("virt-launcher-worker-rvtjp-dz8lg")
+
+	for i := 0; i < 100; i++ {
+		requests := r.getExposedServiceWithHCForPod(context.Background(), &pod)
+		if len(requests) != 2 {
+			t.Fatalf("run %d: got %v, want requests for both %s and %s", i, requests, first, second)
+		}
+		got := map[types.NamespacedName]bool{
+			requests[0].NamespacedName: true,
+			requests[1].NamespacedName: true,
+		}
+		if !got[first] || !got[second] {
+			t.Fatalf("run %d: got %v, want requests for both %s and %s", i, requests, first, second)
+		}
+	}
+}
+
+func TestGetExposedServiceWithHCForPodIgnoresForeignPods(t *testing.T) {
+	r := newTestReconciler()
+	r.servicesWithHealthchecks.Store(
+		types.NamespacedName{Namespace: testNamespace, Name: testSWHName},
+		specWithSelector(map[string]string{lbSelectorKey: "loadbalancer"}),
+	)
+
+	otherNode := newTargetPod("pod-on-another-hypervisor")
+	otherNode.Spec.NodeName = "hv-07"
+
+	otherNamespace := newTargetPod("pod-of-another-team")
+	otherNamespace.Namespace = "team-d8-other"
+
+	notAPod := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: testSWHName, Namespace: testNamespace}}
+
+	tests := []struct {
+		name   string
+		object client.Object
+	}{
+		{"pod on another node", &otherNode},
+		{"pod in another namespace", &otherNamespace},
+		{"not a pod", notAPod},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if requests := r.getExposedServiceWithHCForPod(context.Background(), test.object); len(requests) != 0 {
+				t.Errorf("got %v, want no requests", requests)
+			}
+		})
+	}
+}
+
+func TestReconcileKeepsRequeueingItself(t *testing.T) {
+	scheme := runtime.NewScheme()
+	for _, addToScheme := range []func(*runtime.Scheme) error{
+		corev1.AddToScheme, discoveryv1.AddToScheme, networkv1alpha1.AddToScheme,
+	} {
+		if err := addToScheme(scheme); err != nil {
+			t.Fatalf("failed to build scheme: %v", err)
+		}
+	}
+
+	swh := newTestSWH()
+	swh.Spec.Selector = map[string]string{lbSelectorKey: "loadbalancer"}
+
+	r := newTestReconciler()
+	r.Client = fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(&swh).
+		WithStatusSubresource(&networkv1alpha1.ServiceWithHealthchecks{}).
+		WithIndex(&corev1.Pod{}, "spec.nodeName", func(object client.Object) []string {
+			return []string{object.(*corev1.Pod).Spec.NodeName}
+		}).
+		Build()
+
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: testNamespace, Name: testSWHName}}
+
+	// The second pass leaves the status untouched and must still requeue: an agent that stops
+	// requeueing once the state is settled has no way back if a watch event is ever missed.
+	for _, pass := range []string{"first", "second"} {
+		result, err := r.Reconcile(context.Background(), request)
+		if err != nil {
+			t.Fatalf("%s reconcile failed: %v", pass, err)
+		}
+		if result.RequeueAfter != resyncPeriod {
+			t.Errorf("%s reconcile: RequeueAfter = %v, want %v", pass, result.RequeueAfter, resyncPeriod)
+		}
+	}
 }

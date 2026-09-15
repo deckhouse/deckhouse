@@ -10,7 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.24.16
+	github.com/flant/addon-operator v1.24.17
 	github.com/flant/kube-client v1.9.2
 	github.com/flant/shell-operator v1.20.4
 	github.com/go-openapi/spec v0.22.1
@@ -62,7 +62,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry/apis v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
-	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7
+	github.com/deckhouse/deckhouse/pkg/registry v0.0.1
 	github.com/deckhouse/lib-dhctl v0.22.0
 	github.com/deckhouse/module-sdk v0.12.5
 	github.com/ettle/strcase v0.2.0
@@ -325,7 +325,7 @@ require (
 	github.com/werf/kubedog v0.13.1-0.20260826131632-6d8dc9e2e3c5 // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
-	github.com/werf/nelm v1.30.2
+	github.com/werf/nelm v1.30.3
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect

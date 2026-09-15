@@ -85,7 +85,7 @@ spec:
         - name: RUST_BACKTRACE
           value: "1"
         - name: ISTIO_META_CLUSTER_ID
-          value: {{ .Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum .Values.global.discovery.clusterUUID }}
+          value: {{ include "istioClusterID" . }}
         - name: INPOD_ENABLED
           value: "true"
         - name: TERMINATION_GRACE_PERIOD_SECONDS
