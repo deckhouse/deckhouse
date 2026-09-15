@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package kubernetes
 
 import (
+	"slices"
 	"sort"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,14 @@ func UpdateStatusWithCondition(existingConditions []metav1.Condition, newConditi
 		}
 	}
 	return append(existingConditions, newCondition)
+}
+
+// RemoveStatusCondition drops a condition that is no longer reported, so that a stale copy left
+// by an earlier version of the controller does not stay in the status forever.
+func RemoveStatusCondition(conditions []metav1.Condition, conditionType string) []metav1.Condition {
+	return slices.DeleteFunc(conditions, func(condition metav1.Condition) bool {
+		return condition.Type == conditionType
+	})
 }
 
 func UpdateStatusWithConditions(existingConditions []metav1.Condition, newConditions []metav1.Condition) []metav1.Condition {
