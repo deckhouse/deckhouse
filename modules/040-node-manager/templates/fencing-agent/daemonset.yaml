@@ -75,7 +75,7 @@ spec:
             - name: LOG_LEVEL
               value: info
             - name: FENCING_MODE
-              value: {{ $ng.mode }}
+              value: {{ $ng.mode | quote }}
             - name: WATCHDOG_DEVICE
               value: /dev/watchdog
             - name: WATCHDOG_TIMEOUT

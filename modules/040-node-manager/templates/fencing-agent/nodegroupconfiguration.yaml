@@ -7,8 +7,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
   name: "enable-watchdog-for-nodegroup-{{ $ng.name }}.sh"
-  labels:
-    app: fencing-agent
+  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "fencing-agent")) | nindent 2 }}
 spec:
   weight: 99
   nodeGroups: [{{ $ng.name | quote }}]

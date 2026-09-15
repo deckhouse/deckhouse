@@ -5,6 +5,10 @@ linters-settings:
         - /openapi/conversions/v2.yaml
   container:
     exclude-rules:
+      host-network-ports:
+        - kind: DaemonSet
+          name: fencing-agent-name
+          container: fencing-agent
       read-only-root-filesystem:
         - kind: Deployment
           name: caps-controller-manager
@@ -68,6 +72,9 @@ linters-settings:
           name: nvidia-mig-manager
           container: nvidia-mig-manager
       readiness-probe:
+        - kind: DaemonSet
+          name: fencing-agent-name
+          container: fencing-agent
         - kind: Deployment
           name: standby-holder-name
           container: reserve-resources
@@ -100,6 +107,8 @@ linters-settings:
         - kind: Deployment
           name: standby-holder-name
       vpa:
+        - kind: DaemonSet
+          name: fencing-agent-name
         - kind: Deployment
           name: standby-holder-name
   rbac:
