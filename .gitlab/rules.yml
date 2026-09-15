@@ -129,6 +129,15 @@ workflow:
       changes:
         - modules/040-node-manager/images/node-controller/**/*
 
+# Mirrors the `registry_images` path filter of the GitHub workflow.
+.rules:on_merge_request_registry_images:
+  rules:
+    - *skip_e2e_run
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - modules/038-registry/images/**/*
+        - go_lib/registry/**/*
+
 .rules:on_merge_request_docs:
   rules:
     - *skip_e2e_run
