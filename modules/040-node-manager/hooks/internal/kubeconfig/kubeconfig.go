@@ -53,6 +53,10 @@ func New(clusterName, endpoint string, caCert []byte, clientKey []byte, clientCe
 }
 
 // GenerateSecret returns a Kubernetes secret for the given Cluster and kubeconfig data.
+func SecretName(clusterName string) string {
+	return clusterName + "-kubeconfig"
+}
+
 func GenerateSecret(clusterName string, namespace string, data []byte) *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -60,7 +64,7 @@ func GenerateSecret(clusterName string, namespace string, data []byte) *corev1.S
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-kubeconfig", clusterName),
+			Name:      SecretName(clusterName),
 			Namespace: namespace,
 			Labels: map[string]string{
 				"cluster.x-k8s.io/cluster-name": clusterName,
