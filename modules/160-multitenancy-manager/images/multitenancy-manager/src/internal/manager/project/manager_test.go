@@ -21,6 +21,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -298,4 +299,181 @@ func TestApplyTemplateRolesCondition(t *testing.T) {
 		// "a" (allow-list violation) sorts before "b" (disabled annotation)
 		assert.Less(t, strings.Index(cond.Message, `"a"`), strings.Index(cond.Message, `"b"`))
 	})
+}
+
+func TestEnsureTemplateName(t *testing.T) {
+	t.Run("empty string becomes simple", func(t *testing.T) {
+		project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
+		m, c := newManager(t, project)
+		require.NoError(t, m.ensureTemplateName(context.Background(), project))
+		assert.Equal(t, MinimalTemplate, project.Spec.ProjectTemplateName)
+
+		got := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "proj"}, got))
+		assert.Equal(t, MinimalTemplate, got.Spec.ProjectTemplateName)
+	})
+
+	t.Run("existing template is left alone", func(t *testing.T) {
+		project := &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+			Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "secure"},
+		}
+		m, c := newManager(t, project)
+		before := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "proj"}, before))
+
+		require.NoError(t, m.ensureTemplateName(context.Background(), project))
+		assert.Equal(t, "secure", project.Spec.ProjectTemplateName)
+
+		got := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "proj"}, got))
+		assert.Equal(t, before.ResourceVersion, got.ResourceVersion)
+	})
+
+	t.Run("virtual project is skipped", func(t *testing.T) {
+		project := &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "deckhouse",
+				Labels: map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"},
+			},
+		}
+		m, c := newManager(t, project)
+		require.NoError(t, m.ensureTemplateName(context.Background(), project))
+		assert.Empty(t, project.Spec.ProjectTemplateName)
+
+		got := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "deckhouse"}, got))
+		assert.Empty(t, got.Spec.ProjectTemplateName)
+	})
+
+	t.Run("leftover wrap is not pinned to simple", func(t *testing.T) {
+		project := &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "foo",
+				Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
+			},
+		}
+		m, c := newManager(t, project)
+		require.NoError(t, m.ensureTemplateName(context.Background(), project))
+		assert.Empty(t, project.Spec.ProjectTemplateName)
+
+		got := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+		assert.Empty(t, got.Spec.ProjectTemplateName)
+		assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
+	})
+}
+
+func TestHandle_HoldsOffYoungUnstampedNamespace(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:              "foo",
+		CreationTimestamp: metav1.Now(),
+	}}
+	proj := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "simple"},
+	}
+	m, c := newManager(t, ns, proj)
+	fh := &fakeHelmClient{applyResult: helm.ReleaseOutcome{Applied: true}}
+	m.helmClient = fh
+
+	res, err := m.Handle(context.Background(), proj.DeepCopy())
+	require.NoError(t, err)
+	assert.Greater(t, res.RequeueAfter, time.Duration(0))
+	assert.LessOrEqual(t, res.RequeueAfter, helm.AdoptGracePeriod)
+	assert.Zero(t, fh.analyzeCalls)
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.Empty(t, updated.Annotations[helm.ResourceAnnotationReleaseName])
+	assert.NotEqual(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.NotEqual(t, v1alpha3.ProjectStateError, got.Status.State)
+}
+
+func TestHandle_DeletesLeftoverWrapWhenNamespaceGone(t *testing.T) {
+	leftover := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "foo",
+			Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
+		},
+	}
+	m, c := newManager(t, leftover)
+	fh := &fakeHelmClient{applyResult: helm.ReleaseOutcome{Applied: true}}
+	m.helmClient = fh
+
+	_, err := m.Handle(context.Background(), leftover)
+	require.NoError(t, err)
+	assert.Zero(t, fh.analyzeCalls)
+
+	got := new(v1alpha3.Project)
+	err = c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got)
+	require.True(t, apierrors.IsNotFound(err) || !got.DeletionTimestamp.IsZero())
+}
+
+func TestHandle_LeftoverWrapKeepsIdentityWhenHelmForeign(t *testing.T) {
+	leftover := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "foo",
+			Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
+		},
+	}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "foo",
+		Annotations: map[string]string{
+			helm.ResourceAnnotationReleaseName:      "foo",
+			helm.ResourceAnnotationReleaseNamespace: "foo",
+		},
+	}}
+	m, c := newManager(t, leftover, ns)
+	fh := &fakeHelmClient{applyResult: helm.ReleaseOutcome{Applied: true}}
+	m.helmClient = fh
+
+	_, err := m.Handle(context.Background(), leftover)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, helm.ErrForeignRelease)
+	assert.Zero(t, fh.analyzeCalls)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Empty(t, got.Spec.ProjectTemplateName)
+	assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
+	assert.Equal(t, v1alpha3.ProjectStateError, got.Status.State)
+	assert.True(t, got.IsConditionFalse(v1alpha3.ProjectConditionHelmOwnership))
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseName])
+	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseNamespace])
+}
+
+func TestHandle_RequeuesLeftoverWrapWhenNamespaceGetFails(t *testing.T) {
+	leftover := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "foo",
+			Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
+		},
+	}
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, v1alpha3.AddToScheme(scheme))
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(leftover).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if _, ok := obj.(*corev1.Namespace); ok {
+				return errors.New("namespace get failed")
+			}
+			return c.Get(ctx, key, obj, opts...)
+		},
+	}).Build()
+	m := New(c, &fakeHelmClient{}, logr.Discard())
+
+	_, err := m.Handle(context.Background(), leftover.DeepCopy())
+	require.Error(t, err)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Empty(t, got.Spec.ProjectTemplateName)
+	assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
 }

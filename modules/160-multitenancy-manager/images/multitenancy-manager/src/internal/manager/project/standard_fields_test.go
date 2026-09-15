@@ -44,7 +44,8 @@ func newManager(t *testing.T, objs ...client.Object) (*Manager, client.Client) {
 			t.Fatal(err)
 		}
 	}
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).
+		WithStatusSubresource(&v1alpha3.Project{}).Build()
 	return New(c, nil, logr.Discard()), c
 }
 
