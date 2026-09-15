@@ -365,6 +365,34 @@ func TestRememberConvergeUserNodeSkipsImmutableMaster(t *testing.T) {
 	require.Empty(t, controller.convergeState.ConvergeUserNodes)
 }
 
+// convergeUserSkipped is answered where the payload is rendered, and the record follows
+// that answer. SSHless() turns false the moment the hosts cache is written, so asking a
+// second time at record time claims an account no payload ever carried.
+func TestRememberConvergeUserNodeFollowsTheRenderedPayload(t *testing.T) {
+	// The converge rendered its payload while it knew no host — sshless, no account went
+	// in — and by record time a host is known, so SSHless() is false.
+	convergeCtx := context.NewContext(t.Context(), context.Params{
+		KubeOwnCredentials: true,
+		KubeProvider:       unreachableKubeProvider{},
+		SSHProviderInitializer: providerinitializer.NewSSHProviderInitializer(
+			settings.NewBaseProviders(settings.ProviderParams{}),
+			&sshconfig.ConnectionConfig{
+				Config: &sshconfig.Config{},
+				Hosts:  []sshconfig.Host{{Host: "10.12.1.10"}},
+			},
+		),
+	})
+	require.False(t, convergeCtx.SSHless())
+
+	controller := NewMasterNodeGroupController(
+		NewNodeGroupController("master", state.NodeGroupInfrastructureState{}, nil, nil), false)
+	controller.convergeState = &context.State{}
+
+	require.NoError(t, controller.rememberConvergeUserNode(convergeCtx, "cluster-master-0"))
+	require.Empty(t, controller.convergeState.ConvergeUserNodes,
+		"a payload rendered without the converge user must not be recorded as carrying it")
+}
+
 // The same master is recorded once: addNodes and updateNode both report, and a converge
 // that scales 1→3→1 walks the same node twice.
 func TestRememberConvergeUserNodeIsIdempotent(t *testing.T) {
@@ -373,6 +401,7 @@ func TestRememberConvergeUserNodeIsIdempotent(t *testing.T) {
 	controller := NewMasterNodeGroupController(
 		NewNodeGroupController("master", state.NodeGroupInfrastructureState{}, nil, nil), false)
 	controller.convergeState = &context.State{ConvergeUserNodes: []string{"cluster-master-0"}}
+	controller.cloudConfigHasConvergeUser = true
 
 	require.NoError(t, controller.rememberConvergeUserNode(convergeCtx, "cluster-master-0"))
 	require.Equal(t, []string{"cluster-master-0"}, controller.convergeState.ConvergeUserNodes)
@@ -386,6 +415,7 @@ func TestRememberConvergeUserNodeRecordsTheAccountExpiry(t *testing.T) {
 	controller := NewMasterNodeGroupController(
 		NewNodeGroupController("master", state.NodeGroupInfrastructureState{}, nil, nil), false)
 	controller.convergeState = &context.State{}
+	controller.cloudConfigHasConvergeUser = true
 
 	// The cluster is unreachable, so the save fails; what it was about to save is the point.
 	require.Error(t, controller.rememberConvergeUserNode(convergeCtx, "cluster-master-0"))

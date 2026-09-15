@@ -58,6 +58,11 @@ type NodeGroupController struct {
 	// group-wide bashible cloud-init, and their nodes answer no sshd.
 	immutable bool
 
+	// cloudConfigHasConvergeUser describes the payload above, so that the record of which
+	// masters carry the account follows the render instead of re-deciding: SSHless() turns
+	// false the moment a new master's address is cached.
+	cloudConfigHasConvergeUser bool
+
 	globalOptions *options.GlobalOptions
 }
 
@@ -86,20 +91,22 @@ func (c *NodeGroupController) loadCloudConfig(ctx *context.Context, nodeInternal
 		return err
 	}
 
-	cloudConfig, err := masterCloudConfig(ctx.Ctx(), metaConfig, operatorPrivateKeys(ctx), payload, c.convergeUserSkipped(ctx))
+	skipped := c.convergeUserSkipped(ctx)
+
+	cloudConfig, err := masterCloudConfig(ctx.Ctx(), metaConfig, operatorPrivateKeys(ctx), payload, skipped)
 	if err != nil {
 		return err
 	}
 
 	c.cloudConfig = cloudConfig
+	c.cloudConfigHasConvergeUser = !skipped
 
 	return nil
 }
 
-// convergeUserSkipped reports that no converge user goes into this group's payload. Only
-// a master is reached over SSH by converge, and only when there is an sshd to reach and a
-// reason to: an immutable master answers none, and a commander or sshless converge holds
-// Kubernetes credentials of its own and connects to no node at all.
+// convergeUserSkipped reports that no converge user goes into this group's payload. Only a
+// master is reached over SSH by converge, and only with an sshd to reach: a commander or
+// sshless converge holds Kubernetes credentials of its own and connects to no node at all.
 func (c *NodeGroupController) convergeUserSkipped(ctx *context.Context) bool {
 	if c.name != global.MasterNodeGroupName {
 		return true

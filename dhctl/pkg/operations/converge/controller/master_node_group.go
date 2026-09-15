@@ -356,7 +356,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 // rememberConvergeUserNode records a master that booted with the converge user, so that a
 // later switch knows which user reaches it and the cleanup knows where to remove it.
 func (c *MasterNodeGroupController) rememberConvergeUserNode(ctx *context.Context, nodeName string) error {
-	if c.convergeUserSkipped(ctx) {
+	if !c.cloudConfigHasConvergeUser {
 		return nil
 	}
 
@@ -378,9 +378,8 @@ func (c *MasterNodeGroupController) rememberConvergeUserNode(ctx *context.Contex
 }
 
 // forgetConvergeUserNodes drops the masters that have just been destroyed. A destructive
-// single-master plan scales 1→3→1: the two masters it creates carry the converge user and
-// are deleted again, and left in the state they would send the cleanup to machines that
-// no longer exist.
+// single-master plan scales 1→3→1: the masters it creates carry the converge user and are
+// deleted again, and left in the state they send the cleanup to machines that are gone.
 func (c *MasterNodeGroupController) forgetConvergeUserNodes(ctx *context.Context, deleted []string) error {
 	kept := slices.DeleteFunc(slices.Clone(c.convergeState.ConvergeUserNodes), func(name string) bool {
 		return slices.Contains(deleted, name)
