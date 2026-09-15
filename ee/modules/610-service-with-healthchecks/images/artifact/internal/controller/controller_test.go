@@ -790,3 +790,36 @@ func TestReconcileAdoptsServiceWithPlainOwnerReference(t *testing.T) {
 		t.Errorf("expected no conflict, got %s/%s: %s", condition.Status, condition.Reason, condition.Message)
 	}
 }
+
+// The addresses of a Service the module does not manage are not the addresses of this resource.
+func TestReconcileClearsAddressStatusInConflict(t *testing.T) {
+	swh := newTestSWH(nil, nil)
+	isController := true
+	foreign := ownedChildService("10.96.0.7")
+	foreign.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+		Name:       "backend",
+		UID:        types.UID("2c4e5f60-1a2b-4c3d-8e9f-0a1b2c3d4e5f"),
+		Controller: &isController,
+	}}
+	foreign.Status.LoadBalancer = corev1.LoadBalancerStatus{
+		Ingress: []corev1.LoadBalancerIngress{{IP: "185.11.73.234"}},
+	}
+
+	fakeClient := reconcileWith(t, swh, foreign)
+
+	if condition := childServiceCondition(t, fakeClient); condition.Reason != "ChildServiceConflict" {
+		t.Fatalf("expected a conflict to be reported, got %s", condition.Reason)
+	}
+
+	updated := getSWH(t, fakeClient)
+	if updated.Status.ClusterIP != "" || len(updated.Status.ClusterIPs) != 0 {
+		t.Errorf("expected the address of a foreign Service not to be reported, got %q %v",
+			updated.Status.ClusterIP, updated.Status.ClusterIPs)
+	}
+	if len(updated.Status.LoadBalancer.Ingress) != 0 {
+		t.Errorf("expected the load balancer of a foreign Service not to be reported, got %+v",
+			updated.Status.LoadBalancer)
+	}
+}

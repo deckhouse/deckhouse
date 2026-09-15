@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,9 +30,8 @@ import (
 )
 
 const (
-	endpointControllerLabelKey  = "endpointslice.kubernetes.io/managed-by"
-	controllerName              = "servicewithhealthchecks"
-	serviceWithHealthchecksKind = "ServiceWithHealthchecks"
+	endpointControllerLabelKey = "endpointslice.kubernetes.io/managed-by"
+	controllerName             = "servicewithhealthchecks"
 
 	childServiceConditionType = "ChildServiceReady"
 	// The condition used to be called differently. A stale copy is dropped from the status, so
@@ -196,16 +194,24 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	originalServiceWithHC := serviceWithHC.DeepCopy()
 	patch := client.MergeFrom(originalServiceWithHC)
 
-	if desiredServiceType(serviceWithHC) == corev1.ServiceTypeLoadBalancer {
-		r.Logger.Debug("update status for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
-		serviceWithHC.Status.LoadBalancer = childService.Status.LoadBalancer
-	} else {
+	if conflictErr != nil {
+		// The Service under this name belongs to somebody else, so its addresses are not the
+		// addresses of this resource and must not be reported as if they were.
 		serviceWithHC.Status.LoadBalancer = corev1.LoadBalancerStatus{}
+		serviceWithHC.Status.ClusterIP = ""
+		serviceWithHC.Status.ClusterIPs = nil
+	} else {
+		if desiredServiceType(serviceWithHC) == corev1.ServiceTypeLoadBalancer {
+			r.Logger.Debug("update status for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
+			serviceWithHC.Status.LoadBalancer = childService.Status.LoadBalancer
+		} else {
+			serviceWithHC.Status.LoadBalancer = corev1.LoadBalancerStatus{}
+		}
+		// The address of the child Service is observed state, so it is reported here instead of
+		// being written back into the spec of the ServiceWithHealthchecks.
+		serviceWithHC.Status.ClusterIP = childService.Spec.ClusterIP
+		serviceWithHC.Status.ClusterIPs = childService.Spec.ClusterIPs
 	}
-	// The address of the child Service is observed state, so it is reported here instead of being
-	// written back into the spec of the ServiceWithHealthchecks.
-	serviceWithHC.Status.ClusterIP = childService.Spec.ClusterIP
-	serviceWithHC.Status.ClusterIPs = childService.Spec.ClusterIPs
 
 	// A Service the module does not manage takes precedence: while it is in the way, the address
 	// requested in the spec is not what the reconciliation is stuck on.
@@ -246,7 +252,7 @@ func (p *childServiceProblem) Error() string { return p.message }
 // purpose, would do more damage than the name clash itself.
 func childServiceConflict(service *corev1.Service, shc *networkv1alpha1.ServiceWithHealthchecks) *childServiceProblem {
 	var cause string
-	ref := foreignOwnerReference(service, shc.Name)
+	ref := kubernetes.ForeignControllerReference(service, shc.Name)
 	switch {
 	case ref != nil:
 		cause = fmt.Sprintf("is owned by another resource, %s %q", ref.Kind, ref.Name)
@@ -279,27 +285,6 @@ func clusterIPMismatch(service *corev1.Service, shc *networkv1alpha1.ServiceWith
 			"to have it recreated, or drop spec.clusterIP from the ServiceWithHealthchecks. The current address is "+
 			"reported in status.clusterIP", shc.Name, service.Spec.ClusterIP, shc.Spec.ClusterIP),
 	}
-}
-
-// foreignOwnerReference returns the controller reference of the Service when it points to
-// something other than the ServiceWithHealthchecks the child Service is built for. Only a
-// controller reference means ownership; a plain owner reference is an extra garbage collection
-// link that anything may add, and refusing to manage our own Service because of one would be
-// worse than the clash it is meant to catch. The UID is not compared: a reference to the same
-// name is ours even when the parent was recreated and got a new one.
-func foreignOwnerReference(service *corev1.Service, name string) *metav1.OwnerReference {
-	ref := metav1.GetControllerOf(service)
-	if ref == nil {
-		return nil
-	}
-	gv, err := schema.ParseGroupVersion(ref.APIVersion)
-	if err != nil ||
-		gv.Group != networkv1alpha1.GroupVersion.Group ||
-		ref.Kind != serviceWithHealthchecksKind ||
-		ref.Name != name {
-		return ref
-	}
-	return nil
 }
 
 func createStatusConditionForService(err error, problem *childServiceProblem, svcName string) metav1.Condition {

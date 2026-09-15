@@ -41,7 +41,6 @@ const (
 	endpointServiceNameLabelKey = "kubernetes.io/service-name"
 	endpointControllerLabelKey  = "endpointslice.kubernetes.io/managed-by"
 	controllerName              = "servicewithhealthchecks"
-	serviceWithHealthchecksKind = "ServiceWithHealthchecks"
 
 	// resyncPeriod bounds how long a ServiceWithHealthchecks may stay out of sync with the
 	// pods on this node. New target pods are learned from watch events only, and once the
@@ -132,7 +131,20 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 
 	// update endpointslices unless ClusterIP is None
 	if serviceWithHC.Spec.ClusterIP != "None" {
-		err = r.updateEPSForServiceWithHealthchecks(ctx, serviceWithHC)
+		mayPublish, mayErr := r.mayPublishEPS(ctx, serviceWithHC)
+		if mayErr != nil {
+			r.logger.Error("unable to check the owner of the child Service", log.Err(mayErr))
+			return ctrl.Result{}, mayErr
+		}
+
+		if mayPublish {
+			err = r.updateEPSForServiceWithHealthchecks(ctx, serviceWithHC)
+		} else {
+			// Withdraw what this node published before the clash appeared. Doing it here rather
+			// than from the controller keeps the two components from undoing each other while
+			// they are rolled out one after another.
+			err = r.deleteEPSForNode(ctx, serviceWithHC)
+		}
 		if err != nil {
 			r.logger.Error("unable to update EPS for ServiceWithHealthchecks", log.Err(err))
 			return ctrl.Result{}, err
@@ -444,27 +456,59 @@ func (r *ServiceWithHealthchecksReconciler) GetNodeName() string {
 	return r.nodeName
 }
 
+// mayPublishEPS reports whether the module may publish EndpointSlices under the name of this
+// resource. A Service the module does not control keeps its own selector and its own endpoints,
+// and kube-proxy balances over the union of every slice carrying the service name — so publishing
+// next to it would send traffic meant for somebody else's Service into the pods of this resource.
+//
+// The child Service is read from the cache of the manager. The agent does not watch Services, so a
+// Service appearing under this name is noticed on the next reconciliation rather than immediately;
+// the resync above bounds that window.
+func (r *ServiceWithHealthchecksReconciler) mayPublishEPS(ctx context.Context, svc networkv1alpha1.ServiceWithHealthchecks) (bool, error) {
+	var childService corev1.Service
+	err := r.Get(ctx, client.ObjectKey{Namespace: svc.GetNamespace(), Name: svc.GetName()}, &childService)
+	if errors.IsNotFound(err) {
+		// The controller has not created it yet. Slices are matched to a Service by name, so
+		// publishing ahead of it changes nothing until the Service shows up.
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return kubernetes.IsOwnedByServiceWithHealthchecks(&childService, svc.GetName()), nil
+}
+
+// deleteEPSForNode removes the EndpointSlice this node maintains for the resource, if any.
+func (r *ServiceWithHealthchecksReconciler) deleteEPSForNode(ctx context.Context, svc networkv1alpha1.ServiceWithHealthchecks) error {
+	name := endpointSliceNameForNode(svc.GetName(), r.nodeName)
+	eps := &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: svc.GetNamespace(),
+		},
+	}
+	if err := r.Delete(ctx, eps); err != nil && !errors.IsNotFound(err) {
+		r.logger.Error("could not delete EndpointSlice", log.Err(err), "name", name)
+		return err
+	}
+	return nil
+}
+
+func endpointSliceNameForNode(svcName, nodeName string) string {
+	return svcName + "-" + nodeName
+}
+
 func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(ctx context.Context, svc networkv1alpha1.ServiceWithHealthchecks) error {
 	r.logger.Debug("updating endpoints for service", "swh_name", svc.GetName(), "namespace", svc.GetNamespace())
-	desiredNameForEndpointSlice := svc.GetName() + "-" + r.nodeName
+	desiredNameForEndpointSlice := endpointSliceNameForNode(svc.GetName(), r.nodeName)
 
 	// Build the desired state
 	desiredEPS := r.BuildEndpointSlice(desiredNameForEndpointSlice, svc)
 
 	// If there are no endpoints, the slice should not exist on this node
 	if len(desiredEPS.Endpoints) == 0 {
-		epsToDelete := &discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      desiredNameForEndpointSlice,
-				Namespace: svc.GetNamespace(),
-			},
-		}
-		err := r.Delete(ctx, epsToDelete)
-		if err != nil && !errors.IsNotFound(err) {
-			r.logger.Error("could not delete EndpointSlice", log.Err(err), "name", desiredNameForEndpointSlice)
-			return err
-		}
-		return nil // Exit here after deleting (or if already deleted), do not proceed to Get/Update.
+		// Exit here after deleting (or if already deleted), do not proceed to Get/Update.
+		return r.deleteEPSForNode(ctx, svc)
 	}
 
 	// Try to get the existing one to see if we need to update it.
@@ -532,7 +576,7 @@ func ownerReferenceForServiceWithHealthchecks(svc networkv1alpha1.ServiceWithHea
 	isController := true
 	return metav1.OwnerReference{
 		APIVersion: networkv1alpha1.GroupVersion.String(),
-		Kind:       serviceWithHealthchecksKind,
+		Kind:       kubernetes.ServiceWithHealthchecksKind,
 		Name:       svc.GetName(),
 		UID:        svc.GetUID(),
 		Controller: &isController,

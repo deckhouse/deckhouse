@@ -13,6 +13,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
+	"service-with-healthchecks/internal/kubernetes"
 )
 
 const (
@@ -705,7 +707,7 @@ func TestBuildEndpointSliceIsOwnedBySWH(t *testing.T) {
 		t.Fatalf("expected exactly one owner reference, got %+v", eps.OwnerReferences)
 	}
 	ref := eps.OwnerReferences[0]
-	if ref.APIVersion != networkv1alpha1.GroupVersion.String() || ref.Kind != serviceWithHealthchecksKind {
+	if ref.APIVersion != networkv1alpha1.GroupVersion.String() || ref.Kind != kubernetes.ServiceWithHealthchecksKind {
 		t.Errorf("expected the owner to be a ServiceWithHealthchecks, got %s %s", ref.APIVersion, ref.Kind)
 	}
 	if ref.Name != testSWHName || ref.UID != testSWHUID {
@@ -789,5 +791,95 @@ func TestUpdateEPSReplacesStaleOwnerReference(t *testing.T) {
 	}
 	if len(updated.OwnerReferences) != 1 || updated.OwnerReferences[0].UID != testSWHUID {
 		t.Errorf("expected the stale owner reference to be replaced, got %+v", updated.OwnerReferences)
+	}
+}
+
+// ownedService builds the child Service as the controller maintains it.
+func ownedService() *corev1.Service {
+	isController := true
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testSWHName,
+			Namespace: testNamespace,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: networkv1alpha1.GroupVersion.String(),
+				Kind:       kubernetes.ServiceWithHealthchecksKind,
+				Name:       testSWHName,
+				UID:        testSWHUID,
+				Controller: &isController,
+			}},
+		},
+	}
+}
+
+// A Service the module does not control keeps its own endpoints, and kube-proxy balances over the
+// union of every slice carrying the service name.
+func TestMayPublishEPS(t *testing.T) {
+	foreign := ownedService()
+	foreign.OwnerReferences[0].APIVersion = "apps/v1"
+	foreign.OwnerReferences[0].Kind = "Deployment"
+	foreign.OwnerReferences[0].Name = "backend"
+
+	plainReference := ownedService()
+	plainReference.OwnerReferences[0].Controller = nil
+
+	recreatedParent := ownedService()
+	recreatedParent.OwnerReferences[0].UID = types.UID("00000000-0000-0000-0000-000000000000")
+
+	tests := []struct {
+		name    string
+		service *corev1.Service
+		want    bool
+	}{
+		{"no Service yet", nil, true},
+		{"owned by the parent", ownedService(), true},
+		{"owned by the parent recreated under the same name", recreatedParent, true},
+		{"controlled by another resource", foreign, false},
+		{"merely referenced by the parent, not controlled", plainReference, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := newTestReconciler()
+			builder := fake.NewClientBuilder().WithScheme(newTestScheme(t))
+			if test.service != nil {
+				builder = builder.WithObjects(test.service)
+			}
+			r.Client = builder.Build()
+
+			got, err := r.mayPublishEPS(context.Background(), newTestSWH())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != test.want {
+				t.Errorf("mayPublishEPS = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+// The slice published before the clash appeared has to be withdrawn, otherwise it keeps attracting
+// traffic for as long as the conflict lasts.
+func TestDeleteEPSForNodeWithdrawsTheSlice(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	published := r.BuildEndpointSlice(endpointSliceNameForNode(testSWHName, testNodeName), swh)
+	published.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&published).Build()
+
+	if err := r.deleteEPSForNode(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var remaining discoveryv1.EndpointSlice
+	err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: published.Name}, &remaining)
+	if !errors.IsNotFound(err) {
+		t.Errorf("expected the slice to be gone, got %v", err)
+	}
+
+	// deleting a slice that is not there is how the steady state looks
+	if err := r.deleteEPSForNode(context.Background(), swh); err != nil {
+		t.Errorf("expected a missing slice to be fine, got %v", err)
 	}
 }
