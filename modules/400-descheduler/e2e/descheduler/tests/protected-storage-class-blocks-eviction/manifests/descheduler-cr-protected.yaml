@@ -1,0 +1,13 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: e2e-protected-sc
+spec:
+  podLabelSelector:
+    matchLabels:
+      e2e-test: protected-sc
+  protectedStorageClasses:
+    - ($storageClass)
+  strategies:
+    removePodsViolatingInterPodAntiAffinity:
+      enabled: true
