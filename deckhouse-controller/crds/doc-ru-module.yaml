@@ -61,3 +61,92 @@ spec:
                   properties:
                     editions:
                       description: Настройки работы модуля в редакциях Deckhouse.
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает экземпляр модуля, которым управляет система пакетов.
+          properties:
+            spec:
+              description: Желаемое состояние модуля.
+              properties:
+                packageRepositoryName:
+                  description: |
+                    Имя репозитория, из которого ставится пакет модуля.
+
+                    Если не задано, используется репозиторий по умолчанию.
+                packageVersion:
+                  description: Версия пакета модуля, которую нужно установить.
+                releaseChannel:
+                  description: Канал обновлений пакета модуля.
+                enabled:
+                  description: |
+                    Включает или выключает модуль.
+
+                    Если не задано, решение принимает платформа.
+                maintenance:
+                  description: |
+                    Режим обслуживания модуля.
+
+                    - `NoResourceReconciliation`: режим для разработки и отладки модуля.
+
+                      В этом режиме:
+
+                      - изменения конфигурации и хуков не применяются, поэтому ресурсы не обновляются автоматически;
+                      - слежение за ресурсами отключено, поэтому удалённые ресурсы не восстанавливаются;
+                      - все ресурсы модуля получают лейбл `maintenance: NoResourceReconciliation`;
+                      - срабатывает алерт `ModuleIsInMaintenanceMode`.
+                settingsVersion:
+                  description: Версия схемы параметров. Не путать с `packageVersion`, которая выбирает пакет модуля.
+                settings:
+                  description: Параметры модуля.
+            status:
+              description: Наблюдаемое состояние модуля.
+              properties:
+                summary:
+                  description: |
+                    Сводное состояние модуля: контроллер заполняет его на каждом reconcile, и клиентам не нужно выводить состояние из conditions самостоятельно.
+                  properties:
+                    state:
+                      description: |
+                        Состояние модуля в его жизненном цикле.
+
+                        Одно из: `Pending`, `Failed`, `Updating`, `Ready`, `Degraded`, `Suspended`, `Deleting`.
+                    message:
+                      description: Описание текущего состояния для человека.
+                    tip:
+                      description: Подсказка, как выйти из текущего состояния. Пусто, если делать ничего не нужно.
+                currentVersion:
+                  description: Информация об установленной версии модуля.
+                  properties:
+                    version:
+                      description: Семантическая версия установленного модуля.
+                    channel:
+                      description: Канал обновлений, из которого установлена версия.
+                conditions:
+                  description: Условия, отражающие последние наблюдения за состоянием модуля.
+                  items:
+                    description: Условие, описывающее один аспект текущего состояния модуля.
+                    properties:
+                      type:
+                        description: Тип условия в CamelCase или в формате `foo.example.com/CamelCase`.
+                      status:
+                        description: Статус условия. Может быть `True`, `False` или `Unknown`.
+                      reason:
+                        description: Программный идентификатор причины последнего перехода условия.
+                      message:
+                        description: Сообщение с деталями перехода. Может быть пустым.
+                      lastTransitionTime:
+                        description: Последнее время перехода условия из одного статуса в другой.
+                      observedGeneration:
+                        description: |
+                          Значение `.metadata.generation`, на котором было установлено условие.
+
+                          Позволяет определить актуальность условия для текущего состояния ресурса.
+                lastAppliedConfiguration:
+                  description: |
+                    Действующие параметры последнего успешного применения.
+
+                    Это пользовательская конфигурация, дополненная значениями по умолчанию из схемы параметров.
+                tracking:
+                  description: Отчёт nelm о применении ресурсов модуля.

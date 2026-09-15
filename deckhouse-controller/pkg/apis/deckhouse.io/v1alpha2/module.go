@@ -62,6 +62,7 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:unservedversion
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
 // +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
@@ -93,8 +94,8 @@ type ModuleSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
-	// Version of the module package to install
-	// +crd-enricher:deckhouse:documentation:examples=v1.0.0.
+	// Version of the module package to install.
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 
 	// Release channel for the module package.
@@ -133,7 +134,7 @@ type ModuleSpec struct {
 type ModuleStatus struct {
 	// Summary aggregates the high-level user-facing state, message and
 	// resolution hint for the module. The controller always populates it
-	// on reconcile — every module maps to exactly one lifecycle state — so
+	// on reconcile - every module maps to exactly one lifecycle state - so
 	// it is the single source of truth for the UI; clients should not re-derive
 	// these values from the conditions. The pointer leaves it absent only
 	// before the first status computation.
