@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:security:superadmin
+  annotations:
+    en.meta.deckhouse.io/title: "Security: Superadmin"
+    ru.meta.deckhouse.io/title: "Суперадминистратор подсистемы безопасности"
+    en.meta.deckhouse.io/description: "Full control over the Security subsystem, including its system resources."
+    ru.meta.deckhouse.io/description: "Полный контроль над подсистемой безопасности, включая её системные ресурсы."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: superadmin
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: security
+    rbac.deckhouse.io/aggregate-to-system-as: superadmin
+    # can-assign range of the identity-assign webhook: the security superadmin assigns the basic
+    # levels up to SuperAdmin (and therefore cluster-admin) and the security subsystem roles up to
+    # superadmin; superadmin roles of other scopes stay out of its range.
+    user-authz.deckhouse.io/can-assign-basic-max: SuperAdmin
+    user-authz.deckhouse.io/can-assign-scope: subsystem
+    user-authz.deckhouse.io/can-assign-subsystem: security
+    user-authz.deckhouse.io/can-assign-max-level: superadmin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-security-as: superadmin

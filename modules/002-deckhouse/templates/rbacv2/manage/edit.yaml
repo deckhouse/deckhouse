@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: deckhouse
     rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.deckhouse.edit"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-system
-  name: d8:manage:permission:module:deckhouse:edit
+  name: d8:system-capability:deckhouse:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module deckhouse: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль deckhouse: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the deckhouse module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля deckhouse."
 rules:
 - apiGroups:
   - deckhouse.io

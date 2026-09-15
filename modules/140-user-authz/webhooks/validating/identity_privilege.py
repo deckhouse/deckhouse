@@ -55,7 +55,7 @@ CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
 - name: d8-user-authz-identity-assign.deckhouse.io
-  includeSnapshotsFrom: ["{assign.CAR_SNAP}", "{assign.AR_SNAP}", "{assign.CRB_SNAP}", "{assign.CROLE_SNAP}"]
+  includeSnapshotsFrom: ["{assign.CAR_SNAP}", "{assign.AR_SNAP}", "{assign.CRB_SNAP}", "{assign.CPRB_SNAP}", "{assign.PRB_SNAP}", "{assign.CROLE_SNAP}"]
 {MATCH_CONDITIONS}
   rules:
   - apiGroups:   ["deckhouse.io"]
