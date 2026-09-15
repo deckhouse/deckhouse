@@ -36,6 +36,10 @@ func NewCloudSuite(deps CloudDeps) preflight.Suite {
 		// otherwise costs the whole of base infrastructure to discover.
 		checks.CloudNodeNetworkCIDRIntersection(deps.MetaConfig),
 		checks.CloudSSHKey(deps.MetaConfig, deps.SSHProviderInitializer),
+		// The only one here that leaves the host: dhctl's own reach to the API it is about to
+		// drive. Without it the answer arrives from the infrastructure utility instead, as one
+		// stack trace per resource that happened to touch the API.
+		checks.CloudAPIFromInstaller(deps.MetaConfig),
 		checks.BastionAvailability(deps.SSHProviderInitializer),
 	)
 }

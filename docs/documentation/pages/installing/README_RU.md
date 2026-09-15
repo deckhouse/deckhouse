@@ -693,6 +693,7 @@ dhctl bootstrap \
 - `--preflight-skip-check=host-network-cidr-intersection` — пропуск проверки пересечения CIDR кластера с сетями узла;
 - `--preflight-skip-check=registry-access-through-proxy` — пропуск проверки доступа к хранилищу образов через прокси-сервер;
 - `--preflight-skip-check=cloud-api-accessibility` — пропуск проверки доступности Cloud API;
+- `--preflight-skip-check=cloud-api-from-installer` — пропуск проверки того, что сам установщик дотягивается до API облачного провайдера;
 - `--preflight-skip-check=cloud-kube-data-device` — пропуск проверки того, что диск, выделенный провайдером под данные Kubernetes, присутствует на master-узле;
 - `--preflight-skip-check=registry-access-from-master` — пропуск проверки доступности хранилища образов с самого master-узла;
 - `--preflight-skip-check=immutable-api-reachable` — пропуск проверки того, что порт API первого immutable master-узла отвечает.

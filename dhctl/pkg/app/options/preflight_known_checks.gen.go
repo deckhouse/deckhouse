@@ -4,6 +4,7 @@ package options
 var generatedPreflightChecks = []string{
 	"bastion-availability",
 	"cloud-api-accessibility",
+	"cloud-api-from-installer",
 	"cloud-disk-name-length",
 	"cloud-kube-data-device",
 	"cloud-master-system-requirements",

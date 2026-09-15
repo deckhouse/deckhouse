@@ -224,8 +224,10 @@ func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) prefl
 // the hardware its document describes. Both come from one inventory read.
 //
 // The work lives in the bootstrapper — it owns the tunnel and the documents —
-// and arrives here as run. A cloud bootstrap names no machines and passes it
-// with nothing to do.
+// and arrives here as run. A cloud bootstrap names no machines: the provider creates
+// the masters, so there is nothing to ask and the check says so rather than passing.
+// A pass would be a claim that machines answered, and the operator reading it would
+// believe their hardware had been reached.
 func ImmutableMachinesAvailability(run func(context.Context) error) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableMachinesAvailabilityCheckName,
@@ -235,7 +237,7 @@ func ImmutableMachinesAvailability(run func(context.Context) error) preflight.Ch
 		Phase:       preflight.PhasePreInfra,
 		Run: preflight.Detailless(func(ctx context.Context) error {
 			if run == nil {
-				return nil
+				return preflight.NotApplicable("this bootstrap names no machines with --master-host; the provider creates the masters")
 			}
 			return run(ctx)
 		}),

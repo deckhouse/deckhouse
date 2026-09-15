@@ -209,3 +209,36 @@ func ShouldSkipProxyCheck(serviceURL *url.URL, noProxyAddresses []string) bool {
 	proxy, err := proxyFor(serviceURL)
 	return err == nil && proxy == nil
 }
+
+// BuildHTTPClientFromEnvironment builds the client for a request dhctl makes itself, taking the
+// proxy from its own environment.
+//
+// That is not a shortcut for ClusterConfiguration.proxy: those two are different proxies for
+// different subjects. ClusterConfiguration.proxy configures the cluster's NODES. HTTP_PROXY and
+// HTTPS_PROXY in dhctl's environment are what dhctl's own outgoing requests use — and what it
+// hands the infrastructure utility verbatim (pkg/infrastructure/terraform/cmd.go, tofu/cmd.go),
+// so a check built on this client takes the same path the utility will.
+func BuildHTTPClientFromEnvironment(tlsOpts TLSOptions) (*http.Client, error) {
+	tlsConfig, err := BuildTLSConfig(tlsOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &http.Client{
+		Transport: &http.Transport{
+			Proxy:             ProxyFromEnvironment,
+			TLSClientConfig:   tlsConfig,
+			DisableKeepAlives: true,
+			DialContext:       (&net.Dialer{Timeout: 20 * time.Second, KeepAlive: 20 * time.Second}).DialContext,
+		},
+	}, nil
+}
+
+// ProxyFromEnvironment is http.ProxyFromEnvironment without its process-wide cache: the standard
+// one reads HTTP_PROXY/HTTPS_PROXY/NO_PROXY exactly once, on its first call, which is fine for a
+// CLI whose environment is fixed before main and wrong for anything that has to answer for the
+// environment as it is now — a test among them. The resolution itself is the same code the
+// standard library runs.
+func ProxyFromEnvironment(req *http.Request) (*url.URL, error) {
+	return httpproxy.FromEnvironment().ProxyFunc()(req.URL)
+}

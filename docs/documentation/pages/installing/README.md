@@ -679,6 +679,7 @@ Node checks (the `PostInfraPreflights` phase):
 - `--preflight-skip-check=host-network-cidr-intersection`: Skip the check for intersection between the cluster CIDRs and the host networks.
 - `--preflight-skip-check=registry-access-through-proxy`: Skip the check for accessing the registry through a proxy server.
 - `--preflight-skip-check=cloud-api-accessibility`: Skip the Cloud API accessibility check.
+- `--preflight-skip-check=cloud-api-from-installer`: Skip the check that the installer itself reaches the cloud provider API.
 - `--preflight-skip-check=cloud-kube-data-device`: Skip the check that the disk the provider attached for Kubernetes data is on the master.
 - `--preflight-skip-check=registry-access-from-master`: Skip the check that the master node itself can reach the registry.
 - `--preflight-skip-check=immutable-api-reachable`: Skip the check that the API port of an immutable first master answers.
