@@ -78,8 +78,9 @@ spec:
                   type:
                     default: LoadBalancer
                     description: |-
-                      How the tenant Kubernetes API is published. Only LoadBalancer is supported for
-                      now (the per-VCP ALB uses a LoadBalancer inlet).
+                      How the tenant Kubernetes API is published.
+
+                      Only `LoadBalancer` is supported for now (the per-VCP ALB uses a `LoadBalancer` inlet).
                     enum:
                     - LoadBalancer
                     type: string
@@ -90,13 +91,13 @@ spec:
                   High availability mode for the tenant control plane.
 
                   When `true`: two ControlPlaneNodes on different management-cluster nodes,
-                  a PodDisruptionBudget per component, and a Postgres of three instances with
-                  synchronous replication.
+                  a PodDisruptionBudget per component, and a PostgreSQL cluster with three instances
+                  and synchronous replication.
 
                   Costs a network round trip per commit. A failover can still lose the last
                   transactions: the WAL is guaranteed to reach a standby, not to be flushed to disk.
 
-                  Warning! Switching this on a running tenant interrupts service: the component
+                  > **Warning.** Switching this on a running tenant interrupts service: the component
                   StatefulSets are recreated and the datastore is resized.
 
                   Ignored for the datastore when `datastoreRef` is set. The ControlPlaneNode count
@@ -106,7 +107,7 @@ spec:
                 description: |-
                   Desired Kubernetes version for the tenant control plane.
 
-                  Only versions the current DKP release ships control plane images for are accepted.
+                  Only versions shipped with the current Deckhouse Kubernetes Platform (DKP) release are accepted.
                   `Default` and `Automatic` are not among them: a virtual control plane has no
                   mechanism for picking a version on its own.
                 enum:
@@ -126,10 +127,12 @@ spec:
                   clusterDomain:
                     default: cluster.virtual
                     description: |-
-                      Tenant cluster's DNS domain. Used to build the apiserver's `--service-account-issuer`
-                      and the `kubernetes.default.svc.<clusterDomain>` certificate SAN.
+                      Tenant cluster's DNS domain.
 
-                      Warning! Changing this parameter on a running tenant is extremely dangerous: the apiserver
+                      Used to build the apiserver's `--service-account-issuer` and the
+                      `kubernetes.default.svc.<clusterDomain>` certificate SAN.
+
+                      > **Warning.** Changing this parameter on a running tenant is extremely dangerous: the apiserver
                       serving certificate and `--service-account-issuer` are derived from it only once, at
                       creation. Create a new VirtualControlPlane and migrate workloads instead of changing it.
                     maxLength: 253
@@ -140,10 +143,12 @@ spec:
                       rule: self == oldSelf
                   podSubnetCIDR:
                     description: |-
-                      Address space of the tenant cluster's Pods. Passed to kube-controller-manager as
-                      `--cluster-cidr` and to cilium as the Kubernetes-IPAM Pod CIDR source.
+                      Address space of the tenant cluster's Pods.
 
-                      Warning! Changing this parameter on a running tenant is extremely dangerous: existing
+                      Passed to kube-controller-manager as `--cluster-cidr` and to Cilium as the
+                      Kubernetes-IPAM Pod CIDR source.
+
+                      > **Warning.** Changing this parameter on a running tenant is extremely dangerous: existing
                       nodes and Pods already hold addresses from the current range, and switching it means
                       recreating every node. Create a new VirtualControlPlane and migrate workloads instead
                       of changing it.
@@ -157,10 +162,11 @@ spec:
                       rule: self == oldSelf
                   podSubnetNodeCIDRPrefix:
                     description: |-
-                      Prefix size of the Pod network allocated to each node out of `podSubnetCIDR`. Passed to
-                      kube-controller-manager as `--node-cidr-mask-size`.
+                      Prefix size of the Pod network allocated to each node out of `podSubnetCIDR`.
 
-                      Warning! Changing this parameter on a running tenant is extremely dangerous: nodes that
+                      Passed to kube-controller-manager as `--node-cidr-mask-size`.
+
+                      > **Warning.** Changing this parameter on a running tenant is extremely dangerous: nodes that
                       already received a PodCIDR keep the previous prefix, silently fragmenting the Pod address
                       space. Create a new VirtualControlPlane and migrate workloads instead of changing it.
 
@@ -179,11 +185,12 @@ spec:
                       rule: self == oldSelf
                   serviceSubnetCIDR:
                     description: |-
-                      Address space of the tenant cluster's Services. The tenant apiserver serving certificate
-                      carries the range's 1st address as an IP SAN, and the tenant DNS Service is addressed at
-                      the range's 10th address.
+                      Address space of the tenant cluster's Services.
 
-                      Warning! Changing this parameter on a running tenant is extremely dangerous and can lead
+                      The tenant apiserver serving certificate carries the range's 1st address as an IP SAN,
+                      and the tenant DNS Service is addressed at the range's 10th address.
+
+                      > **Warning.** Changing this parameter on a running tenant is extremely dangerous and can lead
                       to complete tenant failure: existing Services keep ClusterIPs from the current range, the
                       apiserver serving certificate silently regenerates with a different SAN (dropping the old
                       `kubernetes.default` SAN), and the tenant DNS Service stays stranded at the old address.
@@ -205,7 +212,7 @@ spec:
                 x-kubernetes-validations:
                 - message: podSubnetNodeCIDRPrefix must be greater than the prefix length of podSubnetCIDR, otherwise no node subnet fits into the Pod address space
                   rule: int(self.podSubnetNodeCIDRPrefix) > cidr(self.podSubnetCIDR).prefixLength()
-                - message: "podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
+                - message: "podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by Cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
                   rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
               nodeSelector:
                 additionalProperties:
@@ -213,19 +220,20 @@ spec:
                 description: |-
                   Node labels for the virtual control plane pods in the management cluster: the control
                   plane components, `cilium-operator`, `bashible-apiserver`, the tenant's `deckhouse`.
+
                   Pods inside the tenant cluster are not affected.
 
                   A dedicated node pool is usually tainted as well as labelled, so a `nodeSelector`
-                  without matching `tolerations` leaves every pod Pending.
+                  without matching `tolerations` leaves every pod in `Pending` state.
 
-                  Warning! Changing this parameter recreates the component StatefulSets, restarting
+                  > **Warning.** Changing this parameter recreates the component StatefulSets, restarting
                   the tenant control plane.
                 type: object
               tolerations:
                 description: |-
                   Tolerations for the same pods as `nodeSelector`.
 
-                  Warning! Changing this parameter restarts the tenant control plane.
+                  > **Warning.** Changing this parameter restarts the tenant control plane.
                 items:
                   properties:
                     effect:
@@ -254,7 +262,10 @@ spec:
             description: Observed state of the virtual control plane.
             properties:
               conditions:
-                description: Current service state of the virtual control plane.
+                description: |-
+                  Current service state of the virtual control plane.
+
+                  The main condition is `Ready`.
                 items:
                   properties:
                     lastTransitionTime:
@@ -266,7 +277,7 @@ spec:
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: The .metadata.generation value that the condition was set based upon.
+                      description: The `.metadata.generation` value that the condition was set based upon.
                       format: int64
                       minimum: 0
                       type: integer

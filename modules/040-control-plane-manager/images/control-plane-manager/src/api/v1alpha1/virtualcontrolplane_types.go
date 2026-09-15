@@ -27,8 +27,9 @@ type VirtualControlPlaneDatastoreRef struct {
 }
 
 type VirtualControlPlaneExpose struct {
-	// Type is how the tenant Kubernetes API is published. Only LoadBalancer is supported for now
-	// (the per-VCP ALB uses a LoadBalancer inlet).
+	// Type is how the tenant Kubernetes API is published.
+	//
+	// Only `LoadBalancer` is supported for now (the per-VCP ALB uses a `LoadBalancer` inlet).
 	// +kubebuilder:validation:Enum=LoadBalancer
 	// +kubebuilder:default=LoadBalancer
 	// +optional
@@ -46,7 +47,7 @@ type VirtualControlPlaneKubeconfigSecretRef struct {
 // VirtualControlPlaneNetworking is the tenant cluster's network configuration. It is the single
 // source of truth for the tenant's Service/Pod address space: the apiserver's
 // --service-cluster-ip-range and --service-account-issuer, kube-controller-manager's
-// --cluster-cidr/--node-cidr-mask-size, cilium's IPAM configuration, the tenant DNS ClusterIP
+// --cluster-cidr/--node-cidr-mask-size, Cilium's IPAM configuration, the tenant DNS ClusterIP
 // (derived, not stored here) and the tenant ClusterConfiguration all flow from it.
 //
 // Every field is immutable after creation (enforced per-field below so the CEL message can name
@@ -56,11 +57,12 @@ type VirtualControlPlaneKubeconfigSecretRef struct {
 // There is no in-place migration path — recreate the VirtualControlPlane instead.
 type VirtualControlPlaneNetworking struct {
 	// ServiceSubnetCIDR is the address space of the tenant cluster's Services (kube-apiserver
-	// --service-cluster-ip-range and kube-controller-manager --service-cluster-ip-range). The
-	// tenant apiserver serving certificate carries the range's 1st address as an IP SAN and the
+	// --service-cluster-ip-range and kube-controller-manager --service-cluster-ip-range).
+	//
+	// The tenant apiserver serving certificate carries the range's 1st address as an IP SAN and the
 	// tenant DNS Service is addressed at the range's 10th address.
 	//
-	// Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+	// > **Warning.** Changing this value on a running tenant is unsafe and is blocked by immutability.
 	// Existing Services keep ClusterIPs from the current range, the apiserver serving certificate
 	// would silently regenerate with a different SAN (dropping the old kubernetes.default SAN),
 	// and the tenant DNS Service stays stranded at the old address. Recreate the
@@ -72,11 +74,12 @@ type VirtualControlPlaneNetworking struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="serviceSubnetCIDR is immutable: existing Services hold ClusterIPs from the current range and the apiserver serving certificate cannot be re-addressed in place. Create a new VirtualControlPlane and migrate workloads."
 	ServiceSubnetCIDR string `json:"serviceSubnetCIDR"`
 
-	// PodSubnetCIDR is the address space of the tenant cluster's Pods, passed to
-	// kube-controller-manager as --cluster-cidr and to cilium as the Kubernetes-IPAM Pod CIDR
-	// source.
+	// PodSubnetCIDR is the address space of the tenant cluster's Pods.
 	//
-	// Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+	// Passed to kube-controller-manager as --cluster-cidr and to Cilium as the Kubernetes-IPAM Pod
+	// CIDR source.
+	//
+	// > **Warning.** Changing this value on a running tenant is unsafe and is blocked by immutability.
 	// Existing nodes and Pods already hold addresses from the current range; switching it requires
 	// re-allocating every node's PodCIDR, which in practice means recreating the nodes. Recreate
 	// the VirtualControlPlane and migrate workloads instead.
@@ -87,9 +90,11 @@ type VirtualControlPlaneNetworking struct {
 	PodSubnetCIDR string `json:"podSubnetCIDR"`
 
 	// PodSubnetNodeCIDRPrefix is the prefix size of the Pod network allocated to each node out of
-	// PodSubnetCIDR, passed to kube-controller-manager as --node-cidr-mask-size.
+	// PodSubnetCIDR.
 	//
-	// Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+	// Passed to kube-controller-manager as --node-cidr-mask-size.
+	//
+	// > **Warning.** Changing this value on a running tenant is unsafe and is blocked by immutability.
 	// Nodes that already received a PodCIDR sized from the previous prefix keep it; a mismatched
 	// prefix on new nodes silently fragments the Pod address space. Recreate the
 	// VirtualControlPlane and migrate workloads instead.
@@ -109,10 +114,12 @@ type VirtualControlPlaneNetworking struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="podSubnetNodeCIDRPrefix is immutable: nodes already hold PodCIDRs sized from the previous prefix. Create a new VirtualControlPlane and migrate workloads."
 	PodSubnetNodeCIDRPrefix string `json:"podSubnetNodeCIDRPrefix"`
 
-	// ClusterDomain is the tenant cluster's DNS domain. It is used to build the apiserver's
-	// --service-account-issuer and the "kubernetes.default.svc.<ClusterDomain>" certificate SAN.
+	// ClusterDomain is the tenant cluster's DNS domain.
 	//
-	// Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+	// Used to build the apiserver's --service-account-issuer and the
+	// "kubernetes.default.svc.<ClusterDomain>" certificate SAN.
+	//
+	// > **Warning.** Changing this value on a running tenant is unsafe and is blocked by immutability.
 	// The apiserver serving certificate SAN and --service-account-issuer are derived from it once,
 	// at creation. Recreate the VirtualControlPlane and migrate workloads instead.
 	// +kubebuilder:default=cluster.virtual
@@ -133,13 +140,13 @@ type VirtualControlPlaneSpec struct {
 	KubernetesVersion string `json:"kubernetesVersion"`
 
 	// HighAvailability survives the loss of one management-cluster node: two ControlPlaneNodes on
-	// separate nodes, a PodDisruptionBudget per component, a three-instance synchronous Postgres.
+	// separate nodes, a PodDisruptionBudget per component, a three-instance synchronous PostgreSQL cluster.
 	//
 	// Costs a network round trip per commit. A failover can still lose the last transactions: the WAL
-	// is guaranteed to reach a standby, not to be flushed.
+	// is guaranteed to reach a standby, not to be flushed to disk.
 	//
-	// Warning: switching it on a running tenant interrupts service - StatefulSets are recreated and
-	// the datastore is resized.
+	// > **Warning.** Switching it on a running tenant interrupts service: StatefulSets are recreated
+	// and the datastore is resized.
 	//
 	// Ignored for the datastore when DatastoreRef is set. The ControlPlaneNode count still follows it.
 	// +kubebuilder:default=false
@@ -157,11 +164,11 @@ type VirtualControlPlaneSpec struct {
 	// subnet fits. The gap is log2(max nodes): /16 with /24 per node is 2^8 = 256 nodes.
 	// +kubebuilder:validation:XValidation:rule="int(self.podSubnetNodeCIDRPrefix) > cidr(self.podSubnetCIDR).prefixLength()",message="podSubnetNodeCIDRPrefix must be greater than the prefix length of podSubnetCIDR, otherwise no node subnet fits into the Pod address space"
 	//
-	// The Pod and Service ranges are allocated by different components (cilium via Kubernetes IPAM,
+	// The Pod and Service ranges are allocated by different components (Cilium via Kubernetes IPAM,
 	// kube-apiserver's Service allocator) that do not know about each other, so an overlap hands the
 	// same address out twice. Two CIDRs are either disjoint or nested, so testing containment in
 	// both directions is an exact overlap test.
-	// +kubebuilder:validation:XValidation:rule="!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)",message="podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
+	// +kubebuilder:validation:XValidation:rule="!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)",message="podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by Cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
 	Networking VirtualControlPlaneNetworking `json:"networking"`
 
 	// DatastoreRef points to the datastore configuration used by the tenant control plane.
@@ -173,17 +180,18 @@ type VirtualControlPlaneSpec struct {
 	Expose *VirtualControlPlaneExpose `json:"expose,omitempty"`
 
 	// NodeSelector for the VirtualControlPlane pods in the management cluster: the control plane
-	// components, cilium-operator, bashible-apiserver, the tenant's deckhouse. Tenant-side pods are
-	// not affected.
+	// components, `cilium-operator`, `bashible-apiserver`, the tenant's `deckhouse`.
 	//
-	// Warning: changing it recreates the component StatefulSets, restarting the tenant control plane.
+	// Tenant-side pods are not affected.
+	//
+	// > **Warning.** Changing it recreates the component StatefulSets, restarting the tenant control plane.
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// Tolerations for the same pods as NodeSelector. A dedicated node pool is usually tainted as well
-	// as labelled, so a NodeSelector without them leaves every pod Pending.
+	// as labelled, so a NodeSelector without them leaves every pod in `Pending` state.
 	//
-	// Warning: changing it restarts the tenant control plane, same as NodeSelector.
+	// > **Warning.** Changing it restarts the tenant control plane, same as NodeSelector.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
