@@ -4,6 +4,9 @@
       "title": "The admission-policy-engine module",
       "description": "Deckhouse admission-policy-engine module enforces the security policies in a Kubernetes cluster according to the Kubernetes Pod Security Standards.",
       "module": "admission-policy-engine",
+      "extensions": [
+        "advanced_security"
+      ],
       "embedded": "true",
       "tags": [
         "embedded",
@@ -56,6 +59,9 @@
       "title": "The cert-manager module",
       "description": "Managing certificates in the Deckhouse Kubernetes Platform cluster.",
       "module": "cert-manager",
+      "extensions": [
+        "cluster_union"
+      ],
       "embedded": "true",
       "tags": [
         "core",
@@ -501,6 +507,9 @@
       "title": "Cloud provider — DVP",
       "description": "Integration of Deckhouse Kubernetes Platform with the Deckhouse Virtualization Platform.",
       "module": "cloud-provider-dvp",
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "embedded": "true",
       "tags": [
         "cloud",
@@ -551,6 +560,9 @@
       "title": "Cloud provider — Basis Dynamix",
       "description": "Cloud resource management in Deckhouse Kubernetes Platform using Basis Dynamix.",
       "module": "cloud-provider-dynamix",
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "embedded": "true",
       "tags": [
         "bare metal",
@@ -736,6 +748,9 @@
       "title": "Cloud provider — Huawei Cloud",
       "description": "Cloud resource management in Deckhouse Kubernetes Platform using Huawei Cloud.",
       "module": "cloud-provider-huaweicloud",
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "embedded": "true",
       "tags": [
         "cloud",
@@ -806,6 +821,9 @@
       "title": "Cloud provider — OpenStack",
       "description": "Cloud resource management in Deckhouse Kubernetes Platform using OpenStack.",
       "module": "cloud-provider-openstack",
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "embedded": "true",
       "tags": [
         "cloud",
@@ -947,6 +965,9 @@
       "title": "Cloud provider — VMware Cloud Director",
       "description": "Cloud resource management in Deckhouse Kubernetes Platform using VMware Cloud Director.",
       "module": "cloud-provider-vcd",
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "embedded": "true",
       "tags": [
         "cloud",
@@ -1078,6 +1099,9 @@
       "title": "Cloud provider — VMware vSphere",
       "description": "Cloud resource management in Deckhouse Kubernetes Platform using VMware vSphere.",
       "module": "cloud-provider-vsphere",
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "embedded": "true",
       "tags": [
         "bare metal",
@@ -1293,6 +1317,9 @@
       "title": "Cloud provider — zVirt",
       "description": "Cloud resource management in Deckhouse Kubernetes Platform using zVirt.",
       "module": "cloud-provider-zvirt",
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "embedded": "true",
       "tags": [
         "bare metal",
@@ -1358,6 +1385,19 @@
       "title": "The cni-cilium module",
       "description": "The cni-cilium module provides networking in a cluster using the Cilium module.",
       "module": "cni-cilium",
+      "extensions": [
+        "advanced_networking",
+        "cluster_union"
+      ],
+      "extensionsWithRestrictions": [
+        "advanced_networking"
+      ],
+      "extensionsWithRestrictionsComments": {
+        "advanced_networking": {
+          "en": "Egress gateway feature only",
+          "ru": "Только возможность определения выходных узлов (egress gateway)"
+        }
+      },
       "embedded": "true",
       "tags": [
         "embedded",
@@ -1589,6 +1629,9 @@
       "title": "The csi-vsphere module",
       "description": "CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere.",
       "module": "csi-vsphere",
+      "extensions": [
+        "storage_integration"
+      ],
       "embedded": "true",
       "tags": [
         "embedded",
@@ -1633,6 +1676,10 @@
       "title": "The deckhouse module",
       "search": "releaseChannel, release channel stabilization, auto-switching the release channel",
       "module": "deckhouse",
+      "extensions": [
+        "billing",
+        "cluster_union"
+      ],
       "embedded": "true",
       "tags": [
         "core",
@@ -1856,6 +1903,42 @@
         }
       ],
       "module": "istio",
+      "extensions": [
+        "advanced_networking",
+        "advanced_security",
+        "cluster_union",
+        "multitenancy",
+        "network_security"
+      ],
+      "extensionsWithRestrictions": [
+        "advanced_networking",
+        "advanced_security",
+        "cluster_union",
+        "multitenancy",
+        "network_security"
+      ],
+      "extensionsWithRestrictionsComments": {
+        "advanced_networking": {
+          "en": "Multi-cluster and federation mode only",
+          "ru": "Только объединение кластеров в режиме мультикластера или федерации"
+        },
+        "advanced_security": {
+          "en": "Service-to-service authorization (AuthorizationPolicy) only",
+          "ru": "Только управление авторизацией доступа между сервисами (AuthorizationPolicy)"
+        },
+        "cluster_union": {
+          "en": "Multi-cluster and federation mode only",
+          "ru": "Только объединение кластеров в режиме мультикластера или федерации"
+        },
+        "multitenancy": {
+          "en": "Multi-cluster and federation mode only",
+          "ru": "Только объединение кластеров в режиме мультикластера или федерации"
+        },
+        "network_security": {
+          "en": "Service-to-service authorization (AuthorizationPolicy) only",
+          "ru": "Только управление авторизацией доступа между сервисами (AuthorizationPolicy)"
+        }
+      },
       "embedded": "true",
       "tags": [
         "balancing",
@@ -2163,6 +2246,18 @@
       "title": "The metallb module",
       "description": "Load balancing for services in bare metal clusters.",
       "module": "metallb",
+      "extensions": [
+        "advanced_networking"
+      ],
+      "extensionsWithRestrictions": [
+        "advanced_networking"
+      ],
+      "extensionsWithRestrictionsComments": {
+        "advanced_networking": {
+          "en": "BGP mode only",
+          "ru": "Только режим BGP"
+        }
+      },
       "embedded": "true",
       "tags": [
         "balancing",
@@ -2225,6 +2320,9 @@
       "search": "multitenancy",
       "description": "Multitenancy and Projects in Kubernetes. The multitenancy-manager module in Deckhouse allows creating projects for various development teams with the ability to subsequently deploy applications in them.",
       "module": "multitenancy-manager",
+      "extensions": [
+        "multitenancy"
+      ],
       "embedded": "true",
       "tags": [
         "embedded",
@@ -2670,6 +2768,10 @@
       "title": "Registry Module",
       "description": "Configuration management of DKP component registry.",
       "module": "registry",
+      "extensions": [
+        "advanced_security",
+        "billing"
+      ],
       "embedded": "true",
       "tags": [
         "core",
@@ -2723,6 +2825,9 @@
       "title": "The registry-packages-proxy module",
       "description": "Internal proxy for optimizing access to packages from container registries.",
       "module": "registry-packages-proxy",
+      "extensions": [
+        "advanced_security"
+      ],
       "embedded": "true",
       "tags": [
         "core",
@@ -2816,6 +2921,9 @@
       "title": "The service-with-healthchecks module",
       "description": "Readiness Probes with the service-with-healthchecks Module in Deckhouse Kubernetes Platform",
       "module": "service-with-healthchecks",
+      "extensions": [
+        "advanced_networking"
+      ],
       "embedded": "true",
       "tags": [
         "balancing",
@@ -2916,6 +3024,9 @@
         }
       ],
       "module": "user-authn",
+      "extensions": [
+        "billing"
+      ],
       "embedded": "true",
       "tags": [
         "embedded",

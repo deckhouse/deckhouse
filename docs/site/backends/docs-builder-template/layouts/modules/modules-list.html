@@ -220,7 +220,17 @@
           {{- end }}
         {{- end }}
 
-        <a class="button-tile" data-editions="{{ $moduleEditionsString }}" href="{{ .url }}">
+        {{- /* Extensions the module is included in (with or without restrictions). Embedded modules: from embedded_modules.json, modules from sources: from modules_all.json */}}
+        {{- $moduleExtensionsSource := dict }}
+        {{- if .embedded }}
+          {{- $moduleExtensionsSource = index (where $embeddedModulesList "module" .module) 0 }}
+        {{- else if isset $modulesEditions .module }}
+          {{- $moduleExtensionsSource = index $modulesEditions .module }}
+        {{- end }}
+        {{- $_extensions := default slice (index $moduleExtensionsSource "extensions") | append (default slice (index $moduleExtensionsSource "extensionsWithRestrictions")) | uniq }}
+        {{- $moduleExtensionsString := delimit $_extensions "," }}
+
+        <a class="button-tile" data-editions="{{ $moduleEditionsString }}" data-extensions="{{ $moduleExtensionsString }}" href="{{ .url }}">
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
           {{- if eq $moduleStage "General Availability" }}

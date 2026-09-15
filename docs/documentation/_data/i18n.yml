@@ -214,6 +214,15 @@ common:
   module_available_without_limitations_prefix:
     en: Available without limitations in
     ru: Доступно без ограничений в редакциях
+  module_available_extensions_prefix:
+    en: Included in extensions
+    ru: Входит в расширения
+  module_available_extensions_with_limitations_prefix:
+    en: Included with limitations in extensions
+    ru: Входит с ограничениями в расширения
+  module_available_extensions_without_limitations_prefix:
+    en: Included without limitations in extensions
+    ru: Входит без ограничений в расширения
   parameter_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях

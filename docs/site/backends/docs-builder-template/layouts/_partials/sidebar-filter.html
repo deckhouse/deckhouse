@@ -52,6 +52,17 @@
                 <label for="editionCSEPro">CSE Pro</label>
             </div>
         </div>
+        <div class="filter__container filter__container--extensions">
+            <h3 class="filter__container--title closing-title">{{ T "extensions_filter" | humanize }}</h3>
+            <div class="filter__checkboxes filter__checkboxes--extensions">
+                <input type="checkbox" id="extensionsSelectAll" data-select-all="true">
+                <label class="filter__checkboxes--all" for="extensionsSelectAll">{{ T "extensions_filter_all_selected" | humanize }}</label>
+                {{- range $id, $ext := hugo.Data.helpers.extensions }}
+                <input type="checkbox" id="extension-{{ $id }}" value="{{ $id }}">
+                <label for="extension-{{ $id }}">{{ index $ext.title site.Language.Lang | default $ext.title.en }}</label>
+                {{- end }}
+            </div>
+        </div>
         {{- end }}
         <div class="filter__container filter__container--stages">
             <h3 class="filter__container--title closing-title">{{ T "stage_filter" | humanize }}</h3>

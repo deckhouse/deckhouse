@@ -32,6 +32,13 @@ def insert_module_edition_block(page)
     page.content.prepend(additional_content) if page.content
 end
 
+# Inserts the module-extensions.liquid block (the list of extensions the module is included in) into the module pages content.
+def insert_module_extension_block(page)
+    additional_content = "\n{% include module-extensions.liquid %}\n\n"
+
+    page.content.prepend(additional_content) if page.content
+end
+
 def insert_module_oss_block(page)
     # Inserts the module-oss.liquid block into the bottom of the module pages content.
     additional_content = "\n\n{% include module-oss.liquid %}\n"
@@ -194,6 +201,8 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
       if page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
          page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i)
+        # Both blocks are prepended, so the extensions block goes first to end up below the editions block.
+        insert_module_extension_block(page)
         insert_module_edition_block(page)
       end
 
