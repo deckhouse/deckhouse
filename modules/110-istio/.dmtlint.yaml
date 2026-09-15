@@ -36,6 +36,9 @@ linters-settings:
           container: install-cni
   templates:
     exclude-rules:
+      listenerset-redirect:
+        - name: istio
+          section: istio-metadata
       service-port:
         - name: istiod
           port: http-monitoring
