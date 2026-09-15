@@ -44,19 +44,26 @@ locals {
   net_type_vins             = "VINS"
   net_type_extnet           = "EXTNET"
 
+  cloud_config = length(var.cloudConfig) > 0 ? try(jsondecode(base64decode(var.cloudConfig)), yamldecode(base64decode(var.cloudConfig))) : tomap({})
+
+  base_users = [
+    {
+      "name" : "user",
+      "ssh_authorized_keys" : [local.ssh_pubkey],
+      "groups" : "users, wheel",
+      "sudo" : "ALL=(ALL) NOPASSWD:ALL"
+    }
+  ]
+
+  # merge is shallow, so an incoming users key would replace base_users wholesale.
   master_cloud_init_script = jsonencode(merge({
     "hostname" : local.master_node_name,
     "create_hostname_file" : true,
     "ssh_deletekeys" : true,
     "ssh_genkeytypes" : ["rsa", "ecdsa", "ed25519"],
     "ssh_authorized_keys" : [local.ssh_pubkey],
-    "users" : [
-      {
-        "name" : "user",
-        "ssh_authorized_keys" : [local.ssh_pubkey]
-        "groups" : "users, wheel",
-        "sudo" : "ALL=(ALL) NOPASSWD:ALL"
-      }
-    ]
-  }, length(var.cloudConfig) > 0 ? try(jsondecode(base64decode(var.cloudConfig)), yamldecode(base64decode(var.cloudConfig))) : tomap({})))
+    "users" : local.base_users
+  }, local.cloud_config, {
+    "users" : concat(local.base_users, try(local.cloud_config["users"], []))
+  }))
 }

@@ -17,6 +17,7 @@ package controller
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"os"
@@ -24,8 +25,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	ssh "github.com/deckhouse/lib-gossh"
@@ -140,6 +143,136 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 
 		_, err := convergeAuthorizedKeys(meta, nil)
 		require.Error(t, err)
+	})
+}
+
+func TestWithConvergeUser(t *testing.T) {
+	const base = `#cloud-config
+package_update: false
+write_files:
+- path: '/var/lib/bashible/bootstrap.sh'
+  permissions: '0700'
+  content: |
+    #!/bin/bash
+    echo hi
+runcmd:
+- /var/lib/bashible/bootstrap.sh
+`
+	expire := time.Date(2026, 9, 16, 0, 0, 0, 0, time.UTC)
+	keys := []string{"ssh-ed25519 AAAAC3 test@example"}
+
+	render := func(t *testing.T, in string) map[string]any {
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(in)), keys, expire)
+		require.NoError(t, err)
+
+		raw, err := base64.StdEncoding.DecodeString(out)
+		require.NoError(t, err)
+		require.True(t, strings.HasPrefix(string(raw), "#cloud-config\n"))
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		return doc
+	}
+
+	convergeUser := func(t *testing.T, doc map[string]any) map[string]any {
+		users, ok := doc["users"].([]any)
+		require.True(t, ok)
+		require.Len(t, users, 1)
+		return users[0].(map[string]any)
+	}
+
+	t.Run("user carries name, expiry, keys and sudo", func(t *testing.T) {
+		user := convergeUser(t, render(t, base))
+
+		require.Equal(t, "d8-converge", user["name"])
+		require.Equal(t, "2026-09-16", user["expiredate"])
+		require.Equal(t, true, user["lock_passwd"])
+		require.Equal(t, []any{keys[0]}, user["ssh_authorized_keys"])
+		require.Equal(t, []any{"ALL=(ALL) NOPASSWD:ALL"}, user["sudo"])
+	})
+
+	// bashible removes users whose comment is "created by deckhouse" and that are
+	// absent from its NodeUser list. Ours must not look like one.
+	t.Run("gecos is set and is not the bashible marker", func(t *testing.T) {
+		user := convergeUser(t, render(t, base))
+
+		require.Equal(t, "dhctl converge", user["gecos"])
+	})
+
+	t.Run("bootstrap payload is untouched", func(t *testing.T) {
+		doc := render(t, base)
+
+		require.Equal(t, []any{"/var/lib/bashible/bootstrap.sh"}, doc["runcmd"])
+		require.Len(t, doc["write_files"].([]any), 1)
+		require.Equal(t, false, doc["package_update"])
+	})
+
+	t.Run("applying twice changes nothing", func(t *testing.T) {
+		once, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), keys, expire)
+		require.NoError(t, err)
+		twice, err := withConvergeUser(once, keys, expire)
+		require.NoError(t, err)
+		require.Equal(t, once, twice)
+	})
+
+	t.Run("a user with no keys is an error, not a locked door", func(t *testing.T) {
+		_, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), nil, expire)
+		require.Error(t, err)
+	})
+
+	t.Run("a payload that is not a cloud-config is an error", func(t *testing.T) {
+		_, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte("#cloud-config\n")), keys, expire)
+		require.Error(t, err)
+	})
+
+	t.Run("cloud-config users of the provider survive", func(t *testing.T) {
+		doc := render(t, base+"users:\n- name: user\n  sudo: 'ALL=(ALL) NOPASSWD:ALL'\n")
+
+		users, ok := doc["users"].([]any)
+		require.True(t, ok)
+		require.Len(t, users, 2)
+		require.Equal(t, "user", users[0].(map[string]any)["name"])
+		require.Equal(t, "d8-converge", users[1].(map[string]any)["name"])
+	})
+
+	// A sshPublicKey field may hold several keys separated by newlines, so an
+	// authorized key can be a multi-line string. It must stay one list element.
+	t.Run("a multi-line key stays one list element", func(t *testing.T) {
+		multiline := "ssh-ed25519 AAAAC3 first@example\nssh-ed25519 AAAAC4 second@example"
+
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), []string{multiline}, expire)
+		require.NoError(t, err)
+
+		raw, err := base64.StdEncoding.DecodeString(out)
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		require.Equal(t, []any{multiline}, convergeUser(t, doc)["ssh_authorized_keys"])
+	})
+
+	t.Run("a multi-line provider key reaches the render intact", func(t *testing.T) {
+		const twoKeys = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBjoNkgxOUgHOBR6kRCRXyO+XEcnsQ8+A6FHPExg4nMQ first@example\n" +
+			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBjoNkgxOUgHOBR6kRCRXyO+XEcnsQ8+A6FHPExg4nMQ second@example"
+
+		meta := &config.MetaConfig{
+			ProviderName:          "OpenStack",
+			ProviderClusterConfig: map[string]json.RawMessage{"sshPublicKey": json.RawMessage(strconv.Quote(twoKeys))},
+		}
+
+		authorized, err := convergeAuthorizedKeys(meta, nil)
+		require.NoError(t, err)
+		require.Equal(t, []string{twoKeys}, authorized)
+
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), authorized, expire)
+		require.NoError(t, err)
+
+		raw, err := base64.StdEncoding.DecodeString(out)
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		require.Equal(t, []any{twoKeys}, convergeUser(t, doc)["ssh_authorized_keys"])
 	})
 }
 

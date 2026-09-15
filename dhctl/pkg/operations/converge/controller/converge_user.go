@@ -15,7 +15,9 @@
 package controller
 
 import (
+	"bytes"
 	gocontext "context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,12 +25,25 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	ssh "github.com/deckhouse/lib-gossh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+)
+
+const (
+	convergeUserName = "d8-converge"
+	// bashible's 000_add_node_users.sh.tpl deletes every local user whose GECOS is
+	// "created by deckhouse" and that is absent from its NodeUser list, so ours
+	// must carry a different one.
+	convergeUserGecos = "dhctl converge"
+
+	cloudConfigHeader = "#cloud-config"
 )
 
 // convergeAuthorizedKeys collects the public keys the converge user is authorized with: the
@@ -108,4 +123,83 @@ func publicKeyFromPrivateKeyFile(key session.AgentPrivateKey) (string, error) {
 	}
 
 	return string(ssh.MarshalAuthorizedKey(signer.PublicKey())), nil
+}
+
+// withConvergeUser adds the converge user to a base64-encoded cloud-config payload and
+// returns it base64-encoded again. Re-applying it to its own output is a no-op.
+func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (string, error) {
+	if len(keys) == 0 {
+		return "", errors.New("render cloud-config: the converge user has no authorized keys")
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(cloudConfigB64)
+	if err != nil {
+		return "", fmt.Errorf("decode cloud-config: %w", err)
+	}
+
+	var doc map[string]any
+	if err := yaml.Unmarshal(decoded, &doc); err != nil {
+		return "", fmt.Errorf("parse cloud-config: %w", err)
+	}
+
+	if doc == nil {
+		return "", errors.New("parse cloud-config: the document is empty")
+	}
+
+	users, err := cloudConfigUsers(doc)
+	if err != nil {
+		return "", err
+	}
+
+	for _, user := range users {
+		named, ok := user.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		if named["name"] == convergeUserName {
+			return cloudConfigB64, nil
+		}
+	}
+
+	doc["users"] = append(users, map[string]any{
+		"name":                convergeUserName,
+		"gecos":               convergeUserGecos,
+		"expiredate":          expire.Format(time.DateOnly),
+		"lock_passwd":         true,
+		"sudo":                []string{"ALL=(ALL) NOPASSWD:ALL"},
+		"ssh_authorized_keys": keys,
+	})
+
+	var out bytes.Buffer
+	out.WriteString(cloudConfigHeader + "\n")
+
+	// The payload is capped by some providers (16 KB on AWS), and the default
+	// indent of four costs a couple of kilobytes on a bootstrap script this long.
+	encoder := yaml.NewEncoder(&out)
+	encoder.SetIndent(2)
+
+	if err := encoder.Encode(doc); err != nil {
+		return "", fmt.Errorf("render cloud-config: %w", err)
+	}
+
+	if err := encoder.Close(); err != nil {
+		return "", fmt.Errorf("render cloud-config: %w", err)
+	}
+
+	return base64.StdEncoding.EncodeToString(out.Bytes()), nil
+}
+
+func cloudConfigUsers(doc map[string]any) ([]any, error) {
+	value, ok := doc["users"]
+	if !ok || value == nil {
+		return nil, nil
+	}
+
+	users, ok := value.([]any)
+	if !ok {
+		return nil, fmt.Errorf("parse cloud-config: users is %T, not a list", value)
+	}
+
+	return users, nil
 }
