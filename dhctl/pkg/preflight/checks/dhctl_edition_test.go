@@ -109,6 +109,10 @@ func TestOk(t *testing.T) {
 }
 
 func TestCheckDisable(t *testing.T) {
-	check := DhctlEdition(nil, nil, options.BuildInfo{AppVersion: "local", AppEdition: "local"})
+	check := DhctlEdition(nil, nil, options.BuildInfo{
+		AppVersion: "local",
+		AppEdition: "local",
+	})
+
 	assert.True(t, check.Disabled)
 }
