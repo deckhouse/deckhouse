@@ -49,6 +49,9 @@ metadata:
   annotations:
     werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
     werf.io/track-termination-mode: WaitUntilResourceReady
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+    werf.io/deploy-dependency-spe: state=present,kind=SecurityPolicyException,name=node-controller,namespace=d8-cloud-instance-manager
+{{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
@@ -60,6 +63,7 @@ spec:
     metadata:
       labels:
         app: node-controller
+        security.deckhouse.io/security-policy-exception: node-controller
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
