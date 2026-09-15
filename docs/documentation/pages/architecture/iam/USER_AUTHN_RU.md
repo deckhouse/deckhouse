@@ -38,7 +38,7 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 
 ![Архитектура модуля user-authn с аутентификацией через Dex](../../images/architecture/iam/c4-l2-user-authn-dex-client.ru.png)
 
-При подключении к API Kubernetes с помощью утилиты `kubectl` или других клиентов Kubernetes с использованием сгенерированного kubeconfig используются отдельные схемы аутентификации:
+При подключении к API Kubernetes с помощью утилиты `d8`, `kubectl` или других клиентов Kubernetes с использованием сгенерированного kubeconfig используются отдельные схемы аутентификации:
 
 * аутентификация по токенам, подробно описана в [соответствующем разделе документации](authentication.html#подключение-к-api-kubernetes-с-помощью-сгенерированного-kubeconfig);
 * базовая аутентификация (Basic Authentication), пример настройки базовой аутентификации с использованием провайдера LDAP приведён [в разделе документации модуля](/modules/user-authn/usage.html#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%B1%D0%B0%D0%B7%D0%BE%D0%B2%D0%BE%D0%B9-%D0%B0%D1%83%D1%82%D0%B5%D0%BD%D1%82%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D0%B8).
