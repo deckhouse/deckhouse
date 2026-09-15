@@ -61,6 +61,9 @@ type fakeSSHClient struct {
 	// onAwait, when set, receives the retry parameters the check asked the probe for.
 	onAwait func(retry.Params)
 
+	// node answers the commands run over this client.
+	node *fakeNode
+
 	mu      sync.Mutex
 	tunnels []string
 }
@@ -89,6 +92,15 @@ func (c *fakeSSHClient) Tunnel(address string) libcon.Tunnel {
 }
 
 func (c *fakeSSHClient) Session() *session.Session { return c.sess }
+
+// Command runs against an empty fakeNode, which answers every command the way a node that has
+// nothing does. Tests that care about a particular answer declare it on the node instead.
+func (c *fakeSSHClient) Command(name string, args ...string) libcon.Command {
+	if c.node == nil {
+		c.node = newFakeNode()
+	}
+	return c.node.Command(name, args...)
+}
 
 // Check is the availability probe cloud-api-accessibility waits on before it opens the tunnel.
 // reachErr stands in for a master that never answers SSH.

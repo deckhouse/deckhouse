@@ -23,7 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
@@ -81,7 +80,7 @@ func NewStaticSuite(deps StaticDeps) preflight.Suite {
 // nodeInterfaceResolver defers helper.GetNodeInterface to the moment a check runs.
 func nodeInterfaceResolver(initializer *providerinitializer.SSHProviderInitializer) checks.NodeInterfaceFunc {
 	return func(ctx context.Context) (libcon.Interface, error) {
-		return helper.GetNodeInterface(ctx, initializer, initializer.GetSettings())
+		return checks.ResolveNodeInterface(ctx, initializer)
 	}
 }
 

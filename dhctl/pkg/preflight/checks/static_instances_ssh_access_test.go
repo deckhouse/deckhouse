@@ -15,12 +15,16 @@
 package checks
 
 import (
+	"context"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
@@ -316,5 +320,88 @@ func TestStaticInstanceSession(t *testing.T) {
 		got := staticInstanceSession("10.0.0.10", withSudo, nil)
 
 		assert.Equal(t, "instance-sudo", got.BecomePass)
+	})
+}
+
+// switchingSSHProvider records how a check moves the provider's current client around.
+type switchingSSHProvider struct {
+	libcon.SSHProvider
+
+	switched  []string
+	restored  int
+	switchErr error
+}
+
+func (p *switchingSSHProvider) SwitchClient(_ context.Context, sess *session.Session, _ []session.AgentPrivateKey) (libcon.SSHClient, error) {
+	if p.switchErr != nil {
+		return nil, p.switchErr
+	}
+	p.switched = append(p.switched, sess.Host()+"|"+sess.BastionHost)
+	node := newFakeNode().
+		on("sudo -n true").succeeds().
+		on("true").succeeds()
+	return &fakeSSHClient{sess: sess, node: node}, nil
+}
+
+func (p *switchingSSHProvider) SwitchToDefault(context.Context) (libcon.SSHClient, error) {
+	p.restored++
+	return nil, nil
+}
+
+// TestStaticInstancesRestoreTheMasterConnection is the bug a static bootstrap surfaced: this check
+// connects somewhere other than the master, and what it left behind broke every check that ran
+// after it. Fourteen findings came back about a node nobody had looked at.
+func TestStaticInstancesRestoreTheMasterConnection(t *testing.T) {
+	// The master, reached through the bastion the operator named. The whole node network is
+	// behind it, so every instance goes through the same one.
+	master := session.NewSession(session.Input{
+		User:        "ubuntu",
+		Port:        "22",
+		BastionHost: "bastion.example.com",
+		BastionUser: "jump",
+	})
+	master.AddAvailableHosts(session.Host{Host: "10.0.0.2"})
+
+	cred := &v1alpha2.SSHCredentialsSpec{User: "caretaker", SSHPort: 22}
+
+	t.Run("every instance goes through the operator's bastion", func(t *testing.T) {
+		provider := &switchingSSHProvider{}
+		conn := &masterConnection{provider: provider, session: master}
+
+		for _, address := range []string{"10.0.0.10", "10.0.0.11", "10.0.0.12"} {
+			require.NoError(t, conn.check(t.Context(), address, cred))
+		}
+
+		assert.Equal(t, []string{
+			"10.0.0.10|bastion.example.com",
+			"10.0.0.11|bastion.example.com",
+			"10.0.0.12|bastion.example.com",
+		}, provider.switched, "the bastion is the operator's, not the instance visited before")
+	})
+
+	t.Run("the master connection is restored once, not per instance", func(t *testing.T) {
+		// SwitchToDefault builds a fresh connection to the master every time it is called, and
+		// the checks that follow need exactly one.
+		provider := &switchingSSHProvider{}
+		conn := &masterConnection{provider: provider, session: master}
+
+		require.NoError(t, conn.check(t.Context(), "10.0.0.10", cred))
+		require.NoError(t, conn.check(t.Context(), "10.0.0.11", cred))
+		assert.Equal(t, 0, provider.restored, "restoring between instances would rebuild it for nothing")
+
+		conn.restoreDefault(t.Context())
+		assert.Equal(t, 1, provider.restored)
+	})
+
+	t.Run("an instance that cannot be reached still leaves the master connection restored", func(t *testing.T) {
+		// The reason it is a defer: the failure of one instance is reported, not fatal, and the
+		// phase continues over the master's connection either way.
+		provider := &switchingSSHProvider{switchErr: errors.New("no route to host")}
+		conn := &masterConnection{provider: provider, session: master}
+
+		require.Error(t, conn.check(t.Context(), "10.0.0.10", cred))
+
+		conn.restoreDefault(t.Context())
+		assert.Equal(t, 1, provider.restored)
 	})
 }

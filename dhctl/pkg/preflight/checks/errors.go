@@ -254,8 +254,41 @@ type nodeCommandRunner = libcon.Interface
 // deferral the suites apply, available to a check that holds the initializer itself.
 func nodeInterfaceResolverFor(initializer *providerinitializer.SSHProviderInitializer) NodeInterfaceFunc {
 	return func(ctx context.Context) (libcon.Interface, error) {
-		return helper.GetNodeInterface(ctx, initializer, initializer.GetSettings())
+		return ResolveNodeInterface(ctx, initializer)
 	}
+}
+
+// ErrNodeConnectionGone is what every node check gets when the connection they all share has been
+// torn down. It is a cause of its own, and naming it is what keeps one broken connection from
+// being reported as two dozen unrelated findings.
+var ErrNodeConnectionGone = errors.New("the ssh connection to the node is no longer usable")
+
+// ResolveNodeInterface hands out the connection to the node, refusing to hand out a dead one.
+//
+// Every on-node check asks a question by running a command, and a command that cannot run answers
+// nothing — but the checks read silence as an answer. One torn-down connection therefore came back
+// as "sudo is not installed", "systemd is not running", "hostname printed nothing" and eleven more,
+// on a node that had all of them. The connection is asked whether it is alive once, here, so the
+// answer they get is the truth rather than fourteen guesses.
+func ResolveNodeInterface(ctx context.Context, initializer *providerinitializer.SSHProviderInitializer) (libcon.Interface, error) {
+	nodeInterface, err := helper.GetNodeInterface(ctx, initializer, initializer.GetSettings())
+	if err != nil {
+		return nil, err
+	}
+
+	wrapper, overSSH := nodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !overSSH || wrapper == nil {
+		// The installer host itself. There is no connection to lose.
+		return nodeInterface, nil
+	}
+
+	client := wrapper.Client()
+	if client == nil || !client.Live() {
+		return nil, fmt.Errorf("%w: it was working earlier in this phase, so something closed it "+
+			"— the checks after this one cannot be asked", ErrNodeConnectionGone)
+	}
+
+	return nodeInterface, nil
 }
 
 // proxyConnectStatus recovers the status a proxy answered a CONNECT with, or 0 when err is not

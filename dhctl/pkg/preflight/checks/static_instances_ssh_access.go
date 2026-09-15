@@ -26,6 +26,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
@@ -78,6 +79,19 @@ func (c StaticInstancesSSHAccessCheck) Run(ctx context.Context) (string, error) 
 		return "", preflight.NotApplicable("the --config file declares no StaticInstance")
 	}
 
+	// Read before anything is switched: after the first instance the current client is that
+	// instance's, and the second one would be handed the first as its bastion.
+	master, err := masterConnectionFor(ctx, c.SSHProviderInitializer)
+	if err != nil {
+		return "", err
+	}
+
+	// Reaching a StaticInstance means connecting somewhere other than the master, and the
+	// provider has one current client. It is switched per instance and switched back here, once,
+	// rather than after each — SwitchToDefault builds a fresh connection to the master every time
+	// it is called, and the checks that follow need exactly one.
+	defer master.restoreDefault(ctx)
+
 	// Every instance, not the first that fails: these are separate machines, and an operator
 	// setting up a static cluster would otherwise fix them one bootstrap run at a time.
 	var unreachable []string
@@ -93,7 +107,7 @@ func (c StaticInstancesSSHAccessCheck) Run(ctx context.Context) (string, error) 
 		}
 
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Checking StaticInstance %s (%s)", inst.Name, inst.Address))
-		if err := checkSSHAccess(ctx, c.SSHProviderInitializer, inst.Address, cred); err != nil {
+		if err := master.check(ctx, inst.Address, cred); err != nil {
 			unreachable = append(unreachable, fmt.Sprintf("%s (%s@%s:%d): %s",
 				inst.Name, cred.User, inst.Address, cred.SSHPort, oneLineError(err)))
 		}
@@ -270,31 +284,63 @@ func staticInstanceSession(address string, cred *v1alpha2.SSHCredentialsSpec, ma
 	return config
 }
 
-func checkSSHAccess(ctx context.Context, sshProviderInitializer *providerinitializer.SSHProviderInitializer, address string, cred *v1alpha2.SSHCredentialsSpec) error {
-	nodeInterface, err := helper.GetNodeInterface(ctx, sshProviderInitializer, sshProviderInitializer.GetSettings())
+// masterConnection is what every StaticInstance is reached through: the session of the connection
+// to the master, and the keys that connection offers.
+//
+// It is read once, before any switching. The provider has one current client, and after the first
+// instance that client is the instance's — reading the "current" session again would hand the
+// second instance the first one as its bastion.
+type masterConnection struct {
+	provider libcon.SSHProvider
+	session  *session.Session
+	keys     []session.AgentPrivateKey
+}
+
+func masterConnectionFor(ctx context.Context, initializer *providerinitializer.SSHProviderInitializer) (*masterConnection, error) {
+	nodeInterface, err := helper.GetNodeInterface(ctx, initializer, initializer.GetSettings())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, remote := nodeInterface.(*ssh.NodeInterfaceWrapper)
 
-	sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+	provider, err := initializer.GetSSHProvider(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var sess *session.Session
-	pkeys := make([]session.AgentPrivateKey, 0)
+	conn := &masterConnection{provider: provider, keys: []session.AgentPrivateKey{}}
 
-	if remote {
-		sshClient, err := sshProvider.Client(ctx)
-		if err != nil {
-			return err
-		}
-		sess = sshClient.Session()
-		pkeys = sshClient.PrivateKeys()
+	// No SSH host at all: dhctl runs on the machine itself, there is no hop, and the instances
+	// are reached directly.
+	if _, remote := nodeInterface.(*ssh.NodeInterfaceWrapper); !remote {
+		return conn, nil
 	}
 
-	config := staticInstanceSession(address, cred, sess)
+	client, err := provider.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+	conn.session = client.Session()
+	conn.keys = client.PrivateKeys()
+
+	return conn, nil
+}
+
+// restoreDefault puts the connection to the master back after the instances have been visited.
+// Everything in this phase after this check runs over it, and leaving it pointed at the last
+// StaticInstance — or, as a standalone client's teardown left it, at nothing at all — turned one
+// connection into fourteen findings about a node nobody had looked at.
+func (m *masterConnection) restoreDefault(ctx context.Context) {
+	if _, err := m.provider.SwitchToDefault(ctx); err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx,
+			fmt.Sprintf("cannot restore the connection to the master after checking the StaticInstances: %v", err))
+	}
+}
+
+// check logs in to one StaticInstance and runs the smallest command that proves the credentials
+// work.
+func (m *masterConnection) check(ctx context.Context, address string, cred *v1alpha2.SSHCredentialsSpec) error {
+	config := staticInstanceSession(address, cred, m.session)
+	keys := m.keys
 
 	if cred.PrivateSSHKey != "" {
 		// The dhctl pod sets no TMPDIR and mounts / read-only; only /tmp is writable.
@@ -309,17 +355,23 @@ func checkSSHAccess(ctx context.Context, sshProviderInitializer *providerinitial
 			return fmt.Errorf("Failed to write private key: %w", err)
 		}
 
-		pkeys = append(pkeys, session.AgentPrivateKey{Key: privateKeyPath})
-	}
-	client, err := sshProvider.NewStandaloneClient(ctx, config, pkeys)
-	if err != nil {
-		return fmt.Errorf("Cannot create SSH client: %w", err)
+		keys = append(append([]session.AgentPrivateKey{}, keys...), session.AgentPrivateKey{Key: privateKeyPath})
 	}
 
-	if err := client.Start(ctx); err != nil {
+	// SwitchClient, not NewStandaloneClient: the instance becomes the current connection, and the
+	// caller switches back once it is done with all of them. A standalone client looked like the
+	// tidier choice — it leaves the current one alone, in principle — but it starts itself, so the
+	// Start that followed dialled a second connection through the bastion, and the Stop after that
+	// left the shared connection to the master unusable. Every check after this one then reported
+	// its own subject as broken.
+	//
+	// Switching says what is happening: the provider stops the client it replaces and builds a
+	// fresh default one on the way back, so the state afterwards is known rather than whatever a
+	// teardown left behind.
+	client, err := m.provider.SwitchClient(ctx, config, keys)
+	if err != nil {
 		return fmt.Errorf("Cannot connect to SSH host %s: %w", address, err)
 	}
-	defer client.Stop()
 
 	if cred.User == "root" {
 		cmd := client.Command("true")
