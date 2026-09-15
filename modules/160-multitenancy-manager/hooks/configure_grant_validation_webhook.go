@@ -64,8 +64,7 @@ var projectNamespaceSelector = &v1.LabelSelector{
 // Handler-level backstops differ: /defaults and /protect use isSystemRequest (usernames + groups,
 // including system:masters); /is-granted uses the narrower isAutomatedSystemWriter (three groups,
 // no usernames, no system:masters). In-cluster, matchConditions already skip system:masters
-// before any handler runs. Who is skipped where, and why, is tabulated in
-// docs/internal/ADMISSION_BYPASS_MATRIX.md.
+// before any handler runs.
 var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 	{
 		Name:       "exclude-apiserver",
