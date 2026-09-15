@@ -216,6 +216,7 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"releaseNumber\": \"1.76\",
       \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
       \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
@@ -241,6 +242,7 @@ function prepare_environment() {
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"releaseNumber\": \"1.76\",
       \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
       \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
@@ -267,6 +269,7 @@ function prepare_environment() {
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"releaseNumber\": \"1.76\",
       \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
       \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
@@ -296,6 +299,7 @@ function prepare_environment() {
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"releaseNumber\": \"1.76\",
       \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
       \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
@@ -314,6 +318,7 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"releaseNumber\": \"1.76\",
       \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
       \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
@@ -333,6 +338,7 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"releaseNumber\": \"1.76\",
       \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
       \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
@@ -354,6 +360,7 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"releaseNumber\": \"1.76\",
       \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
       \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
@@ -372,6 +379,7 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"releaseNumber\": \"1.76\",
       \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
       \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
@@ -399,6 +407,7 @@ function prepare_environment() {
       \"sshBastionPort\": \"${bastion_port}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"releaseNumber\": \"1.76\",
       \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
       \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
@@ -435,6 +444,7 @@ function prepare_environment() {
     \"sshBastionUser\": \"${ssh_user}\",
     \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
     \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+    \"releaseNumber\": \"1.76\",
     \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
     \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
   }"
@@ -1389,6 +1399,7 @@ function run-test() {
             \"sshPrivateKey\": \"${SSH_KEY}\",
             \"imagesRepo\": \"${IMAGES_REPO}\",
             \"branch\": \"${DEV_BRANCH}\",
+            \"releaseNumber\": \"1.76\",
             \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\",
             \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
             \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
