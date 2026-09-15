@@ -72,6 +72,41 @@ func NewNodeGroupController(name string, state state.NodeGroupInfrastructureStat
 	return controller
 }
 
+// loadCloudConfig reads the group's bashible payload and stores it. A master's copy
+// carries the converge user; every other group's is stored as it came.
+func (c *NodeGroupController) loadCloudConfig(ctx *context.Context, nodeInternalIPs ...string) error {
+	// we hide deckhouse logs because we always have config
+	payload, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs, nodeInternalIPs...)
+	if err != nil {
+		return err
+	}
+
+	metaConfig, err := ctx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
+	cloudConfig, err := masterCloudConfig(ctx.Ctx(), metaConfig, operatorPrivateKeys(ctx), payload, c.convergeUserSkipped(ctx))
+	if err != nil {
+		return err
+	}
+
+	c.cloudConfig = cloudConfig
+
+	return nil
+}
+
+// convergeUserSkipped reports that no converge user goes into this group's payload. Only
+// a master is reached over SSH by converge; an immutable one answers no sshd, and a
+// commander converge holds Kubernetes credentials of its own and connects to no node.
+func (c *NodeGroupController) convergeUserSkipped(ctx *context.Context) bool {
+	if c.name != global.MasterNodeGroupName {
+		return true
+	}
+
+	return c.immutable || ctx.CommanderMode()
+}
+
 func (c *NodeGroupController) Run(ctx *context.Context) error {
 	immutableGroup, err := isImmutableNodeGroup(ctx, c.name)
 	if err != nil {
@@ -83,13 +118,9 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	// a per-node payload built where the node is created. The bashible secret exists
 	// for such a group too, and taking it would hand a machine a config it cannot run.
 	if !c.immutable {
-		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
-		if err != nil {
+		if err := c.loadCloudConfig(ctx); err != nil {
 			return err
 		}
-
-		c.cloudConfig = nodeCloudConfig
 	}
 
 	if c.desiredReplicas > len(c.state.State) {
@@ -397,15 +428,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 				return nil
 			}
 
-			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
-			if err != nil {
-				return err
-			}
-
-			c.cloudConfig = nodeCloudConfig
-
-			return nil
+			return c.loadCloudConfig(ctx)
 		})
 		if err != nil {
 			// We do not return an error immediately for the following reasons:

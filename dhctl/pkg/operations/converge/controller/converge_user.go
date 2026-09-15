@@ -34,6 +34,7 @@ import (
 	ssh "github.com/deckhouse/lib-gossh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 )
 
 const (
@@ -44,14 +45,57 @@ const (
 	convergeUserGecos = "dhctl converge"
 
 	cloudConfigHeader = "#cloud-config"
+
+	// convergeUserLifetime is one day because useradd -e counts whole days, and a
+	// converge started just before midnight must not lose its access halfway through.
+	convergeUserLifetime = 24 * time.Hour
 )
+
+// masterCloudConfig puts the converge user into a master's cloud-init payload. Its input
+// is the payload as the manual-bootstrap-for-master secret holds it. With skip set the
+// payload comes back byte-identical.
+func masterCloudConfig(ctx gocontext.Context, metaConfig *config.MetaConfig, keys []session.AgentPrivateKey, cloudConfigB64 string, skip bool) (string, error) {
+	if skip {
+		return cloudConfigB64, nil
+	}
+
+	authorized, err := convergeAuthorizedKeys(ctx, metaConfig, keys)
+	if err != nil {
+		return "", err
+	}
+
+	return withConvergeUser(cloudConfigB64, authorized, time.Now().UTC().Add(convergeUserLifetime))
+}
+
+// operatorPrivateKeys are the keys dhctl was started with. They are read from the
+// connection config and never from the live SSH client: converge switches that client to
+// a user of its own before a master is rendered, and the public half of the key it
+// generates for that user must not reach a new master's authorized_keys.
+func operatorPrivateKeys(ctx *context.Context) []session.AgentPrivateKey {
+	connection := ctx.SSHProviderInitializer.GetConfig()
+	if connection == nil || connection.Config == nil {
+		return nil
+	}
+
+	keys := make([]session.AgentPrivateKey, 0, len(connection.Config.PrivateKeys))
+
+	for _, key := range connection.Config.PrivateKeys {
+		// A key given inline carries its PEM in Key, and convergeAuthorizedKeys reads a
+		// file. Such an operator key is left out rather than reported as unreadable.
+		if !key.IsPath {
+			continue
+		}
+
+		keys = append(keys, session.AgentPrivateKey{Key: key.Key, Passphrase: key.Passphrase})
+	}
+
+	return keys
+}
 
 // convergeAuthorizedKeys collects the public keys the converge user is authorized with: the
 // cluster key from the provider config, found by value because its field is sshPublicKey for
 // ten providers and sshKey for GCP, plus the public halves of the keys dhctl logs in with.
-func convergeAuthorizedKeys(metaConfig *config.MetaConfig, keys []session.AgentPrivateKey) ([]string, error) {
-	ctx := gocontext.Background()
-
+func convergeAuthorizedKeys(ctx gocontext.Context, metaConfig *config.MetaConfig, keys []session.AgentPrivateKey) ([]string, error) {
 	collected := make([]string, 0, len(keys)+1)
 
 	for _, field := range slices.Sorted(maps.Keys(metaConfig.ProviderClusterConfig)) {

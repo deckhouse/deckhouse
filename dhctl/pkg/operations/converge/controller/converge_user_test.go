@@ -47,7 +47,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 			},
 		}
 
-		got, err := convergeAuthorizedKeys(meta, nil)
+		got, err := convergeAuthorizedKeys(t.Context(), meta, nil)
 		require.NoError(t, err)
 		require.Equal(t, []string{pub}, got)
 	})
@@ -60,7 +60,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 			},
 		}
 
-		got, err := convergeAuthorizedKeys(meta, nil)
+		got, err := convergeAuthorizedKeys(t.Context(), meta, nil)
 		require.NoError(t, err)
 		require.Equal(t, []string{pub}, got)
 	})
@@ -78,7 +78,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 			},
 		}
 
-		got, err := convergeAuthorizedKeys(meta, nil)
+		got, err := convergeAuthorizedKeys(t.Context(), meta, nil)
 		require.NoError(t, err)
 		require.Equal(t, []string{pub}, got)
 	})
@@ -91,7 +91,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 			ProviderClusterConfig: map[string]json.RawMessage{"sshPublicKey": json.RawMessage(strconv.Quote(pub))},
 		}
 
-		got, err := convergeAuthorizedKeys(meta, []session.AgentPrivateKey{{Key: keyPath}})
+		got, err := convergeAuthorizedKeys(t.Context(), meta, []session.AgentPrivateKey{{Key: keyPath}})
 		require.NoError(t, err)
 		require.Len(t, got, 2)
 		require.Contains(t, got, pub)
@@ -107,7 +107,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 			ProviderClusterConfig: map[string]json.RawMessage{"sshPublicKey": json.RawMessage(strconv.Quote(authorized))},
 		}
 
-		got, err := convergeAuthorizedKeys(meta, []session.AgentPrivateKey{{Key: keyPath}})
+		got, err := convergeAuthorizedKeys(t.Context(), meta, []session.AgentPrivateKey{{Key: keyPath}})
 		require.NoError(t, err)
 		require.Equal(t, []string{authorized}, got)
 	})
@@ -117,7 +117,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 
 		meta := &config.MetaConfig{ProviderName: "OpenStack", ProviderClusterConfig: map[string]json.RawMessage{}}
 
-		got, err := convergeAuthorizedKeys(meta, []session.AgentPrivateKey{{Key: keyPath, Passphrase: "s3cret"}})
+		got, err := convergeAuthorizedKeys(t.Context(), meta, []session.AgentPrivateKey{{Key: keyPath, Passphrase: "s3cret"}})
 		require.NoError(t, err)
 		require.Equal(t, []string{testPublicKey(t, keyPath, "s3cret")}, got)
 	})
@@ -130,7 +130,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 			ProviderClusterConfig: map[string]json.RawMessage{"sshPublicKey": json.RawMessage(strconv.Quote(pub))},
 		}
 
-		got, err := convergeAuthorizedKeys(meta, []session.AgentPrivateKey{
+		got, err := convergeAuthorizedKeys(t.Context(), meta, []session.AgentPrivateKey{
 			{Key: encrypted},
 			{Key: filepath.Join(t.TempDir(), "missing")},
 		})
@@ -141,7 +141,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 	t.Run("no key at all is an error", func(t *testing.T) {
 		meta := &config.MetaConfig{ProviderName: "OpenStack", ProviderClusterConfig: map[string]json.RawMessage{}}
 
-		_, err := convergeAuthorizedKeys(meta, nil)
+		_, err := convergeAuthorizedKeys(t.Context(), meta, nil)
 		require.Error(t, err)
 	})
 }
@@ -300,7 +300,7 @@ runcmd:
 			ProviderClusterConfig: map[string]json.RawMessage{"sshPublicKey": json.RawMessage(strconv.Quote(twoKeys))},
 		}
 
-		authorized, err := convergeAuthorizedKeys(meta, nil)
+		authorized, err := convergeAuthorizedKeys(t.Context(), meta, nil)
 		require.NoError(t, err)
 		require.Equal(t, []string{twoKeys}, authorized)
 

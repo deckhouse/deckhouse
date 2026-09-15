@@ -18,6 +18,7 @@ import (
 	gocontext "context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/name212/govalue"
 
@@ -307,6 +308,10 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 			c.state.State[candidateName] = output.InfrastructureState
 			nodesToWait = append(nodesToWait, candidateName)
 
+			if err := c.rememberConvergeUserNode(ctx, candidateName); err != nil {
+				return err
+			}
+
 			// One at a time: etcd admits a single learner, so the next machine must not
 			// start joining until control-plane-manager has this one voting.
 			if c.immutable {
@@ -331,14 +336,31 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 			return err
 		}
 
-		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
-		if err != nil {
+		if err := c.loadCloudConfig(ctx, nodeInternalIPList...); err != nil {
 			return err
 		}
-		c.cloudConfig = nodeCloudConfig
 
 		c.addNewNodesToCache(ctx, masterIPForSSHList)
+	}
+
+	return nil
+}
+
+// rememberConvergeUserNode records a master that booted with the converge user, so that a
+// later switch knows which user reaches it and the cleanup knows where to remove it.
+func (c *MasterNodeGroupController) rememberConvergeUserNode(ctx *context.Context, nodeName string) error {
+	if c.convergeUserSkipped(ctx) {
+		return nil
+	}
+
+	if slices.Contains(c.convergeState.ConvergeUserNodes, nodeName) {
+		return nil
+	}
+
+	c.convergeState.ConvergeUserNodes = append(c.convergeState.ConvergeUserNodes, nodeName)
+
+	if err := ctx.SetConvergeState(c.convergeState); err != nil {
+		return fmt.Errorf("save converge state with node %s: %w", nodeName, err)
 	}
 
 	return nil
@@ -501,6 +523,14 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("Infrastructure utility exited with an error:\n%s", err.Error()))
 
 		return err
+	}
+
+	// The payload with the converge user reached the machine only if the VM was built
+	// anew; an update in place leaves the account that booted with it.
+	if nodeRunner.HasVMDestruction() {
+		if err := c.rememberConvergeUserNode(ctx, nodeName); err != nil {
+			return err
+		}
 	}
 
 	if tomb.IsInterrupted() {

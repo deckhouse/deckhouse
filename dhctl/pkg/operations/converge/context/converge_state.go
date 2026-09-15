@@ -45,6 +45,11 @@ var errConvergeStateTransient = fmt.Errorf("converge state: transient error, may
 type State struct {
 	Phase               phases.OperationPhase   `json:"phase"`
 	NodeUserCredentials *v1.NodeUserCredentials `json:"nodeUserCredentials"`
+
+	// ConvergeUserNodes names the masters this converge created or recreated. They boot
+	// with the converge user in their cloud-init payload, the masters already in the
+	// cluster do not. Names only: this state is kept in a Secret in the cluster.
+	ConvergeUserNodes []string `json:"convergeUserNodes,omitempty"`
 }
 
 type stateStore interface {
