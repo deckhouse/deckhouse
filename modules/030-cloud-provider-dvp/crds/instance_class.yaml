@@ -176,6 +176,31 @@ spec:
                     required:
                     - cores
                     type: object
+                  gpus:
+                    description: |-
+                      List of GPU devices to attach to the virtual machine.
+
+                      Each entry references a GPUClass by name; list order is not significant. To attach several devices of the same class, repeat the entry.
+
+                      Requires the GPU feature gate enabled in the `virtualization` module of the cluster hosting the virtual machines. A virtual machine with an attached GPU cannot be live migrated, so nodes of such a NodeGroup are replaced rather than migrated.
+                    items:
+                      description: A GPU device attached to the virtual machine.
+                      properties:
+                        gpuClassName:
+                          description: |-
+                            Name of the GPUClass that selects the GPU to attach, for example nvidia-h100.
+
+                            The GPUClass must already exist in the cluster hosting the virtual machines.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                          x-doc-example: nvidia-h100
+                      required:
+                      - gpuClassName
+                      type: object
+                    maxItems: 16
+                    type: array
                   liveMigrationPolicy:
                     default: PreferForced
                     description: |-

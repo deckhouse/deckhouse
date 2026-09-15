@@ -98,6 +98,19 @@ type InstanceClassVirtualMachine struct {
 	// +kubebuilder:validation:Enum=BIOS;EFI;EFIWithSecureBoot
 	// +kubebuilder:default="EFI"
 	Bootloader string `json:"bootloader,omitempty"`
+	// List of GPU devices to attach to the virtual machine.
+	//
+	// Each entry references a GPUClass by name; list order is not significant. To attach several devices of the same class, repeat the entry.
+	//
+	// Requires the GPU feature gate enabled in the `virtualization` module of the cluster hosting the virtual machines. A virtual machine with an attached GPU cannot be live migrated, so nodes of such a NodeGroup are replaced rather than migrated.
+	//
+	// +deckhouse:ru:description:value="Список GPU-устройств, подключаемых к виртуальной машине."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Каждый элемент ссылается на GPUClass по имени, порядок элементов не важен. Чтобы подключить несколько устройств одного класса, повторите элемент."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Требует включённого feature gate GPU в модуле `virtualization` кластера, в котором создаются виртуальные машины. Виртуальная машина с подключённым GPU не поддерживает живую миграцию, поэтому узлы такой NodeGroup пересоздаются, а не мигрируют."
+	// +kubebuilder:validation:MaxItems=16
+	GPUs []InstanceClassVirtualMachineGPU `json:"gpus,omitempty"`
 	// Virtual machine run policy.
 	//
 	// * `AlwaysOn`: The virtual machine should always be running.
@@ -189,6 +202,23 @@ type InstanceClassVirtualMachineCPU struct {
 	// +deckhouse:XDocExample:value="100%"
 	// +optional
 	CoreFraction string `json:"coreFraction,omitempty"`
+}
+
+// +deckhouse:ru:description:value="GPU-устройство, подключаемое к виртуальной машине."
+// A GPU device attached to the virtual machine.
+type InstanceClassVirtualMachineGPU struct {
+	// Name of the GPUClass that selects the GPU to attach, for example nvidia-h100.
+	//
+	// The GPUClass must already exist in the cluster hosting the virtual machines.
+	//
+	// +deckhouse:ru:description:value="Имя GPUClass, который выбирает подключаемый GPU, например `nvidia-h100`."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="GPUClass должен существовать в кластере, в котором создаются виртуальные машины."
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +deckhouse:XDocExample:value="nvidia-h100"
+	GPUClassName string `json:"gpuClassName"`
 }
 
 // +deckhouse:ru:description:value="Определяет параметры памяти для виртуальной машины."
