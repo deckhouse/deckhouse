@@ -52,6 +52,17 @@ rules:
       - secrets
     resourceNames:
       - deckhouse-registry
+      # How to read the cluster's own store, which the packages proxy needs in the window where a node
+      # has no agent yet — the agent itself is installed from a package fetched through that proxy.
+      #
+      # Named here because a resourceNames Role is silent when it is short: a watch the proxy is not
+      # allowed to make returns nothing rather than an error, so the whole path would simply never
+      # engage and every fetch would fail with the installer's certificate instead.
+      - registry-storage-access
+      # `registry-bashible-config` is deliberately NOT here. The proxy used to read it as a last resort —
+      # what nodes are told, which names an upstream and carries credentials for it — and that path is
+      # gone: the installer now puts the agent on the first master, so a node never has to reach an
+      # upstream from here. Granting a read it no longer needs would only keep that door open.
     verbs:
       - get
       - list

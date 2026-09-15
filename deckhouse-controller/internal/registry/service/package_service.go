@@ -79,7 +79,23 @@ func NewPackageServiceManager(logger *log.Logger) *ServiceManager[PackagesServic
 	}
 }
 
+// Service returns a client for a package registry, resolving both halves of "how to reach it" here.
+//
+// Callers pass the address as the cluster RECORDS it, which since the registry module took over the
+// pull path is not always an address this process can dial: `registry.d8-system.svc:5001` belongs to
+// the node agent, nothing in the cluster serves it without in-cluster storage, and the agent answers
+// on the node's loopback asking for no credentials.
+//
+// Both facts have to be applied before dialling, and both already have a home: `utils.Dial`
+// translates the recorded name into the agent's address, and `RegistryConfig.ForRepository` drops the
+// docker config for it and reads the agent's authority instead. Without them a fetch fails first with
+// `credentials not found in the dockerCfg` and then, once credentials are supplied, with `lookup
+// registry.d8-system.svc: no such host`. Applied here rather than in each controller, because this is
+// the one place that dials and there are three callers.
 func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryConfig) (*T, error) {
+	registryURL = utils.Dial(registryURL)
+	config = *config.ForRepository(registryURL, m.logger)
+
 	if m.services == nil {
 		m.services = make(map[packageCredentials]*T)
 	}
@@ -156,8 +172,17 @@ func (m *ServiceManager[T]) createAuthOptions(registryURL, dockerCFG, login, pas
 		opts = append(opts, opt)
 		m.logger.Debug("init auth from docker config")
 	default:
+		// No credentials at all is a legitimate case, not a misconfiguration: the node agent asks for
+		// none, and reaching it is exactly when `RegistryConfig.ForRepository` clears them — a docker
+		// config is looked up by host, so one that names only the upstream would fail the lookup rather
+		// than go unused. Refusing here made every package scan fail on a cluster whose registry module
+		// manages the nodes, with an error about authorization data on a registry that wants none.
+		//
+		// The module-source path has always allowed it: `utils.GenerateRegistryOptions` passes whatever
+		// is set and nothing when nothing is.
 		opts = append(opts, client.WithAuth(authn.Anonymous))
-		m.logger.Debug("init anonymous auth")
+		m.logger.Debug("no credentials for this registry; dialling it anonymously",
+			slog.String("registry", registryURL))
 	}
 
 	return opts, nil

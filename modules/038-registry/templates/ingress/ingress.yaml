@@ -1,6 +1,12 @@
+{{- /*
+  The legacy publication endpoint. Stands down as a whole when the controller-based
+  implementation owns the cluster: two publication endpoints for one cluster, with two
+  certificates, is not a state anyone asked for. The Service behind it stands down with it —
+  see service.yaml and _ownership.tpl.
+*/ -}}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
 {{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
-{{- if and (($orchestrator).state).ingress_enabled (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") $ingressEnabled -}}
+{{- if and (($orchestrator).state).ingress_enabled (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") $ingressEnabled (eq (include "registry_legacy_owns_the_cluster" .) "true") -}}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

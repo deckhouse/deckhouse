@@ -1,0 +1,122 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Объявляет дополнительный registry, в который кластер маршрутизирует загрузки, помимо основного.
+
+            Это штатный способ для модуля, администратора или пользователя принести свой registry. Модуль создаёт объект с `ownerReference` на себя, поэтому объект удаляется сборщиком мусора вместе с модулем; GitOps-инструмент, ведущий ModuleConfig, не конкурирует за владение полями, потому что каждый upstream — отдельный объект.
+
+            Трафик через такие upstream — **всегда транзит**: агент проксирует загрузку, подставляя ключи и сертификат удостоверяющего центра, и передаёт её потоком, не записывая ни на диск, ни в кэш. Место под кэш ограничено и отдано под компоненты Deckhouse — тем более в air-gap, где кэш является единственным источником образов.
+
+            Значение `match`, уже занятое другим объектом, или затеняющее путь Primary, отклоняется, а не сливается молча. См. `status.conflict`.
+          properties:
+            spec:
+              properties:
+                match:
+                  description: |
+                    Хост registry, который перехватывается на узлах.
+                upstream:
+                  description: |
+                    Куда фактически отправляются перехваченные загрузки.
+                  properties:
+                    scheme:
+                      description: |
+                        Протокол подключения к registry.
+                    host:
+                      description: |
+                        Хост registry, опционально с портом.
+                    path:
+                      description: |
+                        Префикс пути к репозиторию внутри registry.
+                    ca:
+                      description: |
+                        PEM-сертификат удостоверяющего центра для проверки registry при `scheme: HTTPS`.
+                    auth:
+                      description: |
+                        Ключи доступа к registry.
+
+                        **Чувствительные данные.** Ключи хранятся внутри объекта, а не по ссылке на Secret, — так агент на узле остаётся самодостаточным при недоступном API-сервере.
+                      properties:
+                        username:
+                          description: |
+                            Имя пользователя для базовой аутентификации.
+                        password:
+                          description: |
+                            Пароль для базовой аутентификации.
+                        auth:
+                          description: |
+                            Заранее закодированное значение `base64("username:password")`.
+
+                            Имеет приоритет над `username` и `password`, если задано.
+                    mirrors:
+                      description: |
+                        Дополнительные адреса, отдающие **тот же** контент, что и registry, — для отказоустойчивости.
+                      items:
+                        properties:
+                          scheme:
+                            description: |
+                              Протокол подключения к зеркалу.
+                          host:
+                            description: |
+                              Хост зеркала, опционально с портом.
+                          path:
+                            description: |
+                              Префикс пути к репозиторию внутри зеркала.
+                          ca:
+                            description: |
+                              PEM-сертификат удостоверяющего центра для проверки зеркала.
+                          auth:
+                            description: |
+                              Ключи доступа к зеркалу.
+
+                              **Чувствительные данные.** См. `upstream.auth`.
+                            properties:
+                              username:
+                                description: |
+                                  Имя пользователя для базовой аутентификации.
+                              password:
+                                description: |
+                                  Пароль для базовой аутентификации.
+                              auth:
+                                description: |
+                                  Заранее закодированное значение `base64("username:password")`.
+            status:
+              properties:
+                observedGeneration:
+                  description: |
+                    Поколение `spec`, на которое контроллер отреагировал последним.
+                accepted:
+                  description: |
+                    Скомпилировал ли контроллер этот upstream в выкладку по узлам.
+                conflict:
+                  description: |
+                    Почему объект отклонён: какой объект уже занял `match`, либо что `match` затеняет путь Primary.
+
+                    Пусто, если объект принят.
+                conditions:
+                  description: |
+                    Результат арбитража с машиночитаемой причиной.
+
+                    - `Accepted` — входит ли upstream в выкладку по узлам.
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип состояния.
+                      status:
+                        description: |
+                          Значение состояния.
+                      observedGeneration:
+                        description: |
+                          Поколение `spec`, для которого выставлено состояние.
+                      lastTransitionTime:
+                        description: |
+                          Время последнего изменения состояния.
+                      reason:
+                        description: |
+                          Машиночитаемая причина состояния.
+                      message:
+                        description: |
+                          Пояснение для человека.

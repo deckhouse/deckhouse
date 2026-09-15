@@ -78,14 +78,27 @@ func (sc *StateController) SetupWithManager(ctx context.Context, ctrlManager ctr
 }
 
 func (sc *StateController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	deckhouseRegistrySecret, err := sc.loadDeckhouseRegistrySecret(ctx)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("cannot load deckhouse registry secret: %w", err)
-	}
-
+	// The module's own layout first, because it decides whether anything else is needed at all:
+	// `loadFromInput` below uses it when it exists and ignores the secret entirely.
 	bashibleCfgSecret, err := sc.loadBashibleCfgSecret(ctx)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot load bashible config secret: %w", err)
+	}
+
+	// And the secret is required only when nothing else describes the registry.
+	//
+	// It used to be loaded unconditionally, which made its absence fatal here — and this controller is
+	// what produces a node's bootstrap data, so no bootstrap secret is written, CAPI waits on one that
+	// never appears and no node joins. Nothing in that path needs the secret: the layout is there, and
+	// it is what the node is configured from.
+	deckhouseRegistrySecret, err := sc.loadDeckhouseRegistrySecret(ctx)
+	if err != nil {
+		if bashibleCfgSecret == nil {
+			return ctrl.Result{}, fmt.Errorf("cannot load deckhouse registry secret: %w", err)
+		}
+
+		klog.Infof("%s: no usable %q secret, continuing from %q, which is what the node is configured from: %v",
+			sc.controllerName, deckhouseRegistrySecretName, bashibleConfigSecretName, err)
 	}
 
 	rData := RegistryData{}
