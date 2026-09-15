@@ -25,11 +25,6 @@ import (
 	"strings"
 	"time"
 
-	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
 	capi "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
@@ -40,6 +35,10 @@ import (
 	"github.com/yandex-cloud/go-sdk/v2/credentials"
 	"github.com/yandex-cloud/go-sdk/v2/pkg/iamkey"
 	"github.com/yandex-cloud/go-sdk/v2/pkg/options"
+	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const (
@@ -213,7 +212,7 @@ func getDNSZone(ctx context.Context, dnsClient dnssdk.DnsZoneClient, folder, res
 		}
 
 		for _, dnsZone := range resp.DnsZones {
-			if isPublicDnsZone(dnsZone) && normalizeZone(dnsZone.Zone) == zoneName {
+			if isPublicDNSZone(dnsZone) && normalizeZone(dnsZone.Zone) == zoneName {
 				return dnsZone, nil
 			}
 		}
@@ -325,6 +324,6 @@ func normalizeZone(zone string) string {
 	return zone
 }
 
-func isPublicDnsZone(dnsZone *dns.DnsZone) bool {
+func isPublicDNSZone(dnsZone *dns.DnsZone) bool {
 	return dnsZone.PublicVisibility != nil
 }
