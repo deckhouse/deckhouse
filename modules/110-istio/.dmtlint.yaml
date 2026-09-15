@@ -12,6 +12,9 @@ linters-settings:
         - kind: Deployment
           name: operator-1x25
           container: operator
+        - kind: Deployment
+          name: istiod-1x27
+          container: discovery
       no-new-privileges:
         - kind: DaemonSet
           name: istio-cni-node

@@ -1,4 +1,5 @@
 dirs:
+ - /cacerts
  - /etc/cacerts
  - /var/run/secrets/istio-dns
  - /var/run/secrets/istiod/ca

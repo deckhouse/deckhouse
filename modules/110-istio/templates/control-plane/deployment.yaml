@@ -25,6 +25,7 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot" "istio" "istiod" "app.kubernetes.io/name" "istiod" "app.kubernetes.io/instance" $instance "app.kubernetes.io/version" $fullVersion "app.kubernetes.io/part-of" "istio" "app.kubernetes.io/managed-by" "Helm")) | nindent 2 }}
 spec:
+  revisionHistoryLimit: 2
   {{- if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA" }}
   {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
   replicas: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
@@ -60,6 +61,7 @@ spec:
         sidecar.istio.io/inject: "false"
         istio-mtls-ca-bundle-checksum: {{ include "istioCABundleChecksum" $ }}
     spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ | nindent 6 }}
       serviceAccountName: istiod-{{ $revision }}
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 6 }}
