@@ -1,3 +1,4 @@
+{{- if not (default false (dig "storage" "disabled" false .Values.cloudProviderZvirt)) }}
 {{- range $index, $storageClass := .Values.cloudProviderZvirt.internal.storageClasses }}
 ---
 apiVersion: storage.k8s.io/v1
@@ -13,4 +14,5 @@ volumeBindingMode: WaitForFirstConsumer
 parameters:
   storageDomainName: {{ $storageClass.storageDomain | quote }}
   thinProvisioning: "false"
+{{- end }}
 {{- end }}

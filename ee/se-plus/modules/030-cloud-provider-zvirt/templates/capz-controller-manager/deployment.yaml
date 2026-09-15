@@ -40,4 +40,6 @@ checksum/config: {{ include (print $.Template.BasePath "/capz-controller-manager
 {{- $_ := set $capiConfig "additionalPodAnnotations" (include "zvirt_capi_pod_annotations" . | fromYaml) -}}
 {{- $_ := set $capiConfig "vpaEnabled" true -}}
 
+{{- if not (default false (dig "nodes" "disabled" false .Values.cloudProviderZvirt)) }}
 {{- include "helm_lib_capi_controller_manager_manifests" (list . $capiConfig) }}
+{{- end }}
