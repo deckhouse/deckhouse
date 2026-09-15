@@ -1,3 +1,4 @@
+{{- if not (default false (dig "ccm" "disabled" false .Values.cloudProviderZvirt)) }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -117,3 +118,4 @@ subjects:
 - kind: ServiceAccount
   name: cloud-controller-manager
   namespace: d8-cloud-provider-zvirt
+{{- end }}

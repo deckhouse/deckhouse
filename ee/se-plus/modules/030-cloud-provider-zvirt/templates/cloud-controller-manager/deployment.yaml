@@ -53,4 +53,6 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 {{- $_ := set $ccmConfig "vpaEnabled" true -}}
 {{- $_ := set $ccmConfig "securityPolicyExceptionEnabled" true -}}
 
+{{- if not (default false (dig "ccm" "disabled" false .Values.cloudProviderZvirt)) }}
 {{- include "helm_lib_cloud_controller_manager_manifests" (list . $ccmConfig) }}
+{{- end }}
