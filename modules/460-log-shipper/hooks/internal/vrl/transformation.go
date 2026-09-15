@@ -67,10 +67,8 @@ if err == null && value != null {
       . = set!(., {{.pathArray}}, replaced)
     }
 {{- else }}
-    replaced, rep_err = replace(value_str, r'{{.sourceRegex}}', {{.targetQuoted}})
-    if rep_err == null {
-      . = set!(., {{.pathArray}}, replaced)
-    }
+    replaced = replace(value_str, r'{{.sourceRegex}}', {{.targetQuoted}})
+    . = set!(., {{.pathArray}}, replaced)
 {{- end }}
   }
 }

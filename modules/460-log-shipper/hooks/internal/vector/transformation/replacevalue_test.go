@@ -37,10 +37,8 @@ func TestReplaceValueVRL(t *testing.T) {
 if err == null && value != null {
   value_str, err_str = to_string(value)
   if err_str == null {
-    replaced, rep_err = replace(value_str, r'secret', "[REDACTED]")
-    if rep_err == null {
-      . = set!(., ["message"], replaced)
-    }
+    replaced = replace(value_str, r'secret', "[REDACTED]")
+    . = set!(., ["message"], replaced)
   }
 }`, got)
 	})
@@ -56,10 +54,8 @@ if err == null && value != null {
 if err == null && value != null {
   value_str, err_str = to_string(value)
   if err_str == null {
-    replaced, rep_err = replace(value_str, r'key\d+', "X")
-    if rep_err == null {
-      . = set!(., ["message", "secret"], replaced)
-    }
+    replaced = replace(value_str, r'key\d+', "X")
+    . = set!(., ["message", "secret"], replaced)
   }
 }`, got)
 	})
@@ -75,20 +71,16 @@ if err == null && value != null {
 if err == null && value != null {
   value_str, err_str = to_string(value)
   if err_str == null {
-    replaced, rep_err = replace(value_str, r'a', "b")
-    if rep_err == null {
-      . = set!(., ["first"], replaced)
-    }
+    replaced = replace(value_str, r'a', "b")
+    . = set!(., ["first"], replaced)
   }
 }
 value, err = get(., ["second"])
 if err == null && value != null {
   value_str, err_str = to_string(value)
   if err_str == null {
-    replaced, rep_err = replace(value_str, r'a', "b")
-    if rep_err == null {
-      . = set!(., ["second"], replaced)
-    }
+    replaced = replace(value_str, r'a', "b")
+    . = set!(., ["second"], replaced)
   }
 }`, got)
 	})
