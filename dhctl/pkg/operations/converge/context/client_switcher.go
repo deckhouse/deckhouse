@@ -140,10 +140,8 @@ func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
 
 		return s.replaceKubeClient(ctx, replaceKubeClientParams{
 			convergeState: convergeState,
-			state: map[string][]byte{
-				firstMasterState.Name: firstMasterState.State,
-			},
-			appendPKey: nil,
+			state:         selectMasterStates(firstMasterState, nil, keepAllMasters),
+			appendPKey:    nil,
 		})
 	})
 }
@@ -168,11 +166,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 			return err
 		}
 
-		statesMap := make(map[string][]byte)
-
-		for _, s := range anotherMastersStates {
-			statesMap[s.Name] = s.State
-		}
+		statesMap := selectMasterStates(nil, anotherMastersStates, keepAllMasters)
 
 		if len(statesMap) == 0 {
 			if firstMasterState == nil {
@@ -180,7 +174,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 			}
 
 			s.warn("States for other control-plane nodes not found. Trying to continue with the first one")
-			statesMap[firstMasterState.Name] = firstMasterState.State
+			statesMap = selectMasterStates(firstMasterState, nil, keepAllMasters)
 		}
 
 		return s.replaceKubeClient(ctx, replaceKubeClientParams{
@@ -216,30 +210,7 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 		return nil
 	}
 
-	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
-		convergeState, err := s.ctx.ConvergeState()
-		if err != nil {
-			return fmt.Errorf("Cannot get converge state: %w", err)
-		}
-
-		firstMaster, anotherMasters, err := s.extractStatesFromCluster(ctx)
-		if err != nil {
-			return err
-		}
-
-		statesMap := make(map[string][]byte)
-		for _, s := range append([]*NodeState{firstMaster}, anotherMasters...) {
-			if nodeName != s.Name {
-				statesMap[s.Name] = s.State
-			}
-		}
-
-		return s.replaceKubeClient(ctx, replaceKubeClientParams{
-			convergeState: convergeState,
-			state:         statesMap,
-			appendPKey:    nil,
-		})
-	})
+	return s.switchAwayFromHosts(ctx, action, map[string]struct{}{nodeName: {}})
 }
 
 func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context, ngName string, nodesToDeleteInfo []*NodeState) error {
@@ -292,6 +263,11 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 		return nil
 	}
 
+	return s.switchAwayFromHosts(ctx, action, deletedHostsNames)
+}
+
+// switchAwayFromHosts moves the clients to any control-plane node that is not being deleted.
+func (s *KubeClientSwitcher) switchAwayFromHosts(ctx context.Context, action string, deleted map[string]struct{}) error {
 	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
@@ -303,12 +279,10 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 			return err
 		}
 
-		statesMap := make(map[string][]byte)
-		for _, s := range append([]*NodeState{firstMaster}, anotherMasters...) {
-			if _, ok := deletedHostsNames[s.Name]; !ok {
-				statesMap[s.Name] = s.State
-			}
-		}
+		statesMap := selectMasterStates(firstMaster, anotherMasters, func(name string) bool {
+			_, deleting := deleted[name]
+			return !deleting
+		})
 
 		return s.replaceKubeClient(ctx, replaceKubeClientParams{
 			convergeState: convergeState,
