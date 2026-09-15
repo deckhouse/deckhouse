@@ -1,35 +1,20 @@
 linters-settings:
   container:
     exclude-rules:
-      check-run-as-non-root:
-        - kind: Deployment
-          name: kiali
       read-only-root-filesystem:
-        - kind: Deployment
-          name: kiali
-        - kind: DaemonSet
-          name: ingressgateway
-          container: istio-proxy
-      controller-security-context:
-        - kind: Deployment
-          name: kiali
-      security-context:
         - kind: Deployment
           name: kiali
       readiness-probe:
         - kind: Deployment
           name: operator-1x25
           container: operator
-        - kind: Deployment
-          name: metadata-exporter
-          container: metadata-discovery
       liveness-probe:
         - kind: Deployment
           name: operator-1x25
           container: operator
         - kind: Deployment
-          name: metadata-exporter
-          container: metadata-discovery
+          name: istiod-1x27
+          container: discovery
       no-new-privileges:
         - kind: DaemonSet
           name: istio-cni-node
@@ -54,13 +39,6 @@ linters-settings:
           port: http
         - name: api-proxy
           port: https
-      pdb:
-        - kind: Deployment
-          name: operator-1x25
-          container: operator
-        - kind: DaemonSet
-          name: istio-cni-node
-          container: kube-rbac-proxy
   module:
     conversions:
       disable: true
