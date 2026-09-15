@@ -17,6 +17,7 @@ package v1
 type ZvirtCloudProviderDiscoveryData struct {
 	APIVersion     string               `json:"apiVersion,omitempty"`
 	Kind           string               `json:"kind,omitempty"`
+	Zones          []string             `json:"zones,omitempty"`
 	StorageDomains []ZvirtStorageDomain `json:"storageDomains,omitempty"`
 }
 
@@ -24,4 +25,17 @@ type ZvirtStorageDomain struct {
 	Name      string `json:"name"`
 	IsEnabled bool   `json:"isEnabled,omitempty"`
 	IsDefault bool   `json:"isDefault,omitempty"`
+}
+
+// SetDefaults fills in the fields a caller may rely on but the discovery run does not produce.
+func (d *ZvirtCloudProviderDiscoveryData) SetDefaults() {
+	if d.APIVersion == "" {
+		d.APIVersion = "deckhouse.io/v1"
+	}
+	if d.Kind == "" {
+		d.Kind = "ZvirtCloudProviderDiscoveryData"
+	}
+	if len(d.Zones) == 0 {
+		d.Zones = []string{"default"}
+	}
 }
