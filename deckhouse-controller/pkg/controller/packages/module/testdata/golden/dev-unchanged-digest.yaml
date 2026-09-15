@@ -1,0 +1,30 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  annotations:
+    modules.deckhouse.io/dev: "true"
+    modules.deckhouse.io/hash: sha256:c0ffee
+  finalizers:
+  - module.deckhouse.io/statistic-registered
+  name: test-module
+  resourceVersion: "3"
+spec:
+  packageRepositoryName: deckhouse
+  packageVersion: main
+status:
+  lastAppliedConfiguration: null
+  tracking: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status: {}
