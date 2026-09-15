@@ -372,3 +372,54 @@ func unrelatedCA(t *testing.T) string {
 
 	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
 }
+
+// With ssh-credential skipped by name, this check is the first thing in the run to touch the
+// connection, so it has to answer for one that was never made. It used to hand the runner the
+// error lib-connection produced, printed raw:
+//
+//	↻ cloud-api-accessibility attempt 1/3 failed: no SSH connection to the master node: start
+//	  client after create: Failed to connect to target directly (last '62.84.116.209:22' with
+//	  user 'moobuntu'): Timeout while "Get SSH client": last error: Cannot Dial to …
+//
+// Bought live on 2026-09-15 with --preflight-skip-check=ssh-credential and a wrong --ssh-user.
+func TestCloudAPIAccessWithNoConnection(t *testing.T) {
+	endpoint := func() string { return "moobuntu@62.84.116.209:22" }
+
+	newCheck := func(err error) CloudAPICheck {
+		return CloudAPICheck{
+			MetaConfig:             metaConfigForProvider(t, "yandex", "{}"),
+			SSHProviderInitializer: fakeSSHProviderInitializer{provider: fakeSSHProvider{err: err}},
+			Endpoint:               endpoint,
+		}
+	}
+
+	t.Run("the node never answered", func(t *testing.T) {
+		_, err := newCheck(errors.New(`Cannot Dial to '62.84.116.209:22': dial tcp: i/o timeout`)).Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Checked, "moobuntu@62.84.116.209:22",
+			"the user and the host are the whole point: the raw error buried them mid-sentence")
+	})
+
+	t.Run("the node turned the credentials down", func(t *testing.T) {
+		_, err := newCheck(errors.New("ssh: unable to authenticate, no supported methods remain")).Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Observed, "did not accept the credentials")
+
+		// ssh-credential is the check that diagnoses a credential, and the operator turned it
+		// off. Repeating its advice here hands back the verdict they declined to read.
+		assert.NotContains(t, failure.Fix, "--ssh-user")
+		assert.Contains(t, failure.Fix, "ssh-credential")
+	})
+
+	// Getting a client is a retry loop inside lib-connection — about two minutes — so retrying
+	// the check on top of it waits the same two minutes three times over.
+	t.Run("the failure is not retried on top of lib-connection's own retries", func(t *testing.T) {
+		_, err := newCheck(errors.New("Timeout while \"Get SSH client\"")).Run(t.Context())
+
+		require.True(t, isPermanent(err), "the waiting has already been done inside Get SSH client")
+	})
+}

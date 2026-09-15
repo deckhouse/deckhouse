@@ -470,7 +470,12 @@ func (b *ClusterBootstrapper) disableChecksWithoutSSHHost(ctx context.Context, r
 // machines that exist. A typo in an address costs a minute here instead of ten.
 func (b *ClusterBootstrapper) checkMachinesAreAvailable(ctx context.Context, bctx *bootstrapContext) error {
 	if bctx.immutable == nil || len(bctx.immutable.hosts) == 0 {
-		return nil
+		// A cloud bootstrap of immutable masters names none: the provider creates the machines.
+		// Returning nil here printed a ✓ under the line "the machines named with --master-host
+		// answer and match the configuration written for them" — a claim about hardware that
+		// does not exist, and one the operator cannot tell from a real one. Seen live on
+		// bootstrap_dh_engine_dvp.
+		return preflight.NotApplicable("this bootstrap names no machines with --master-host; the provider creates the masters")
 	}
 
 	port := maintenancePort(bctx)

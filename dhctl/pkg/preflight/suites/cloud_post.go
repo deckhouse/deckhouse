@@ -64,7 +64,7 @@ func NewPostCloudSuite(deps PostCloudDeps) preflight.Suite {
 		checks.SSHCredentialAfterInfra(nodeInterface, endpointOf(deps.SSHProviderInitializer)),
 		// Declared, not merely relied on: the credential check is what proves this connection
 		// and carries the wait for the machine to boot, so this one no longer probes it itself.
-		checks.CloudAPIAccess(deps.MetaConfig, deps.SSHProviderInitializer).
+		checks.CloudAPIAccess(deps.MetaConfig, deps.SSHProviderInitializer, endpointOf(deps.SSHProviderInitializer)).
 			After(checks.SSHCredentialCheckName),
 		checks.RegistryFromMaster(deps.MetaConfig, deps.SSHProviderInitializer),
 		checks.NodeSystemRequirements(nodeInterface, deps.InstallConfig),

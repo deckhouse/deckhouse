@@ -50,6 +50,10 @@ type CloudAPICheck struct {
 	// by returning nil, which the runner printed as a ✓. The check only ever really ran on a
 	// resumed bootstrap.
 	SSHProviderInitializer sshClientSource
+	// Endpoint renders user@host:port from the configuration, for the failures that happen
+	// before there is a client to read it off. It is exactly the case this check has to name:
+	// with ssh-credential skipped, this is the first thing to touch the connection.
+	Endpoint EndpointFunc
 }
 
 func (CloudAPICheck) Description() string {
@@ -149,20 +153,60 @@ func (c CloudAPICheck) endpoint() (*cca.CloudAPIConfig, error) {
 // had just been proven — 50 milliseconds, and a "Waiting for SSH connection" box in the middle of
 // the report that read as though the wait were happening twice.
 //
-// If the connection is broken anyway — ssh-credential turned off by name — the failure surfaces at
-// the tunnel below, and tunnelFailure classifies it the same way.
+// If the connection is broken anyway — ssh-credential turned off by name — this is the first
+// thing in the run to touch it, so it has to name the failure itself. It used to return the
+// error the provider handed it, which the runner prints raw: a wrong --ssh-user came back as
+// "no SSH connection to the master node: ... dial: transient error, may succeed on retry",
+// naming neither the user nor the host. The comment here used to claim the tunnel below would
+// classify it, which is only true when a client was obtained and the forward then failed.
 func (c CloudAPICheck) masterClient(ctx context.Context) (libcon.SSHClient, error) {
 	sshProvider, err := c.SSHProviderInitializer.GetSSHProvider(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("no SSH connection to the master node: %w", err)
+		return nil, c.connectionFailure(err)
 	}
 
 	sshClient, err := sshProvider.Client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("no SSH connection to the master node: %w", err)
+		return nil, c.connectionFailure(err)
 	}
 
 	return sshClient, nil
+}
+
+// connectionFailure names a connection that was never made — the obstacle this check ran into,
+// and no more.
+//
+// It deliberately does not reproduce what ssh-credential would have said. This branch is reached
+// when that check did not run, which on a bootstrap means the operator turned it off by name: an
+// answer that repeats its advice hands back the verdict they declined to read, under a different
+// check's name. What is owed here is the opposite of the OpenStack report that started this — not
+// advice about sshd's AllowTcpForwarding for a login that never happened, but the plain fact that
+// there was no connection, and to whom.
+func (c CloudAPICheck) connectionFailure(err error) error {
+	label := "the master node"
+	if c.Endpoint != nil {
+		if endpoint := c.Endpoint(); endpoint != "" {
+			label = endpoint
+		}
+	}
+
+	failure := &preflight.Failure{
+		Checked:  fmt.Sprintf("an ssh connection to %s", label),
+		Observed: classifyNetworkError(err),
+		Expected: "the node to accept an SSH connection",
+		Fix:      "let ssh-credential run — it is the check that diagnoses this, and the cloud API cannot be asked until it passes",
+		Err:      err,
+	}
+
+	if sshNeverConnected(err) {
+		failure.Observed = "the node did not accept the credentials it was offered"
+	}
+
+	// Permanent whatever the cause: the waiting has already been done. Getting a client is itself
+	// a retry loop inside lib-connection — 50 attempts, about two minutes — so this check's own
+	// NetworkRetry does not wait longer, it waits the same two minutes three times over. Seen
+	// live: "Get SSH client FAILED (118.78 seconds)" followed by "attempt 1/3".
+	return preflight.Permanent(failure)
 }
 
 // request asks the endpoint through the tunnel and turns the answer into a verdict.
@@ -286,10 +330,11 @@ func tunnelFailure(sshClient libcon.SSHClient, target *url.URL, err error) error
 	}
 }
 
-func CloudAPIAccess(meta *config.MetaConfig, sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
+func CloudAPIAccess(meta *config.MetaConfig, sshProviderInitializer *providerinitializer.SSHProviderInitializer, endpoint EndpointFunc) preflight.Check {
 	check := CloudAPICheck{
 		MetaConfig:             meta,
 		SSHProviderInitializer: sshProviderInitializer,
+		Endpoint:               endpoint,
 	}
 	return preflight.Check{
 		Name:        CloudAPICheckName,

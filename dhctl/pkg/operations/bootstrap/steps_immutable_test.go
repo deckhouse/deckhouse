@@ -1138,11 +1138,16 @@ func TestMachinesArePreflightedAgainstTheirDocuments(t *testing.T) {
 		require.False(t, machine.pushed.Load(), "a preflight must not hand the machine anything")
 	})
 
+	// A cloud bootstrap names no machines, and this must not read as a pass: the check's line
+	// says the machines answered, and there are none.
 	t.Run("a cloud names no machines", func(t *testing.T) {
 		b, bctx := immutableTestBootstrapper(t)
 		bctx.immutable.hosts = nil
 
-		require.NoError(t, b.checkMachinesAreAvailable(t.Context(), bctx))
+		err := b.checkMachinesAreAvailable(t.Context(), bctx)
+
+		require.ErrorIs(t, err, preflight.ErrNotApplicable)
+		require.ErrorContains(t, err, "--master-host")
 	})
 }
 
