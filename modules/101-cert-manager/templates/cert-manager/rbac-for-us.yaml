@@ -128,7 +128,7 @@ metadata:
 rules:
   - apiGroups: ["cert-manager.io"]
     resources: ["issuers", "issuers/status"]
-    verbs: ["update"]
+    verbs: ["update", "patch"]
   - apiGroups: ["cert-manager.io"]
     resources: ["issuers"]
     verbs: ["get", "list", "watch"]
@@ -161,7 +161,7 @@ metadata:
 rules:
   - apiGroups: ["cert-manager.io"]
     resources: ["clusterissuers", "clusterissuers/status"]
-    verbs: ["update"]
+    verbs: ["update", "patch"]
   - apiGroups: ["cert-manager.io"]
     resources: ["clusterissuers"]
     verbs: ["get", "list", "watch"]
@@ -252,6 +252,9 @@ rules:
   # https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#ownerreferencespermissionenforcement
   - apiGroups: ["acme.cert-manager.io"]
     resources: ["orders/finalizers"]
+    verbs: ["update"]
+  - apiGroups: ["cert-manager.io"]
+    resources: ["clusterissuers/finalizers", "issuers/finalizers"]
     verbs: ["update"]
   - apiGroups: [""]
     resources: ["secrets"]
