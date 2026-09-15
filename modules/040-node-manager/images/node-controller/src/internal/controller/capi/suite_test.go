@@ -109,13 +109,15 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping the envtest environment with the NodeGroup and provider CRDs")
 	var err error
+	crdPaths := append(
+		testenv.CRDPaths(testenv.WithNodeGroupCRDFile(), testenv.WithMachineSetCRDFile()),
+		filepath.Join(testdataDir(), "dvpinstanceclass-crd.yaml"),
+		filepath.Join(testdataDir(), "deckhousemachinetemplate-crd.yaml"),
+	)
+	crdPaths = append(crdPaths, testenv.ModuleCRDPaths("030-cloud-provider-dvp/crds/external/deckhouseclusters.yaml")...)
 	testEnv, cfg, k8sClient, err = testenv.Start(
 		scheme,
-		append(
-			testenv.CRDPaths(testenv.WithNodeGroupCRDFile(), testenv.WithMachineSetCRDFile()),
-			filepath.Join(testdataDir(), "dvpinstanceclass-crd.yaml"),
-			filepath.Join(testdataDir(), "deckhousemachinetemplate-crd.yaml"),
-		)...,
+		crdPaths...,
 	)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -137,6 +139,7 @@ var _ = BeforeSuite(func() {
 		"instanceClassKind":             []byte("DVPInstanceClass"),
 		"instanceClassAPIVersion":       []byte("v1alpha1"),
 		"capiClusterKind":               []byte(`"DeckhouseCluster"`),
+		"capiClusterAPIVersion":         []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
 		"capiClusterName":               []byte("dvp"),
 		"capiMachineTemplateKind":       []byte("DeckhouseMachineTemplate"),
 		"capiMachineTemplateAPIVersion": []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
@@ -158,7 +161,7 @@ var _ = BeforeSuite(func() {
 	// The derived-status service and the pod-subnet reader resolve this secret by its
 	// production name, so the fixture name must match exactly.
 	clusterCfg.Data = map[string][]byte{
-		"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\n"),
+		"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\nserviceSubnetCIDR: 10.222.0.0/16\nclusterDomain: cluster.local\n"),
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, clusterCfg))).To(Succeed())
 
@@ -169,6 +172,16 @@ var _ = BeforeSuite(func() {
 	templates.Data = map[string][]byte{
 		"machine-template.yaml":   []byte(capiMachineTemplateFixture),
 		"instance-class.checksum": []byte(instanceClassChecksumFixture),
+		"cluster.yaml": []byte(`version: v1
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: DeckhouseCluster
+  metadata:
+    name: {{ .cluster.name }}
+    namespace: {{ .cluster.namespace }}
+    labels:
+      app: capdvp-controller-manager
+`),
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, templates))).To(Succeed())
 

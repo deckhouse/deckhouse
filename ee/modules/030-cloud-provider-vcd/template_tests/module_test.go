@@ -347,6 +347,7 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 			Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
 			Expect(len(providerSpecificCAPISecretData) >= 1).To(BeTrue())
 			Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["credentials.yaml"].String()) > 0).To(BeTrue())
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-vcd:user")
 			Expect(userAuthzUser.Exists()).To(BeTrue())
