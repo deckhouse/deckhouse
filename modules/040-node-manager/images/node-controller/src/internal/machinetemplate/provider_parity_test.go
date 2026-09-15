@@ -251,7 +251,7 @@ func providerFixtures() []providerFixture {
 		},
 		{
 			name:    "zvirt",
-			crdPath: "../../../../../../../ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi/instance_class.yaml",
+			crdPath: "../../../../../../../ee/se-plus/modules/030-cloud-provider-zvirt/crds/instance_class.yaml",
 
 			registrationPath: "../../../../../../../ee/se-plus/modules/030-cloud-provider-zvirt/templates/registration.yaml",
 			contractPath:     "../../../../../../../ee/se-plus/modules/030-cloud-provider-zvirt/capi/template.yaml",
