@@ -47,7 +47,7 @@ func TestFailureRendersEveryFieldItWasGiven(t *testing.T) {
 		t.Fatal("want an error")
 	}
 
-	want := `1 preflight check failed (0 passed, 1 failed):
+	want := `1 preflight check failed — 0 passed, 1 failed:
 
 [1] cidr-intersection — cluster CIDRs do not intersect
 checked: ClusterConfiguration.podSubnetCIDR, ClusterConfiguration.serviceSubnetCIDR
@@ -84,7 +84,7 @@ func TestBareErrorStillGetsSkipAndDocs(t *testing.T) {
 		t.Fatal("want an error")
 	}
 
-	want := `1 preflight check failed (0 passed, 1 failed):
+	want := `1 preflight check failed — 0 passed, 1 failed:
 
 [1] python-modules — python and required modules are installed
 reason: python3 is not found on the node

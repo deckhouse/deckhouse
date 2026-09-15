@@ -64,7 +64,9 @@ func (e *PhaseError) Error() string {
 		b.WriteString("s")
 	}
 	if e.Tally != "" {
-		fmt.Fprintf(&b, " failed (%s)", e.Tally)
+		// Not parentheses: the tally ends in "22 not run (the phase stopped here)" often enough
+		// that wrapping it produced nested brackets.
+		fmt.Fprintf(&b, " failed — %s", e.Tally)
 		b.WriteString(":\n")
 		e.writeResults(&b)
 		return b.String()

@@ -238,6 +238,16 @@ func agentPublicKeys(socket string) []heldKey {
 		if comment := strings.TrimSpace(key.Comment); comment != "" {
 			source = fmt.Sprintf("the ssh-agent key %q", comment)
 		}
+
+		// `ssh-add` loads a certificate alongside the key it certifies, and an agent that holds
+		// one lists both. The certificate marshals to itself, not to the key inside it, so
+		// comparing it against sshPublicKey never matches — and an agent holding only a
+		// certificate would have been reported as holding the wrong key.
+		if certificate, isCertificate := publicKey.(*ssh.Certificate); isCertificate {
+			publicKey = certificate.Key
+			source += " (through its certificate)"
+		}
+
 		held = append(held, heldKey{publicKey: publicKey, source: source})
 	}
 	return held

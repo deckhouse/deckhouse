@@ -323,3 +323,68 @@ func TestCloudSSHKeyAsksTheSocketDhctlWillUse(t *testing.T) {
 		assert.Contains(t, detail, "ssh-agent")
 	})
 }
+
+// TestCloudSSHKeyThroughACertificate: `ssh-add` loads a certificate alongside the key it
+// certifies, so an agent commonly lists both. A certificate marshals to itself rather than to the
+// key inside it, so comparing it as-is never matches sshPublicKey — and an agent holding only a
+// certificate would have been reported as holding the wrong key entirely.
+func TestCloudSSHKeyThroughACertificate(t *testing.T) {
+	public, private, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	signer, err := ssh.NewSignerFromKey(private)
+	require.NoError(t, err)
+	publicKey, err := ssh.NewPublicKey(public)
+	require.NoError(t, err)
+
+	// A certificate over that key, signed by an authority of its own — the shape a Vault-issued
+	// SSH certificate has.
+	_, caPrivate, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	caSigner, err := ssh.NewSignerFromKey(caPrivate)
+	require.NoError(t, err)
+
+	certificate := &ssh.Certificate{
+		Key:         publicKey,
+		Serial:      1,
+		CertType:    ssh.UserCert,
+		KeyId:       "vault-issued",
+		ValidBefore: ssh.CertTimeInfinity,
+	}
+	require.NoError(t, certificate.SignCert(rand.Reader, caSigner))
+
+	dir, err := os.MkdirTemp("/tmp", "d8cert")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+
+	socket := filepath.Join(dir, "a.sock")
+	listener, err := net.Listen("unix", socket)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = listener.Close() })
+
+	keyring := agent.NewKeyring()
+	// Only the certificate, which is what makes the case worth pinning.
+	require.NoError(t, keyring.Add(agent.AddedKey{
+		PrivateKey:  &private,
+		Certificate: certificate,
+		Comment:     "vault-issued",
+	}))
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() { _ = agent.ServeAgent(keyring, conn) }()
+		}
+	}()
+
+	agentSockets.Store(t.Name(), socket)
+	t.Cleanup(func() { agentSockets.Delete(t.Name()) })
+
+	detail, err := sshKeyCheck(t, string(ssh.MarshalAuthorizedKey(signer.PublicKey()))).Run(t.Context())
+
+	require.NoError(t, err, "the key inside the certificate is the one the cloud installs")
+	assert.Contains(t, detail, "certificate")
+}

@@ -72,7 +72,7 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	// The node is asked with whatever it has. curl and wget are what a Deckhouse-supported
 	// distribution ships; if neither is there the question cannot be asked from here, and saying
 	// so is better than reporting the registry as unreachable.
-	probe, err := nodeRegistryProbe(ctx, nodeInterface)
+	probe, err := nodeRegistryProbe(ctx, nodeInterface, registry.CA != "")
 	if err != nil {
 		return "", preflight.NotApplicable("neither curl nor wget is installed on %s", host)
 	}
@@ -82,13 +82,13 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	status := strings.TrimSpace(string(stdout))
 
 	if runErr != nil && status == "" {
+		observed, fix := probe.classify(runErr, registryV2URL(c.MetaConfig).Hostname(), address)
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from %s", endpoint, host),
-			Observed: "the node could not reach the registry",
+			Observed: observed,
 			Expected: "the registry API to answer from the node",
-			Fix: fmt.Sprintf("give the node egress to %s — a NAT gateway or a route, and a security group that "+
-				"allows it; if the node goes through a proxy, set ClusterConfiguration.proxy", address),
-			Err: runErr,
+			Fix:      fix,
+			Err:      runErr,
 		}
 	}
 
@@ -132,16 +132,74 @@ func (c RegistryFromMasterCheck) nodeInterface(ctx context.Context) (nodeCommand
 type registryProbe struct {
 	binary string
 	args   func(endpoint string) []string
+	// classify turns the probe's exit status into what went wrong and what to do about it.
+	classify func(err error, hostname, address string) (observed, fix string)
 }
 
-func nodeRegistryProbe(ctx context.Context, nodeInterface nodeCommandRunner) (registryProbe, error) {
+// curlExitCodes are the ones worth telling apart. They are the four things that stop a node from
+// pulling an image, and each sends the reader somewhere different — which the single sentence
+// "the node could not reach the registry" did not.
+//
+// The name not resolving is the one worth the most: it is what a node with the wrong resolver
+// does, and it surfaces from bashible as "etcd not running after 200s", because crictl could not
+// resolve the registry and never pulled the image. Nothing in that message mentions DNS.
+func curlClassify(err error, hostname, address string) (string, string) {
+	status, ok := exitStatus(err)
+	if !ok {
+		return "the node could not reach the registry", registryEgressFix(address)
+	}
+
+	switch status {
+	case 6:
+		return fmt.Sprintf("the node cannot resolve %s", hostname),
+			fmt.Sprintf("give the node a resolver that knows %s — check /etc/resolv.conf on it — "+
+				"or put the address in its /etc/hosts; the container runtime resolves the same way, "+
+				"and an image it cannot resolve stops the control plane from starting", hostname)
+	case 7:
+		return fmt.Sprintf("the node reached no service at %s", address), registryEgressFix(address)
+	case 28:
+		return fmt.Sprintf("the node timed out reaching %s", address), registryEgressFix(address)
+	case 35, 60:
+		return "the node rejected the registry certificate",
+			fmt.Sprintf("give the node the CA of %s (.spec.settings.registry.<mode>.ca in the \"deckhouse\" "+
+				"ModuleConfig), or correct the certificate the registry serves", address)
+	default:
+		return "the node could not reach the registry", registryEgressFix(address)
+	}
+}
+
+// wgetClassify is the same question of a node with no curl. wget collapses every network failure
+// into one status, so only the certificate is separable.
+func wgetClassify(err error, _, address string) (string, string) {
+	if status, ok := exitStatus(err); ok && status == 5 {
+		return "the node rejected the registry certificate",
+			fmt.Sprintf("give the node the CA of %s, or correct the certificate the registry serves", address)
+	}
+	return "the node could not reach the registry", registryEgressFix(address)
+}
+
+func registryEgressFix(address string) string {
+	return fmt.Sprintf("give the node egress to %s — a NAT gateway or a route, and a security group that "+
+		"allows it; if the node goes through a proxy, set ClusterConfiguration.proxy", address)
+}
+
+func nodeRegistryProbe(ctx context.Context, nodeInterface nodeCommandRunner, insecure bool) (registryProbe, error) {
 	if err := nodeInterface.Command("command", "-v", "curl").Run(ctx); err == nil {
 		return registryProbe{
 			binary: "curl",
 			args: func(endpoint string) []string {
-				// Only the status code is printed, so the body never reaches the log.
-				return []string{"-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "20", endpoint}
+				args := []string{"-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "20"}
+				if insecure {
+					// The node has no CA yet — bashible installs it later — so a registry
+					// signed by a private one would fail verification here on a node that is
+					// perfectly able to pull from it once configured. The question this check
+					// asks is whether the node reaches the registry; whether the certificate
+					// is trustworthy is registry-reachable's, and it has the CA to judge with.
+					args = append(args, "-k")
+				}
+				return append(args, endpoint)
 			},
+			classify: curlClassify,
 		}, nil
 	}
 
@@ -149,8 +207,13 @@ func nodeRegistryProbe(ctx context.Context, nodeInterface nodeCommandRunner) (re
 		return registryProbe{
 			binary: "wget",
 			args: func(endpoint string) []string {
-				return []string{"-q", "-O", "/dev/null", "-T", "20", "--server-response", endpoint}
+				args := []string{"-q", "-O", "/dev/null", "-T", "20", "--server-response"}
+				if insecure {
+					args = append(args, "--no-check-certificate")
+				}
+				return append(args, endpoint)
 			},
+			classify: wgetClassify,
 		}, nil
 	}
 
