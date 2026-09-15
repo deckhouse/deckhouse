@@ -247,9 +247,22 @@ Test kept as the evidence record: `~/src/kind/d8-1.20-tests/011-hostport-lb-algo
 
 ### 019-ipcache-no-deadlock-on-label-injection.patch
 
-`IPCache.UpdatePolicyMaps()` was removed upstream (`cilium#39970`), so the
-deadlock the patch worked around cannot occur and the patch cannot apply.
+The deadlock was ipcache holding `ipc.mutex` while waiting for every endpoint's
+policy map update. Both halves of that are gone from `pkg/ipcache`:
+`IPCache.UpdatePolicyMaps()` and `ipc.DatapathHandler` were removed by
+`47ace2de6e`, and the wait now lives in another component entirely,
+`pkg/policy/cell/identity_updater.go` calling `epmanager.UpdatePolicyMaps()`,
+which never runs under that lock. Note 1.20 still has a function of that name at
+`pkg/endpointmanager/manager.go` -- different owner, different signature.
+
+Upstream also adopted the patch's ordering on its own: `doInjectLabels` now
+deletes no-longer-referenced prefixes before releasing identities.
 
 ### 020-policy-nil-safe-selector-policy-detach.patch
 
-`pkg/policy/distillery.go` is gone and the nil check is present upstream.
+`policyCache`, `cachedSelectorPolicy` and `pkg/policy/distillery.go` are all
+gone, replaced by the StateDB-based `pkg/policy/compute`. The same defect class
+-- releasing a policy while another goroutine may still be resolving it -- is
+handled there: the row is deleted in a write transaction, and only after the
+commit are the selectors released, behind a nil guard
+(`pkg/policy/compute/compute.go`, `if obj.NewPolicy != nil`).
