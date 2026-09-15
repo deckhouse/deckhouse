@@ -72,24 +72,18 @@ internal:
 			renderWith("Baseline", "Deny", "deny")
 		})
 
-		It("Warns on the restricted standard in every system namespace", func() {
-			// D8AllowedUsers carries the restricted requirement to run as a non-root user.
-			constraint := f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-warn-system")
-			Expect(constraint.Exists()).To(BeTrue())
-			Expect(constraint.Field("spec.enforcementAction").String()).To(Equal("warn"))
-			Expect(constraint.Field("spec.parameters.runAsUser.rule").String()).To(Equal("MustRunAsNonRoot"))
-			Expect(constraint.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces))
-			Expect(constraint.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(enforcementNotEnabled))
-		})
+		It("Carries the parameters of the standard it warns about", func() {
+			// The selectors are checked for every defaultPolicy further down; what matters here is
+			// that the warning constraint carries the same checks as the enforcing one, so that a
+			// system namespace is measured against the full restricted set.
+			restricted := f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-warn-system")
+			Expect(restricted.Field("spec.parameters.runAsUser.rule").String()).To(Equal("MustRunAsNonRoot"))
 
-		It("Warns on the baseline standard in every system namespace", func() {
-			// The restricted standard builds on baseline, so hostNetwork and the other
-			// baseline checks have to reach system namespaces as well.
-			constraint := f.KubernetesGlobalResource("D8HostNetwork", "d8-pod-security-baseline-warn-system")
-			Expect(constraint.Exists()).To(BeTrue())
-			Expect(constraint.Field("spec.enforcementAction").String()).To(Equal("warn"))
-			Expect(constraint.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces))
-			Expect(constraint.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(enforcementNotEnabled))
+			// The restricted standard builds on baseline, so hostNetwork and the other baseline
+			// checks have to reach system namespaces as well.
+			baseline := f.KubernetesGlobalResource("D8HostNetwork", "d8-pod-security-baseline-warn-system")
+			Expect(baseline.Exists()).To(BeTrue())
+			Expect(baseline.Field("spec.parameters.allowHostNetwork").Bool()).To(BeFalse())
 		})
 
 		It("Leaves the pod exemption labels working", func() {
@@ -114,34 +108,51 @@ internal:
 		})
 	})
 
-	Context("With the default policy set to Restricted", func() {
-		BeforeEach(func() {
-			renderWith("Restricted", "Deny", "deny")
-		})
+	// defaultPolicy governs non-system namespaces only, so the constraints that serve system ones
+	// must come out the same for every value of it. Gating them on defaultPolicy used to disable a
+	// standard exactly where the namespace had asked for it: with Restricted the restricted
+	// constraint went missing, with Privileged the baseline one, and the namespace was left
+	// enforced against the weaker standard while the stronger only warned.
+	for _, defaultPolicy := range []string{"Privileged", "Baseline", "Restricted"} {
+		defaultPolicy := defaultPolicy
 
-		It("Enforces the restricted standard in opted-in namespaces", func() {
-			// The strictest default policy must not disable the strictest constraint: a system
-			// namespace labeled `enable-security-policy-check` is enforced against restricted,
-			// not left with the baseline enforcement and a restricted warning.
-			enforcing := f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-deny-d8-default")
-			Expect(enforcing.Exists()).To(BeTrue())
-			Expect(enforcing.Field("spec.enforcementAction").String()).To(Equal("deny"))
-			Expect(enforcing.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces))
-			Expect(enforcing.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
-				`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"In","values":["true"]}]`))
+		Context("With the default policy set to "+defaultPolicy, func() {
+			BeforeEach(func() {
+				renderWith(defaultPolicy, "Deny", "deny")
+			})
 
-			// Both standards now enforce there, so neither warns twice about the same namespace.
-			for _, standard := range []string{"baseline", "restricted"} {
-				warning := f.KubernetesGlobalResource("D8AllowedUsers", fmt.Sprintf("d8-pod-security-%s-warn-system", standard))
-				if !warning.Exists() {
-					continue
+			It("Enforces both standards in opted-in namespaces", func() {
+				for _, c := range []struct{ kind, standard string }{
+					{"D8HostNetwork", "baseline"},
+					{"D8AllowedUsers", "restricted"},
+				} {
+					enforcing := f.KubernetesGlobalResource(c.kind, fmt.Sprintf("d8-pod-security-%s-deny-d8-default", c.standard))
+					Expect(enforcing.Exists()).To(BeTrue(), c.standard)
+					Expect(enforcing.Field("spec.enforcementAction").String()).To(Equal("deny"), c.standard)
+					Expect(enforcing.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces), c.standard)
+					Expect(enforcing.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+						`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"In","values":["true"]}]`), c.standard)
 				}
-				Expect(warning.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(enforcementNotEnabled), standard)
-			}
-		})
-	})
+			})
 
-	Context("With the default policy set to Privileged", func() {
+			It("Warns on both standards in namespaces that did not opt in", func() {
+				for _, c := range []struct{ kind, standard string }{
+					{"D8HostNetwork", "baseline"},
+					{"D8AllowedUsers", "restricted"},
+				} {
+					warning := f.KubernetesGlobalResource(c.kind, fmt.Sprintf("d8-pod-security-%s-warn-system", c.standard))
+					Expect(warning.Exists()).To(BeTrue(), c.standard)
+					Expect(warning.Field("spec.enforcementAction").String()).To(Equal("warn"), c.standard)
+					Expect(warning.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces), c.standard)
+					// Opted-in namespaces are excluded, so none is both enforced and warned about.
+					Expect(warning.Field("spec.match.namespaceSelector.matchExpressions").String()).To(
+						MatchJSON(enforcementNotEnabled), c.standard)
+				}
+			})
+		})
+	}
+
+	Context("With a default policy that reaches non-system namespaces", func() {
 		BeforeEach(func() {
 			renderWith("Privileged", "Deny", "deny")
 		})
