@@ -74,6 +74,9 @@ func TestSelectMasterStates(t *testing.T) {
 
 type fakeStateStore struct {
 	state *State
+	// writes is ConvergeUserNodes as of every SetState, which is how a test tells a state
+	// saved node by node from one saved once at the end.
+	writes [][]string
 }
 
 // GetState hands out a copy, as the real store does by unmarshalling afresh: only SetState
@@ -86,7 +89,10 @@ func (s *fakeStateStore) GetState(*Context) (*State, error) {
 }
 
 func (s *fakeStateStore) SetState(_ *Context, st *State) error {
-	s.state = st
+	stored := *st
+	stored.ConvergeUserNodes = slices.Clone(st.ConvergeUserNodes)
+	s.state = &stored
+	s.writes = append(s.writes, stored.ConvergeUserNodes)
 
 	return nil
 }
@@ -384,13 +390,20 @@ func TestCleanupConvergeUser(t *testing.T) {
 	})
 
 	t.Run("a cleaned node leaves the state right away", func(t *testing.T) {
-		switcher := newSwitcher(t, "cluster-master-0", "cluster-master-1")
+		switcher := newSwitcher(t, "cluster-master-0", "cluster-master-9", "cluster-master-1")
 		recorder, _ := newRecorder(preExisting)
 
 		require.Error(t, switcher.removeConvergeUser(t.Context(), recorder))
 
-		// Left listed, the cleaned node would send the next converge to log in as an
-		// account that is already gone, and no converge of this cluster could finish.
+		// Saved after each node rather than once at the end: a converge killed mid-cleanup
+		// must not send the next one to log in as an account that is already gone, and no
+		// converge of this cluster would then ever finish.
+		store := switcher.ctx.stateStore.(*fakeStateStore)
+		require.Equal(t, [][]string{
+			{"cluster-master-9", "cluster-master-1"},
+			{"cluster-master-1"},
+		}, store.writes)
+
 		state, err := switcher.ctx.ConvergeState()
 		require.NoError(t, err)
 		require.Equal(t, []string{"cluster-master-1"}, state.ConvergeUserNodes)
@@ -406,14 +419,17 @@ func TestCleanupConvergeUser(t *testing.T) {
 		require.Equal(t, []string{rebuilt, preExisting}, recorder.order)
 	})
 
-	t.Run("a node with no known address is reported, the rest are cleaned", func(t *testing.T) {
+	t.Run("a node with no known address is given up on", func(t *testing.T) {
 		switcher := newSwitcher(t, "cluster-master-0", "cluster-master-9")
 		recorder, ran := newRecorder("")
 
-		err := switcher.removeConvergeUser(t.Context(), recorder)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "cluster-master-9")
-
+		require.NoError(t, switcher.removeConvergeUser(t.Context(), recorder))
 		require.Equal(t, userdel, ran[rebuilt])
+
+		// Kept in the list, a node nobody can reach fails every later cleanup, and with it
+		// the removal of the NodeUser and of the secret holding its private key.
+		state, err := switcher.ctx.ConvergeState()
+		require.NoError(t, err)
+		require.Empty(t, state.ConvergeUserNodes)
 	})
 }

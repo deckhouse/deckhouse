@@ -190,9 +190,17 @@ func (s *KubeClientSwitcher) removeConvergeUser(ctx context.Context, sshProvider
 	var failures *multierror.Error
 
 	for _, node := range cleanupOrder(convergeState.ConvergeUserNodes, addresses, sshCl.Session().Host()) {
-		host := session.Host{Host: addresses[node], Name: node}
+		address := addresses[node]
 
-		if err := removeConvergeUserOn(ctx, standalone, sshCl, creds, host); err != nil {
+		// Neither the session nor the hosts cache knows where this node is, so nothing of
+		// ours can be reached on it. Left in the list it would fail every later cleanup,
+		// and with it the removal of the NodeUser and the secret holding its key.
+		if address == "" {
+			s.warn(
+				"No ssh address known for %s, so %s cannot be removed there; it stops accepting logins on its own at the expiry date it was created with",
+				node, global.ConvergeUserName,
+			)
+		} else if err := removeConvergeUserOn(ctx, standalone, sshCl, creds, session.Host{Host: address, Name: node}); err != nil {
 			failures = multierror.Append(failures, err)
 			continue
 		}
@@ -254,10 +262,6 @@ func (s *KubeClientSwitcher) masterAddresses(sess *session.Session) (map[string]
 // work: userdel refuses a user that owns a running process, and the ssh session running
 // the command is one. The account also carries an expiry date, in case this never runs.
 func removeConvergeUserOn(ctx context.Context, provider libcon.StandaloneClientProvider, source libcon.SSHClient, creds sshCredentials, host session.Host) error {
-	if host.Host == "" {
-		return fmt.Errorf("remove %s on %s: no ssh address known for the node", global.ConvergeUserName, host.Name)
-	}
-
 	key := "converge-user-cleanup/" + host.Name
 	sess := switchSession(source.Session(), creds, []session.Host{host})
 
