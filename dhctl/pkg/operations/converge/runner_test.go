@@ -95,13 +95,23 @@ func TestConvergeDeletesTheStateOnlyAfterCleanupSucceeded(t *testing.T) {
 			return true
 		}
 
-		for _, stmt := range block.List {
+		for i, stmt := range block.List {
 			guard, ok := stmt.(*ast.IfStmt)
 			if !ok || guard.Init == nil || !strings.Contains(text(guard.Init), "CleanupConvergeUser") {
 				continue
 			}
 
 			guards++
+
+			// What this guard stops is an account that expires in two days; what it would
+			// hold back is a permanent sudoer CR whose private key sits in etcd.
+			var legacySwept bool
+			for _, earlier := range block.List[:i] {
+				legacySwept = legacySwept || strings.Contains(text(earlier), "deleteLegacyNodeUser")
+			}
+
+			require.True(t, legacySwept,
+				"the NodeUser of an older dhctl must be deleted before an unfinished cleanup can end the converge")
 
 			require.Len(t, guard.Body.List, 1, "the guard on an unfinished cleanup must do nothing but end the converge")
 			require.Equal(t, "return nil", text(guard.Body.List[0]),

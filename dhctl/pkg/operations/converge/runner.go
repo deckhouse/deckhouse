@@ -481,17 +481,18 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 	}
 
 	if nodesConverged {
+		// A finished converge is not worth failing over an object it cleans up after someone
+		// else: the next converge tries again. It goes first because the leftover that stops
+		// the guard below expires in two days and this CR never does.
+		if err := deleteLegacyNodeUser(ctx.Ctx(), ctx); err != nil {
+			dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(), err.Error())
+		}
+
 		// An unfinished cleanup is not a converge failure — it has already warned, and the
 		// account expires by itself — but the state naming the nodes that still carry it
 		// has to survive for the next converge to finish the job.
 		if leftovers := r.switcher.CleanupConvergeUser(ctx.Ctx()); leftovers != nil {
 			return nil
-		}
-
-		// A finished converge is not worth failing over an object it cleans up after
-		// someone else: the next converge tries again.
-		if err := deleteLegacyNodeUser(ctx.Ctx(), ctx); err != nil {
-			dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(), err.Error())
 		}
 
 		// Nothing else deletes it: kept, the phase and the node list of a finished converge
@@ -502,13 +503,9 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 	return nil
 }
 
-// deleteLegacyNodeUser removes the NodeUser that dhctl logged in with before the converge
-// user replaced it. A converge of that era interrupted before its own cleanup left the CR
-// behind, and bashible keeps the passwordless sudoer it describes on every master — the
-// account carries no expiry date — until the CR is gone.
-//
-// destroy static creates a live NodeUser under this same name, so this must only ever run
-// where that flow cannot: on a cloud cluster, at the end of a converge of its nodes.
+// deleteLegacyNodeUser removes the NodeUser dhctl logged in with before the converge user,
+// left by an interrupted converge of that era: bashible keeps the passwordless sudoer it
+// describes, with no expiry. destroy static makes a live one under this name, so cloud only.
 func deleteLegacyNodeUser(ctx gocontext.Context, kubeGetter kubernetes.KubeClientProviderWithCtx) error {
 	// Both calls retry for minutes, and no converge should wait that long on a leftover
 	// that is absent from almost every cluster.
