@@ -1,0 +1,32 @@
+From 5f75933eb13edb955e6fdaa09e3700ebd59e9cd6 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Fri, 11 Sep 2026 11:07:03 +0300
+Subject: [PATCH] wireguard: listen on 4287 instead of 51871
+
+Deckhouse reserves a port range for platform components and 51871 is outside it.
+One constant covers everything in 1.20: the datapath reads it through
+CONFIG(wg_port), the iptables rules and the device itself derive from it too, so
+the 1.17 patch's bpf/node_config.h hunk is no longer needed.
+---
+ pkg/wireguard/types/types.go | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/pkg/wireguard/types/types.go b/pkg/wireguard/types/types.go
+index bc7efa34fd..6c3ea12379 100644
+--- a/pkg/wireguard/types/types.go
++++ b/pkg/wireguard/types/types.go
+@@ -9,8 +9,12 @@ import (
+ )
+ 
+ const (
+-	// ListenPort is the port on which the WireGuard tunnel device listens on
+-	ListenPort = 51871
++	// ListenPort is the port on which the WireGuard tunnel device listens on.
++	// Deckhouse uses 4287, inside the port range the platform reserves for its
++	// own components; upstream's 51871 is not. Everything derives from this
++	// constant -- the datapath via CONFIG(wg_port), the iptables rules, and the
++	// device itself -- so this is the only place it needs changing.
++	ListenPort = 4287
+ 	// IfaceName is the name of the WireGuard tunnel device
+ 	IfaceName = "cilium_wg0"
+ 	// PrivKeyFilename is the name of the WireGuard private key file
