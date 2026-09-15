@@ -97,14 +97,19 @@ func (c *NodeGroupController) loadCloudConfig(ctx *context.Context, nodeInternal
 }
 
 // convergeUserSkipped reports that no converge user goes into this group's payload. Only
-// a master is reached over SSH by converge; an immutable one answers no sshd, and a
-// commander converge holds Kubernetes credentials of its own and connects to no node.
+// a master is reached over SSH by converge, and only when there is an sshd to reach and a
+// reason to: an immutable master answers none, and a commander or sshless converge holds
+// Kubernetes credentials of its own and connects to no node at all.
 func (c *NodeGroupController) convergeUserSkipped(ctx *context.Context) bool {
 	if c.name != global.MasterNodeGroupName {
 		return true
 	}
 
-	return c.immutable || ctx.CommanderMode()
+	if c.immutable || ctx.CommanderMode() {
+		return true
+	}
+
+	return ctx.SSHless()
 }
 
 func (c *NodeGroupController) Run(ctx *context.Context) error {

@@ -257,7 +257,8 @@ runcmd:
 	t.Run("the keys dhctl logs in with are authorized", func(t *testing.T) {
 		keyPath := writeTestPrivateKey(t, "")
 
-		got, err := masterCloudConfig(t.Context(), meta, []session.AgentPrivateKey{{Key: keyPath}}, base, false)
+		got, err := masterCloudConfig(t.Context(), meta,
+			[]sshconfig.AgentPrivateKey{{Key: keyPath, IsPath: true}}, base, false)
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -265,16 +266,24 @@ runcmd:
 			convergeUser(t, got)["ssh_authorized_keys"])
 	})
 
-	// useradd counts whole days, so the earliest expiry that outlives a converge
-	// started a minute before midnight is the next day.
-	t.Run("the user expires tomorrow", func(t *testing.T) {
-		tomorrow := func() string { return time.Now().UTC().Add(24 * time.Hour).Format(time.DateOnly) }
+	// useradd -e disables the account at 00:00 on the date it is given, so one day would
+	// leave a converge started at 23:50 ten minutes. Two days are at least 24 hours.
+	t.Run("the user outlives a converge started at any hour", func(t *testing.T) {
+		expiry := func() string { return time.Now().UTC().Add(48 * time.Hour).Format(time.DateOnly) }
 
-		before := tomorrow()
+		before := expiry()
 		got, err := masterCloudConfig(t.Context(), meta, nil, base, false)
 		require.NoError(t, err)
 
-		require.Contains(t, []string{before, tomorrow()}, convergeUser(t, got)["expiredate"])
+		expiredate, ok := convergeUser(t, got)["expiredate"].(string)
+		require.True(t, ok)
+
+		disabledAt, err := time.ParseInLocation(time.DateOnly, expiredate, time.UTC)
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, time.Until(disabledAt), 24*time.Hour,
+			"the account is disabled at 00:00 on %s, sooner than a master converge can finish", expiredate)
+
+		require.Contains(t, []string{before, expiry()}, expiredate)
 	})
 
 	// An immutable master answers no sshd, and a commander converge has no SSH at
@@ -302,8 +311,10 @@ func TestOperatorPrivateKeys(t *testing.T) {
 			),
 		})
 
+		// Handed over as they are: the public half is taken later, and a key given
+		// inline needs its IsPath to survive the trip.
 		require.Equal(t,
-			[]session.AgentPrivateKey{{Key: "/tmp/id_ed25519", Passphrase: "s3cret"}},
+			[]sshconfig.AgentPrivateKey{{Key: "/tmp/id_ed25519", Passphrase: "s3cret", IsPath: true}},
 			operatorPrivateKeys(convergeCtx))
 	})
 
@@ -326,10 +337,16 @@ func TestConvergeUserSkipped(t *testing.T) {
 	commanderCtx := context.NewCommanderContext(t.Context(), context.Params{},
 		commander.NewCommanderModeParams([]byte("{}"), []byte("{}")))
 
+	// Own Kubernetes credentials and no SSH host known: nothing will ever log in, and a
+	// standing NOPASSWD sudo account on a control-plane node is not worth an expiry date.
+	sshlessCtx := context.NewContext(t.Context(), context.Params{KubeOwnCredentials: true})
+	require.True(t, sshlessCtx.SSHless())
+
 	require.False(t, newController("master", false).convergeUserSkipped(convergeCtx))
 	require.True(t, newController("worker", false).convergeUserSkipped(convergeCtx))
 	require.True(t, newController("master", true).convergeUserSkipped(convergeCtx))
 	require.True(t, newController("master", false).convergeUserSkipped(commanderCtx))
+	require.True(t, newController("master", false).convergeUserSkipped(sshlessCtx))
 }
 
 // A master that answers no sshd carries no converge user, so listing it would send the
@@ -359,4 +376,39 @@ func TestRememberConvergeUserNodeIsIdempotent(t *testing.T) {
 
 	require.NoError(t, controller.rememberConvergeUserNode(convergeCtx, "cluster-master-0"))
 	require.Equal(t, []string{"cluster-master-0"}, controller.convergeState.ConvergeUserNodes)
+}
+
+// The scale dance of a destructive single-master plan creates two masters with the
+// converge user and deletes them again. Left in the state, they send the cleanup to
+// machines that no longer exist, and every later consumer has to re-derive liveness.
+func TestForgetConvergeUserNodes(t *testing.T) {
+	newController := func(recorded ...string) *MasterNodeGroupController {
+		controller := NewMasterNodeGroupController(
+			NewNodeGroupController("master", state.NodeGroupInfrastructureState{}, nil, nil), false)
+		controller.convergeState = &context.State{ConvergeUserNodes: recorded}
+		return controller
+	}
+
+	t.Run("the deleted masters are dropped and the state is saved", func(t *testing.T) {
+		// The cluster is unreachable, so the save fails immediately. That failure is the
+		// proof that it was attempted: a prune kept only in memory is lost on restart.
+		convergeCtx := context.NewContext(t.Context(), context.Params{KubeProvider: unreachableKubeProvider{}})
+
+		controller := newController("cluster-master-0", "cluster-master-1", "cluster-master-2")
+
+		err := controller.forgetConvergeUserNodes(convergeCtx, []string{"cluster-master-1", "cluster-master-2"})
+		require.ErrorContains(t, err, "save converge state without the deleted nodes")
+		require.Equal(t, []string{"cluster-master-0"}, controller.convergeState.ConvergeUserNodes)
+	})
+
+	// Nothing to drop must not cost a write: deleteNodes runs on every converge that
+	// scales down, and most of them never created a master of their own.
+	t.Run("a node nobody recorded is not saved", func(t *testing.T) {
+		convergeCtx := context.NewContext(t.Context(), context.Params{KubeProvider: unreachableKubeProvider{}})
+
+		controller := newController("cluster-master-0")
+
+		require.NoError(t, controller.forgetConvergeUserNodes(convergeCtx, []string{"cluster-master-7"}))
+		require.Equal(t, []string{"cluster-master-0"}, controller.convergeState.ConvergeUserNodes)
+	})
 }

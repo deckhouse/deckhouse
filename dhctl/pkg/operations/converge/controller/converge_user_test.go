@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	ssh "github.com/deckhouse/lib-gossh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -91,7 +91,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 			ProviderClusterConfig: map[string]json.RawMessage{"sshPublicKey": json.RawMessage(strconv.Quote(pub))},
 		}
 
-		got, err := convergeAuthorizedKeys(t.Context(), meta, []session.AgentPrivateKey{{Key: keyPath}})
+		got, err := convergeAuthorizedKeys(t.Context(), meta, []sshconfig.AgentPrivateKey{{Key: keyPath, IsPath: true}})
 		require.NoError(t, err)
 		require.Len(t, got, 2)
 		require.Contains(t, got, pub)
@@ -107,7 +107,7 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 			ProviderClusterConfig: map[string]json.RawMessage{"sshPublicKey": json.RawMessage(strconv.Quote(authorized))},
 		}
 
-		got, err := convergeAuthorizedKeys(t.Context(), meta, []session.AgentPrivateKey{{Key: keyPath}})
+		got, err := convergeAuthorizedKeys(t.Context(), meta, []sshconfig.AgentPrivateKey{{Key: keyPath, IsPath: true}})
 		require.NoError(t, err)
 		require.Equal(t, []string{authorized}, got)
 	})
@@ -117,7 +117,37 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 
 		meta := &config.MetaConfig{ProviderName: "OpenStack", ProviderClusterConfig: map[string]json.RawMessage{}}
 
-		got, err := convergeAuthorizedKeys(t.Context(), meta, []session.AgentPrivateKey{{Key: keyPath, Passphrase: "s3cret"}})
+		got, err := convergeAuthorizedKeys(t.Context(), meta, []sshconfig.AgentPrivateKey{{Key: keyPath, Passphrase: "s3cret", IsPath: true}})
+		require.NoError(t, err)
+		require.Equal(t, []string{testPublicKey(t, keyPath, "s3cret")}, got)
+	})
+
+	// A connection config carries the key material itself, not a path to it: dhctl
+	// converge takes one with --connection-config, and its keys must be authorized
+	// exactly like the ones passed by path.
+	t.Run("takes a key given inline", func(t *testing.T) {
+		keyPath := writeTestPrivateKey(t, "")
+
+		inline, err := os.ReadFile(keyPath)
+		require.NoError(t, err)
+
+		meta := &config.MetaConfig{ProviderName: "OpenStack", ProviderClusterConfig: map[string]json.RawMessage{}}
+
+		got, err := convergeAuthorizedKeys(t.Context(), meta, []sshconfig.AgentPrivateKey{{Key: string(inline)}})
+		require.NoError(t, err)
+		require.Equal(t, []string{testPublicKey(t, keyPath, "")}, got)
+	})
+
+	t.Run("takes a passphrase protected key given inline", func(t *testing.T) {
+		keyPath := writeTestPrivateKey(t, "s3cret")
+
+		inline, err := os.ReadFile(keyPath)
+		require.NoError(t, err)
+
+		meta := &config.MetaConfig{ProviderName: "OpenStack", ProviderClusterConfig: map[string]json.RawMessage{}}
+
+		got, err := convergeAuthorizedKeys(t.Context(), meta,
+			[]sshconfig.AgentPrivateKey{{Key: string(inline), Passphrase: "s3cret"}})
 		require.NoError(t, err)
 		require.Equal(t, []string{testPublicKey(t, keyPath, "s3cret")}, got)
 	})
@@ -130,9 +160,9 @@ func TestConvergeAuthorizedKeys(t *testing.T) {
 			ProviderClusterConfig: map[string]json.RawMessage{"sshPublicKey": json.RawMessage(strconv.Quote(pub))},
 		}
 
-		got, err := convergeAuthorizedKeys(t.Context(), meta, []session.AgentPrivateKey{
-			{Key: encrypted},
-			{Key: filepath.Join(t.TempDir(), "missing")},
+		got, err := convergeAuthorizedKeys(t.Context(), meta, []sshconfig.AgentPrivateKey{
+			{Key: encrypted, IsPath: true},
+			{Key: filepath.Join(t.TempDir(), "missing"), IsPath: true},
 		})
 		require.NoError(t, err)
 		require.Equal(t, []string{pub}, got)

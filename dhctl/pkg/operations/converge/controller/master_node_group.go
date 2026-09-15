@@ -366,6 +366,28 @@ func (c *MasterNodeGroupController) rememberConvergeUserNode(ctx *context.Contex
 	return nil
 }
 
+// forgetConvergeUserNodes drops the masters that have just been destroyed. A destructive
+// single-master plan scales 1→3→1: the two masters it creates carry the converge user and
+// are deleted again, and left in the state they would send the cleanup to machines that
+// no longer exist.
+func (c *MasterNodeGroupController) forgetConvergeUserNodes(ctx *context.Context, deleted []string) error {
+	kept := slices.DeleteFunc(slices.Clone(c.convergeState.ConvergeUserNodes), func(name string) bool {
+		return slices.Contains(deleted, name)
+	})
+
+	if len(kept) == len(c.convergeState.ConvergeUserNodes) {
+		return nil
+	}
+
+	c.convergeState.ConvergeUserNodes = kept
+
+	if err := ctx.SetConvergeState(c.convergeState); err != nil {
+		return fmt.Errorf("save converge state without the deleted nodes: %w", err)
+	}
+
+	return nil
+}
+
 func (c *MasterNodeGroupController) beforeUpdateNodes(ctx *context.Context) error {
 	noScaleToMultiMaster := c.convergeState.Phase != phases.ScaleToMultiMasterPhase
 
@@ -645,6 +667,10 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 
 		// If deletion was successful, update master hosts cache
 		if err == nil && len(nodesToDelete) > 0 {
+			if forgetErr := c.forgetConvergeUserNodes(ctx, nodesToDelete); forgetErr != nil {
+				return forgetErr
+			}
+
 			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache after deleting %d masters: %v", len(nodesToDelete), nodesToDelete))
 
 			// Get current master hosts from cache
