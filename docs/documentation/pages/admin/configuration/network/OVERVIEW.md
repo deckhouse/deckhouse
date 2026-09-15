@@ -63,3 +63,7 @@ The section includes the following pages:
 - [Host firewall on nodes](./policy/host_firewall.html) — protecting nodes with CiliumClusterwideNetworkPolicy and `nodeSelector`.
 - [Common policy examples](./policy/examples.html) — recipes for typical tasks.
 - [Diagnostics and observability](./policy/troubleshooting.html) — verifying and debugging policies.
+
+## Virtual machine networking
+
+Virtual machines get their addresses from separate subnets listed in the `virtualMachineCIDRs` parameter of the virtualization settings. Which subnets to choose, how they differ from the pod and service networks, and how a machine gets its address is described in [Virtual machine networking](./vm-network.html).
