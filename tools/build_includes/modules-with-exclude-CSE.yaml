@@ -4,6 +4,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -23,6 +24,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -42,6 +44,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -61,6 +64,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -80,6 +84,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -99,6 +104,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -118,6 +124,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -137,6 +144,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -156,6 +164,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -175,6 +184,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -194,6 +204,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -213,6 +224,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -232,6 +244,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -251,6 +264,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -270,6 +284,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -289,6 +304,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -308,6 +324,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -327,6 +344,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -346,6 +364,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -365,6 +384,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -384,6 +404,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -403,6 +424,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -422,6 +444,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -441,6 +464,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -460,6 +484,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -479,6 +504,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -503,6 +529,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -522,6 +549,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -541,6 +569,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -560,6 +589,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -579,6 +609,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -598,6 +629,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -637,6 +669,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -656,6 +689,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -675,6 +709,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -694,6 +729,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -718,6 +754,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -737,6 +774,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -761,6 +799,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -780,6 +819,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -799,6 +839,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -818,6 +859,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -847,6 +889,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -866,6 +909,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -885,6 +929,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -904,6 +949,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -923,6 +969,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -942,6 +989,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -961,6 +1009,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1055,6 +1104,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1074,6 +1124,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1103,6 +1154,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1132,6 +1184,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1166,6 +1219,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1185,6 +1239,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1204,6 +1259,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1223,6 +1279,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1242,6 +1299,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1261,6 +1319,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1295,6 +1354,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
