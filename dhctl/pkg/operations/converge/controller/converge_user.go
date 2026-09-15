@@ -106,9 +106,10 @@ func convergeAuthorizedKeys(ctx gocontext.Context, metaConfig *config.MetaConfig
 	for _, key := range keys {
 		publicKey, err := publicKeyFromPrivateKey(key)
 		if err != nil {
-			// An unreadable key is not a converge stopper: it may be encrypted
-			// with a passphrase dhctl was not given.
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skipping an ssh key for the converge user: %v", err))
+			// An unreadable key is not a converge stopper: it may be encrypted with a
+			// passphrase dhctl was not given. It is worth a warning, though — the account
+			// is then left with whatever the provider configuration carries.
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Skipping an ssh key for the converge user: %v", err))
 			continue
 		}
 
