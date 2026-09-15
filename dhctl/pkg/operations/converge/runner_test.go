@@ -23,6 +23,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	convergecontext "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 const runnerFile = "runner.go"
@@ -83,7 +95,7 @@ func TestConvergeDeletesTheStateOnlyAfterCleanupSucceeded(t *testing.T) {
 			return true
 		}
 
-		for i, stmt := range block.List {
+		for _, stmt := range block.List {
 			guard, ok := stmt.(*ast.IfStmt)
 			if !ok || guard.Init == nil || !strings.Contains(text(guard.Init), "CleanupConvergeUser") {
 				continue
@@ -91,19 +103,72 @@ func TestConvergeDeletesTheStateOnlyAfterCleanupSucceeded(t *testing.T) {
 
 			guards++
 
-			require.Len(t, guard.Body.List, 1)
+			require.Len(t, guard.Body.List, 1, "the guard on an unfinished cleanup must do nothing but end the converge")
 			require.Equal(t, "return nil", text(guard.Body.List[0]),
 				"a cleanup that could not finish must end the converge without deleting the state")
 
-			require.Greater(t, len(block.List), i+1, "nothing follows the converge user cleanup")
-			require.Contains(t, text(block.List[i+1]), "DeleteConvergeState",
-				"the converge state must be deleted right after a cleanup that succeeded")
+			// The last statement of the very block the cleanup guards: anywhere else the
+			// deletion runs on paths the cleanup never ran on, and a call whose error is
+			// dropped reports a converge that kept its state as a converge that cleaned up.
+			require.Equal(t, "return ctx.DeleteConvergeState()", text(block.List[len(block.List)-1]),
+				"the block that removes the converge user must end by returning the state deletion")
 		}
 
 		return true
 	})
 
 	require.Equal(t, 1, guards, "%s must remove the converge user exactly once", runnerFile)
+}
+
+// Commander stops a converge at a phase boundary, and the node phase then returns without
+// touching a thing. Read as a finished run, it takes the resume marker of an interrupted
+// master scaling down with it.
+func TestAStoppedNodePhaseIsNotAConvergedRun(t *testing.T) {
+	t.Parallel()
+
+	phaseContext := phases.NewDefaultPhasedExecutionContext(
+		phases.OperationConverge,
+		func(phases.OnPhaseFuncData[phases.DefaultContextType]) error {
+			return phases.ErrStopOperationCondition
+		},
+		nil,
+	)
+
+	convergeCtx := convergecontext.
+		NewContext(t.Context(), convergecontext.Params{Cache: cache.NewTestCache()}).
+		WithPhaseContext(phaseContext)
+
+	converged, err := newRunner(nil, nil).convergeTerraNodes(convergeCtx, nil, nil)
+
+	require.NoError(t, err)
+	require.False(t, converged, "a phase stopped at its boundary reports the nodes as converged")
+}
+
+// A converge interrupted before this path was removed left the NodeUser behind, and
+// bashible keeps provisioning the passwordless sudoer it describes on every master,
+// including masters that join later. Nothing expires that account.
+func TestTheNodeUserLeftByAnOlderDhctlIsDeleted(t *testing.T) {
+	t.Parallel()
+
+	kubeCl := client.NewFakeKubernetesClientWithListGVR(
+		map[schema.GroupVersionResource]string{v1.NodeUserGVR: v1.NodeUserList},
+	)
+	kubeGetter := kubernetes.NewSimpleKubeClientGetter(kubeCl)
+
+	_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Create(t.Context(), &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "NodeUser",
+		"metadata":   map[string]any{"name": global.ConvergeNodeUserName},
+	}}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	require.NoError(t, deleteLegacyNodeUser(t.Context(), kubeGetter))
+
+	_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(t.Context(), global.ConvergeNodeUserName, metav1.GetOptions{})
+	require.True(t, apierrors.IsNotFound(err), "the NodeUser of an older dhctl is still there: %v", err)
+
+	// Every cluster but the interrupted one has none, and that must cost a converge nothing.
+	require.NoError(t, deleteLegacyNodeUser(t.Context(), kubeGetter))
 }
 
 // calleeName is the package-qualified name an argument calls, and "" for an argument

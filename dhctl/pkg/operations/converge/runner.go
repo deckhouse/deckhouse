@@ -18,6 +18,7 @@ import (
 	gocontext "context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -26,7 +27,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manager"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -212,11 +215,14 @@ func (r *runner) migrateTerraNodes(ctx *convergecontext.Context, metaConfig *con
 	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
-func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
+// convergeTerraNodes reports whether the node phase ran. A phase stopped at its boundary
+// and a converge the operator aborted both leave the cluster untouched, and what follows
+// the phase must not take them for a finished run.
+func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) (bool, error) {
 	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.AllNodesPhase, true); err != nil {
-		return err
+		return false, err
 	} else if shouldStop {
-		return nil
+		return false, nil
 	}
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
@@ -231,7 +237,7 @@ func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *co
 		confirmation := input.NewConfirmation().WithYesByDefault().WithMessage(noNodesConfirmationMessage)
 		if !ctx.ChangesSettings().AutoApprove && !confirmation.Ask() {
 			dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Aborted")
-			return nil
+			return false, nil
 		}
 	}
 
@@ -257,7 +263,7 @@ func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *co
 
 	kubeCl, err := ctx.KubeClientCtx(ctx.Ctx())
 	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
+		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
 	if err := bootstrapNewNodeGroups(
@@ -272,7 +278,7 @@ func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *co
 		// reaches only the groups whose systemType is Immutable.
 		controller.NewImmutablePayloadBuilder(ctx),
 	); err != nil {
-		return err
+		return false, err
 	}
 
 	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
@@ -283,11 +289,11 @@ func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *co
 		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, false, r.switcher.GetGlobalOptions())
 		err := rr.Run(ctx)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
-	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
+	return true, ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
 func (r *runner) convergeDeckhouseConfiguration(ctx *convergecontext.Context, commanderUUID uuid.UUID) error {
@@ -457,11 +463,10 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 			return err
 		}
 
-		if err := r.convergeTerraNodes(ctx, metaConfig, nodesStates); err != nil {
+		nodesConverged, err = r.convergeTerraNodes(ctx, metaConfig, nodesStates)
+		if err != nil {
 			return err
 		}
-
-		nodesConverged = true
 	} else {
 		dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Skipping converge of nodes")
 	}
@@ -483,9 +488,32 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 			return nil
 		}
 
+		// A finished converge is not worth failing over an object it cleans up after
+		// someone else: the next converge tries again.
+		if err := deleteLegacyNodeUser(ctx.Ctx(), ctx); err != nil {
+			dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(), err.Error())
+		}
+
 		// Nothing else deletes it: kept, the phase and the node list of a finished converge
 		// are read as unfinished business by the next one.
 		return ctx.DeleteConvergeState()
+	}
+
+	return nil
+}
+
+// deleteLegacyNodeUser removes the NodeUser that dhctl logged in with before the converge
+// user replaced it. A converge of that era interrupted before its own cleanup left the CR
+// behind, and bashible keeps the passwordless sudoer it describes on every master — the
+// account carries no expiry date — until the CR is gone.
+func deleteLegacyNodeUser(ctx gocontext.Context, kubeGetter kubernetes.KubeClientProviderWithCtx) error {
+	// DeleteNodeUser retries for 450 seconds, and no converge should wait that long on a
+	// leftover that is absent from almost every cluster.
+	c, cancel := gocontext.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err := entity.DeleteNodeUser(c, kubeGetter, global.ConvergeNodeUserName); err != nil {
+		return fmt.Errorf("delete the NodeUser left by an older dhctl: %w", err)
 	}
 
 	return nil
