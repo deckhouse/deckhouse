@@ -506,11 +506,25 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 // user replaced it. A converge of that era interrupted before its own cleanup left the CR
 // behind, and bashible keeps the passwordless sudoer it describes on every master — the
 // account carries no expiry date — until the CR is gone.
+//
+// destroy static creates a live NodeUser under this same name, so this must only ever run
+// where that flow cannot: on a cloud cluster, at the end of a converge of its nodes.
 func deleteLegacyNodeUser(ctx gocontext.Context, kubeGetter kubernetes.KubeClientProviderWithCtx) error {
-	// DeleteNodeUser retries for 450 seconds, and no converge should wait that long on a
-	// leftover that is absent from almost every cluster.
+	// Both calls retry for minutes, and no converge should wait that long on a leftover
+	// that is absent from almost every cluster.
 	c, cancel := gocontext.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+
+	// The lookup is silent, the deletion announces itself. Asking first keeps every
+	// converge of every cluster that has no such CR from reporting a deletion.
+	exists, err := entity.NodeUserExists(c, kubeGetter, global.ConvergeNodeUserName)
+	if err != nil {
+		return fmt.Errorf("look for the NodeUser left by an older dhctl: %w", err)
+	}
+
+	if !exists {
+		return nil
+	}
 
 	if err := entity.DeleteNodeUser(c, kubeGetter, global.ConvergeNodeUserName); err != nil {
 		return fmt.Errorf("delete the NodeUser left by an older dhctl: %w", err)

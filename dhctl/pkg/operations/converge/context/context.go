@@ -278,8 +278,19 @@ func (c *Context) ConvergeState() (*State, error) {
 	return c.stateStore.GetState(c)
 }
 
-// DeleteConvergeState drops the state a finished converge kept in the cluster: the phase
-// it may have had to resume and the masters it built with the converge user.
+// DeleteConvergeState drops the state a finished converge kept in the cluster: the phase it
+// may have had to resume and the masters it built with the converge user. A master still
+// listed keeps the whole state alive — the list is the only record of accounts nobody has
+// removed yet, and a cleanup skipped in commander or sshless mode reports no error.
 func (c *Context) DeleteConvergeState() error {
+	state, err := c.ConvergeState()
+	if err != nil {
+		return fmt.Errorf("read the converge state before deleting it: %w", err)
+	}
+
+	if len(state.ConvergeUserNodes) > 0 {
+		return nil
+	}
+
 	return c.stateStore.Delete(c)
 }

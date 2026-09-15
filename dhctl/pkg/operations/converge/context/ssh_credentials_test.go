@@ -73,7 +73,8 @@ func TestSelectMasterStates(t *testing.T) {
 }
 
 type fakeStateStore struct {
-	state *State
+	state   *State
+	deleted bool
 	// writes is ConvergeUserNodes as of every SetState, which is how a test tells a state
 	// saved node by node from one saved once at the end.
 	writes [][]string
@@ -97,7 +98,11 @@ func (s *fakeStateStore) SetState(_ *Context, st *State) error {
 	return nil
 }
 
-func (s *fakeStateStore) Delete(*Context) error { return nil }
+func (s *fakeStateStore) Delete(*Context) error {
+	s.deleted = true
+
+	return nil
+}
 
 // switcherWithConvergeUserNodes builds a switcher whose converge state names the given
 // masters as built by this converge, with "ubuntu" as the user dhctl was started with.
