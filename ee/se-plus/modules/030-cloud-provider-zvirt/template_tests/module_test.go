@@ -57,6 +57,16 @@ const globalValues = `
 `
 
 const moduleValuesA = `
+provider:
+  parameters:
+    server: https://zvirt.example.com/api
+    clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
+    caBundle: ""
+    insecure: true
+nodes:
+  parameters:
+    sshPublicKey: ssh-rsa deadbeef
+    layout: Standard
 internal:
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
