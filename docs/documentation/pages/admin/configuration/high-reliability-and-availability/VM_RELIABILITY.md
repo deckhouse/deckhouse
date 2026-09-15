@@ -13,14 +13,20 @@ Over time, the distribution of virtual machines across nodes stops being even. T
 
 Rebalancing solves two tasks:
 
-- It evens out the load. DP tracks how much CPU is reserved on each node and, when a node reserves more than 80%, moves some VMs to less loaded nodes.
+- It evens out the load. DP tracks how much CPU is reserved on each node and, when a node reserves more than 80%, moves some VMs to the nodes that reserve less than 50%.
 - It restores correct placement. DP checks whether the current node meets the VM requirements and the rules of mutual VM placement. For example, if the rules forbid keeping certain VMs on the same node, the extra ones are moved.
+
+DP sets the rebalancing parameters itself: with the `descheduler` module enabled, it creates a [Descheduler](/modules/descheduler/cr.html#descheduler) resource named `virtualization` and selects in it only the machines that can be moved by live migration. How the eviction strategies work is covered in [Pod eviction](../app-scaling/pod-eviction/scheduler.html).
 
 {% tabs descheduler %}
 
 {% tab "Using the CLI" %}
 
-Create a [Descheduler](/modules/descheduler/cr.html#descheduler) resource and enable the strategies you need in it. The strategy parameters are covered in [Pod eviction](../app-scaling/pod-eviction/scheduler.html).
+To view the rebalancing settings, run the following command:
+
+```shell
+d8 k get descheduler virtualization -o yaml
+```
 
 {% endtab %}
 

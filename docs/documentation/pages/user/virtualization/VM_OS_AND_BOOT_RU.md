@@ -39,7 +39,6 @@ lang: ru
 
 Выбирайте `Legacy`, когда гостевая операционная система не умеет работать с контроллером AHCI, а не просто потому, что она старая. Для Linux с ядром 2.6.19 и новее подходит `osType: Generic` с `enableParavirtualization: false` — там нет ограничения в четыре устройства и диски можно подключать на ходу через [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment).
 
-{% alert level="warning" %}
 Для `Legacy` недоступны:
 
 - изменение числа ядер процессора и объёма памяти на работающей ВМ, потому что эти гостевые ОС не вводят их в работу. Изменение принимается, ВМ показывает его в [`.status.restartAwaitingChanges`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-restartawaitingchanges) вместе с условием `AwaitingRestartToApplyConfiguration`, а применяется оно после перезапуска;
@@ -52,7 +51,6 @@ lang: ru
 Снимок с `requiredConsistency: true` тоже не завершится успешно, но по другой причине. DP запрашивает заморозку файловой системы, а агент отвечает, что команда в его сборке отключена, сообщением `guest-fsfreeze-status has been disabled for this instance`. На Windows заморозка идёт через провайдер VSS, которого в этой сборке нет. Снимок около десяти минут ждёт в фазе `InProgress` и переходит в `Failed`, поэтому для таких ВМ задавайте `requiredConsistency: false`.
 
 С `enableParavirtualization: false` добавляется ещё одно ограничение. Блочных устройств может быть не более четырёх суммарно, потому что шина IDE предоставляет два канала по два устройства.
-{% endalert %}
 
 Пример конфигурации для виртуальной машины с Windows XP:
 

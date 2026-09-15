@@ -231,7 +231,7 @@ status:
 
 ## Recovering a VM
 
-Recovery returns a machine and its disks to the state saved in a snapshot. It's started by a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `restore` type, which has three modes:
+Recovery returns a machine and its disks to the state saved in a snapshot. It's started by a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `Restore` type, which has three modes:
 
 - `DryRun`: A dry run of the recovery operation, needed to check for possible conflicts, which are shown in the resource status (`status.resources`).
 - `Strict`: The strict recovery mode, when the VM has to be recovered exactly as in the snapshot; missing external dependencies can leave the VM in `Pending` after recovery.
@@ -258,7 +258,7 @@ Don't cancel a recovery operation from a snapshot, that is, don't delete the [Vi
 
 {% tab "Using the CLI" %}
 
-Recovery is started by a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `restore` type:
+Recovery is started by a [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource of the `Restore` type:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2

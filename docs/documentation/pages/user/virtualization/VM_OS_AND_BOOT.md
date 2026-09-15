@@ -38,7 +38,6 @@ USB device passthrough works for `Legacy`, but the UHCI controller is limited to
 
 Choose `Legacy` when the guest operating system can't work with an AHCI controller, not just because it's old. For Linux with kernel 2.6.19 and newer, `osType: Generic` with `enableParavirtualization: false` is a fit, because there's no four-device limit there and attaching disks on the fly through [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) remains available.
 
-{% alert level="warning" %}
 For `Legacy`, the following isn't available:
 
 - Changing the number of CPU cores and the amount of memory on a running VM, because these guest operating systems don't bring them into service. The change is accepted, the VM shows it in [`.status.restartAwaitingChanges`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-restartawaitingchanges) along with the `AwaitingRestartToApplyConfiguration` condition, and it applies after a restart.
@@ -51,7 +50,6 @@ You can install the QEMU guest agent in such an OS from an archived virtio-win r
 A snapshot with `requiredConsistency: true` also doesn't complete successfully, but for a different reason. DP requests a file system freeze, and the agent replies that the command is disabled in its build with the `guest-fsfreeze-status has been disabled for this instance` message. On Windows, the freeze goes through the VSS provider, which isn't in this build. The snapshot waits in the `InProgress` phase for about ten minutes and moves to `Failed`, so set `requiredConsistency: false` for such VMs.
 
 With `enableParavirtualization: false`, one more limitation applies. There can be no more than four block devices in total, because the IDE bus provides two channels with two devices each.
-{% endalert %}
 
 Example configuration for a Windows XP virtual machine:
 

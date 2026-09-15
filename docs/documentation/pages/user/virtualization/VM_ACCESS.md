@@ -65,7 +65,6 @@ d8 v ssh cloud@linux-vm
 
 {% endtabs %}
 
-{% alert level="warning" %}
 The serial console and VNC are exclusive, only one user works in them, and a new connection disconnects whoever is already working with the machine.
 
 Before connecting, `d8 v console` and `d8 v vnc` report who took the stream and since when, and offer a choice:
@@ -82,7 +81,6 @@ Connect and disconnect them? [y] yes  [N] no  [w] wait until free:
 <!-- markdownlint-enable MD031 -->
 
 The `w` answer means waiting until the other user disconnects and connecting automatically. Pressing Enter cancels the connection, because the safe option is selected by default. The `--force` flag connects without asking, and it's also what you need for a non-interactive run in a script.
-{% endalert %}
 
 {% alert level="info" %}
 The serial console doesn't resize the terminal automatically. If the command output wraps incorrectly, set the size manually with the `stty rows <ROWS> cols <COLUMNS>` command, for example `stty rows 50 cols 200`. When the `xterm` package is installed in the system, the `resize` command does the same job.

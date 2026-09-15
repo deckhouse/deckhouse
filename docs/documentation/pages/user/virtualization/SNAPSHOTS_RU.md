@@ -232,7 +232,7 @@ status:
 
 ## Восстановление ВМ
 
-Восстановление возвращает машину и её диски к состоянию, сохранённому в снимке. Запускает его ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типом `restore`, у которого есть три режима:
+Восстановление возвращает машину и её диски к состоянию, сохранённому в снимке. Запускает его ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типом `Restore`, у которого есть три режима:
 
 - `DryRun` — холостой запуск операции восстановления, необходим для проверки возможных конфликтов, которые будут отображены в статусе ресурса (`status.resources`).
 - `Strict` — режим строгого восстановления, когда требуется восстановление ВМ «как в снимке», отсутствующие внешние зависимости могут привести к тому, что ВМ после восстановления будет в `Pending`.
@@ -259,7 +259,7 @@ status:
 
 {% tab "В командной строке" %}
 
-Восстановление запускает ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типом `restore`:
+Восстановление запускает ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типом `Restore`:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
