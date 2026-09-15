@@ -253,3 +253,82 @@ func TestAfterActionDropsTheCachedCheckClient(t *testing.T) {
 	require.Equal(t, map[string]int{oldIP: 1, newIP: 1}, ran,
 		"the check after the rebuild must reach the new machine, not the cached client")
 }
+
+// The rebuilt master is the clients' last host, and a provider that drops the account from
+// its cloud-config leaves them there under a user it does not know. The switch itself
+// reports nothing on the legacy backend, so only a command on it tells the two apart.
+func TestAfterActionProvesTheRecreatedNodeAnswers(t *testing.T) {
+	const (
+		oldIP = "10.12.1.1"
+		newIP = "10.12.1.10"
+	)
+
+	newProvider := func(t *testing.T, accepted string, ran *[]string) *testssh.SSHProvider {
+		t.Helper()
+
+		live := session.NewSession(session.Input{
+			User:           "ubuntu",
+			AvailableHosts: []session.Host{{Host: oldIP, Name: "cluster-master-0"}},
+		})
+
+		provider := testssh.NewSSHProvider(live, true)
+		provider.AddCommandProvider(newIP, func(_ testssh.Bastion, _ string, _ ...string) *testssh.Command {
+			switches := provider.Switches()
+			user := switches[len(switches)-1].Session.User
+			*ran = append(*ran, user)
+
+			if user != accepted {
+				return testssh.NewCommand(nil).WithErr(fmt.Errorf("Permission denied (publickey)"))
+			}
+
+			return testssh.NewCommand(nil)
+		})
+
+		return provider
+	}
+
+	move := func(t *testing.T, provider *testssh.SSHProvider) error {
+		t.Helper()
+
+		hook := NewHookForUpdatePipeline(
+			unreachableKubeGetter{},
+			provider,
+			map[string]string{"cluster-master-1": "10.12.1.2"},
+			operatorSessionForNode,
+			false,
+			true,
+			false,
+		).WithNodeToConverge("cluster-master-0")
+
+		hook.oldMasterIPForSSH = oldIP
+
+		cl, err := provider.Client(t.Context())
+		require.NoError(t, err)
+
+		return hook.moveSessionToRecreatedNode(t.Context(), cl, session.Host{Host: newIP, Name: "cluster-master-0"})
+	}
+
+	t.Run("the account is there", func(t *testing.T) {
+		var ran []string
+
+		require.NoError(t, move(t, newProvider(t, global.ConvergeUserName, &ran)))
+		require.Equal(t, []string{global.ConvergeUserName}, ran)
+	})
+
+	t.Run("the provider dropped it, so the operator takes over", func(t *testing.T) {
+		var ran []string
+
+		require.NoError(t, move(t, newProvider(t, "ubuntu", &ran)))
+		require.Equal(t, []string{global.ConvergeUserName, "ubuntu"}, ran,
+			"a rejected converge user must be retried as the user dhctl started with")
+	})
+
+	t.Run("neither answers", func(t *testing.T) {
+		var ran []string
+
+		err := move(t, newProvider(t, "nobody", &ran))
+
+		require.ErrorContains(t, err, global.ConvergeUserName)
+		require.ErrorContains(t, err, "ubuntu")
+	})
+}

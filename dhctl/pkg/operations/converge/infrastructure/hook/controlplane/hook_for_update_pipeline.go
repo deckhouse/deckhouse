@@ -200,9 +200,9 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	return false, nil
 }
 
-// moveSessionToRecreatedNode puts the rebuilt master back in reach. This hook only runs on
-// a rebuilt VM, and such a machine boots with the converge user, so its generation is known
-// here without asking the cluster — the state naming it is saved after this hook returns.
+// moveSessionToRecreatedNode puts the rebuilt master back in reach, under the converge user
+// a rebuilt machine boots with. The state naming that node is written only after a
+// successful apply, so the generation is not read from it but proven on the connection.
 func (h *HookForUpdatePipeline) moveSessionToRecreatedNode(ctx context.Context, cl libcon.SSHClient, host session.Host) error {
 	live := cl.Session()
 
@@ -231,19 +231,28 @@ func (h *HookForUpdatePipeline) moveSessionToRecreatedNode(ctx context.Context, 
 
 	// No host of the current generation is left to talk to, so the clients follow the
 	// rebuilt master instead of running out of hosts.
-	sess := session.NewSession(session.Input{
-		User:            global.ConvergeUserName,
-		Port:            live.Port,
-		BastionHost:     live.BastionHost,
-		BastionPort:     live.BastionPort,
-		BastionUser:     live.BastionUser,
-		BastionPassword: live.BastionPassword,
-		ExtraArgs:       live.ExtraArgs,
-		AvailableHosts:  []session.Host{host},
-	})
-
-	if _, err := h.sshProvider.SwitchClient(ctx, sess, cl.PrivateKeys()); err != nil {
+	if err := h.followRecreatedNode(ctx, cl, live, host); err != nil {
 		return fmt.Errorf("move the clients to the recreated node %s: %w", h.nodeToConverge, err)
+	}
+
+	return nil
+}
+
+// followRecreatedNode moves the clients onto the rebuilt master as the converge user and
+// proves that account answers, falling back to the user dhctl started with. A node whose
+// provider dropped the account from its cloud-config still answers to that one.
+func (h *HookForUpdatePipeline) followRecreatedNode(ctx context.Context, cl libcon.SSHClient, live *session.Session, host session.Host) error {
+	err := switchAndCheck(ctx, h.sshProvider, sessionForHost(live, global.ConvergeUserName, host), cl.PrivateKeys())
+	if err == nil {
+		return nil
+	}
+
+	dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+		"Cannot connect to the rebuilt %s as %s: %v. Retrying as %s",
+		h.nodeToConverge, global.ConvergeUserName, err, live.User))
+
+	if retryErr := switchAndCheck(ctx, h.sshProvider, sessionForHost(live, live.User, host), cl.PrivateKeys()); retryErr != nil {
+		return fmt.Errorf("connect as %s (%v), then as %s: %w", global.ConvergeUserName, err, live.User, retryErr)
 	}
 
 	return nil

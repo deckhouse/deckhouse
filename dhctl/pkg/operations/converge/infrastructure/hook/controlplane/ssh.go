@@ -134,3 +134,36 @@ func (c *SSHChecker) clientForNode(
 func SSHCheckerClientKey(nodeName string) string {
 	return "controlplane-readiness/" + nodeName
 }
+
+// sessionForHost points the live settings at one host under one user: everything the
+// operator configured about how to reach a node stays as it is.
+func sessionForHost(live *session.Session, user string, host session.Host) *session.Session {
+	return session.NewSession(session.Input{
+		User:            user,
+		Port:            live.Port,
+		BastionHost:     live.BastionHost,
+		BastionPort:     live.BastionPort,
+		BastionUser:     live.BastionUser,
+		BastionPassword: live.BastionPassword,
+		ExtraArgs:       live.ExtraArgs,
+		BecomePass:      live.BecomePass,
+		AvailableHosts:  []session.Host{host},
+	})
+}
+
+// switchAndCheck switches the clients and runs one command on them. That command is the
+// only failure signal the legacy backend gives: it starts a local agent and nothing else,
+// so a user the node does not know surfaces on the first command, not on the switch.
+func switchAndCheck(ctx context.Context, sshProvider libcon.SSHProvider, sess *session.Session, keys []session.AgentPrivateKey) error {
+	client, err := sshProvider.SwitchClient(ctx, sess, keys)
+	if err != nil {
+		return err
+	}
+
+	cmd := client.Command("true")
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf("run a command as %s: %w; stderr: %s", sess.User, err, string(cmd.StderrBytes()))
+	}
+
+	return nil
+}
