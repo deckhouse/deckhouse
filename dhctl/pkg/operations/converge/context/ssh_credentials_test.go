@@ -427,7 +427,7 @@ func TestCleanupConvergeUser(t *testing.T) {
 		require.Equal(t, userdel, ran[rebuilt])
 
 		// Kept in the list, a node nobody can reach fails every later cleanup, and with it
-		// the removal of the NodeUser and of the secret holding its private key.
+		// the deletion of the converge state.
 		state, err := switcher.ctx.ConvergeState()
 		require.NoError(t, err)
 		require.Empty(t, state.ConvergeUserNodes)

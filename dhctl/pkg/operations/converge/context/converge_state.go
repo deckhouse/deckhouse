@@ -26,7 +26,6 @@ import (
 
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
-	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
@@ -43,8 +42,7 @@ const (
 var errConvergeStateTransient = fmt.Errorf("converge state: transient error, may succeed on retry")
 
 type State struct {
-	Phase               phases.OperationPhase   `json:"phase"`
-	NodeUserCredentials *v1.NodeUserCredentials `json:"nodeUserCredentials"`
+	Phase phases.OperationPhase `json:"phase"`
 
 	// ConvergeUserNodes names the masters this converge created or recreated. They boot
 	// with the converge user in their cloud-init payload, the masters already in the

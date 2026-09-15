@@ -25,21 +25,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-// An sshless converge has no way to log in to a node, so the switcher must not create
-// the NodeUser and wait for bashible to report it: that wait never ends. The context
-// carries no kube provider here — reaching the cluster at all would fail the test.
-func TestSwitcherSkipsNodeUserWhenSSHless(t *testing.T) {
+// An sshless converge has no way to log in to a node, so the switcher must neither move
+// the clients nor go removing accounts on machines it cannot reach. The context carries
+// no kube provider here — reaching the cluster at all would fail the test.
+func TestSwitcherSkipsSSHWorkWhenSSHless(t *testing.T) {
 	// Own Kubernetes credentials and no SSH host known: nothing can reach a node.
 	ctx := NewContext(t.Context(), Params{KubeOwnCredentials: true})
 	require.True(t, ctx.SSHless())
 
 	switcher := NewKubeClientSwitcher(ctx, nil, KubeClientSwitcherParams{})
 
-	require.NoError(t, switcher.SwitchToNodeUser(t.Context(), nil))
-	require.NoError(t, switcher.CleanupNodeUser())
 	require.NoError(t, switcher.CleanupConvergeUser(t.Context()))
 
-	// Strict switches are skipped as well: with no SSH there is no session to move.
+	// The switches are skipped as well: with no SSH there is no session to move.
 	require.NoError(t, switcher.SwitchToFirstMaster(t.Context()))
 	require.NoError(t, switcher.SwitchToNotFirstMaster(t.Context()))
 }

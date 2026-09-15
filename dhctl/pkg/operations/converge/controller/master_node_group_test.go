@@ -139,8 +139,7 @@ func TestNewHookForUpdatePipelineNeedsNoSSHForImmutableMaster(t *testing.T) {
 }
 
 // The cached address is what makes Context.SSHless() false. Caching an immutable
-// master sends the next converge looking for a NodeUser and bashible on a machine
-// that runs neither.
+// master sends the next converge looking for an sshd that the machine does not run.
 func TestMasterHostsCacheSkipsImmutableNodes(t *testing.T) {
 	newHost := []session.Host{{Host: "10.12.1.10", Name: "cluster-master-0"}}
 

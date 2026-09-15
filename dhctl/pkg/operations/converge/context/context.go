@@ -278,6 +278,8 @@ func (c *Context) ConvergeState() (*State, error) {
 	return c.stateStore.GetState(c)
 }
 
-func (c *Context) deleteConvergeState() error {
+// DeleteConvergeState drops the state a finished converge kept in the cluster: the phase
+// it may have had to resume and the masters it built with the converge user.
+func (c *Context) DeleteConvergeState() error {
 	return c.stateStore.Delete(c)
 }

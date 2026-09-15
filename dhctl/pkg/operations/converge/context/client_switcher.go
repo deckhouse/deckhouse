@@ -32,13 +32,11 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
@@ -69,47 +67,6 @@ func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params K
 	}
 }
 
-func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState map[string][]byte) error {
-	const action = "Switch clients to node user"
-
-	if skip, err := s.isSkipOrLogStart(action, false); err != nil {
-		return err
-	} else if skip {
-		return nil
-	}
-
-	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
-		convergeState, err := s.createNodeUser(ctx)
-		if err != nil {
-			return err
-		}
-
-		return s.replaceKubeClientForSwithToNodeUser(ctx, convergeState, nodesState)
-	})
-}
-
-func (s *KubeClientSwitcher) CleanupNodeUser() error {
-	const action = "Cleanup"
-
-	if skip, err := s.isSkipOrLogStart(action, false); err != nil {
-		return err
-	} else if skip {
-		return nil
-	}
-
-	// todo(ctx): does it's real need to use s.ctx.Ctx() instead of param context?
-	return dhlog.RunProcess(s.ctx.Ctx(), s.slogger, action, func(ctx context.Context) error {
-		err := s.ctx.deleteConvergeState()
-		if err != nil {
-			return err
-		}
-
-		c, cancel := s.ctx.WithTimeout(10 * time.Second)
-		defer cancel()
-		return entity.DeleteNodeUser(c, s.ctx, global.ConvergeNodeUserName)
-	})
-}
-
 // CleanupConvergeUser removes the account this converge baked into the masters it built.
 // A node left uncleaned is not a converge failure: the rollout is over by the time this
 // runs and the account expires on its own, while failing here would report a finished
@@ -117,9 +74,9 @@ func (s *KubeClientSwitcher) CleanupNodeUser() error {
 func (s *KubeClientSwitcher) CleanupConvergeUser(ctx context.Context) error {
 	const action = "Remove the converge user from the nodes this converge built"
 
-	// Gated by hand rather than by isSkipOrLogStart: that also skips a disabled switch, and
-	// DHCTL_CLI_NO_SWITCH_TO_NODE_USER stops dhctl logging in as the account, not a new
-	// master from booting with it.
+	// Gated by hand rather than by isSkipOrLogStart: that one fails on a disabled switch,
+	// and DHCTL_CLI_NO_SWITCH_TO_NODE_USER stops dhctl logging in as the account, not a
+	// new master from booting with it.
 	if s.inCommander(action) {
 		return nil
 	}
@@ -194,7 +151,7 @@ func (s *KubeClientSwitcher) removeConvergeUser(ctx context.Context, sshProvider
 
 		// Neither the session nor the hosts cache knows where this node is, so nothing of
 		// ours can be reached on it. Left in the list it would fail every later cleanup,
-		// and with it the removal of the NodeUser and the secret holding its key.
+		// and with it the deletion of the converge state.
 		if address == "" {
 			s.warn(
 				"No ssh address known for %s, so %s cannot be removed there; it stops accepting logins on its own at the expiry date it was created with",
@@ -287,7 +244,7 @@ func removeConvergeUserOn(ctx context.Context, provider libcon.StandaloneClientP
 func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
 	const action = "Switch clients to first control-plane node"
 
-	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
+	if skip, err := s.isSkipOrLogStart(action); err != nil {
 		return err
 	} else if skip {
 		return nil
@@ -320,7 +277,7 @@ func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
 func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 	const action = "Switch clients to not first control-plane nodes"
 
-	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
+	if skip, err := s.isSkipOrLogStart(action); err != nil {
 		return err
 	} else if skip {
 		return nil
@@ -352,7 +309,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Context, nodeName, ip string) error {
 	const action = "Switch clients on destructive change of control-plane nodes"
 
-	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
+	if skip, err := s.isSkipOrLogStart(action); err != nil {
 		return err
 	} else if skip {
 		return nil
@@ -394,7 +351,7 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 		return nil
 	}
 
-	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
+	if skip, err := s.isSkipOrLogStart(action); err != nil {
 		return err
 	} else if skip {
 		return nil
@@ -621,98 +578,6 @@ func (s *KubeClientSwitcher) tmpDirForConverger() (string, error) {
 	return tmpDir, nil
 }
 
-func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error) {
-	convergeState, err := s.ctx.ConvergeState()
-	if err != nil {
-		return nil, err
-	}
-
-	if convergeState.NodeUserCredentials != nil {
-		exists, err := entity.NodeUserExists(s.ctx.Ctx(), s.ctx, convergeState.NodeUserCredentials.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		if exists {
-			return convergeState, nil
-		}
-
-		s.warn(
-			"NodeUser %q is missing while converge state exists; recreating NodeUser",
-			convergeState.NodeUserCredentials.Name,
-		)
-
-		convergeState.NodeUserCredentials = nil
-
-		if err := s.ctx.SetConvergeState(convergeState); err != nil {
-			return nil, fmt.Errorf("Failed to reset stale node user credentials: %w", err)
-		}
-	}
-
-	s.debugStartOperation("create node user")
-	s.debug("Generate node user")
-
-	nodeUser, nodeUserCredentials, err := v1.GenerateNodeUser(v1.ConvergerNodeUser())
-	if err != nil {
-		return nil, fmt.Errorf("Failed to generate NodeUser: %w", err)
-	}
-
-	err = entity.CreateOrUpdateNodeUser(s.ctx.Ctx(), s.ctx, nodeUser, nil)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to create or update NodeUser: %w", err)
-	}
-
-	// check ssh client
-	_, err = s.extractSSHClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	err = entity.NewConvergerNodeUserExistsWaiter(s.ctx).WaitPresentOnNodes(ctx, nodeUserCredentials)
-	if err != nil {
-		return nil, fmt.Errorf("Could not ensure converger user is present on control plane hosts: %w", err)
-	}
-
-	convergeState.NodeUserCredentials = nodeUserCredentials
-
-	err = s.ctx.SetConvergeState(convergeState)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to set converge state: %w", err)
-	}
-
-	return convergeState, nil
-}
-
-func (s *KubeClientSwitcher) replaceKubeClientForSwithToNodeUser(ctx context.Context, convergeState *State, state map[string][]byte) error {
-	s.debugStartOperation("call replaceKubeClientForSwithToNodeUser")
-
-	tmpDir, err := s.tmpDirForConverger()
-	if err != nil {
-		return err
-	}
-
-	privateKeyPath := filepath.Join(tmpDir, "id_rsa_converger")
-
-	privateKey := session.AgentPrivateKey{
-		Key:        privateKeyPath,
-		Passphrase: convergeState.NodeUserCredentials.Password,
-	}
-
-	err = os.WriteFile(privateKeyPath, []byte(convergeState.NodeUserCredentials.PrivateKey), 0o600)
-	if err != nil {
-		return fmt.Errorf("Failed to write private key for NodeUser: %w", err)
-	}
-
-	return s.replaceKubeClient(ctx, replaceKubeClientParams{
-		state: state,
-		creds: &sshCredentials{
-			User:       convergeState.NodeUserCredentials.Name,
-			Keys:       []session.AgentPrivateKey{privateKey},
-			BecomePass: convergeState.NodeUserCredentials.Password,
-		},
-	})
-}
-
 type NodeState struct {
 	Name  string
 	State []byte
@@ -763,9 +628,8 @@ func (s *KubeClientSwitcher) inCommander(action string) bool {
 	return false
 }
 
-// sshless skips what only SSH can do. The NodeUser this switcher creates is delivered
-// by bashible, and an sshless converge has neither bashible nor a way to log in, so the
-// wait for it would never end.
+// sshless skips what only SSH can do: an sshless converge reaches the cluster over the
+// Kubernetes API alone, with no way to log in to a node.
 func (s *KubeClientSwitcher) sshless(action string) bool {
 	if s.ctx.SSHless() {
 		s.warn("%s skipped. Converge runs over the Kubernetes API, with no SSH access to nodes", action)
@@ -784,7 +648,10 @@ func (s *KubeClientSwitcher) switchDisbled(action string) bool {
 	return false
 }
 
-func (s *KubeClientSwitcher) isSkipOrLogStart(action string, strict bool) (bool, error) {
+// isSkipOrLogStart tells a switch it must not run. Every switch left needs SSH and moves
+// the clients between control-plane nodes, so a disabled switch is an error rather than
+// something to skip.
+func (s *KubeClientSwitcher) isSkipOrLogStart(action string) (bool, error) {
 	if s.inCommander(action) {
 		return true, nil
 	}
@@ -794,11 +661,7 @@ func (s *KubeClientSwitcher) isSkipOrLogStart(action string, strict bool) (bool,
 	}
 
 	if s.switchDisbled(action) {
-		if strict {
-			return true, fmt.Errorf("Internal error: disabling switch to node user was requested, but it is needed for %s", action)
-		}
-
-		return true, nil
+		return true, fmt.Errorf("Internal error: switching clients was disabled with DHCTL_CLI_NO_SWITCH_TO_NODE_USER, but it is needed for %s", action)
 	}
 
 	s.debugStartOperation(action)

@@ -449,7 +449,7 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 		dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Skipping converge of base infrastructure")
 	}
 
-	kubeClientSwitched := false
+	nodesConverged := false
 
 	if !skipInfrastructure && !r.isSkip(phases.AllNodesPhase) {
 		nodesStates, err := populateNodesState(ctx)
@@ -457,26 +457,11 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 			return err
 		}
 
-		// An immutable control plane answers no sshd: there is no node user to create and
-		// no master to rebuild the client through, and the node phases run against the
-		// client converge already holds.
-		immutableMasters, err := masterGroupIsImmutable(ctx.Ctx(), ctx)
-		if err != nil {
-			return err
-		}
-
-		if !immutableMasters {
-			err = r.switcher.SwitchToNodeUser(ctx.Ctx(), nodesStates[global.MasterNodeGroupName].State)
-			if err != nil {
-				return err
-			}
-		}
-
-		kubeClientSwitched = true
-
 		if err := r.convergeTerraNodes(ctx, metaConfig, nodesStates); err != nil {
 			return err
 		}
+
+		nodesConverged = true
 	} else {
 		dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Skipping converge of nodes")
 	}
@@ -490,16 +475,17 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 		dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Skipping converge of deckhouse configuration")
 	}
 
-	if kubeClientSwitched {
-		// Before CleanupNodeUser: that deletes the converge state, and the state is the
-		// list of nodes still carrying the converge user. An unfinished cleanup is not a
-		// converge failure — it has already warned, and the account expires by itself —
-		// but the list has to survive for the next converge to finish the job.
+	if nodesConverged {
+		// An unfinished cleanup is not a converge failure — it has already warned, and the
+		// account expires by itself — but the state naming the nodes that still carry it
+		// has to survive for the next converge to finish the job.
 		if leftovers := r.switcher.CleanupConvergeUser(ctx.Ctx()); leftovers != nil {
 			return nil
 		}
 
-		return r.switcher.CleanupNodeUser()
+		// Nothing else deletes it: kept, the phase and the node list of a finished converge
+		// are read as unfinished business by the next one.
+		return ctx.DeleteConvergeState()
 	}
 
 	return nil
