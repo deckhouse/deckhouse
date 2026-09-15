@@ -217,10 +217,11 @@ data:
 	initValues = `
 cloudProviderZvirt:
   internal: {}
-  storageClass:
-    exclude:
-    - d3*
-    - bar
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - d3*
+      - bar
 `
 
 	f := HookExecutionConfigInit(initValues, `{}`)
