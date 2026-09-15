@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'se': 'Standard Edition',
     'se-plus': 'Standard Edition+',
     'ee': 'Ultimate/Enterprise Edition',
-    'cse-lite': 'CSE Lite',
+    'cse-lite': 'CSE Lite/Core',
     'cse-pro': 'CSE Pro'
   };
 
