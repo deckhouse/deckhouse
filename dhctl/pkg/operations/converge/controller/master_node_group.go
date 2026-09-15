@@ -18,6 +18,7 @@ import (
 	gocontext "context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/name212/govalue"
 
@@ -26,9 +27,11 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
+	kubeapiserver "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/apiserver"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
@@ -267,7 +270,6 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 	var (
 		nodesToWait        []string
 		masterIPForSSHList []session.Host
-		nodeInternalIPList []string
 	)
 
 	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
@@ -301,7 +303,6 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 			}
 
 			masterIPForSSHList = append(masterIPForSSHList, session.Host{Host: output.MasterIPForSSH, Name: candidateName})
-			nodeInternalIPList = append(nodeInternalIPList, output.NodeInternalIP)
 
 			count++
 			c.state.State[candidateName] = output.InfrastructureState
@@ -330,13 +331,6 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		if err := c.addNewNodesToSSH(ctx, masterIPForSSHList); err != nil {
 			return err
 		}
-
-		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
-		if err != nil {
-			return err
-		}
-		c.cloudConfig = nodeCloudConfig
 
 		c.addNewNodesToCache(ctx, masterIPForSSHList)
 	}
@@ -424,6 +418,92 @@ func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, mas
 	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache with %d new masters. hostsMap: %v", len(masterIPForSSHList), hostsMap))
 }
 
+func (c *MasterNodeGroupController) survivingMasterNodeNames(nodeName string) []string {
+	nodeNames := make([]string, 0, len(c.state.State))
+
+	for candidateName := range c.state.State {
+		if candidateName == nodeName {
+			continue
+		}
+
+		nodeNames = append(nodeNames, candidateName)
+	}
+
+	slices.Sort(nodeNames)
+
+	return nodeNames
+}
+
+func (c *MasterNodeGroupController) makeMasterNodeVariablesRefresher(
+	ctx *context.Context,
+	metaConfig *config.MetaConfig,
+	nodeName string,
+	nodeIndex int,
+) infrastructure.VariablesRefresher {
+	survivingNodeNames := c.survivingMasterNodeNames(nodeName)
+
+	// A single-master destructive plan must first trigger the existing
+	// scale-to-multi-master workflow.
+	if len(survivingNodeNames) == 0 {
+		return nil
+	}
+
+	return func(refreshCtx gocontext.Context) ([]byte, error) {
+		kubeClient, err := ctx.KubeClientCtx(refreshCtx)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"get Kubernetes client before replacing master node %q: %w",
+				nodeName,
+				err,
+			)
+		}
+
+		apiServerHosts, err := kubeapiserver.GetReadyHostsForNodes(
+			refreshCtx,
+			kubeClient,
+			survivingNodeNames,
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"get ready API server hosts before replacing master node %q: %w",
+				nodeName,
+				err,
+			)
+		}
+
+		dhlog.FromContext(refreshCtx).InfoContext(
+			refreshCtx,
+			fmt.Sprintf(
+				"Waiting for master cloud config with ready API server hosts: %v",
+				apiServerHosts,
+			),
+		)
+
+		nodeCloudConfig, err := entity.GetCloudConfig(
+			refreshCtx,
+			ctx,
+			c.name,
+			global.HideDeckhouseLogs,
+			apiServerHosts...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"get refreshed cloud config before replacing master node %q: %w",
+				nodeName,
+				err,
+			)
+		}
+
+		c.cloudConfig = nodeCloudConfig
+
+		return metaConfig.NodeGroupConfig(
+			c.name,
+			nodeIndex,
+			nodeCloudConfig,
+		), nil
+	}
+}
+
 func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName string, nodeIndex int) error {
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
@@ -452,17 +532,28 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		}
 	}
 
+	var variablesRefresher infrastructure.VariablesRefresher
+	if !c.immutable {
+		variablesRefresher = c.makeMasterNodeVariablesRefresher(
+			ctx,
+			metaConfig,
+			nodeName,
+			nodeIndex,
+		)
+	}
+
 	var nodeGroupSettingsFromConfig []byte
 
 	nodeRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(ctx.Ctx(), metaConfig, infrastructure.NodeRunnerOptions{
-		NodeName:        nodeName,
-		NodeGroupName:   c.name,
-		NodeGroupStep:   c.layoutStep,
-		NodeIndex:       nodeIndex,
-		NodeState:       nodeState,
-		NodeCloudConfig: cloudConfig,
-		CommanderMode:   ctx.CommanderMode(),
-		StateCache:      ctx.StateCache(),
+		NodeName:           nodeName,
+		NodeGroupName:      c.name,
+		NodeGroupStep:      c.layoutStep,
+		NodeIndex:          nodeIndex,
+		NodeState:          nodeState,
+		NodeCloudConfig:    cloudConfig,
+		VariablesRefresher: variablesRefresher,
+		CommanderMode:      ctx.CommanderMode(),
+		StateCache:         ctx.StateCache(),
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
 			infrastructurestate.NewNodeStateSaver(ctx, nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
 		},

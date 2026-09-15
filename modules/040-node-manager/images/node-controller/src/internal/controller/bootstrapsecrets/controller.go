@@ -24,6 +24,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,9 +50,8 @@ const (
 	controllerName = "bootstrap-secrets"
 
 	// manualSecretPrefix names the Secret an operator bootstraps a static node
-	// from. The name and its three keys are a contract: dhctl
-	// (pkg/kubernetes/actions/entity/node.go:125), CAPS (client/bootstrap.go:485)
-	// and the documentation all read them.
+	// from. The name and its three keys are a contract used by dhctl,
+	// CAPS, and the documentation.
 	manualSecretPrefix = "manual-bootstrap-for-"
 
 	// resyncInterval is shorter than the three hours of validity at which
@@ -104,6 +104,17 @@ func (r *Reconciler) ForPredicates() []predicate.Predicate {
 }
 
 func (r *Reconciler) SetupWatches(w register.Watcher) {
+	// A newly ready master must reach manual-bootstrap-for-master before dhctl
+	// destroys an old master. Otherwise dhctl can time out while this controller
+	// waits for the periodic resync.
+	w.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
+		builder.WithPredicates(kubeAPIServerPod()))
+
+	// ReadEndpoints merges kube-apiserver Pods with the kubernetes EndpointSlice,
+	// so changes to either source must refresh the bootstrap Secrets.
+	w.Watches(&discoveryv1.EndpointSlice{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
+		builder.WithPredicates(named("default", "kubernetes")))
+
 	// A candi update arrives as a chart upgrade: without this watch the Secrets
 	// would keep the old script until the next NodeGroup event.
 	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
@@ -131,8 +142,17 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 		builder.WithPredicates(named(nodecommon.CloudProviderSecretNamespace, nodecommon.CloudProviderSecretName)))
 }
 
-// named selects one object by namespace and name. Both watched namespaces are covered by the
-// Secret and ConfigMap scopes of common/cache.go, so no watch here starts an informer of its own.
+func kubeAPIServerPod() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		labels := obj.GetLabels()
+		return obj.GetNamespace() == nodecommon.KubeSystemNamespace &&
+			labels["component"] == "kube-apiserver" &&
+			labels["tier"] == "control-plane"
+	})
+}
+
+// named selects one object by namespace and name. Every caller's kind and namespace is already
+// scoped in common/cache.go, so no watch here starts an unbounded informer of its own.
 func named(namespace, name string) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == namespace && obj.GetName() == name

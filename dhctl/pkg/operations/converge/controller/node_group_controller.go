@@ -393,7 +393,9 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 				return err
 			}
 
-			if c.immutable {
+			// Mutable masters refresh their variables only immediately before an
+			// actual VM replacement; see makeMasterNodeVariablesRefresher.
+			if c.immutable || c.name == global.MasterNodeGroupName {
 				return nil
 			}
 
