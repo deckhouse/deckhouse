@@ -30,6 +30,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -53,7 +54,6 @@ type HookForUpdatePipeline struct {
 	commanderMode     bool
 	immutableNode     bool
 	clientSwitcher    ClientSwitcher
-	sessionForNode    SessionForNode
 }
 
 func NewHookForUpdatePipeline(
@@ -94,12 +94,11 @@ func NewHookForUpdatePipeline(
 	)
 
 	return &HookForUpdatePipeline{
-		Checker:        checker,
-		kubeGetter:     kubeGetter,
-		sshProvider:    sshProvider,
-		commanderMode:  commanderMode,
-		immutableNode:  immutableNode,
-		sessionForNode: sessionForNode,
+		Checker:       checker,
+		kubeGetter:    kubeGetter,
+		sshProvider:   sshProvider,
+		commanderMode: commanderMode,
+		immutableNode: immutableNode,
 	}
 }
 
@@ -201,9 +200,9 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	return false, nil
 }
 
-// moveSessionToRecreatedNode puts the rebuilt master back in reach. It joins the live
-// session only when it answers to the same user: a master this converge rebuilt carries
-// the converge user, and one session carries one user.
+// moveSessionToRecreatedNode puts the rebuilt master back in reach. This hook only runs on
+// a rebuilt VM, and such a machine boots with the converge user, so its generation is known
+// here without asking the cluster — the state naming it is saved after this hook returns.
 func (h *HookForUpdatePipeline) moveSessionToRecreatedNode(ctx context.Context, cl libcon.SSHClient, host session.Host) error {
 	live := cl.Session()
 
@@ -211,30 +210,38 @@ func (h *HookForUpdatePipeline) moveSessionToRecreatedNode(ctx context.Context, 
 		live.RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
 	}
 
-	if h.sessionForNode == nil {
-		return fmt.Errorf("no way to pick the ssh user for the recreated node %s", h.nodeToConverge)
+	// The machine behind the name changed, and a keyed client built for the old one keeps
+	// reporting itself alive on the legacy backend. Node deletion drops it the same way.
+	if standalone, ok := h.sshProvider.(libcon.StandaloneClientProvider); ok {
+		standalone.StopStandaloneClientFor(ctx, SSHCheckerClientKey(h.nodeToConverge))
 	}
 
-	sess, err := h.sessionForNode(live, host)
-	if err != nil {
-		return fmt.Errorf("pick the ssh user for the recreated node %s: %w", h.nodeToConverge, err)
-	}
-
-	if sess.User == live.User {
+	if live.User == global.ConvergeUserName {
 		live.AddAvailableHosts(host)
 		return nil
 	}
 
 	if len(live.AvailableHosts()) > 0 {
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
-			"Node %s answers to %s while the clients run as %s. It joins when they move to its generation",
-			h.nodeToConverge, sess.User, live.User))
+			"Rebuilt node %s answers to %s while the clients run as %s. It joins when they move to its generation",
+			h.nodeToConverge, global.ConvergeUserName, live.User))
 
 		return nil
 	}
 
 	// No host of the current generation is left to talk to, so the clients follow the
 	// rebuilt master instead of running out of hosts.
+	sess := session.NewSession(session.Input{
+		User:            global.ConvergeUserName,
+		Port:            live.Port,
+		BastionHost:     live.BastionHost,
+		BastionPort:     live.BastionPort,
+		BastionUser:     live.BastionUser,
+		BastionPassword: live.BastionPassword,
+		ExtraArgs:       live.ExtraArgs,
+		AvailableHosts:  []session.Host{host},
+	})
+
 	if _, err := h.sshProvider.SwitchClient(ctx, sess, cl.PrivateKeys()); err != nil {
 		return fmt.Errorf("move the clients to the recreated node %s: %w", h.nodeToConverge, err)
 	}

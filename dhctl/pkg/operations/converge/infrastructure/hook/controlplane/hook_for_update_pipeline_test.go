@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -137,34 +138,30 @@ func operatorSessionForNode(base *session.Session, host session.Host) (*session.
 	}), nil
 }
 
-// A master this converge rebuilt answers to the converge user while the clients still run
-// as the operator. Putting it in their session mixes two users into one host list, and
-// every later connection that picks it fails to log in.
+// A master this converge rebuilt answers to the converge user — this hook runs on nothing
+// else. Putting it in a session that runs as the operator mixes two users into one host
+// list, and every later connection that picks it fails to log in.
 func TestAfterActionKeepsTheSessionToOneUser(t *testing.T) {
 	const (
-		oldIP = "10.12.1.1"
-		newIP = "10.12.1.10"
+		oldIP  = "10.12.1.1"
+		peerIP = "10.12.1.2"
+		newIP  = "10.12.1.10"
 	)
 
-	newHook := func(userForRecreated string) (*HookForUpdatePipeline, *session.Session) {
+	newHook := func(liveUser string) (*HookForUpdatePipeline, *session.Session) {
 		live := session.NewSession(session.Input{
-			User: "ubuntu",
+			User: liveUser,
 			AvailableHosts: []session.Host{
 				{Host: oldIP, Name: "cluster-master-0"},
-				{Host: "10.12.1.2", Name: "cluster-master-1"},
+				{Host: peerIP, Name: "cluster-master-1"},
 			},
 		})
 
 		hook := NewHookForUpdatePipeline(
 			unreachableKubeGetter{},
 			testssh.NewSSHProvider(live, true),
-			map[string]string{"cluster-master-1": "10.12.1.2"},
-			func(_ *session.Session, host session.Host) (*session.Session, error) {
-				return session.NewSession(session.Input{
-					User:           userForRecreated,
-					AvailableHosts: []session.Host{host},
-				}), nil
-			},
+			map[string]string{"cluster-master-1": peerIP},
+			operatorSessionForNode,
 			false,
 			true,
 			false,
@@ -175,27 +172,84 @@ func TestAfterActionKeepsTheSessionToOneUser(t *testing.T) {
 		return hook, live
 	}
 
-	hostNames := func(sess *session.Session) []string {
-		names := make([]string, 0, len(sess.AvailableHosts()))
+	addresses := func(sess *session.Session) []string {
+		hosts := make([]string, 0, len(sess.AvailableHosts()))
 		for _, host := range sess.AvailableHosts() {
-			names = append(names, host.Host)
+			hosts = append(hosts, host.Host)
 		}
 
-		return names
+		return hosts
 	}
 
-	t.Run("a node of another generation stays out", func(t *testing.T) {
-		hook, live := newHook("d8-converge")
+	t.Run("the clients run as the operator, so the rebuilt node stays out", func(t *testing.T) {
+		hook, live := newHook("ubuntu")
 
 		// The kube client is unreachable, so AfterAction fails right after the move.
 		require.Error(t, hook.AfterAction(t.Context(), recreatedMasterRunner{}))
-		require.Equal(t, []string{"10.12.1.2"}, hostNames(live))
+		require.Equal(t, []string{peerIP}, addresses(live))
 	})
 
-	t.Run("a node of the session's own generation joins", func(t *testing.T) {
-		hook, live := newHook("ubuntu")
+	t.Run("the clients already run as the converge user, so it joins", func(t *testing.T) {
+		hook, live := newHook(global.ConvergeUserName)
 
 		require.Error(t, hook.AfterAction(t.Context(), recreatedMasterRunner{}))
-		require.ElementsMatch(t, []string{"10.12.1.2", newIP}, hostNames(live))
+		require.ElementsMatch(t, []string{peerIP, newIP}, addresses(live))
 	})
+}
+
+// The checker caches one client per node, and the legacy backend reports a cached client
+// alive forever. Rebuilding the VM behind a name leaves that client pointed at a machine
+// that no longer exists, under the user the old one answered to.
+func TestAfterActionDropsTheCachedCheckClient(t *testing.T) {
+	const (
+		oldIP = "10.12.1.1"
+		newIP = "10.12.1.10"
+	)
+
+	live := session.NewSession(session.Input{
+		User:           "ubuntu",
+		AvailableHosts: []session.Host{{Host: oldIP, Name: "cluster-master-0"}},
+	})
+
+	provider := testssh.NewSSHProvider(live, true)
+
+	ran := map[string]int{}
+	for _, address := range []string{oldIP, newIP} {
+		ran[address] = 0
+
+		provider.AddCommandProvider(address, func(_ testssh.Bastion, _ string, _ ...string) *testssh.Command {
+			return testssh.NewCommand(nil).WithRun(func() { ran[address]++ })
+		})
+	}
+
+	sessionForNode := func(base *session.Session, host session.Host) (*session.Session, error) {
+		return session.NewSession(session.Input{User: base.User, AvailableHosts: []session.Host{host}}), nil
+	}
+
+	// A peer check before the rebuild: it caches a client keyed by the node name.
+	ready, err := NewSSHChecker(provider, map[string]string{"cluster-master-0": oldIP}, sessionForNode).
+		IsReady(t.Context(), "cluster-master-0")
+	require.NoError(t, err)
+	require.True(t, ready)
+
+	hook := NewHookForUpdatePipeline(
+		unreachableKubeGetter{},
+		provider,
+		map[string]string{"cluster-master-1": "10.12.1.2"},
+		sessionForNode,
+		false,
+		true,
+		false,
+	).WithNodeToConverge("cluster-master-0")
+
+	require.Error(t, hook.AfterAction(t.Context(), recreatedMasterRunner{}))
+
+	// The same node, now at the address it was rebuilt on.
+	ready, err = NewSSHChecker(provider, map[string]string{"cluster-master-0": newIP}, sessionForNode).
+		IsReady(t.Context(), "cluster-master-0")
+	require.NoError(t, err)
+	require.True(t, ready)
+
+	require.Equal(t, map[string]int{oldIP: 1, newIP: 1}, ran,
+		"the check after the rebuild must reach the new machine, not the cached client")
 }
