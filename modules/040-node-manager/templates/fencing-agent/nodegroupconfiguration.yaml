@@ -1,8 +1,7 @@
 {{ $ctx := . }}
-{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{- $mode := dig "fencing" "mode" "" $ng }}
-  {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
-    {{- $timeout := dig "fencing" "watchdog" "timeout" 60 $ng }}
+{{- range $ng := .Values.nodeManager.internal.fencingNodeGroups }}
+  {{- $mode := $ng.mode }}
+  {{- $timeout := $ng.watchdogTimeout }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -129,5 +128,4 @@ spec:
     EOF
 
     chmod +x /opt/deckhouse/bin/nodegroup-watchdog.sh
-  {{- end }}
 {{- end }}

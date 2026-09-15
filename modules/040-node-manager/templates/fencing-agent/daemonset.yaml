@@ -4,9 +4,7 @@ memory: 50Mi
 {{- end }}
 
 {{ $ctx := . }}
-{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{ $mode := dig "fencing" "mode" "" $ng }}
-  {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
+{{- range $ng := .Values.nodeManager.internal.fencingNodeGroups }}
       {{- if ($.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -77,11 +75,11 @@ spec:
             - name: LOG_LEVEL
               value: info
             - name: FENCING_MODE
-              value: {{ (($ng.fencing).mode) | default "Watchdog" }}
+              value: {{ $ng.mode }}
             - name: WATCHDOG_DEVICE
               value: /dev/watchdog
             - name: WATCHDOG_TIMEOUT
-              value: {{ ((($ng.fencing).watchdog).timeout) | default 60 | toString | quote }}
+              value: {{ $ng.watchdogTimeout | toString | quote }}
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
@@ -124,5 +122,4 @@ spec:
         - name: socket
           hostPath:
             path: /tmp
-  {{- end }}
 {{- end }}
