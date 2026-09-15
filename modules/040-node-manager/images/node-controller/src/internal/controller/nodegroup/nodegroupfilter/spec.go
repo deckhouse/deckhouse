@@ -250,6 +250,7 @@ type Window struct {
 
 type Fencing struct {
 	Mode     string           `json:"mode,omitempty"`
+	Profile  string           `json:"profile,omitempty"`
 	Watchdog *FencingWatchdog `json:"watchdog,omitempty"`
 }
 
