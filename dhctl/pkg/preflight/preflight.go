@@ -185,17 +185,21 @@ func (p *Preflight) runChecks(ctx context.Context, checks []Check, title string)
 		}
 	}
 
+	err := newPhaseError(title, results, notRun)
+	if err != nil {
+		// Nothing more here. RunProcess prints the phase as failed on its own, so a milestone
+		// naming the same phase again put two identical FAILED lines one under the other; the
+		// tally that made the second one worth reading is in the report instead.
+		return err
+	}
+
 	// A milestone rather than an ordinary record: the per-check lines live in the phase box,
 	// which the interactive renderer tears down when the phase ends, and the one line worth
 	// keeping in the closing summary is this tally.
-	err := newPhaseError(title, results)
-	badge := dhlog.BadgeSuccess()
-	if err != nil {
-		badge = dhlog.BadgeFailed()
-	}
-	log.InfoContext(ctx, fmt.Sprintf("%s — %s", title, summarize(results, notRun)), badge, dhlog.ShowInCompacted())
+	log.InfoContext(ctx, fmt.Sprintf("%s — %s", title, summarize(results, notRun)),
+		dhlog.BadgeSuccess(), dhlog.ShowInCompacted())
 
-	return err
+	return nil
 }
 
 // evaluate decides one check's outcome without running anything it does not have to.

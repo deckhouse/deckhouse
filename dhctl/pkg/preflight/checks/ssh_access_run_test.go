@@ -259,7 +259,7 @@ func TestSSHCredentialAfterInfra(t *testing.T) {
 	t.Run("the wait is not multiplied by the runner", func(t *testing.T) {
 		// The waiting is inside the check. A retry policy on top of it would restart a
 		// four-minute wait several times over, and a permanent marker would be a lie besides.
-		check := SSHCredentialAfterInfra(FixedNodeInterface(newFakeNode()))
+		check := SSHCredentialAfterInfra(FixedNodeInterface(newFakeNode()), nil)
 
 		assert.Equal(t, preflight.NoRetry, check.Retry)
 		assert.Equal(t, preflight.LongCheckTimeout, check.Timeout)
@@ -315,6 +315,24 @@ func TestSSHCredentialWhenTheClientCannotBeBuilt(t *testing.T) {
 		return func(context.Context) (libcon.Interface, error) { return nil, err }
 	}
 
+	// The machine, named from the configuration. There is no session to read it back from when
+	// the connection never opened, and "the master node" told the reader nothing — the user they
+	// mistyped is the whole point.
+	endpoint := EndpointOfConfig(&sshconfig.ConnectionConfig{
+		Config: &sshconfig.Config{User: "noubuntu", Port: intPtr(22)},
+		Hosts:  []sshconfig.Host{{Host: "89.169.149.45"}},
+	})
+
+	t.Run("the machine is named from the configuration", func(t *testing.T) {
+		check := SSHCredentialCheck{NodeInterface: failing(refused), Endpoint: endpoint, FreshlyCreated: true}
+
+		_, err := check.Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Checked, "noubuntu@89.169.149.45:22")
+	})
+
 	t.Run("on a machine the cloud just created", func(t *testing.T) {
 		check := SSHCredentialCheck{NodeInterface: failing(refused), FreshlyCreated: true}
 
@@ -356,3 +374,5 @@ func TestSSHCredentialWhenTheClientCannotBeBuilt(t *testing.T) {
 		assert.NotErrorAs(t, err, &failure)
 	})
 }
+
+func intPtr(v int) *int { return &v }

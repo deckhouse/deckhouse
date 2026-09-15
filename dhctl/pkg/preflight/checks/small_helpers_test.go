@@ -60,7 +60,7 @@ func TestSSHLoginFailure(t *testing.T) {
 	t.Run("the credentials were turned down", func(t *testing.T) {
 		cause := errors.New("ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey]")
 
-		err := sshLoginFailure(client, cause)
+		err := sshLoginFailure(hostLabelOfClient(client), cause)
 
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
@@ -77,7 +77,7 @@ func TestSSHLoginFailure(t *testing.T) {
 	t.Run("the machine was never reached", func(t *testing.T) {
 		cause := fmt.Errorf("dial tcp 10.0.0.5:22: %w", syscall.ECONNREFUSED)
 
-		err := sshLoginFailure(client, cause)
+		err := sshLoginFailure(hostLabelOfClient(client), cause)
 
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)

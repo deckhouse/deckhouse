@@ -37,6 +37,10 @@ type SSHCredentialCheck struct {
 	// FreshlyCreated is set when the machine was created moments ago, which changes both how long
 	// the check waits and what a rejected credential means. See SSHCredentialAfterInfra.
 	FreshlyCreated bool
+	// Endpoint names the machine when the connection could not be opened and there is no session
+	// to read the user and the address back from. Optional; without it such a failure can only
+	// say "the master node".
+	Endpoint EndpointFunc
 }
 
 var ErrAuthSSHFailed = fmt.Errorf("authentication failed")
@@ -154,7 +158,7 @@ func (c *SSHCredentialCheck) Run(ctx context.Context) (string, error) {
 	}
 
 	if err := client.Check().CheckAvailability(ctx); err != nil {
-		return "", sshLoginFailure(client, err)
+		return "", sshLoginFailure(hostLabelOfClient(client), err)
 	}
 	return fmt.Sprintf("ssh login works for %s", hostLabelOfClient(client)), nil
 }
@@ -163,10 +167,17 @@ func (c *SSHCredentialCheck) Run(ctx context.Context) (string, error) {
 // ago and one that has been running for months are refusing for different reasons, and only the
 // second one is refusing for good.
 func (c *SSHCredentialCheck) loginFailure(client libcon.SSHClient, err error) error {
-	if c.FreshlyCreated {
-		return freshMachineLoginFailure(client, err)
+	label := hostLabelOfClient(client)
+	if client == nil && c.Endpoint != nil {
+		if fromConfig := c.Endpoint(); fromConfig != "" {
+			label = fromConfig
+		}
 	}
-	return sshLoginFailure(client, err)
+
+	if c.FreshlyCreated {
+		return freshMachineLoginFailure(label, err)
+	}
+	return sshLoginFailure(label, err)
 }
 
 // freshMachineBudget is how long a machine the cloud has just created is given to accept a login.
@@ -199,13 +210,12 @@ func awaitFreshMachineLogin(ctx context.Context, client libcon.SSHClient) (strin
 		return fmt.Sprintf("ssh login works for %s", hostLabelOfClient(client)), nil
 	}
 
-	return "", freshMachineLoginFailure(client, err)
+	return "", freshMachineLoginFailure(hostLabelOfClient(client), err)
 }
 
 // freshMachineLoginFailure says which of the two readings the failure supports, for a machine the
 // cloud created moments ago. client may be nil: the connection can fail before there is one.
-func freshMachineLoginFailure(client libcon.SSHClient, err error) error {
-	label := hostLabelOfClient(client)
+func freshMachineLoginFailure(label string, err error) error {
 	waited := roundedBudget(freshMachineBudget.attempts, freshMachineBudget.wait)
 
 	if sshNeverConnected(err) {
@@ -241,9 +251,9 @@ func roundedBudget(attempts int, wait time.Duration) string {
 // sshLoginFailure separates the two things that go wrong here, because they have nothing to do
 // with each other: the credentials were rejected, or the machine was never reached. Both used to
 // arrive as one sentence with the raw x/crypto text appended.
-func sshLoginFailure(client libcon.SSHClient, err error) error {
+func sshLoginFailure(label string, err error) error {
 	failure := &preflight.Failure{
-		Checked: fmt.Sprintf("ssh login to %s", hostLabelOfClient(client)),
+		Checked: fmt.Sprintf("ssh login to %s", label),
 		Err:     err,
 	}
 
@@ -326,9 +336,9 @@ func isSSHAuthError(err error) bool {
 // until cloud-init has run, the login user does not exist yet, and a refusal means nothing.
 // Everything else in this phase is asked over this connection, so the wait belongs here — the
 // phase runs before dhctl's own wait for SSH on the master.
-func SSHCredentialAfterInfra(nodeInterface NodeInterfaceFunc) preflight.Check {
-	check := SSHCredentialCheck{NodeInterface: nodeInterface, FreshlyCreated: true}
-	built := SSHCredential(nodeInterface)
+func SSHCredentialAfterInfra(nodeInterface NodeInterfaceFunc, endpoint EndpointFunc) preflight.Check {
+	check := SSHCredentialCheck{NodeInterface: nodeInterface, Endpoint: endpoint, FreshlyCreated: true}
+	built := SSHCredential(nodeInterface, endpoint)
 	// The waiting is inside. Letting the runner retry the check on top of that would multiply a
 	// four-minute wait by the retry count.
 	built.Retry = preflight.NoRetry
@@ -337,8 +347,8 @@ func SSHCredentialAfterInfra(nodeInterface NodeInterfaceFunc) preflight.Check {
 	return built
 }
 
-func SSHCredential(nodeInterface NodeInterfaceFunc) preflight.Check {
-	check := SSHCredentialCheck{NodeInterface: nodeInterface}
+func SSHCredential(nodeInterface NodeInterfaceFunc, endpoint EndpointFunc) preflight.Check {
+	check := SSHCredentialCheck{NodeInterface: nodeInterface, Endpoint: endpoint}
 	return preflight.Check{
 		Name:        SSHCredentialCheckName,
 		Description: check.Description(),

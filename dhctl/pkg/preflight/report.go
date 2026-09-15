@@ -26,9 +26,14 @@ import (
 type PhaseError struct {
 	Title   string
 	Results []Result
+	// Tally is what became of every check of the phase, including the ones that never ran. It is
+	// in the report rather than on a line of its own because the process box prints the phase as
+	// failed by itself: a second line naming the same phase said the same thing twice, and the
+	// reader is already looking here.
+	Tally string
 }
 
-func newPhaseError(title string, results []Result) error {
+func newPhaseError(title string, results []Result, notRun int) error {
 	var failed []Result
 	for _, r := range results {
 		if r.Status == StatusFailed {
@@ -38,7 +43,7 @@ func newPhaseError(title string, results []Result) error {
 	if len(failed) == 0 {
 		return nil
 	}
-	return &PhaseError{Title: title, Results: failed}
+	return &PhaseError{Title: title, Results: failed, Tally: summarize(results, notRun)}
 }
 
 func (e *PhaseError) Unwrap() []error {
@@ -58,20 +63,29 @@ func (e *PhaseError) Error() string {
 	if len(e.Results) > 1 {
 		b.WriteString("s")
 	}
+	if e.Tally != "" {
+		fmt.Fprintf(&b, " failed (%s)", e.Tally)
+		b.WriteString(":\n")
+		e.writeResults(&b)
+		return b.String()
+	}
 	b.WriteString(" failed:\n")
+	e.writeResults(&b)
+	return b.String()
+}
 
+func (e *PhaseError) writeResults(b *strings.Builder) {
 	for i, r := range e.Results {
-		fmt.Fprintf(&b, "\n[%d] %s — %s\n", i+1, r.Name, r.Description)
-		writeCause(&b, r.Err)
-		writeSkipLine(&b, r)
-		writeField(&b, "docs", docsFor(r.Err))
+		fmt.Fprintf(b, "\n[%d] %s — %s\n", i+1, r.Name, r.Description)
+		writeCause(b, r.Err)
+		writeSkipLine(b, r)
+		writeField(b, "docs", docsFor(r.Err))
 	}
 
 	// Both ways forward, named. The reader who can fix the configuration re-runs; the reader who
 	// cannot — a registry that is down for the afternoon, a check that is wrong about their
 	// setup — needs to know the flags exist and are printed above.
 	b.WriteString("\nRe-run the same command after fixing, or add the skip flags above to proceed anyway.")
-	return b.String()
 }
 
 // writeCause renders what the check reported: the five fields when it returned a *Failure, and

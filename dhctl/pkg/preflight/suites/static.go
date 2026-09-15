@@ -52,7 +52,7 @@ func NewStaticSuite(deps StaticDeps) preflight.Suite {
 		checks.SingleSSHHost(nodeInterface),
 		checks.BastionAvailability(deps.SSHProviderInitializer),
 		checks.SSHConnectivity(deps.SSHProviderInitializer),
-		checks.SSHCredential(nodeInterface),
+		checks.SSHCredential(nodeInterface, endpointOf(deps.SSHProviderInitializer)),
 		checks.SSHTunnel(deps.SSHProviderInitializer, deps.GlobalOpts),
 		checks.StaticInstancesSSHAccess(deps.MetaConfig, deps.SSHProviderInitializer),
 		checks.NodeSystemRequirements(nodeInterface, deps.InstallConfig),
@@ -83,4 +83,10 @@ func nodeInterfaceResolver(initializer *providerinitializer.SSHProviderInitializ
 	return func(ctx context.Context) (libcon.Interface, error) {
 		return helper.GetNodeInterface(ctx, initializer, initializer.GetSettings())
 	}
+}
+
+// endpointOf names the machine from the configuration, for the failures that happen before there
+// is a connection to read it from.
+func endpointOf(initializer *providerinitializer.SSHProviderInitializer) checks.EndpointFunc {
+	return checks.EndpointOfConfig(initializer.GetConfig())
 }

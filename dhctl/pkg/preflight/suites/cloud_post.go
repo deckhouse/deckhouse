@@ -61,7 +61,7 @@ func NewPostCloudSuite(deps PostCloudDeps) preflight.Suite {
 		//
 		// AfterInfra, not the plain one: this phase runs between creating the machine and waiting
 		// for it, so the first minutes of refusals are the machine booting, not a bad credential.
-		checks.SSHCredentialAfterInfra(nodeInterface),
+		checks.SSHCredentialAfterInfra(nodeInterface, endpointOf(deps.SSHProviderInitializer)),
 		// Declared, not merely relied on: the credential check is what proves this connection
 		// and carries the wait for the machine to boot, so this one no longer probes it itself.
 		checks.CloudAPIAccess(deps.MetaConfig, deps.SSHProviderInitializer).

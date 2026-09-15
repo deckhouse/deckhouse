@@ -23,11 +23,13 @@ import (
 	"net/http"
 	"net/url"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
@@ -125,6 +127,31 @@ func stderrOf(err error) string {
 		return string(execErr.Stderr)
 	}
 	return ""
+}
+
+// EndpointFunc names the machine a check is about, from the configuration rather than from a
+// connection. A connection that could not be opened has no session to read the user and the
+// address back from, and those are exactly what the reader needs to see in that case.
+type EndpointFunc func() string
+
+// EndpointOfConfig renders user@host:port the way hostLabelOfClient does for a live connection, so
+// the two read the same whether or not there is one.
+func EndpointOfConfig(connectionConfig *sshconfig.ConnectionConfig) EndpointFunc {
+	return func() string {
+		if connectionConfig == nil || connectionConfig.Config == nil || len(connectionConfig.Hosts) == 0 {
+			return ""
+		}
+
+		cfg := connectionConfig.Config
+		host := connectionConfig.Hosts[0].Host
+		if cfg.Port != nil {
+			host = net.JoinHostPort(host, strconv.Itoa(*cfg.Port))
+		}
+		if cfg.User != "" {
+			return cfg.User + "@" + host
+		}
+		return host
+	}
 }
 
 // hostLabelOfClient is hostLabel for a check that holds an SSH client rather than a node

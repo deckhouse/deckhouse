@@ -273,7 +273,7 @@ func tunnelFailure(sshClient libcon.SSHClient, target *url.URL, err error) error
 	// back as "check that sshd has AllowTcpForwarding yes", which is advice about a file on a
 	// machine the operator was never logged in to.
 	if sshNeverConnected(err) {
-		return sshLoginFailure(sshClient, err)
+		return sshLoginFailure(hostLabelOfClient(sshClient), err)
 	}
 
 	return &preflight.Failure{

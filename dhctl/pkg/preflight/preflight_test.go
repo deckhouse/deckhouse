@@ -195,11 +195,21 @@ func TestCriticalPathFailureStopsThePhase(t *testing.T) {
 	if strings.Contains(out, "sudo-allowed") {
 		t.Errorf("no record may be printed for a check the phase never reached, got:\n%s", out)
 	}
-	if !strings.Contains(out, "3 not run (the phase stopped here)") {
-		t.Errorf("the summary must account for the checks that were not reached, got:\n%s", out)
+	// The tally rides in the report, not on a line of its own: the process box already prints
+	// the phase as failed, and a second line naming the same phase said it twice.
+	if !strings.Contains(err.Error(), "3 not run (the phase stopped here)") {
+		t.Errorf("the report must account for the checks that were not reached, got:\n%s", err)
 	}
 	if !strings.Contains(err.Error(), "1 preflight check failed") {
 		t.Errorf("the report carries the one failure that matters, got:\n%s", err)
+	}
+	// The process box opens and closes with the phase name, which is fine. What must not be
+	// there is a compacted record naming it again: those are what the terminal keeps, and two
+	// of them read as two failures.
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "compact=true") && strings.Contains(line, "Preflight checks: configuration") {
+			t.Errorf("the phase is named twice in the compacted view:\n%s", line)
+		}
 	}
 }
 

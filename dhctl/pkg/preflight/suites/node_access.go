@@ -33,7 +33,7 @@ type NodeAccessDeps struct {
 func NewNodeAccessSuite(deps NodeAccessDeps) preflight.Suite {
 	nodeInterface := nodeInterfaceResolver(deps.SSHProviderInitializer)
 	return preflight.NewSuite(
-		checks.SSHCredential(nodeInterfaceResolver(deps.SSHProviderInitializer)),
+		checks.SSHCredential(nodeInterfaceResolver(deps.SSHProviderInitializer), endpointOf(deps.SSHProviderInitializer)),
 		checks.SudoInstalled(nodeInterface),
 		checks.SudoAllowed(nodeInterface).After(checks.SudoInstalledCheckName),
 	)
