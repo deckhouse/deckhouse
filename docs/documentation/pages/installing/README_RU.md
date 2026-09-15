@@ -756,7 +756,7 @@ virtualization   900      deckhouse   Ready   True      True
 | `virt-operator-*`             | system/master     |                                                                                                           |
 | `virt-api-*`                  | master            |                                                                                                           |
 | `virt-controller-*`           | system/worker     |                                                                                                           |
-| `virt-handler-*`              | Все узлы кластера |                                                                                                           |
+| `virt-handler-*`              | Узлы с KVM        |                                                                                                           |
 | `virtualization-api-*`        | master            |                                                                                                           |
 | `virtualization-controller-*` | master            |                                                                                                           |
 | `dvcr-*`                      | system            | На узле должно быть доступно хранилище. При отсутствии system-узлов компонент размещается на worker-узле. |
@@ -764,7 +764,7 @@ virtualization   900      deckhouse   Ready   True      True
 | `virtualization-dra-*`        | Отдельные узлы    | Доступен в коммерческих редакциях DP.                                                                     |
 | `vm-route-forge-*`            | Все узлы кластера |                                                                                                           |
 
-Компонент `virtualization-dra-*` запускается только на узлах с лейблом `virtualization.deckhouse.io/usbip`.
+Компонент `virt-handler-*` запускается только на узлах, где DP обнаружил поддержку KVM и проставил лейбл `virtualization.deckhouse.io/kvm-enabled`, а компонент `virtualization-dra-*` — только на узлах с лейблом `virtualization.deckhouse.io/usbip`.
 
 Компоненты, которые создают и загружают образы и диски виртуальных машин, запускаются только на время этой работы:
 

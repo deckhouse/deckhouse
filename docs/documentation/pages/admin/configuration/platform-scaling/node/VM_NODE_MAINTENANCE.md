@@ -228,11 +228,11 @@ If a shutdown or reboot is requested on a node that still runs virtual machines:
 - The node shutdown is postponed for up to three days.
 - A message about the workloads holding the shutdown is periodically printed to the node console.
 
-On nodes where the delay mechanism works, the `GracefulShutdownPostpone` condition is always present and always has the `True` status, even when there are no virtual machines on the node and nobody requested a shutdown. What actually happens to the node is shown by the reason in the `reason` field of this condition:
+On nodes where the delay mechanism works, the `GracefulShutdownPostpone` condition is always present. While the mechanism waits for a shutdown signal or holds the node, the condition has the `True` status, and once there's nothing left to hold, it switches to `False`. What actually happens to the node is shown by the reason in the `reason` field of this condition:
 
 - `WaitingForShutdownSignal`: The mechanism is active and waiting for a node shutdown request.
 - `PodsWithLabelAreRunningOnNode`: A node shutdown is requested and postponed, because virtual machines are still running on the node.
-- `NoRunningPodsWithLabel`: No virtual machines are left on the node and the shutdown continues; the condition status changes to `False`.
+- `NoRunningPodsWithLabel`: No virtual machines are left on the node, there's nothing to hold the shutdown with, and it continues.
 
 To check the reason, run the following command:
 

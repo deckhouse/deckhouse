@@ -742,7 +742,7 @@ Deckhouse Platform (DP) distributes the components by priority, and if the clust
 | `virt-operator-*`             | system/master     |                                                                                                      |
 | `virt-api-*`                  | master            |                                                                                                      |
 | `virt-controller-*`           | system/worker     |                                                                                                      |
-| `virt-handler-*`              | All cluster nodes |                                                                                                      |
+| `virt-handler-*`              | Nodes with KVM    |                                                                                                      |
 | `virtualization-api-*`        | master            |                                                                                                      |
 | `virtualization-controller-*` | master            |                                                                                                      |
 | `dvcr-*`                      | system            | Storage has to be available on the node. With no system nodes, the component lands on a worker node. |
@@ -750,7 +750,7 @@ Deckhouse Platform (DP) distributes the components by priority, and if the clust
 | `virtualization-dra-*`        | Dedicated nodes   | Available in commercial DP editions.                                                                 |
 | `vm-route-forge-*`            | All cluster nodes |                                                                                                      |
 
-The `virtualization-dra-*` component runs only on nodes labeled with `virtualization.deckhouse.io/usbip`.
+The `virt-handler-*` component runs only on the nodes where DP detected KVM support and set the `virtualization.deckhouse.io/kvm-enabled` label, and the `virtualization-dra-*` component runs only on nodes labeled with `virtualization.deckhouse.io/usbip`.
 
 The components that create and upload virtual machine images and disks run only while that work is in progress:
 

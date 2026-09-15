@@ -35,7 +35,7 @@ The guaranteed share is taken into account when selecting a node, so a machine d
 Deckhouse Platform (DP) can pick the CPU time share on its own, following how much the machine consumes.
 
 {% alert level="info" %}
-The feature is available in commercial DP editions and is in the Alpha stage. It requires the enabled [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module, which picks the core fraction, and the `HotplugCPUAndMemoryWithInPlaceResize` feature in the module settings.
+The feature is available in commercial DP editions and is in the Alpha stage. It requires the enabled [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module, which picks the core fraction, and the `HotplugCPUAndMemoryWithInPlaceResize` feature in the module settings. The feature works with Kubernetes 1.33 or later, both on the control plane and on every node running VMs.
 {% endalert %}
 
 Instead of a fixed percentage, you can set `coreFraction: Auto`. Then DP picks the fraction, raising it when the machine lacks CPU and lowering it when the machine is idle. The number of cores and the amount of memory stay unchanged, and the new fraction applies without a restart.
