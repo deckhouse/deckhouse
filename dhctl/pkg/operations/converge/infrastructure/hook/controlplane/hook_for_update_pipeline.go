@@ -242,7 +242,8 @@ func (h *HookForUpdatePipeline) moveSessionToRecreatedNode(ctx context.Context, 
 // proves that account answers, falling back to the user dhctl started with. A node whose
 // provider dropped the account from its cloud-config still answers to that one.
 func (h *HookForUpdatePipeline) followRecreatedNode(ctx context.Context, cl libcon.SSHClient, live *session.Session, host session.Host) error {
-	err := switchAndCheck(ctx, h.sshProvider, sessionForHost(live, global.ConvergeUserName, host), cl.PrivateKeys())
+	// The converge user's sudo is NOPASSWD, so no password is sent to that account.
+	err := switchAndCheck(ctx, h.sshProvider, sessionForHost(live, global.ConvergeUserName, "", host), cl.PrivateKeys())
 	if err == nil {
 		return nil
 	}
@@ -251,7 +252,10 @@ func (h *HookForUpdatePipeline) followRecreatedNode(ctx context.Context, cl libc
 		"Cannot connect to the rebuilt %s as %s: %v. Retrying as %s",
 		h.nodeToConverge, global.ConvergeUserName, err, live.User))
 
-	if retryErr := switchAndCheck(ctx, h.sshProvider, sessionForHost(live, live.User, host), cl.PrivateKeys()); retryErr != nil {
+	// The operator's account is the one the sudo password was given for.
+	operator := sessionForHost(live, live.User, live.BecomePass, host)
+
+	if retryErr := switchAndCheck(ctx, h.sshProvider, operator, cl.PrivateKeys()); retryErr != nil {
 		return fmt.Errorf("connect as %s (%v), then as %s: %w", global.ConvergeUserName, err, live.User, retryErr)
 	}
 

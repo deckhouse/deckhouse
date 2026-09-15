@@ -135,9 +135,10 @@ func SSHCheckerClientKey(nodeName string) string {
 	return "controlplane-readiness/" + nodeName
 }
 
-// sessionForHost points the live settings at one host under one user: everything the
-// operator configured about how to reach a node stays as it is.
-func sessionForHost(live *session.Session, user string, host session.Host) *session.Session {
+// sessionForHost points the live settings at one host under one user and its own sudo
+// password: everything the operator configured about how to reach a node stays as it is.
+// becomePass belongs to user, not to the session — the accounts do not share one.
+func sessionForHost(live *session.Session, user, becomePass string, host session.Host) *session.Session {
 	return session.NewSession(session.Input{
 		User:            user,
 		Port:            live.Port,
@@ -146,7 +147,7 @@ func sessionForHost(live *session.Session, user string, host session.Host) *sess
 		BastionUser:     live.BastionUser,
 		BastionPassword: live.BastionPassword,
 		ExtraArgs:       live.ExtraArgs,
-		BecomePass:      live.BecomePass,
+		BecomePass:      becomePass,
 		AvailableHosts:  []session.Host{host},
 	})
 }

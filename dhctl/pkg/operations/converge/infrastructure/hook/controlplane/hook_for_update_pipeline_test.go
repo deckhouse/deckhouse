@@ -259,8 +259,9 @@ func TestAfterActionDropsTheCachedCheckClient(t *testing.T) {
 // reports nothing on the legacy backend, so only a command on it tells the two apart.
 func TestAfterActionProvesTheRecreatedNodeAnswers(t *testing.T) {
 	const (
-		oldIP = "10.12.1.1"
-		newIP = "10.12.1.10"
+		oldIP        = "10.12.1.1"
+		newIP        = "10.12.1.10"
+		operatorSudo = "operator-sudo"
 	)
 
 	newProvider := func(t *testing.T, accepted string, ran *[]string) *testssh.SSHProvider {
@@ -268,6 +269,7 @@ func TestAfterActionProvesTheRecreatedNodeAnswers(t *testing.T) {
 
 		live := session.NewSession(session.Input{
 			User:           "ubuntu",
+			BecomePass:     operatorSudo,
 			AvailableHosts: []session.Host{{Host: oldIP, Name: "cluster-master-0"}},
 		})
 
@@ -318,9 +320,23 @@ func TestAfterActionProvesTheRecreatedNodeAnswers(t *testing.T) {
 	t.Run("the provider dropped it, so the operator takes over", func(t *testing.T) {
 		var ran []string
 
-		require.NoError(t, move(t, newProvider(t, "ubuntu", &ran)))
+		provider := newProvider(t, "ubuntu", &ran)
+
+		require.NoError(t, move(t, provider))
 		require.Equal(t, []string{global.ConvergeUserName, "ubuntu"}, ran,
 			"a rejected converge user must be retried as the user dhctl started with")
+
+		// The sudo password the operator gave belongs to the operator's account. The
+		// converge user's sudo is NOPASSWD, and a credential nothing reads is still one
+		// that was sent to another account.
+		switches := provider.Switches()
+		require.Len(t, switches, 2)
+		require.Equal(t, global.ConvergeUserName, switches[0].Session.User)
+		require.Empty(t, switches[0].Session.BecomePass,
+			"the converge user must be reached with no sudo password")
+		require.Equal(t, "ubuntu", switches[1].Session.User)
+		require.Equal(t, operatorSudo, switches[1].Session.BecomePass,
+			"the operator fallback must keep the sudo password dhctl was started with")
 	})
 
 	t.Run("neither answers", func(t *testing.T) {
