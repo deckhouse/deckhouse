@@ -52,7 +52,7 @@ d8 k get available -n <PROJECT_NAME>
 
 Такие объекты продолжают работать. Чтобы устранить расхождение, предоставьте проекту доступ к используемому cluster-wide-ресурсу или измените объект так, чтобы он использовал доступный ресурс.
 
-Подробную информацию о нарушениях можно посмотреть на дашборде Grafana в разделе «Security» → «Cluster Resource Grant Violations». Для мониторинга используется метрика `d8_cluster_objects_grant_violated`.
+Подробную информацию о нарушениях можно посмотреть на дашборде Grafana в разделе «Security» → «Cluster Resource Grant Violations». Для мониторинга используется метрика `d8_cluster_objects_grant_violated`; её отдаёт контроллер модуля по тем же правилам доступности, что и admission webhook.
 
 ### Как разрешить все StorageClasses, кроме отдельных?
 

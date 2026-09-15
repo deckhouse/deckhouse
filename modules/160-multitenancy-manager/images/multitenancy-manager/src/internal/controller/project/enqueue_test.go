@@ -19,9 +19,11 @@ package project
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -109,4 +111,32 @@ func requestNames(reqs []reconcile.Request) []string {
 		out = append(out, req.Name)
 	}
 	return out
+}
+
+// TestCustomPredicate_StatusOnlyWriteDoesNotRequeue: a parked project (TemplateRequiresRewrite=False)
+// ends every reconcile with a status write. If that write re-entered the queue the project would
+// spin forever. The update predicate lets a Project through only on a generation change or the
+// require-sync annotation, so a status-only update is dropped.
+func TestCustomPredicate_StatusOnlyWriteDoesNotRequeue(t *testing.T) {
+	p := customPredicate[client.Object]{logger: logr.Discard()}
+	old := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "parked", Generation: 3}}
+	old.Status.State = v1alpha3.ProjectStateDeployed
+	cur := old.DeepCopy()
+	cur.Status.State = v1alpha3.ProjectStateError
+	cur.Status.Conditions = []v1alpha3.Condition{{Type: v1alpha3.ProjectConditionTemplateRequiresRewrite, Status: corev1.ConditionFalse}}
+	if p.Update(event.TypedUpdateEvent[client.Object]{ObjectOld: old, ObjectNew: cur}) {
+		t.Fatal("a status-only update must not requeue the project")
+	}
+
+	// A spec edit (generation bump) and the require-sync annotation still do.
+	bumped := cur.DeepCopy()
+	bumped.Generation = 4
+	if !p.Update(event.TypedUpdateEvent[client.Object]{ObjectOld: cur, ObjectNew: bumped}) {
+		t.Fatal("a generation change must requeue the project")
+	}
+	synced := cur.DeepCopy()
+	synced.Annotations = map[string]string{v1alpha3.ProjectAnnotationRequireSync: "true"}
+	if !p.Update(event.TypedUpdateEvent[client.Object]{ObjectOld: cur, ObjectNew: synced}) {
+		t.Fatal("the require-sync annotation must requeue the project")
+	}
 }

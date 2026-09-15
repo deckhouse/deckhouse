@@ -398,6 +398,27 @@ class TestWebhookConfig(unittest.TestCase):
                     f"{group} must be filtered out before the request reaches the handler",
                 )
 
+    def test_privileged_users_are_excluded_by_match_conditions_of_both_bindings(self):
+        """PRIVILEGED_USERS pass inside the hook body, but a body check is worthless while the
+        webhook-handler is down: only a matchCondition keeps a cluster component off a fail-closed
+        webhook. The exec binding used to list two of the four."""
+        for webhook in system_resources.CONFIG.split("- name: rbacv2-")[1:]:
+            for user in system_resources.PRIVILEGED_USERS:
+                self.assertIn(
+                    f'"{user}" != request.userInfo.username',
+                    webhook,
+                    f"{user} must be filtered out before the request reaches the handler",
+                )
+
+    def test_exec_denial_names_the_roles_that_help(self):
+        """The hint lists every role the check accepts and nothing else, so a denied user is not
+        sent after a role that would not have helped."""
+        hint = system_resources.PRIVILEGED_ROLES_HINT
+        for role in ("d8:system:superadmin", "d8:project:superadmin", "d8:namespace:superadmin", "cluster-admin", "user-authz:super-admin"):
+            self.assertIn(role, hint)
+        self.assertNotIn("d8:system:manager", hint)
+        self.assertNotIn("d8:namespace:admin", hint)
+
 
 if __name__ == "__main__":
     unittest.main()

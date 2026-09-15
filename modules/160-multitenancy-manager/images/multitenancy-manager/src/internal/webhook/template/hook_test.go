@@ -278,3 +278,54 @@ func TestHandle_DeleteInUseTemplate(t *testing.T) {
 	require.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "cannot be deleted")
 }
+
+// TestHandle_LiteralValidation pins the fixed-set fields: a literal outside the set is refused with
+// the set spelled out, a reference is left to the parameters-schema check, and the built-in values
+// pass. A typo here used to be accepted and rendered into nothing.
+func TestHandle_LiteralValidation(t *testing.T) {
+	ctx := context.Background()
+	withLiterals := func(pss, mode string) *v1alpha2.ProjectTemplate {
+		tmpl := &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "tmpl"}}
+		if pss != "" {
+			tmpl.Spec.PodSecurityStandard = v1alpha2.LiteralParam(pss)
+		}
+		if mode != "" {
+			tmpl.Spec.NetworkPolicy = &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.LiteralParam(mode)}
+		}
+		return tmpl
+	}
+
+	t.Run("a typo in podSecurityStandard is denied with the accepted values", func(t *testing.T) {
+		resp := newValidator(t).Handle(ctx, createRequest(t, withLiterals("Isolted", "")))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "podSecurityStandard")
+		assert.Contains(t, resp.Result.Message, "Privileged, Baseline, Restricted")
+		assert.Contains(t, resp.Result.Message, "'Isolted'")
+	})
+
+	t.Run("a lower-case network policy mode is denied with the accepted values", func(t *testing.T) {
+		resp := newValidator(t).Handle(ctx, createRequest(t, withLiterals("Baseline", "isolated")))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "networkPolicy.mode")
+		assert.Contains(t, resp.Result.Message, "Isolated, NotRestricted")
+	})
+
+	t.Run("the accepted literals pass", func(t *testing.T) {
+		for _, pss := range []string{"Privileged", "Baseline", "Restricted"} {
+			for _, mode := range []string{"Isolated", "NotRestricted"} {
+				resp := newValidator(t).Handle(ctx, createRequest(t, withLiterals(pss, mode)))
+				assert.True(t, resp.Allowed, "%s/%s: %s", pss, mode, resp.Result.Message)
+			}
+		}
+	})
+
+	t.Run("a reference is not a literal and is checked against the schema instead", func(t *testing.T) {
+		tmpl := withLiterals("", "")
+		tmpl.Spec.PodSecurityStandard = v1alpha2.FromParamRef[string]("profile")
+		tmpl.Spec.ParametersSchema = v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+			"type": "object", "properties": map[string]any{"profile": map[string]any{"type": "string"}},
+		}}
+		resp := newValidator(t).Handle(ctx, createRequest(t, tmpl))
+		assert.True(t, resp.Allowed, resp.Result.Message)
+	})
+}

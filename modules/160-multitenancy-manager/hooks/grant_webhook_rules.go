@@ -70,9 +70,10 @@ func grantableWebhookRules(input *go_hook.HookInput) []admissionregistrationv1.R
 		}
 		for _, g := range toStringSlice(rule["apiGroups"]) {
 			if g == "*" {
-				// A wildcard-group rule would intercept every namespaced object. Omit it from
-				// the static webhook rules: a request whose GVK is not listed never reaches
-				// /is-granted, so an unknown grouped API is not denied here.
+				// The CRD refuses "*" in apiGroups now (a wildcard would silently intercept
+				// nothing, see the schema description). This stays as the safety net for an
+				// object stored before that rule existed: it is omitted from the static webhook
+				// rules rather than turned into a catch-all on every namespaced object.
 				continue
 			}
 			for _, res := range toStringSlice(rule["resources"]) {

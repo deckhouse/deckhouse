@@ -69,8 +69,20 @@ var (
 )
 
 const (
-	haModeEnv      = "HA_MODE"
 	controllerName = "multitenancy-manager"
+
+	// Leader election is always on: even a single-replica Deployment has two pods during a rolling
+	// update, and two writers of the same Helm releases would each upgrade them (the 2026-09-14
+	// rollout left every project on the changed template with an extra, identical revision). The
+	// webhooks keep serving on every replica; only the controllers wait for the lease.
+	//
+	// The lease is renewed against the API server, and controller-runtime exits the process when a
+	// renewal misses RenewDeadline. With the defaults (15 s lease, 10 s renew) every short API-server
+	// absence would restart the pod and throw away a warm cache; these give it a minute to come back,
+	// the same budget user-authz-controller runs with.
+	leaseDuration = 60 * time.Second
+	renewDeadline = 40 * time.Second
+	retryPeriod   = 8 * time.Second
 )
 
 func main() {
@@ -129,6 +141,10 @@ func main() {
 	if err = (&grantcontrollers.ProjectReconciler{
 		Client: runtimeManager.GetClient(),
 		Mapper: runtimeManager.GetRESTMapper(),
+		// Usage objects are of whatever kinds the references name; the uncached reader keeps the
+		// two-minute recount from starting an informer per kind.
+		Usage:   runtimeManager.GetAPIReader(),
+		Factory: jsonpathFactory,
 	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant project reconciler")
 	}
@@ -137,6 +153,9 @@ func main() {
 	}
 	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant definition reconciler")
+	}
+	if err = (&grantcontrollers.PolicyReconciler{Client: runtimeManager.GetClient(), Mapper: runtimeManager.GetRESTMapper()}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up grant policy reconciler")
 	}
 	// Use the direct (uncached) API reader for the admission webhooks: a cache-backed read lazily
 	// starts an informer and blocks on its sync inside the request, which can exceed the webhook
@@ -195,20 +214,22 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	}
 
 	opts := manager.Options{
-		LeaderElection:          false,
-		Scheme:                  scheme,
-		GracefulShutdownTimeout: ptr.To(10 * time.Second),
-		HealthProbeBindAddress:  ":9090",
-		WebhookServer:           webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		LeaderElection:                true,
+		LeaderElectionID:              controllerName,
+		LeaderElectionNamespace:       helmNamespace,
+		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 ptr.To(leaseDuration),
+		RenewDeadline:                 ptr.To(renewDeadline),
+		RetryPeriod:                   ptr.To(retryPeriod),
+		Scheme:                        scheme,
+		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
+		HealthProbeBindAddress:        ":9090",
+		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		// The grant-violation series (d8_cluster_objects_grant_violated) is served from here; the
+		// PodMonitor of the module scrapes this port.
 		Metrics: metrics.Options{
-			BindAddress: "0",
+			BindAddress: ":9091",
 		},
-	}
-
-	if os.Getenv(haModeEnv) == "true" {
-		opts.LeaderElection = true
-		opts.LeaderElectionID = controllerName
-		opts.LeaderElectionNamespace = helmNamespace
 	}
 
 	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), opts)

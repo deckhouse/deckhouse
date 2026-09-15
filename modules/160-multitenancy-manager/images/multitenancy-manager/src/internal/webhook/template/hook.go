@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
+	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -76,6 +78,13 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			if err := validate.ParamPath(schema, ref.Param, ref.Type); err != nil {
 				return admission.Denied(fmt.Sprintf("the '%s' project template field '%s' %v", template.Name, ref.Field, err))
 			}
+		}
+
+		// a literal in a field with a fixed set of values must be one of them: a typo used to be
+		// accepted, rendered into a label nothing reads or into no NetworkPolicy at all, and the
+		// project reported Deployed
+		if err := validateLiterals(template); err != nil {
+			return admission.Denied(fmt.Sprintf("the '%s' project template %v", template.Name, err))
 		}
 
 		// grantPolicies must reference existing library policies (without a projectSelector)
@@ -176,4 +185,37 @@ func (v *validator) validateManagedGrantNames(ctx context.Context, template *v1a
 		}
 	}
 	return admission.Allowed("")
+}
+
+// literalValues are the values the fixed-set fields accept as literals. The CRD carries the same
+// sets as CEL rules; this check is the answer for a cluster whose CRD predates them, and it is what
+// the unit tests pin.
+var literalValues = map[string][]string{
+	"podSecurityStandard": {v1alpha2.PodSecurityStandardPrivileged, v1alpha2.PodSecurityStandardBaseline, v1alpha2.PodSecurityStandardRestricted},
+	"networkPolicy.mode":  {v1alpha2.NetworkPolicyModeIsolated, v1alpha2.NetworkPolicyModeNotRestricted},
+}
+
+// validateLiterals checks every fixed-set field that holds a literal (a {fromParam} reference is
+// checked against the parameters schema instead, see FromParamRefs).
+func validateLiterals(template *v1alpha2.ProjectTemplate) error {
+	check := func(field string, param v1alpha2.Param[string]) error {
+		value, isLiteral := param.Literal()
+		if !isLiteral {
+			return nil
+		}
+		allowed := literalValues[field]
+		if slices.Contains(allowed, value) {
+			return nil
+		}
+		return fmt.Errorf("field '%s' must be one of %s or a {fromParam: <name>} reference, got '%s'", field, strings.Join(allowed, ", "), value)
+	}
+	if err := check("podSecurityStandard", template.Spec.PodSecurityStandard); err != nil {
+		return err
+	}
+	if template.Spec.NetworkPolicy != nil {
+		if err := check("networkPolicy.mode", template.Spec.NetworkPolicy.Mode); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -73,9 +73,9 @@ spec:
                   properties:
                     apiGroups:
                       description: |-
-                        API-группы ресурсов Kubernetes.
+                        API-группы ресурсов Kubernetes. Core-группа задаётся пустой строкой.
 
-                        Используйте `*`, чтобы выбрать все API-группы.
+                        `*` не принимается: admission webhook регистрируется только на перечисленные группы, и подстановочный знак молча не перехватывал бы ничего.
                     apiVersions:
                       description: |-
                         Версии API ресурсов Kubernetes.
