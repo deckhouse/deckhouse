@@ -129,6 +129,21 @@ properties:
               minimum: 1
               maximum: 65535
 
+      fencingNodeGroups:
+        type: array
+        description: |
+          NodeGroups with fencing enabled.
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              x-dmt-default: name
+            mode:
+              type: string
+            watchdogTimeout:
+              type: integer
+
       standbyNodeGroups:
         type: array
         description: |
@@ -283,17 +298,6 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
-            fencing:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              properties:
-                mode:
-                  type: string
-                watchdog:
-                  type: object
-                  properties:
-                    timeout:
-                      type: integer
         x-examples:
           - - name: worker
               nodeType: CloudEphemeral

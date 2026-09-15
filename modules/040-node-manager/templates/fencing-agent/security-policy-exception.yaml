@@ -1,7 +1,5 @@
 {{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
-{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{- $mode := dig "fencing" "mode" "" $ng }}
-  {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
+{{- range $ng := .Values.nodeManager.internal.fencingNodeGroups }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
@@ -74,6 +72,5 @@ spec:
           readOnly: false
           metadata:
             description: Shared host socket directory used by the fencing agent.
-  {{- end }}
 {{- end }}
 {{- end }}

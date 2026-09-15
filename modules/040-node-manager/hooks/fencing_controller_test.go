@@ -49,10 +49,10 @@ type testCaseResult struct {
 }
 
 const internalNodeGroupValuesTemplate = `
-nodeGroups:
+fencingNodeGroups:
 - name: {{ .Name }}
-  fencing:
-    mode: Watchdog
+  mode: Watchdog
+  watchdogTimeout: 60
 `
 
 const nodeStateTemplate = `

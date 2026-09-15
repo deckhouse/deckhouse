@@ -26,8 +26,8 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-// get_crds builds the nodeManager.internal.nodeGroups blob: name, nodeType, engine, gpu,
-// fencing and the three read cloudInstances fields, with zones defaulted for CloudEphemeral.
+// get_crds builds the nodeManager.internal.nodeGroups blob: name, nodeType, engine, gpu
+// and the three read cloudInstances fields, with zones defaulted for CloudEphemeral.
 // Everything else about a NodeGroup is owned by node-controller and is not tested here.
 var _ = Describe("Modules :: node-manager :: hooks :: get_crds ::", func() {
 	const (
@@ -256,9 +256,10 @@ spec:
 			f.RunHook()
 		})
 
-		It("Fencing values must be passed through", func() {
+		It("Fencing must not be part of the blob, it has its own key", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.fencing.mode").Value()).To(Equal("Watchdog"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.name").String()).To(Equal("worker"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.fencing").Exists()).To(BeFalse())
 		})
 	})
 
@@ -355,7 +356,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(slices.Collect(maps.Keys(f.ValuesGet("nodeManager.internal.nodeGroups.0").Map()))).To(
-				ConsistOf("name", "nodeType", "engine", "gpu", "cloudInstances", "fencing"))
+				ConsistOf("name", "nodeType", "engine", "gpu", "cloudInstances"))
 			Expect(slices.Collect(maps.Keys(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances").Map()))).To(
 				ConsistOf("minPerZone", "maxPerZone", "zones"))
 		})
