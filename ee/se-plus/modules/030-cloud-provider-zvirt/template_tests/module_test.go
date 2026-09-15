@@ -68,6 +68,11 @@ nodes:
     sshPublicKey: ssh-rsa deadbeef
     layout: Standard
 internal:
+  credentialSecrets:
+    d8-credentials:
+      authScheme: userPassword
+      identity: user
+      secret: imsostrong
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
     clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
@@ -86,6 +91,51 @@ internal:
     provider:
       caBundle: ""
       insecure: true
+      password: imsostrong
+      server: https://zvirt.example.com/api
+      username: user
+    sshPublicKey: ssh-rsa deadbeef
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: ZvirtCloudProviderDiscoveryData
+    storageDomains: []
+    zones:
+      - default`
+
+// The provider cluster configuration reaches the values as a typed structure, whose omitempty tags
+// drop zero values: a cluster that trusts the zVirt certificate carries neither `insecure` nor
+// `caBundle` in its values at all.
+const moduleValuesWithoutOptionalProviderFields = `
+provider:
+  parameters:
+    server: https://zvirt.example.com/api
+    clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
+nodes:
+  parameters:
+    sshPublicKey: ssh-rsa deadbeef
+    layout: Standard
+internal:
+  credentialSecrets:
+    d8-credentials:
+      authScheme: userPassword
+      identity: user
+      secret: imsostrong
+  providerClusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
+    kind: ZvirtClusterConfiguration
+    layout: Standard
+    masterNodeGroup:
+      instanceClass:
+        etcdDiskSizeGb: 10
+        memory: 8192
+        numCPUs: 4
+        rootDiskSizeGb: 50
+        storageDomainID: fdc40068-1975-46a3-a1db-7b3731316d87
+        template: awesome-template
+        vnicProfileID: ad0bfe09-f7a3-4f88-b6af-b71680a82ca4
+      replicas: 1
+    provider:
       password: imsostrong
       server: https://zvirt.example.com/api
       username: user
@@ -151,6 +201,16 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 - --configure-cloud-routes=false
 - --controllers=cloud-node,cloud-node-lifecycle
 - --v=4`))
+
+			// The login and the password come from the managed credential Secret, not from the
+			// legacy provider cluster configuration.
+			for _, secretName := range []string{"zvirt-credentials", "ccm-zvirt-credentials", "cdd-zvirt-credentials", "capi-zvirt-credentials"} {
+				credentialsSecret := f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", secretName)
+				Expect(credentialsSecret.Exists()).To(BeTrue(), secretName)
+				Expect(credentialsSecret.Field("data.username").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("user"))), secretName)
+				Expect(credentialsSecret.Field("data.password").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("imsostrong"))), secretName)
+				Expect(credentialsSecret.Field("data.server").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("https://zvirt.example.com/api"))), secretName)
+			}
 
 			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "csi-controller")
 			Expect(csiControllerDeployment.Exists()).To(BeTrue())
@@ -242,6 +302,85 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 
 			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
+		})
+	})
+
+	// Every subsystem switched off through its `disabled` flag.
+	const moduleValuesAllSubsystemsDisabled = `
+provider:
+  parameters:
+    server: https://zvirt.example.com/api
+    clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
+nodes:
+  disabled: true
+  parameters:
+    sshPublicKey: ssh-rsa deadbeef
+    layout: Standard
+storage:
+  disabled: true
+  parameters: {}
+ccm:
+  disabled: true
+internal:
+  credentialSecrets:
+    d8-credentials:
+      authScheme: userPassword
+      identity: user
+      secret: imsostrong
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: ZvirtCloudProviderDiscoveryData
+    storageDomains: []
+    zones:
+      - default`
+
+	// The provider cluster configuration reaches the values as a typed structure, whose omitempty
+	// tags drop zero values: a cluster that trusts the zVirt certificate has neither `insecure`
+	// nor `caBundle` in its values at all. The templates have to read those as false and "".
+	Context("zVirt Suite B: provider without caBundle and insecure", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderZvirt", moduleValuesWithoutOptionalProviderFields)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// An absent `insecure` must render as "false", not as the "<nil>" a missing key
+			// would otherwise produce.
+			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", "ccm-zvirt-credentials")
+			Expect(ccmSecret.Exists()).To(BeTrue())
+			Expect(ccmSecret.Field("data.insecure").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("false"))))
+
+			// An absent `caBundle` must not mount a CA that does not exist.
+			caSecret := f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", "csi-controller-manager-ca")
+			Expect(caSecret.Exists()).To(BeFalse())
+
+			registrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(registrationSecret.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("zVirt Suite C: every subsystem disabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderZvirt", moduleValuesAllSubsystemsDisabled)
+			f.HelmRender()
+		})
+
+		It("Renders no workload of a disabled subsystem", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-controller-manager").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "csi-controller").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-cloud-provider-zvirt", "csi-node").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "capz-controller-manager").Exists()).To(BeFalse())
+
+			// The registration Secret keeps node-manager working and is not tied to a subsystem.
+			Expect(f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider").Exists()).To(BeTrue())
 		})
 	})
 })
