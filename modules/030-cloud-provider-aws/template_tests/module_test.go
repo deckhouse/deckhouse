@@ -293,6 +293,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(ebsCSIDriver.Exists()).To(BeTrue())
 			Expect(ebsNodePluginDaemonSet.Exists()).To(BeTrue())
 			Expect(ebsNodePluginDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(ebsNodePluginDaemonSet.Field("spec.template.spec.serviceAccountName").String()).To(Equal("csi"))
 			Expect(ebsControllerSA.Exists()).To(BeTrue())
 			Expect(ebsProvisionerCR.Exists()).To(BeTrue())
 			Expect(ebsProvisionerCRB.Exists()).To(BeTrue())
