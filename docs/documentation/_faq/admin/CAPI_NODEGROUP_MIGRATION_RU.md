@@ -10,7 +10,8 @@ Deckhouse Kubernetes Platform переводит управление узлам
 На данный момент миграция с MCM на CAPI поддерживается для следующих облачных провайдеров:
 
 - [Yandex Cloud](/modules/cloud-provider-yandex/);
-- [OpenStack](/modules/cloud-provider-openstack/).
+- [OpenStack](/modules/cloud-provider-openstack/);
+- [VMware vSphere](/modules/cloud-provider-vsphere/).
 
 После появления поддержки CAPI существующие группы узлов типа [CloudEphemeral](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#добавление-cloudephemeral-узлов-в-облачном-кластере) продолжают использовать MCM (`status.engine: MCM`). Новые группы узлов по умолчанию создаются с использованием CAPI (`status.engine: CAPI`).
 

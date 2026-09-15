@@ -15,3 +15,13 @@ description: "Управление облачными ресурсами в Deck
 - Заказ CloudEphemeral-узлов через Machine Controller Manager (MCM). Параметры виртуальных машин задаются в ресурсе [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/).
+
+{% alert level="warning" %}
+Модуль находится в процессе миграции управления CloudEphemeral-узлами с Machine Controller Manager (MCM) на Cluster API (CAPI). Существующие NodeGroup продолжают использовать MCM, а новые по умолчанию создаются с использованием CAPI. Порядок миграции существующих групп — в разделе [«Как мигрировать группы узлов на Cluster API (CAPI)»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-группы-узлов-на-cluster-api-capi).
+{% endalert %}
+
+{% alert level="info" %}
+**Паритет vCenter-тегов для CAPI-узлов.** Под CAPI на каждую VM ставится тег `deckhouse-cluster-name/<clusterUUID>` (как и в MCM). Тег `deckhouse-node-role/<nodeGroup>-<zone>`, который MCM ставил дополнительно, в CAPI-варианте пока не воспроизводится — для группировки узлов по NodeGroup используйте Kubernetes-лейбл `node.deckhouse.io/group`. Полный паритет тегов — в отдельном follow-up.
+
+**Поля размещения `VsphereInstanceClass` под CAPI.** И `spec.resourcePool`, и `spec.datastore` учитываются: если задано хотя бы одно из них, модуль создаёт отдельный `VSphereDeploymentZone` под каждый NodeGroup для каждой зоны, в которой NodeGroup работает, кладёт оба поля в `placementConstraint` и указывает `MachineDeployment` NodeGroup-а на этот DZ. Поддержка `placementConstraint.datastore` — downstream-расширение upstream CAPV (`images/capv-controller-manager/patches/003-datastore-on-deployment-zone.patch`): в ванильном upstream CAPV datastore читается только из `VSphereFailureDomain.spec.topology.datastore`. Патч добавляет приоритет: `placementConstraint.datastore` выигрывает если задан, иначе используется значение из FD.topology (совпадает с апстримовым поведением).
+{% endalert %}

@@ -1,0 +1,35 @@
+diff --git a/apis/v1beta1/vspheredeploymentzone_types.go b/apis/v1beta1/vspheredeploymentzone_types.go
+index 64c9310..5af20c3 100644
+--- a/apis/v1beta1/vspheredeploymentzone_types.go
++++ b/apis/v1beta1/vspheredeploymentzone_types.go
+@@ -143,6 +143,14 @@ type PlacementConstraint struct {
+ 	// virtual machine is created/located.
+ 	// +optional
+ 	Folder string `json:"folder,omitempty"`
++
++	// Datastore is the name or inventory path of the datastore in which the
++	// virtual machine is created/located. When set it takes precedence over
++	// VSphereFailureDomain.spec.topology.datastore for VMs bound to this
++	// DeploymentZone -- this allows two DeploymentZones on the same
++	// FailureDomain to place VMs on different datastores.
++	// +optional
++	Datastore string `json:"datastore,omitempty"`
+ }
+ 
+ // Network holds information about the network.
+diff --git a/pkg/services/vimmachine.go b/pkg/services/vimmachine.go
+index 6af60dc..73a9b79 100644
+--- a/pkg/services/vimmachine.go
++++ b/pkg/services/vimmachine.go
+@@ -478,7 +478,10 @@ func (v *VimMachineService) generateOverrideFunc(ctx context.Context, vimMachine
+ 		if vsphereDeploymentZone.Spec.PlacementConstraint.ResourcePool != "" {
+ 			vm.Spec.ResourcePool = vsphereDeploymentZone.Spec.PlacementConstraint.ResourcePool
+ 		}
+-		if vsphereFailureDomain.Spec.Topology.Datastore != "" {
++		switch {
++		case vsphereDeploymentZone.Spec.PlacementConstraint.Datastore != "":
++			vm.Spec.Datastore = vsphereDeploymentZone.Spec.PlacementConstraint.Datastore
++		case vsphereFailureDomain.Spec.Topology.Datastore != "":
+ 			vm.Spec.Datastore = vsphereFailureDomain.Spec.Topology.Datastore
+ 		}
+ 		if len(vsphereFailureDomain.Spec.Topology.Networks) > 0 {

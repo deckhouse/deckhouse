@@ -57,6 +57,7 @@ rules:
   - deckhousemachinetemplates
   - yandexmachinetemplates
   - openstackmachinetemplates
+  - vspheremachinetemplates
 - apiGroups:
   - cluster.x-k8s.io
   resources:
@@ -190,6 +191,7 @@ rules:
   - deckhousemachinetemplates
   - yandexmachinetemplates
   - openstackmachinetemplates
+  - vspheremachinetemplates
 - apiGroups: ["cluster.x-k8s.io"]
   resources:
   - machinedeployments
