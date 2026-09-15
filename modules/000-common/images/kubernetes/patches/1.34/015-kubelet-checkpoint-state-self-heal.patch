@@ -67,10 +67,10 @@ index 00000000000..0f279a7a84b
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/doc.go b/pkg/kubelet/cm/checkpointselfheal/doc.go
 new file mode 100644
-index 00000000000..84e9a2f4931
+index 00000000000..bb30aaaf9a3
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/doc.go
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,33 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -101,10 +101,8 @@ index 00000000000..84e9a2f4931
 +// the runtime is marked synced only afterwards, so no pod can be admitted while
 +// CPUs and NUMA zones look free in the state but are still occupied.
 +//
-+// The stop honours each pod's terminationGracePeriodSeconds, read from the CRI
-+// container annotations because the pod specs are not loaded yet. It does not
-+// run preStop hooks: those belong to kubelet's own kill path, which this stop
-+// bypasses.
++// Containers are stopped with their pod's terminationGracePeriodSeconds, taken
++// from the CRI annotations; preStop hooks are not run.
 +package checkpointselfheal
 diff --git a/pkg/kubelet/cm/checkpointselfheal/metrics.go b/pkg/kubelet/cm/checkpointselfheal/metrics.go
 new file mode 100644
@@ -195,10 +193,10 @@ index 00000000000..190c2b2c532
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal.go b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
 new file mode 100644
-index 00000000000..0c3b83d4466
+index 00000000000..5b4dd164c8d
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
-@@ -0,0 +1,236 @@
+@@ -0,0 +1,233 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -357,10 +355,7 @@ index 00000000000..0c3b83d4466
 +
 +	if err := os.Remove(path); err != nil {
 +		if os.IsNotExist(err) {
-+			// Nothing to reset: the manager failed on something other than
-+			// the file, such as the state directory itself, and the retry
-+			// would fail the same way. Recording a reset here would count an
-+			// event that never happened.
++			// No file, so the failure was elsewhere and a retry cannot help.
 +			klog.ErrorS(cause, "Checkpoint manager failed without a checkpoint to reset, kubelet will fail as before",
 +				"manager", manager, "stateFile", path)
 +			return false
@@ -437,10 +432,10 @@ index 00000000000..0c3b83d4466
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/stop.go b/pkg/kubelet/cm/checkpointselfheal/stop.go
 new file mode 100644
-index 00000000000..c07bced4666
+index 00000000000..d0ff076c5bb
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/stop.go
-@@ -0,0 +1,373 @@
+@@ -0,0 +1,350 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -476,26 +471,17 @@ index 00000000000..c07bced4666
 +)
 +
 +const (
-+	// terminationGracePeriodAnnotation is the CRI container annotation the
-+	// kubelet fills from pod.Spec.TerminationGracePeriodSeconds when it creates
-+	// the container (podTerminationGracePeriodLabel in
-+	// pkg/kubelet/kuberuntime/labels.go, which cannot be imported from here
-+	// without an import cycle through pkg/kubelet/cm). Pod specs are not
-+	// loaded this early, so this annotation is the only way to honour each
-+	// pod's own grace period rather than a single short value for everyone.
++	// Same key as podTerminationGracePeriodLabel in pkg/kubelet/kuberuntime,
++	// which cannot be imported from here (cycle through pkg/kubelet/cm).
 +	terminationGracePeriodAnnotation = "io.kubernetes.pod.terminationGracePeriod"
 +
-+	// stopDeadlineMargin is what the runtime gets on top of the longest grace
-+	// period among the containers being stopped: time to SIGKILL the slowest
-+	// one and answer. Every container of every reset is stopped in the same
-+	// pass, so the deadline of the whole phase is the slowest container plus
-+	// this margin, not a per-manager budget.
++	// The stop phase deadline is the longest grace period among the victims
++	// plus this margin for the SIGKILL and the runtime round trip.
 +	stopDeadlineMargin = 30 * time.Second
 +
-+	// statusRecheckTimeout bounds the ContainerStatus call made after a stop
-+	// request fails, which tells a container the runtime finished stopping
-+	// anyway from one that is still running.
-+	statusRecheckTimeout = 10 * time.Second
++	// How long a failed stop is given to turn out to have worked anyway.
++	statusRecheckTimeout  = 10 * time.Second
++	statusRecheckInterval = time.Second
 +
 +	eventReason = "NUMACheckpointReset"
 +
@@ -514,9 +500,7 @@ index 00000000000..c07bced4666
 +// returns an error -- the state is already reset, and everything a caller could
 +// do is logged and counted here.
 +//
-+// The stop goes straight to the runtime with the pod's own grace period. What
-+// it cannot do is run the container's preStop hook: that is kubelet's job, and
-+// kubelet does not know the pod yet.
++// Each container gets its pod's own grace period; preStop hooks are not run.
 +func StopContainersWithLostAssignments(ctx context.Context, runtime internalapi.RuntimeService, recorder record.EventRecorder) {
 +	resets := takePendingResets()
 +	if len(resets) == 0 {
@@ -542,7 +526,6 @@ index 00000000000..c07bced4666
 +
 +	targets := planStops(resets, containers)
 +
-+	// The deadline is known only once every target and its grace period is.
 +	deadline := stopDeadlineMargin
 +	for _, t := range targets {
 +		if d := time.Duration(t.gracePeriodSeconds)*time.Second + stopDeadlineMargin; d > deadline {
@@ -641,10 +624,6 @@ index 00000000000..c07bced4666
 +	return byKey, true
 +}
 +
-+// gracePeriodOf reads the pod's terminationGracePeriodSeconds from the
-+// container's annotations. The API server defaults the field, so the
-+// annotation is missing only on a container the kubelet did not create; the
-+// same default is used then.
 +func gracePeriodOf(c *runtimeapi.Container) int64 {
 +	if raw, ok := c.Annotations[terminationGracePeriodAnnotation]; ok {
 +		if v, err := strconv.ParseInt(raw, 10, 64); err == nil && v >= 0 {
@@ -656,9 +635,6 @@ index 00000000000..c07bced4666
 +	return v1.DefaultTerminationGracePeriodSeconds
 +}
 +
-+// stopTarget is one container the stop phase has to stop, together with the
-+// reset that lost it: the manager and reason go into the log, the event and the
-+// metrics, the lost assignment receives the outcome.
 +type stopTarget struct {
 +	manager            ManagerName
 +	reason             Reason
@@ -666,15 +642,8 @@ index 00000000000..c07bced4666
 +	gracePeriodSeconds int64
 +}
 +
-+// planStops resolves every lost assignment to a container and decides which
-+// ones get stopped. It fills in what is known about each assignment and marks
-+// the ones that are skipped; the returned targets are the ones left.
-+//
-+// Both managers can lose the same container's assignment in one start.
-+// Recording it for each is correct, but stopping it twice would count two
-+// restarts and emit two events where one container was restarted, so the first
-+// reset to claim a container owns it. The CPU manager starts first, so that is
-+// the CPU manager.
++// planStops resolves lost assignments to running containers. A container lost
++// by both managers is stopped once, for the manager that recorded it first.
 +func planStops(resets []ResourceManagerStateReset, containers map[AssignmentKey]runtimeContainer) []stopTarget {
 +	var targets []stopTarget
 +	stoppedBy := map[string]ManagerName{}
@@ -746,20 +715,23 @@ index 00000000000..c07bced4666
 +	emitStoppedEvent(recorder, t.manager, t.reason, lost)
 +}
 +
-+// stoppedAnyway re-reads the container's state after a failed stop request. The
-+// request can fail, or the phase deadline expire, while the runtime is still
-+// delivering the SIGKILL; counting that as a failure would raise the alert that
-+// needs a human for a container the runtime finished off a moment later. The
-+// check gets its own timeout because the stop context may already be expired.
++// stoppedAnyway polls the container state after a failed stop request: the
++// deadline can expire while the runtime is still finishing the kill.
 +func stoppedAnyway(ctx context.Context, runtime internalapi.RuntimeService, containerID string) bool {
 +	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), statusRecheckTimeout)
 +	defer cancel()
 +
-+	resp, err := runtime.ContainerStatus(ctx, containerID, false)
-+	if err != nil {
-+		return false
++	for {
++		resp, err := runtime.ContainerStatus(ctx, containerID, false)
++		if err == nil && resp.GetStatus().GetState() != runtimeapi.ContainerState_CONTAINER_RUNNING {
++			return true
++		}
++		select {
++		case <-ctx.Done():
++			return false
++		case <-time.After(statusRecheckInterval):
++		}
 +	}
-+	return resp.GetStatus().GetState() != runtimeapi.ContainerState_CONTAINER_RUNNING
 +}
 +
 +// emitStoppedEvent puts the reason on the pod. The stop goes straight to the
