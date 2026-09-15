@@ -43,7 +43,8 @@ import (
 // system:serviceaccounts:d8-user-authz) deadlocks. Unlike protect.go's broader systemBypassGroups,
 // system:masters is absent here: the handler itself still polices a cluster-admin (unit tests call
 // the handler directly). In-cluster, matchConditions skip system:masters before this code runs.
-// The full table of exemptions per admission point is docs/internal/ADMISSION_BYPASS_MATRIX.md.
+// The matchConditions of every admission point live in hooks/configure_grant_validation_webhook.go
+// (systemWriterMatchConditions) and templates/admission/validation.yaml.
 var automatedSystemWriterGroups = map[string]struct{}{
 	"system:nodes":                         {},
 	"system:serviceaccounts:kube-system":   {},
