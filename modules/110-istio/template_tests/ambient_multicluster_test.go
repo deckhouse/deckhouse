@@ -30,8 +30,9 @@ import (
 
 // Peers covering every case the per-peer `istio-remote` Gateway has to distinguish: one
 // running the ambient gateway, one not, a flat peer that opted out of the gateway hop, one
-// publishing several addresses, and one whose own name is that peer's name plus an index -
-// the pair that collides if the index is ever omitted for the first address.
+// publishing several addresses, one whose own name is that peer's name plus an index - the
+// pair that collides if the index is ever omitted for the first address - and one reached
+// by DNS name rather than by IP, which is the half of the address type the object declares.
 //
 // Unusable addresses are not among them: a peer's ambient endpoints are validated by the
 // multicluster discovery hook, at the point they enter the cluster, so nothing that reaches
@@ -47,6 +48,7 @@ const ambientMulticlusters = `
     port: 15443
   ambientGateways:
   - address: 1.1.1.2
+    addressType: IPAddress
     port: 15008
   networkName: network-neigh-ambient
   clusterID: neigh-ambient
@@ -76,8 +78,10 @@ const ambientMulticlusters = `
     port: 15443
   ambientGateways:
   - address: "2001:db8::1"
+    addressType: IPAddress
     port: 15008
   - address: 4.4.4.2
+    addressType: IPAddress
     port: 15008
   networkName: network-neigh-multi-address
   clusterID: neigh-multi-address
@@ -94,9 +98,27 @@ const ambientMulticlusters = `
     port: 15443
   ambientGateways:
   - address: 5.5.5.2
+    addressType: IPAddress
     port: 15008
   networkName: network-neigh-multi-address-1
   clusterID: neigh-multi-address-1
+  metadataExporterCA: ""
+  rootCA: ---ROOT CA---
+  spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
+- name: neighbour-hostname
+  apiHost: remote6.api.example.com
+  apiJWT: aAaA.bBbB.CcCc
+  enableIngressGateway: true
+  insecureSkipVerify: false
+  ingressGateways:
+  - address: 6.6.6.1
+    port: 15443
+  ambientGateways:
+  - address: ambient.lb.example.com
+    addressType: Hostname
+    port: 15008
+  networkName: network-neigh-hostname
+  clusterID: neigh-hostname
   metadataExporterCA: ""
   rootCA: ---ROOT CA---
   spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
@@ -107,6 +129,7 @@ const ambientMulticlusters = `
   insecureSkipVerify: false
   ambientGateways:
   - address: 3.3.3.1
+    addressType: IPAddress
     port: 15008
   networkName: network-neigh-flat
   clusterID: neigh-flat
@@ -313,6 +336,34 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 				To(BeFalse())
 		})
 
+		// The address type is carried in the values, decided once by the merge hook: istiod
+		// copies spec.addresses to status.addresses verbatim for this class, and the
+		// network-gateway readers key off the type. A DNS name published as an IPAddress
+		// would reach ztunnel as an address that resolves to nothing, and nothing would say
+		// so. See TestAmbientGatewayEndpoints for where the type is derived.
+		It("Declares a peer reached by name as a Hostname address", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			gw := f.KubernetesResource("Gateway", "d8-istio", "ambientgateway-remote-neighbour-hostname-0")
+			Expect(gw.Exists()).To(BeTrue())
+
+			addresses := gw.Field("spec.addresses").Array()
+			Expect(addresses).To(HaveLen(1))
+			Expect(addresses[0].Get("type").String()).To(Equal("Hostname"))
+			Expect(addresses[0].Get("value").String()).To(Equal("ambient.lb.example.com"))
+
+			// Everything else about the object is the same as an IP-addressed peer's -
+			// ztunnel reaches both through the Workload istiod synthesizes from it, and
+			// that Workload takes its identity from this annotation either way.
+			Expect(gw.Field("spec.gatewayClassName").String()).To(Equal("istio-remote"))
+			Expect(gw.Field(`metadata.annotations.gateway\.istio\.io/service-account`).String()).
+				To(Equal("ambientgateway"))
+			Expect(gw.Field(`metadata.labels.topology\.istio\.io/network`).String()).
+				To(Equal("network-neigh-hostname"))
+			Expect(gw.Field("spec.listeners.0.protocol").String()).To(Equal("HBONE"))
+			Expect(gw.Field("spec.listeners.0.port").Int()).To(Equal(int64(15008)))
+		})
+
 		// One Gateway per address, because a Gateway carries a single address and istiod
 		// needs every one of them to load-balance the cross-network hop.
 		It("Gives a peer publishing several addresses one Gateway each", func() {
@@ -320,10 +371,11 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 
 			first := f.KubernetesResource("Gateway", "d8-istio", "ambientgateway-remote-neighbour-multi-address-0")
 			Expect(first.Exists()).To(BeTrue())
-			// An IPv6 literal reaches the Gateway verbatim: the address was already
-			// validated and canonicalised on the way in, so the template does not have to
-			// recognise the shape of one.
+			// An IPv6 literal reaches the Gateway verbatim, and so does its type: both the
+			// address and the kind of address it is were settled on the way in, so the
+			// template neither parses the value nor judges whether it is well formed.
 			Expect(first.Field("spec.addresses.0.value").String()).To(Equal("2001:db8::1"))
+			Expect(first.Field("spec.addresses.0.type").String()).To(Equal("IPAddress"))
 
 			second := f.KubernetesResource("Gateway", "d8-istio", "ambientgateway-remote-neighbour-multi-address-1")
 			Expect(second.Exists()).To(BeTrue())

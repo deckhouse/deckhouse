@@ -33,6 +33,17 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+type AmbientGatewayEndpoint struct {
+	Address     string `json:"address"`
+	AddressType string `json:"addressType"`
+	Port        uint   `json:"port"`
+}
+
+type IngressGatewayEndpoint struct {
+	Address string `json:"address"`
+	Port    uint   `json:"port"`
+}
+
 type IstioFederationMergeCrdInfo struct {
 	ClusterUUID              string                            `json:"clusterUUID"`
 	EnableInsecureConnection bool                              `json:"insecureSkipVerify"`
@@ -46,20 +57,20 @@ type IstioFederationMergeCrdInfo struct {
 }
 
 type IstioMulticlusterMergeCrdInfo struct {
-	AmbientGateways          *[]eeCrd.MulticlusterIngressGateways `json:"ambientGateways,omitempty"`
-	APIHost                  string                               `json:"apiHost"`
-	APIJWT                   string                               `json:"apiJWT"`
-	ClusterID                string                               `json:"clusterID"`
-	ClusterUUID              string                               `json:"clusterUUID"`
-	EnableIngressGateway     bool                                 `json:"enableIngressGateway"`
-	EnableInsecureConnection bool                                 `json:"insecureSkipVerify"`
-	IngressGateways          *[]eeCrd.MulticlusterIngressGateways `json:"ingressGateways"`
-	MetadataExporterCA       string                               `json:"metadataExporterCA"`
-	Name                     string                               `json:"name"`
-	NetworkName              string                               `json:"networkName"`
-	Public                   *eeCrd.AlliancePublicMetadata        `json:"public,omitempty"`
-	RootCA                   string                               `json:"rootCA"`
-	SpiffeEndpoint           string                               `json:"spiffeEndpoint"`
+	AmbientGateways          *[]AmbientGatewayEndpoint     `json:"ambientGateways,omitempty"`
+	APIHost                  string                        `json:"apiHost"`
+	APIJWT                   string                        `json:"apiJWT"`
+	ClusterID                string                        `json:"clusterID"`
+	ClusterUUID              string                        `json:"clusterUUID"`
+	EnableIngressGateway     bool                          `json:"enableIngressGateway"`
+	EnableInsecureConnection bool                          `json:"insecureSkipVerify"`
+	IngressGateways          *[]IngressGatewayEndpoint     `json:"ingressGateways"`
+	MetadataExporterCA       string                        `json:"metadataExporterCA"`
+	Name                     string                        `json:"name"`
+	NetworkName              string                        `json:"networkName"`
+	Public                   *eeCrd.AlliancePublicMetadata `json:"public,omitempty"`
+	RootCA                   string                        `json:"rootCA"`
+	SpiffeEndpoint           string                        `json:"spiffeEndpoint"`
 }
 
 type ServiceEntry struct {
@@ -80,6 +91,44 @@ func federationServiceEntryResolution(endpoints []eeCrd.FederationIngressGateway
 		}
 	}
 	return "STATIC"
+}
+
+// ingressGatewayEndpoints derives nothing: the sidecar half renders meshNetworks entries,
+// which carry no address type. It exists so the CRD type is not the values contract.
+func ingressGatewayEndpoints(gateways *[]eeCrd.MulticlusterIngressGateways) *[]IngressGatewayEndpoint {
+	if gateways == nil {
+		return nil
+	}
+
+	endpoints := make([]IngressGatewayEndpoint, 0, len(*gateways))
+	for _, gw := range *gateways {
+		endpoints = append(endpoints, IngressGatewayEndpoint{Address: gw.Address, Port: gw.Port})
+	}
+
+	return &endpoints
+}
+
+func ambientGatewayEndpoints(gateways *[]eeCrd.MulticlusterIngressGateways) *[]AmbientGatewayEndpoint {
+	if gateways == nil {
+		return nil
+	}
+
+	endpoints := make([]AmbientGatewayEndpoint, 0, len(*gateways))
+	for _, gw := range *gateways {
+		address, ok := canonicalAmbientGatewayAddress(gw.Address)
+		if !ok {
+			continue
+		}
+
+		addressType := "Hostname"
+		if net.ParseIP(address) != nil {
+			addressType = "IPAddress"
+		}
+
+		endpoints = append(endpoints, AmbientGatewayEndpoint{Address: address, AddressType: addressType, Port: gw.Port})
+	}
+
+	return &endpoints
 }
 
 func sortedEndpointsKey(endpoints []eeCrd.FederationIngressGateway) string {
@@ -171,8 +220,8 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	me = strings.TrimSuffix(me, "/")
 
 	var (
-		igs         *[]eeCrd.MulticlusterIngressGateways
-		ambientGws  *[]eeCrd.MulticlusterIngressGateways
+		igs         *[]IngressGatewayEndpoint
+		ambientGws  *[]AmbientGatewayEndpoint
 		apiHost     string
 		clusterID   string
 		networkName string
@@ -182,12 +231,8 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	)
 
 	if multicluster.Status.MetadataCache.Private != nil {
-		if multicluster.Status.MetadataCache.Private.IngressGateways != nil {
-			igs = multicluster.Status.MetadataCache.Private.IngressGateways
-		}
-		if multicluster.Status.MetadataCache.Private.AmbientGateways != nil {
-			ambientGws = multicluster.Status.MetadataCache.Private.AmbientGateways
-		}
+		igs = ingressGatewayEndpoints(multicluster.Status.MetadataCache.Private.IngressGateways)
+		ambientGws = ambientGatewayEndpoints(multicluster.Status.MetadataCache.Private.AmbientGateways)
 		apiHost = multicluster.Status.MetadataCache.Private.APIHost
 		clusterID = multicluster.Status.MetadataCache.Private.ClusterIDOrDerived()
 		networkName = multicluster.Status.MetadataCache.Private.NetworkName

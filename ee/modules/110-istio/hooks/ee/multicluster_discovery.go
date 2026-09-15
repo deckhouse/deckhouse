@@ -290,7 +290,7 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		}
 
 		if dropped, reason := sanitizeAmbientGateways(&privateMetadata); len(dropped) > 0 {
-			input.Logger.Warn("dropping ambient gateway endpoints the ambient data plane cannot use", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), slog.String("reason", reason), slog.String("dropped", strings.Join(dropped, ", ")))
+			input.Logger.Warn("dropping ambient gateway endpoints that cannot be rendered into a Gateway", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), slog.String("reason", reason), slog.String("dropped", strings.Join(dropped, ", ")))
 		}
 
 		multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 0)
@@ -363,8 +363,8 @@ func checkMulticlusterRemoteAPIServer(client http.Client, apiHost, bearerToken s
 	return metav1.ConditionTrue, "RemoteAPIReachable", fmt.Sprintf("GET %s returned HTTP %d with kind APIVersions", url, code)
 }
 
-// sanitizeAmbientGateways drops the ambient endpoints of a peer that the
-// ambient data plane cannot use, and reports what went wrong and why.
+// sanitizeAmbientGateways drops the ambient endpoints of a peer that this cluster
+// cannot render into an istio-remote Gateway, and reports what went wrong and why.
 //
 // Only the ambient half of a peer is validated here. Sidecar multicluster
 // should be validated in the future too. Right now this requires breaking
@@ -387,15 +387,22 @@ func sanitizeAmbientGateways(pm *eeCrd.MulticlusterPrivateMetadata) ([]string, s
 	var dropped []string
 
 	kept := make([]eeCrd.MulticlusterIngressGateways, 0, len(*pm.AmbientGateways))
+	seen := make(map[eeCrd.MulticlusterIngressGateways]struct{}, len(*pm.AmbientGateways))
 
 	for _, gw := range *pm.AmbientGateways {
-		ip := net.ParseIP(gw.Address)
-		if ip == nil || gw.Port == 0 || gw.Port > 65535 {
+		address, ok := canonicalAmbientGatewayAddress(gw.Address)
+		if !ok || gw.Port == 0 || gw.Port > 65535 {
 			dropped = append(dropped, formatAmbientGateway(gw))
 			continue
 		}
 
-		gw.Address = ip.String()
+		gw.Address = address
+
+		if _, duplicate := seen[gw]; duplicate {
+			continue
+		}
+
+		seen[gw] = struct{}{}
 		kept = append(kept, gw)
 	}
 
@@ -410,7 +417,23 @@ func sanitizeAmbientGateways(pm *eeCrd.MulticlusterPrivateMetadata) ([]string, s
 	return dropped, ambientGatewayAddressDropReason
 }
 
-const ambientGatewayAddressDropReason = "not an IP address and port the ambient data plane can dial"
+const ambientGatewayAddressDropReason = "not a usable IP address or DNS name, or the port is out of range"
+
+// Keep in sync with the function of the same name in ee/modules/110-istio/images/metadata-exporter/src/exporter.go.
+func canonicalAmbientGatewayAddress(address string) (string, bool) {
+	address = strings.TrimSpace(address)
+
+	if ip := net.ParseIP(address); ip != nil {
+		return ip.String(), true
+	}
+
+	host := strings.ToLower(strings.TrimSuffix(address, "."))
+	if host == "" || len(validation.IsDNS1123Subdomain(host)) > 0 {
+		return "", false
+	}
+
+	return host, true
+}
 
 func formatAmbientGateway(gw eeCrd.MulticlusterIngressGateways) string {
 	// JoinHostPort, not "%s:%d", so a colon-bearing address stays readable.

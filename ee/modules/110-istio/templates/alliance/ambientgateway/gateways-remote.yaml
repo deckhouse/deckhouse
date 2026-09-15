@@ -18,7 +18,7 @@ metadata:
 spec:
   gatewayClassName: istio-remote
   addresses:
-  - type: IPAddress
+  - type: {{ $ambientGateway.addressType }}
     value: {{ $ambientGateway.address | quote }}
   listeners:
   - name: hbone

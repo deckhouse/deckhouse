@@ -80,7 +80,7 @@ func TestExtractLoadBalancerInfo_BasicCase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractLoadBalancerInfo(tt.services, ingressGatewayPortName, firstIngressEntry)
+			got := extractLoadBalancerInfo(tt.services, ingressGatewayPortName)
 
 			if len(got) != len(tt.want) {
 				t.Fatalf("expected %d gateways, got %d", len(tt.want), len(got))
@@ -117,7 +117,7 @@ func TestExtractLoadBalancerInfo_EdgeCases(t *testing.T) {
 			},
 		}
 
-		got := extractLoadBalancerInfo(services, ingressGatewayPortName, firstIngressEntry)
+		got := extractLoadBalancerInfo(services, ingressGatewayPortName)
 		if len(got) != 1 {
 			t.Fatalf("expected 1 gateway, got %d", len(got))
 		}
@@ -154,7 +154,7 @@ func TestExtractLoadBalancerInfo_EdgeCases(t *testing.T) {
 			},
 		}
 
-		got := extractLoadBalancerInfo(services, ingressGatewayPortName, firstIngressEntry)
+		got := extractLoadBalancerInfo(services, ingressGatewayPortName)
 		if len(got) != 1 {
 			t.Errorf("expected 1 valid gateway, got %d", len(got))
 		}
@@ -510,22 +510,22 @@ func TestExtractLoadBalancerInfo_SelectsByPortName(t *testing.T) {
 		},
 	}
 
-	got := extractLoadBalancerInfo(services, ambientGatewayPortName, anyEntryWithIP)
+	got := extractLoadBalancerInfo(services, ambientGatewayPortName)
 	if len(got) != 1 || got[0].Address != "1.2.3.4" || got[0].Port != 15008 {
 		t.Fatalf("ambient port name: got %+v, want one entry 1.2.3.4:15008", got)
 	}
 
-	got = extractLoadBalancerInfo(services, ingressGatewayPortName, firstIngressEntry)
+	got = extractLoadBalancerInfo(services, ingressGatewayPortName)
 	if len(got) != 1 || got[0].Port != 15443 {
 		t.Fatalf("sidecar port name: got %+v, want one entry on 15443", got)
 	}
 
-	if got := extractLoadBalancerInfo(services, "nonexistent", anyEntryWithIP); len(got) != 0 {
+	if got := extractLoadBalancerInfo(services, "nonexistent"); len(got) != 0 {
 		t.Fatalf("unknown port name: got %+v, want nothing", got)
 	}
 }
 
-func TestExtractLoadBalancerInfo_PrefersAnIPAcrossEntries(t *testing.T) {
+func TestExtractLoadBalancerInfo_TakesTheFirstAddressedIngressEntry(t *testing.T) {
 	service := func(ingresses ...v1.LoadBalancerIngress) *v1.ServiceList {
 		return &v1.ServiceList{
 			Items: []v1.Service{
@@ -548,8 +548,13 @@ func TestExtractLoadBalancerInfo_PrefersAnIPAcrossEntries(t *testing.T) {
 		want      string
 	}{
 		{
-			name:      "hostname listed first does not shadow an IP",
+			name:      "the first entry wins even when a later one carries an IP",
 			ingresses: []v1.LoadBalancerIngress{{Hostname: "lb.example.com"}, {IP: "1.2.3.4"}},
+			want:      "lb.example.com",
+		},
+		{
+			name:      "an entry carrying both prefers its IP",
+			ingresses: []v1.LoadBalancerIngress{{IP: "1.2.3.4", Hostname: "lb.example.com"}},
 			want:      "1.2.3.4",
 		},
 		{
@@ -577,11 +582,21 @@ func TestExtractLoadBalancerInfo_PrefersAnIPAcrossEntries(t *testing.T) {
 			ingresses: []v1.LoadBalancerIngress{{}},
 			want:      "",
 		},
+		{
+			name:      "an entry carrying neither is skipped, not settled for",
+			ingresses: []v1.LoadBalancerIngress{{}, {IP: "1.2.3.4"}},
+			want:      "1.2.3.4",
+		},
+		{
+			name:      "the same, when the address behind the hole is a name",
+			ingresses: []v1.LoadBalancerIngress{{}, {Hostname: "lb.example.com"}},
+			want:      "lb.example.com",
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := extractLoadBalancerInfo(service(tc.ingresses...), ambientGatewayPortName, anyEntryWithIP)
+			got := extractLoadBalancerInfo(service(tc.ingresses...), ambientGatewayPortName)
 
 			if tc.want == "" {
 				if len(got) != 0 {
@@ -596,13 +611,21 @@ func TestExtractLoadBalancerInfo_PrefersAnIPAcrossEntries(t *testing.T) {
 		})
 	}
 
-	t.Run("the sidecar rule is unchanged", func(t *testing.T) {
+	t.Run("both gateways read the same entry", func(t *testing.T) {
 		services := service(v1.LoadBalancerIngress{Hostname: "lb.example.com"}, v1.LoadBalancerIngress{IP: "1.2.3.4"})
-		services.Items[0].Spec.Ports = []v1.ServicePort{{Name: ingressGatewayPortName, Port: 15443}}
+		services.Items[0].Spec.Ports = []v1.ServicePort{
+			{Name: ingressGatewayPortName, Port: 15443},
+			{Name: ambientGatewayPortName, Port: 15008},
+		}
 
-		got := extractLoadBalancerInfo(services, ingressGatewayPortName, firstIngressEntry)
-		if len(got) != 1 || got[0].Address != "lb.example.com" {
-			t.Fatalf("got %+v, want the first entry's hostname", got)
+		sidecar := extractLoadBalancerInfo(services, ingressGatewayPortName)
+		if len(sidecar) != 1 || sidecar[0].Address != "lb.example.com" || sidecar[0].Port != 15443 {
+			t.Fatalf("sidecar: got %+v, want lb.example.com:15443", sidecar)
+		}
+
+		ambient := extractLoadBalancerInfo(services, ambientGatewayPortName)
+		if len(ambient) != 1 || ambient[0].Address != "lb.example.com" || ambient[0].Port != 15008 {
+			t.Fatalf("ambient: got %+v, want lb.example.com:15008", ambient)
 		}
 	})
 }
@@ -646,25 +669,61 @@ func TestExtractNodePortInfo_SelectsByPortName(t *testing.T) {
 	}
 }
 
-func TestKeepIPAddresses(t *testing.T) {
-	got, dropped := keepIPAddresses([]Gateway{
+func TestKeepDialableAddresses(t *testing.T) {
+	got, dropped := keepDialableAddresses([]Gateway{
 		{Address: "1.2.3.4", Port: 15008},
 		{Address: "lb.example.com", Port: 15008},
 		{Address: "2001:db8::1", Port: 15008},
 		{Address: "::ffff:5.6.7.8", Port: 15008},
+		{Address: "LB.Example.COM.", Port: 15008},
+		{Address: "lb_1.example.com", Port: 15008},
+		{Address: "*.example.com", Port: 15008},
+		{Address: "", Port: 15008},
+		{Address: "999.999.999.999", Port: 15008},
 	})
 
 	want := []Gateway{
 		{Address: "1.2.3.4", Port: 15008},
+		{Address: "lb.example.com", Port: 15008},
 		{Address: "2001:db8::1", Port: 15008},
 		{Address: "5.6.7.8", Port: 15008},
+		{Address: "999.999.999.999", Port: 15008},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("kept %+v, want %+v", got, want)
 	}
 
-	if wantDropped := []Gateway{{Address: "lb.example.com", Port: 15008}}; !reflect.DeepEqual(dropped, wantDropped) {
+	wantDropped := []Gateway{
+		{Address: "lb_1.example.com", Port: 15008},
+		{Address: "*.example.com", Port: 15008},
+		{Address: "", Port: 15008},
+	}
+	if !reflect.DeepEqual(dropped, wantDropped) {
 		t.Fatalf("dropped %+v, want %+v", dropped, wantDropped)
+	}
+}
+
+func TestKeepDialableAddresses_CollapsesDuplicatesRatherThanDroppingThem(t *testing.T) {
+	got, dropped := keepDialableAddresses([]Gateway{
+		{Address: "LB.Example.com", Port: 15008},
+		{Address: "lb.example.com.", Port: 15008},
+		{Address: "lb.example.com", Port: 15008},
+		{Address: "::ffff:5.6.7.8", Port: 15008},
+		{Address: "5.6.7.8", Port: 15008},
+		{Address: "lb.example.com", Port: 15009},
+	})
+
+	want := []Gateway{
+		{Address: "lb.example.com", Port: 15008},
+		{Address: "5.6.7.8", Port: 15008},
+		{Address: "lb.example.com", Port: 15009},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("kept %+v, want %+v", got, want)
+	}
+
+	if len(dropped) != 0 {
+		t.Fatalf("dropped %+v, want nothing dropped", dropped)
 	}
 }
 
@@ -747,6 +806,24 @@ func TestRenderMulticlusterPrivateMetadataJSON_AmbientGateways(t *testing.T) {
 		}
 	})
 
+	t.Run("published when the load balancer assigned a DNS name", func(t *testing.T) {
+		service := ambientService(hbone)
+		service.Status.LoadBalancer.Ingress = []v1.LoadBalancerIngress{{Hostname: "ambient.lb.example.com"}}
+
+		exp := ambientExporter("LoadBalancer", service)
+
+		var pm MulticlusterPrivateMetadata
+		if err := json.Unmarshal([]byte(exp.RenderMulticlusterPrivateMetadataJSON()), &pm); err != nil {
+			t.Fatalf("cannot parse the rendered document: %v", err)
+		}
+		if pm.AmbientGateways == nil {
+			t.Fatal("ambientGateways missing")
+		}
+		if want := (Gateway{Address: "ambient.lb.example.com", Port: 15008}); (*pm.AmbientGateways)[0] != want {
+			t.Fatalf("got %+v, want %+v", (*pm.AmbientGateways)[0], want)
+		}
+	})
+
 	for _, tt := range []struct {
 		name    string
 		service *v1.Service
@@ -804,11 +881,11 @@ func TestAmbientGateways_Unusable(t *testing.T) {
 			setUp:               func(*Exporter) {},
 		},
 		{
-			name:                "every address is a hostname",
+			name:                "every address is a name the rendered Gateway could not hold",
 			ambientGatewayInlet: "LoadBalancer",
 			setUp: func(exp *Exporter) {
 				exp.ambientGatewayServiceInformer.GetStore().List()[0].(*v1.Service).Status.LoadBalancer.Ingress =
-					[]v1.LoadBalancerIngress{{Hostname: "lb.example.com"}}
+					[]v1.LoadBalancerIngress{{Hostname: "lb_1.example.com"}}
 			},
 		},
 		{
@@ -937,10 +1014,24 @@ func TestAmbientGateways_Advertised(t *testing.T) {
 		assertSidecarHalfIntact(t, exp.RenderMulticlusterPrivateMetadataJSON())
 	})
 
-	t.Run("an advertised hostname is still rejected", func(t *testing.T) {
+	t.Run("an advertised hostname is published", func(t *testing.T) {
 		exp := ambientExporter("LoadBalancer", ambientService(hbone))
 		exp.ambientGatewayAdvertiseConfigMapInformer = advertiseCM(t, ambientGatewayAdvertiseConfigMapName,
 			Gateway{Address: "lb.example.com", Port: 15008})
+
+		gateways, err := exp.ambientGateways()
+		if err != nil {
+			t.Fatalf("got %v, want the advertised hostname published", err)
+		}
+		if want := []Gateway{{Address: "lb.example.com", Port: 15008}}; !reflect.DeepEqual(gateways, want) {
+			t.Fatalf("got %+v, want %+v", gateways, want)
+		}
+	})
+
+	t.Run("an advertised name the Gateway API cannot carry is rejected", func(t *testing.T) {
+		exp := ambientExporter("LoadBalancer", ambientService(hbone))
+		exp.ambientGatewayAdvertiseConfigMapInformer = advertiseCM(t, ambientGatewayAdvertiseConfigMapName,
+			Gateway{Address: "lb_1.example.com", Port: 15008})
 
 		if gateways, err := exp.ambientGateways(); err == nil {
 			t.Fatalf("got %+v and no error, want the address rejected", gateways)

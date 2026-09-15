@@ -218,21 +218,19 @@ properties:
               The actual addresses that will be announced to remote clusters as this cluster's ambient east-west gateway. If not specified, the addresses will be discovered automatically from the gateway's own Service.
 
               Independent from [`ingressGateway.advertise`](#parameters-alliance-ingressgateway-advertise), which describes the sidecar east-west gateway. Where a single load balancer fronts both gateways, name its address in both lists and give each its own `port`.
-
-              Unlike the sidecar gateway, a DNS name cannot be announced here: the address is written straight into a `Workload` for ztunnel, which resolves it as an in-mesh hostname rather than through DNS.
             x-doc-d8Editions:
               - ee
               - cse-pro
             x-experimental: true
             default: []
-            x-examples: [[{"address": "172.16.0.5", "port": 15008}],[{"address": "2001:db8::1", "port": 15008}]]
+            x-examples: [[{"address": "172.16.0.5", "port": 15008}],[{"address": "2001:db8::1", "port": 15008}],[{"address": "somehost.example.com", "port": 15008}]]
             items:
               type: object
               required: ["address", "port"]
               properties:
                 address:
                   description: |
-                    The IP address (IPv4 or IPv6) peer clusters dial to reach the ambient east-west gateway.
+                    The IP address (IPv4 or IPv6) or DNS name peer clusters dial to reach the ambient east-west gateway.
                   anyOf:
                   - type: string
                     format: ipv4
@@ -242,6 +240,10 @@ properties:
                     format: ipv6
                     pattern: '^[0-9A-Fa-f:]+$'
                     example: "2001:db8::1"
+                  - type: string
+                    pattern: '^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}\.?$'
+                    maxLength: 253
+                    example: "somehost.example.com"
                 port:
                   type: integer
                   description: The port peer clusters should dial at this address to reach the ambient east-west gateway.
@@ -298,7 +300,7 @@ properties:
             description: |
               Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
 
-              Applies only when `inlet` is `LoadBalancer`. Worth setting where the default class hands out a DNS name rather than an IP address, which the ambient data plane cannot use.
+              Applies only when `inlet` is `LoadBalancer`.
             x-doc-d8Editions:
               - ee
               - cse-pro

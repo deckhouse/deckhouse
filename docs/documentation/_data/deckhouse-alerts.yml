@@ -1711,11 +1711,11 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The ambient east-west gateway is deployed in this cluster, but publishes no address peer clusters can dial: either every address it has is a DNS name, which the ambient data plane cannot use, or it has no address at all. The `metadata-exporter` pod logs in `d8-istio` say which.
+        The ambient east-west gateway is deployed in this cluster, but publishes no address peer clusters can dial: either it has no external address at all, or every address it has is neither an IP address nor a usable DNS name. The `metadata-exporter` pod logs in `d8-istio` say which.
 
         Ambient-mode workloads in peer clusters therefore cannot reach services here. Sidecar-mode multicluster is unaffected.
 
-        To fix, set `alliance.ambientGateway.advertise` to the IP address peers should dial. Or make the load balancer assign an IP rather than a DNS name (`alliance.ambientGateway.loadBalancerClass`, `.serviceAnnotations`). Or switch `alliance.ambientGateway.inlet` to `NodePort` and check that gateway pods are scheduled (`.nodeSelector`, `.tolerations`). Or turn `ambient.multicluster.enabled` off if ambient multicluster is not needed here.
+        To fix, set `alliance.ambientGateway.advertise` to the IP address or DNS name peers should dial. Or make the load balancer assign an address (`alliance.ambientGateway.loadBalancerClass`, `.serviceAnnotations`). Or switch `alliance.ambientGateway.inlet` to `NodePort` and check that gateway pods are scheduled (`.nodeSelector`, `.tolerations`). Or turn `ambient.multicluster.enabled` off if ambient multicluster is not needed here.
       summary: |
         The ambient east-west gateway has no address peers can dial.
       severity: "6"
