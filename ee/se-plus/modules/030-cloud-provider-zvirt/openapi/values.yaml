@@ -10,6 +10,29 @@ properties:
         type: string
         x-examples:
         - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lrUnBjbVZqZEZkcGRHaE9iMlJsVW05MWRHVnpJbjA9Cg=="
+      # Managed credential Secrets of the module namespace, keyed by Secret name. Written by
+      # hooks/credentials.go; while the migration from the legacy ZvirtClusterConfiguration is
+      # incomplete, hooks/zvirt_cluster_configuration.go seeds the same map from the legacy
+      # provider.username/password so the workloads keep rendering.
+      credentialSecrets:
+        type: object
+        default: {}
+        x-examples:
+        - d8-credentials:
+            authScheme: userPassword
+            identity: user
+            secret: password
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [authScheme, secret]
+          properties:
+            authScheme:
+              type: string
+            identity:
+              type: string
+            secret:
+              type: string
       providerClusterConfiguration:
         type: object
         additionalProperties: false
