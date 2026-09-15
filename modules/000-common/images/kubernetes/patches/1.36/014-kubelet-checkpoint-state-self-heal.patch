@@ -67,10 +67,10 @@ index 00000000000..0f279a7a84b
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/doc.go b/pkg/kubelet/cm/checkpointselfheal/doc.go
 new file mode 100644
-index 00000000000..7310962943d
+index 00000000000..bb30aaaf9a3
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/doc.go
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,33 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -100,6 +100,9 @@ index 00000000000..7310962943d
 +// containers are stopped inside containerManagerImpl.Start, before it returns:
 +// the runtime is marked synced only afterwards, so no pod can be admitted while
 +// CPUs and NUMA zones look free in the state but are still occupied.
++//
++// Containers are stopped with their pod's terminationGracePeriodSeconds, taken
++// from the CRI annotations; preStop hooks are not run.
 +package checkpointselfheal
 diff --git a/pkg/kubelet/cm/checkpointselfheal/metrics.go b/pkg/kubelet/cm/checkpointselfheal/metrics.go
 new file mode 100644
@@ -190,10 +193,10 @@ index 00000000000..190c2b2c532
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal.go b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
 new file mode 100644
-index 00000000000..c7f15c827b3
+index 00000000000..5b4dd164c8d
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
-@@ -0,0 +1,227 @@
+@@ -0,0 +1,233 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -350,7 +353,13 @@ index 00000000000..c7f15c827b3
 +		reason = ReasonPolicyMismatch
 +	}
 +
-+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
++	if err := os.Remove(path); err != nil {
++		if os.IsNotExist(err) {
++			// No file, so the failure was elsewhere and a retry cannot help.
++			klog.ErrorS(cause, "Checkpoint manager failed without a checkpoint to reset, kubelet will fail as before",
++				"manager", manager, "stateFile", path)
++			return false
++		}
 +		klog.ErrorS(err, "Could not remove unusable checkpoint, kubelet will fail as before",
 +			"manager", manager, "stateFile", path)
 +		return false
@@ -423,10 +432,10 @@ index 00000000000..c7f15c827b3
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/stop.go b/pkg/kubelet/cm/checkpointselfheal/stop.go
 new file mode 100644
-index 00000000000..507b0264df6
+index 00000000000..d0ff076c5bb
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/stop.go
-@@ -0,0 +1,283 @@
+@@ -0,0 +1,350 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -448,6 +457,7 @@ index 00000000000..507b0264df6
 +import (
 +	"context"
 +	"path/filepath"
++	"strconv"
 +	"sync"
 +	"time"
 +
@@ -461,15 +471,17 @@ index 00000000000..507b0264df6
 +)
 +
 +const (
-+	// stopGracePeriodSeconds is handed to the runtime. Pod specs are not
-+	// available this early, so each pod's own terminationGracePeriodSeconds
-+	// cannot be honoured and a single short value has to serve.
-+	stopGracePeriodSeconds = int64(15)
++	// Same key as podTerminationGracePeriodLabel in pkg/kubelet/kuberuntime,
++	// which cannot be imported from here (cycle through pkg/kubelet/cm).
++	terminationGracePeriodAnnotation = "io.kubernetes.pod.terminationGracePeriod"
 +
-+	// stopDeadline bounds the whole stop phase. Every container of every reset
-+	// is stopped in the same pass, so this is the grace period plus runtime
-+	// overhead rather than a per-manager budget.
-+	stopDeadline = 30 * time.Second
++	// The stop phase deadline is the longest grace period among the victims
++	// plus this margin for the SIGKILL and the runtime round trip.
++	stopDeadlineMargin = 30 * time.Second
++
++	// How long a failed stop is given to turn out to have worked anyway.
++	statusRecheckTimeout  = 10 * time.Second
++	statusRecheckInterval = time.Second
 +
 +	eventReason = "NUMACheckpointReset"
 +
@@ -487,6 +499,8 @@ index 00000000000..507b0264df6
 +// iteration until then, so nothing can be admitted while this runs. It never
 +// returns an error -- the state is already reset, and everything a caller could
 +// do is logged and counted here.
++//
++// Each container gets its pod's own grace period; preStop hooks are not run.
 +func StopContainersWithLostAssignments(ctx context.Context, runtime internalapi.RuntimeService, recorder record.EventRecorder) {
 +	resets := takePendingResets()
 +	if len(resets) == 0 {
@@ -510,13 +524,24 @@ index 00000000000..507b0264df6
 +		return
 +	}
 +
-+	stopCtx, cancel := context.WithTimeout(ctx, stopDeadline)
++	targets := planStops(resets, containers)
++
++	deadline := stopDeadlineMargin
++	for _, t := range targets {
++		if d := time.Duration(t.gracePeriodSeconds)*time.Second + stopDeadlineMargin; d > deadline {
++			deadline = d
++		}
++	}
++	stopCtx, cancel := context.WithTimeout(ctx, deadline)
 +	defer cancel()
 +
 +	var wg sync.WaitGroup
-+	stoppedBy := map[string]ManagerName{}
-+	for i := range resets {
-+		stopContainersFor(stopCtx, runtime, recorder, &resets[i], containers, stoppedBy, &wg)
++	for _, t := range targets {
++		wg.Add(1)
++		go func(t stopTarget) {
++			defer wg.Done()
++			stopContainer(stopCtx, runtime, recorder, t)
++		}(t)
 +	}
 +	wg.Wait()
 +
@@ -544,14 +569,15 @@ index 00000000000..507b0264df6
 +	writeResetReport(reportDir, resets)
 +}
 +
-+// runtimeContainer is what the runtime reports for one assignment key. Pod name
-+// and namespace come from CRI labels because the API is not necessarily
-+// reachable this early.
++// runtimeContainer is what the runtime reports for one assignment key. Pod name,
++// namespace and grace period come from CRI labels and annotations because the
++// API is not necessarily reachable this early.
 +type runtimeContainer struct {
-+	id           string
-+	running      bool
-+	podName      string
-+	podNamespace string
++	id                 string
++	running            bool
++	podName            string
++	podNamespace       string
++	gracePeriodSeconds int64
 +}
 +
 +// indexContainersByAssignment indexes the runtime's containers by assignment
@@ -588,74 +614,124 @@ index 00000000000..507b0264df6
 +			continue
 +		}
 +		byKey[key] = runtimeContainer{
-+			id:           c.Id,
-+			running:      running,
-+			podName:      c.Labels[kubelettypes.KubernetesPodNameLabel],
-+			podNamespace: c.Labels[kubelettypes.KubernetesPodNamespaceLabel],
++			id:                 c.Id,
++			running:            running,
++			podName:            c.Labels[kubelettypes.KubernetesPodNameLabel],
++			podNamespace:       c.Labels[kubelettypes.KubernetesPodNamespaceLabel],
++			gracePeriodSeconds: gracePeriodOf(c),
 +		}
 +	}
 +	return byKey, true
 +}
 +
-+// stopContainersFor queues one reset's containers for stopping. stoppedBy is
-+// shared across resets and is only touched from here, which the stop phase calls
-+// one reset at a time, so it needs no lock.
-+func stopContainersFor(ctx context.Context, runtime internalapi.RuntimeService, recorder record.EventRecorder, reset *ResourceManagerStateReset, containers map[AssignmentKey]runtimeContainer, stoppedBy map[string]ManagerName, wg *sync.WaitGroup) {
-+	for i := range reset.LostAssignments {
-+		lost := &reset.LostAssignments[i]
-+
-+		container, ok := containers[AssignmentKey{PodUID: lost.PodUID, ContainerName: lost.ContainerName}]
-+		if !ok {
-+			// An assignment left over for a container that no longer exists:
-+			// the common case right after a reboot.
-+			lost.Skipped = "no container for this assignment"
-+			continue
++func gracePeriodOf(c *runtimeapi.Container) int64 {
++	if raw, ok := c.Annotations[terminationGracePeriodAnnotation]; ok {
++		if v, err := strconv.ParseInt(raw, 10, 64); err == nil && v >= 0 {
++			return v
 +		}
-+
-+		lost.ContainerID = container.id
-+		lost.PodName = container.podName
-+		lost.PodNamespace = container.podNamespace
-+
-+		if !container.running {
-+			lost.Skipped = "container not running"
-+			continue
-+		}
-+
-+		// Both managers can lose the same container's assignment in one start.
-+		// Recording it for each is correct, but stopping it twice would count
-+		// two restarts and emit two events where one container was restarted.
-+		if owner, taken := stoppedBy[lost.ContainerID]; taken {
-+			lost.Skipped = "already stopped for the " + string(owner) + " manager"
-+			continue
-+		}
-+		stoppedBy[lost.ContainerID] = reset.Manager
-+
-+		wg.Add(1)
-+		go func() {
-+			defer wg.Done()
-+			stopContainer(ctx, runtime, recorder, reset.Manager, reset.Reason, lost)
-+		}()
++		klog.ErrorS(nil, "Container carries an unreadable termination grace period annotation, using the default",
++			"containerID", c.Id, "value", raw)
 +	}
++	return v1.DefaultTerminationGracePeriodSeconds
 +}
 +
-+func stopContainer(ctx context.Context, runtime internalapi.RuntimeService, recorder record.EventRecorder, manager ManagerName, reason Reason, lost *LostAssignment) {
-+	if err := runtime.StopContainer(ctx, lost.ContainerID, stopGracePeriodSeconds); err != nil {
++type stopTarget struct {
++	manager            ManagerName
++	reason             Reason
++	lost               *LostAssignment
++	gracePeriodSeconds int64
++}
++
++// planStops resolves lost assignments to running containers. A container lost
++// by both managers is stopped once, for the manager that recorded it first.
++func planStops(resets []ResourceManagerStateReset, containers map[AssignmentKey]runtimeContainer) []stopTarget {
++	var targets []stopTarget
++	stoppedBy := map[string]ManagerName{}
++
++	for i := range resets {
++		reset := &resets[i]
++		for j := range reset.LostAssignments {
++			lost := &reset.LostAssignments[j]
++
++			container, ok := containers[AssignmentKey{PodUID: lost.PodUID, ContainerName: lost.ContainerName}]
++			if !ok {
++				// An assignment left over for a container that no longer exists:
++				// the common case right after a reboot.
++				lost.Skipped = "no container for this assignment"
++				continue
++			}
++
++			lost.ContainerID = container.id
++			lost.PodName = container.podName
++			lost.PodNamespace = container.podNamespace
++
++			if !container.running {
++				lost.Skipped = "container not running"
++				continue
++			}
++
++			if owner, taken := stoppedBy[lost.ContainerID]; taken {
++				lost.Skipped = "already stopped for the " + string(owner) + " manager"
++				continue
++			}
++			stoppedBy[lost.ContainerID] = reset.Manager
++
++			targets = append(targets, stopTarget{
++				manager:            reset.Manager,
++				reason:             reset.Reason,
++				lost:               lost,
++				gracePeriodSeconds: container.gracePeriodSeconds,
++			})
++		}
++	}
++	return targets
++}
++
++func stopContainer(ctx context.Context, runtime internalapi.RuntimeService, recorder record.EventRecorder, t stopTarget) {
++	lost := t.lost
++
++	err := runtime.StopContainer(ctx, lost.ContainerID, t.gracePeriodSeconds)
++	if err != nil && !stoppedAnyway(ctx, runtime, lost.ContainerID) {
 +		lost.Error = err.Error()
-+		stopFailuresTotal.WithLabelValues(string(manager)).Inc()
++		stopFailuresTotal.WithLabelValues(string(t.manager)).Inc()
 +		klog.ErrorS(err, "Failed to stop container, it may still hold CPUs or a NUMA zone the state considers free",
-+			"manager", manager, "pod", klog.KRef(lost.PodNamespace, lost.PodName),
++			"manager", t.manager, "pod", klog.KRef(lost.PodNamespace, lost.PodName),
 +			"containerName", lost.ContainerName, "containerID", lost.ContainerID)
-+		emitStopFailedEvent(recorder, manager, reason, lost, err)
++		emitStopFailedEvent(recorder, t.manager, t.reason, lost, err)
 +		return
++	}
++	if err != nil {
++		klog.InfoS("Stop request failed but the container is no longer running, counting it as stopped",
++			"err", err, "manager", t.manager, "pod", klog.KRef(lost.PodNamespace, lost.PodName),
++			"containerName", lost.ContainerName, "containerID", lost.ContainerID)
 +	}
 +
 +	lost.Stopped = true
-+	stoppedContainersTotal.WithLabelValues(string(manager)).Inc()
++	stoppedContainersTotal.WithLabelValues(string(t.manager)).Inc()
 +	klog.InfoS("Stopped container after checkpoint reset, it will be recreated and pinned again",
-+		"manager", manager, "reason", reason, "pod", klog.KRef(lost.PodNamespace, lost.PodName),
-+		"containerName", lost.ContainerName, "containerID", lost.ContainerID)
++		"manager", t.manager, "reason", t.reason, "pod", klog.KRef(lost.PodNamespace, lost.PodName),
++		"containerName", lost.ContainerName, "containerID", lost.ContainerID, "gracePeriodSeconds", t.gracePeriodSeconds)
 +
-+	emitStoppedEvent(recorder, manager, reason, lost)
++	emitStoppedEvent(recorder, t.manager, t.reason, lost)
++}
++
++// stoppedAnyway polls the container state after a failed stop request: the
++// deadline can expire while the runtime is still finishing the kill.
++func stoppedAnyway(ctx context.Context, runtime internalapi.RuntimeService, containerID string) bool {
++	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), statusRecheckTimeout)
++	defer cancel()
++
++	for {
++		resp, err := runtime.ContainerStatus(ctx, containerID, false)
++		if err == nil && resp.GetStatus().GetState() != runtimeapi.ContainerState_CONTAINER_RUNNING {
++			return true
++		}
++		select {
++		case <-ctx.Done():
++			return false
++		case <-time.After(statusRecheckInterval):
++		}
++	}
 +}
 +
 +// emitStoppedEvent puts the reason on the pod. The stop goes straight to the
@@ -687,7 +763,7 @@ index 00000000000..507b0264df6
 +}
 +
 +// podRef builds the reference by hand, because the pod object is not loaded this
-+// early. A nil recorder is standalone mode, where there is no API at all.
++// early. A nil recorder means there is nowhere to send events.
 +func podRef(recorder record.EventRecorder, lost *LostAssignment) *v1.ObjectReference {
 +	if recorder == nil || lost.PodName == "" || lost.PodNamespace == "" {
 +		return nil
