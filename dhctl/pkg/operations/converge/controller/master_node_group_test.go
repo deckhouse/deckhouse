@@ -432,5 +432,5 @@ func TestMergeMasterHosts(t *testing.T) {
 		{Host: "10.0.0.1", Name: "cluster-master-0"},
 		{Host: "10.0.0.9", Name: "cluster-master-1"},
 		{Host: "10.0.0.3", Name: "cluster-master-2"},
-	}, mergeMasterHosts(sessionHosts, cachedHosts))
+	}, state.MergeMasterHosts(sessionHosts, cachedHosts))
 }

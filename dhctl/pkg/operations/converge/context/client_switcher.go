@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -110,11 +111,15 @@ func (s *KubeClientSwitcher) CleanupNodeUser() error {
 }
 
 // CleanupConvergeUser removes the account this converge baked into the masters it built.
-// Not gated on the switch being enabled: DHCTL_CLI_NO_SWITCH_TO_NODE_USER keeps dhctl from
-// logging in as that account, it does not keep a new master from booting with it.
+// A node left uncleaned is not a converge failure: the rollout is over by the time this
+// runs and the account expires on its own, while failing here would report a finished
+// converge as broken. The error is for the caller to keep the state with, not to abort on.
 func (s *KubeClientSwitcher) CleanupConvergeUser(ctx context.Context) error {
 	const action = "Remove the converge user from the nodes this converge built"
 
+	// Gated by hand rather than by isSkipOrLogStart: that also skips a disabled switch, and
+	// DHCTL_CLI_NO_SWITCH_TO_NODE_USER stops dhctl logging in as the account, not a new
+	// master from booting with it.
 	if s.inCommander(action) {
 		return nil
 	}
@@ -125,7 +130,7 @@ func (s *KubeClientSwitcher) CleanupConvergeUser(ctx context.Context) error {
 
 	s.debugStartOperation(action)
 
-	return dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
+	err := dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
 		sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
 			return err
@@ -133,6 +138,18 @@ func (s *KubeClientSwitcher) CleanupConvergeUser(ctx context.Context) error {
 
 		return s.removeConvergeUser(ctx, sshProvider)
 	})
+	if err == nil {
+		return nil
+	}
+
+	s.warn(
+		"Could not remove %s from every node this converge built:\n%v\nThose nodes still accept it "+
+			"until the expiry date baked into the account, at most two days after this converge created "+
+			"them. The next converge removes it from the ones still listed.",
+		global.ConvergeUserName, err,
+	)
+
+	return err
 }
 
 // removeConvergeUser deletes the account node by node. One machine refusing must not save
@@ -160,6 +177,11 @@ func (s *KubeClientSwitcher) removeConvergeUser(ctx context.Context, sshProvider
 		return fmt.Errorf("get ssh client: %w", err)
 	}
 
+	creds, err := s.credentialsFor(convergeState.ConvergeUserNodes)
+	if err != nil {
+		return err
+	}
+
 	addresses, err := s.masterAddresses(sshCl.Session())
 	if err != nil {
 		return err
@@ -167,33 +189,61 @@ func (s *KubeClientSwitcher) removeConvergeUser(ctx context.Context, sshProvider
 
 	var failures *multierror.Error
 
-	for _, node := range convergeState.ConvergeUserNodes {
+	for _, node := range cleanupOrder(convergeState.ConvergeUserNodes, addresses, sshCl.Session().Host()) {
 		host := session.Host{Host: addresses[node], Name: node}
 
-		if err := removeConvergeUserOn(ctx, standalone, sshCl, host); err != nil {
+		if err := removeConvergeUserOn(ctx, standalone, sshCl, creds, host); err != nil {
 			failures = multierror.Append(failures, err)
+			continue
+		}
+
+		// Written back node by node: a converge that stops here must not send the next
+		// one to log in to this node as the account it has just removed.
+		convergeState.ConvergeUserNodes = slices.DeleteFunc(convergeState.ConvergeUserNodes, func(name string) bool {
+			return name == node
+		})
+
+		if err := s.ctx.SetConvergeState(convergeState); err != nil {
+			failures = multierror.Append(failures, fmt.Errorf("save converge state without %s: %w", node, err))
 		}
 	}
 
 	return failures.ErrorOrNil()
 }
 
+// cleanupOrder leaves the node the live client is connected to for last: the kube tunnel
+// rides that session, the ssh backend reconnects on its own, and a reconnect made after
+// the account is gone cannot authenticate.
+func cleanupOrder(nodes []string, addresses map[string]string, connected string) []string {
+	ordered := make([]string, 0, len(nodes))
+
+	var last []string
+
+	for _, node := range nodes {
+		if addresses[node] == connected {
+			last = append(last, node)
+			continue
+		}
+
+		ordered = append(ordered, node)
+	}
+
+	return append(ordered, last...)
+}
+
 // masterAddresses is every master dhctl has an address for. A master this converge built is
 // deliberately kept out of the session — that carries one generation of users — so its
-// address comes from the hosts cache, rewritten as each master is created.
+// address comes from the hosts cache, written once the new masters are up.
 func (s *KubeClientSwitcher) masterAddresses(sess *session.Session) (map[string]string, error) {
 	cached, err := dstate.GetMasterHostsIPs(s.ctx.Ctx(), s.ctx.StateCache())
 	if err != nil {
 		return nil, fmt.Errorf("read master addresses from the cache: %w", err)
 	}
 
-	addresses := make(map[string]string, len(cached))
+	merged := dstate.MergeMasterHosts(sess.AvailableHosts(), cached)
 
-	for _, host := range sess.AvailableHosts() {
-		addresses[host.Name] = host.Host
-	}
-
-	for _, host := range cached {
+	addresses := make(map[string]string, len(merged))
+	for _, host := range merged {
 		addresses[host.Name] = host.Host
 	}
 
@@ -203,18 +253,17 @@ func (s *KubeClientSwitcher) masterAddresses(sess *session.Session) (map[string]
 // removeConvergeUserOn deletes the account while logged in as it. -f is what makes that
 // work: userdel refuses a user that owns a running process, and the ssh session running
 // the command is one. The account also carries an expiry date, in case this never runs.
-func removeConvergeUserOn(ctx context.Context, provider libcon.StandaloneClientProvider, source libcon.SSHClient, host session.Host) error {
+func removeConvergeUserOn(ctx context.Context, provider libcon.StandaloneClientProvider, source libcon.SSHClient, creds sshCredentials, host session.Host) error {
 	if host.Host == "" {
 		return fmt.Errorf("remove %s on %s: no ssh address known for the node", global.ConvergeUserName, host.Name)
 	}
 
 	key := "converge-user-cleanup/" + host.Name
-	creds := sshCredentials{User: global.ConvergeUserName}
 	sess := switchSession(source.Session(), creds, []session.Host{host})
 
 	client, err := provider.StandaloneClientFor(ctx, key, sess, source.PrivateKeys())
 	if err != nil {
-		return fmt.Errorf("connect to %s as %s: %w", host.Name, global.ConvergeUserName, err)
+		return fmt.Errorf("connect to %s as %s: %w", host.Name, creds.User, err)
 	}
 
 	// Nothing else stops a keyed client, and this one logs in with an account that is

@@ -38,6 +38,30 @@ func SaveMasterHostsToCache(ctx context.Context, cache Cache, hosts map[string]s
 	}
 }
 
+// MergeMasterHosts joins two host lists by node name, the cached address winning: it is
+// rewritten every time a master is created or recreated, while the session may still hold
+// the address of a machine that has been replaced.
+func MergeMasterHosts(sessionHosts, cachedHosts []session.Host) []session.Host {
+	byName := make(map[string]string, len(sessionHosts)+len(cachedHosts))
+
+	for _, host := range sessionHosts {
+		byName[host.Name] = host.Host
+	}
+
+	for _, host := range cachedHosts {
+		byName[host.Name] = host.Host
+	}
+
+	merged := make([]session.Host, 0, len(byName))
+	for name, address := range byName {
+		merged = append(merged, session.Host{Host: address, Name: name})
+	}
+
+	sort.Sort(session.SortByName(merged))
+
+	return merged
+}
+
 func GetMasterHostsIPs(ctx context.Context, cache Cache) ([]session.Host, error) {
 	inCache, err := cache.InCache(ctx, MasterHostsCacheKey)
 	if err != nil {

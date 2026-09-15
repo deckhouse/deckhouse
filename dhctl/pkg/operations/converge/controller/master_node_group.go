@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 
 	"github.com/name212/govalue"
 
@@ -109,7 +108,7 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not read master hosts from cache: %v", err))
 	}
 
-	userPassedHosts := mergeMasterHosts(sessionHosts, cachedHosts)
+	userPassedHosts := state.MergeMasterHosts(sessionHosts, cachedHosts)
 
 	nodesNames := make([]string, 0, len(c.state.State))
 	for nodeName := range c.state.State {
@@ -124,30 +123,6 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	c.nodeToHost = nodeToHost
 
 	return nil
-}
-
-// mergeMasterHosts joins two host lists by node name, the cached address winning: it is
-// rewritten every time a master is created or recreated, while the session may still hold
-// the address of a machine that has been replaced.
-func mergeMasterHosts(sessionHosts, cachedHosts []session.Host) []session.Host {
-	byName := make(map[string]string, len(sessionHosts)+len(cachedHosts))
-
-	for _, host := range sessionHosts {
-		byName[host.Name] = host.Host
-	}
-
-	for _, host := range cachedHosts {
-		byName[host.Name] = host.Host
-	}
-
-	merged := make([]session.Host, 0, len(byName))
-	for name, address := range byName {
-		merged = append(merged, session.Host{Host: address, Name: name})
-	}
-
-	sort.Sort(session.SortByName(merged))
-
-	return merged
 }
 
 // confirmOrProceed answers the questions converge asks before it recreates a master: the

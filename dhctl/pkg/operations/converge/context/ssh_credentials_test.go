@@ -17,6 +17,7 @@ package context
 import (
 	gocontext "context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -75,9 +76,20 @@ type fakeStateStore struct {
 	state *State
 }
 
-func (s *fakeStateStore) GetState(*Context) (*State, error) { return s.state, nil }
+// GetState hands out a copy, as the real store does by unmarshalling afresh: only SetState
+// persists, so a test can tell a written-back state from a mutated one.
+func (s *fakeStateStore) GetState(*Context) (*State, error) {
+	copied := *s.state
+	copied.ConvergeUserNodes = slices.Clone(s.state.ConvergeUserNodes)
 
-func (s *fakeStateStore) SetState(*Context, *State) error { return nil }
+	return &copied, nil
+}
+
+func (s *fakeStateStore) SetState(_ *Context, st *State) error {
+	s.state = st
+
+	return nil
+}
 
 func (s *fakeStateStore) Delete(*Context) error { return nil }
 
@@ -260,6 +272,7 @@ type standaloneRecorder struct {
 	*testssh.SSHProvider
 	usersByHost map[string]string
 	stoppedKeys []string
+	order       []string
 }
 
 func (p *standaloneRecorder) StandaloneClientFor(ctx gocontext.Context, key string, sess *session.Session, keys []session.AgentPrivateKey, opts ...libcon.StandaloneClientOpt) (libcon.SSHClient, error) {
@@ -310,7 +323,10 @@ func TestCleanupConvergeUser(t *testing.T) {
 						WithErr(errors.New("exit status 8"))
 				}
 
-				return cmd.WithRun(func() { ran[host] = append([]string{name}, args...) })
+				return cmd.WithRun(func() {
+					ran[host] = append([]string{name}, args...)
+					recorder.order = append(recorder.order, host)
+				})
 			})
 		}
 
@@ -339,6 +355,10 @@ func TestCleanupConvergeUser(t *testing.T) {
 
 		require.Equal(t, global.ConvergeUserName, recorder.usersByHost[rebuilt])
 		require.Len(t, recorder.stoppedKeys, 1, "the connection outlives the account it logs in with")
+
+		state, err := switcher.ctx.ConvergeState()
+		require.NoError(t, err)
+		require.Empty(t, state.ConvergeUserNodes)
 	})
 
 	t.Run("a converge that built no master touches nothing", func(t *testing.T) {
@@ -361,6 +381,29 @@ func TestCleanupConvergeUser(t *testing.T) {
 
 		require.Equal(t, userdel, ran[preExisting], "the host after the failing one is cleaned up too")
 		require.Len(t, ran, 2)
+	})
+
+	t.Run("a cleaned node leaves the state right away", func(t *testing.T) {
+		switcher := newSwitcher(t, "cluster-master-0", "cluster-master-1")
+		recorder, _ := newRecorder(preExisting)
+
+		require.Error(t, switcher.removeConvergeUser(t.Context(), recorder))
+
+		// Left listed, the cleaned node would send the next converge to log in as an
+		// account that is already gone, and no converge of this cluster could finish.
+		state, err := switcher.ctx.ConvergeState()
+		require.NoError(t, err)
+		require.Equal(t, []string{"cluster-master-1"}, state.ConvergeUserNodes)
+	})
+
+	t.Run("the node the live client is on is cleaned last", func(t *testing.T) {
+		// The session is connected to the pre-existing master, and this converge rebuilt
+		// it too: taking its account first would break the kube tunnel riding that session.
+		switcher := newSwitcher(t, "cluster-master-1", "cluster-master-0")
+		recorder, _ := newRecorder("")
+
+		require.NoError(t, switcher.removeConvergeUser(t.Context(), recorder))
+		require.Equal(t, []string{rebuilt, preExisting}, recorder.order)
 	})
 
 	t.Run("a node with no known address is reported, the rest are cleaned", func(t *testing.T) {

@@ -37,6 +37,7 @@ func TestSwitcherSkipsNodeUserWhenSSHless(t *testing.T) {
 
 	require.NoError(t, switcher.SwitchToNodeUser(t.Context(), nil))
 	require.NoError(t, switcher.CleanupNodeUser())
+	require.NoError(t, switcher.CleanupConvergeUser(t.Context()))
 
 	// Strict switches are skipped as well: with no SSH there is no session to move.
 	require.NoError(t, switcher.SwitchToFirstMaster(t.Context()))

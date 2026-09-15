@@ -491,10 +491,12 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 	}
 
 	if kubeClientSwitched {
-		// Before CleanupNodeUser: it deletes the converge state, and that state is the
-		// list of nodes carrying the converge user.
-		if err := r.switcher.CleanupConvergeUser(ctx.Ctx()); err != nil {
-			return err
+		// Before CleanupNodeUser: that deletes the converge state, and the state is the
+		// list of nodes still carrying the converge user. An unfinished cleanup is not a
+		// converge failure — it has already warned, and the account expires by itself —
+		// but the list has to survive for the next converge to finish the job.
+		if leftovers := r.switcher.CleanupConvergeUser(ctx.Ctx()); leftovers != nil {
+			return nil
 		}
 
 		return r.switcher.CleanupNodeUser()
