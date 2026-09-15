@@ -372,7 +372,7 @@ Expected HTTP response code [202] when accessing
 
 ## Как создать прерываемые узлы в Selectel?
 
-В Selectel для создания прерываемых инстансов используется тег Nova `preemptible`. Параметр [`additionalTags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-additionaltags) для таких тегов не подходит, поскольку его значения преобразуются в формат ключ=значение. Чтобы передать тег в Nova без изменений, используйте параметр [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) ресурса OpenStackInstanceClass.
+Для инстансов, помеченных Nova-тегом `preemptible`, Selectel включает preemption. Установите параметр [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) ресурса OpenStackInstanceClass в `true` — тег будет автоматически прикреплён к инстансу.
 
 Пример:
 
@@ -385,8 +385,7 @@ spec:
   flavorName: SL1.4-8192
   imageName: Ubuntu 24.04 LTS 64-bit
   rootDiskSize: 30
-  tags:
-    - preemptible
+  preemptible: true
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -403,14 +402,14 @@ spec:
     zones: [ru-3a]
 ```
 
-При использовании параметра [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) учитывайте следующие ограничения:
+Ограничения:
 
-* Параметр `tags` поддерживается только в кластерах, размещённых в Selectel. Если указать его в другом OpenStack-облаке, в `.status.error` NodeGroup появится сообщение `Machine creation failed. Check events for details.`, виртуальные машины создаваться не будут. Подробности — в событиях NodeGroup: `Remove spec.tags, or use the field only on Selectel-hosted clusters where it is known to work.`
-* Параметр `tags` поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI. Если OpenStackInstanceClass с заданным параметром `tags` используется в NodeGroup на движке MCM, в `.status.error` NodeGroup появится ошибка. Контроллер не будет обрабатывать такую NodeGroup, пока параметр `tags` не будет удалён или NodeGroup не будет переведена на движок CAPI.
-* Движок управления выбирается отдельно для каждой NodeGroup. Если один OpenStackInstanceClass с заданным параметром `tags` используется одновременно в NodeGroup на движках CAPI и MCM, NodeGroup на MCM станет невалидной. Для NodeGroup, работающих на разных движках, используйте отдельные ресурсы OpenStackInstanceClass.
+* Тег `preemptible` — Selectel-специфичный механизм. В других OpenStack-облаках тег будет прикреплён к виртуальной машине, но проигнорирован — инстанс создастся, но прерываемым не будет.
+* Параметр поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI. Если OpenStackInstanceClass с `preemptible: true` используется в NodeGroup на движке MCM, рендер MCM machine-class завершается ошибкой и виртуальные машины не создаются; причина указывается в `.status.error` NodeGroup.
+* Движок управления выбирается отдельно для каждой NodeGroup. Если один OpenStackInstanceClass с `preemptible: true` используется одновременно в NodeGroup на движках CAPI и MCM, NodeGroup на MCM станет невалидной — для NodeGroup, работающих на разных движках, используйте отдельные ресурсы OpenStackInstanceClass.
 
 {% alert level="warning" %}
-Добавление, изменение или удаление параметра [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) в существующем OpenStackInstanceClass приводит к изменению OpenStackMachineTemplate и пересозданию всех узлов соответствующей NodeGroup.
+Изменение параметра [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) в существующем OpenStackInstanceClass приводит к изменению OpenStackMachineTemplate и пересозданию всех узлов соответствующей NodeGroup.
 {% endalert %}
 
 Если прерываемый инстанс завершается без `graceful shutdown`, соответствующий узел переходит в состояние `NotReady`. После обнаружения отсутствующего инстанса CAPO и MachineHealthCheck инициируют создание нового Machine и виртуальной машины. До завершения восстановления поды на потерянном узле могут отображаться в Kubernetes API в состоянии `Running`, хотя фактически они уже недоступны.

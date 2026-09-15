@@ -502,7 +502,7 @@ spec:
 
 ### How to create preemptible nodes in Selectel
 
-In Selectel, the Nova tag `preemptible` is used to create preemptible instances. The [`additionalTags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-additionaltags) parameter is not suitable for such tags because its values are converted to the `key=value` format. To pass the tag to Nova without modification, use the [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) parameter of the OpenStackInstanceClass resource.
+Selectel triggers preemption on the presence of the raw Nova tag `preemptible`. Set the [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) parameter of the OpenStackInstanceClass to `true` — the tag is then attached to the instance automatically.
 
 Example:
 
@@ -515,8 +515,7 @@ spec:
   flavorName: SL1.4-8192
   imageName: Ubuntu 24.04 LTS 64-bit
   rootDiskSize: 30
-  tags:
-    - preemptible
+  preemptible: true
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -533,14 +532,14 @@ spec:
     zones: [ru-3a]
 ```
 
-When using the [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) parameter, consider the following limitations:
+Limitations:
 
-- The `tags` parameter is supported only in Selectel-hosted clusters. If you specify it in another OpenStack cloud, the NodeGroup `.status.error` will show `Machine creation failed. Check events for details.`, and virtual machines will not be created. For details, check the NodeGroup events: `Remove spec.tags, or use the field only on Selectel-hosted clusters where it is known to work.`
-- The `tags` parameter is supported only for CloudEphemeral NodeGroups running on the CAPI engine. If an OpenStackInstanceClass with the `tags` parameter specified is used by a NodeGroup running on the MCM engine, an error will appear in the NodeGroup `.status.error`. The controller will not process such a NodeGroup until the `tags` parameter is removed or the NodeGroup is switched to the CAPI engine.
-- The management engine is selected separately for each NodeGroup. If the same OpenStackInstanceClass with the `tags` parameter specified is used simultaneously by NodeGroups running on CAPI and MCM, the MCM NodeGroup becomes invalid. Use separate OpenStackInstanceClass resources for NodeGroups running on different engines.
+- The `preemptible` tag is a Selectel-specific mechanism. On other OpenStack providers the tag is attached to the VM but ignored — the instance will be created but will not be preemptible.
+- Supported only for CloudEphemeral NodeGroups running on the CAPI engine. If an OpenStackInstanceClass with `preemptible: true` is used by a NodeGroup running on the MCM engine, the MCM machine-class render fails and no machine is created; the reason is written to the NodeGroup `.status.error`.
+- The management engine is selected per NodeGroup. If the same OpenStackInstanceClass with `preemptible: true` is used simultaneously by NodeGroups running on CAPI and MCM, the MCM NodeGroup becomes invalid — use separate OpenStackInstanceClass resources for different engines.
 
 {% alert level="warning" %}
-Adding, changing, or removing the [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) parameter in an existing OpenStackInstanceClass changes the OpenStackMachineTemplate and causes all nodes in the corresponding NodeGroup to be recreated.
+Changing the [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) parameter in an existing OpenStackInstanceClass changes the OpenStackMachineTemplate and causes all nodes in the corresponding NodeGroup to be recreated.
 {% endalert %}
 
 If a preemptible instance is terminated without a `graceful shutdown`, the corresponding node transitions to the `NotReady` state. After the missing instance is detected, CAPO and MachineHealthCheck initiate the creation of a new Machine and virtual machine. Until recovery is complete, pods on the lost node may still appear in the Kubernetes API with the `Running` status even though they are no longer actually available.
