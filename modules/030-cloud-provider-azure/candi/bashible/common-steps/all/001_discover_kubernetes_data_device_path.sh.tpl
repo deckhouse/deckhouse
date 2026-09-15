@@ -37,7 +37,10 @@ if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
 fi
 
 if [ -z "$kubernetes_data_device_id" ]; then
-  kubernetes_data_device_id="$(get_data_device_secret | jq -re --arg hostname "$(bb-d8-node-name)" '.data[$hostname] // empty' | base64 -d)"
+  # `jq -r` (not `-re`): with `set -eEo pipefail` the `-e` flag would fail the
+  # pipeline when the secret has no key for this node, killing the step before
+  # the emptiness check below can produce a readable error.
+  kubernetes_data_device_id="$(get_data_device_secret | jq -r --arg hostname "$(bb-d8-node-name)" '.data[$hostname] // empty' | base64 -d)"
   if [ -z "$kubernetes_data_device_id" ]; then
     >&2 echo "kubernetes_data_device_path is not set. Provide it via Terraform/cloud-init or Secret d8-masters-kubernetes-data-device-path."
     return 1
@@ -94,4 +97,10 @@ fi
 
 echo "kubernetes_data_device: $kubernetes_data_device_path"
 blkid
+
+# Persist the resolved block device path for the subsequent common step 005,
+# which runs in a fresh `bash -c` and would otherwise re-read the raw LUN
+# ("10") and fall back to unused-disk autodiscovery — the very behavior #18839
+# set out to remove.
+echo "$kubernetes_data_device_path" > /var/lib/bashible/kubernetes_data_device_path
 {{- end }}
