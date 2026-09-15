@@ -27,6 +27,20 @@ import (
 // is the filesystem whose size decides whether a bootstrap can finish.
 const nodeStatePath = "/var/lib"
 
+// nodeFilesystemFloorGB is how big the filesystem holding /var/lib has to be.
+//
+// It is not minimumRequiredRootDiskSizeGB, and the difference is the point. That constant is the
+// disk a cloud master is asked for, and it is checked against the configuration, where 50 means
+// 50. This one is checked against what df reports, and a 50 GB disk never presents 50 GB of
+// filesystem: the partition table, ext4's inode tables and journal take on the order of two
+// percent, and many images carve a boot partition off the front as well. Comparing the formatted
+// size against the unformatted requirement failed a node that had exactly the disk the
+// documentation asks for.
+//
+// 45 leaves room for both and still refuses a node given 40 GB, which is the mistake worth
+// catching.
+const nodeFilesystemFloorGB = 45
+
 // minimumFreeDiskGiB is how much of the filesystem has to be free for the bootstrap to finish:
 // unpacking packages, pulling images and writing the first etcd state all happen before anything
 // reclaims space.
@@ -79,15 +93,19 @@ func (c NodeDiskSpaceCheck) Run(ctx context.Context) (string, error) {
 		})
 	}
 
-	totalGB := totalKB / (1000 * 1000)
+	// df -Pk counts 1024-byte blocks, and GB here is decimal, the unit a disk is sold and
+	// configured in. Dividing the blocks by a million treated a KiB as a kB and reported every
+	// filesystem 2.3% smaller than it is.
+	totalGB := totalKB * 1024 / 1_000_000_000
 
-	if totalGB < minimumRequiredRootDiskSizeGB {
+	if totalGB < nodeFilesystemFloorGB {
 		// A disk does not grow between two attempts of the same check.
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the filesystem holding %s on %s", nodeStatePath, host),
 			Observed: fmt.Sprintf("it is %d GB", totalGB),
-			Expected: fmt.Sprintf("at least %d GB, the same floor a cloud master is checked against", minimumRequiredRootDiskSizeGB),
-			Fix:      "give the node a larger disk, or mount a larger filesystem at " + nodeStatePath,
+			Expected: fmt.Sprintf("at least %d GB of filesystem, which is what a %d GB disk holds once it is "+
+				"partitioned and formatted", nodeFilesystemFloorGB, minimumRequiredRootDiskSizeGB),
+			Fix: "give the node a larger disk, or mount a larger filesystem at " + nodeStatePath,
 		})
 	}
 

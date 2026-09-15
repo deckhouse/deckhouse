@@ -29,8 +29,16 @@ import (
 //
 // The two units are deliberate and are the ones the checks use: a disk is sold and reported in
 // decimal GB, and free space is compared in GiB, which is what an operator sees in `df -h`.
+// dfOutput renders what `df -Pk` prints for a filesystem of totalGB decimal gigabytes with
+// freeGiB gibibytes free.
+//
+// The conversion is spelled out because getting it wrong is the bug this file exists to catch:
+// df counts 1024-byte blocks, so a decimal gigabyte is 1e9/1024 of them, not a million. The
+// fixture used to make the same mistake as the code it was testing, which is why a filesystem
+// reported 2.3% smaller than it is went unnoticed until a node with exactly the documented disk
+// was refused.
 func dfOutput(totalGB, freeGiB int) string {
-	totalKB := totalGB * 1000 * 1000
+	totalKB := totalGB * 1_000_000_000 / 1024
 	freeKB := freeGiB * 1024 * 1024
 	return "Filesystem     1024-blocks     Used Available Capacity Mounted on\n" +
 		fmt.Sprintf("/dev/vda1 %d %d %d 22%% /\n", totalKB, totalKB-freeKB, freeKB)
@@ -49,8 +57,21 @@ func TestNodeDiskSpace(t *testing.T) {
 			wantDetail: "has 100 GB at /var/lib",
 		},
 		{
-			// The same floor cloud-master-system-requirements checks the configuration against,
-			// and which nothing checked against an actual machine.
+			// The case a real bootstrap was refused on: a 50 GiB disk, whose root filesystem
+			// measures about 50 GB once it is partitioned and formatted. It has the disk the
+			// documentation asks for, and the check said it was 49 GB and stopped the install.
+			name:       "the disk the documentation asks for",
+			node:       newFakeNode().on("df -Pk /var/lib").prints(dfOutput(50, 40)),
+			wantDetail: "has 50 GB at /var/lib",
+		},
+		{
+			// Formatting takes a couple of percent and many images carve off a boot partition,
+			// so the floor sits below the disk requirement rather than on it.
+			name:       "a disk of the right size with a boot partition taken off it",
+			node:       newFakeNode().on("df -Pk /var/lib").prints(dfOutput(46, 30)),
+			wantDetail: "has 46 GB at /var/lib",
+		},
+		{
 			name:    "a disk below the floor",
 			node:    newFakeNode().on("df -Pk /var/lib").prints(dfOutput(30, 25)),
 			wantErr: "it is 30 GB",
