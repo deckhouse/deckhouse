@@ -25,9 +25,18 @@
 #   KUBECONFIG_BASE64_DEV     (namespace deckhouse-web-stage)
 # A cluster whose variable is unset is skipped with a warning, not a failure.
 #
-# Required env: CI_COMMIT_TAG, RELEASE_CHANNEL.
+# Outside the deckhouse/deckhouse project (forks/test projects) the
+# deckhouse-web clusters are not reachable at all, so the whole script exits
+# 0 immediately.
+#
+# Required env: CI_COMMIT_TAG, RELEASE_CHANNEL, CI_PROJECT_PATH.
 
 set -Euo pipefail
+
+if [[ "${CI_PROJECT_PATH}" != "deckhouse/deckhouse" ]]; then
+  echo "⚓️ 🧪 [$(date -u)] CI_PROJECT_PATH='${CI_PROJECT_PATH}' is not 'deckhouse/deckhouse'. deckhouse-web clusters are not reachable from test/fork projects, skipping."
+  exit 0
+fi
 
 if [[ -z "${CI_COMMIT_TAG:-}" ]]; then
   echo "CI_COMMIT_TAG is not set." >&2
