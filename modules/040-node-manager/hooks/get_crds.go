@@ -148,8 +148,8 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 var _ = sdk.RegisterFunc(getCRDsHookConfig, getCRDsHandler)
 
 // getCRDsHandler builds the nodeManager.internal.nodeGroups blob: name, nodeType, engine,
-// gpu, fencing and the three read cloudInstances fields, with zones defaulted for
-// CloudEphemeral. Everything else about a NodeGroup is owned by node-controller.
+// gpu and the three read cloudInstances fields, with zones defaulted for CloudEphemeral.
+// Fencing has its own key, see fencing_node_groups.go.
 func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 	// Default zones. Take them from machine_deployments and cloud_provider_secret.zones.
 	defaultZones := set.New()
@@ -230,9 +230,6 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 			MaxPerZone: nodeGroupSpec.CloudInstances.MaxPerZone,
 			Zones:      nodeGroupSpec.CloudInstances.Zones,
 		}
-	}
-	if !nodeGroupSpec.Fencing.IsEmpty() {
-		res["fencing"] = nodeGroupSpec.Fencing
 	}
 	return res
 }

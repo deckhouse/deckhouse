@@ -34,7 +34,7 @@ import (
 const defaultFencingWatchdogTimeout = int64(60)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager/fencing",
+	Queue: "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "fencing_ngs",
