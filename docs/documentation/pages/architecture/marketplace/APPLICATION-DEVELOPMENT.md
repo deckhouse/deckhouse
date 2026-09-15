@@ -1,7 +1,7 @@
 ---
 title: Application development
 permalink: en/architecture/marketplace/application-development.html
-description: "Create an Application package for Deckhouse Kubernetes Platform Marketplace: bootstrap, project structure, package.yaml, CI/CD setup, local build, and OCI artifact layout."
+description: "Create an Application package for Deckhouse Platform Marketplace: bootstrap, project structure, package.yaml, CI/CD setup, local build, and OCI artifact layout."
 ---
 
 ## Prerequisites
@@ -106,7 +106,7 @@ requirements:
 | `type` | Yes | `Application` or `Module` |
 | `stage` | Yes | Maturity stage (`Preview`, `General Availability`, etc.) |
 | `category` | Yes | Category for catalog classification |
-| `requirements.deckhouse` | No | Minimum DKP version constraint |
+| `requirements.deckhouse` | No | Minimum DP version constraint |
 | `requirements.kubernetes` | No | Minimum Kubernetes version constraint |
 | `requirements.modules` | No | Module dependencies (semver constraints) |
 

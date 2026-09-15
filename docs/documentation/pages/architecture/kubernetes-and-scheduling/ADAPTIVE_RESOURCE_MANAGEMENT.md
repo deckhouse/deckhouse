@@ -2,12 +2,12 @@
 title: Adaptive-resource-management module
 permalink: en/architecture/kubernetes-and-scheduling/adaptive-resource-management.html
 search: adaptive-resource-management, autovpa
-description: Architecture of the adaptive-resource-management module in Deckhouse Kubernetes Platform.
+description: Architecture of the adaptive-resource-management module in Deckhouse Platform.
 ---
 
 The [`adaptive-resource-management`](/modules/adaptive-resource-management/) module  lets you automate the selection of resource requests and limits for workloads by leveraging the Vertical Pod Autoscaler (VPA) recommendations.
 
-The module deploys the **AutoVPA** controller based on [Goldilocks](https://github.com/FairwindsOps/goldilocks) tailored for Deckhouse Kubernetes Platform (DKP). The controller automatically creates and maintains VPA objects for workloads in selected namespaces and provides recommendations on resource configuration.
+The module deploys the **AutoVPA** controller based on [Goldilocks](https://github.com/FairwindsOps/goldilocks) tailored for Deckhouse Platform (DP). The controller automatically creates and maintains VPA objects for workloads in selected namespaces and provides recommendations on resource configuration.
 
 Main features:
 
@@ -29,7 +29,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`adaptive-resource-management`](/modules/adaptive-resource-management/) module and its interactions with other components of DKP are shown in the following diagram:
+The Level 2 C4 architecture of the [`adaptive-resource-management`](/modules/adaptive-resource-management/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Adaptive-resource-management module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-adaptive-resource-management.png)
 

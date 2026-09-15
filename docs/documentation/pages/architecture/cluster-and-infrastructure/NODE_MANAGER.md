@@ -2,7 +2,7 @@
 title: Node-manager module
 permalink: en/architecture/cluster-and-infrastructure/node-management/node-manager.html
 search: node-manager architecture
-description: Architecture of the node-manager module in Deckhouse Kubernetes Platform.
+description: Architecture of the node-manager module in Deckhouse Platform.
 ---
 
 Cluster nodes are managed by the `node-manager` module.

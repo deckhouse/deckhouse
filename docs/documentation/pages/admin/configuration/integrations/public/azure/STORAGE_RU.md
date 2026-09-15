@@ -6,7 +6,7 @@ lang: ru
 
 ## Хранилище
 
-При работе с Azure Deckhouse Kubernetes Platform (DKP) автоматически создаёт следующие StorageClass:
+При работе с Azure Deckhouse Platform (DP) автоматически создаёт следующие StorageClass:
 
 | Имя                    | Тип диска        |
 | ---------------------- | ---------------- |
@@ -43,7 +43,7 @@ spec:
 
 ## Балансировка нагрузки
 
-DKP автоматически создает ресурсы LoadBalancer в Azure при использовании Kubernetes-сервисов типа LoadBalancer.
+DP автоматически создает ресурсы LoadBalancer в Azure при использовании Kubernetes-сервисов типа LoadBalancer.
 
 Дополнительные особенности:
 

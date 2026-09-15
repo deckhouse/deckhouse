@@ -1,26 +1,26 @@
 ---
 title: "Managed PostgreSQL"
 permalink: en/admin/configuration/managed-services/postgres/
-description: "Administering managed PostgreSQL in Deckhouse Kubernetes Platform."
+description: "Administering managed PostgreSQL in Deckhouse Platform."
 ---
 
-The Managed PostgreSQL service helps you deploy and maintain PostgreSQL instances in DKP. [Supported PostgreSQL version](/modules/managed-postgres/user_guide.html#supported-postgresql-versions) — 17.6.
+The Managed PostgreSQL service helps you deploy and maintain PostgreSQL instances in DP. [Supported PostgreSQL version](/modules/managed-postgres/user_guide.html#supported-postgresql-versions) — 17.6.
 
 This page describes the settings a cluster administrator can configure: managing resource limits and topology, configuring parameter validation, setting default values, and binding to cluster nodes.
 
 ## Enabling the service
 
-To enable the Managed PostgreSQL service in DKP, complete the following steps:
+To enable the Managed PostgreSQL service in DP, complete the following steps:
 
 1. Make sure the [requirements for the `managed-postgres` module](/modules/managed-postgres/configuration.html#requirements) are met.
-1. [Enable the `managed-postgres` module](/modules/managed-postgres/configuration.html#enable) in the DKP web interface or another way.
-1. Create a [PostgresClass](/modules/managed-postgres/cr.html#postgresclass-v1alpha1) with the settings that users will need when creating Postgres objects. You can also use the `default` PostgresClass that the module creates when enabled. The `default` PostgresClass contains baseline settings so users can start creating databases right after Managed PostgreSQL is enabled in DKP. For production environments, it's recommended to create separate PostgresClass resources with explicit settings and limits.
+1. [Enable the `managed-postgres` module](/modules/managed-postgres/configuration.html#enable) in the DP web interface or another way.
+1. Create a [PostgresClass](/modules/managed-postgres/cr.html#postgresclass-v1alpha1) with the settings that users will need when creating Postgres objects. You can also use the `default` PostgresClass that the module creates when enabled. The `default` PostgresClass contains baseline settings so users can start creating databases right after Managed PostgreSQL is enabled in DP. For production environments, it's recommended to create separate PostgresClass resources with explicit settings and limits.
 
 Once the module is enabled, users can create PostgreSQL databases on their own. User operations with the service are described in [Usage → Managed services → Managed PostgreSQL](../../../user/managed-services/postgres.html).
 
 ## Dependencies for specific features
 
-Some module features require additional configuration of Deckhouse Kubernetes Platform components or cluster infrastructure:
+Some module features require additional configuration of Deckhouse Platform components or cluster infrastructure:
 
 | Feature                                                  | Requirement                                                                                                                                                                                 |
 |-----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

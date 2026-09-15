@@ -59,13 +59,13 @@ usage() {
  Usage: %s [--channel <CHANNEL NAME>] [--key <DECKHOUSE EE LICENSE KEY>] [--os <linux|mac>]
 
     --channel <CHANNEL NAME>
-            Deckhouse Kubernetes Platform release channel name.
+            Deckhouse Platform release channel name.
             Possible values: Alpha, Beta, EarlyAccess, Stable, RockSolid.
             Default: Stable.
 
     --key <DECKHOUSE EE LICENSE KEY>
-            Deckhouse Kubernetes Platform Enterprise Edition license key.
-            If no license key specified, Deckhouse Kubernetes Platform Community Edition will be installed.
+            Deckhouse Platform Enterprise Edition license key.
+            If no license key specified, Deckhouse Platform Community Edition will be installed.
 
     --os <linux|mac>
             Override the OS detection.
@@ -102,7 +102,7 @@ parse_args() {
     --key)
       case "$2" in
       "")
-        echo "License key is empty. Please specify the license key or don't use the --key parameter to install Deckhouse Kubernetes Platform Community Edition."
+        echo "License key is empty. Please specify the license key or don't use the --key parameter to install Deckhouse Platform Community Edition."
         usage
         exit 1
         ;;
@@ -213,14 +213,14 @@ memory_check() {
   fi
 
   if [[ ("$MEMORY_TOTAL_BYTES" -gt "0") && ("$MEMORY_TOTAL_BYTES" -lt "$REQUIRE_MEMORY_MIN_BYTES") ]]; then
-    echo "Insufficient memory to install Deckhouse Kubernetes Platform."
-    echo "Deckhouse Kubernetes Platform requires at least 4 gigabytes of memory."
+    echo "Insufficient memory to install Deckhouse Platform."
+    echo "Deckhouse Platform requires at least 4 gigabytes of memory."
     exit 1
   fi
 
   if [[ ("$MEMORY_TOTAL_BYTES" -eq "0") || (-z "$MEMORY_TOTAL_BYTES") ]]; then
     echo "Can't get the total memory value."
-    echo "Note, that Deckhouse Kubernetes Platform requires at least 4 gigabytes of memory."
+    echo "Note, that Deckhouse Platform requires at least 4 gigabytes of memory."
     echo "Press enter to continue..."
     read
   fi
@@ -402,7 +402,7 @@ nodes:
     protocol: TCP
 EOF
 
-  echo "Creating Deckhouse Kubernetes Platform installation config file (${CONFIG_DIR}/config.yml)..."
+  echo "Creating Deckhouse Platform installation config file (${CONFIG_DIR}/config.yml)..."
   cat <<EOF >${CONFIG_DIR}/config.yml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -494,7 +494,7 @@ deckhouse:
 EOF
   fi
 
-  echo "Creating Deckhouse Kubernetes Platform resource file (${CONFIG_DIR}/resources.yml)..."
+  echo "Creating Deckhouse Platform resource file (${CONFIG_DIR}/resources.yml)..."
   cat <<EOF >${CONFIG_DIR}/resources.yml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -540,7 +540,7 @@ E.g., you can find programs that use these ports using the following command:
 }
 
 deckhouse_install() {
-  echo "Running Deckhouse Kubernetes Platform installation (the $D8_RELEASE_CHANNEL_NAME release channel)..."
+  echo "Running Deckhouse Platform installation (the $D8_RELEASE_CHANNEL_NAME release channel)..."
 
   docker run --pull=always --rm --network kind -v "${CONFIG_DIR}/config.yml:/config.yml" -v "${CONFIG_DIR}/resources.yml:/resources.yml" \
     -v "${CONFIG_DIR}/kubeconfig:/kubeconfig" ${D8_REGISTRY_PATH}/install:$D8_RELEASE_CHANNEL_TAG \
@@ -548,7 +548,7 @@ deckhouse_install() {
              dhctl bootstrap-phase create-resources --kubeconfig=/kubeconfig --kubeconfig-context=kind-${KIND_CLUSTER_NAME} --resources=/resources.yml"
 
   if [ "$?" -ne "0" ]; then
-    echo "Error installing Deckhouse Kubernetes Platform!"
+    echo "Error installing Deckhouse Platform!"
     cluster_deletion_info
     exit 1
   fi
@@ -611,7 +611,7 @@ generate_ee_access_string() {
   D8_EE_ACCESS_STRING=$(echo -n "{\"auths\": { \"$D8_REGISTRY_ADDRESS\": { \"username\": \"license-token\", \"password\": \"$1\", \"auth\": \"$auth_part\"}}}" | base64 $B64_ARG)
 
   if [ "$?" -ne "0" ]; then
-    echo "Error generation container registry access string for Deckhouse Kubernetes Platform Enterprise Edition"
+    echo "Error generation container registry access string for Deckhouse Platform Enterprise Edition"
     exit 1
   fi
 }
@@ -642,7 +642,7 @@ Provide following credentials to access Grafana at http://grafana.127.0.0.1.ssli
 
 installation_finish() {
   printf "
-You have installed Deckhouse Kubernetes Platform in kind!
+You have installed Deckhouse Platform in kind!
 
 Don't forget that the default kubectl context has been changed to 'kind-${KIND_CLUSTER_NAME}'.
 

@@ -3,7 +3,7 @@ title: Модуль observability
 permalink: ru/architecture/observability/observability.html
 lang: ru
 search: observability, grafana, alertmanager, dashboard, дашборд, alert, алерт, алертинг
-description: Архитектура модуля observability в Deckhouse Kubernetes Platform.
+description: Архитектура модуля observability в Deckhouse Platform.
 ---
 
 Модуль [`observability`](/modules/observability/) расширяет функциональность модуля [`prometheus`](/modules/prometheus/) и [веб-интерфейса Deckhouse](/modules/console/), предоставляя дополнительные возможности для гибкого управления метриками, дашбордами и алертами, а также средства разграничения доступа к ним.
@@ -28,7 +28,7 @@ description: Архитектура модуля observability в Deckhouse Kube
 * Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура модуля [`observability`](/modules/observability/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`observability`](/modules/observability/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля observability](../../images/architecture/observability/c4-l2-observability.ru.svg)
 
@@ -42,7 +42,7 @@ description: Архитектура модуля observability в Deckhouse Kube
 
 1. **Alert-kube-api** — состоит из одного контейнера **alert-kube-api**, реализует [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который расширяет Kubernetes API кастомными ресурсами ObservabilityAlert и ClusterObservabilityAlert. Alert-kube-api позволяет запрашивать алерты как кастомные ресурсы, используя в качестве бэкенда компонент Alertmanager модуля, и кеширует их в памяти для быстрого доступа.
 
-1. **Alertmanager** — принимает алерты от компонента prometheus-main модуля [`prometheus`](/modules/prometheus/), обрабатывает и отправляет их конечным получателям. DKP поддерживает отправку алертов через следующие каналы доставки:
+1. **Alertmanager** — принимает алерты от компонента prometheus-main модуля [`prometheus`](/modules/prometheus/), обрабатывает и отправляет их конечным получателям. DP поддерживает отправку алертов через следующие каналы доставки:
 
    * `Email`;
    * `Telegram`;

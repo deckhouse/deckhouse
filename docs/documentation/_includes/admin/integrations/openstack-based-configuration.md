@@ -1,6 +1,6 @@
 ## List of required OpenStack services
 
-The following {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services must be available for Deckhouse Kubernetes Platform (DKP) to operate:
+The following {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services must be available for Deckhouse Platform (DP) to operate:
 
 | Service                      |                         API Version                      |
 | :------------------------- | :--------------------------------------------------------: |
@@ -39,7 +39,7 @@ To avoid this, we recommend using the [SimpleWithInternalNetwork](#simplewithint
 with a bastion host.
 {% endalert %}
 
-The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DKP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
+The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
 
 The following inbound rules will be created:
 
@@ -48,7 +48,7 @@ The following inbound rules will be created:
 - Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
 - Allow any incoming traffic from nodes in the same security group.
 
-In addition to the group created by DKP, you can attach your own security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and specify them in `additionalSecurityGroups`:
+In addition to the group created by DP, you can attach your own security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and specify them in `additionalSecurityGroups`:
 
 - For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
 - For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
@@ -159,7 +159,7 @@ This layout should be used if you want all nodes in the cluster to be directly a
 ![StandardWithNoRouter layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
 <!--- Source: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
-The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DKP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
+The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
 
 The following inbound rules will be created:
 
@@ -168,7 +168,7 @@ The following inbound rules will be created:
 - Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
 - Allow any incoming traffic from nodes in the same security group.
 
-In addition to the group created by DKP, you can attach your own security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and specify them in `additionalSecurityGroups`:
+In addition to the group created by DP, you can attach your own security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and specify them in `additionalSecurityGroups`:
 
 - For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
 - For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
@@ -257,7 +257,7 @@ An internal LoadBalancer with the virtual IP in the public network is only acces
 ![Simple layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simple.png)
 <!--- Source: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
-In this layout, DKP does not create security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and attach them to the nodes via `additionalSecurityGroups`:
+In this layout, DP does not create security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and attach them to the nodes via `additionalSecurityGroups`:
 
 - For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
 - For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
@@ -336,7 +336,7 @@ This layout can be useful if you need to merge a Kubernetes cluster with existin
 ![SimpleWithInternalNetwork layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
 <!--- Source: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
 
-In this layout, DKP does not create security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and attach them to the nodes via `additionalSecurityGroups`:
+In this layout, DP does not create security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and attach them to the nodes via `additionalSecurityGroups`:
 
 - For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
 - For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
@@ -418,7 +418,7 @@ Integration with {{ site.data.admin.cloud-types.types[page.cloud_type].name }} i
 using the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
 It defines the configuration of the cloud cluster in {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 and is used by the cloud provider when the cluster control plane is hosted in the cloud.
-The DKP module responsible for the integration is automatically configured based on the selected layout.
+The DP module responsible for the integration is automatically configured based on the selected layout.
 
 To modify the configuration in a running cluster, run the following command:
 
@@ -514,7 +514,7 @@ The `annotations` field of the corresponding inlet configuration in the [Ingress
 - `loadbalancer.openstack.deckhouse.io/load-balancer-id`: Instructs OpenStack CCM to use a pre-created Octavia load balancer.
 - `loadbalancer.openstack.deckhouse.io/load-balancer-address`: Instructs OpenStack CCM to associate a pre-allocated floating IP with the load balancer it creates.
 
-DKP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
+DP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
 
 When using the `loadbalancer.openstack.deckhouse.io/load-balancer-id` annotation, the load balancer must meet the following requirements:
 
@@ -530,7 +530,7 @@ When using only `loadbalancer.openstack.deckhouse.io/load-balancer-address`, the
 
 If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the Service object.
 
-Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DKP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
+Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
 
 #### IngressNginxController with a pre-created load balancer
 

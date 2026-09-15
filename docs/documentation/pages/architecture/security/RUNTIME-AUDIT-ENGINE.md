@@ -2,10 +2,10 @@
 title: Runtime-audit-engine module
 permalink: en/architecture/security/runtime-audit-engine.html
 search: security audit, audit rules, falco, runtime-audit-engine
-description: Architecture of the runtime-audit-engine module in Deckhouse Kubernetes Platform.
+description: Architecture of the runtime-audit-engine module in Deckhouse Platform.
 ---
 
-The [`runtime-audit-engine`](/modules/runtime-audit-engine/) module implements [runtime auditing](./runtime-audit.html) in Deckhouse Kubernetes Platform (DKP) based on the [Falco](https://falco.org/) threat detection system. The module collects Linux kernel events and Kubernetes API audit events (using the `k8saudit` plugin), enriches them with Kubernetes Pod metadata, and generates security events according to configured rules. Audit rules are defined using the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
+The [`runtime-audit-engine`](/modules/runtime-audit-engine/) module implements [runtime auditing](./runtime-audit.html) in Deckhouse Platform (DP) based on the [Falco](https://falco.org/) threat detection system. The module collects Linux kernel events and Kubernetes API audit events (using the `k8saudit` plugin), enriches them with Kubernetes Pod metadata, and generates security events according to configured rules. Audit rules are defined using the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
 
 When the module is enabled, the `control-plane-configurator` ConfigMap is created in the `d8-runtime-audit-engine` namespace with the audit webhook URL and CA. The [`control-plane-manager`](/modules/control-plane-manager/) module detects this ConfigMap and configures the control plane to send Kubernetes API audit events to the `runtime-audit-engine` module.
 
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 - Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module and its interactions with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module and its interactions with other DP components are shown in the following diagram:
 
 ![Runtime-audit-engine module architecture](../../images/architecture/security/c4-l2-runtime-audit-engine.svg)
 
@@ -30,7 +30,7 @@ The `runtime-audit-engine` module consists of the following components:
 
    The component includes the following containers:
 
-   - **falco**: Main container that collects security events from cluster nodes and containerized applications in DKP based on the [Falco](https://falco.org/) threat detection system.
+   - **falco**: Main container that collects security events from cluster nodes and containerized applications in DP based on the [Falco](https://falco.org/) threat detection system.
    - **falcosidekick**: Sidecar container that receives events from the `falco` component and exports audit events as Prometheus metrics.
    - **rules-loader**: Sidecar container that performs the following operations:
       - Watches [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resources and stores them in the shared `/etc/falco/rules.d/` Pod directory for processing by the `falco` component.

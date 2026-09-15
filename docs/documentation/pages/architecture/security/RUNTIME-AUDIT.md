@@ -2,24 +2,24 @@
 title: Runtime audit architecture
 permalink: en/architecture/security/runtime-audit.html
 search: runtime audit, audit rules, falco
-description: Runtime audit architecture in Deckhouse Kubernetes Platform.
+description: Runtime audit architecture in Deckhouse Platform.
 ---
 
-The runtime audit of Deckhouse Kubernetes Platform (DKP) is based on the [Falco](https://falco.org/) threat detection system.
+The runtime audit of Deckhouse Platform (DP) is based on the [Falco](https://falco.org/) threat detection system.
 This mechanism analyzes Linux kernel events and Kubernetes API audit events to detect suspicious activity
 in running containers and across the cluster.
 
-DKP deploys Falco agents on each node as part of a DaemonSet.
+DP deploys Falco agents on each node as part of a DaemonSet.
 Once started, the agents begin collecting OS system calls and Kubernetes audit data.
 
 {% alert level="info" %}
 Falco developers recommend running it as a systemd service,
 which can be challenging in Kubernetes clusters that support autoscaling.
-DKP includes additional security mechanisms such as multitenancy and resource control policies.
+DP includes additional security mechanisms such as multitenancy and resource control policies.
 Combined with the DaemonSet deployment, these mechanisms ensure a high level of protection.
 {% endalert %}
 
-![Falco agents on DKP cluster nodes](../../images/runtime-audit-engine/falco_daemonset.svg)
+![Falco agents on DP cluster nodes](../../images/runtime-audit-engine/falco_daemonset.svg)
 
 Each cluster node runs a Falco Pod with the following components:
 
@@ -30,7 +30,7 @@ Each cluster node runs a Falco Pod with the following components:
   and exports them as metrics to external systems.
 - `kube-rbac-proxy`: Protects the `falcosidekick` metrics endpoint from unauthorized access.
 
-For a detailed architecture of the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module, which implements DKP security event audit, refer to the [corresponding documentation section](./runtime-audit-engine.html).
+For a detailed architecture of the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module, which implements DP security event audit, refer to the [corresponding documentation section](./runtime-audit-engine.html).
 
 ## Audit rules
 
@@ -39,9 +39,9 @@ Each rule consists of a condition expression written in accordance with [Falco's
 
 ### Built-in rules
 
-DKP provides the following types of built-in rules:
+DP provides the following types of built-in rules:
 
-- **Kubernetes audit rules**: Help detect security issues in DKP and in the audit mechanism itself.
+- **Kubernetes audit rules**: Help detect security issues in DP and in the audit mechanism itself.
   These rules are located in the `falco` container at `/etc/falco/k8s_audit_rules.yaml`.
 
 ### Custom rules

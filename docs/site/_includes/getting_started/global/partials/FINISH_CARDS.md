@@ -147,7 +147,7 @@ You need to create a new
 <div markdown="1">
 ## Next steps
 
-Detailed information about the system and the Deckhouse Kubernetes Platform components is available in the [documentation](/products/kubernetes-platform/documentation/v1/).
+Detailed information about the system and the Deckhouse Platform components is available in the [documentation](/products/kubernetes-platform/documentation/v1/).
 
 Contact our [online community](/community/about.html#online-community) if you have any questions.
 </div>

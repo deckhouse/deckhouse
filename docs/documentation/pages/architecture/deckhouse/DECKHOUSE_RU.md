@@ -3,16 +3,16 @@ title: Модуль deckhouse
 permalink: ru/architecture/deckhouse/deckhouse.html
 lang: ru
 search: deckhouse, deckhouse-controller, modules
-description: Архитектура модуля deckhouse в Deckhouse Kubernetes Platform.
+description: Архитектура модуля deckhouse в Deckhouse Platform.
 ---
 
-Модуль [`deckhouse`](/modules/deckhouse/) реализует ядро Deckhouse Kubernetes Platform (DKP) и выполняет следующие операции:
+Модуль [`deckhouse`](/modules/deckhouse/) реализует ядро Deckhouse Platform (DP) и выполняет следующие операции:
 
 - обновление платформы;
 - управление конфигурацией модулей;
 - установка и обновление модулей;
 - запуск сборки документации модулей;
-- валидация кастомных ресурсов, находящихся под управлением модулей DKP.
+- валидация кастомных ресурсов, находящихся под управлением модулей DP.
 
 Модуль управляет следующими кастомными ресурсами API-группы `deckhouse.io`:
 
@@ -26,7 +26,7 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
   - [ModuleUpdatePolicy](../../reference/api/cr.html#moduleupdatepolicy) — правила обновления и автоматизации переходов версий модулей;
 
 - управление платформой:
-  - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease) — объект, определяющий релиз (версию) DKP и политику обновления платформы;
+  - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease) — объект, определяющий релиз (версию) DP и политику обновления платформы;
 
 - управление пакетами ([Marketplace](../marketplace/)):
   - [Application](../../reference/api/cr.html#application) — описание и желаемое состояние прикладного пакета (группы компонентов или приложения);
@@ -41,7 +41,7 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
   - ObjectKeeper — ресурс, обеспечивающий связь между другими ресурсами Kubernetes с использованием `ownerReference`;
   - [ModuleDocumentation](../../reference/api/cr.html#moduledocumentation) — описание параметров для генерации и хранения документации модулей;
 
-- управление кастомными ресурсами под управлением модулей DKP:
+- управление кастомными ресурсами под управлением модулей DP:
   - [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) — настройки и обработчики вебхуков для конверсий ресурсов;
   - [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) — настройки и обработчики вебхуков для валидации ресурсов.
 
@@ -54,7 +54,7 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`deckhouse`](/modules/deckhouse/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`deckhouse`](/modules/deckhouse/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля deckhouse](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse.ru.svg)
 
@@ -88,11 +88,11 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
    * **deckhouse** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к интерфейсу отладки компонентов основного контейнера.
   
-1. **Webhook-handler** (Deployment) — состоит из одного контейнера **handler** и реализует универсальный вебхук для конверсий и валидации кастомных ресурсов, находящихся под управлением DKP.
+1. **Webhook-handler** (Deployment) — состоит из одного контейнера **handler** и реализует универсальный вебхук для конверсий и валидации кастомных ресурсов, находящихся под управлением DP.
 
    Компонент следит за кастомными ресурсами [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) и [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) и на их основе создаёт из шаблона Python-файлы хуков для [shell-operator](https://github.com/flant/shell-operator). При получении запросов от `kube-apiserver` на валидацию или конверсию ресурсов shell-operator запускает необходимый хук и возвращает результат обработки.
 
-1. **Cni-migration-manager** (Deployment) — опциональный компонент, запускающийся на узлах control plane и состоящий из одного контейнера **manager**. Компонент управляет процессом смены сетевого плагина (CNI) в кластере DKP и фиксирует текущее состояние в кастомном ресурсе CNIMigration. Поддерживается миграция на плагины Flannel, Simple bridge, Cilium. Подробнее с переключением CNI в кластере можно ознакомиться [в соответствующем руководстве](/products/kubernetes-platform/guides/cni-migration.html).
+1. **Cni-migration-manager** (Deployment) — опциональный компонент, запускающийся на узлах control plane и состоящий из одного контейнера **manager**. Компонент управляет процессом смены сетевого плагина (CNI) в кластере DP и фиксирует текущее состояние в кастомном ресурсе CNIMigration. Поддерживается миграция на плагины Flannel, Simple bridge, Cilium. Подробнее с переключением CNI в кластере можно ознакомиться [в соответствующем руководстве](/products/kubernetes-platform/guides/cni-migration.html).
 
    {% alert level="info" %}
    Компонент создаётся глобальным хуком `detect-cni-migration` при наличии кастомного ресурса CNIMigration. Ресурс CNIMigration создаётся администратором вручную или при использовании команды `d8 network cni-migration switch --to-cni <target cni>`.
@@ -113,10 +113,10 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
    - отслеживание ресурсов Pod и DaemonSet, а также перезапуск Pod при смене сетевого плагина;
    - отслеживание ресурсов, описанных в кастомном ресурсе ObjectKeeper;
    - создание и обновление ресурса Lease;
-   - создание, удаление, изменение и отслеживание ресурсов, описанных в модулях DKP;
+   - создание, удаление, изменение и отслеживание ресурсов, описанных в модулях DP;
    - авторизация запросов.
 
-1. [**Documentation**](/modules/documentation/) — обновление документации при добавлении или обновлении модуля DKP.
+1. [**Documentation**](/modules/documentation/) — обновление документации при добавлении или обновлении модуля DP.
 
 1. **Хранилище образов** — получение образов компонентов модулей вместе с метаданными, в случае если модуль [`registry`](/modules/registry/) установлен в режиме `Unmanaged`.
 
@@ -124,5 +124,5 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-* **Kube-apiserver** — валидация и конверсия кастомных ресурсов DKP.
+* **Kube-apiserver** — валидация и конверсия кастомных ресурсов DP.
 * **Prometheus-main** — сбор метрик с контейнеров `deckhouse` и `webhook-handler`.

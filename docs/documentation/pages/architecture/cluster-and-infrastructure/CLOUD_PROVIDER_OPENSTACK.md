@@ -2,7 +2,7 @@
 title: Cloud-provider-openstack module
 permalink: en/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-openstack.html
 search: cloud-provider-openstack, cloud provider openstack
-description: Architecture of the cloud-provider-openstack module in Deckhouse Kubernetes Platform.
+description: Architecture of the cloud-provider-openstack module in Deckhouse Platform.
 ---
 
 The `cloud-provider-openstack` module is responsible for interacting with the [OpenStack](https://www.openstack.org/) cloud resources. It allows the [`node-manager`](/modules/node-manager/) module to use OpenStack resources for provisioning nodes for the specified [node group](/modules/node-manager/cr.html#nodegroup).
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`cloud-provider-openstack`](/modules/cloud-provider-openstack/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`cloud-provider-openstack`](/modules/cloud-provider-openstack/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Cloud-provider-openstack architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-openstack.png)
 

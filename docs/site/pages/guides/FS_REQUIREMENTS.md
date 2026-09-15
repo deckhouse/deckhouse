@@ -1,32 +1,32 @@
 ---
 title: Disk layout and size
 permalink: en/guides/fs-requirements.html
-description: A guide on how to select the disk size and layout of the file system before installing the Deckhouse Kubernetes Platform.
+description: A guide on how to select the disk size and layout of the file system before installing the Deckhouse Platform.
 layout: sidebar-guides
 ---
 
-In the [guide to choosing the minimum required disk space](hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) for various types of Deckhouse Kubernetes Platform (DKP) nodes, the disk volumes that must be allocated for successful installation and operation of DKP are specified. But you should also pay attention to the correct configuration of the file system so that the disk space does not suddenly "run out" despite the correctly selected volume at the installation stage.
+In the [guide to choosing the minimum required disk space](hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) for various types of Deckhouse Platform (DP) nodes, the disk volumes that must be allocated for successful installation and operation of DP are specified. But you should also pay attention to the correct configuration of the file system so that the disk space does not suddenly "run out" despite the correctly selected volume at the installation stage.
 
 {% alert level="info" %}
-Problems may arise not through the fault of the administrator, but due to the peculiarities of the installer of the selected Linux distribution. For example, during installation, Astra Linux may allocate 15 GB for the root file system (`/`), 15 GB for the user's home directory (`/home`), and leave the rest unallocated, despite the connected disk having a total capacity of 60 GB, as recommended in the guide. With this configuration, the DKP installation will not fail with an error about insufficient disk space.
+Problems may arise not through the fault of the administrator, but due to the peculiarities of the installer of the selected Linux distribution. For example, during installation, Astra Linux may allocate 15 GB for the root file system (`/`), 15 GB for the user's home directory (`/home`), and leave the rest unallocated, despite the connected disk having a total capacity of 60 GB, as recommended in the guide. With this configuration, the DP installation will not fail with an error about insufficient disk space.
 {% endalert %}
 
-To avoid problems in the future, before installing, it is better to make sure that the file system partitions of the disk allocated for the machine meet the DKP volume requirements.
+To avoid problems in the future, before installing, it is better to make sure that the file system partitions of the disk allocated for the machine meet the DP volume requirements.
 
-## Where and what does DKP store
+## Where and what does DP store
 
-DKP stores various types of data in specific file system directories. Let's look at the main ones in more detail:
+DP stores various types of data in specific file system directories. Let's look at the main ones in more detail:
 
 * `/etc/kubernetes/`, `/etc/containerd`, etc. — directories with Kubernetes component configuration;
-* `/var/lib/containerd` — layers of images of DKP components and other containers running on the node. The more DKP components are installed on a node or user load containers are launched on it, the more free space in this directory will be required.
+* `/var/lib/containerd` — layers of images of DP components and other containers running on the node. The more DP components are installed on a node or user load containers are launched on it, the more free space in this directory will be required.
 * `/var/lib/kubelet` — two types of information are stored in this directory:
   * data about the pods running in the cluster;
   * ephemeral-storage data — for example, if 7 GB of ephemeral-storage is requested on the master node, and there is not enough space in this directory, pods will not be scheduled for this node.
 * `/var/lib/etcd` — the etcd database, which stores the information necessary for the operation of the Kubernetes cluster;
-* `/var/lib/deckhouse/downloaded/` — repository of release configurations for Deckhouse DKP modules ([ModuleRelease](../documentation/v1/reference/api/cr.html#modulerelease));
+* `/var/lib/deckhouse/downloaded/` — repository of release configurations for Deckhouse DP modules ([ModuleRelease](../documentation/v1/reference/api/cr.html#modulerelease));
 * `/var/lib/deckhouse/stronghold/` — data storage for [Stronghold](../../stronghold/) (if the corresponding module is enabled);
 * `/var/log/pods/` — storage of pod logs;
-* `/opt/deckhouse/` — DKP service components such as kubelet, containerd, static utilities (e.g. lsblk), etc.;
+* `/opt/deckhouse/` — DP service components such as kubelet, containerd, static utilities (e.g. lsblk), etc.;
 * `/opt/local-path-provider/` — directory for storing data when using [local storage Local Path Provisioner](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html) (may be redefined [in configuration](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html#example-localpathprovisioner-resources)).
 
 ## Disk Space Recommendations
@@ -39,7 +39,7 @@ The total amount of space specified in the tables may exceed the minimum recomme
 
 ### Master nodes
 
-The table below shows the recommended amounts of space for the directories used by DKP on the cluster's master nodes.
+The table below shows the recommended amounts of space for the directories used by DP on the cluster's master nodes.
 
 <table>
   <thead>
@@ -100,7 +100,7 @@ The table below shows the recommended amounts of space for the directories used 
 
 ### Worker nodes
 
-The table below shows the recommended amounts of space for the directories used by DKP on the worker nodes of the cluster.
+The table below shows the recommended amounts of space for the directories used by DP on the worker nodes of the cluster.
 
 <table>
   <thead>
@@ -155,11 +155,11 @@ The table below shows the recommended amounts of space for the directories used 
 
 ### System nodes
 
-The system nodes are the nodes on which the DKP components are running. When adding such nodes to the cluster, keep in mind that they host the monitoring load, including:
+The system nodes are the nodes on which the DP components are running. When adding such nodes to the cluster, keep in mind that they host the monitoring load, including:
 
 - [Prometheus](/modules/prometheus/);
 - [loki](/modules/loki/);
-- [upmeter](/modules/upmeter/) and other DKP components.
+- [upmeter](/modules/upmeter/) and other DP components.
 
 If monitoring data is stored locally on the nodes, it is recommended to additionally allocate ≥ 100 GB of free disk space for each system node.
 
@@ -169,7 +169,7 @@ If you use a cluster configuration without dedicated system nodes, the above loa
 
 ### Pod log storage
 
-Pod logs are stored in the `/var/log/pods/` directory. The amount of logs used depends on the number of containers and DKP settings. On average, about 90 containers are running on the master node when using the [Default module set](../documentation/v1/admin/configuration/#module-bundles), with about 50 MB of space allocated to the logs of each of them by default. That is, there should be a minimum of `90 * 50 MB = 4.5 GB` space available in the directory `/var/log/pods/`.
+Pod logs are stored in the `/var/log/pods/` directory. The amount of logs used depends on the number of containers and DP settings. On average, about 90 containers are running on the master node when using the [Default module set](../documentation/v1/admin/configuration/#module-bundles), with about 50 MB of space allocated to the logs of each of them by default. That is, there should be a minimum of `90 * 50 MB = 4.5 GB` space available in the directory `/var/log/pods/`.
 
 The log storage parameters can also be redefined in the `containerLogMaxSize` parameter of [node groups](../documentation/v1/admin/configuration/platform-scaling/node/node-customization.html):
 
@@ -180,7 +180,7 @@ containerLogMaxFiles: 4
 
 ### Trivy Vulnerability Database Repository
 
-DKP has a built-in [vulnerability image scanning system](../documentation/v1/admin/configuration/security/scanning.html) based on [Trivy](https://github.com/aquasecurity/trivy), which scans all container images used in the cluster's files. Both public vulnerability databases and enriched data from Astra Linux, ALT Linux and RED OS are used for scanning. The total amount of disk space occupied by databases is 5 GB, so it must be taken into account when choosing the disk partition configuration.
+DP has a built-in [vulnerability image scanning system](../documentation/v1/admin/configuration/security/scanning.html) based on [Trivy](https://github.com/aquasecurity/trivy), which scans all container images used in the cluster's files. Both public vulnerability databases and enriched data from Astra Linux, ALT Linux and RED OS are used for scanning. The total amount of disk space occupied by databases is 5 GB, so it must be taken into account when choosing the disk partition configuration.
 
 Databases are stored on the cluster's system nodes, and if there are no such nodes in the cluster, the databases will be located on the worker node.
 
@@ -190,7 +190,7 @@ If resource limits in terms of disk space are configured for cluster entities, t
 
 ## LVM-based local storage
 
-In a DKP cluster, you can configure [local storage on nodes](../documentation/v1/admin/configuration/storage/sds/lvm-local.html), using LVM.
+In a DP cluster, you can configure [local storage on nodes](../documentation/v1/admin/configuration/storage/sds/lvm-local.html), using LVM.
 
 Requirements and placement procedure:
 

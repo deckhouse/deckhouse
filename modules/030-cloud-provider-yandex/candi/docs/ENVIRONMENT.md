@@ -11,7 +11,7 @@ The provider supports working with only one disk in the virtual machine template
 
 ## Creating a service account
 
-You need to create a service account with the editor role with the cloud provider so that Deckhouse Kubernetes Platform (DKP) can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available [in the provider's documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
+You need to create a service account with the editor role with the cloud provider so that Deckhouse Platform (DP) can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available [in the provider's documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
 
 1. Create a user named `deckhouse`:
 
@@ -60,14 +60,14 @@ Recommended quotas for a new cluster:
 ## Yandex Cloud integration
 
 {% alert level="warning" %}
-Starting with DKP version 1.77, Yandex Cloud uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
+Starting with DP version 1.77, Yandex Cloud uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
 
 New clusters require Linux kernel version 5.8 or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
 {% endalert %}
 
 ### Configuring security groups
 
-When creating [a cloud network](https://cloud.yandex.com/en/docs/vpc/concepts/network#network), Yandex Cloud creates [a default security group](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups) for all networks, including the Deckhouse Kubernetes Platform cluster network. The default security group contains rules that allow for any traffic to pass in any direction (inbound and outbound) and applies to all subnets within the cloud network, unless an object (VM interface) is explicitly assigned to a different security group. You can change the default security group rules if you need to control traffic in your cluster.
+When creating [a cloud network](https://cloud.yandex.com/en/docs/vpc/concepts/network#network), Yandex Cloud creates [a default security group](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups) for all networks, including the Deckhouse Platform cluster network. The default security group contains rules that allow for any traffic to pass in any direction (inbound and outbound) and applies to all subnets within the cloud network, unless an object (VM interface) is explicitly assigned to a different security group. You can change the default security group rules if you need to control traffic in your cluster.
 
 {% alert level="danger" %}
 Do not delete the default rules that allow for traffic to pass in any direction before finishing configuring all the other rules for the security group. Doing so may disrupt the performance of the cluster.
@@ -77,7 +77,7 @@ This section provides general guidelines for setting up a security group. Incorr
 
 If the cluster uses `cilium` in VXLAN mode, make sure security groups allow inter-node UDP traffic on the ports required for Cilium. For details, see [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
 
-1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
+1. Find out in which cloud network the Deckhouse Platform cluster is running.
 
    The network name matches the [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) parameter of the ModuleConfig `global`.
    You can retrieve it using the following command:
@@ -105,7 +105,7 @@ If the cluster uses `cilium` in VXLAN mode, make sure security groups allow inte
 
 ### Yandex Lockbox integration
 
-The [External Secrets Operator](https://github.com/external-secrets/external-secrets) allows you to synchronize [Yandex Lockbox](https://cloud.yandex.com/en/docs/lockbox/concepts/) secrets with the Deckhouse Kubernetes Platform cluster secrets.
+The [External Secrets Operator](https://github.com/external-secrets/external-secrets) allows you to synchronize [Yandex Lockbox](https://cloud.yandex.com/en/docs/lockbox/concepts/) secrets with the Deckhouse Platform cluster secrets.
 
 The instructions below are meant to be viewed as a _Quick Start_ guide. To use integration in production environments, please review the following resources:
 
@@ -230,7 +230,7 @@ The instructions below are meant to be viewed as a _Quick Start_ guide. To use i
    ```
 
    Where:
-   - `spec.target.name` — the name of the new secret. The External Secrets Operator will create this secret in the Deckhouse Kubernetes Platform cluster and populate it with the parameters of the Yandex Lockbox's `lockbox-secret`.
+   - `spec.target.name` — the name of the new secret. The External Secrets Operator will create this secret in the Deckhouse Platform cluster and populate it with the parameters of the Yandex Lockbox's `lockbox-secret`.
    - `spec.data[].secretKey` — the name of the key in the `.data` field of the secret that the External Secrets Operator will create.
    - `spec.data[].remoteRef.key` — identifier of the Yandex Lockbox's `lockbox-secret` created earlier, e.g., `e6q28nvfmhu539******`.
    - `spec.data[].remoteRef.property` — the **key** you specified earlier for the Yandex Lockbox's `lockbox-secret`.

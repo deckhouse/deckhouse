@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-To deploy Deckhouse Kubernetes Platform on DVP, perform the initial setup in the virtualization system. Create a user (ServiceAccount), assign permissions, and obtain a kubeconfig.
+To deploy Deckhouse Platform on DVP, perform the initial setup in the virtualization system. Create a user (ServiceAccount), assign permissions, and obtain a kubeconfig.
 
 1. Create a user (ServiceAccount and token) by running:
 

@@ -1,6 +1,6 @@
 ## Список необходимых сервисов OpenStack
 
-Для работы Deckhouse Kubernetes Platform (DKP) должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
+Для работы Deckhouse Platform (DP) должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
 
 | Сервис                     |                         Версия API                         |
 | :------------------------- | :--------------------------------------------------------: |
@@ -32,7 +32,7 @@
 Например, `kube-apiserver` на master-узлах будет доступен на порту `6443`. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
 {% endalert %}
 
-Параметр [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DKP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
+Параметр [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
 
 Будут созданы следующие правила входящего трафика:
 
@@ -153,7 +153,7 @@ provider:
 ![resources](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
-Параметр [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DKP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
+Параметр [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
 
 Будут созданы следующие правила входящего трафика:
 
@@ -253,7 +253,7 @@ virtual IP создается в публичной сети, он все рав
 ![resources](../../../../images/cloud-provider-openstack/openstack-simple.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
-В этой схеме размещения DKP не создаёт группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и подключите к узлам через `additionalSecurityGroups`:
+В этой схеме размещения DP не создаёт группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и подключите к узлам через `additionalSecurityGroups`:
 
 - для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
 - для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
@@ -334,7 +334,7 @@ Master-узел и узлы кластера подключаются к сущ�
 ![resources](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
 
-В этой схеме размещения DKP не создаёт группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и подключите к узлам через `additionalSecurityGroups`:
+В этой схеме размещения DP не создаёт группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и подключите к узлам через `additionalSecurityGroups`:
 
 - для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
 - для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
@@ -413,7 +413,7 @@ provider:
 
 ## Конфигурация
 
-Интеграции с {{ site.data.admin.cloud-types.types[page.cloud_type].name }} осуществляется с помощью [ресурса OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration), который описывает конфигурацию облачного кластера в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграции с {{ site.data.admin.cloud-types.types[page.cloud_type].name }} осуществляется с помощью [ресурса OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration), который описывает конфигурацию облачного кластера в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DP настраивается автоматически, исходя из выбранной схемы размещения.
 
 Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
@@ -504,7 +504,7 @@ spec:
 * `loadbalancer.openstack.deckhouse.io/load-balancer-id` — указывает OpenStack CCM использовать заранее созданный Octavia-балансировщик.
 * `loadbalancer.openstack.deckhouse.io/load-balancer-address` — указывает OpenStack CCM привязать заранее выделенный floating IP к создаваемому им балансировщику.
 
-DKP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
+DP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
 
 Если используется аннотация `loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
 
@@ -520,7 +520,7 @@ DKP автоматически добавит указанные аннотац�
 
 Если указанный floating IP недоступен, OpenStack CCM не сможет назначить внешний IP-адрес объекту Service.
 
-Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DKP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
+Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
 
 #### IngressNginxController с заранее созданным балансировщиком
 

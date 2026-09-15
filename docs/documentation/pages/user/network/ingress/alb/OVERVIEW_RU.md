@@ -1,6 +1,6 @@
 ---
 title: "Использование Application Load Balancer (ALB)"
-description: "Настройка Application Load Balancer для HTTP/HTTPS/gRPC трафика в Deckhouse Kubernetes Platform. Использование ingress-nginx, alb (Gateway API) и istio для маршрутизации запросов, терминации SSL/TLS и публикации приложений."
+description: "Настройка Application Load Balancer для HTTP/HTTPS/gRPC трафика в Deckhouse Platform. Использование ingress-nginx, alb (Gateway API) и istio для маршрутизации запросов, терминации SSL/TLS и публикации приложений."
 permalink: ru/user/network/ingress/alb/
 lang: ru
 extractedLinksMax: 0
@@ -21,7 +21,7 @@ relatedLinks:
     url: /modules/istio/
 ---
 
-Публикация приложений и балансировка трафика на прикладном уровне в Deckhouse Kubernetes Platform (DKP) могут выполняться средствами:
+Публикация приложений и балансировка трафика на прикладном уровне в Deckhouse Platform (DP) могут выполняться средствами:
 
 - [Ingress NGINX Controller](alb/nginx.html) (модуль `ingress-nginx`);
 - [Kubernetes Gateway API](alb/gateway-api.html) (модуль `alb`);

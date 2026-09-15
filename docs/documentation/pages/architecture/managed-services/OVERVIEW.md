@@ -2,10 +2,10 @@
 title: Managed Services subsystem
 permalink: en/architecture/managed-services/
 search: managed services
-description: Architecture of the Managed Services subsystem in Deckhouse Kubernetes Platform.
+description: Architecture of the Managed Services subsystem in Deckhouse Platform.
 ---
 
-This subsection describes the architecture of the Managed Services subsystem of Deckhouse Kubernetes Platform (DKP). Managed Services subsystem automates the deployment, scaling, backup, and updating of managed services in DKP.
+This subsection describes the architecture of the Managed Services subsystem of Deckhouse Platform (DP). Managed Services subsystem automates the deployment, scaling, backup, and updating of managed services in DP.
 
 The Managed Services subsystem includes the following modules
 

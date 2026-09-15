@@ -3,11 +3,11 @@ title: Модуль registry-packages-proxy
 permalink: ru/architecture/cluster-and-infrastructure/infrastructure/registry-packages-proxy.html
 lang: ru
 search: registry, proxy, bootstrap
-description: Архитектура модуля registry-packages-proxy в Deckhouse Kubernetes Platform.
+description: Архитектура модуля registry-packages-proxy в Deckhouse Platform.
 ---
 
 Модуль [`registry-packages-proxy`](/modules/registry-packages-proxy/) предоставляет сервис HTTP-прокси внутри кластера
-Deckhouse Kubernetes Platform (DKP) для доступа к [пакетам](../../marketplace/concepts.html) из хранилищ образов контейнеров.
+Deckhouse Platform (DP) для доступа к [пакетам](../../marketplace/concepts.html) из хранилищ образов контейнеров.
 Он выступает в качестве посредника между компонентами кластера и внешними или внутренними хранилищами образов
 контейнеров с функциями кеширования для оптимизации использования пропускной способности сети и повышения
 производительности при загрузке пакетов.
@@ -40,7 +40,7 @@ Deckhouse Kubernetes Platform (DKP) для доступа к [пакетам](..
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`registry-packages-proxy`](/modules/registry-packages-proxy/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`registry-packages-proxy`](/modules/registry-packages-proxy/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля registry-packages-proxy](../../../images/architecture/cluster-and-infrastructure/c4-l2-registry-packages-proxy.ru.svg)
 
