@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
@@ -66,9 +68,7 @@ func (c NodeKernelModulesCheck) Run(ctx context.Context) (string, error) {
 
 	var missing []string
 	for _, module := range wanted {
-		// -n is a dry run and -q keeps it silent: nothing is loaded and nothing is printed,
-		// so asking costs nothing and changes nothing on the node.
-		if err := nodeInterface.Command("sudo", "modprobe", "-n", "-q", module).Run(ctx); err != nil {
+		if !moduleAvailable(ctx, nodeInterface, module) {
 			missing = append(missing, module)
 		}
 	}
@@ -85,6 +85,23 @@ func (c NodeKernelModulesCheck) Run(ctx context.Context) (string, error) {
 	}
 
 	return fmt.Sprintf("%s can load %s", host, strings.Join(wanted, ", ")), nil
+}
+
+// moduleAvailable reports whether the node can end up with this module in its kernel.
+//
+// A module already loaded, or compiled into the kernel rather than shipped as a file, is present
+// and there is nothing to load — /sys/module/<name> is there in both cases. It is asked first
+// because modprobe is not a reliable answer for either: older kmod exits non-zero for a builtin,
+// which would have this check refuse a kernel that already has what Deckhouse needs.
+//
+// Only when the module is absent is modprobe asked, and then as a dry run: -n loads nothing and -q
+// keeps it quiet, so the question costs nothing and changes nothing on the node.
+func moduleAvailable(ctx context.Context, nodeInterface libcon.Interface, module string) bool {
+	if err := nodeInterface.Command("test", "-d", "/sys/module/"+module).Run(ctx); err == nil {
+		return true
+	}
+
+	return nodeInterface.Command("sudo", "modprobe", "-n", "-q", module).Run(ctx) == nil
 }
 
 func NodeKernelModules(metaConfig *config.MetaConfig, nodeInterface NodeInterfaceFunc) preflight.Check {

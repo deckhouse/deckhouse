@@ -35,6 +35,16 @@ func TestNodeKernelModulesRun(t *testing.T) {
 		return node
 	}
 
+	// A module compiled into the kernel is not a file modprobe can load, and older kmod exits
+	// non-zero for it. /sys/module/<name> is there either way.
+	builtin := func(modules ...string) *fakeNode {
+		node := newFakeNode()
+		for _, module := range modules {
+			node = node.on("test -d /sys/module/" + module).succeeds()
+		}
+		return node
+	}
+
 	t.Run("every module loads", func(t *testing.T) {
 		node := loadable("br_netfilter", "overlay")
 
@@ -76,6 +86,28 @@ func TestNodeKernelModulesRun(t *testing.T) {
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
 		assert.Contains(t, failure.Observed, "erofs")
+	})
+
+	t.Run("a module built into the kernel counts as present", func(t *testing.T) {
+		// The false refusal this guards against: a kernel that already has what Deckhouse
+		// needs, and a modprobe that says it cannot load it.
+		node := builtin("br_netfilter", "overlay")
+
+		detail, err := NodeKernelModulesCheck{NodeInterface: FixedNodeInterface(node)}.Run(t.Context())
+
+		require.NoError(t, err)
+		assert.Contains(t, detail, "br_netfilter, overlay")
+		// modprobe is not even asked: /sys/module answered.
+		assert.NotContains(t, node.ran(), "sudo modprobe -n -q br_netfilter")
+	})
+
+	t.Run("an absent module still falls back to modprobe", func(t *testing.T) {
+		node := loadable("br_netfilter", "overlay")
+
+		_, err := NodeKernelModulesCheck{NodeInterface: FixedNodeInterface(node)}.Run(t.Context())
+
+		require.NoError(t, err)
+		assert.Contains(t, node.ran(), "sudo modprobe -n -q br_netfilter")
 	})
 
 	t.Run("the probe changes nothing on the node", func(t *testing.T) {
