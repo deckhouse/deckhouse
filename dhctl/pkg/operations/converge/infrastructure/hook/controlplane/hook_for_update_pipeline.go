@@ -53,12 +53,14 @@ type HookForUpdatePipeline struct {
 	commanderMode     bool
 	immutableNode     bool
 	clientSwitcher    ClientSwitcher
+	sessionForNode    SessionForNode
 }
 
 func NewHookForUpdatePipeline(
 	kubeGetter kubernetes.KubeClientProviderWithCtx,
 	sshProvider libcon.SSHProvider,
 	nodeToHostForChecks map[string]string,
+	sessionForNode SessionForNode,
 	commanderMode bool,
 	skipChecks bool,
 	immutableNode bool,
@@ -76,6 +78,7 @@ func NewHookForUpdatePipeline(
 			NewSSHChecker(
 				sshProvider,
 				nodeToHostForChecks,
+				sessionForNode,
 			),
 		)
 	}
@@ -91,11 +94,12 @@ func NewHookForUpdatePipeline(
 	)
 
 	return &HookForUpdatePipeline{
-		Checker:       checker,
-		kubeGetter:    kubeGetter,
-		sshProvider:   sshProvider,
-		commanderMode: commanderMode,
-		immutableNode: immutableNode,
+		Checker:        checker,
+		kubeGetter:     kubeGetter,
+		sshProvider:    sshProvider,
+		commanderMode:  commanderMode,
+		immutableNode:  immutableNode,
+		sessionForNode: sessionForNode,
 	}
 }
 
@@ -197,6 +201,47 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	return false, nil
 }
 
+// moveSessionToRecreatedNode puts the rebuilt master back in reach. It joins the live
+// session only when it answers to the same user: a master this converge rebuilt carries
+// the converge user, and one session carries one user.
+func (h *HookForUpdatePipeline) moveSessionToRecreatedNode(ctx context.Context, cl libcon.SSHClient, host session.Host) error {
+	live := cl.Session()
+
+	if h.oldMasterIPForSSH != "" {
+		live.RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
+	}
+
+	if h.sessionForNode == nil {
+		return fmt.Errorf("no way to pick the ssh user for the recreated node %s", h.nodeToConverge)
+	}
+
+	sess, err := h.sessionForNode(live, host)
+	if err != nil {
+		return fmt.Errorf("pick the ssh user for the recreated node %s: %w", h.nodeToConverge, err)
+	}
+
+	if sess.User == live.User {
+		live.AddAvailableHosts(host)
+		return nil
+	}
+
+	if len(live.AvailableHosts()) > 0 {
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+			"Node %s answers to %s while the clients run as %s. It joins when they move to its generation",
+			h.nodeToConverge, sess.User, live.User))
+
+		return nil
+	}
+
+	// No host of the current generation is left to talk to, so the clients follow the
+	// rebuilt master instead of running out of hosts.
+	if _, err := h.sshProvider.SwitchClient(ctx, sess, cl.PrivateKeys()); err != nil {
+		return fmt.Errorf("move the clients to the recreated node %s: %w", h.nodeToConverge, err)
+	}
+
+	return nil
+}
+
 func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	if runner.GetChangesInPlan() != plan.HasDestructiveChanges {
 		return nil
@@ -219,10 +264,10 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 			return fmt.Errorf("get ssh client to move the session to the recreated node: %w", err)
 		}
 
-		if h.oldMasterIPForSSH != "" {
-			cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
+		host := session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge}
+		if err := h.moveSessionToRecreatedNode(ctx, cl, host); err != nil {
+			return err
 		}
-		cl.Session().AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
 	}
 
 	// Before waiting for the master node to be listed as a member of the etcd cluster,

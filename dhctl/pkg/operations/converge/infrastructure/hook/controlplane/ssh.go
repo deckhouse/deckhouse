@@ -22,18 +22,26 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 )
 
+// SessionForNode builds the session that reaches one master: the settings of the session
+// it is given, pointed at that host, under the user the node answers to. A master rebuilt
+// by this converge answers to another user than the one dhctl started with.
+type SessionForNode func(base *session.Session, host session.Host) (*session.Session, error)
+
 type SSHChecker struct {
 	sshProvider      libcon.SSHProvider
 	nodesExternalIPs map[string]string
+	sessionForNode   SessionForNode
 }
 
 func NewSSHChecker(
 	sshProvider libcon.SSHProvider,
 	nodesExternalIPs map[string]string,
+	sessionForNode SessionForNode,
 ) *SSHChecker {
 	return &SSHChecker{
 		sshProvider:      sshProvider,
 		nodesExternalIPs: nodesExternalIPs,
+		sessionForNode:   sessionForNode,
 	}
 }
 
@@ -90,13 +98,14 @@ func (c *SSHChecker) clientForNode(
 		return nil, fmt.Errorf("source SSH session is nil")
 	}
 
-	checkSession := sourceSession.Copy()
-	checkSession.SetAvailableHosts([]session.Host{
-		{
-			Host: address,
-			Name: nodeName,
-		},
-	})
+	if c.sessionForNode == nil {
+		return nil, fmt.Errorf("SSH checker has no way to pick the user for node %s", nodeName)
+	}
+
+	checkSession, err := c.sessionForNode(sourceSession, session.Host{Host: address, Name: nodeName})
+	if err != nil {
+		return nil, fmt.Errorf("build a session for node %s: %w", nodeName, err)
+	}
 
 	standaloneProvider, ok := c.sshProvider.(libcon.StandaloneClientProvider)
 	if !ok {

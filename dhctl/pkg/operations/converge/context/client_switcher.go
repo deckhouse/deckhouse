@@ -325,6 +325,17 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	creds := params.creds
 
 	if creds == nil {
+		hosts, err := s.hostsOfOneGeneration(availableHosts)
+		if err != nil {
+			return err
+		}
+
+		if len(hosts) < len(availableHosts) {
+			s.debug("Switching to %d of %d hosts: one session carries one generation", len(hosts), len(availableHosts))
+		}
+
+		availableHosts = hosts
+
 		picked, err := s.credentialsFor(hostNames(availableHosts))
 		if err != nil {
 			return err
@@ -378,7 +389,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 // dhctl started with when the converge user does not answer. Any failure counts: a master
 // built before that user existed and an unreachable one are still indistinguishable.
 func (s *KubeClientSwitcher) switchClientTo(ctx context.Context, sshProvider libcon.SSHProvider, settings *session.Session, creds sshCredentials, hosts []session.Host) (libcon.SSHClient, error) {
-	client, err := sshProvider.SwitchClient(ctx, switchSession(settings, creds, hosts), creds.Keys)
+	client, err := switchAndCheck(ctx, sshProvider, switchSession(settings, creds, hosts), creds.Keys)
 	if err == nil {
 		return client, nil
 	}
@@ -389,14 +400,36 @@ func (s *KubeClientSwitcher) switchClientTo(ctx context.Context, sshProvider lib
 
 	s.warn("Cannot connect as %s: %v. The node looks built without the converge user, retrying as the user dhctl started with", creds.User, err)
 
-	operator, credsErr := s.operatorCredentials()
+	operator, credsErr := operatorCredentials(s.ctx)
 	if credsErr != nil {
-		return nil, credsErr
+		return nil, fmt.Errorf("connect as %s (%v), then read the user dhctl started with: %w", creds.User, err, credsErr)
 	}
 
 	operator.Keys = creds.Keys
 
-	return sshProvider.SwitchClient(ctx, switchSession(settings, operator, hosts), operator.Keys)
+	client, retryErr := switchAndCheck(ctx, sshProvider, switchSession(settings, operator, hosts), operator.Keys)
+	if retryErr != nil {
+		return nil, fmt.Errorf("connect as %s (%v), then as %s: %w", creds.User, err, operator.User, retryErr)
+	}
+
+	return client, nil
+}
+
+// switchAndCheck switches the client and runs one command on it. That command is the only
+// failure signal the legacy backend gives: clissh starts a local agent and nothing else,
+// so a user the node does not know surfaces on the first command instead of on the switch.
+func switchAndCheck(ctx context.Context, sshProvider libcon.SSHProvider, sess *session.Session, keys []session.AgentPrivateKey) (libcon.SSHClient, error) {
+	client, err := sshProvider.SwitchClient(ctx, sess, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := client.Command("true")
+	if err := cmd.Run(ctx); err != nil {
+		return nil, fmt.Errorf("run a command as %s: %w; stderr: %s", sess.User, err, string(cmd.StderrBytes()))
+	}
+
+	return client, nil
 }
 
 func (s *KubeClientSwitcher) tmpDirForConverger() (string, error) {

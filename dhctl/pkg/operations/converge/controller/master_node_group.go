@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sort"
 
 	"github.com/name212/govalue"
 
@@ -85,7 +86,6 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		return fmt.Errorf("converge has no ssh connection configuration to reach the master nodes with")
 	}
 
-	var userPassedHosts []session.Host
 	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
 	if err != nil {
 		return err
@@ -96,9 +96,20 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		return err
 	}
 
+	var sessionHosts []session.Host
 	if sshCl != nil {
-		userPassedHosts = append(make([]session.Host, 0), sshCl.Session().AvailableHosts()...)
+		sessionHosts = sshCl.Session().AvailableHosts()
 	}
+
+	// A master this converge created is deliberately kept out of the session — that
+	// carries one generation of users — but it is in the hosts cache. Reading both keeps
+	// the checks from seeing a master with no address and refusing to go on.
+	cachedHosts, err := state.GetMasterHostsIPs(ctx.Ctx(), ctx.StateCache())
+	if err != nil {
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not read master hosts from cache: %v", err))
+	}
+
+	userPassedHosts := mergeMasterHosts(sessionHosts, cachedHosts)
 
 	nodesNames := make([]string, 0, len(c.state.State))
 	for nodeName := range c.state.State {
@@ -113,6 +124,30 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	c.nodeToHost = nodeToHost
 
 	return nil
+}
+
+// mergeMasterHosts joins two host lists by node name, the cached address winning: it is
+// rewritten every time a master is created or recreated, while the session may still hold
+// the address of a machine that has been replaced.
+func mergeMasterHosts(sessionHosts, cachedHosts []session.Host) []session.Host {
+	byName := make(map[string]string, len(sessionHosts)+len(cachedHosts))
+
+	for _, host := range sessionHosts {
+		byName[host.Name] = host.Host
+	}
+
+	for _, host := range cachedHosts {
+		byName[host.Name] = host.Host
+	}
+
+	merged := make([]session.Host, 0, len(byName))
+	for name, address := range byName {
+		merged = append(merged, session.Host{Host: address, Name: name})
+	}
+
+	sort.Sort(session.SortByName(merged))
+
+	return merged
 }
 
 // confirmOrProceed answers the questions converge asks before it recreates a master: the
@@ -575,6 +610,9 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		ctx,
 		sshProvider,
 		nodesToCheck,
+		func(base *session.Session, host session.Host) (*session.Session, error) {
+			return context.SessionForNode(ctx, base, host)
+		},
 		ctx.CommanderMode(),
 		c.skipChecks,
 		c.immutable,

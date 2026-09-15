@@ -22,6 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -60,6 +62,7 @@ func TestBeforeActionRetiresImmutableMasterWithoutSSHIP(t *testing.T) {
 			unreachableKubeGetter{},
 			nil,
 			map[string]string{"cluster-master-1": ""},
+			operatorSessionForNode,
 			false,
 			true,
 			immutableNode,
@@ -112,6 +115,7 @@ func TestAfterActionReportsUnavailableSSHClient(t *testing.T) {
 		nil,
 		sshProviderWithoutClient{},
 		map[string]string{"cluster-master-0": "10.12.1.10"},
+		operatorSessionForNode,
 		false,
 		true,
 		false,
@@ -120,4 +124,78 @@ func TestAfterActionReportsUnavailableSSHClient(t *testing.T) {
 	err := hook.AfterAction(t.Context(), recreatedMasterRunner{})
 
 	require.ErrorContains(t, err, "get ssh client")
+}
+
+// operatorSessionForNode is the mapping of a cluster this converge has not rebuilt: every
+// node answers to the user the session already runs as.
+func operatorSessionForNode(base *session.Session, host session.Host) (*session.Session, error) {
+	return session.NewSession(session.Input{
+		User:           base.User,
+		Port:           base.Port,
+		BecomePass:     base.BecomePass,
+		AvailableHosts: []session.Host{host},
+	}), nil
+}
+
+// A master this converge rebuilt answers to the converge user while the clients still run
+// as the operator. Putting it in their session mixes two users into one host list, and
+// every later connection that picks it fails to log in.
+func TestAfterActionKeepsTheSessionToOneUser(t *testing.T) {
+	const (
+		oldIP = "10.12.1.1"
+		newIP = "10.12.1.10"
+	)
+
+	newHook := func(userForRecreated string) (*HookForUpdatePipeline, *session.Session) {
+		live := session.NewSession(session.Input{
+			User: "ubuntu",
+			AvailableHosts: []session.Host{
+				{Host: oldIP, Name: "cluster-master-0"},
+				{Host: "10.12.1.2", Name: "cluster-master-1"},
+			},
+		})
+
+		hook := NewHookForUpdatePipeline(
+			unreachableKubeGetter{},
+			testssh.NewSSHProvider(live, true),
+			map[string]string{"cluster-master-1": "10.12.1.2"},
+			func(_ *session.Session, host session.Host) (*session.Session, error) {
+				return session.NewSession(session.Input{
+					User:           userForRecreated,
+					AvailableHosts: []session.Host{host},
+				}), nil
+			},
+			false,
+			true,
+			false,
+		).WithNodeToConverge("cluster-master-0")
+
+		hook.oldMasterIPForSSH = oldIP
+
+		return hook, live
+	}
+
+	hostNames := func(sess *session.Session) []string {
+		names := make([]string, 0, len(sess.AvailableHosts()))
+		for _, host := range sess.AvailableHosts() {
+			names = append(names, host.Host)
+		}
+
+		return names
+	}
+
+	t.Run("a node of another generation stays out", func(t *testing.T) {
+		hook, live := newHook("d8-converge")
+
+		// The kube client is unreachable, so AfterAction fails right after the move.
+		require.Error(t, hook.AfterAction(t.Context(), recreatedMasterRunner{}))
+		require.Equal(t, []string{"10.12.1.2"}, hostNames(live))
+	})
+
+	t.Run("a node of the session's own generation joins", func(t *testing.T) {
+		hook, live := newHook("ubuntu")
+
+		require.Error(t, hook.AfterAction(t.Context(), recreatedMasterRunner{}))
+		require.ElementsMatch(t, []string{"10.12.1.2", newIP}, hostNames(live))
+	})
 }

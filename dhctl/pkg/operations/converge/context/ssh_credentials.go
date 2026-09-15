@@ -36,11 +36,55 @@ type sshCredentials struct {
 // built answer to the converge user, the ones that predate it to the user dhctl started
 // with. Keys are the caller's: the same keys open both, only the account differs.
 func (s *KubeClientSwitcher) credentialsFor(nodes []string) (sshCredentials, error) {
+	return credentialsForNodes(s.ctx, nodes)
+}
+
+// SessionForNode points a copy of the connection settings at one master, under the user
+// that master answers to. For the control-plane hook and the ssh readiness checker, which
+// reach a single node outside the switcher's own session.
+func SessionForNode(c *Context, base *session.Session, host session.Host) (*session.Session, error) {
+	creds, err := credentialsForNodes(c, []string{host.Name})
+	if err != nil {
+		return nil, err
+	}
+
+	return switchSession(base, creds, []session.Host{host}), nil
+}
+
+// hostsOfOneGeneration keeps hosts a single user reaches: the operator's generation while
+// it still has one here, otherwise the masters this converge built. Call it on the hosts
+// that survived the IP lookup, or a dropped host decides the generation.
+func (s *KubeClientSwitcher) hostsOfOneGeneration(hosts []session.Host) ([]session.Host, error) {
+	convergeState, err := s.ctx.ConvergeState()
+	if err != nil {
+		return nil, fmt.Errorf("get converge state: %w", err)
+	}
+
+	thisConverge := make([]session.Host, 0, len(hosts))
+	older := make([]session.Host, 0, len(hosts))
+
+	for _, host := range hosts {
+		if slices.Contains(convergeState.ConvergeUserNodes, host.Name) {
+			thisConverge = append(thisConverge, host)
+			continue
+		}
+
+		older = append(older, host)
+	}
+
+	if len(older) > 0 {
+		return older, nil
+	}
+
+	return thisConverge, nil
+}
+
+func credentialsForNodes(c *Context, nodes []string) (sshCredentials, error) {
 	if len(nodes) == 0 {
 		return sshCredentials{}, fmt.Errorf("pick ssh credentials: no nodes given")
 	}
 
-	convergeState, err := s.ctx.ConvergeState()
+	convergeState, err := c.ConvergeState()
 	if err != nil {
 		return sshCredentials{}, fmt.Errorf("get converge state: %w", err)
 	}
@@ -64,7 +108,7 @@ func (s *KubeClientSwitcher) credentialsFor(nodes []string) (sshCredentials, err
 	}
 
 	if len(older) > 0 {
-		return s.operatorCredentials()
+		return operatorCredentials(c)
 	}
 
 	// No password at all: the converge user's sudo is NOPASSWD.
@@ -74,8 +118,8 @@ func (s *KubeClientSwitcher) credentialsFor(nodes []string) (sshCredentials, err
 // operatorCredentials are the ones dhctl was started with. They come from the connection
 // configuration rather than the live client, which converge moves to another user as it
 // recreates masters.
-func (s *KubeClientSwitcher) operatorCredentials() (sshCredentials, error) {
-	connection := s.ctx.SSHProviderInitializer.GetConfig()
+func operatorCredentials(c *Context) (sshCredentials, error) {
+	connection := c.SSHProviderInitializer.GetConfig()
 	if connection == nil || connection.Config == nil {
 		return sshCredentials{}, fmt.Errorf("read the ssh user dhctl started with: no connection configuration")
 	}
@@ -91,14 +135,15 @@ func (s *KubeClientSwitcher) operatorCredentials() (sshCredentials, error) {
 // everything the operator configured about how to reach them does not.
 func switchSession(settings *session.Session, creds sshCredentials, hosts []session.Host) *session.Session {
 	return session.NewSession(session.Input{
-		User:           creds.User,
-		Port:           settings.Port,
-		BastionHost:    settings.BastionHost,
-		BastionPort:    settings.BastionPort,
-		BastionUser:    settings.BastionUser,
-		ExtraArgs:      settings.ExtraArgs,
-		AvailableHosts: hosts,
-		BecomePass:     creds.BecomePass,
+		User:            creds.User,
+		Port:            settings.Port,
+		BastionHost:     settings.BastionHost,
+		BastionPort:     settings.BastionPort,
+		BastionUser:     settings.BastionUser,
+		BastionPassword: settings.BastionPassword,
+		ExtraArgs:       settings.ExtraArgs,
+		AvailableHosts:  hosts,
+		BecomePass:      creds.BecomePass,
 	})
 }
 

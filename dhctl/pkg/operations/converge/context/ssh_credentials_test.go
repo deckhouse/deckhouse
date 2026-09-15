@@ -153,16 +153,20 @@ func TestCredentialsForGeneration(t *testing.T) {
 	})
 }
 
-// failingOnceProvider refuses the first switch, the way a master built without the
-// converge user refuses that user.
-type failingOnceProvider struct {
+// switchRecorder records the user of every switch attempt, and refuses the first attempt
+// the way a master built without the converge user does: either at the switch, as the
+// default backend does when it dials, or at the first command, as the legacy one does.
+type switchRecorder struct {
 	*testssh.SSHProvider
-	refused bool
+	users              []string
+	refuseSwitch       bool
+	refuseFirstCommand bool
 }
 
-func (p *failingOnceProvider) SwitchClient(ctx gocontext.Context, sess *session.Session, keys []session.AgentPrivateKey) (libcon.SSHClient, error) {
-	if !p.refused {
-		p.refused = true
+func (p *switchRecorder) SwitchClient(ctx gocontext.Context, sess *session.Session, keys []session.AgentPrivateKey) (libcon.SSHClient, error) {
+	p.users = append(p.users, sess.User)
+
+	if p.refuseSwitch && len(p.users) == 1 {
 		return nil, errors.New("ssh: handshake failed")
 	}
 
@@ -170,35 +174,80 @@ func (p *failingOnceProvider) SwitchClient(ctx gocontext.Context, sess *session.
 }
 
 func TestSwitchClientFallsBackToOperatorUser(t *testing.T) {
-	hosts := []session.Host{{Host: "10.0.0.1", Name: "cluster-master-0"}}
+	const host = "10.0.0.1"
+
+	hosts := []session.Host{{Host: host, Name: "cluster-master-0"}}
 	settings := session.NewSession(session.Input{User: "ubuntu", Port: "22", AvailableHosts: hosts})
 
-	newProvider := func() *failingOnceProvider {
-		return &failingOnceProvider{SSHProvider: testssh.NewSSHProvider(settings, true)}
+	newRecorder := func() *switchRecorder {
+		recorder := &switchRecorder{SSHProvider: testssh.NewSSHProvider(settings, true)}
+
+		recorder.AddCommandProvider(host, func(_ testssh.Bastion, _ string, _ ...string) *testssh.Command {
+			if recorder.refuseFirstCommand && len(recorder.users) == 1 {
+				return testssh.NewCommand(nil).WithErr(errors.New("Permission denied (publickey)"))
+			}
+
+			return testssh.NewCommand(nil)
+		})
+
+		return recorder
 	}
 
-	t.Run("the converge user is retried as the operator", func(t *testing.T) {
-		switcher := switcherWithConvergeUserNodes(t, operatorConnection(), "cluster-master-0")
-		provider := newProvider()
+	for name, refusal := range map[string]func(*switchRecorder){
+		"the switch is refused":             func(r *switchRecorder) { r.refuseSwitch = true },
+		"only the first command is refused": func(r *switchRecorder) { r.refuseFirstCommand = true },
+	} {
+		t.Run(name+", so the converge user is retried as the operator", func(t *testing.T) {
+			switcher := switcherWithConvergeUserNodes(t, operatorConnection(), "cluster-master-0")
+			recorder := newRecorder()
+			refusal(recorder)
 
-		client, err := switcher.switchClientTo(t.Context(), provider, settings,
-			sshCredentials{User: global.ConvergeUserName}, hosts)
-		require.NoError(t, err)
-		require.Equal(t, "ubuntu", client.Session().User)
+			client, err := switcher.switchClientTo(t.Context(), recorder, settings,
+				sshCredentials{User: global.ConvergeUserName}, hosts)
+			require.NoError(t, err)
 
-		switches := provider.Switches()
-		require.Len(t, switches, 1, "only the successful switch is recorded")
-		require.Equal(t, "ubuntu", switches[0].Session.User)
-		require.Equal(t, "become-pass", switches[0].Session.BecomePass)
-	})
+			require.Equal(t, []string{global.ConvergeUserName, "ubuntu"}, recorder.users,
+				"the converge user is tried first, the operator only after it fails")
+			require.Equal(t, "ubuntu", client.Session().User)
+
+			switches := recorder.Switches()
+			require.NotEmpty(t, switches)
+
+			live := switches[len(switches)-1].Session
+			require.Equal(t, "ubuntu", live.User)
+			require.Equal(t, "become-pass", live.BecomePass, "the operator's sudo password comes along")
+		})
+	}
 
 	t.Run("the operator user is not retried", func(t *testing.T) {
 		switcher := switcherWithConvergeUserNodes(t, operatorConnection())
-		provider := newProvider()
+		recorder := newRecorder()
+		recorder.refuseSwitch = true
 
-		_, err := switcher.switchClientTo(t.Context(), provider, settings,
+		_, err := switcher.switchClientTo(t.Context(), recorder, settings,
 			sshCredentials{User: "ubuntu"}, hosts)
 		require.Error(t, err)
-		require.Empty(t, provider.Switches())
+		require.Equal(t, []string{"ubuntu"}, recorder.users)
+	})
+}
+
+func TestHostsOfOneGeneration(t *testing.T) {
+	older := session.Host{Host: "10.0.0.1", Name: "cluster-master-0"}
+	rebuilt := session.Host{Host: "10.0.0.2", Name: "cluster-master-1"}
+
+	t.Run("the operator generation is preferred while it has a host", func(t *testing.T) {
+		switcher := switcherWithConvergeUserNodes(t, operatorConnection(), "cluster-master-1")
+
+		kept, err := switcher.hostsOfOneGeneration([]session.Host{older, rebuilt})
+		require.NoError(t, err)
+		require.Equal(t, []session.Host{older}, kept)
+	})
+
+	t.Run("with none left the converge generation is taken", func(t *testing.T) {
+		switcher := switcherWithConvergeUserNodes(t, operatorConnection(), "cluster-master-0", "cluster-master-1")
+
+		kept, err := switcher.hostsOfOneGeneration([]session.Host{older, rebuilt})
+		require.NoError(t, err)
+		require.Equal(t, []session.Host{older, rebuilt}, kept)
 	})
 }
