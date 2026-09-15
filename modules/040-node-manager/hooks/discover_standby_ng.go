@@ -43,6 +43,7 @@ const (
 type StandbyNodeGroupInfo struct {
 	Name                 string
 	NeedStandby          bool
+	CurrentStandby       *int
 	MaxPerZone           int
 	ZonesCount           int
 	Standby              *intstr.IntOrString
@@ -50,11 +51,25 @@ type StandbyNodeGroupInfo struct {
 	Taints               []v1.Taint
 }
 
+// Fields other than Name, NeedStandby and CurrentStandby are left zero for NodeGroups without
+// standby, so that unrelated spec changes do not alter the filter result checksum and wake the hook.
 func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	nodeGroup := new(ngv1.NodeGroup)
-	err := sdk.FromUnstructured(obj, nodeGroup)
+	if err := sdk.FromUnstructured(obj, nodeGroup); err != nil {
+		return nil, fmt.Errorf("convert nodegroup from unstructured: %w", err)
+	}
+
+	currentStandby, err := standbyStatus(obj, nodeGroup)
 	if err != nil {
 		return nil, err
+	}
+
+	if !needStandby(nodeGroup) {
+		return StandbyNodeGroupInfo{
+			Name:           nodeGroup.GetName(),
+			NeedStandby:    false,
+			CurrentStandby: currentStandby,
+		}, nil
 	}
 
 	var zonesCount int
@@ -67,35 +82,51 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		taints = make([]v1.Taint, 0)
 	}
 
-	needStandby := false
-	maxPerZone := 0
 	overprovisioningRate := int64(50) // default: 50%
-
-	if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral {
-		// No nil-checking for MaxPerZone and MinPerZone pointers as these fields are mandatory for CloudEphemeral NGs.
-		maxPerZone = int(*nodeGroup.Spec.CloudInstances.MaxPerZone)
-		if nodeGroup.Spec.CloudInstances.Standby != nil {
-			if nodeGroup.Spec.CloudInstances.Standby.String() != "0" {
-				if int(*nodeGroup.Spec.CloudInstances.MinPerZone) != int(*nodeGroup.Spec.CloudInstances.MaxPerZone) {
-					needStandby = true
-				}
-			}
-		}
-
-		if nodeGroup.Spec.CloudInstances.StandbyHolder.OverprovisioningRate != nil {
-			overprovisioningRate = *nodeGroup.Spec.CloudInstances.StandbyHolder.OverprovisioningRate
-		}
+	if nodeGroup.Spec.CloudInstances.StandbyHolder.OverprovisioningRate != nil {
+		overprovisioningRate = *nodeGroup.Spec.CloudInstances.StandbyHolder.OverprovisioningRate
 	}
 
 	return StandbyNodeGroupInfo{
 		Name:                 nodeGroup.GetName(),
-		NeedStandby:          needStandby,
-		MaxPerZone:           maxPerZone,
+		NeedStandby:          true,
+		CurrentStandby:       currentStandby,
+		MaxPerZone:           int(*nodeGroup.Spec.CloudInstances.MaxPerZone),
 		ZonesCount:           zonesCount,
 		Standby:              nodeGroup.Spec.CloudInstances.Standby,
 		OverprovisioningRate: overprovisioningRate,
 		Taints:               taints,
 	}, nil
+}
+
+func needStandby(nodeGroup *ngv1.NodeGroup) bool {
+	if nodeGroup.Spec.NodeType != ngv1.NodeTypeCloudEphemeral {
+		return false
+	}
+	if nodeGroup.Spec.CloudInstances.Standby == nil {
+		return false
+	}
+	if nodeGroup.Spec.CloudInstances.Standby.String() == "0" {
+		return false
+	}
+
+	// No nil-checking for MaxPerZone and MinPerZone pointers as these fields are mandatory for CloudEphemeral NGs.
+	return *nodeGroup.Spec.CloudInstances.MinPerZone != *nodeGroup.Spec.CloudInstances.MaxPerZone
+}
+
+// The field is read through unstructured only to tell an absent status.standby from an explicit zero,
+// the value itself is already decoded into the typed NodeGroup.
+func standbyStatus(obj *unstructured.Unstructured, nodeGroup *ngv1.NodeGroup) (*int, error) {
+	value, found, err := unstructured.NestedFieldNoCopy(obj.Object, "status", standbyStatusField)
+	if err != nil {
+		return nil, fmt.Errorf("read status.%s of nodegroup %s: %w", standbyStatusField, nodeGroup.GetName(), err)
+	}
+	if !found || value == nil {
+		return nil, nil
+	}
+
+	standby := int(nodeGroup.Status.Standby)
+	return &standby, nil
 }
 
 type StandbyNodeInfo struct {
@@ -160,7 +191,7 @@ func standbyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager/discover_standby_ng",
+	Queue: "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "node_groups",
@@ -215,7 +246,9 @@ func discoverStandbyNGHandler(_ context.Context, input *go_hook.HookInput) error
 		}
 
 		if !nodeGroup.NeedStandby {
-			setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, standbyStatusField, nil)
+			if nodeGroup.CurrentStandby != nil {
+				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, standbyStatusField, nil)
+			}
 			continue
 		}
 
@@ -229,7 +262,9 @@ func discoverStandbyNGHandler(_ context.Context, input *go_hook.HookInput) error
 				actualStandby++
 			}
 		}
-		setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, standbyStatusField, &actualStandby)
+		if nodeGroup.CurrentStandby == nil || *nodeGroup.CurrentStandby != actualStandby {
+			setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, standbyStatusField, &actualStandby)
+		}
 
 		readyNodesCount := 0
 		var (

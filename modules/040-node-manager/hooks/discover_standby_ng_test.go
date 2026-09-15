@@ -18,9 +18,12 @@ package hooks
 
 import (
 	"fmt"
+	"reflect"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -136,6 +139,29 @@ spec:
       key: ship-class
       value: frigate
 status: {}
+`
+		nodeGroupStandbyAbsoluteActualStatus = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: standby-absolute
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 10
+    minPerZone: 1
+    zones:
+      - zone1
+      - zone2
+    standby: 5
+  nodeTemplate:
+    taints:
+    - effect: NoExecute
+      key: ship-class
+      value: frigate
+status:
+  standby: 1
 `
 		nodeGroupStandbyPercent = `
 ---
@@ -549,4 +575,57 @@ status:
 			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"worker","standby":3,"reserveCPU":"2","reserveMemory": "983Mi","taints":[]}`))
 		})
 	})
+
+	Context("Cluster where NodeGroup statuses already hold the actual standby value", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupWithoutStandby + nodeGroupStandbyAbsoluteActualStatus +
+				fmt.Sprintf(nodeStandby6Cpu, "standby-absolute") +
+				fmt.Sprintf(podStandby0, "standby-absolute")))
+			f.RunHook()
+		})
+
+		It("Hook must not patch NodeGroup statuses", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(BeEmpty())
+		})
+	})
 })
+
+func standbyTestNodeGroupWithoutStandby(maxPerZone int64) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "NodeGroup",
+		"metadata": map[string]interface{}{
+			"name": "normal",
+		},
+		"spec": map[string]interface{}{
+			"nodeType": "CloudEphemeral",
+			"cloudInstances": map[string]interface{}{
+				"minPerZone": int64(1),
+				"maxPerZone": maxPerZone,
+				"zones":      []interface{}{"zone1"},
+			},
+			"nodeTemplate": map[string]interface{}{
+				"taints": []interface{}{
+					map[string]interface{}{"effect": "NoExecute", "key": "ship-class", "value": "frigate"},
+				},
+			},
+		},
+	}}
+}
+
+func Test_standbyNodeGroupFilter_StableWithoutStandby(t *testing.T) {
+	small, err := standbyNodeGroupFilter(standbyTestNodeGroupWithoutStandby(5))
+	if err != nil {
+		t.Fatalf("filter nodegroup with maxPerZone 5: %v", err)
+	}
+
+	big, err := standbyNodeGroupFilter(standbyTestNodeGroupWithoutStandby(50))
+	if err != nil {
+		t.Fatalf("filter nodegroup with maxPerZone 50: %v", err)
+	}
+
+	if !reflect.DeepEqual(small, big) {
+		t.Fatalf("filter result of a nodegroup without standby must not depend on maxPerZone:\n%#v\n%#v", small, big)
+	}
+}
