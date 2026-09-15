@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-e5d5b4bf60ab357b345e3dafa971ef72d4f11c15379269c12e2376f62e4d93e4",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -157,8 +157,36 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "mime: отказ в обслуживании при декодировании специально сформированного MIME-заголовка с множеством некорректных encoded-words. docs-builder не декодирует недоверенные MIME-заголовки, поэтому уязвимый код не задействован. Обновление до Go 1.25.11 невозможно, так как сборка выполняется на Go 1.25.7.",
       "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-c3wq-j5vh-68rc"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gohugoio/hugo"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "hugo: обход границ монтирования по символьной ссылке в os.ReadFile: RootMappingFs.statRoot вызывает Stat вместо Lstat. Уязвимый путь недостижим: docs-builder не подключает темы и не описывает module.mounts, шаблоны не используют resources.Get, readFile и os.ReadFile, а распаковщик документации модуля (internal/docs/upload.go) принимает только записи tar.TypeDir и tar.TypeReg и завершается ошибкой на любом другом типе, включая символьные ссылки, поэтому symlink невозможно поместить в дерево контента. Обновление до 0.163.1 невозможно: hugo начиная с 0.163 требует Go 1.26, а сборка релиза 1.75 выполняется на Go 1.25.13.",
+      "timestamp": "2026-09-15T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-q76j-gcg9-vxc6"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gohugoio/hugo"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "hugo: XSS через неэкранированный язык code-fence в стандартном рендерере блоков кода. Неэкранированное значение попадает в атрибуты class и data-lang только в ветке с неизвестным лексером (markup/highlight/highlight.go, lexer == nil). docs-builder переопределяет рендерер блоков кода собственным хуком layouts/_markup/render-codeblock.html: язык из info-string передаётся в подсветку только после проверки transform.CanHighlight (то есть когда такой лексер есть в chroma), а для неизвестного языка жёстко подставляется \"plaintext\". Значение info-string, контролируемое автором документации, в атрибуты не попадает, поэтому уязвимый код не задействован.",
+      "timestamp": "2026-09-15T00:00:00Z"
     }
   ],
   "timestamp": "2026-07-23T00:00:00Z",
-  "last_updated": "2026-07-23T00:00:00Z"
+  "last_updated": "2026-09-15T00:00:00Z"
 }

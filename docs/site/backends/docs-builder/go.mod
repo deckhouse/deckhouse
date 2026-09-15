@@ -1,6 +1,6 @@
 module github.com/flant/docs-builder
 
-go 1.26.0
+go 1.25.13
 
 require (
 	github.com/bep/clocks v0.5.0
@@ -9,7 +9,7 @@ require (
 	github.com/bep/overlayfs v0.11.0
 	github.com/deckhouse/deckhouse/pkg/log v0.1.0
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
-	github.com/gohugoio/hugo v0.163.3
+	github.com/gohugoio/hugo v0.162.0
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/fsync v0.10.1
