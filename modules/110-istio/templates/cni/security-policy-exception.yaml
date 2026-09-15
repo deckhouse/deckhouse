@@ -1,5 +1,8 @@
 {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 {{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+{{- $version := $.Values.istio.internal.globalVersion }}
+{{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+{{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
@@ -49,6 +52,7 @@ spec:
           NET_ADMIN/NET_RAW are required for iptables/ipset and routing;
           SYS_PTRACE/SYS_ADMIN are required to inspect and enter pod network namespaces;
           DAC_OVERRIDE is required to write hostPath mounts owned by non-root.
+  {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
   network:
     hostNetwork:
       allowedValue: true
@@ -65,6 +69,7 @@ spec:
         protocol: TCP
         metadata:
           description: HTTPS metrics endpoint exposed through kube-rbac-proxy in ambient mode.
+  {{- end }}
   volumes:
     types:
       allowedValues:
@@ -91,6 +96,7 @@ spec:
           readOnly: false
           metadata:
             description: Host network namespaces used by CNI repair to enter pod netns.
+        {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
         - path: /proc
           readOnly: true
           metadata:
@@ -99,5 +105,6 @@ spec:
           readOnly: false
           metadata:
             description: Host directory shared with ztunnel for the ambient dataplane UDS socket.
+        {{- end }}
 {{- end }}
 {{- end }}
