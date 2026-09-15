@@ -35,18 +35,23 @@ PRIVILEGED_GROUP = "superadmins"
 SECURITY = "sec@corp"
 
 
-def clusterrole(name, rules, labels=None):
+def clusterrole(name, rules, labels=None, access_level="", heritage=True):
+    labels = dict(labels or {})
+    if heritage:
+        labels.setdefault("heritage", "deckhouse")
     return {"filterResult": {
         "name": name,
         "rules": rules,
-        "accessLevel": "",
-        "labels": labels or {},
+        "accessLevel": access_level,
+        "labels": labels,
     }}
 
 
 def default_croles():
     return [
         clusterrole("user-authz:user", USERS_EDIT),
+        clusterrole("user-authz:editor", [{"apiGroups": ["apps"], "resources": ["deployments"],
+                                           "verbs": ["create", "update", "patch", "delete"]}]),
         clusterrole("user-authz:admin", USERS_EDIT + CAR_EDIT),
         clusterrole("user-authz:cluster-admin", STAR,
                     {"can-assign-basic-max": "ClusterAdmin"}),
@@ -106,6 +111,8 @@ def snapshots(privileged_email=PRIVILEGED_EMAIL, privileged_group=PRIVILEGED_GRO
         assign.AR_SNAP: [],
         assign.CRB_SNAP: [],
         assign.CROLE_SNAP: default_croles(),
+        assign.USER_SNAP: [],
+        assign.GROUP_SNAP: [],
     }
 
 
@@ -271,10 +278,46 @@ class TestIdentityAssignHook(unittest.TestCase):
             }}]}))
         self.assertFalse(out.validations.data[0]["allowed"])
 
-    def test_group_car_does_not_protect_user_without_spec_groups(self):
+    def test_group_car_does_not_protect_user_without_membership(self):
         out = self.run_hook(isolated_helpdesk_ctx(
             "User", "DELETE", None, old_spec={"email": "admin@deckhouse.io"}))
         tests.assert_validation_allowed(self, out, None)
+
+    def test_group_membership_protects_user_without_spec_groups(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [{"filterResult": {
+                "name": PRIVILEGED_GROUP, "members": ["admin"],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "User", "DELETE", None, old_spec={"email": "admin@deckhouse.io"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_nested_group_membership_protects_user_delete(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [
+                {"filterResult": {
+                    "name": "inner",
+                    "members": [{"kind": "User", "name": "admin"}],
+                }},
+                {"filterResult": {
+                    "name": PRIVILEGED_GROUP,
+                    "members": [{"kind": "Group", "name": "inner"}],
+                }},
+            ],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "User", "DELETE", None, old_spec={"email": "admin@deckhouse.io"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
 
     def test_user_spec_groups_superadmin_is_denied(self):
         out = self.run_hook(isolated_helpdesk_ctx(
@@ -306,6 +349,99 @@ class TestIdentityAssignHook(unittest.TestCase):
             {"accessLevel": "User",
              "additionalRoles": [{"name": "cluster-write-all"}],
              "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_clusteradmin_cannot_delete_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_clusteradmin_cannot_downgrade_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "UPDATE",
+            {"accessLevel": "User",
+             "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_clusteradmin_cannot_repoint_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "UPDATE",
+            {"accessLevel": "SuperAdmin",
+             "subjects": [{"kind": "User", "name": "other@corp"}]},
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_clusteradmin_can_delete_clusteradmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "ClusterAdmin",
+                      "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=CLUSTER_ADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_superadmin_can_delete_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=SUPERADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_security_manager_cannot_delete_superadmin_car(self):
+        extra = {assign.CRB_SNAP: [{"filterResult": {
+            "name": "sec",
+            "role": "d8:manage:security:manager",
+            "userSubjects": [SECURITY],
+            "groupSubjects": [],
+            "saSubjects": [],
+        }}]}
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=SECURITY, extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_security_manager_can_delete_clusteradmin_car(self):
+        extra = {assign.CRB_SNAP: [{"filterResult": {
+            "name": "sec",
+            "role": "d8:manage:security:manager",
+            "userSubjects": [SECURITY],
+            "groupSubjects": [],
+            "saSubjects": [],
+        }}]}
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "ClusterAdmin",
+                      "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=SECURITY, extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_deckhouse_sa_can_delete_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username="system:serviceaccount:d8-system:deckhouse"))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_clusteradmin_cannot_delete_car_with_cluster_admin_additional_role(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "User",
+                      "additionalRoles": [{"name": "cluster-admin"}],
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
             username=CLUSTER_ADMIN))
         self.assertFalse(out.validations.data[0]["allowed"])
 
@@ -472,6 +608,120 @@ class TestIdentityAssignHook(unittest.TestCase):
             api_group="rbac.authorization.k8s.io"))
         tests.assert_validation_allowed(self, out, None)
 
+    def test_helpdesk_cannot_reset_superadmin_via_useroperation(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "root", "email": PRIVILEGED_EMAIL, "groups": [],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"user": "root", "type": "ResetPassword", "initiatorType": "admin"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_helpdesk_initiator_self_does_not_bypass_useroperation(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "root", "email": PRIVILEGED_EMAIL, "groups": [],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"user": "root", "type": "ResetPassword", "initiatorType": "self"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_helpdesk_can_reset_ordinary_user(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "dev", "email": "dev@corp", "groups": [],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"user": "dev", "type": "ResetPassword"},
+            extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_useroperation_target_email_superadmin_denied(self):
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"type": "Lock", "target": {"connectorID": "ldap", "email": PRIVILEGED_EMAIL}}))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_useroperation_membership_superadmin_denied(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [{"filterResult": {
+                "name": PRIVILEGED_GROUP, "members": ["admin"],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"user": "admin", "type": "ResetPassword"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_user_api_sa_can_reset_superadmin(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "root", "email": PRIVILEGED_EMAIL, "groups": [],
+            }}],
+        }
+        out = self.run_hook(ctx(
+            "UserOperation", "CREATE",
+            {"user": "root", "type": "ResetPassword", "initiatorType": "self"},
+            username=assign.USER_API_SA, extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_superadmin_can_reset_superadmin_via_useroperation(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "root", "email": PRIVILEGED_EMAIL, "groups": [],
+            }}],
+        }
+        out = self.run_hook(ctx(
+            "UserOperation", "CREATE",
+            {"user": "root", "type": "ResetPassword"},
+            username=SUPERADMIN, extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_clusterrole_cannot_claim_platform_heritage(self):
+        out = self.run_hook(ctx(
+            "ClusterRole", "CREATE",
+            {"name": "d8:manage:pwned:admin", "rules": []},
+            username=CLUSTER_ADMIN,
+            labels={"heritage": "deckhouse"}))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("heritage: deckhouse", out.validations.data[0]["message"])
+
+    def test_clusterrole_platform_name_without_heritage_allowed(self):
+        out = self.run_hook(ctx(
+            "ClusterRole", "CREATE",
+            {"name": "d8:manage:pwned:admin", "rules": []},
+            username=CLUSTER_ADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_clusterrole_custom_name_with_heritage_allowed(self):
+        out = self.run_hook(ctx(
+            "ClusterRole", "CREATE",
+            {"name": "d8:custom:app", "rules": []},
+            username=CLUSTER_ADMIN,
+            labels={"heritage": "deckhouse"}))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_deckhouse_sa_can_install_platform_clusterrole(self):
+        out = self.run_hook(ctx(
+            "ClusterRole", "CREATE",
+            {"name": "d8:manage:all:admin", "rules": []},
+            username="system:serviceaccount:d8-system:deckhouse",
+            labels={"heritage": "deckhouse"}))
+        tests.assert_validation_allowed(self, out, None)
+
     def test_clusterrole_unrelated_label_change_allowed(self):
         out = self.run_hook(ctx(
             "ClusterRole", "UPDATE",
@@ -484,38 +734,249 @@ class TestIdentityAssignHook(unittest.TestCase):
         tests.assert_validation_allowed(self, out, None)
 
 
+
+# --- DexProvider gate: spec.md M1/M2 (specs/002-dexprovider-identity-gate) ---
+
+AUTHN_EDIT = "authn@corp"
+CUSTOM = "custom@corp"
+DEXPROVIDERS_WRITE = [{"apiGroups": ["deckhouse.io"], "resources": ["dexproviders"],
+                       "verbs": ["get", "create", "update", "patch", "delete"]}]
+
+
+def dex_oidc(**extra):
+    spec = {"type": "OIDC", "displayName": "corp", "enabled": False,
+            "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "s",
+                     "promptType": "login",
+                     "scopes": ["openid", "profile", "email", "groups"]}}
+    for k, v in extra.items():
+        if k in ("allowedIdentities", "displayName", "enabled"):
+            spec[k] = v
+        else:
+            spec["oidc"][k] = v
+    return spec
+
+
+P1 = dex_oidc()
+P2 = dex_oidc(allowedGroups=["contractors"])
+P3 = dex_oidc(allowedIdentities={"emailDomains": ["contractor.example"]})
+P4_CLEAN = dex_oidc(allowedIdentities={"emailDomains": ["contractor.example"],
+                                       "groups": ["contractors"]})
+P4_EDITOR = dex_oidc(allowedIdentities={"emails": ["boss@partner.example"],
+                                        "groups": ["contractors"]})
+P4_TRAP = dex_oidc(allowedIdentities={"emailDomains": ["contractor.example"],
+                                      "groups": ["gate-trap"]})
+
+
+def dex_extra():
+    """Bindings for the four non-basic actors plus the trap grants."""
+    return {
+        assign.CAR_SNAP: [
+            {"filterResult": {"name": "boss", "accessLevel": "Editor", "additionalRoles": [],
+                              "userSubjects": ["boss@partner.example"],
+                              "groupSubjects": [], "saSubjects": []}},
+            {"filterResult": {"name": "trap", "accessLevel": "SuperAdmin", "additionalRoles": [],
+                              "userSubjects": [], "groupSubjects": ["gate-trap"],
+                              "saSubjects": []}},
+        ],
+        assign.CRB_SNAP: [
+            {"filterResult": {"name": "sec", "role": "d8:manage:security:manager",
+                              "userSubjects": [SECURITY], "groupSubjects": [], "saSubjects": []}},
+            {"filterResult": {"name": "authn", "role": "d8:manage:permission:module:user-authn:edit",
+                              "userSubjects": [AUTHN_EDIT], "groupSubjects": [], "saSubjects": []}},
+            {"filterResult": {"name": "custom", "role": "dexproviders-writer",
+                              "userSubjects": [CUSTOM], "groupSubjects": [], "saSubjects": []}},
+        ],
+        assign.CROLE_SNAP: [
+            clusterrole("dexproviders-writer", DEXPROVIDERS_WRITE, heritage=False),
+        ],
+    }
+
+
+def dex_ctx(operation, spec, old_spec=None, **kw):
+    kw.setdefault("extra_snaps", dex_extra())
+    return ctx("DexProvider", operation, spec, old_spec=old_spec, **kw)
+
+
+class TestDexProviderGate(unittest.TestCase):
+    def run_hook(self, context):
+        return hook.testrun(identity_privilege.main, [context])
+
+    def allowed(self, context):
+        out = self.run_hook(context)
+        tests.assert_validation_allowed(self, out, None)
+
+    def denied(self, context, *needles):
+        out = self.run_hook(context)
+        self.assertFalse(out.validations.data[0]["allowed"])
+        msg = out.validations.data[0]["message"]
+        self.assertIn("the provider can assert identities that already carry roles", msg)
+        for needle in needles:
+            self.assertIn(needle, msg)
+        return msg
+
+    # M1: CREATE by actor x form -------------------------------------------------
+    def test_superadmin_creates_every_form(self):
+        for form in (P1, P2, P3, P4_CLEAN, P4_EDITOR, P4_TRAP):
+            self.allowed(dex_ctx("CREATE", form, username=SUPERADMIN))
+
+    def test_clusteradmin_cannot_create_open_provider(self):
+        self.denied(dex_ctx("CREATE", P1, username=CLUSTER_ADMIN), "user-authz:super-admin")
+
+    def test_clusteradmin_cannot_create_groups_only_closed_provider(self):
+        self.denied(dex_ctx("CREATE", P2, username=CLUSTER_ADMIN), "user-authz:super-admin")
+
+    def test_clusteradmin_cannot_create_email_only_closed_provider(self):
+        # SuperAdmin is granted to a group in the fixture, and the group axis is open.
+        self.denied(dex_ctx("CREATE", P3, username=CLUSTER_ADMIN), "user-authz:super-admin")
+
+    def test_clusteradmin_creates_closed_provider_with_no_targets(self):
+        self.allowed(dex_ctx("CREATE", P4_CLEAN, username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_creates_closed_provider_within_range(self):
+        self.allowed(dex_ctx("CREATE", P4_EDITOR, username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_cannot_create_closed_provider_reaching_superadmin_group(self):
+        self.denied(dex_ctx("CREATE", P4_TRAP, username=CLUSTER_ADMIN), "user-authz:super-admin")
+
+    def test_security_manager_matches_clusteradmin(self):
+        self.denied(dex_ctx("CREATE", P1, username=SECURITY))
+        self.allowed(dex_ctx("CREATE", P4_CLEAN, username=SECURITY))
+        self.allowed(dex_ctx("CREATE", P4_EDITOR, username=SECURITY))
+        self.denied(dex_ctx("CREATE", P4_TRAP, username=SECURITY))
+
+    def test_user_authn_edit_without_range_only_passes_empty_targets(self):
+        self.denied(dex_ctx("CREATE", P1, username=AUTHN_EDIT))
+        self.allowed(dex_ctx("CREATE", P4_CLEAN, username=AUTHN_EDIT))
+        self.denied(dex_ctx("CREATE", P4_EDITOR, username=AUTHN_EDIT), "user-authz:editor")
+
+    def test_custom_role_outside_the_model_only_passes_empty_targets(self):
+        self.denied(dex_ctx("CREATE", P1, username=CUSTOM))
+        self.allowed(dex_ctx("CREATE", P4_CLEAN, username=CUSTOM))
+        self.denied(dex_ctx("CREATE", P4_EDITOR, username=CUSTOM), "user-authz:editor")
+
+    def test_identity_without_any_role_passes_only_empty_targets(self):
+        self.denied(isolated_helpdesk_ctx("DexProvider", "CREATE", P1))
+        self.allowed(isolated_helpdesk_ctx("DexProvider", "CREATE", P4_CLEAN))
+
+    def test_service_identities_are_exempt(self):
+        self.allowed(dex_ctx("CREATE", P1, username="system:serviceaccount:d8-system:deckhouse"))
+        self.allowed(dex_ctx("CREATE", P1, username="dhctl"))
+        self.allowed(dex_ctx("CREATE", P1, username="x", groups=["system:masters"]))
+        self.allowed(dex_ctx("CREATE", P1,
+                             username="system:serviceaccount:kube-system:argocd",
+                             groups=["system:serviceaccounts:kube-system"]))
+
+    def test_deny_message_follows_the_contract(self):
+        msg = self.denied(dex_ctx("CREATE", P1, username=CLUSTER_ADMIN))
+        self.assertTrue(msg.startswith(
+            'dexproviders.deckhouse.io "obj": the provider can assert identities that already '
+            'carry roles ['))
+        self.assertIn("can-assign range is basic<=ClusterAdmin", msg)
+        self.assertIn("Narrow spec.allowedIdentities", msg)
+
+    # M2: UPDATE on a foreign open provider (actor B) ----------------------------
+    def test_clusteradmin_rotates_secret_of_foreign_open_provider(self):
+        self.allowed(dex_ctx("UPDATE", dex_oidc(clientSecret="new"), old_spec=P1,
+                             username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_renames_and_disables_foreign_open_provider(self):
+        self.allowed(dex_ctx("UPDATE", dex_oidc(displayName="renamed"), old_spec=P1,
+                             username=CLUSTER_ADMIN))
+        self.allowed(dex_ctx("UPDATE", dex_oidc(enabled=False), old_spec=dex_oidc(enabled=True),
+                             username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_cannot_re_enable_foreign_open_provider(self):
+        # P1 is stored disabled; switching it back on is a fresh connection (review #15)
+        self.denied(dex_ctx("UPDATE", dex_oidc(enabled=True), old_spec=P1, username=CLUSTER_ADMIN),
+                    "user-authz:super-admin")
+        self.allowed(dex_ctx("UPDATE", dex_oidc(enabled=True), old_spec=P1, username=SUPERADMIN))
+        # ... and a closed provider within range comes back on for its owner
+        off = dex_oidc(allowedIdentities={"emailDomains": ["contractor.example"], "groups": ["contractors"]})
+        on = dict(off); on["enabled"] = True
+        self.allowed(dex_ctx("UPDATE", on, old_spec=off, username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_reapplies_foreign_open_provider(self):
+        self.allowed(dex_ctx("UPDATE", dex_oidc(), old_spec=P1, username=CLUSTER_ADMIN))
+        self.allowed(dex_ctx("UPDATE", dex_oidc(scopes=["groups", "email", "profile", "openid"]),
+                             old_spec=P1, username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_narrows_foreign_open_provider(self):
+        self.allowed(dex_ctx("UPDATE", P4_CLEAN, old_spec=P1, username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_cannot_repoint_foreign_open_provider(self):
+        self.denied(dex_ctx("UPDATE", dex_oidc(issuer="https://evil"), old_spec=P1,
+                            username=CLUSTER_ADMIN), "user-authz:super-admin")
+
+    def test_clusteradmin_cannot_touch_other_connector_fields_of_foreign_open_provider(self):
+        self.denied(dex_ctx("UPDATE", dex_oidc(promptType="consent"), old_spec=P1,
+                            username=CLUSTER_ADMIN))
+        self.denied(dex_ctx("UPDATE", dex_oidc(insecureSkipEmailVerified=True), old_spec=P1,
+                            username=CLUSTER_ADMIN))
+
+    def test_user_authn_edit_rotates_secret_of_foreign_open_provider(self):
+        self.allowed(dex_ctx("UPDATE", dex_oidc(clientSecret="new"), old_spec=P1,
+                             username=AUTHN_EDIT))
+
+    # M2: UPDATE on the actor's own closed provider (actor A) --------------------
+    def test_clusteradmin_widens_own_provider_to_a_domain_without_grants(self):
+        new = dex_oidc(allowedIdentities={"emailDomains": ["contractor.example", "nobody.example"],
+                                          "groups": ["contractors"]})
+        self.allowed(dex_ctx("UPDATE", new, old_spec=P4_CLEAN, username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_cannot_widen_own_provider_to_the_trap_group(self):
+        self.denied(dex_ctx("UPDATE", P4_TRAP, old_spec=P4_CLEAN, username=CLUSTER_ADMIN),
+                    "user-authz:super-admin")
+
+    def test_clusteradmin_cannot_open_the_email_axis_of_own_provider(self):
+        new = dex_oidc(allowedIdentities={"groups": ["contractors"]})
+        self.denied(dex_ctx("UPDATE", new, old_spec=P4_CLEAN, username=CLUSTER_ADMIN),
+                    "user-authz:super-admin")
+
+    def test_clusteradmin_repoints_own_provider_with_no_targets(self):
+        new = dex_oidc(issuer="https://other",
+                       allowedIdentities={"emailDomains": ["contractor.example"],
+                                          "groups": ["contractors"]})
+        self.allowed(dex_ctx("UPDATE", new, old_spec=P4_CLEAN, username=CLUSTER_ADMIN))
+
+    def test_superadmin_widens_anything(self):
+        self.allowed(dex_ctx("UPDATE", P4_TRAP, old_spec=P4_CLEAN, username=SUPERADMIN))
+        self.allowed(dex_ctx("UPDATE", P1, old_spec=P4_CLEAN, username=SUPERADMIN))
+
+
 class TestIdentityAssignConfigContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.config = yaml.safe_load(identity_privilege.CONFIG)
         cls.validating = cls.config["kubernetesValidating"][0]
 
-    def test_wave1_resources(self):
+    def test_wave2_resources(self):
         resources = []
         for rule in self.validating["rules"]:
             resources.extend(rule["resources"])
-        self.assertEqual(sorted(set(resources)),
-                         ["clusterauthorizationrules", "clusterroles", "groups", "users"])
+        self.assertEqual(sorted(set(resources)), [
+            "clusterauthorizationrules", "clusterroles", "dexproviders",
+            "groups", "useroperations", "users",
+        ])
 
-    def test_does_not_admit_dexproviders_or_useroperations(self):
-        resources = []
+    def test_useroperations_are_create_only(self):
+        ops = []
         for rule in self.validating["rules"]:
-            resources.extend(rule["resources"])
-        for extra in ("dexproviders", "useroperations"):
-            self.assertNotIn(extra, resources)
+            if "useroperations" in rule["resources"]:
+                ops.extend(rule["operations"])
+        self.assertEqual(sorted(set(ops)), ["CREATE"])
 
-    def test_car_operations_are_create_and_update_only(self):
+    def test_car_operations_include_delete(self):
         car_ops = []
         for rule in self.validating["rules"]:
             if "clusterauthorizationrules" in rule["resources"]:
                 car_ops.extend(rule["operations"])
-        self.assertEqual(sorted(set(car_ops)), ["CREATE", "UPDATE"])
+        self.assertEqual(sorted(set(car_ops)), ["CREATE", "DELETE", "UPDATE"])
 
     def test_snapshots_include_crb_and_clusterroles(self):
         kinds = [b["kind"] for b in self.config["kubernetes"]]
         self.assertEqual(kinds, [
             "ClusterAuthorizationRule", "AuthorizationRule",
-            "ClusterRoleBinding", "ClusterRole",
+            "ClusterRoleBinding", "ClusterRole", "User", "Group",
         ])
 
 
@@ -572,6 +1033,28 @@ class TestAssignSnapshotJQFilters(unittest.TestCase):
         })
         self.assertEqual(out["labels"]["can-assign-basic-max"], "ClusterAdmin")
         self.assertEqual(out["rules"], CAR_EDIT)
+
+    def test_user_filter(self):
+        out = self.run_filter(assign.USER_SNAP, {
+            "metadata": {"name": "admin"},
+            "spec": {"email": "admin@deckhouse.io", "groups": ["legacy"]},
+        })
+        self.assertEqual(out["email"], "admin@deckhouse.io")
+        self.assertEqual(out["groups"], ["legacy"])
+
+    def test_group_filter(self):
+        out = self.run_filter(assign.GROUP_SNAP, {
+            "metadata": {"name": "g1"},
+            "spec": {"name": "superadmins", "members": [
+                {"kind": "User", "name": "admin"},
+                {"kind": "Group", "name": "other"},
+            ]},
+        })
+        self.assertEqual(out["name"], "superadmins")
+        self.assertEqual(out["members"], [
+            {"kind": "User", "name": "admin"},
+            {"kind": "Group", "name": "other"},
+        ])
 
 
 if __name__ == "__main__":

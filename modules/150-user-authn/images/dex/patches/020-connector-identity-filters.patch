@@ -1,0 +1,406 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 7d3792f5..aa38fe64 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -380,6 +380,12 @@ type Connector struct {
+ 	ID   string `json:"id"`
+ 
+ 	Config server.ConnectorConfig `json:"config"`
++
++	// Identity limits applied by the server after the connector produced an
++	// identity, independent of the connector type. See storage.Connector.
++	AllowedEmails       []string `json:"allowedEmails"`
++	AllowedEmailDomains []string `json:"allowedEmailDomains"`
++	AllowedGroups       []string `json:"allowedGroups"`
+ }
+ 
+ // UnmarshalJSON allows Connector to implement the unmarshaler interface to
+@@ -391,6 +397,10 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+ 		ID   string `json:"id"`
+ 
+ 		Config json.RawMessage `json:"config"`
++
++		AllowedEmails       []string `json:"allowedEmails"`
++		AllowedEmailDomains []string `json:"allowedEmailDomains"`
++		AllowedGroups       []string `json:"allowedGroups"`
+ 	}
+ 	if err := json.Unmarshal(b, &conn); err != nil {
+ 		return fmt.Errorf("parse connector: %v", err)
+@@ -428,10 +438,13 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+ 	}
+ 
+ 	*c = Connector{
+-		Type:   conn.Type,
+-		Name:   conn.Name,
+-		ID:     conn.ID,
+-		Config: connConfig,
++		Type:                conn.Type,
++		Name:                conn.Name,
++		ID:                  conn.ID,
++		Config:              connConfig,
++		AllowedEmails:       conn.AllowedEmails,
++		AllowedEmailDomains: conn.AllowedEmailDomains,
++		AllowedGroups:       conn.AllowedGroups,
+ 	}
+ 	return nil
+ }
+@@ -444,10 +457,13 @@ func ToStorageConnector(c Connector) (storage.Connector, error) {
+ 	}
+ 
+ 	return storage.Connector{
+-		ID:     c.ID,
+-		Type:   c.Type,
+-		Name:   c.Name,
+-		Config: data,
++		ID:                  c.ID,
++		Type:                c.Type,
++		Name:                c.Name,
++		Config:              data,
++		AllowedEmails:       c.AllowedEmails,
++		AllowedEmailDomains: c.AllowedEmailDomains,
++		AllowedGroups:       c.AllowedGroups,
+ 	}, nil
+ }
+ 
+diff --git a/server/connector_filters_test.go b/server/connector_filters_test.go
+new file mode 100644
+index 00000000..413a43c7
+--- /dev/null
++++ b/server/connector_filters_test.go
+@@ -0,0 +1,140 @@
++package server
++
++import (
++	"log/slog"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++func TestApplyConnectorAccessFilters(t *testing.T) {
++	tests := []struct {
++		name           string
++		conn           storage.Connector
++		claims         storage.Claims
++		expectedGroups []string
++		expectedErr    bool
++	}{
++		{
++			name:           "no limits keep email and groups",
++			claims:         storage.Claims{Email: "jane@example.com", Groups: []string{"a", "b"}},
++			expectedGroups: []string{"a", "b"},
++		},
++		{
++			name:           "exact email accepted case-insensitively",
++			conn:           storage.Connector{AllowedEmails: []string{"Jane@Example.com"}},
++			claims:         storage.Claims{Email: "jane@example.com", Groups: []string{"a"}},
++			expectedGroups: []string{"a"},
++		},
++		{
++			name:        "email outside the list is refused",
++			conn:        storage.Connector{AllowedEmails: []string{"jane@example.com"}},
++			claims:      storage.Claims{Email: "john@example.com"},
++			expectedErr: true,
++		},
++		{
++			name:           "domain accepted case-insensitively",
++			conn:           storage.Connector{AllowedEmailDomains: []string{"Contractor.Example"}},
++			claims:         storage.Claims{Email: "alice@contractor.example", Groups: []string{"a"}},
++			expectedGroups: []string{"a"},
++		},
++		{
++			name:        "subdomain is not the domain",
++			conn:        storage.Connector{AllowedEmailDomains: []string{"example.com"}},
++			claims:      storage.Claims{Email: "alice@corp.example.com"},
++			expectedErr: true,
++		},
++		{
++			name:        "domain is taken after the last at sign",
++			conn:        storage.Connector{AllowedEmailDomains: []string{"evil.example"}},
++			claims:      storage.Claims{Email: "\"x@evil.example\"@corp.example"},
++			expectedErr: true,
++		},
++		{
++			name:           "either an email or a domain match is enough",
++			conn:           storage.Connector{AllowedEmails: []string{"boss@partner.example"}, AllowedEmailDomains: []string{"contractor.example"}},
++			claims:         storage.Claims{Email: "boss@partner.example"},
++			expectedGroups: nil,
++		},
++		{
++			name:        "email without a domain is refused when only domains are allowed",
++			conn:        storage.Connector{AllowedEmailDomains: []string{"contractor.example"}},
++			claims:      storage.Claims{Email: "alice"},
++			expectedErr: true,
++		},
++		{
++			name:           "groups reduced to the intersection",
++			conn:           storage.Connector{AllowedGroups: []string{"contractors"}},
++			claims:         storage.Claims{Email: "alice@contractor.example", Groups: []string{"contractors", "other-team"}},
++			expectedGroups: []string{"contractors"},
++		},
++		{
++			name:        "empty intersection is refused",
++			conn:        storage.Connector{AllowedGroups: []string{"contractors"}},
++			claims:      storage.Claims{Email: "carol@contractor.example", Groups: []string{"other-team"}},
++			expectedErr: true,
++		},
++		{
++			name:        "user without groups is refused when groups are limited",
++			conn:        storage.Connector{AllowedGroups: []string{"contractors"}},
++			claims:      storage.Claims{Email: "carol@contractor.example"},
++			expectedErr: true,
++		},
++		{
++			name:           "both axes pass together",
++			conn:           storage.Connector{AllowedEmailDomains: []string{"contractor.example"}, AllowedGroups: []string{"contractors"}},
++			claims:         storage.Claims{Email: "alice@contractor.example", Groups: []string{"contractors", "other-team"}},
++			expectedGroups: []string{"contractors"},
++		},
++		{
++			name:        "email limit is checked before groups",
++			conn:        storage.Connector{AllowedEmailDomains: []string{"contractor.example"}, AllowedGroups: []string{"contractors"}},
++			claims:      storage.Claims{Email: "bob@other.example", Groups: []string{"contractors"}},
++			expectedErr: true,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			claims := tc.claims
++			err := applyConnectorAccessFilters(tc.conn, &claims)
++			if tc.expectedErr {
++				require.Error(t, err)
++				var nae *NotAllowedError
++				require.ErrorAs(t, err, &nae)
++				return
++			}
++			require.NoError(t, err)
++			require.Equal(t, tc.expectedGroups, claims.Groups)
++		})
++	}
++}
++
++func TestApplyAccessFiltersLooksUpStaticConnector(t *testing.T) {
++	ctx := t.Context()
++	s := storage.WithStaticConnectors(memory.New(slog.Default()), []storage.Connector{{
++		ID: "corp", Type: "mock", Name: "Corp",
++		AllowedEmailDomains: []string{"corp.example"},
++		AllowedGroups:       []string{"staff"},
++	}})
++	srv := &Server{storage: s}
++	client := storage.Client{AllowedGroups: []string{"staff", "guests"}}
++
++	claims := storage.Claims{Email: "ann@corp.example", Groups: []string{"staff", "guests", "x"}}
++	require.NoError(t, srv.applyAccessFilters(ctx, client, "corp", &claims))
++	// client keeps staff+guests, connector then keeps staff only
++	require.Equal(t, []string{"staff"}, claims.Groups)
++
++	claims = storage.Claims{Email: "ann@other.example", Groups: []string{"staff"}}
++	err := srv.applyAccessFilters(ctx, client, "corp", &claims)
++	var nae *NotAllowedError
++	require.ErrorAs(t, err, &nae)
++
++	// a connector missing from storage is an inconsistency: fail closed
++	claims = storage.Claims{Email: "ann@corp.example", Groups: []string{"staff"}}
++	err = srv.applyAccessFilters(ctx, client, "missing", &claims)
++	require.ErrorAs(t, err, &nae)
++}
+diff --git a/server/handlers.go b/server/handlers.go
+index ede7a28f..733a99c4 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -791,6 +791,65 @@ func applyClientAccessFilters(client storage.Client, claims *storage.Claims) err
+ 	return nil
+ }
+ 
++// applyConnectorAccessFilters enforces the connector's allowedEmails /
++// allowedEmailDomains / allowedGroups on the claims that will be issued, for
++// every connector type alike. Emails and domains compare case-insensitively;
++// a domain is the part of the email after the last '@' and must match
++// exactly. Groups are reduced to the intersection with allowedGroups. An
++// empty allow-list means no restriction.
++func applyConnectorAccessFilters(conn storage.Connector, claims *storage.Claims) error {
++	if len(conn.AllowedEmails) > 0 || len(conn.AllowedEmailDomains) > 0 {
++		email := strings.ToLower(strings.TrimSpace(claims.Email))
++		allowed := false
++		for _, e := range conn.AllowedEmails {
++			if strings.ToLower(strings.TrimSpace(e)) == email {
++				allowed = true
++				break
++			}
++		}
++		if !allowed {
++			if at := strings.LastIndex(email, "@"); at >= 0 && at < len(email)-1 {
++				domain := email[at+1:]
++				for _, d := range conn.AllowedEmailDomains {
++					if strings.ToLower(strings.TrimSpace(d)) == domain {
++						allowed = true
++						break
++					}
++				}
++			}
++		}
++		if !allowed {
++			return &NotAllowedError{Reason: fmt.Sprintf("Email %s not allowed by connector", claims.Email)}
++		}
++	}
++	if len(conn.AllowedGroups) > 0 {
++		claims.Groups = groups.Filter(claims.Groups, conn.AllowedGroups)
++		if len(claims.Groups) == 0 {
++			return &NotAllowedError{Reason: fmt.Sprintf("Email %s not in groups allowed by connector", claims.Email)}
++		}
++	}
++	return nil
++}
++
++// applyAccessFilters runs the DexClient filters and then the connector's own
++// limits. Both must pass; the connector is looked up in storage, where static
++// (config file) connectors are visible through WithStaticConnectors. A login
++// that got this far has a connector by definition, so a connector missing from
++// storage is an inconsistency, not an unrestricted provider: fail closed.
++func (s *Server) applyAccessFilters(ctx context.Context, client storage.Client, connectorID string, claims *storage.Claims) error {
++	if err := applyClientAccessFilters(client, claims); err != nil {
++		return err
++	}
++	conn, err := s.storage.GetConnector(ctx, connectorID)
++	if err != nil {
++		if errors.Is(err, storage.ErrNotFound) {
++			return &NotAllowedError{Reason: fmt.Sprintf("Connector %s not found", connectorID)}
++		}
++		return fmt.Errorf("failed to retrieve connector %q: %w", connectorID, err)
++	}
++	return applyConnectorAccessFilters(conn, claims)
++}
++
+ // recordOfflineSessionFailedAttempt increments the failed-attempt counter on
+ // the OfflineSessions object for (identity.UserID, connID) and applies a
+ // lockout when the configured threshold is reached.
+@@ -872,7 +931,7 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+ 		return "", false, fmt.Errorf("failed to retrieve client: %w", err)
+ 	}
+ 
+-	if err := applyClientAccessFilters(client, &claims); err != nil {
++	if err := s.applyAccessFilters(ctx, client, authReq.ConnectorID, &claims); err != nil {
+ 		return "", false, err
+ 	}
+ 
+@@ -1813,8 +1872,8 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+ 		Groups:            identity.Groups,
+ 	}
+ 
+-	if err := applyClientAccessFilters(client, &claims); err != nil {
+-		s.logger.WarnContext(r.Context(), "password grant denied by client access filter",
++	if err := s.applyAccessFilters(r.Context(), client, connID, &claims); err != nil {
++		s.logger.WarnContext(r.Context(), "password grant denied by access filter",
+ 			"client_id", client.ID,
+ 			"email", claims.Email,
+ 			"err", err,
+@@ -2027,8 +2086,8 @@ func (s *Server) handleTokenExchange(w http.ResponseWriter, r *http.Request, cli
+ 		EmailVerified:     identity.EmailVerified,
+ 		Groups:            identity.Groups,
+ 	}
+-	if err := applyClientAccessFilters(client, &claims); err != nil {
+-		s.logger.WarnContext(r.Context(), "token exchange denied by client access filter",
++	if err := s.applyAccessFilters(r.Context(), client, connID, &claims); err != nil {
++		s.logger.WarnContext(r.Context(), "token exchange denied by access filter",
+ 			"client_id", client.ID,
+ 			"email", claims.Email,
+ 			"err", err,
+diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
+index 2a169ff3..4028f858 100644
+--- a/server/refreshhandlers.go
++++ b/server/refreshhandlers.go
+@@ -727,7 +727,7 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 	// storedClaims is a copy: applyClientAccessFilters is a check, not a
+ 	// transformation of the token in storage.
+ 	storedClaims := rCtx.storageToken.Claims
+-	if err := applyClientAccessFilters(client, &storedClaims); err != nil {
++	if err := s.applyAccessFilters(r.Context(), client, rCtx.storageToken.ConnectorID, &storedClaims); err != nil {
+ 		s.logger.WarnContext(r.Context(), "refresh denied by client access filter",
+ 			"client_id", client.ID,
+ 			"email", rCtx.storageToken.Claims.Email,
+@@ -756,8 +756,8 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 	// Connector Refresh may have returned a newer email or group set (LDAP
+ 	// re-queries the directory when it is actually contacted). Filter again
+ 	// so an upstream membership change is enforced on this response.
+-	if err := applyClientAccessFilters(client, &claims); err != nil {
+-		s.logger.WarnContext(r.Context(), "refresh denied by client access filter after upstream refresh",
++	if err := s.applyAccessFilters(r.Context(), client, rCtx.storageToken.ConnectorID, &claims); err != nil {
++		s.logger.WarnContext(r.Context(), "refresh denied by access filter after upstream refresh",
+ 			"client_id", client.ID,
+ 			"email", claims.Email,
+ 			"err", err,
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
+index 9b667386..0cda95d1 100644
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
+@@ -755,6 +755,10 @@ type Connector struct {
+ 	Name string `json:"name,omitempty"`
+ 	// Config holds connector specific configuration information
+ 	Config []byte `json:"config,omitempty"`
++
++	AllowedEmails       []string `json:"allowedEmails,omitempty"`
++	AllowedEmailDomains []string `json:"allowedEmailDomains,omitempty"`
++	AllowedGroups       []string `json:"allowedGroups,omitempty"`
+ }
+ 
+ func (cli *client) fromStorageConnector(c storage.Connector) Connector {
+@@ -767,20 +771,26 @@ func (cli *client) fromStorageConnector(c storage.Connector) Connector {
+ 			Name:      c.ID,
+ 			Namespace: cli.namespace,
+ 		},
+-		ID:     c.ID,
+-		Type:   c.Type,
+-		Name:   c.Name,
+-		Config: c.Config,
++		ID:                  c.ID,
++		Type:                c.Type,
++		Name:                c.Name,
++		Config:              c.Config,
++		AllowedEmails:       c.AllowedEmails,
++		AllowedEmailDomains: c.AllowedEmailDomains,
++		AllowedGroups:       c.AllowedGroups,
+ 	}
+ }
+ 
+ func toStorageConnector(c Connector) storage.Connector {
+ 	return storage.Connector{
+-		ID:              c.ID,
+-		Type:            c.Type,
+-		Name:            c.Name,
+-		ResourceVersion: c.ObjectMeta.ResourceVersion,
+-		Config:          c.Config,
++		ID:                  c.ID,
++		Type:                c.Type,
++		Name:                c.Name,
++		ResourceVersion:     c.ObjectMeta.ResourceVersion,
++		Config:              c.Config,
++		AllowedEmails:       c.AllowedEmails,
++		AllowedEmailDomains: c.AllowedEmailDomains,
++		AllowedGroups:       c.AllowedGroups,
+ 	}
+ }
+ 
+diff --git a/storage/storage.go b/storage/storage.go
+index 1f331103..529841a7 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -417,6 +417,15 @@ type Connector struct {
+ 	// However, fixing this requires migrating Kubernetes objects for all previously created connectors,
+ 	// or making Dex reading both tags and act accordingly.
+ 	Config []byte `json:"email"`
++
++	// AllowedEmails, AllowedEmailDomains and AllowedGroups bound the identities
++	// this connector may assert, for every connector type alike. An empty list
++	// does not limit that attribute. Domains are matched exactly against the
++	// part of the email after the last '@'; emails and domains compare
++	// case-insensitively. Groups are reduced to the intersection.
++	AllowedEmails       []string `json:"allowedEmails,omitempty" yaml:"allowedEmails,omitempty"`
++	AllowedEmailDomains []string `json:"allowedEmailDomains,omitempty" yaml:"allowedEmailDomains,omitempty"`
++	AllowedGroups       []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
+ }
+ 
+ // VerificationKey is a rotated signing key which can still be used to verify

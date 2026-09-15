@@ -42,6 +42,10 @@ CAR_SNAP = "d8-user-authz-assign-cluster-authorization-rules"
 AR_SNAP = "d8-user-authz-assign-authorization-rules"
 CRB_SNAP = "d8-user-authz-assign-cluster-role-bindings"
 CROLE_SNAP = "d8-user-authz-assign-cluster-roles"
+USER_SNAP = "d8-user-authz-assign-users"
+GROUP_SNAP = "d8-user-authz-assign-groups"
+
+USER_API_SA = "system:serviceaccount:d8-user-authn:user-api"
 
 SA_PREFIX = "system:serviceaccount:"
 
@@ -182,6 +186,26 @@ def is_platform_range_role(name: str) -> bool:
     return name.startswith("d8:") and not name.startswith("d8:custom:")
 
 
+def is_platform_owned(entry: Optional["CatalogEntry"]) -> bool:
+    """Whether the platform installed this ClusterRole.
+
+    A platform role name carries meaning to this webhook -- the level in
+    `d8:manage:<subsystem>:admin`, the access-level annotation, the can-assign
+    labels. Anyone able to create a ClusterRole can pick such a name, and with
+    no rules in it the apiserver's escalation check has nothing to object to
+    when it is created or bound, so the name alone cannot be trusted. Every
+    platform role is helm-labelled `heritage: deckhouse`, and
+    `system-roles.deckhouse.io` refuses that label on both CREATE and UPDATE to
+    everything but the platform itself, so it is a marker a requester cannot
+    put on a role of their own.
+    """
+    if entry is None:
+        return False
+    if entry.name in DISASTER_NAMES:
+        return True
+    return entry.labels.get("heritage") == "deckhouse"
+
+
 def basic_role_for_level(level: Optional[str], *, cap: Optional[str] = None) -> Optional[str]:
     if not isinstance(level, str) or level not in BASIC_LEVEL_ROLE:
         return None
@@ -320,6 +344,109 @@ def actor_roles(user_info: Any, snapshots: Any) -> List[str]:
     return found
 
 
+def user_record(snapshots: Any, *, name: str = "", email: str = "") -> Optional[dict]:
+    name = name if isinstance(name, str) else ""
+    email = email.lower() if isinstance(email, str) and email else ""
+    if name:
+        for fr in iter_filter_results(snapshots, USER_SNAP):
+            if (fr.get("name") or "") == name:
+                return fr
+        return None
+    if not email:
+        return None
+    for fr in iter_filter_results(snapshots, USER_SNAP):
+        fr_email = fr.get("email") or ""
+        fr_email_l = fr_email.lower() if isinstance(fr_email, str) else ""
+        if fr_email_l == email:
+            return fr
+    return None
+
+
+def _group_by_name(snapshots: Any) -> dict:
+    by_name = {}
+    for fr in iter_filter_results(snapshots, GROUP_SNAP):
+        name = fr.get("name")
+        if isinstance(name, str) and name and name not in by_name:
+            by_name[name] = fr
+    return by_name
+
+
+def _member_refs(fr: dict) -> List[Tuple[str, str]]:
+    """(kind, name) from a Group snapshot. A bare string is a User name (tests)."""
+    found: List[Tuple[str, str]] = []
+    for member in _list(fr.get("members")):
+        if isinstance(member, str) and member:
+            found.append(("User", member))
+            continue
+        item = _dict(member)
+        kind = item.get("kind")
+        name = item.get("name")
+        if kind in ("User", "Group") and isinstance(name, str) and name:
+            found.append((kind, name))
+    return found
+
+
+def _ancestor_groups(by_name: dict, seeds: Iterable[str]) -> List[str]:
+    """Parents of seeds, including the seeds. Cycle-safe. Same walk as user-authn groups.go."""
+    parents: dict = {}
+    for name, fr in by_name.items():
+        for kind, member in _member_refs(fr):
+            if kind == "Group":
+                parents.setdefault(member, []).append(name)
+
+    found: List[str] = []
+    seen: Set[str] = set()
+    queue: List[str] = []
+    for seed in seeds:
+        if isinstance(seed, str) and seed and seed not in seen:
+            seen.add(seed)
+            found.append(seed)
+            queue.append(seed)
+    i = 0
+    while i < len(queue):
+        child = queue[i]
+        i += 1
+        for parent in parents.get(child, []):
+            if parent not in seen:
+                seen.add(parent)
+                found.append(parent)
+                queue.append(parent)
+    return found
+
+
+def groups_containing_user(snapshots: Any, user_name: str) -> List[str]:
+    if not isinstance(user_name, str) or not user_name:
+        return []
+    by_name = _group_by_name(snapshots)
+    direct = []
+    for name, fr in by_name.items():
+        if any(kind == "User" and member == user_name for kind, member in _member_refs(fr)):
+            direct.append(name)
+    return _ancestor_groups(by_name, direct)
+
+
+def membership_groups(snapshots: Any, *, user_name: str = "", email: str = "",
+                      spec_groups: Optional[Iterable[str]] = None) -> List[str]:
+    found: List[str] = []
+    seen: Set[str] = set()
+
+    def add(names: Iterable[str]) -> None:
+        for name in names:
+            if isinstance(name, str) and name and name not in seen:
+                seen.add(name)
+                found.append(name)
+
+    add(_list(spec_groups))
+    if user_name:
+        add(groups_containing_user(snapshots, user_name))
+    rec = user_record(snapshots, name=user_name, email=email)
+    if rec:
+        add(groups_containing_user(snapshots, rec.get("name") or ""))
+        add(_list(rec.get("groups")))
+    add(_ancestor_groups(_group_by_name(snapshots), found))
+    return found
+
+
 def target_user_roles(snapshots: Any, email: str, groups: Optional[Iterable[str]] = None) -> List[str]:
     found: List[str] = []
     seen: Set[str] = set()
@@ -339,6 +466,263 @@ def target_user_roles(snapshots: Any, email: str, groups: Optional[Iterable[str]
 
 def target_group_roles(snapshots: Any, group_name: str) -> List[str]:
     return collect_roles_for_identity(snapshots, "group", group_name, lowercase_user=False)
+
+
+# --- DexProvider: the identity space a provider can assert ---------------------
+#
+# Connecting a provider is not a role assignment by itself: dex asserts an
+# email and a set of groups, and the grants behind those strings are whatever
+# the cluster already holds. What a provider can assert is bounded on two axes.
+# The email axis is bounded only by `spec.allowedIdentities` (emails, domains);
+# the group axis by the same block and by the connector's own group filters,
+# where dex demonstrably narrows the claim to a list (see research R3.1). An
+# axis without a limiter is open: every grant on a human subject of that kind
+# is reachable. Group nesting from Group objects is not applied: the platform
+# expands it for local Users only, an external token carries exactly the
+# groups the IdP asserted (research R8).
+
+DEX_ALLOWED_IDENTITIES = "allowedIdentities"
+
+# Fields whose change neither moves the identity source nor widens the space.
+# `enabled` is handled separately: switching a provider off is free, switching
+# it back on is measured as a fresh connection, because disabling is the
+# containment action for a suspect provider and undoing it must not be free
+# for an actor that could not have created it.
+DEX_BENIGN_TOP_FIELDS = frozenset({"displayName"})
+DEX_CREDENTIAL_FIELDS = frozenset({"clientSecret", "bindPW"})
+
+DEX_CONNECTOR_BLOCKS = ("oidc", "saml", "ldap", "crowd", "gitlab", "github", "bitbucketCloud")
+
+# Connector fields that only narrow the group claim. Stripped before comparing
+# the rest of the spec, then compared as sets through dex_group_filter.
+DEX_GROUP_LIMITER_FIELDS = {
+    "oidc": ("allowedGroups",),
+    "gitlab": ("groups",),
+    "crowd": ("groups",),
+    "bitbucketCloud": ("teams", "includeTeamGroups"),
+    "saml": ("allowedGroups", "filterGroups"),
+}
+
+
+def _clean_strings(values: Any, *, lower: bool) -> List[str]:
+    out = []
+    for value in _list(values):
+        if not isinstance(value, str):
+            continue
+        value = value.strip()
+        if not value:
+            continue
+        out.append(value.lower() if lower else value)
+    return out
+
+
+def _dex_assertable(subject: str) -> bool:
+    # kube-apiserver refuses OIDC usernames and groups carrying the system:
+    # prefix, so no provider can assert those subjects.
+    return isinstance(subject, str) and bool(subject) and not subject.startswith("system:")
+
+
+def dex_email_filter(spec: Any) -> Optional[Tuple[frozenset, frozenset]]:
+    """(emails, domains), lowercase, or None when the email axis is open."""
+    block = _dict(_dict(spec).get(DEX_ALLOWED_IDENTITIES))
+    emails = frozenset(_clean_strings(block.get("emails"), lower=True))
+    domains = frozenset(_clean_strings(block.get("emailDomains"), lower=True))
+    if not emails and not domains:
+        return None
+    return emails, domains
+
+
+def _connector_group_filter(spec: dict) -> Optional[frozenset]:
+    kind = spec.get("type")
+    if kind == "OIDC":
+        groups = _clean_strings(_dict(spec.get("oidc")).get("allowedGroups"), lower=False)
+        return frozenset(groups) if groups else None
+    if kind == "Gitlab":
+        groups = _clean_strings(_dict(spec.get("gitlab")).get("groups"), lower=False)
+        return frozenset(groups) if groups else None
+    if kind == "Crowd":
+        groups = _clean_strings(_dict(spec.get("crowd")).get("groups"), lower=False)
+        return frozenset(groups) if groups else None
+    if kind == "BitbucketCloud":
+        block = _dict(spec.get("bitbucketCloud"))
+        if block.get("includeTeamGroups"):
+            # team/group entries under the allowed teams are not enumerable
+            return None
+        teams = _clean_strings(block.get("teams"), lower=False)
+        return frozenset(teams) if teams else None
+    if kind == "Github":
+        orgs = [_dict(o) for o in _list(_dict(spec.get("github")).get("orgs"))]
+        if not orgs:
+            return None
+        found: Set[str] = set()
+        for org in orgs:
+            name = org.get("name")
+            teams = _clean_strings(org.get("teams"), lower=False)
+            if not isinstance(name, str) or not name or not teams:
+                # an org without teams admits every team of that org
+                return None
+            found.update(f"{name}:{team}" for team in teams)
+        return frozenset(found)
+    if kind == "SAML":
+        block = _dict(spec.get("saml"))
+        if not block.get("filterGroups"):
+            return None
+        groups = _clean_strings(block.get("allowedGroups"), lower=False)
+        return frozenset(groups) if groups else None
+    return None
+
+
+def dex_group_filter(spec: Any) -> Optional[frozenset]:
+    """Group names dex narrows the claim to, or None when the group axis is open."""
+    spec = _dict(spec)
+    universal = _clean_strings(_dict(spec.get(DEX_ALLOWED_IDENTITIES)).get("groups"), lower=False)
+    connector = _connector_group_filter(spec)
+    if universal and connector is not None:
+        return frozenset(universal) & connector
+    if universal:
+        return frozenset(universal)
+    return connector
+
+
+def _grant_roles(snapshots: Any, key: str, wanted) -> List[str]:
+    """Roles on subjects of one kind (userSubjects / groupSubjects) accepted by `wanted`."""
+    found: List[str] = []
+    seen: Set[str] = set()
+
+    def add(roles: Iterable[str]) -> None:
+        for role in roles:
+            if role and role not in seen:
+                seen.add(role)
+                found.append(role)
+
+    for snap_name, namespaced in ((CAR_SNAP, False), (AR_SNAP, True)):
+        for fr in iter_filter_results(snapshots, snap_name):
+            if any(wanted(s) for s in _subjects(fr, key)):
+                add(_fr_role_names(fr, namespaced=namespaced))
+    for fr in iter_filter_results(snapshots, CRB_SNAP):
+        if any(wanted(s) for s in _subjects(fr, key)):
+            role = fr.get("role")
+            if isinstance(role, str):
+                add([role])
+    return found
+
+
+def dex_target_roles(spec: Any, snapshots: Any) -> List[str]:
+    """Roles already granted to identities the provider can assert."""
+    email_filter = dex_email_filter(spec)
+    group_filter = dex_group_filter(spec)
+
+    if email_filter is None:
+        users_wanted = _dex_assertable
+    else:
+        emails, domains = email_filter
+
+        def users_wanted(subject: str) -> bool:
+            if not _dex_assertable(subject):
+                return False
+            lowered = subject.lower()
+            if lowered in emails:
+                return True
+            _, _, domain = lowered.rpartition("@")
+            return bool(domain) and domain in domains
+
+    if group_filter is None:
+        groups_wanted = _dex_assertable
+    else:
+        def groups_wanted(subject: str) -> bool:
+            return _dex_assertable(subject) and subject in group_filter
+
+    found: List[str] = []
+    seen: Set[str] = set()
+    for role in _grant_roles(snapshots, "userSubjects", users_wanted) + \
+            _grant_roles(snapshots, "groupSubjects", groups_wanted):
+        if role not in seen:
+            seen.add(role)
+            found.append(role)
+    return found
+
+
+def _dex_normalize(value: Any) -> Any:
+    """Order-free, noise-free view of a spec fragment for equality checks."""
+    value = as_plain(value)
+    if isinstance(value, dict):
+        items = []
+        for key in sorted(value):
+            norm = _dex_normalize(value[key])
+            if norm is None or norm == () or norm == "":
+                continue
+            items.append((str(key), norm))
+        return tuple(items)
+    if isinstance(value, list):
+        return tuple(sorted((_dex_normalize(v) for v in value), key=repr))
+    return value
+
+
+def _dex_strip(spec: dict, *, limiters: bool) -> dict:
+    """Spec without credentials, display fields and (optionally) group limiters."""
+    out = {}
+    for key, value in spec.items():
+        if key in DEX_BENIGN_TOP_FIELDS:
+            continue
+        if key == DEX_ALLOWED_IDENTITIES and limiters:
+            continue
+        if key in DEX_CONNECTOR_BLOCKS and isinstance(as_plain(value), dict):
+            block = {}
+            for field, inner in _dict(value).items():
+                if field in DEX_CREDENTIAL_FIELDS:
+                    continue
+                if limiters and field in DEX_GROUP_LIMITER_FIELDS.get(key, ()):
+                    continue
+                if limiters and key == "github" and field == "orgs":
+                    inner = [{k: v for k, v in _dict(org).items() if k != "teams"}
+                             for org in _list(inner)]
+                block[field] = inner
+            out[key] = block
+            continue
+        out[key] = value
+    return out
+
+
+def _dex_enabled(spec: dict) -> bool:
+    # The CRD defaults `enabled` to true; an absent field means enabled.
+    value = spec.get("enabled")
+    return True if value is None else bool(value)
+
+
+def _subset(new: Optional[frozenset], old: Optional[frozenset]) -> bool:
+    if old is None:
+        return True
+    if new is None:
+        return False
+    return new <= old
+
+
+def dex_benign_update(old_spec: Any, new_spec: Any) -> bool:
+    """Whether an UPDATE can be admitted without recomputing targets.
+
+    Benign: credential rotation, display name, enabled, a no-op re-apply, or a
+    change that only narrows the identity space. Anything else may move the
+    identity source or widen the space and is checked as a fresh connection.
+    """
+    old = _dict(old_spec)
+    new = _dict(new_spec)
+    if _dex_enabled(new) and not _dex_enabled(old):
+        return False
+    old = {k: v for k, v in old.items() if k != "enabled"}
+    new = {k: v for k, v in new.items() if k != "enabled"}
+    if _dex_normalize(_dex_strip(old, limiters=False)) == _dex_normalize(_dex_strip(new, limiters=False)):
+        return True
+    if _dex_normalize(_dex_strip(old, limiters=True)) != _dex_normalize(_dex_strip(new, limiters=True)):
+        return False
+    old_email = dex_email_filter(old)
+    new_email = dex_email_filter(new)
+    if old_email is None:
+        email_ok = True
+    elif new_email is None:
+        email_ok = False
+    else:
+        email_ok = new_email[0] <= old_email[0] and new_email[1] <= old_email[1]
+    return email_ok and _subset(dex_group_filter(new), dex_group_filter(old))
 
 
 def car_target_roles(spec: Any) -> List[str]:
@@ -402,11 +786,19 @@ def describe_role(name: str, labels: Optional[dict] = None) -> Optional[RoleDesc
 
 
 def basic_level_of(name: str, entry: Optional[CatalogEntry]) -> Optional[str]:
+    """Basic level a role stands for, read only off a platform-owned role.
+
+    Both the ladder names and the access-level annotation are strings a
+    requester with create on clusterroles can put on a role of their own, so
+    neither is trusted without the heritage marker. The disaster check stays
+    name-based on purpose: it only ever makes the verdict stricter.
+    """
+    if not is_platform_owned(entry):
+        return None
     for level, role in BASIC_LEVEL_ROLE.items():
         if name == role:
             return level
-    if (entry and entry.access_level in BASIC_ORDER
-            and is_platform_range_role(name)):
+    if entry.access_level in BASIC_ORDER and is_platform_range_role(name):
         return entry.access_level
     return None
 
@@ -419,7 +811,7 @@ def is_disaster(name: str, entry: Optional[CatalogEntry]) -> bool:
 
 
 def _range_from_entry(entry: CatalogEntry) -> Optional[AssignRange]:
-    if not is_platform_range_role(entry.name):
+    if not is_platform_range_role(entry.name) or not is_platform_owned(entry):
         return None
     labels = entry.labels
     basic_max = labels.get("can-assign-basic-max") or labels.get(LABEL_BASIC_MAX) or None
@@ -475,12 +867,18 @@ def role_in_range(name: str, entry: Optional[CatalogEntry], rng: AssignRange) ->
     if is_disaster(name, entry):
         return rng.basic_max == "SuperAdmin" or rng.max_level == "superadmin"
 
+    # A range is a statement about platform roles. A self-made role under a
+    # platform name is leftover for everyone below the SuperAdmin range,
+    # whatever its name or annotations claim.
+    if not is_platform_owned(entry):
+        return False
+
     basic = basic_level_of(name, entry)
     if basic and rng.basic_max:
         if BASIC_ORDER[basic] <= BASIC_ORDER[rng.basic_max]:
             return True
 
-    desc = describe_role(name, entry.labels if entry else None)
+    desc = describe_role(name, entry.labels)
     if not desc or not rng.max_level:
         return False
     if RBACV2_ORDER[desc.level] > RBACV2_ORDER[rng.max_level]:
@@ -602,14 +1000,21 @@ def can_assign(actor_role_names: Sequence[str], target_role_names: Sequence[str]
     Disaster names (cluster-admin, SuperAdmin, rbacv2 superadmin) require the
     SuperAdmin range even when the live ClusterRole was rewritten to rules the
     actor already covers. Cover is only used for non-disaster roles that still
-    have atoms. A role missing from the catalog is leftover: range is not
-    inferred from the name alone.
+    have atoms. A role missing from the catalog is leftover for everyone below
+    the SuperAdmin range: range is not inferred from the name alone.
     """
     targets = [n for n in target_role_names if isinstance(n, str) and n]
     if not targets:
         return None
 
     rng = actor_range(actor_role_names, catalog)
+    if rng.basic_max == "SuperAdmin" or rng.max_level == "superadmin":
+        # The SuperAdmin range is the top of both ladders and only a platform
+        # role carries it. Nothing is outside it, including a role the catalog
+        # does not have: a ClusterRoleBinding whose role was removed still
+        # names a human subject and is a target, but it must not lock the
+        # requester that could recreate that role out.
+        return None
     actor_rules = union_rules(actor_role_names, catalog)
     leftover = []
     for name in targets:
@@ -667,15 +1072,60 @@ def deny_label_message(name: str) -> str:
     )
 
 
+def deny_uo_message(target: str, leftover: Sequence[str], rng: AssignRange) -> str:
+    roles = ", ".join(leftover)
+    return (
+        f'useroperations.deckhouse.io target "{target}" already carries roles [{roles}]; '
+        f"the requester's can-assign range is {range_summary(rng)} and does not cover them"
+    )
+
+
+def deny_dex_message(name: str, leftover: Sequence[str], rng: AssignRange) -> str:
+    roles = ", ".join(leftover)
+    return (
+        f'dexproviders.deckhouse.io "{name}": the provider can assert identities that '
+        f"already carry roles [{roles}]; the requester's can-assign range is "
+        f"{range_summary(rng)} and does not cover them. Narrow spec.allowedIdentities "
+        f"(emails, emailDomains, groups) or ask a SuperAdmin"
+    )
+
+
+def _labels_of(obj: Any) -> dict:
+    return _dict(_dict(_dict(obj).get("metadata")).get("labels"))
+
+
 def can_assign_labels_changed(old_obj: Any, new_obj: Any) -> bool:
-    old_labels = _dict(_dict(old_obj).get("metadata")).get("labels")
-    new_labels = _dict(_dict(new_obj).get("metadata")).get("labels")
-    old_labels = _dict(old_labels)
-    new_labels = _dict(new_labels)
+    old_labels = _labels_of(old_obj)
+    new_labels = _labels_of(new_obj)
     for key in CAN_ASSIGN_LABELS:
         if old_labels.get(key) != new_labels.get(key):
             return True
     return False
+
+
+def claims_platform_ownership(new_obj: Any) -> bool:
+    """Whether the write presents the ClusterRole as platform-installed.
+
+    `heritage: deckhouse` on a platform-shaped name is what makes this webhook
+    read a level out of that name, so a non-exempt requester must not be able
+    to write one. `system-roles.deckhouse.io` is the gate that enforces it, and
+    it is the stricter of the two: it refuses the label to everyone but the
+    platform, where this one exempts break-glass identities. This check is a
+    deliberate second layer, so that narrowing that webhook cannot silently
+    make the level readings here forgeable.
+    """
+    name = _dict(_dict(new_obj).get("metadata")).get("name")
+    if not is_platform_range_role(name if isinstance(name, str) else ""):
+        return False
+    return _labels_of(new_obj).get("heritage") == "deckhouse"
+
+
+def deny_heritage_message(name: str) -> str:
+    return (
+        f'clusterroles.rbac.authorization.k8s.io "{name}" cannot carry '
+        f"heritage: deckhouse under a platform role name; that combination "
+        f"marks a role as platform-installed and is reserved for the platform"
+    )
 
 
 def _indent(text: str, n: int) -> str:
@@ -722,6 +1172,7 @@ CROLE_JQ_FILTER = """
   "rules": (.rules // []),
   "accessLevel": (.metadata.annotations["user-authz.deckhouse.io/access-level"] // ""),
   "labels": {
+    "heritage": (.metadata.labels["heritage"] // ""),
     "can-assign-basic-max": (.metadata.labels["user-authz.deckhouse.io/can-assign-basic-max"] // ""),
     "can-assign-scope": (.metadata.labels["user-authz.deckhouse.io/can-assign-scope"] // ""),
     "can-assign-subsystem": (.metadata.labels["user-authz.deckhouse.io/can-assign-subsystem"] // ""),
@@ -729,6 +1180,21 @@ CROLE_JQ_FILTER = """
     "scope": (.metadata.labels["rbac.deckhouse.io/scope"] // ""),
     "subsystem": (.metadata.labels["rbac.deckhouse.io/subsystem"] // "")
   }
+}
+"""
+
+USER_JQ_FILTER = """
+{
+  "name": .metadata.name,
+  "email": (.spec.email // ""),
+  "groups": [.spec.groups[]? | select(type == "string")]
+}
+"""
+
+GROUP_JQ_FILTER = """
+{
+  "name": (.spec.name // .metadata.name),
+  "members": [.spec.members[]? | select(.kind == "User" or .kind == "Group") | {kind, name}]
 }
 """
 
@@ -767,4 +1233,20 @@ def kubernetes_snapshots() -> str:
   keepFullObjectsInMemory: false
   jqFilter: |-
 { _indent(CROLE_JQ_FILTER.strip(), 4) }
+- name: {USER_SNAP}
+  apiVersion: deckhouse.io/v1
+  kind: User
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  jqFilter: |-
+{ _indent(USER_JQ_FILTER.strip(), 4) }
+- name: {GROUP_SNAP}
+  apiVersion: deckhouse.io/v1alpha1
+  kind: Group
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  jqFilter: |-
+{ _indent(GROUP_JQ_FILTER.strip(), 4) }
 """
