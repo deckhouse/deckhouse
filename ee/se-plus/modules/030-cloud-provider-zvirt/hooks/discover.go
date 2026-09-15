@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"regexp"
 	"sort"
 	"strings"
 	"unicode"
@@ -27,6 +26,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+	"github.com/deckhouse/deckhouse/go_lib/regexpset"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -133,6 +133,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
+	discoveryData.SetDefaults()
 
 	input.Values.Set("cloudProviderZvirt.internal.providerDiscoveryData", discoveryData)
 
@@ -157,15 +158,24 @@ func handleDiscoveryDataVolumeTypes(
 		storageClassStorageDomain[getStorageClassName(domain.Name)] = domain.Name
 	}
 
-	classExcludes, ok := input.Values.GetOk("cloudProviderZvirt.storageClass.exclude")
-	if ok {
-		for _, esc := range classExcludes.Array() {
-			rg := regexp.MustCompile("^(" + esc.String() + ")$")
-			for class := range storageClassStorageDomain {
-				if rg.MatchString(class) {
-					delete(storageClassStorageDomain, class)
-				}
-			}
+	excludePatternValues := input.Values.Get("cloudProviderZvirt.storage.parameters.excludedStorageClasses").Array()
+	excludePatterns := make([]string, 0, len(excludePatternValues))
+	for _, pattern := range excludePatternValues {
+		excludePatterns = append(excludePatterns, pattern.String())
+	}
+
+	excludeRegExpSet, err := NewExcludeRegExpSet(excludePatterns)
+	if err != nil {
+		return fmt.Errorf("failed to compile storage class exclude patterns: %v", err)
+	}
+
+	for storageClass := range storageClassStorageDomain {
+		if excludeRegExpSet.Match(storageClass) {
+			input.Logger.Info(
+				"Excluding storage class because it matches storage.parameters.excludedStorageClasses",
+				slog.String("storage_class", storageClass),
+			)
+			delete(storageClassStorageDomain, storageClass)
 		}
 	}
 
@@ -202,6 +212,18 @@ func handleDiscoveryDataVolumeTypes(
 	setStorageClassesValues(input, storageClasses)
 
 	return nil
+}
+
+// NewExcludeRegExpSet compiles `storage.parameters.excludedStorageClasses` patterns into a set of anchored
+// regular expressions: a pattern has to match the whole StorageClass name, so a plain name in the
+// list stays an exact name — `fast` excludes `fast` and not `ultra-fast-ssd`.
+func NewExcludeRegExpSet(patterns []string) (regexpset.RegExpSet, error) {
+	anchored := make([]string, 0, len(patterns))
+	for _, pattern := range patterns {
+		anchored = append(anchored, "^("+pattern+")$")
+	}
+
+	return regexpset.New(anchored...)
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
