@@ -119,15 +119,25 @@ internal:
 			renderWith("Restricted", "Deny", "deny")
 		})
 
-		It("Warns in opted-in namespaces too, because no restricted constraint enforces there", func() {
-			// d8-pod-security-restricted-deny-d8-default is not rendered for this default policy,
-			// so excluding opted-in namespaces would leave them without any restricted check.
-			Expect(f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-deny-d8-default").Exists()).To(BeFalse())
+		It("Enforces the restricted standard in opted-in namespaces", func() {
+			// The strictest default policy must not disable the strictest constraint: a system
+			// namespace labeled `enable-security-policy-check` is enforced against restricted,
+			// not left with the baseline enforcement and a restricted warning.
+			enforcing := f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-deny-d8-default")
+			Expect(enforcing.Exists()).To(BeTrue())
+			Expect(enforcing.Field("spec.enforcementAction").String()).To(Equal("deny"))
+			Expect(enforcing.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces))
+			Expect(enforcing.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"In","values":["true"]}]`))
 
-			constraint := f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-warn-system")
-			Expect(constraint.Exists()).To(BeTrue())
-			Expect(constraint.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces))
-			Expect(constraint.Field("spec.match.namespaceSelector").Exists()).To(BeFalse())
+			// Both standards now enforce there, so neither warns twice about the same namespace.
+			for _, standard := range []string{"baseline", "restricted"} {
+				warning := f.KubernetesGlobalResource("D8AllowedUsers", fmt.Sprintf("d8-pod-security-%s-warn-system", standard))
+				if !warning.Exists() {
+					continue
+				}
+				Expect(warning.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(enforcementNotEnabled), standard)
+			}
 		})
 	})
 
