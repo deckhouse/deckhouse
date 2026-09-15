@@ -177,8 +177,8 @@ runcmd:
 	convergeUser := func(t *testing.T, doc map[string]any) map[string]any {
 		users, ok := doc["users"].([]any)
 		require.True(t, ok)
-		require.Len(t, users, 1)
-		return users[0].(map[string]any)
+		require.Len(t, users, 2)
+		return users[1].(map[string]any)
 	}
 
 	t.Run("user carries name, expiry, keys and sudo", func(t *testing.T) {
@@ -189,6 +189,18 @@ runcmd:
 		require.Equal(t, true, user["lock_passwd"])
 		require.Equal(t, []any{keys[0]}, user["ssh_authorized_keys"])
 		require.Equal(t, []any{"ALL=(ALL) NOPASSWD:ALL"}, user["sudo"])
+		// cloud-init passes --shell to useradd only when the key is there, and the
+		// Debian default is /bin/sh. dhctl drives commands over this account.
+		require.Equal(t, "/bin/bash", user["shell"])
+	})
+
+	// cloud-init creates the distro default user (ubuntu, ec2-user) only while the users
+	// list is absent or names "default". None of the real payloads carry a users key, so
+	// without the marker our user would be the only one on the node.
+	t.Run("the distro default user is kept", func(t *testing.T) {
+		doc := render(t, base)
+
+		require.Equal(t, "default", doc["users"].([]any)[0])
 	})
 
 	// bashible removes users whose comment is "created by deckhouse" and that are
@@ -205,6 +217,31 @@ runcmd:
 		require.Equal(t, []any{"/var/lib/bashible/bootstrap.sh"}, doc["runcmd"])
 		require.Len(t, doc["write_files"].([]any), 1)
 		require.Equal(t, false, doc["package_update"])
+
+		written := doc["write_files"].([]any)[0].(map[string]any)
+		require.Equal(t, "#!/bin/bash\necho hi\n", written["content"])
+		require.Equal(t, "/var/lib/bashible/bootstrap.sh", written["path"])
+		require.Equal(t, "0700", written["permissions"])
+	})
+
+	// The whole render is a yaml round-trip of the node-controller payload, so the guard
+	// that matters is a real one going through it unchanged but for our users key.
+	t.Run("a real node-controller payload survives the round-trip", func(t *testing.T) {
+		const golden = "../../../../../modules/040-node-manager/images/node-controller/src/internal/bootstrap/testdata/golden/mcm-aws-userData.txt"
+
+		payload, err := os.ReadFile(golden)
+		require.NoError(t, err)
+
+		var before map[string]any
+		require.NoError(t, yaml.Unmarshal(payload, &before))
+		require.NotContains(t, before, "users")
+
+		after := render(t, string(payload))
+		require.Equal(t, "default", after["users"].([]any)[0])
+		require.Equal(t, convergeUserName, convergeUser(t, after)["name"])
+
+		delete(after, "users")
+		require.Equal(t, before, after)
 	})
 
 	t.Run("applying twice changes nothing", func(t *testing.T) {

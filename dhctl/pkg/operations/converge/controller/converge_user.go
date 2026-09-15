@@ -125,8 +125,9 @@ func publicKeyFromPrivateKeyFile(key session.AgentPrivateKey) (string, error) {
 	return string(ssh.MarshalAuthorizedKey(signer.PublicKey())), nil
 }
 
-// withConvergeUser adds the converge user to a base64-encoded cloud-config payload and
-// returns it base64-encoded again. Re-applying it to its own output is a no-op.
+// withConvergeUser adds the converge user to the unmodified manual-bootstrap-for-master
+// payload, base64 in and out. Given its own output it returns that as is, with the keys
+// and expiry already rendered there, so callers must not feed it back to refresh them.
 func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (string, error) {
 	if len(keys) == 0 {
 		return "", errors.New("render cloud-config: the converge user has no authorized keys")
@@ -167,6 +168,7 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 		"gecos":               convergeUserGecos,
 		"expiredate":          expire.Format(time.DateOnly),
 		"lock_passwd":         true,
+		"shell":               "/bin/bash",
 		"sudo":                []string{"ALL=(ALL) NOPASSWD:ALL"},
 		"ssh_authorized_keys": keys,
 	})
@@ -174,8 +176,8 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 	var out bytes.Buffer
 	out.WriteString(cloudConfigHeader + "\n")
 
-	// The payload is capped by some providers (16 KB on AWS), and the default
-	// indent of four costs a couple of kilobytes on a bootstrap script this long.
+	// yaml.v3 re-renders the whole document, and its default indent of four would push
+	// every line of the bootstrap script two columns further right for nothing.
 	encoder := yaml.NewEncoder(&out)
 	encoder.SetIndent(2)
 
@@ -190,10 +192,13 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 	return base64.StdEncoding.EncodeToString(out.Bytes()), nil
 }
 
+// cloudConfigUsers returns the list our user is appended to. cloud-init skips the distro
+// default user (ubuntu, ec2-user) as soon as a users list exists and does not name
+// "default", so a document with no list of its own is seeded with it.
 func cloudConfigUsers(doc map[string]any) ([]any, error) {
 	value, ok := doc["users"]
 	if !ok || value == nil {
-		return nil, nil
+		return []any{"default"}, nil
 	}
 
 	users, ok := value.([]any)
