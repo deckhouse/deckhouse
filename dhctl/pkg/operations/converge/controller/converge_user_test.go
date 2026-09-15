@@ -227,7 +227,10 @@ runcmd:
 	// The whole render is a yaml round-trip of the node-controller payload, so the guard
 	// that matters is a real one going through it unchanged but for our users key.
 	t.Run("a real node-controller payload survives the round-trip", func(t *testing.T) {
-		const golden = "../../../../../modules/040-node-manager/images/node-controller/src/internal/bootstrap/testdata/golden/mcm-aws-userData.txt"
+		// Copied from modules/040-node-manager/images/node-controller/src/internal/
+		// bootstrap/testdata/golden/mcm-aws-userData.txt: the werf tests image excludes
+		// every module's images directory, so it cannot be read in place.
+		const golden = "testdata/mcm-aws-userData.txt"
 
 		payload, err := os.ReadFile(golden)
 		require.NoError(t, err)

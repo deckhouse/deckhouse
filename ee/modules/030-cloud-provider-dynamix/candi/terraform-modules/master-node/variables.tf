@@ -56,14 +56,15 @@ locals {
   ]
 
   # merge is shallow, so an incoming users key would replace base_users wholesale.
+  # The "default" marker is filtered out: this node already declares its own user,
+  # and cloud-init would turn the marker into a second key-carrying sudo account.
   master_cloud_init_script = jsonencode(merge({
     "hostname" : local.master_node_name,
     "create_hostname_file" : true,
     "ssh_deletekeys" : true,
     "ssh_genkeytypes" : ["rsa", "ecdsa", "ed25519"],
-    "ssh_authorized_keys" : [local.ssh_pubkey],
-    "users" : local.base_users
+    "ssh_authorized_keys" : [local.ssh_pubkey]
   }, local.cloud_config, {
-    "users" : concat(local.base_users, try(local.cloud_config["users"], []))
+    "users" : concat(local.base_users, [for u in try(local.cloud_config["users"], []) : u if u != "default"])
   }))
 }
