@@ -20,12 +20,15 @@ webhooks:
   failurePolicy: Ignore
   matchPolicy: Exact
   name: admission-policy-engine.deckhouse.io
-  namespaceSelector:
-    matchExpressions:
-    - key: heritage
-      operator: NotIn
-      values:
-        - deckhouse
+  {{/*
+    Mutations are scoped the same way validation is: namespaces named `d8-*` and `kube-*` hold the
+    components of the platform itself and are never mutated. Selecting them by name replaces the
+    former `heritage` label check, which missed `kube-*` because the label is set by the platform
+    on its own namespaces only.
+  */}}
+  matchConditions:
+  - name: 'exclude-system-namespaces'
+    expression: '!({{ include "system_namespaces_cel" . }})'
   objectSelector: {}
   reinvocationPolicy: IfNeeded
   rules:

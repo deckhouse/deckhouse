@@ -65,6 +65,43 @@ As with policy assignment, enforcement mode can be set:
   d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
   ```
 
+### Policies in system namespaces
+
+Namespaces named `d8-*` and `kube-*` hold the components of the platform itself,
+so the policies that apply to them are decided separately from the settings above.
+
+The `restricted` standard applies to every such namespace in `warn` mode.
+The `security.deckhouse.io/pod-policy` label and the
+[`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter
+are ignored there.
+The check reports violations in the audit and in Grafana, and never blocks a system component from starting.
+
+To enforce policies in a system namespace, set the label `security.deckhouse.io/enable-security-policy-check` to `true` on it.
+Only that value enables enforcement:
+
+```shell
+d8 k label ns d8-my-namespace security.deckhouse.io/enable-security-policy-check=true
+```
+
+The namespace then follows the configured enforcement mode instead of `warn`,
+and the `security.deckhouse.io/pod-policy-action` label applies to it as it does to any other namespace.
+
+The same rule governs OperationPolicy and SecurityPolicy resources.
+A policy with `enforcementAction: Deny` blocks workloads in ordinary namespaces,
+only warns in system ones, and blocks in system namespaces that carry the label.
+
+Splitting a policy this way produces extra constraints named `d8-system-warn-<policy>` and
+`d8-system-enforce-<policy>`, which appear in the audit and in Grafana next to the original one.
+Both prefixes are reserved: a policy whose own name starts with one of them is rejected on creation.
+A policy stays a single constraint whenever the split would change nothing: when it warns or runs
+in dryrun, when the namespaces it names hold no system namespace, when it already excludes every
+system namespace it names, or when that list uses a leading glob such as `*-system`, which cannot
+be intersected with `d8-*` exactly.
+
+Gatekeeper mutations are never applied in system namespaces, whether the namespace carries the label or not.
+The platform sets the parameters of its own components itself, so an `Assign` or `ModifySet` resource
+that would change them is not allowed to run there.
+
 ### Extending a policy
 
 You can extend the `baseline` and `restricted` policies using Gatekeeper templates
