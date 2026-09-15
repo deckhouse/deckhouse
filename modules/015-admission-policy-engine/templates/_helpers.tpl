@@ -362,7 +362,14 @@ spec:
   default action, which is always present in internal.podSecurityStandards.enforcementActions.
   That keeps it at one object per standard instead of one per action.
 */}}
-{{- $d8EnforceRendered := or (and (eq $standard "baseline") (ne $defaultPolicy "privileged")) (and (eq $standard "restricted") (ne $defaultPolicy "restricted")) }}
+{{/*
+  The restricted enforcing constraint is rendered for every defaultPolicy. Gating it on
+  `defaultPolicy != Restricted`, as the baseline one still is, used to disable the strictest
+  constraint exactly when the strictest default policy was configured: a system namespace labeled
+  both `security.deckhouse.io/pod-policy: restricted` and `enable-security-policy-check: "true"`
+  was then enforced against baseline and only warned against restricted.
+*/}}
+{{- $d8EnforceRendered := or (and (eq $standard "baseline") (ne $defaultPolicy "privileged")) (eq $standard "restricted") }}
 {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
