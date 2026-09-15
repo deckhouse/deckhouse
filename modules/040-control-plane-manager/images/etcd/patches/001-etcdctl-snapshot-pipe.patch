@@ -1,5 +1,5 @@
 diff --git a/client/v3/snapshot/v3_snapshot.go b/client/v3/snapshot/v3_snapshot.go
-index 5f263ea30..d8047a987 100644
+index 5f263ea..d8047a9 100644
 --- a/client/v3/snapshot/v3_snapshot.go
 +++ b/client/v3/snapshot/v3_snapshot.go
 @@ -121,3 +121,46 @@ func SaveWithVersion(ctx context.Context, lg *zap.Logger, cfg clientv3.Config, d
@@ -50,7 +50,7 @@ index 5f263ea30..d8047a987 100644
 +	return nil
 +}
 diff --git a/etcdctl/ctlv3/command/snapshot_command.go b/etcdctl/ctlv3/command/snapshot_command.go
-index 66934bede..d2bd43121 100644
+index dcdab90..e711eda 100644
 --- a/etcdctl/ctlv3/command/snapshot_command.go
 +++ b/etcdctl/ctlv3/command/snapshot_command.go
 @@ -17,6 +17,7 @@ package command
@@ -61,15 +61,15 @@ index 66934bede..d2bd43121 100644
  
  	"github.com/spf13/cobra"
  	"go.uber.org/zap"
-@@ -54,6 +55,7 @@ func NewSnapshotCommand() *cobra.Command {
- 		Example: snapshotExample,
+@@ -55,6 +56,7 @@ func NewSnapshotCommand() *cobra.Command {
+ 		GroupID: groupClusterMaintenanceID,
  	}
  	cmd.AddCommand(NewSnapshotSaveCommand())
 +	cmd.AddCommand(NewSnapshotPipeCommand())
  	return cmd
  }
  
-@@ -66,6 +68,14 @@ func NewSnapshotSaveCommand() *cobra.Command {
+@@ -67,6 +69,14 @@ func NewSnapshotSaveCommand() *cobra.Command {
  	}
  }
  
@@ -84,7 +84,7 @@ index 66934bede..d2bd43121 100644
  func snapshotSaveCommandFunc(cmd *cobra.Command, args []string) {
  	if len(args) != 1 {
  		err := fmt.Errorf("snapshot save expects one argument <filename>")
-@@ -95,3 +105,23 @@ func snapshotSaveCommandFunc(cmd *cobra.Command, args []string) {
+@@ -96,3 +106,23 @@ func snapshotSaveCommandFunc(cmd *cobra.Command, args []string) {
  		fmt.Printf("Server version %s\n", version)
  	}
  }
