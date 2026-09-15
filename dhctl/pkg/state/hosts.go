@@ -17,6 +17,7 @@ package state
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
@@ -44,11 +45,14 @@ func SaveMasterHostsToCache(ctx context.Context, cache Cache, hosts map[string]s
 func MergeMasterHosts(sessionHosts, cachedHosts []session.Host) []session.Host {
 	byName := make(map[string]string, len(sessionHosts)+len(cachedHosts))
 
-	for _, host := range sessionHosts {
-		byName[host.Name] = host.Host
-	}
+	// An entry without an address says nothing about where the node is. One writer of the
+	// cache stores a master whose SSH address came back empty, and letting that win would
+	// hide the address the session still has.
+	for _, host := range slices.Concat(sessionHosts, cachedHosts) {
+		if host.Host == "" {
+			continue
+		}
 
-	for _, host := range cachedHosts {
 		byName[host.Name] = host.Host
 	}
 

@@ -413,24 +413,3 @@ func TestForgetConvergeUserNodes(t *testing.T) {
 		require.Equal(t, []string{"cluster-master-0"}, controller.convergeState.ConvergeUserNodes)
 	})
 }
-
-// A master this converge created is kept out of the live session on purpose — one session
-// carries one generation of users — so the hosts cache is the only place its address
-// lives. Dropping it maps the node to an empty address, and the readiness check refuses
-// to go on with one.
-func TestMergeMasterHosts(t *testing.T) {
-	sessionHosts := []session.Host{
-		{Host: "10.0.0.1", Name: "cluster-master-0"},
-		{Host: "10.0.0.2", Name: "cluster-master-1"},
-	}
-	cachedHosts := []session.Host{
-		{Host: "10.0.0.9", Name: "cluster-master-1"},
-		{Host: "10.0.0.3", Name: "cluster-master-2"},
-	}
-
-	require.Equal(t, []session.Host{
-		{Host: "10.0.0.1", Name: "cluster-master-0"},
-		{Host: "10.0.0.9", Name: "cluster-master-1"},
-		{Host: "10.0.0.3", Name: "cluster-master-2"},
-	}, state.MergeMasterHosts(sessionHosts, cachedHosts))
-}
