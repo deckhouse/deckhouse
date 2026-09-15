@@ -176,6 +176,16 @@ func providerFixtures() []providerFixture {
 				"additionalTags":           map[string]any{"team": "platform"},
 				"capacity":                 map[string]any{"cores": float64(4), "memory": "8Gi"},
 			},
+			rolloutExceptions: map[string]string{
+				// `preemptible` (PR #21866) is absent from the fixture on purpose: it never shipped
+				// under v1, so the field's history starts with "missing". The v1 checksum gates it
+				// on truthiness, hashing `preemptible: false` exactly like a missing field, while
+				// v2 compares by value and sees the transition to false as a change. The rendered
+				// OpenStackMachineTemplate is identical either way (the CAPI template only emits
+				// the tag when preemptible is truthy). Same trade-off as `additionalTags`: an
+				// unnecessary rollout in exchange for never losing an edit — see TestEmptyValueDivergence.
+				"preemptible/empty": "v1 gates on truthiness — preemptible:false hashes like missing",
+			},
 		},
 		{
 			name:    "huaweicloud",

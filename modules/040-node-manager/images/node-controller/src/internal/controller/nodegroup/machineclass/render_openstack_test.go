@@ -103,3 +103,19 @@ func TestRenderMachineClass_OpenstackByteParity(t *testing.T) {
 	assert.Equal(t, "prod", tags["env"])
 	assert.Equal(t, "1", tags["kubernetes.io-cluster-deckhouse-aaaa-bbbb"])
 }
+
+// TestRenderMachineClass_OpenstackMCM_PreemptibleRejected guards that the MCM template refuses
+// to render when OpenStackInstanceClass.spec.preemptible is true — MCM has no way to emit the raw
+// Nova `preemptible` tag, so tolerating the field would silently drop it and mislead users into
+// thinking preemptible instances were requested.
+func TestRenderMachineClass_OpenstackMCM_PreemptibleRejected(t *testing.T) {
+	tmpl, err := os.ReadFile(openstackMachineClassTemplatePath)
+	require.NoError(t, err)
+
+	ctx := openstackRenderContext()
+	ctx["nodeGroup"].(map[string]interface{})["instanceClass"].(map[string]interface{})["preemptible"] = true
+
+	_, err = RenderMachineClass(tmpl, ctx)
+	require.Error(t, err, "MCM must refuse OpenStackInstanceClass.spec.preemptible")
+	assert.Contains(t, err.Error(), "supported only with the CAPI engine")
+}

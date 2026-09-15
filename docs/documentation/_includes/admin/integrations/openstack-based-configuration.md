@@ -498,6 +498,54 @@ spec:
       owner: default
 ```
 
+{% if page.cloud_type == 'selectel' %}
+
+### How to create preemptible nodes in Selectel
+
+Selectel triggers preemption on the presence of the raw Nova tag `preemptible`. Set the [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) parameter of the OpenStackInstanceClass to `true` — the tag is then attached to the instance automatically.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: OpenStackInstanceClass
+metadata:
+  name: worker-preempt
+spec:
+  flavorName: SL1.4-8192
+  imageName: Ubuntu 24.04 LTS 64-bit
+  rootDiskSize: 30
+  preemptible: true
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-preempt
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: worker-preempt
+    minPerZone: 2
+    maxPerZone: 4
+    zones: [ru-3a]
+```
+
+Limitations:
+
+- The `preemptible` tag is a Selectel-specific mechanism. On other OpenStack providers the tag is attached to the VM but ignored — the instance will be created but will not be preemptible.
+- Supported only for CloudEphemeral NodeGroups running on the CAPI engine. If an OpenStackInstanceClass with `preemptible: true` is used by a NodeGroup running on the MCM engine, the MCM machine-class render fails and no machine is created; the reason is written to the NodeGroup `.status.error`.
+- The management engine is selected per NodeGroup. If the same OpenStackInstanceClass with `preemptible: true` is used simultaneously by NodeGroups running on CAPI and MCM, the MCM NodeGroup becomes invalid — use separate OpenStackInstanceClass resources for different engines.
+
+{% alert level="warning" %}
+Changing the [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) parameter in an existing OpenStackInstanceClass changes the OpenStackMachineTemplate and causes all nodes in the corresponding NodeGroup to be recreated.
+{% endalert %}
+
+If a preemptible instance is terminated without a `graceful shutdown`, the corresponding node transitions to the `NotReady` state. After the missing instance is detected, CAPO and MachineHealthCheck initiate the creation of a new Machine and virtual machine. Until recovery is complete, pods on the lost node may still appear in the Kubernetes API with the `Running` status even though they are no longer actually available.
+
+{% endif %}
+
 ### LoadBalancer configuration
 
 {% alert level="warning" %}

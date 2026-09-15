@@ -124,6 +124,16 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
+                preemptible:
+                  description: |
+                    Marks instances of this class as preemptible.
+
+                    When `true`, the raw Nova tag `preemptible` is attached to the instance. This is a Selectel-specific mechanism for creating interruptible instances; on other OpenStack providers the tag is attached to the VM but ignored.
+
+                    Supported only for CloudEphemeral NodeGroups running on the CAPI engine. If used on a NodeGroup running on the MCM engine, node creation fails and `.status.error` explains why.
+                  type: boolean
+                  default: false
+                  x-doc-examples: [true]
             status:
               type: object
               properties:

@@ -208,6 +208,29 @@ func TestEmptyValueDivergence(t *testing.T) {
 		"and the object is identical, which is what makes this rollout unnecessary but harmless")
 }
 
+// TestOpenstackPreemptibleRenderedInV2 pins that OpenStackInstanceClass.spec.preemptible flows into
+// the OpenStackMachineTemplate under the v2 contract as the raw Nova tag `preemptible` next to the
+// mandatory deckhouse-<uuid>=1 / role-* / use-cluster-api=1. If the raw form regresses (e.g. the
+// tag gets rendered as `preemptible=true` key=value), Selectel's preemption mechanism stops firing.
+func TestOpenstackPreemptibleRenderedInV2(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	spec := deepCopySpec(t, fixture.instanceClass)
+	spec["preemptible"] = true
+
+	obj, err := renderV2Spec(fixture, contract, spec)
+	require.NoError(t, err)
+
+	tags, ok := obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["tags"].([]any)
+	require.True(t, ok, "spec.template.spec.tags must be a list")
+
+	assert.Contains(t, tags, "preemptible", "raw Nova tag must be present as a string (no key=value)")
+	assert.Contains(t, tags, "deckhouse-"+parityClusterUUID+"=1", "mandatory safety-controller tag")
+	assert.Contains(t, tags, "role-deckhouse-"+parityNodeGroup+"-"+parityZone+"=1")
+	assert.Contains(t, tags, "use-cluster-api=1")
+}
+
 // TestProviderRenderParityOnEdgeSpecs runs both engines on the InstanceClass shapes a fixture
 // never has: only the CRD-required fields, and every optional field set to its zero value.
 //
