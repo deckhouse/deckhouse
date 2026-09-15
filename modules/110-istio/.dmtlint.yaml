@@ -12,7 +12,14 @@ linters-settings:
         - kind: Deployment
           name: istiod-1x27
           container: discovery
+        - kind: DaemonSet
+          name: ztunnel
+          container: istio-proxy
       no-new-privileges:
+        - kind: DaemonSet
+          name: istio-cni-node
+          container: install-cni
+      host-network-ports:
         - kind: DaemonSet
           name: istio-cni-node
           container: install-cni
