@@ -20,6 +20,8 @@ spec:
           replacement: caphc-controller-manager
         - targetLabel: tier
           replacement: cluster
+        - targetLabel: d8_source
+          replacement: dkp
   selector:
     matchLabels:
       app: caphc-controller-manager

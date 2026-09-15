@@ -34,4 +34,6 @@ spec:
       targetLabel: node
     - targetLabel: tier
       replacement: cluster
+    - targetLabel: d8_source
+      replacement: dkp
 {{- end }}
