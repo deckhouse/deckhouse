@@ -90,6 +90,11 @@ workflow:
     - *skip_e2e_run
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_K8S_AUTOUPDATE_ENABLE == "true"
 
+.rules:on_schedule_av_scan:
+  rules:
+    - *skip_e2e_run
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_AV_SCAN_ENABLE == "true"
+
 # Manual edition builds (MR / main). Release-branch editions are automatic.
 .rules:on_main_manual:
   rules:

@@ -77,6 +77,33 @@
       message=":passport_control: **Average build time on the same commit is [${AVG_BUILD_TIME}](${CI_PIPELINE_SCHEDULE_DESCRIPTION:-CI_PIPELINE_SOURCE})** :passport_control:"
       send_msg
 
+  notify_av:
+    - *send_msg
+    - |
+      # Check skipped images
+      if [ -f av.env ]; then
+          # Using this `|| true` method cause of wrong RC when grep does n't find string
+          skipped=$(grep -c 'SCAN_ID_skipped' av.env || true)
+          echo "Skipped images = ${skipped}"
+          if [[ "${skipped}" != "0" ]]; then
+            message="🛑 Github Antivirus Scan Attention!\n\n"
+            message+="**Skipped images jobs:**\n"
+            message+="AV SCAN MODE: ${AV_SCAN_MODE}\n"
+            message+="${AV_NAME}: [URL]("${CI_JOB_URL}")\n"
+            send_msg
+          fi
+        else 
+          export CI_JOB_STATUS="failed"
+      fi
+    - |
+      if [ "${CI_JOB_STATUS}" == "failed" ]; then
+        message="🛑 Github Antivirus Scan Failed!\n\n"
+        message+="**Failed jobs:**\n"
+        message+="AV SCAN MODE: ${AV_SCAN_MODE}\n"
+        message+="${AV_NAME}: [URL]("${CI_JOB_URL}")\n"
+        send_msg
+      fi
+
 .notify-base:
   variables:
     VAULT_AUTH_PATH: fox
@@ -155,4 +182,15 @@
 .notify-failure-test:
   extends:
     - .notify-failure
+    - .notify-test
+
+.notify-av:
+  extends:
+    - .notify-base
+  after_script:
+    - !reference [.notify_after_scripts, notify_av]
+
+.notify-av-test:
+  extends:
+    - .notify-av
     - .notify-test
