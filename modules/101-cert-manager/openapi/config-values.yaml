@@ -4,6 +4,9 @@
 # /ee/cse/modules/101-cert-manager/openapi/config-values.yaml
 type: object
 description: The module does not have any mandatory parameters.
+x-deckhouse-validations:
+  - expression: "(!has(self.yandexFolderID) && !has(self.yandexServiceAccountJSON)) || (has(self.yandexFolderID) && has(self.yandexServiceAccountJSON))"
+    message: "yandexFolderID and yandexServiceAccountJSON must be set together"
 properties:
   nodeSelector:
     type: object
@@ -107,6 +110,28 @@ properties:
       [
         "eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0=",
       ]
+
+  yandexFolderID:
+    type: string
+    minLength: 1
+    description: |
+      ID of the [Yandex Cloud](usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns) folder
+      that contains the public DNS zone used for the ACME DNS-01 challenge.
+
+      Must be set together with `yandexServiceAccountJSON`.
+    x-examples: ["b1gabcdefghijklmnopq"]
+
+  yandexServiceAccountJSON:
+    type: string
+    format: byte
+    minLength: 1
+    description: |
+      Base64-encoded authorized key JSON for a Yandex Cloud service account
+      with the `dns.editor` role (or equivalent) on the folder with the DNS zone.
+
+      Must be set together with `yandexFolderID`.
+      Details are available in [Issuing a DNS wildcard certificate using Yandex Cloud DNS](usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns).
+    x-examples: ["eyJpZCI6ImFqZSIsInNlcnZpY2VfYWNjb3VudF9pZCI6ImFqZSJ9"]
 
   email:
     type: string

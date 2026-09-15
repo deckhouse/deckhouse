@@ -199,6 +199,59 @@ Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutor
      - "*.domain.com"
    ```
 
+## Issuing a DNS wildcard certificate using Yandex Cloud DNS
+
+To issue a wildcard certificate with DNS-01 validation in Yandex Cloud DNS,
+configure the module parameters and create a Certificate that references the `yandex` ClusterIssuer.
+
+1. Create a [service account](https://yandex.cloud/en/docs/iam/operations/sa/create) in Yandex Cloud and assign the `dns.editor` role (or equivalent) on the folder that contains the public DNS zone.
+
+1. Create an [authorized key](https://yandex.cloud/en/docs/iam/operations/authorized-key/create) for the service account and encode the resulting JSON file with **Base64**:
+
+   ```shell
+   base64 authorized_key.json
+   ```
+
+1. Set the module parameters:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cert-manager
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       yandexFolderID: <FOLDER_ID>
+       yandexServiceAccountJSON: <AUTHORIZED_KEY_JSON_BASE64>
+   ```
+
+   After that, Deckhouse Kubernetes Platform automatically deploys the Yandex Cloud DNS ACME webhook
+   and creates a ClusterIssuer and Secret for Yandex in the `d8-cert-manager` namespace.
+
+   Where:
+
+   - `<FOLDER_ID>`: ID of the Yandex Cloud folder that contains the public DNS zone
+   - `<AUTHORIZED_KEY_JSON_BASE64>`: Contents of `authorized_key.json` encoded in Base64
+
+1. Create a Certificate with validation via Yandex Cloud DNS:
+
+   ```yaml
+   apiVersion: cert-manager.io/v1
+   kind: Certificate
+   metadata:
+     name: domain-wildcard
+     namespace: app-namespace
+   spec:
+     secretName: tls-wildcard
+     issuerRef:
+       name: yandex
+       kind: ClusterIssuer
+     dnsNames:
+     - "*.domain.com"
+   ```
+
 ## Issuing a self-signed certificate
 
 In this case, the entire process is even more straightforward than that of LetsEncrypt. Simply replace the issuer name (`letsencrypt`) with `selfsigned`:

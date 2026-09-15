@@ -1,0 +1,14 @@
+{{- if include "cert_manager.yandex_dns_webhook_ready" . }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: yandex-dns-webhook
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: yandex-dns-webhook
+{{- end }}
