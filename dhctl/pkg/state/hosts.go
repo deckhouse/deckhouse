@@ -17,6 +17,7 @@ package state
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
@@ -36,6 +37,33 @@ func SaveMasterHostsToCache(ctx context.Context, cache Cache, hosts map[string]s
 	if err := SaveMasterHosts(ctx, cache, hosts); err != nil {
 		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot save ssh hosts %v", err))
 	}
+}
+
+// MergeMasterHosts joins two host lists by node name, the cached address winning: it is
+// rewritten every time a master is created or recreated, while the session may still hold
+// the address of a machine that has been replaced.
+func MergeMasterHosts(sessionHosts, cachedHosts []session.Host) []session.Host {
+	byName := make(map[string]string, len(sessionHosts)+len(cachedHosts))
+
+	// An entry without an address says nothing about where the node is. One writer of the
+	// cache stores a master whose SSH address came back empty, and letting that win would
+	// hide the address the session still has.
+	for _, host := range slices.Concat(sessionHosts, cachedHosts) {
+		if host.Host == "" {
+			continue
+		}
+
+		byName[host.Name] = host.Host
+	}
+
+	merged := make([]session.Host, 0, len(byName))
+	for name, address := range byName {
+		merged = append(merged, session.Host{Host: address, Name: name})
+	}
+
+	sort.Sort(session.SortByName(merged))
+
+	return merged
 }
 
 func GetMasterHostsIPs(ctx context.Context, cache Cache) ([]session.Host, error) {

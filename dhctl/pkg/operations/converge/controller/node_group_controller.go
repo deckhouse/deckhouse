@@ -58,6 +58,11 @@ type NodeGroupController struct {
 	// group-wide bashible cloud-init, and their nodes answer no sshd.
 	immutable bool
 
+	// cloudConfigHasConvergeUser describes the payload above, so that the record of which
+	// masters carry the account follows the render instead of re-deciding: SSHless() turns
+	// false the moment a new master's address is cached.
+	cloudConfigHasConvergeUser bool
+
 	globalOptions *options.GlobalOptions
 }
 
@@ -72,6 +77,48 @@ func NewNodeGroupController(name string, state state.NodeGroupInfrastructureStat
 	return controller
 }
 
+// loadCloudConfig reads the group's bashible payload and stores it. A master's copy
+// carries the converge user; every other group's is stored as it came.
+func (c *NodeGroupController) loadCloudConfig(ctx *context.Context, nodeInternalIPs ...string) error {
+	// we hide deckhouse logs because we always have config
+	payload, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs, nodeInternalIPs...)
+	if err != nil {
+		return err
+	}
+
+	metaConfig, err := ctx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
+	skipped := c.convergeUserSkipped(ctx)
+
+	cloudConfig, err := masterCloudConfig(ctx.Ctx(), metaConfig, operatorPrivateKeys(ctx), payload, skipped)
+	if err != nil {
+		return err
+	}
+
+	c.cloudConfig = cloudConfig
+	c.cloudConfigHasConvergeUser = !skipped
+
+	return nil
+}
+
+// convergeUserSkipped reports that no converge user goes into this group's payload. Only a
+// master is reached over SSH by converge, and only with an sshd to reach: a commander or
+// sshless converge holds Kubernetes credentials of its own and connects to no node at all.
+func (c *NodeGroupController) convergeUserSkipped(ctx *context.Context) bool {
+	if c.name != global.MasterNodeGroupName {
+		return true
+	}
+
+	if c.immutable || ctx.CommanderMode() {
+		return true
+	}
+
+	return ctx.SSHless()
+}
+
 func (c *NodeGroupController) Run(ctx *context.Context) error {
 	immutableGroup, err := isImmutableNodeGroup(ctx, c.name)
 	if err != nil {
@@ -83,13 +130,9 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	// a per-node payload built where the node is created. The bashible secret exists
 	// for such a group too, and taking it would hand a machine a config it cannot run.
 	if !c.immutable {
-		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
-		if err != nil {
+		if err := c.loadCloudConfig(ctx); err != nil {
 			return err
 		}
-
-		c.cloudConfig = nodeCloudConfig
 	}
 
 	if c.desiredReplicas > len(c.state.State) {
@@ -397,15 +440,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 				return nil
 			}
 
-			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
-			if err != nil {
-				return err
-			}
-
-			c.cloudConfig = nodeCloudConfig
-
-			return nil
+			return c.loadCloudConfig(ctx)
 		})
 		if err != nil {
 			// We do not return an error immediately for the following reasons:

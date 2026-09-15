@@ -18,6 +18,8 @@ import (
 	gocontext "context"
 	"errors"
 	"fmt"
+	"slices"
+	"time"
 
 	"github.com/name212/govalue"
 
@@ -84,7 +86,6 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		return fmt.Errorf("converge has no ssh connection configuration to reach the master nodes with")
 	}
 
-	var userPassedHosts []session.Host
 	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
 	if err != nil {
 		return err
@@ -95,9 +96,20 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		return err
 	}
 
+	var sessionHosts []session.Host
 	if sshCl != nil {
-		userPassedHosts = append(make([]session.Host, 0), sshCl.Session().AvailableHosts()...)
+		sessionHosts = sshCl.Session().AvailableHosts()
 	}
+
+	// A master this converge created is deliberately kept out of the session — that
+	// carries one generation of users — but it is in the hosts cache. Reading both keeps
+	// the checks from seeing a master with no address and refusing to go on.
+	cachedHosts, err := state.GetMasterHostsIPs(ctx.Ctx(), ctx.StateCache())
+	if err != nil {
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not read master hosts from cache: %v", err))
+	}
+
+	userPassedHosts := state.MergeMasterHosts(sessionHosts, cachedHosts)
 
 	nodesNames := make([]string, 0, len(c.state.State))
 	for nodeName := range c.state.State {
@@ -307,6 +319,10 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 			c.state.State[candidateName] = output.InfrastructureState
 			nodesToWait = append(nodesToWait, candidateName)
 
+			if err := c.rememberConvergeUserNode(ctx, candidateName); err != nil {
+				return err
+			}
+
 			// One at a time: etcd admits a single learner, so the next machine must not
 			// start joining until control-plane-manager has this one voting.
 			if c.immutable {
@@ -327,18 +343,56 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 	// than from the group's bashible secret: registering it as an SSH host and waiting
 	// for that secret to list it would both stall on something that never happens.
 	if len(masterIPForSSHList) > 0 && !c.immutable {
-		if err := c.addNewNodesToSSH(ctx, masterIPForSSHList); err != nil {
+		if err := c.loadCloudConfig(ctx, nodeInternalIPList...); err != nil {
 			return err
 		}
-
-		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
-		if err != nil {
-			return err
-		}
-		c.cloudConfig = nodeCloudConfig
 
 		c.addNewNodesToCache(ctx, masterIPForSSHList)
+	}
+
+	return nil
+}
+
+// rememberConvergeUserNode records a master that booted with the converge user, so that a
+// later switch knows which user reaches it and the cleanup knows where to remove it.
+func (c *MasterNodeGroupController) rememberConvergeUserNode(ctx *context.Context, nodeName string) error {
+	if !c.cloudConfigHasConvergeUser {
+		return nil
+	}
+
+	if slices.Contains(c.convergeState.ConvergeUserNodes, nodeName) {
+		return nil
+	}
+
+	c.convergeState.ConvergeUserNodes = append(c.convergeState.ConvergeUserNodes, nodeName)
+
+	// The same lifetime masterCloudConfig bakes into the account, measured from a moment
+	// just after it: the record must not die before the accounts it names.
+	c.convergeState.ConvergeUserExpiry = time.Now().UTC().Add(convergeUserLifetime)
+
+	if err := ctx.SetConvergeState(c.convergeState); err != nil {
+		return fmt.Errorf("save converge state with node %s: %w", nodeName, err)
+	}
+
+	return nil
+}
+
+// forgetConvergeUserNodes drops the masters that have just been destroyed. A destructive
+// single-master plan scales 1→3→1: the masters it creates carry the converge user and are
+// deleted again, and left in the state they send the cleanup to machines that are gone.
+func (c *MasterNodeGroupController) forgetConvergeUserNodes(ctx *context.Context, deleted []string) error {
+	kept := slices.DeleteFunc(slices.Clone(c.convergeState.ConvergeUserNodes), func(name string) bool {
+		return slices.Contains(deleted, name)
+	})
+
+	if len(kept) == len(c.convergeState.ConvergeUserNodes) {
+		return nil
+	}
+
+	c.convergeState.ConvergeUserNodes = kept
+
+	if err := ctx.SetConvergeState(c.convergeState); err != nil {
+		return fmt.Errorf("save converge state without the deleted nodes: %w", err)
 	}
 
 	return nil
@@ -354,29 +408,6 @@ func (c *MasterNodeGroupController) beforeUpdateNodes(ctx *context.Context) erro
 	}
 
 	return c.switchClientToNotFirstMaster(ctx)
-}
-
-func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, masterIPForSSHList []session.Host) error {
-	if ctx.CommanderMode() {
-		return nil
-	}
-	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
-	if err != nil {
-		return err
-	}
-
-	sshCl, err := sshProvider.Client(ctx.Ctx())
-	if err != nil {
-		return err
-	}
-
-	if govalue.IsNil(sshCl) {
-		return fmt.Errorf("NodeInterface is not ssh")
-	}
-
-	sshCl.Session().AddAvailableHosts(masterIPForSSHList...)
-
-	return nil
 }
 
 // sshProviderForHooks builds the provider the control-plane hooks reach nodes with.
@@ -503,6 +534,14 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return err
 	}
 
+	// The payload with the converge user reached the machine only if the VM was built
+	// anew; an update in place leaves the account that booted with it.
+	if nodeRunner.HasVMDestruction() {
+		if err := c.rememberConvergeUserNode(ctx, nodeName); err != nil {
+			return err
+		}
+	}
+
 	if tomb.IsInterrupted() {
 		return global.ErrConvergeInterrupted
 	}
@@ -550,6 +589,9 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		ctx,
 		sshProvider,
 		nodesToCheck,
+		func(base *session.Session, host session.Host) (*session.Session, error) {
+			return context.SessionForNode(ctx, base, host)
+		},
 		ctx.CommanderMode(),
 		c.skipChecks,
 		c.immutable,
@@ -615,6 +657,10 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 
 		// If deletion was successful, update master hosts cache
 		if err == nil && len(nodesToDelete) > 0 {
+			if forgetErr := c.forgetConvergeUserNodes(ctx, nodesToDelete); forgetErr != nil {
+				return forgetErr
+			}
+
 			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache after deleting %d masters: %v", len(nodesToDelete), nodesToDelete))
 
 			// Get current master hosts from cache
