@@ -30,7 +30,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager/set_priorities",
+	Queue: "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "ngs",

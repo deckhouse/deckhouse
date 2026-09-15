@@ -160,7 +160,7 @@ func standbyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager/discover_standby_ng",
+	Queue: "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "node_groups",
