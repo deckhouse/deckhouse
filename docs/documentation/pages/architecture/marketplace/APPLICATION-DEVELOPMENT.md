@@ -166,10 +166,10 @@ properties:
     x-deckhouse-immutable: true
   postgres:
     type: object
-    x-deckhouse-immutable: true
     properties:
       storageClass:
         type: string
+        x-deckhouse-immutable: true
       volumeSize:
         type: string
 ```
@@ -177,8 +177,10 @@ properties:
 Behavior:
 
 - Only the literal `true` marks a field. Any other value is ignored.
-- The mark on an object freezes the whole block: every nested field below it becomes unchangeable too, as in the
-  `postgres` example above.
+- The mark on an object freezes the whole block as one value: any change below it is rejected and reported as the
+  block, including fields that would otherwise be editable. Mark an object only when the block makes sense as a
+  single choice; to freeze one field, mark that field, the way `postgres.storageClass` does above while
+  `postgres.volumeSize` stays editable.
 - An update that changes a marked field is rejected by the validating webhook, naming the field.
 - The web console renders a marked field read-only in the edit form of an installed application, and editable in
   the install form.
