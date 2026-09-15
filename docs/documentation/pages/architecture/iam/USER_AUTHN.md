@@ -37,7 +37,7 @@ Using the Dex client:
 
 ![User-authn module architecture with Dex authentication](../../images/architecture/iam/c4-l2-user-authn-dex-client.png)
 
-When connecting to the Kubernetes API using `kubectl` or other Kubernetes clients with a generated kubeconfig, a separate authentication schemes are used:
+When connecting to the Kubernetes API using  `d8`, `kubectl` or other Kubernetes clients with a generated kubeconfig, a separate authentication schemes are used:
 
 * Token authentication. It is described in detail in the [corresponding documentation section](authentication.html#connecting-to-kubernetes-api-using-a-generated-kubeconfig).
 * Basic authentication. An example of configuring basic authentication using an LDAP provider is described in [the module documentation](/modules/user-authn/usage.html#configuring-basic-authentication) section.
