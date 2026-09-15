@@ -109,7 +109,6 @@ steps:
     id: build
     env:
       WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
-      WERF_DOCKER_REGISTRY_DEBUG: 1
       WERF_TELEMETRY: "1"
       WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
 {!{- if eq $buildType "dev" }!}
@@ -227,6 +226,7 @@ steps:
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
       export WERF_REPO="${DEV_REGISTRY_PATH}"
     {!{- end }!}
+      export WERF_META_REPO="${WERF_REPO}/meta"
     {!{ if eq $buildType "release" }!}
       # Registry path to publish images for Git tags.
       if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
@@ -300,26 +300,12 @@ steps:
         export WERF_SIGN_MANIFEST="0"
         echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
       fi
-      # Statisctics added since werf 2.78.1
-      werf_major="$(werf version | cut -d. -f1)"
-      werf_minor="$(werf version | cut -d. -f2)"
-      werf_build_report_operations_arg=""
-      if (( werf_major >= 3 )); then
-        echo "Using build-report-operations, werf version >=3.0"
-        werf_build_report_operations_arg="--build-report-operations=true"
-      else
-        if (( werf_minor >= 78 )); then
-          echo "Using build-report-operations, werf version >=2.78"
-          werf_build_report_operations_arg="--build-report-operations=true"
-        fi
-      fi
 
       type werf && source $(werf ci-env github --verbose --as-file)
       werf build \
         --parallel=true --parallel-tasks-limit=5 \
         --save-build-report=true \
-        --build-report-path images_tags_werf.json \
-        ${werf_build_report_operations_arg}
+        --build-report-path images_tags_werf.json
 
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -498,20 +484,7 @@ steps:
       DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
       export WERF_REPO="${DEV_REGISTRY_PATH}"
-
-      # Statisctics added since werf 2.78.1
-      werf_major="$(werf version | cut -d. -f1)"
-      werf_minor="$(werf version | cut -d. -f2)"
-      werf_build_report_operations_arg=""
-      if (( werf_major >= 3 )); then
-        echo "Using build-report-operations, werf version >=3.0"
-        werf_build_report_operations_arg="--build-report-operations=true"
-      else
-        if (( werf_minor >= 78 )); then
-          echo "Using build-report-operations, werf version >=2.78"
-          werf_build_report_operations_arg="--build-report-operations=true"
-        fi
-      fi
+      export WERF_META_REPO="${WERF_REPO}/meta"
 
       type werf && source $(werf ci-env github --verbose --as-file)
       # Build only the `tests` image (and its transitive werf deps);
@@ -522,8 +495,7 @@ steps:
         --parallel=true --parallel-tasks-limit=5 \
         --save-build-report=true \
         --final-images-only=true \
-        --build-report-path images_tags_werf.json \
-        ${werf_build_report_operations_arg}
+        --build-report-path images_tags_werf.json
 
       TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
       rm -f images_tags_werf.json

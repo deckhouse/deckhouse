@@ -424,6 +424,7 @@ jobs:
     if: needs.resolve_target.outputs.baseline_workflow == 'main'
     env:
       WERF_ENV: "FE"
+      WERF_DOCKER_REGISTRY_DEBUG: 1
 {!{ tmpl.Exec "build_template" (slice (coll.Merge (coll.Dict "pullRequestRefField" "needs.resolve_target.outputs.sha" "printGitContext" true) .) "main" "FE") | strings.Indent 4 }!}
 
   build_fe_dev:
@@ -435,6 +436,7 @@ jobs:
     if: needs.resolve_target.outputs.baseline_workflow == 'dev'
     env:
       WERF_ENV: "FE"
+      WERF_DOCKER_REGISTRY_DEBUG: 1
 {!{ tmpl.Exec "build_template" (slice (coll.Merge (coll.Dict "pullRequestRefField" "needs.resolve_target.outputs.sha" "printGitContext" true) .) "dev" "FE") | strings.Indent 4 }!}
 
   compare_reports:

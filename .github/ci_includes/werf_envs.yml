@@ -1,5 +1,5 @@
 # WERF version for CI workflows. Read at runtime from this file by read_werf_version_step.
-WERF_VERSION: "v2.78.1-dk.1"
+WERF_VERSION: "v3.4.0-dk.2"
 
 {!{ define "werf_envs" }!}
 # <template: werf_envs>
@@ -14,6 +14,7 @@ DOCKER_BUILDKIT: "1"
 WERF_FINAL_IMAGES_ONLY: true
 WERF_LOG_TERMINAL_WIDTH: "200"
 WERF_LOG_TIME: true
+WERF_BUILD_REPORT_OPERATIONS: true
 WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
 GOPROXY: "${{vars.GOPROXY}}"
 # </template: werf_envs>
