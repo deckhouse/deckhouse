@@ -53,6 +53,7 @@ rules:
   - vcdmachinetemplates
   - huaweicloudmachinetemplates
   - dynamixmachinetemplates
+  - metal3machinetemplates
   - zvirtmachinetemplates
   - deckhousemachinetemplates
   - yandexmachinetemplates
@@ -186,6 +187,7 @@ rules:
   - vcdmachinetemplates
   - huaweicloudmachinetemplates
   - dynamixmachinetemplates
+  - metal3machinetemplates
   - zvirtmachinetemplates
   - deckhousemachinetemplates
   - yandexmachinetemplates

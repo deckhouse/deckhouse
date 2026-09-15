@@ -1,0 +1,227 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-metal3
+  name: metal3instances.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: Metal3Instance
+    listKind: Metal3InstanceList
+    plural: metal3instances
+    singular: metal3instance
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: BMC
+      type: string
+      jsonPath: .spec.bmc.ipAddress
+    - name: Protocol
+      type: string
+      jsonPath: .status.bmc.protocol
+    - name: Boot MAC
+      type: string
+      jsonPath: .spec.bootMACAddress
+    - name: BMH
+      type: string
+      jsonPath: .status.bareMetalHost.name
+    - name: State
+      type: string
+      jsonPath: .status.bareMetalHost.state
+    - name: Consumer
+      type: string
+      jsonPath: .status.bareMetalHost.consumer
+    - name: Online
+      type: boolean
+      jsonPath: .status.bareMetalHost.online
+    - name: Error
+      type: string
+      jsonPath: .status.message
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        required:
+        - spec
+        properties:
+          apiVersion:
+            type: string
+            x-doc-skip: true
+          kind:
+            type: string
+            x-doc-skip: true
+          metadata:
+            type: object
+          spec:
+            type: object
+            required:
+            - bootMACAddress
+            - bmc
+            properties:
+              online:
+                type: boolean
+                default: false
+                description: Desired BareMetalHost online state.
+              bootMACAddress:
+                type: string
+                pattern: '^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'
+                description: MAC address of the NIC used for PXE boot.
+              rootDeviceHints:
+                type: object
+                description: Hints for Ironic root disk selection. If omitted, an empty object is passed to BareMetalHost to avoid its unsafe /dev/sda default.
+                properties:
+                  deviceName:
+                    type: string
+                    description: A Linux device name like "/dev/vda", or a by-path link. The hint must match the actual value exactly.
+                  hctl:
+                    type: string
+                    description: A SCSI bus address like 0:0:0:0. The hint must match the actual value exactly.
+                  minSizeGigabytes:
+                    type: integer
+                    minimum: 0
+                    description: The minimum size of the device in Gigabytes.
+                  model:
+                    type: string
+                    description: A vendor-specific device identifier. The hint can be a substring of the actual value.
+                  rotational:
+                    type: boolean
+                    description: True if the device should use spinning media, false otherwise.
+                  serialNumber:
+                    type: string
+                    description: Device serial number. The hint must match the actual value exactly.
+                  vendor:
+                    type: string
+                    description: The name of the vendor or manufacturer of the device. The hint can be a substring of the actual value.
+                  wwn:
+                    type: string
+                    description: Unique storage identifier. The hint must match the actual value exactly.
+                  wwnVendorExtension:
+                    type: string
+                    description: Unique vendor storage identifier. The hint must match the actual value exactly.
+                  wwnWithExtension:
+                    type: string
+                    description: Unique storage identifier with the vendor extension appended. The hint must match the actual value exactly.
+              bmc:
+                type: object
+                required:
+                - ipAddress
+                - systemUUID
+                - credentialsRef
+                properties:
+                  ipAddress:
+                    type: string
+                    format: ipv4
+                    description: BMC IPv4 address.
+                  port:
+                    type: integer
+                    format: int32
+                    minimum: 1
+                    maximum: 65535
+                    description: Optional BMC port. Standard Redfish and IPMI ports are probed when omitted.
+                  systemUUID:
+                    type: string
+                    format: uuid
+                    description: UUID of the physical ComputerSystem managed by this BMC.
+                  credentialsRef:
+                    type: object
+                    required:
+                    - kind
+                    - name
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                        - Secret
+                      name:
+                        type: string
+                        minLength: 1
+                  insecure:
+                    type: boolean
+                    default: false
+                    description: Disables TLS certificate verification while accessing Redfish.
+          status:
+            type: object
+            properties:
+              observedGeneration:
+                type: integer
+                format: int64
+              bmc:
+                type: object
+                properties:
+                  protocol:
+                    type: string
+                    enum:
+                    - Redfish
+                    - IPMI
+                  address:
+                    type: string
+                    description: Resolved BMC address passed to BareMetalHost.
+                  systemUUID:
+                    type: string
+                  credentialsVersion:
+                    type: string
+              bareMetalHost:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                  state:
+                    type: string
+                  consumer:
+                    type: string
+                  online:
+                    type: boolean
+                  error:
+                    type: string
+              credentialsSecret:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+              conditions:
+                type: array
+                x-kubernetes-list-type: map
+                x-kubernetes-list-map-keys:
+                - type
+                items:
+                  type: object
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  properties:
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    message:
+                      type: string
+                    observedGeneration:
+                      type: integer
+                      format: int64
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                    type:
+                      type: string
+              message:
+                type: string

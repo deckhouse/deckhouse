@@ -1,0 +1,69 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-metal3
+  name: metal3images.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: Metal3Image
+    listKind: Metal3ImageList
+    plural: metal3images
+    singular: metal3image
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    additionalPrinterColumns:
+    - name: URL
+      type: string
+      jsonPath: .spec.direct.url
+    - name: Format
+      type: string
+      jsonPath: .spec.direct.format
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        required:
+        - spec
+        properties:
+          apiVersion:
+            type: string
+            x-doc-skip: true
+          kind:
+            type: string
+            x-doc-skip: true
+          metadata:
+            type: object
+          spec:
+            type: object
+            required:
+            - direct
+            properties:
+              direct:
+                type: object
+                required:
+                - url
+                - checksum
+                - checksumType
+                - format
+                properties:
+                  url:
+                    type: string
+                    pattern: '^https?://'
+                    description: Image URL reachable from Ironic and provisioning hosts.
+                  checksum:
+                    type: string
+                    minLength: 1
+                  checksumType:
+                    type: string
+                    pattern: '^(md5|sha256|sha512)$'
+                  format:
+                    type: string
+                    pattern: '^(qcow2|raw)$'

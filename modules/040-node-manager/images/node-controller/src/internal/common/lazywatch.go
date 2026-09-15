@@ -57,6 +57,29 @@ import (
 // anyway. Unsubscribing would mean hand-rolling the event translation source.Kind gives us for
 // free, because it discards the handler registration RemoveEventHandler would need.
 func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
+	return lazyRegisteredSource(informers, func(gvks []schema.GroupVersionKind) []schema.GroupVersionKind {
+		return gvks
+	}, eventHandler, predicates...)
+}
+
+// LazyMetal3ImageSource starts the Metal3Image watch only after Metal3 registers its
+// InstanceClass. This avoids a permanently failing informer on clusters without Metal3 while
+// still handling a provider enabled after node-controller has started.
+func LazyMetal3ImageSource(informers cache.Cache, eventHandler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
+	return lazyRegisteredSource(informers, func(gvks []schema.GroupVersionKind) []schema.GroupVersionKind {
+		if !HasMetal3InstanceClass(gvks) {
+			return nil
+		}
+		return []schema.GroupVersionKind{metal3ImageGVK}
+	}, eventHandler, predicates...)
+}
+
+func lazyRegisteredSource(
+	informers cache.Cache,
+	selectGVKs func([]schema.GroupVersionKind) []schema.GroupVersionKind,
+	eventHandler handler.EventHandler,
+	predicates ...predicate.Predicate,
+) source.Source {
 	return source.Func(func(ctx context.Context, queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
 		secretInformer, err := informers.GetInformer(ctx, &corev1.Secret{})
 		if err != nil {
@@ -107,7 +130,7 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 					logger.V(1).Info("list instance class registrations", "error", err.Error())
 					continue
 				}
-				for _, gvk := range gvks {
+				for _, gvk := range selectGVKs(gvks) {
 					if started[gvk] {
 						continue
 					}
@@ -118,7 +141,7 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 						continue
 					}
 					started[gvk] = true
-					logger.Info("instance class watch registered; it attaches once the CRD is served", "gvk", gvk.String())
+					logger.Info("registered resource watch; it attaches once the CRD is served", "gvk", gvk.String())
 				}
 			}
 		}()

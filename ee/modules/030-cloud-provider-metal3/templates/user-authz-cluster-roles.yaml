@@ -1,0 +1,23 @@
+{{- $userAuthzConfig := dict -}}
+{{- $_ := set $userAuthzConfig "providerName" "cloud-provider-metal3" -}}
+{{- $_ := set $userAuthzConfig "instanceClassResource" "metal3instanceclasses" -}}
+{{- $_ := set $userAuthzConfig "additionalUserRules" (list (dict "apiGroups" (list "deckhouse.io") "resources" (list "metal3instances" "metal3images" "metal3ramdiskimages") "verbs" (list "get" "list" "watch"))) -}}
+{{- $_ := set $userAuthzConfig "additionalClusterAdminRules" (list (dict "apiGroups" (list "deckhouse.io") "resources" (list "metal3instances" "metal3images" "metal3ramdiskimages") "verbs" (list "create" "update" "patch" "delete" "deletecollection"))) -}}
+{{- include "helm_lib_cloud_provider_user_authz_cluster_roles" (list . $userAuthzConfig) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: SuperAdmin
+  name: d8:user-authz:cloud-provider-metal3:super-admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts
+  verbs:
+  - get
+  - list
+  - watch
