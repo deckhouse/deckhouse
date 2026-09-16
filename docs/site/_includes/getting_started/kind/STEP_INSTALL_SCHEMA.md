@@ -23,7 +23,7 @@ When using kind on Windows, monitoring (Grafana, Prometheus) may not be availabl
 ## Installing
 
 {% alert level="warning" %}
-If you are installing Deckhouse Kubernetes Platform in kind on an Apple computer with an ARM processor, disable Rosetta for Docker Desktop.
+If you are installing Deckhouse Platform in kind on an Apple computer with an ARM processor, disable Rosetta for Docker Desktop.
 To do this, in the Docker Desktop interface, go to `Settings > General > Virtual Machine Options` and disable the `Use Rosetta for x86_64/amd64 emulation on Apple Silicon` option.
 {% endalert %}
 
@@ -34,7 +34,7 @@ A Kubernetes cluster will be deployed and Deckhouse will be installed into a clu
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
 ```
 
-- Or run the following command for installing a commercial edition of Deckhouse Kubernetes Platform by providing a license key:
+- Or run the following command for installing a commercial edition of Deckhouse Platform by providing a license key:
 
 ```shell
  echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.io
@@ -49,7 +49,7 @@ After installation is complete, you will get the `admin` user password for acces
 Waiting for the Ingress controller to be ready.........................................
 Ingress controller is running.
 
-You have installed Deckhouse Kubernetes Platform in kind!
+You have installed Deckhouse Platform in kind!
 
 Don't forget that the default kubectl context has been changed to 'kind-d8'.
 

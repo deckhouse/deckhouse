@@ -1,7 +1,7 @@
 ---
 title: "Incoming traffic balancing"
 permalink: en/admin/configuration/network/ingress/
-description: "Configure ingress load balancing in Deckhouse Kubernetes Platform with NLB and ALB. Traffic routing, SSL termination, and application-level load balancing setup."
+description: "Configure ingress load balancing in Deckhouse Platform with NLB and ALB. Traffic routing, SSL termination, and application-level load balancing setup."
 extractedLinksMax: 4
 relatedLinks:
   - title: "ALB with Ingress NGINX Controller"
@@ -16,7 +16,7 @@ relatedLinks:
     url: ../../../../user/network/ingress/alb/
 ---
 
-This section describes the approaches to balancing incoming traffic in Deckhouse Kubernetes Platform (DKP):
+This section describes the approaches to balancing incoming traffic in Deckhouse Platform (DP):
 
 - NLB (Network Load Balancer) — operates at the network level, routing traffic based on IP addresses
   and ports without inspecting request contents.
@@ -32,7 +32,7 @@ NLB-based load balancing can be implemented in two ways:
 
 ## Application-level load balancing (ALB)
 
-For application-level traffic balancing, DKP provides the following solutions:
+For application-level traffic balancing, DP provides following solutions:
 
 - [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (via the [`ingress-nginx`](/modules/ingress-nginx/) module).
 - [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) ([`alb`](/modules/alb/) module).
@@ -73,16 +73,16 @@ The table below lists the criteria for choosing an ALB implementation.
 
 Both modules solve the same task — receiving and routing external traffic to applications — but rely on different standards: `ingress-nginx` uses the Ingress API with annotations, while `alb` uses the Kubernetes Gateway API. The modules can be used in a cluster simultaneously. The table below compares their capabilities in the current versions.
 
-Service domains (web interfaces of DKP components and modules via `publicDomainTemplate`) and application domains (routes owned by application developers) are configured differently. Details are in [Publishing service domains](alb/alb-gateway-api.html#publishing-service-domains).
+Service domains (web interfaces of DP components and modules via `publicDomainTemplate`) and application domains (routes owned by application developers) are configured differently. Details are in [Publishing service domains](alb/alb-gateway-api.html#publishing-service-domains).
 
 | Capability | `ingress-nginx`                                                                                                           | `alb`                                                                                                                                                                                    |
 | :--- |:--------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Routing standard | Ingress API with annotations                                                                                              | Kubernetes Gateway API                                                                                                                                                                   |
 | Proxy implementation | nginx                                                                                                                     | Envoy Proxy                                                                                                                                                                              |
 | Lifecycle stage | General Availability                                                                                                      | Preview                                                                                                                                                                                  |
-| Development | Maintenance mode: the upstream Ingress NGINX project no longer develops new features, while DKP provides security updates | Actively developed                                                                                                                                                                       |
-| Minimum DKP version | Available in all supported versions                                                                                       | 1.76                                                                                                                                                                                     |
-| DKP editions | All editions                                                                                                              | All editions                                                                                                                                                                             |
+| Development | Maintenance mode: the upstream Ingress NGINX project no longer develops new features, while DP provides security updates | Actively developed                                                                                                                                                                       |
+| Minimum DP version | Available in all supported versions                                                                                       | 1.76                                                                                                                                                                                     |
+| DP editions | All editions                                                                                                              | All editions                                                                                                                                                                             |
 | Role separation model | Cluster administrator, namespace administrator                                                                            | Cluster administrator, namespace administrator, application developers                                                                                                                    |
 | Multiple independent entry points | Multiple Ingress controllers selected via `ingressClass`                                                                  | Multiple Gateway objects selected via `gatewayName`; cluster-scoped and namespaced gateways                                                                                              |
 | HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Yes                                                                                                                       | Yes ([enabling HTTP/3](alb/alb-gateway-api.html#http3))                                                                                                                                  |

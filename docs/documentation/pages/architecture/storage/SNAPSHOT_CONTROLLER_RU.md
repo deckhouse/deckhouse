@@ -3,10 +3,10 @@ title: Модуль snapshot-controller
 permalink: ru/architecture/storage/snapshot-controller.html
 lang: ru
 search: snapshot-controller, snapshot, снимок, снапшот, снапшот
-description: Архитектура модуля snapshot-controller в Deckhouse Kubernetes Platform.
+description: Архитектура модуля snapshot-controller в Deckhouse Platform.
 ---
 
-Модуль `snapshot-controller` включает поддержку снимков томов для совместимых CSI-драйверов в Deckhouse Kubernetes Platform (DKP).
+Модуль `snapshot-controller` включает поддержку снимков томов для совместимых CSI-драйверов в Deckhouse Platform (DP).
 
 Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/snapshot-controller/).
 
@@ -19,7 +19,7 @@ description: Архитектура модуля snapshot-controller в Deckhous
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`snapshot-controller`](/modules/snapshot-controller/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`snapshot-controller`](/modules/snapshot-controller/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля snapshot-controller](../../images/architecture/storage/c4-l2-snapshot-controller.ru.png)
 

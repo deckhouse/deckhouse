@@ -2,7 +2,7 @@
 title: "Network policies"
 permalink: en/admin/configuration/network/policy/configuration.html
 description: |
-  Overview of network policy implementations in Deckhouse Kubernetes Platform: NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall.
+  Overview of network policy implementations in Deckhouse Platform: NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall.
 search: network policy, network policies, NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall
 relatedLinks:
   - title: "Network Policies — Kubernetes documentation"
@@ -15,9 +15,9 @@ relatedLinks:
     url: https://docs.cilium.io/en/v1.17/security/host-firewall/
 ---
 
-Network policies restrict how pods communicate with each other, with external systems, and with cluster nodes. In Deckhouse Kubernetes Platform (DKP), the implementation depends on the enabled CNI module.
+Network policies restrict how pods communicate with each other, with external systems, and with cluster nodes. In Deckhouse Platform (DP), the implementation depends on the enabled CNI module.
 
-## Network policy implementation in DKP
+## Network policy implementation in DP
 
 The available policy formats and the engine that processes them depend on the enabled CNI module:
 

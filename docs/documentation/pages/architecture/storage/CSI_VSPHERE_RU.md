@@ -3,7 +3,7 @@ title: Модуль csi-vsphere
 permalink: ru/architecture/storage/external/csi-vsphere.html
 lang: ru
 search: csi-vsphere, vmware vsphere
-description: Архитектура модуля csi-vsphere в Deckhouse Kubernetes Platform.
+description: Архитектура модуля csi-vsphere в Deckhouse Platform.
 ---
 
 Модуль [`csi-vsphere`](/modules/csi-vsphere/) предоставляет поддержку [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для сред VMware vSphere, обеспечивая динамическое предоставление и управление постоянными томами хранения в кластерах Kubernetes, работающих на инфраструктуре vSphere.
@@ -19,7 +19,7 @@ description: Архитектура модуля csi-vsphere в Deckhouse Kubern
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`csi-vsphere`](/modules/csi-vsphere/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`csi-vsphere`](/modules/csi-vsphere/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля csi-vsphere](../../../images/architecture/storage/c4-l2-csi-vsphere.ru.png)
 
@@ -34,7 +34,7 @@ description: Архитектура модуля csi-vsphere в Deckhouse Kubern
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-1. **CSI-драйвер (vsphere)** — реализация CSI-драйвера для VMware vSphere. С архитектурой CSI-драйвера, используемого в модуле `csi-vsphere` DKP, можно ознакомиться в [соответствующем разделе документации](../csi-drivers/csi-driver-vsphere.html).
+1. **CSI-драйвер (vsphere)** — реализация CSI-драйвера для VMware vSphere. С архитектурой CSI-драйвера, используемого в модуле `csi-vsphere` DP, можно ознакомиться в [соответствующем разделе документации](../csi-drivers/csi-driver-vsphere.html).
 
    CSI-драйвер (vsphere) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

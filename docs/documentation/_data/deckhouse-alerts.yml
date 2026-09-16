@@ -3151,7 +3151,7 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        Specify a Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
+        Specify a Deckhouse Platform edition in `{{ $labels.module }}` ModuleConfig.
 
         ```bash
         d8 k patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "DKP_EDITION"}}}}'
@@ -3159,7 +3159,7 @@ alerts:
 
         Where `DKP_EDITION` is the edition you want to use: `CE`, `BE`, `EE`, `SE`, or `SE-plus`.
       summary: |
-        Incorrect Deckhouse Kubernetes Platform edition.
+        Incorrect Deckhouse Platform edition.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseHighMemoryUsage

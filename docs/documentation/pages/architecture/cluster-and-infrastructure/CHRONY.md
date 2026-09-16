@@ -2,10 +2,10 @@
 title: Chrony module
 permalink: en/architecture/cluster-and-infrastructure/infrastructure/chrony.html
 search: chrony, ntp, time sync
-description: Architecture of the chrony module in Deckhouse Kubernetes Platform.
+description: Architecture of the chrony module in Deckhouse Platform.
 ---
 
-The [`chrony`](/modules/chrony/) module provides time synchronization on all nodes in the Deckhouse Kubernetes Platform (DKP) cluster using [chrony](https://chrony-project.org/index.html) NTP server/client implementation.
+The [`chrony`](/modules/chrony/) module provides time synchronization on all nodes in the Deckhouse Platform (DP) cluster using [chrony](https://chrony-project.org/index.html) NTP server/client implementation.
 
 For more details, refer to the [module documentation](/modules/chrony/configuration.html).
 
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`chrony`](/modules/chrony/) module its interactions with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`chrony`](/modules/chrony/) module its interactions with other DP components are shown in the following diagram:
 
 ![Chrony module architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.png)
 

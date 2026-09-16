@@ -2,7 +2,7 @@
 title: "Установка"
 permalink: ru/installing/
 description: |
- Установка Deckhouse Kubernetes Platform (DKP), подготовка инфраструктуры установки, запуск установщика.
+ Установка Deckhouse Platform (DP), подготовка инфраструктуры установки, запуск установщика.
 lang: ru
 search: требования, системные требования, installation, platform setup, infrastructure preparation, installer configuration, настройка платформы, подготовка инфраструктуры, конфигурация инсталлятора, конфигурация установщика, dhctl, dhctl bootstrap
 extractedLinksMax: 2
@@ -13,27 +13,27 @@ relatedLinks:
     url: ../reference/supported_versions.html
   - title: "Интеграция с инфраструктурой"
     url: ../admin/integrations/integrations-overview.html
-  - title: "Установка DKP в закрытом окружении"
+  - title: "Установка DP в закрытом окружении"
     url: /products/kubernetes-platform/guides/private-environment.html
   - title: "Подготовка к Production"
     url: /products/kubernetes-platform/guides/production.html   
 ---
 
 {% alert %}
-В разделе {% if site.mode == 'module' %}[«Быстрый старт»]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Быстрый старт](/products/kubernetes-platform/gs/){% endif %} доступны пошаговые инструкции по установке Deckhouse Kubernetes Platform.
+В разделе {% if site.mode == 'module' %}[«Быстрый старт»]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Быстрый старт](/products/kubernetes-platform/gs/){% endif %} доступны пошаговые инструкции по установке Deckhouse Platform.
 
-Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/installer/).
+Попробуйте также [графический установщик Deckhouse Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/installer/).
 {% endalert %}
 
-На этой странице представлена обзорная информация по установке Deckhouse Kubernetes Platform (DKP).
+На этой странице представлена обзорная информация по установке Deckhouse Platform (DP).
 
 {% alert level="info" %}
-Администрирование платформы подробно разобрано в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Администрирование платформы подробно разобрано в курсе [«Администрирование Deckhouse Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 {% endalert %}
 
 ## Способы установки
 
-Установить DKP можно следующими способами:
+Установить DP можно следующими способами:
 
 - с помощью CLI-установщика (доступен в виде образа контейнера и основан на утилите [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>));
 - с помощью [графического установщика]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/installer/).
@@ -42,17 +42,17 @@ relatedLinks:
 
 ## Варианты установки
 
-Установить DKP можно в следующих вариантах:
+Установить DP можно в следующих вариантах:
 
-- **В поддерживаемом облаке.** Установщик автоматически создает и настраивает все необходимые ресурсы (включая виртуальные машины, сетевые объекты и т.д.), разворачивает кластер Kubernetes и устанавливает DKP. Полный список поддерживаемых облачных провайдеров доступен в разделе [«Интеграция с IaaS»](../admin/integrations/public/overview.html).
+- **В поддерживаемом облаке.** Установщик автоматически создает и настраивает все необходимые ресурсы (включая виртуальные машины, сетевые объекты и т.д.), разворачивает кластер Kubernetes и устанавливает DP. Полный список поддерживаемых облачных провайдеров доступен в разделе [«Интеграция с IaaS»](../admin/integrations/public/overview.html).
 
-- **На серверах bare metal (в том числе гибридные кластеры) или в неподдерживаемых облаках**. Установщик настраивает указанные в конфигурации серверы или виртуальные машины, разворачивает кластер Kubernetes и устанавливает DKP. Пошаговые инструкции по развертыванию на bare metal можно найти в разделе [«Быстрый старт» → «Deckhouse Kubernetes Platform на bare metal»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm/step2.html).
+- **На серверах bare metal (в том числе гибридные кластеры) или в неподдерживаемых облаках**. Установщик настраивает указанные в конфигурации серверы или виртуальные машины, разворачивает кластер Kubernetes и устанавливает DP. Пошаговые инструкции по развертыванию на bare metal можно найти в разделе [«Быстрый старт» → «Deckhouse Platform на bare metal»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm/step2.html).
 
-- **В существующем кластере Kubernetes.** Установщик разворачивает DKP и интегрирует его с текущей инфраструктурой. Пошаговые инструкции по развертыванию в существующем кластере можно найти в разделе [«Быстрый старт» → «Deckhouse Kubernetes Platform в существующем кластере»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
+- **В существующем кластере Kubernetes.** Установщик разворачивает DP и интегрирует его с текущей инфраструктурой. Пошаговые инструкции по развертыванию в существующем кластере можно найти в разделе [«Быстрый старт» → «Deckhouse Platform в существующем кластере»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
 
 ## Требования к установке
 
-Для оценки ресурсов, необходимых для установки Deckhouse Kubernetes Platform, вы можете ознакомиться со следующими руководствами:
+Для оценки ресурсов, необходимых для установки Deckhouse Platform, вы можете ознакомиться со следующими руководствами:
 
 - [Руководство по подбору ресурсов для кластера на bare metal](/products/kubernetes-platform/guides/hardware-requirements.html)
 - [Руководство по разметке и объему дисков](/products/kubernetes-platform/guides/fs-requirements.html)
@@ -74,25 +74,25 @@ relatedLinks:
 
 ### Файл конфигурации установки
 
-Файл конфигурации установки состоит из YAML-секций (документов) и содержит настройки DKP, а также описание (манифесты) объектов и ресурсов кластера, которые будут созданы после установки. Файл конфигурации установки используется в CLI-установщике и передается с помощью параметра `--config` (см. далее).
+Файл конфигурации установки состоит из YAML-секций (документов) и содержит настройки DP, а также описание (манифесты) объектов и ресурсов кластера, которые будут созданы после установки. Файл конфигурации установки используется в CLI-установщике и передается с помощью параметра `--config` (см. далее).
 
 Список обязательных и опциональных объектов и ресурсов кластера, которые могут понадобиться в файле конфигурации установки:
 
-1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**обязательный**) — начальные [параметры конфигурации](../admin/configuration/), необходимые для запуска DKP.
+1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**обязательный**) — начальные [параметры конфигурации](../admin/configuration/), необходимые для запуска DP.
 
-   > Начиная с версии DKP 1.75, используйте ModuleConfig `deckhouse` для настройки доступа к хранилищу образов DKP. Настройка доступа с помощью InitConfiguration (параметры `imagesRepo`, `registryDockerCfg`, `registryScheme`, `registryCA`) считается устаревшим способом.
+   > Начиная с версии DP 1.75, используйте ModuleConfig `deckhouse` для настройки доступа к хранилищу образов DP. Настройка доступа с помощью InitConfiguration (параметры `imagesRepo`, `registryDockerCfg`, `registryScheme`, `registryCA`) считается устаревшим способом.
 
-1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия Kubernetes (компонентов control plane кластера), сетевые настройки, параметры CRI и т. д. Является **обязательным**, кроме случая, когда DKP устанавливается в уже существующий кластер Kubernetes.
+1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия Kubernetes (компонентов control plane кластера), сетевые настройки, параметры CRI и т. д. Является **обязательным**, кроме случая, когда DP устанавливается в уже существующий кластер Kubernetes.
 
-1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры кластера, развертываемого на серверах bare-metal (в том числе гибридного кластера) или виртуальных машинах в неподдерживаемых облаках. Является **обязательным**, кроме случая, когда DKP устанавливается в уже существующий кластер Kubernetes.
+1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры кластера, развертываемого на серверах bare-metal (в том числе гибридного кластера) или виртуальных машинах в неподдерживаемых облаках. Является **обязательным**, кроме случая, когда DP устанавливается в уже существующий кластер Kubernetes.
 
    Для добавления группы узлов (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)) под рабочую нагрузку в кластер могут понадобиться также объекты [StaticInstance](/modules/node-manager/cr.html#staticinstance) и [SSHCredentials](/modules/node-manager/cr.html#sshcredentials).
 
-1. `<PROVIDER>ClusterConfiguration` — параметры интеграции с облачным провайдером. Является **обязательным** при интеграции DKP с [поддерживаемой облачной инфраструктурой](../admin/integrations/public/overview.html).
+1. `<PROVIDER>ClusterConfiguration` — параметры интеграции с облачным провайдером. Является **обязательным** при интеграции DP с [поддерживаемой облачной инфраструктурой](../admin/integrations/public/overview.html).
 
-   > При интеграции с Deckhouse Virtualization Platform (DVP) ресурс DVPClusterConfiguration не используется. Его заменяют ModuleConfig [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) и связанные с ним ресурсы, описанные в разделе [«Схемы размещения и настройка DVP»](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
+   > При интеграции с виртуализацией Deckhouse ресурс DVPClusterConfiguration не используется. Его заменяют ModuleConfig [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) и связанные с ним ресурсы, описанные в разделе [«Схемы размещения и настройка DVP»](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
 
-   Примеры ресурсов, настраивающих интеграцию DKP с облачным провайдером:
+   Примеры ресурсов, настраивающих интеграцию DP с облачным провайдером:
 
    * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
    * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
@@ -108,20 +108,20 @@ relatedLinks:
 
    Для добавления облачных узлов в кластер также понадобятся объекты `<PROVIDER>InstanceClass` (например [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) для Yandex Cloud), которые описывают конфигурацию виртуальных машин в группе узлов (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)).
 
-1. Конфигурации модулей DKP.
+1. Конфигурации модулей DP.
 
    Каждый модуль настраивается (а также может быть включен или отключен) с помощью собственного объекта [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) с именем модуля (например, ModuleConfig `user-authn` для [модуля `user-authn`](/modules/user-authn/)). Допустимые параметры, которые можно указывать в объекте ModuleConfig, можно найти в документации соответствующего модуля в разделе «Настройки» (например, [настройки модуля `user-authn`](/modules/user-authn/configuration.html)).
 
-   Список всех модулей Deckhouse Kubernetes Platform доступен в разделе [«Модули»](/modules/) документации.
+   Список всех модулей Deckhouse Platform доступен в разделе [«Модули»](/modules/) документации.
 
    Некоторые модули могут быть включены и предварительно настроены автоматически, в зависимости от выбранного варианта установки и конфигурации кластера (например, модули, обеспечивающие работу control plane кластера и сети).
 
    Модули, часто настраиваемые при установке:
 
-   * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html) — глобальные настройки DKP для указания параметров, которые используются по умолчанию всеми модулями и компонентами (шаблон DNS-имен, StorageClass, настройки расположения компонентов модулей и т.д.);
+   * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html) — глобальные настройки DP для указания параметров, которые используются по умолчанию всеми модулями и компонентами (шаблон DNS-имен, StorageClass, настройки расположения компонентов модулей и т.д.);
    * [`deckhouse`](/modules/deckhouse/configuration.html) — настройки доступа к хранилищу образов, желаемый канал обновлений и другие параметры;
    * [`user-authn`](/modules/user-authn/configuration.html) — отвечает за единую систему аутентификации;
-   * [`cni-cilium`](/modules/cni-cilium/configuration.html) — отвечает за работу сети в кластере (например, используется при установке DKP на bare metal, в закрытом окружении, на РЕД-виртуализации и на SpaceVM).
+   * [`cni-cilium`](/modules/cni-cilium/configuration.html) — отвечает за работу сети в кластере (например, используется при установке DP на bare metal, в закрытом окружении, на РЕД-виртуализации и на SpaceVM).
 
    Если кластер изначально создается с узлами, выделенными для определенных типов нагрузки (например, системные узлы или узлы для мониторинга), рекомендуется в конфигурации модулей, использующих тома постоянного хранилища, явно задавать параметр `nodeSelector` (например, в [параметре `nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector) ModuleConfig `prometheus` для модуля `prometheus`).
 
@@ -136,8 +136,8 @@ relatedLinks:
 {% offtopic title="Пример файла конфигурации установки..." %}
 
 {% tabs variant %}
-{% tab "Конфигурация, применимая с версии 1.75 DKP" %}
-В этом примере доступ к хранилищу образов DKP настраивается с помощью ModuleConfig `deckhouse`.
+{% tab "Конфигурация, применимая с версии 1.75 DP" %}
+В этом примере доступ к хранилищу образов DP настраивается с помощью ModuleConfig `deckhouse`.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -291,7 +291,7 @@ spec:
 
 {% endtab %}
 {% tab "Устаревший вариант конфигурации" %}
-В этом примере доступ к хранилищу образов DKP настраивается с помощью InitConfiguration.
+В этом примере доступ к хранилищу образов DP настраивается с помощью InitConfiguration.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -457,7 +457,7 @@ spec:
 Указать путь к post-bootstrap-скрипту можно с помощью параметра `--post-bootstrap-script-path` при запуске CLI-установщика.
 
 {% offtopic title="Пример скрипта, выводящего IP-адрес балансировщика..." %}
-Пример скрипта, который выводит IP-адрес балансировщика после установки DKP:
+Пример скрипта, который выводит IP-адрес балансировщика после установки DP:
 
 ```shell
 #!/usr/bin/env bash
@@ -509,7 +509,7 @@ fi
 ## Установка
 
 {% alert level="info" %}
-При установке коммерческой редакции Deckhouse Kubernetes Platform из публичного хранилища образов `registry.deckhouse.ru` необходимо предварительно пройти аутентификацию с использованием лицензионного ключа:
+При установке коммерческой редакции Deckhouse Platform из публичного хранилища образов `registry.deckhouse.ru` необходимо предварительно пройти аутентификацию с использованием лицензионного ключа:
 
 ```shell
 docker login -u license-token registry.deckhouse.ru
@@ -525,7 +525,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<
 
 Где:
 
-1. `<DECKHOUSE_REVISION>` — [редакция DKP](../reference/revision-comparison.html). Например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.
+1. `<DECKHOUSE_REVISION>` — [редакция DP](../reference/revision-comparison.html). Например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.
 1. `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер установщика, таких как:
    - SSH-ключи доступа;
    - файл конфигурации;
@@ -537,7 +537,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<
    - `stable` — для канала обновлений Stable;
    - `rock-solid` — для канала обновлений Rock Solid.
 
-Пример команды для запуска контейнера с установщиком DKP Community Edition из канала обновлений Stable:
+Пример команды для запуска контейнера с установщиком DP Community Edition (DP Boost) из канала обновлений Stable:
 
 ```shell
 docker run -it --pull=always \
@@ -546,16 +546,16 @@ docker run -it --pull=always \
   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
 ```
 
-Установка DKP осуществляется в контейнере установщика с помощью команды `dhctl`:
+Установка DP осуществляется в контейнере установщика с помощью команды `dhctl`:
 
-* Для запуска установки DKP с развертыванием нового кластера (все случаи, кроме установки в существующий кластер) используйте команду `dhctl bootstrap`.
-* Для установки DKP в уже существующий кластер используйте команду `dhctl bootstrap-phase install-deckhouse`.
+* Для запуска установки DP с развертыванием нового кластера (все случаи, кроме установки в существующий кластер) используйте команду `dhctl bootstrap`.
+* Для установки DP в уже существующий кластер используйте команду `dhctl bootstrap-phase install-deckhouse`.
 
 {% alert level="info" %}
 Для получения подробной справки по параметрам команды выполните `dhctl bootstrap -h`.
 {% endalert %}
 
-Пример запуска установки DKP с развертыванием кластера в облаке:
+Пример запуска установки DP с развертыванием кластера в облаке:
 
 ```shell
 dhctl bootstrap \
@@ -573,14 +573,14 @@ dhctl bootstrap \
 ### Проверки перед началом установки
 
 {% alert level="info" %}
-Начиная с версии 1.74, модули DKP устанавливаются в виде образов в формате EROFS, подключаемых только для чтения, что защищает их от изменения после установки. Этот механизм включается автоматически, если на узле, где работает контроллер DKP (по умолчанию — master-узел), в ядре зарегистрирована файловая система `erofs`. DKP загружает этот модуль ядра только на узлах с containerd v2, поэтому при использовании containerd v1 на master-узлах загрузку `erofs` нужно обеспечить средствами операционной системы. Иначе DKP будет устанавливать модули обычным способом, без защиты их целостности и без отдельного алерта. Подробнее — в разделе [«Защита целостности модулей DKP»](../architecture/security/integrity-control.html#защита-целостности-модулей-dkp).
+Начиная с версии 1.74, модули DP устанавливаются в виде образов в формате EROFS, подключаемых только для чтения, что защищает их от изменения после установки. Этот механизм включается автоматически, если на узле, где работает контроллер DP (по умолчанию — master-узел), в ядре зарегистрирована файловая система `erofs`. DP загружает этот модуль ядра только на узлах с containerd v2, поэтому при использовании containerd v1 на master-узлах загрузку `erofs` нужно обеспечить средствами операционной системы. Иначе DP будет устанавливать модули обычным способом, без защиты их целостности и без отдельного алерта. Подробнее — в разделе [«Защита целостности модулей DP»](../architecture/security/integrity-control.html#защита-целостности-модулей-dp).
 {% endalert %}
 
 {% offtopic title="Схема выполнения проверок, выполняемых установщиком перед началом установки..." %}
-![Схема выполнения проверок, выполняемых установщиком перед началом установки Deckhouse Kubernetes Platform](../images/installing/preflight-checks.png)
+![Схема выполнения проверок, выполняемых установщиком перед началом установки Deckhouse Platform](../images/installing/preflight-checks.png)
 {% endofftopic %}
 
-Список проверок, выполняемых установщиком перед началом установки Deckhouse Kubernetes Platform:
+Список проверок, выполняемых установщиком перед началом установки Deckhouse Platform:
 
 1. Общие проверки:
    - Значения параметров [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) не совпадают.
@@ -640,7 +640,7 @@ dhctl bootstrap \
 - `--preflight-skip-check=static-ssh-tunnel` — пропуск проверки проброса SSH;
 - `--preflight-skip-check=ports-availability` — пропуск проверки доступности необходимых портов;
 - `--preflight-skip-check=resolve-localhost` — пропуск проверки разрешения `localhost`;
-- `--preflight-skip-check=dhctl-edition` — пропуск проверки версии DKP;
+- `--preflight-skip-check=dhctl-edition` — пропуск проверки версии DP;
 - `--preflight-skip-check=registry-access-through-proxy` — пропуск проверки доступа к хранилищу образов через прокси-сервер;
 - `--preflight-skip-check=public-domain-template` — пропуск проверки шаблона `publicDomain`;
 - `--preflight-skip-check=static-ssh-credential` — пропуск проверки учетных данных SSH-пользователя;
@@ -689,15 +689,15 @@ dhctl bootstrap-phase abort
 <div id="установка-deckhouse-kubernetes-platform-из-стороннего-registry"></div>
 
 {% alert level="info" %}
-Подробнее с установкой и обновлением DKP в закрытом окружении можно ознакомиться в руководствах [«Установка DKP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DKP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
+Подробнее с установкой и обновлением DP в закрытом окружении можно ознакомиться в руководствах [«Установка DP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
 {% endalert %}
 
 ### Установка из стороннего хранилища образов контейнеров
 
-DKP можно установить из стороннего хранилища образов или через проксирующий сервер внутри закрытого контура.
+DP можно установить из стороннего хранилища образов или через проксирующий сервер внутри закрытого контура.
 
 {% alert level="warning" %}
-DKP поддерживает аутентификацию в хранилище образов по схемам Basic и Bearer token (сначала проверяется Basic, при неуспехе — Bearer).
+DP поддерживает аутентификацию в хранилище образов по схемам Basic и Bearer token (сначала проверяется Basic, при неуспехе — Bearer).
 
 Если перед хранилищем стоит прокси-сервер, он должен корректно проксировать заголовок Registry API v2 `Docker-Distribution-API-Version: registry/2.0`, иначе проверка Basic может завершиться ошибкой, а последующая попытка Bearer сообщением с ошибкой `couldn't find bearer realm parameter`.
 
@@ -707,13 +707,13 @@ DKP поддерживает аутентификацию в хранилище 
 {%- unless forloop.last %}, {% endunless %}
 {%- endfor %}.
 
-При работе со сторонним хранилищем образов не используйте учетную запись администратора для доступа к нему со стороны DKP. Используйте отдельную учетную запись с правами только на чтение и только в пределах нужного раздела в хранилище образов. Ознакомьтесь с [примером создания](#особенности-настройки-nexus) такой учетной записи.
+При работе со сторонним хранилищем образов не используйте учетную запись администратора для доступа к нему со стороны DP. Используйте отдельную учетную запись с правами только на чтение и только в пределах нужного раздела в хранилище образов. Ознакомьтесь с [примером создания](#особенности-настройки-nexus) такой учетной записи.
 {% endalert %}
 
 Варианты настройки работы со сторонними хранилищами образов при установке кластера:
 
-- начиная с версии DKP 1.75 — с помощью ModuleConfig `deckhouse`;
-- до версии DKP 1.75 — с помощью InitConfiguration (устаревший способ, пример приведен ниже).
+- начиная с версии DP 1.75 — с помощью ModuleConfig `deckhouse`;
+- до версии DP 1.75 — с помощью InitConfiguration (устаревший способ, пример приведен ниже).
 
 Для настройки с помощью ModuleConfig `deckhouse` укажите параметры доступа к стороннему хранилищу образов в [секции `settings.registry`](/modules/deckhouse/configuration.html#parameters-registry).
 
@@ -742,10 +742,10 @@ spec:
 
 Установите следующие параметры в InitConfiguration:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — адрес образа DKP EE в стороннем хранилище образов. Пример: `imagesRepo: registry.deckhouse.ru/deckhouse/ee`;
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — адрес образа DP EE в стороннем хранилище образов. Пример: `imagesRepo: registry.deckhouse.ru/deckhouse/ee`;
 * `registryDockerCfg: <BASE64>` — права доступа к стороннему хранилищу образов, зашифрованные в Base64.
 
-Если разрешен анонимный доступ к образам DKP в стороннем хранилище образов, `registryDockerCfg` должен выглядеть следующим образом:
+Если разрешен анонимный доступ к образам DP в стороннем хранилище образов, `registryDockerCfg` должен выглядеть следующим образом:
 
 ```json
 {"auths": { "<PROXY_REGISTRY>": {}}}
@@ -753,7 +753,7 @@ spec:
 
 Приведенное значение должно быть закодировано в Base64.
 
-Если для доступа к образам DKP в стороннем хранилище образов необходима аутентификация, `registryDockerCfg` должен выглядеть следующим образом:
+Если для доступа к образам DP в стороннем хранилище образов необходима аутентификация, `registryDockerCfg` должен выглядеть следующим образом:
 
 ```json
 {"auths": { "<PROXY_REGISTRY>": {"username":"<PROXY_USERNAME>","password":"<PROXY_PASSWORD>","auth":"<AUTH_BASE64>"}}}
@@ -818,16 +818,16 @@ echo "$MYRESULTSTRING"
    * `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
    * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
    * `Maximum Metadata Age` должно быть равно `0`.
-   * Если планируется использовать коммерческую редакцию Deckhouse Kubernetes Platform, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
+   * Если планируется использовать коммерческую редакцию Deckhouse Platform, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
      * `Authentication Type` должно иметь значение `Username`.
      * `Username` должно иметь значение `license-token`.
-     * `Password` должно содержать ключ лицензии Deckhouse Kubernetes Platform.
+     * `Password` должно содержать ключ лицензии Deckhouse Platform.
 
     ![Пример настроек репозитория 1](../images/registry/nexus/nexus-repo-example-1.png)
     ![Пример настроек репозитория 2](../images/registry/nexus/nexus-repo-example-2.png)
     ![Пример настроек репозитория 3](../images/registry/nexus/nexus-repo-example-3.png)
 
-1. Настройте контроль доступа Nexus для доступа DKP к созданному репозиторию:
+1. Настройте контроль доступа Nexus для доступа DP к созданному репозиторию:
    * Создайте роль **Nexus** («Administration» → «Security» → «Roles») с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
 
      ![Создание роли Nexus](../images/registry/nexus/nexus-role.png)
@@ -846,7 +846,7 @@ echo "$MYRESULTSTRING"
 
      ![Настройка Docker Bearer Token Realm](../images/registry/nexus/nexus-realms.png)
 
-В результате образы DKP будут доступны, например, по следующему адресу: `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
+В результате образы DP будут доступны, например, по следующему адресу: `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
 
 ### Особенности настройки Harbor
 
@@ -859,7 +859,7 @@ echo "$MYRESULTSTRING"
    * в поле «Name» укажите имя эндпоинта на свое усмотрение;
    * в поле «Endpoint URL» укажите `https://registry.deckhouse.ru`;
    * в поле «Access ID» укажите `license-token`;
-   * в поле «Access Secret» укажите свой лицензионный ключ Deckhouse Kubernetes Platform;
+   * в поле «Access Secret» укажите свой лицензионный ключ Deckhouse Platform;
    * задайте остальные параметры по своему усмотрению;
    * нажмите «ОК», чтобы подтвердить создание эндпоинта для хранилища образов.
 
@@ -876,9 +876,9 @@ echo "$MYRESULTSTRING"
 
    ![Создание нового проекта](../images/registry/harbor/harbor2.png)
 
-После настройки Harbor образы DKP станут доступны по адресу следующего вида: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
+После настройки Harbor образы DP станут доступны по адресу следующего вида: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
-### Ручная загрузка образов DKP и БД уязвимостей в приватное хранилище образов контейнеров
+### Ручная загрузка образов DP и БД уязвимостей в приватное хранилище образов контейнеров
 
 {% alert level="warning" %}
 Утилита `d8 mirror` недоступна для использования с редакциями Community Edition (CE) и Basic Edition (BE).
@@ -890,10 +890,10 @@ echo "$MYRESULTSTRING"
 
 - [Скачайте и установите утилиту Deckhouse CLI](../cli/d8/).
 
-- Скачайте образы DKP в выделенную директорию, используя команду `d8 mirror pull`.
+- Скачайте образы DP в выделенную директорию, используя команду `d8 mirror pull`.
 
-  По умолчанию `d8 mirror pull` скачивает только актуальные версии DKP, базы данных сканера уязвимостей (если они входят в редакцию DKP) и официально поставляемых модулей.
-  Например, для Deckhouse Kubernetes Platform 1.59 будет скачана только версия 1.59.12, т. к. этого достаточно для обновления платформы с 1.58 до 1.59.
+  По умолчанию `d8 mirror pull` скачивает только актуальные версии DP, базы данных сканера уязвимостей (если они входят в редакцию DP) и официально поставляемых модулей.
+  Например, для Deckhouse Platform 1.59 будет скачана только версия 1.59.12, т. к. этого достаточно для обновления платформы с 1.58 до 1.59.
 
   Выполните следующую команду (укажите код редакции и лицензионный ключ), чтобы скачать образы актуальных версий:
 
@@ -906,14 +906,14 @@ echo "$MYRESULTSTRING"
   где:
 
   - `--source` — адрес хранилища образов Deckhouse;
-  - `<EDITION>` — код редакции Deckhouse Kubernetes Platform (например, `ee`, `se`, `se-plus`). По умолчанию параметр `--source` ссылается на редакцию Enterprise Edition (`ee`) и может быть опущен;
-  - `--license` — параметр для указания лицензионного ключа Deckhouse Kubernetes Platform для аутентификации в официальном хранилище образов;
-  - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Kubernetes Platform;
+  - `<EDITION>` — код редакции Deckhouse Platform (например, `ee`, `se`, `se-plus`). По умолчанию параметр `--source` ссылается на редакцию Enterprise Edition (`ee`) и может быть опущен;
+  - `--license` — параметр для указания лицензионного ключа Deckhouse Platform для аутентификации в официальном хранилище образов;
+  - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Platform;
   - `/home/user/d8-bundle` — директория, в которой будут расположены пакеты образов. Будет создана, если не существует.
 
   > Если загрузка образов будет прервана, повторный вызов команды продолжит загрузку, если с момента ее остановки прошло не более суток.
 
-  Пример команды для загрузки всех версий DKP EE, начиная с версии 1.59 (укажите лицензионный ключ):
+  Пример команды для загрузки всех версий DP EE, начиная с версии 1.59 (укажите лицензионный ключ):
 
   ```shell
   d8 mirror pull \
@@ -921,7 +921,7 @@ echo "$MYRESULTSTRING"
   --since-version=1.59 /home/user/d8-bundle
   ```
 
-  Пример команды для загрузки актуальных версий DKP SE (укажите лицензионный ключ):
+  Пример команды для загрузки актуальных версий DP SE (укажите лицензионный ключ):
 
   ```shell
   d8 mirror pull \
@@ -930,7 +930,7 @@ echo "$MYRESULTSTRING"
   /home/user/d8-bundle
   ```
 
-  Пример команды для загрузки образов DKP из стороннего хранилища образов:
+  Пример команды для загрузки образов DP из стороннего хранилища образов:
 
   ```shell
   d8 mirror pull \
@@ -1012,14 +1012,14 @@ echo "$MYRESULTSTRING"
 - `--no-pull-resume` — принудительно начать загрузку сначала;
 - `--force` — перезаписать существующие пакеты, если они конфликтуют с текущей операцией загрузки;
 - `--ignore-suspend` — игнорировать приостановленные каналы релизов и продолжить зеркалирование. Используйте с осторожностью;
-- `--no-platform` — пропустить загрузку пакета образов Deckhouse Kubernetes Platform (`platform.tar`);
+- `--no-platform` — пропустить загрузку пакета образов Deckhouse Platform (`platform.tar`);
 - `--no-modules` — пропустить загрузку пакетов модулей (`module-*.tar`);
 - `--no-security-db` — пропустить загрузку пакета баз данных сканера уязвимостей (`security.tar`);
 - `--no-packages` — пропустить загрузку пакетов Deckhouse;
 - `--no-installer` — пропустить загрузку образов инсталлятора Deckhouse;
 - `--only-extra-images` — загрузить только дополнительные образы модулей без загрузки основных образов модулей;
 - `--skip-vex-images` — пропустить загрузку VEX-образов;
-- `--include-platform` = `CONSTRAINT` — загрузить релизы Deckhouse Kubernetes Platform по semver-ограничению. Параметр нельзя использовать одновременно с `--since-version` и `--deckhouse-tag`. Значение ограничения всегда заключайте в кавычки: `>` и `<` являются shell-перенаправлениями. Примеры: `--include-platform ">=1.64 <=1.68"`, `--include-platform "~1.65.0"`, `--include-platform "^1.65.0"`, `--include-platform "1.65.0"`, `--include-platform "=v1.65.3"` или `--include-platform "=v1.65.3+stable"`;
+- `--include-platform` = `CONSTRAINT` — загрузить релизы Deckhouse Platform по semver-ограничению. Параметр нельзя использовать одновременно с `--since-version` и `--deckhouse-tag`. Значение ограничения всегда заключайте в кавычки: `>` и `<` являются shell-перенаправлениями. Примеры: `--include-platform ">=1.64 <=1.68"`, `--include-platform "~1.65.0"`, `--include-platform "^1.65.0"`, `--include-platform "1.65.0"`, `--include-platform "=v1.65.3"` или `--include-platform "=v1.65.3+stable"`;
 - `--include-module` / `-i` = `name[@Major.Minor]` — загрузить определенный набор модулей по принципу белого списка (и, при необходимости, их минимальных версий). Укажите несколько раз, чтобы добавить в белый список больше модулей. Эти флаги игнорируются, если используются совместно с `--no-modules`.
 
   Поддерживаются следующие синтаксисы для указания версий модулей. Если используются операторы `>=` или `<=`, заключайте в кавычки все значение флага:
@@ -1033,14 +1033,14 @@ echo "$MYRESULTSTRING"
 - `--exclude-module` / `-e` = `name` — пропустить загрузку определенного набора модулей по принципу черного списка. Укажите несколько раз, чтобы добавить в черный список больше модулей. Игнорируется, если используются `--no-modules` или `--include-module`.
 - `--include-package` = `name[@version]` — загрузить определенный набор пакетов по принципу белого списка. Для указания версий и semver-ограничений используется тот же синтаксис, что и у `--include-module`, включая правила использования кавычек.
 - `--exclude-package` = `name[@version]` — пропустить загрузку определенного набора пакетов по принципу черного списка. Игнорируется, если используется `--include-package`.
-- `--modules-path-suffix` — изменить суффикс пути к репозиторию модулей в основном репозитории DKP. По умолчанию используется суффикс `/modules` (так, например, полный путь к репозиторию с модулями будет выглядеть как `registry.deckhouse.ru/deckhouse/EDITION/modules`);
-- `--since-version=X.Y` — скачать все версии DKP, начиная с указанной минорной версии. Параметр будет проигнорирован, если указанная версия выше, чем версия на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
-- `--deckhouse-tag` — скачать только конкретную версию DKP (без учета каналов обновлений). Параметр не может быть использован одновременно с параметром `--since-version`;
+- `--modules-path-suffix` — изменить суффикс пути к репозиторию модулей в основном репозитории DP. По умолчанию используется суффикс `/modules` (так, например, полный путь к репозиторию с модулями будет выглядеть как `registry.deckhouse.ru/deckhouse/EDITION/modules`);
+- `--since-version=X.Y` — скачать все версии DP, начиная с указанной минорной версии. Параметр будет проигнорирован, если указанная версия выше, чем версия на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
+- `--deckhouse-tag` — скачать только конкретную версию DP (без учета каналов обновлений). Параметр не может быть использован одновременно с параметром `--since-version`;
 - `--installer-tag=TAG` — скачать конкретный тег инсталлятора Deckhouse. Если параметр не указан, используется тег `latest`;
 - `--proxy-registry` — использовать proxy/cache-хранилище, которое не поддерживает registry catalog API. Требует `--include-platform`, если платформа не пропущена через `--no-platform`, и хотя бы один `--include-module`, если модули не пропущены через `--no-modules`. Нельзя использовать вместе с `--deckhouse-tag` или `--since-version`;
 - `--dry-run` — вывести список того, что будет загружено, без скачивания образов;
 - `--verbose-summary` — вывести подробную сводку по всем модулям и пакетам с разрешенными версиями;
-- `--gost-digest` — рассчитать контрольную сумму итогового набора образов DKP в формате ГОСТ Р 34.11-2012 (Стрибог). Контрольная сумма будет отображена и записана в файл с расширением `.tar.gostsum` в папке с TAR-архивом, содержащим образы DKP;
+- `--gost-digest` — рассчитать контрольную сумму итогового набора образов DP в формате ГОСТ Р 34.11-2012 (Стрибог). Контрольная сумма будет отображена и записана в файл с расширением `.tar.gostsum` в папке с TAR-архивом, содержащим образы DP;
 - `--source-login` и `--source-password` — данные для аутентификации в стороннем хранилище образов;
 - `--tls-skip-verify` — отключить проверку TLS-сертификата;
 - `--insecure` — обращаться к хранилищам образов по HTTP;
@@ -1056,9 +1056,9 @@ echo "$MYRESULTSTRING"
 - `MIRROR_BYPASS_ACCESS_CHECKS` — установите для этого параметра значение `1`, чтобы отключить проверку корректности переданных учетных данных для хранилища образов.
 {% endofftopic %}
 
-- На хост с доступом к хранилищу образов, куда нужно загрузить образы DKP, скопируйте загруженный пакет образов DKP и установите [Deckhouse CLI](../cli/d8/).
+- На хост с доступом к хранилищу образов, куда нужно загрузить образы DP, скопируйте загруженный пакет образов DP и установите [Deckhouse CLI](../cli/d8/).
 
-- Загрузите образы DKP в хранилище образов с помощью команды `d8 mirror push`.
+- Загрузите образы DP в хранилище образов с помощью команды `d8 mirror push`.
 
   Команда `d8 mirror push` загружает в хранилище образов образы из всех пакетов, которые присутствуют в переданной директории.
   При необходимости выгрузить в хранилище образов только часть пакетов вы можете либо выполнить команду для каждого необходимого пакета образов, передав ей прямой путь до TAR-пакета вместо директории, либо убрав расширение `.tar` у ненужных пакетов или переместив их вне директории.
@@ -1072,27 +1072,27 @@ echo "$MYRESULTSTRING"
 
   Перед загрузкой образов убедитесь, что путь для загрузки в хранилище образов существует (в примере — `/sys/deckhouse`) и у используемой учетной записи есть права на запись.
 
-  Если вы используете Harbor, вы не сможете выгрузить образы в корень проекта. Используйте выделенный репозиторий в проекте для размещения образов DKP.
+  Если вы используете Harbor, вы не сможете выгрузить образы в корень проекта. Используйте выделенный репозиторий в проекте для размещения образов DP.
 
-- После загрузки образов в хранилище образов можно переходить к установке DKP. Воспользуйтесь [руководством по быстрому старту](/products/kubernetes-platform/gs/bm-private/step2.html).
+- После загрузки образов в хранилище образов можно переходить к установке DP. Воспользуйтесь [руководством по быстрому старту](/products/kubernetes-platform/gs/bm-private/step2.html).
 
-  При запуске установщика используйте хранилище образов, в которое ранее были загружены образы, а не официальное публичное хранилище образов DKP. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
+  При запуске установщика используйте хранилище образов, в которое ранее были загружены образы, а не официальное публичное хранилище образов DP. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
-  В [секции параметров `registry`](/modules/deckhouse/configuration.html#parameters-registry) ModuleConfig `deckhouse` при установке также используйте адрес вашего хранилища образов и данные авторизации (с версии DKP 1.75). Устаревший способ — использование [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (параметры [`imagesRepo`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [`registryDockerCfg`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg)).
+  В [секции параметров `registry`](/modules/deckhouse/configuration.html#parameters-registry) ModuleConfig `deckhouse` при установке также используйте адрес вашего хранилища образов и данные авторизации (с версии DP 1.75). Устаревший способ — использование [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (параметры [`imagesRepo`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [`registryDockerCfg`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg)).
 
-### Создание кластера и запуск DKP без использования каналов обновлений
+### Создание кластера и запуск DP без использования каналов обновлений
 
 {% alert level="warning" %}
 Этот способ следует использовать только в случае, если в приватном хранилище нет образов, содержащих информацию о каналах обновлений.
 {% endalert %}
 
-Если необходимо установить DKP с отключенным автоматическим обновлением:
+Если необходимо установить DP с отключенным автоматическим обновлением:
 
 1. Используйте тег образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
 1. Укажите соответствующий номер версии в [параметре `deckhouse.devBranch`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
    > **Не указывайте** [параметр `deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module-v1alpha1-properties-releasechannel) в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
 
-Если вы хотите отключить автоматические обновления для уже установленного DKP (включая обновления patch-релизов), удалите [параметр `releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
+Если вы хотите отключить автоматические обновления для уже установленного DP (включая обновления patch-релизов), удалите [параметр `releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
 ### Использование прокси-сервера
 
@@ -1135,7 +1135,7 @@ echo "$MYRESULTSTRING"
 
 {% endofftopic %}
 
-Для настройки DKP на работу с прокси-сервером используйте [параметр `proxy`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) ресурса ClusterConfiguration.
+Для настройки DP на работу с прокси-сервером используйте [параметр `proxy`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) ресурса ClusterConfiguration.
 
 Пример:
 
@@ -1160,7 +1160,7 @@ proxy:
 
 ### Автозагрузка прокси-переменных пользователям в CLI
 
-Начиная с версии 1.67, в DKP больше не настраивается файл `/etc/profile.d/d8-system-proxy.sh`, который ранее устанавливал прокси-переменные для пользователей. Для автозагрузки прокси-переменных пользователям в CLI используйте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
+Начиная с версии 1.67, в DP больше не настраивается файл `/etc/profile.d/d8-system-proxy.sh`, который ранее устанавливал прокси-переменные для пользователей. Для автозагрузки прокси-переменных пользователям в CLI используйте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
