@@ -30,6 +30,14 @@ source /shell_lib.sh
 # the stored object is v1alpha1 (the apiserver asks for the conversion because that is what it
 # reads), and it stays marked until an administrator rewrites the template and removes the mark.
 #
+# The string itself is carried into the ...-body annotation beside the mark, because v1alpha1 is not
+# served: without it the only copy left would be the one in etcd, which no API call can return and
+# which the first write of the object replaces (the apiserver persists at the storage version,
+# v1alpha2). The administrator is asked to rewrite the template with structured fields, so they have
+# to be able to read what it used to do. Over 64 KiB the body is left out: all annotations of an
+# object together may not exceed 256 KiB, and a body that big would make the object unwritable --
+# and therefore unfixable -- the moment it is read back and applied.
+#
 # Down: the structured fields v1alpha2 added exist only there -- they are pruned on the way down and
 # cannot come back, which is precisely why v1alpha1 is not served: no client can write a template
 # back through it and erase them.
@@ -55,7 +63,10 @@ function __on_conversion::v1alpha1_to_v1alpha2() {
      if .apiVersion == "deckhouse.io/v1alpha1" then
        .apiVersion = "deckhouse.io/v1alpha2" |
        (if (((.spec // {}).resourcesTemplate // "") | tostring | test("\\S")) then
-          .metadata.annotations["projects.deckhouse.io/legacy-helm-template"] = "true"
+          .metadata.annotations["projects.deckhouse.io/legacy-helm-template"] = "true" |
+          (if ((.spec.resourcesTemplate | tostring | utf8bytelength) <= 65536) then
+             .metadata.annotations["projects.deckhouse.io/legacy-helm-template-body"] = (.spec.resourcesTemplate | tostring)
+           else . end)
         else . end) |
        (if .spec then del(.spec.resourcesTemplate) else . end)
      else . end

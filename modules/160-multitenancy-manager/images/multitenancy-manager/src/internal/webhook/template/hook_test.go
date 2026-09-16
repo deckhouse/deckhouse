@@ -278,3 +278,63 @@ func TestHandle_DeleteInUseTemplate(t *testing.T) {
 	require.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "cannot be deleted")
 }
+
+func updateRequest(t *testing.T, oldTmpl, newTmpl *v1alpha2.ProjectTemplate) admission.Request {
+	t.Helper()
+	for _, tmpl := range []*v1alpha2.ProjectTemplate{oldTmpl, newTmpl} {
+		tmpl.TypeMeta = metav1.TypeMeta{APIVersion: v1alpha2.SchemeGroupVersion.String(), Kind: v1alpha2.ProjectTemplateKind}
+	}
+	oldRaw, err := json.Marshal(oldTmpl)
+	require.NoError(t, err)
+	newRaw, err := json.Marshal(newTmpl)
+	require.NoError(t, err)
+	return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+		Operation: admissionv1.Update,
+		Object:    runtime.RawExtension{Raw: newRaw},
+		OldObject: runtime.RawExtension{Raw: oldRaw},
+	}}
+}
+
+func markedEmptyTemplate(name string) *v1alpha2.ProjectTemplate {
+	return &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Annotations: map[string]string{v1alpha2.TemplateAnnotationLegacyHelm: "true"},
+		},
+	}
+}
+
+// TestHandle_LegacyMarkRemoval: taking the mark off a template that renders nothing is the two-step
+// order the condition message invites, and it costs the projects every object their Helm template
+// produced. Only the request that also rewrites the template is accepted.
+func TestHandle_LegacyMarkRemoval(t *testing.T) {
+	ctx := context.Background()
+	v := newValidator(t)
+
+	t.Run("removing the mark alone is refused", func(t *testing.T) {
+		unmarked := markedEmptyTemplate("legacy")
+		unmarked.Annotations = nil
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), unmarked))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "delete every object")
+	})
+
+	t.Run("rewriting and unmarking in one request is allowed", func(t *testing.T) {
+		rewritten := structuredTemplate("legacy")
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), rewritten))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("editing a marked template without touching the mark is allowed", func(t *testing.T) {
+		edited := markedEmptyTemplate("legacy")
+		edited.Spec.Description = "parked, waiting for a rewrite"
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), edited))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("a template that never carried the mark is untouched by the guard", func(t *testing.T) {
+		resp := v.Handle(ctx, updateRequest(t, &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "plain"}},
+			&v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "plain"}}))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+}

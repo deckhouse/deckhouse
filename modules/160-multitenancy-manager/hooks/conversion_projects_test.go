@@ -205,11 +205,38 @@ func TestProjectTemplateUpConversionDropsTheHelmString(t *testing.T) {
 			assert.Equal(t, "me", annotations["keep"], "the other annotations survive")
 			if tt.marked {
 				assert.Equal(t, "true", annotations[mark])
+				assert.Equal(t, tt.resource, annotations[mark+"-body"],
+					"the string the administrator is asked to rewrite must stay readable")
 			} else {
 				assert.NotContains(t, annotations, mark)
+				assert.NotContains(t, annotations, mark+"-body")
 			}
 		})
 	}
+}
+
+// A Helm string too large to live in an annotation still gets the mark: the projects must be parked
+// either way. All annotations of an object together may not exceed 256 KiB, and an object carrying a
+// body near that cap could not be written back -- which is the very thing the administrator has to
+// do to fix it.
+func TestProjectTemplateUpConversionSkipsAnOversizedHelmString(t *testing.T) {
+	t.Parallel()
+
+	const mark = "projects.deckhouse.io/legacy-helm-template"
+	huge := strings.Repeat("x", 65536+1)
+
+	template := map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ProjectTemplate",
+		"metadata":   map[string]any{"name": "test"},
+		"spec":       map[string]any{"resourcesTemplate": huge},
+	}
+
+	up := convertWith(t, templateConversionHook, "v1alpha1_to_v1alpha2", template)
+	annotations, _ := up["metadata"].(map[string]any)["annotations"].(map[string]any)
+	assert.Equal(t, "true", annotations[mark])
+	assert.NotContains(t, annotations, mark+"-body")
+	assert.Nil(t, specField(up, "resourcesTemplate"))
 }
 
 // The apiserver keeps asking for the conversion of whatever v1alpha1 objects it holds, and a

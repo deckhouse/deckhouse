@@ -35,6 +35,11 @@ const (
 	// used to produce. The controller refuses to render the projects of a marked template until the
 	// template is rewritten with structured fields and the annotation is removed.
 	TemplateAnnotationLegacyHelm = "projects.deckhouse.io/legacy-helm-template"
+
+	// TemplateAnnotationLegacyHelmBody carries the Helm resourcesTemplate the conversion dropped, so
+	// the administrator asked to rewrite the template can read what it used to render. It is absent
+	// when the string did not fit into an annotation; see the conversion hook.
+	TemplateAnnotationLegacyHelmBody = "projects.deckhouse.io/legacy-helm-template-body"
 )
 
 // Pod Security Standard profiles, mirroring the legacy parameters.podSecurityProfile values.
@@ -169,6 +174,23 @@ type ProjectTemplateSpec struct {
 
 	// ParametersSchema is the OpenAPI v3 schema validating Project.spec.parameters.
 	ParametersSchema ParametersSchema `json:"parametersSchema,omitempty"`
+}
+
+// RendersObjects reports whether the spec declares at least one field that renders an object into
+// the project namespaces. Title, description, parametersSchema and the grant fields are excluded:
+// they configure the template or the cluster-resource availability, and a template carrying only
+// those renders the namespace and nothing else.
+//
+// It answers one question: would applying this template to a project that already has a release
+// delete everything in it. The legacy-Helm mark exists for exactly that case, and dropping the mark
+// while this is false is what the template webhook refuses.
+func (p *ProjectTemplateSpec) RendersObjects() bool {
+	if !p.PodSecurityStandard.IsZero() || !p.NodeSelector.IsZero() || !p.Tolerations.IsZero() ||
+		!p.AllowedUIDs.IsZero() || !p.AllowedGIDs.IsZero() {
+		return true
+	}
+	return p.NetworkPolicy != nil || p.NamespaceMetadata != nil || p.Features != nil ||
+		p.LogShipping != nil || p.RuntimeAudit != nil
 }
 
 // ParamRef pairs a structured field path (for diagnostics) with the parameter it references.

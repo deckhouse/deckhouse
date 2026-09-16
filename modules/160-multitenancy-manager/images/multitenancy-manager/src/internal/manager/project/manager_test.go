@@ -85,8 +85,8 @@ func TestHandleTemplateRefusesALegacyHelmTemplate(t *testing.T) {
 	assert.True(t, done, "the reconcile stops at the template")
 	assert.Equal(t, 0, fh.upgradeCalls, "the release must not be touched")
 	assert.Equal(t, v1alpha3.ProjectStateError, project.Status.State)
-	assert.True(t, project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRequiresRewrite))
-	cond := conditionByType(project, v1alpha3.ProjectConditionTemplateRequiresRewrite)
+	assert.True(t, project.IsConditionFalse(v1alpha3.ProjectConditionProjectTemplateUsable))
+	cond := conditionByType(project, v1alpha3.ProjectConditionProjectTemplateUsable)
 	require.NotNil(t, cond)
 	assert.Contains(t, cond.Message, v1alpha2.TemplateAnnotationLegacyHelm)
 
@@ -103,7 +103,7 @@ func TestHandleTemplateRefusesALegacyHelmTemplate(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, done)
 	assert.Equal(t, 1, fh.upgradeCalls, "an unmarked template renders")
-	assert.False(t, project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRequiresRewrite))
+	assert.False(t, project.IsConditionFalse(v1alpha3.ProjectConditionProjectTemplateUsable))
 }
 
 func conditionByType(project *v1alpha3.Project, condName string) *v1alpha3.Condition {

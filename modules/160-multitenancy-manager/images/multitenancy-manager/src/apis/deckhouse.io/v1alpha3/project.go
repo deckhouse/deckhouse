@@ -36,10 +36,11 @@ const (
 	ProjectConditionProjectResourcesUpgraded = "ResourcesUpgraded"
 	ProjectConditionStandardFieldsApplied    = "StandardFieldsApplied"
 	ProjectConditionHelmOwnership            = "HelmOwnership"
-	// ProjectConditionTemplateRequiresRewrite is False while the project's template carries the
+	// ProjectConditionProjectTemplateUsable is False while the project's template carries the
 	// legacy-helm-template mark: the template was a Helm string in v1alpha1, the string is gone, and
-	// rendering the empty structured shape would delete the objects that string produced.
-	ProjectConditionTemplateRequiresRewrite = "TemplateRequiresRewrite"
+	// rendering the empty structured shape would delete the objects that string produced. Named so
+	// that True means healthy, like every other condition here.
+	ProjectConditionProjectTemplateUsable = "ProjectTemplateUsable"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 
