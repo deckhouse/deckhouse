@@ -197,14 +197,14 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   namespace lists, so "deny in user namespaces, warn in system ones" needs more than one
   object. A policy with enforcementAction: Deny that spans both is split into three CRs:
     - the original name, with the system namespaces excluded;
-    - `d8-system-warn-<name>`, warn-only, for system namespaces that have not opted into
+    - `d8ape-system-warn-<name>`, warn-only, for system namespaces that have not opted into
       policy enforcement;
-    - `d8-system-enforce-<name>`, the original action, for system namespaces labeled
+    - `d8ape-system-enforce-<name>`, the original action, for system namespaces labeled
       `security.deckhouse.io/enable-security-policy-check: "true"`.
 
   The generated names carry a prefix rather than a suffix so that neither can collide with the
-  other, and the validating webhook `reserved_policy_names.py` keeps both prefixes free by
-  rejecting policies that claim them.
+  other, and the validating webhook `reserved_policy_names.py` keeps the `d8ape-` prefix free by
+  rejecting policies that claim it.
 
   Nothing is split that does not have to be, because every extra constraint costs an audit pass:
     - a policy that only warns or only runs in dryrun keeps one CR, its action being already
@@ -235,7 +235,7 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
     {{- end }}
 
     {{- $systemWarn := deepCopy $policy }}
-    {{- $_ := set $systemWarn.metadata "name" (printf "d8-system-warn-%s" $policy.metadata.name) }}
+    {{- $_ := set $systemWarn.metadata "name" (printf "d8ape-system-warn-%s" $policy.metadata.name) }}
     {{- $_ := set $systemWarn.spec "enforcementAction" "warn" }}
     {{- $_ := set $systemWarn.spec.match "d8NamespaceScope" "system-warn" }}
     {{- $_ := set $systemWarn.spec.match "d8SystemNamespaces" $scope.names }}
@@ -243,7 +243,7 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
 
     {{- $systemEnforce := deepCopy $policy }}
     {{- if $scope.userPossible }}
-      {{- $_ := set $systemEnforce.metadata "name" (printf "d8-system-enforce-%s" $policy.metadata.name) }}
+      {{- $_ := set $systemEnforce.metadata "name" (printf "d8ape-system-enforce-%s" $policy.metadata.name) }}
     {{- end }}
     {{- $_ := set $systemEnforce.spec.match "d8NamespaceScope" "system-enforce" }}
     {{- $_ := set $systemEnforce.spec.match "d8SystemNamespaces" $scope.names }}
@@ -365,7 +365,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: {{ $policyCRDName }}
 metadata:
-  name: d8-pod-security-{{$standard}}-warn-system
+  name: d8ape-pod-security-{{$standard}}-warn-system
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
 spec:
   enforcementAction: warn

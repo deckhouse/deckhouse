@@ -387,8 +387,8 @@ admissionPolicyEngine:
 
 			// genpolicy sets enforcementAction: Warn, which is already harmless in system
 			// namespaces, so it keeps a single constraint with an unscoped selector.
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-warn-"+testPolicyName).Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-enforce-"+testPolicyName).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-warn-"+testPolicyName).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-enforce-"+testPolicyName).Exists()).To(BeFalse())
 
 			spec := getConstraintSpecMap(f.KubernetesGlobalResource("D8PrivilegedContainer", testPolicyName))
 			match := spec["match"].(map[string]interface{})
@@ -401,8 +401,8 @@ admissionPolicyEngine:
 			// exprpolicy omits enforcementAction, so it denies, and it names no namespace,
 			// which means it reaches system namespaces and has to be split.
 			userScoped := f.KubernetesGlobalResource("D8PrivilegedContainer", "exprpolicy")
-			systemWarn := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-warn-exprpolicy")
-			systemEnforce := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-enforce-exprpolicy")
+			systemWarn := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-warn-exprpolicy")
+			systemEnforce := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-enforce-exprpolicy")
 
 			Expect(userScoped.Exists()).To(BeTrue())
 			Expect(systemWarn.Exists()).To(BeTrue())
@@ -437,8 +437,8 @@ admissionPolicyEngine:
 
 			// minpolicy denies but is limited to the `default` namespace, so the system variants
 			// would match nothing and are not rendered at all.
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-warn-minpolicy").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-enforce-minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-warn-minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-enforce-minpolicy").Exists()).To(BeFalse())
 
 			userScoped := f.KubernetesGlobalResource("D8PrivilegedContainer", "minpolicy")
 			Expect(userScoped.Exists()).To(BeTrue())
@@ -452,11 +452,11 @@ admissionPolicyEngine:
 			// syspolicy names only system namespaces, so no user-scoped constraint is needed and
 			// the enforcing one keeps the name the policy author wrote.
 			systemEnforce := f.KubernetesGlobalResource("D8PrivilegedContainer", "syspolicy")
-			systemWarn := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-warn-syspolicy")
+			systemWarn := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-warn-syspolicy")
 
 			Expect(systemEnforce.Exists()).To(BeTrue())
 			Expect(systemWarn.Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-enforce-syspolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-enforce-syspolicy").Exists()).To(BeFalse())
 
 			Expect(systemEnforce.Field("spec.enforcementAction").String()).To(Equal("deny"))
 			Expect(systemWarn.Field("spec.enforcementAction").String()).To(Equal("warn"))
@@ -471,8 +471,8 @@ admissionPolicyEngine:
 
 			// excludedpolicy already excludes d8-* and kube-*, so the system variants would be
 			// shadowed by their own excludedNamespaces and cost an audit pass for nothing.
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-warn-excludedpolicy").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-enforce-excludedpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-warn-excludedpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-enforce-excludedpolicy").Exists()).To(BeFalse())
 
 			constraint := f.KubernetesGlobalResource("D8PrivilegedContainer", "excludedpolicy")
 			Expect(constraint.Exists()).To(BeTrue())
@@ -485,8 +485,8 @@ admissionPolicyEngine:
 
 			// A suffix glob intersects `d8-*` in a set no Gatekeeper glob describes, so the policy
 			// keeps the single constraint it had rather than matching wider or narrower than asked.
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-warn-globpolicy").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-enforce-globpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-warn-globpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8ape-system-enforce-globpolicy").Exists()).To(BeFalse())
 
 			constraint := f.KubernetesGlobalResource("D8PrivilegedContainer", "globpolicy")
 			Expect(constraint.Exists()).To(BeTrue())
@@ -497,7 +497,7 @@ admissionPolicyEngine:
 		It("Every variant keeps the parameters of the policy it came from", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			for _, name := range []string{"exprpolicy", "d8-system-warn-exprpolicy", "d8-system-enforce-exprpolicy"} {
+			for _, name := range []string{"exprpolicy", "d8ape-system-warn-exprpolicy", "d8ape-system-enforce-exprpolicy"} {
 				constraint := f.KubernetesGlobalResource("D8HostNetwork", name)
 				Expect(constraint.Exists()).To(BeTrue(), name)
 				Expect(constraint.Field("spec.parameters.allowHostNetwork").Bool()).To(BeTrue(), name)

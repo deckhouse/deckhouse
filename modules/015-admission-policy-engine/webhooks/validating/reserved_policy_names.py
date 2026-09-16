@@ -25,9 +25,11 @@ from deckhouse import hook
 from dotmap import DotMap
 
 RESERVED_NAME_PREFIXES = (
-    "d8-system-warn-",
-    "d8-system-enforce-",
-    # Pod Security Standards render their own constraints under this prefix.
+    # Everything the module names for itself: the constraints derived from a policy
+    # (d8ape-system-warn-, d8ape-system-enforce-) and the Pod Security Standards constraint
+    # for system namespaces (d8ape-pod-security-).
+    "d8ape-",
+    # Pod Security Standards render their remaining constraints under this prefix.
     "d8-pod-security-",
 )
 
