@@ -3,7 +3,7 @@ title: Модуль csi-huawei
 permalink: ru/architecture/storage/external/csi-huawei.html
 lang: ru
 search: csi-huawei, huawei
-description: Архитектура модуля csi-huawei в Deckhouse Kubernetes Platform.
+description: Архитектура модуля csi-huawei в Deckhouse Platform.
 ---
 
 Модуль [`csi-huawei`](/modules/csi-huawei/) предназначен для управления томами c использованием систем хранения данных Huawei. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса HuaweiStorageClass.
@@ -19,7 +19,7 @@ description: Архитектура модуля csi-huawei в Deckhouse Kuberne
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`csi-huawei`](/modules/csi-huawei/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`csi-huawei`](/modules/csi-huawei/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля csi-huawei](../../../images/architecture/storage/c4-l2-csi-huawei.ru.png)
 

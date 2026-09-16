@@ -26,15 +26,15 @@ se: Standard Edition
 se-plus: Standard Edition+
 ee: Enterprise Edition
 cse: Certified Security Edition
-kubernetes-platform: Deckhouse Kubernetes Platform
+kubernetes-platform: Deckhouse Platform
 virtualization-platform: Deckhouse Virtualization Platform
 stronghold: Deckhouse Stronghold
-dkp-ce: DKP CE
-dkp-se-plus: DKP SE+
-dkp-ee: DKP EE
+dkp-ce: DP CE
+dkp-se-plus: DP SE+
+dkp-ee: DP EE
 dvp-ee: DVP EE
 dvp-cse: DVP CSE
-dkp-cse-pro: DKP CSE Pro
+dkp-cse-pro: DP CSE Pro
 
 common:
   pdf_download:
@@ -116,8 +116,8 @@ common:
     en: "coming soon..."
     ru: "скоро..."
   tech_support_stronghold_notice_ce:
-    en: "Technical Support and Warranty Technical Support are available if Deckhouse Stronghold CE is used as part of the commercial editions of the Deckhouse Kubernetes Platform, with a valid Deckhouse Kubernetes Platform Technical Support certificate and compliance with the Terms."
-    ru: "Техническая поддержка и Гарантийная техническая поддержка доступны при условии использования Deckhouse Stronghold CE в составе коммерческих редакций Deckhouse Kubernetes Platform, наличии действующего сертификата на Техническую поддержку Deckhouse Kubernetes Platform и выполнения Условий, опубликованных на legal.flant.ru"
+    en: "Technical Support and Warranty Technical Support are available if Deckhouse Stronghold CE is used as part of the commercial editions of the Deckhouse Platform, with a valid Deckhouse Platform Technical Support certificate and compliance with the Terms."
+    ru: "Техническая поддержка и Гарантийная техническая поддержка доступны при условии использования Deckhouse Stronghold CE в составе коммерческих редакций Deckhouse Platform, наличии действующего сертификата на Техническую поддержку Deckhouse Platform и выполнения Условий, опубликованных на legal.flant.ru"
   tech_support_stronghold_notice_commercial:
     en: "Purchased separately"
     ru: "Приобретается отдельно"
@@ -200,11 +200,11 @@ common:
     en: Enter a&nbsp;name
     ru: Поиск по каталогу
   search_context_dkpdocs_and_modules:
-    en: The search is performed throughout DKP documentation and modules.
-    ru: Поиск выполняется по всей документации DKP и модулям.
+    en: The search is performed throughout DP documentation and modules.
+    ru: Поиск выполняется по всей документации DP и модулям.
   search_context_modules:
-    en: The search is performed throughout modules, excluding the DKP documentation.
-    ru: Поиск выполняется по всем модулям, не включая документацию DKP.
+    en: The search is performed throughout modules, excluding the DP documentation.
+    ru: Поиск выполняется по всем модулям, не включая документацию DP.
   search_context_only_product_docs:
     en: The search is performed throughout the product documentation, excluding modules.
     ru: Поиск выполняется по всей документации продукта, не включая модули.
@@ -400,8 +400,8 @@ features:
     en: This feature is available in Enterprise Edition only.
     ru: Доступно только в Enterprise Edition.
   requiresSeparateLicense:
-    en: Licensed separately, not included in the DKP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/features/">Условия и цены</a>.
+    en: Licensed separately, not included in the DP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/features/">Условия и цены</a>.
   requiresSeparateLicenseObservability:
-    en: Licensed separately, not included in the DKP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.
+    en: Licensed separately, not included in the DP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.

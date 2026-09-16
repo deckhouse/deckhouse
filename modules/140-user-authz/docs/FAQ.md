@@ -89,7 +89,7 @@ Approximate level mapping:
 An example for `ClusterAdmin` (the `k8s-admins` group):
 
 ```yaml
-# Platform: DKP module configuration, cluster-wide resources, system namespaces.
+# Platform: DP module configuration, cluster-wide resources, system namespaces.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -128,7 +128,7 @@ Specifics:
 
 A typical request: a user in a namespace should only work with the resources of one module (for example, only with virtual machines) without seeing the other resources (Pod, Deployment, etc.).
 
-Every DKP module ships separate capabilities for its resources, so such access is granted without writing RBAC rules. Assemble a [custom role](#creating-a-custom-namespace-or-project-role) that aggregates only the capabilities of the desired module (a selector by the `module` label):
+Every DP module ships separate capabilities for its resources, so such access is granted without writing RBAC rules. Assemble a [custom role](#creating-a-custom-namespace-or-project-role) that aggregates only the capabilities of the desired module (a selector by the `module` label):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -490,7 +490,7 @@ This way, your role will combine permissions of the `deckhouse` subsystem, `kube
 
 Notes:
 
-* Custom roles and capabilities must be named with the `d8:custom:` prefix (the rest of the `d8:` prefix space is reserved for DKP built-in objects). The name must agree with the declared scope: a subsystem role is `d8:custom:<subsystem>:<name>` (the segment is the subsystem itself, as in the example above), a namespace or project role is `d8:custom:namespace:<name>` or `d8:custom:project:<name>`, and a capability is `d8:custom:<scope>-capability:<name>`. A name that disagrees with the `rbac.deckhouse.io/scope` label is rejected.
+* Custom roles and capabilities must be named with the `d8:custom:` prefix (the rest of the `d8:` prefix space is reserved for DP built-in objects). The name must agree with the declared scope: a subsystem role is `d8:custom:<subsystem>:<name>` (the segment is the subsystem itself, as in the example above), a namespace or project role is `d8:custom:namespace:<name>` or `d8:custom:project:<name>`, and a capability is `d8:custom:<scope>-capability:<name>`. A name that disagrees with the `rbac.deckhouse.io/scope` label is rejected.
 * RoleBindings with a namespace role (`d8:namespace:<level>`) will be created in the namespaces of the aggregated subsystems' modules, the level is specified by the `rbac.deckhouse.io/use-role` label.
 
 ### Extending the custom role
@@ -715,7 +715,7 @@ The created role is assigned exactly like a built-in one: via a RoleBinding in a
 
 > You can also assemble such a role without YAML — with the access grant wizard in the Deckhouse Console web interface: it shows the available capabilities, builds a role out of them, and immediately creates the required binding.
 
-## How do I migrate custom roles to the new scheme in DKP 1.78?
+## How do I migrate custom roles to the new scheme in DP 1.78?
 
 {% alert level="warning" %}
 Custom roles and capabilities get no compatibility aliases, unlike the [built-in roles](./#deprecated-role-names). Until every one of them is migrated, the upgrade is held back by the `legacyRBACv2CustomRolesCount` release requirement, and the `D8UserAuthzLegacyRBACv2CustomRoleFound` alert fires.
@@ -890,7 +890,7 @@ Labels on ClusterRole objects:
 | `rbac.deckhouse.io/namespace` | Namespace | Unchanged | An additional namespace where a RoleBinding is automatically created for the role holders |
 | `rbac.deckhouse.io/capability` | — | A unique capability name (for example, `system-capability.deckhouse.view`) | A machine-readable identifier of a built-in capability |
 | `rbac.deckhouse.io/deprecated` | — | `"true"` on alias roles | The role is deprecated and will be removed; migrate the bindings to the new role |
-| `module` | Module name | Unchanged | Marks a built-in object as belonging to a DKP module; handy in aggregation selectors together with `scope` |
+| `module` | Module name | Unchanged | Marks a built-in object as belonging to a DP module; handy in aggregation selectors together with `scope` |
 | `heritage: deckhouse` | Platform object marker | Unchanged | Must not be set on custom objects |
 
 Annotations on ClusterRole objects (the old scheme did not use annotations):
@@ -899,7 +899,7 @@ Annotations on ClusterRole objects (the old scheme did not use annotations):
 |------------|---------|
 | `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` | The displayed name and description of a role/capability in Russian (the platform sets them on built-in objects; you can set your own on custom ones) |
 | `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` | Same in English |
-| `rbac.deckhouse.io/deprecated-replaced-by` | Introduced in DKP 1.78 together with the new scheme. Alias roles aggregate the **new** role's capabilities for one release so existing bindings keep authorizing — then they are removed. This is not identical to pre-upgrade rights: `d8:use:role:admin` no longer grants ServiceAccount token minting or impersonation. The annotation on each previous role names the new role to migrate to |
+| `rbac.deckhouse.io/deprecated-replaced-by` | Introduced in DP 1.78 together with the new scheme. Alias roles aggregate the **new** role's capabilities for one release so existing bindings keep authorizing — then they are removed. This is not identical to pre-upgrade rights: `d8:use:role:admin` no longer grants ServiceAccount token minting or impersonation. The annotation on each previous role names the new role to migrate to |
 
 ### Adding a custom capability (in the new scheme)
 

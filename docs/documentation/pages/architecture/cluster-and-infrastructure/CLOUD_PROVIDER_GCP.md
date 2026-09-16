@@ -2,7 +2,7 @@
 title: Cloud-provider-gcp module
 permalink: en/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-gcp.html
 search: cloud-provider-gcp, cloud provider gcp, google cloud platform
-description: Architecture of the cloud-provider-gcp module in Deckhouse Kubernetes Platform.
+description: Architecture of the cloud-provider-gcp module in Deckhouse Platform.
 ---
 
 The `cloud-provider-gcp` module is responsible for interacting with the [Google Cloud Platform](https://cloud.google.com/) cloud resources. It allows the [`node-manager`](/modules/node-manager/) module to use GCP resources for provisioning nodes for the specified [node group](/modules/node-manager/cr.html#nodegroup).
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`cloud-provider-gcp`](/modules/cloud-provider-gcp/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`cloud-provider-gcp`](/modules/cloud-provider-gcp/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Cloud-provider-gcp architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-gcp.png)
 

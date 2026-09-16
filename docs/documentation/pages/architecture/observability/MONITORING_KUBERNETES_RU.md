@@ -3,7 +3,7 @@ title: Модуль monitoring-kubernetes
 permalink: ru/architecture/observability/monitoring-kubernetes.html
 lang: ru
 search: monitoring-kubernetes, kubernetes monitoring, мониторинг kubernetes 
-description: Архитектура модуля monitoring-kubernetes в Deckhouse Kubernetes Platform.
+description: Архитектура модуля monitoring-kubernetes в Deckhouse Platform.
 ---
 
 Модуль [`monitoring-kubernetes`](/modules/monitoring-kubernetes/) обеспечивает прозрачный и своевременный контроль состояния всех узлов кластера и ключевых инфраструктурных компонентов.
@@ -19,7 +19,7 @@ description: Архитектура модуля monitoring-kubernetes в Deckho
 * Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура модуля [`monitoring-kubernetes`](/modules/monitoring-kubernetes/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`monitoring-kubernetes`](/modules/monitoring-kubernetes/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля monitoring-kubernetes](../../images/architecture/observability/c4-l2-monitoring-kubernetes.ru.png)
 

@@ -51,7 +51,7 @@ spec:
                   description: Time until which the release will be delayed.
                 requirements:
                   type: object
-                  description: Release dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform to run the module release.
+                  description: Release dependencies, a set of requirements that must be met for Deckhouse Platform to run the module release.
                   properties:
                     deckhouse:
                       type: string

@@ -1,7 +1,7 @@
 ---
-title: "Переключение между редакциями DKP"
+title: "Переключение между редакциями DP"
 permalink: ru/admin/configuration/update/switching-editions.html
-description: "Переключение между редакциями Deckhouse Kubernetes Platform."
+description: "Переключение между редакциями Deckhouse Platform."
 lang: ru
 ---
 
@@ -24,7 +24,7 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_of_the_internal_modules %}
-1. Определите список внутренних модулей, которые используются в кластере и не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
+1. Определите список внутренних модулей, которые используются в кластере и не поддерживаются в DP новой редакции. Для этого выполните следующие шаги:
 
    <!REMOVE_FOR_CE>
 
@@ -36,7 +36,7 @@ Summary:
 
    <!/REMOVE_FOR_CE>
 
-   1. Получите список внутренних модулей, которые не поддерживаются в DKP $NEW_EDITION:
+   1. Получите список внутренних модулей, которые не поддерживаются в DP $NEW_EDITION:
 
       ```shell
       (set -e
@@ -75,7 +75,7 @@ Summary:
 
    1. Отключите модули из полученного списка, если это допустимо (функциональность модулей не используется, или вы готовы от нее отказаться). Иначе, **прервите процесс переключения.**
 
-      Отключить модули из полученного списка можно в веб-интерфейсе DKP в разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», либо выполнив следующую команду:
+      Отключить модули из полученного списка можно в веб-интерфейсе DP в разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», либо выполнив следующую команду:
 
       ```shell
       echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
@@ -84,7 +84,7 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_of_the_external_modules %}
-1. Определите список внешних модулей, запущенных из `moduleSource/deckhouse`, которые не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
+1. Определите список внешних модулей, запущенных из `moduleSource/deckhouse`, которые не поддерживаются в DP новой редакции. Для этого выполните следующие шаги:
 
    <!REMOVE_FOR_CE>
 
@@ -96,7 +96,7 @@ Summary:
 
    <!/REMOVE_FOR_CE>
 
-   1. Получите список внешних модулей запущенных из `moduleSource/deckhouse` с результатом проверки их наличия в DKP новой редакции:
+   1. Получите список внешних модулей запущенных из `moduleSource/deckhouse` с результатом проверки их наличия в DP новой редакции:
 
       ```shell
       (set -e
@@ -190,7 +190,7 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_of_the_queue %}
-1. Убедитесь в выполнении всех задач в очередях DKP, прежде чем продолжить процесс переключения:
+1. Убедитесь в выполнении всех задач в очередях DP, прежде чем продолжить процесс переключения:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 {% endcapture %}
@@ -223,13 +223,13 @@ d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(
 
 Подтверждайте узлы по одному, дожидаясь возвращения каждого в состояние `Ready`.
 
-В ручном режиме подтверждения простоя DKP не вытесняет поды с узла — аннотация подтверждения сразу разрешает очистку состояния containerd. Вытесните нагрузку самостоятельно:
+В ручном режиме подтверждения простоя DP не вытесняет поды с узла — аннотация подтверждения сразу разрешает очистку состояния containerd. Вытесните нагрузку самостоятельно:
 
 ```shell
 d8 k drain <ИМЯ_УЗЛА> --ignore-daemonsets --delete-emptydir-data
 ```
 
-Не подтверждайте узел, пока манифесты control plane на master-узлах не начнут ссылаться на образы DKP CSE: команда `grep image: /etc/kubernetes/manifests/*` не должна возвращать строк с `deckhouse/ee`. Если такие строки ещё есть, дождитесь, пока control-plane-manager перепишет манифесты. До подтверждения узел работает штатно, но не переходит в состояние `UPTODATE`.
+Не подтверждайте узел, пока манифесты control plane на master-узлах не начнут ссылаться на образы DP CSE: команда `grep image: /etc/kubernetes/manifests/*` не должна возвращать строк с `deckhouse/ee`. Если такие строки ещё есть, дождитесь, пока control-plane-manager перепишет манифесты. До подтверждения узел работает штатно, но не переходит в состояние `UPTODATE`.
 
 Подтвердите обновление узла:
 
@@ -542,16 +542,16 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
 {% endcapture %}
 
-Эта инструкция описывает шаги, необходимые для смены редакции Deckhouse Kubernetes Platform в работающем кластере. Выполняйте их последовательно по разделам.
+Эта инструкция описывает шаги, необходимые для смены редакции Deckhouse Platform в работающем кластере. Выполняйте их последовательно по разделам.
 
 В зависимости от способа работы с хранилищем образов процесс переключения отличается. Выбираете подходящий для вашего кластера способ и следуйте инструкциям.
 
-При переключении на DKP BE/SE/SE+/EE/CSE необходим действующий лицензионный ключ. При переключении на DKP CE он не требуется.
+При переключении на DP BE/SE/SE+/EE/CSE необходим действующий лицензионный ключ. При переключении на DP CE он не требуется.
 
 {% alert level="warning" %}
-Инструкция не подходит для переключения **с** DKP CSE на другие редакции, но подходит для переключения **на** DKP CSE с DKP EE.
+Инструкция не подходит для переключения **с** DP CSE на другие редакции, но подходит для переключения **на** DP CSE с DP EE.
 
-Инструкция подразумевает использование публичного хранилища образов контейнеров (`registry-cse.deckhouse.ru` для DKP CSE, и `registry.deckhouse.ru` в остальных случаях). При использовании другого адреса хранилища образов измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего хранилища образов контейнеров](../registry/third-party.html).
+Инструкция подразумевает использование публичного хранилища образов контейнеров (`registry-cse.deckhouse.ru` для DP CSE, и `registry.deckhouse.ru` в остальных случаях). При использовании другого адреса хранилища образов измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего хранилища образов контейнеров](../registry/third-party.html).
 
 Выполняйте все команды на master-узле существующего кластера под пользователем `root`.
 {% endalert %}
@@ -560,29 +560,29 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
 Перед переключением между редакциями выполните следующие действия:
 
-1. Убедитесь, что [очереди DKP пусты](#проверка-очереди).
-1. Определите [текущую редакцию и версию DKP](#определение-текущей-редакции-и-версии).
+1. Убедитесь, что [очереди DP пусты](#проверка-очереди).
+1. Определите [текущую редакцию и версию DP](#определение-текущей-редакции-и-версии).
 1. Убедитесь в возможности переключения [с текущей редакции на желаемую](#определение-возможности-переключения-на-желаемую-редакцию).
 
 ### Проверка очереди
 
-Убедитесь, что очереди DKP пусты, и в них нет выполняющихся задач, которые могут помешать переключению:
+Убедитесь, что очереди DP пусты, и в них нет выполняющихся задач, которые могут помешать переключению:
 
 {{ wait_queue }}
 
 ### Определение текущей редакции и версии
 
-Чтобы быть уверенным в корректности дальнейших действий, определите текущую редакцию DKP, используемую в кластере. Это поможет избежать ошибок при переключении и убедиться в поддержке необходимых модулей и функциональных возможностей в новой редакции.
+Чтобы быть уверенным в корректности дальнейших действий, определите текущую редакцию DP, используемую в кластере. Это поможет избежать ошибок при переключении и убедиться в поддержке необходимых модулей и функциональных возможностей в новой редакции.
 
-Узнать используемые в кластере редакцию и версию DKP можно на главной странице веб-интерфейса DKP, либо с помощью CLI-команд:
+Узнать используемые в кластере редакцию и версию DP можно на главной странице веб-интерфейса DP, либо с помощью CLI-команд:
 
-- получение текущей редакции DKP:
+- получение текущей редакции DP:
 
   ```bash
   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values -o yaml | yq '.deckhouseEdition'
   ```
 
-- получение текущей версии DKP:
+- получение текущей версии DP:
 
   ```bash
   d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}'
@@ -590,14 +590,14 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
 ### Определение возможности переключения на желаемую редакцию
 
-Редакции DKP различаются набором модулей, поддерживаемых версий Kubernetes и функциональными возможностями. Важно понимать, какие изменения в функциональности произойдут при переключении, какие возможности станут недоступными. Это поможет вам подготовиться к процессу переключения.
+Редакции DP различаются набором модулей, поддерживаемых версий Kubernetes и функциональными возможностями. Важно понимать, какие изменения в функциональности произойдут при переключении, какие возможности станут недоступными. Это поможет вам подготовиться к процессу переключения.
 
-Сравнение редакций DKP по составу модулей представлено странице [«Сравнение редакций»](../../../reference/revision-comparison.html).
+Сравнение редакций DP по составу модулей представлено странице [«Сравнение редакций»](../../../reference/revision-comparison.html).
 
 Что необходимо учесть перед переключением:
 
 {% tabs step1 %}
-{% tab "На DKP CE" %}
+{% tab "На DP CE" %}
 
 {{
    take_care_of_the_internal_modules
@@ -614,7 +614,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 {{ take_care_of_the_queue }}
 {% endtab %}
 
-{% tab "На DKP BE" %}
+{% tab "На DP BE" %}
 {{
    take_care_of_the_internal_modules
    | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
@@ -630,7 +630,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 {{ take_care_of_the_queue }}
 {% endtab %}
 
-{% tab "На DKP SE" %}
+{% tab "На DP SE" %}
 {{
    take_care_of_the_internal_modules
    | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
@@ -646,7 +646,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 {{ take_care_of_the_queue }}
 {% endtab %}
 
-{% tab "На DKP SE+" %}
+{% tab "На DP SE+" %}
 {{
    take_care_of_the_internal_modules
    | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
@@ -662,7 +662,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 {{ take_care_of_the_queue }}
 {% endtab %}
 
-{% tab "На DKP EE" %}
+{% tab "На DP EE" %}
 {{
    take_care_of_the_internal_modules
    | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
@@ -678,8 +678,8 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 {{ take_care_of_the_queue }}
 {% endtab %}
 
-{% tab "На DKP CSE" %}
-1. При переключении на DKP CSE возможна временная недоступность компонентов кластера.
+{% tab "На DP CSE" %}
+1. При переключении на DP CSE возможна временная недоступность компонентов кластера.
 1. Каждый узел кластера будет поочерёдно перезагружен с очисткой кеша образов containerd. Чтобы управлять моментом перезагрузки, заранее переведите все NodeGroup, включая `master`, в ручной режим подтверждения простоя:
 
    1. Сохраните текущий режим подтверждения простоя всех NodeGroup, чтобы вернуть исходные значения после переключения:
@@ -702,15 +702,15 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    d8 k patch ng <ИМЯ_NODEGROUP> --type=json -p='[{"op":"remove","path":"/spec/disruptions/approvalMode"}]'
    ```
 
-1. Переключение на DKP CSE возможно только с DKP EE (Enterprise Edition). Переключение поддерживается только **между одинаковыми минорными версиями** DKP. Например, с DKP EE 1.67.x на DKP CSE 1.67.x.```
+1. Переключение на DP CSE возможно только с DP EE (Enterprise Edition). Переключение поддерживается только **между одинаковыми минорными версиями** DP. Например, с DP EE 1.67.x на DP CSE 1.67.x.```
 
-   При необходимости, выполните обновление DKP EE до соответствующей минорной версии и последней патч-версии.
+   При необходимости, выполните обновление DP EE до соответствующей минорной версии и последней патч-версии.
 
-   Актуальные патч-версии DKP CSE: `v1.58.2`, `v1.64.1`, `v1.67.4`, `v1.73.0`. Также, информацию о доступных версиях DKP CSE можно получить в разделе [Обновления DKP Certified Security Edition](https://deckhouse.ru/products/kubernetes-platform/certified-security-edition/updates/) на официальном сайте.
+   Актуальные патч-версии DP CSE: `v1.58.2`, `v1.64.1`, `v1.67.4`, `v1.73.0`. Также, информацию о доступных версиях DP CSE можно получить в разделе [Обновления DP Certified Security Edition](https://deckhouse.ru/products/kubernetes-platform/certified-security-edition/updates/) на официальном сайте.
 
-1. Убедитесь, что версия Kubernetes, используемая в кластере, поддерживается в желаемой версии DKP CSE:
-   - DKP CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27;
-   - DKP CSE 1.67 поддерживает Kubernetes версий 1.27 и 1.29.
+1. Убедитесь, что версия Kubernetes, используемая в кластере, поддерживается в желаемой версии DP CSE:
+   - DP CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27;
+   - DP CSE 1.67 поддерживает Kubernetes версий 1.27 и 1.29.
 
    При необходимости, обновите версию Kubernetes в кластере до поддерживаемой:
    - Выполните команду:
@@ -723,7 +723,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    - Сохраните изменения. Узлы кластера начнут последовательно обновляться.
    - Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление считается завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
-1. Начиная с DKP CSE 1.77, поддерживается только containerd v2 — containerd v1 в редакции отсутствует. Убедитесь, что в кластере не используется containerd v1: параметр `defaultCRI` в ClusterConfiguration не равен `Containerd` и ни в одной группе узлов не задан `spec.cri.type: Containerd`. Иначе переключение будет заблокировано.
+1. Начиная с DP CSE 1.77, поддерживается только containerd v2 — containerd v1 в редакции отсутствует. Убедитесь, что в кластере не используется containerd v1: параметр `defaultCRI` в ClusterConfiguration не равен `Containerd` и ни в одной группе узлов не задан `spec.cri.type: Containerd`. Иначе переключение будет заблокировано.
 
    При необходимости [мигрируйте узлы на containerd v2](../platform-scaling/node/migrating.html) до переключения редакции.
 
@@ -749,28 +749,28 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
 ### Выбор способа переключения
 
-При выборе способа переключения редакции учитывайте то, каким образом в кластере организована работа с хранилищем образов контейнеров DKP.
+При выборе способа переключения редакции учитывайте то, каким образом в кластере организована работа с хранилищем образов контейнеров DP.
 
-Существует два способа работы с хранилищем образов контейнеров DKP:
+Существует два способа работы с хранилищем образов контейнеров DP:
 
-- С использованием модуля [`registry`](/modules/registry/) — конфигурация работы с хранилищем образов DKP задана в секции [`registry`](/modules/deckhouse/configuration.html#parameters-registry) параметров модуля `deckhouse` (ModuleConfig `deckhouse`). Это обеспечивает более плавный процесс перехода и автоматическую проверку наличия необходимых образов. Если в кластере используется этот способ работы с хранилищем образов контейнеров DKP, для переключения редакции воспользуйтесь разделом [«Переключение с помощью модуля registry»](#переключение-с-помощью-модуля-registry).
+- С использованием модуля [`registry`](/modules/registry/) — конфигурация работы с хранилищем образов DP задана в секции [`registry`](/modules/deckhouse/configuration.html#parameters-registry) параметров модуля `deckhouse` (ModuleConfig `deckhouse`). Это обеспечивает более плавный процесс перехода и автоматическую проверку наличия необходимых образов. Если в кластере используется этот способ работы с хранилищем образов контейнеров DP, для переключения редакции воспользуйтесь разделом [«Переключение с помощью модуля registry»](#переключение-с-помощью-модуля-registry).
 
-- Без использования модуля `registry` — конфигурация работы с хранилищем образов DKP задаётся при установке кластера [в `InitConfiguration`](../../../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), параметр [`registry.mode`](/modules/deckhouse/configuration.html#parameters-registry-mode) модуля `deckhouse` (ModuleConfig `deckhouse`) установлен в `Unmanaged`, параметр [`registry.unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged) модуля `deckhouse` не задан.
+- Без использования модуля `registry` — конфигурация работы с хранилищем образов DP задаётся при установке кластера [в `InitConfiguration`](../../../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), параметр [`registry.mode`](/modules/deckhouse/configuration.html#parameters-registry-mode) модуля `deckhouse` (ModuleConfig `deckhouse`) установлен в `Unmanaged`, параметр [`registry.unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged) модуля `deckhouse` не задан.
 
-  Этот способ — единственный доступный для managed Kubernetes-кластеров, где control plane управляется провайдером облачных услуг, а не DKP (например, Amazon EKS, Azure AKS, Google GKE и др.).
+  Этот способ — единственный доступный для managed Kubernetes-кластеров, где control plane управляется провайдером облачных услуг, а не DP (например, Amazon EKS, Azure AKS, Google GKE и др.).
 
-  Если в кластере используется этот способ работы с хранилищем образов контейнеров DKP, для переключения редакции воспользуйтесь разделом [«Переключение без использования модуля registry»](#переключение-без-использования-модуля-registry).
+  Если в кластере используется этот способ работы с хранилищем образов контейнеров DP, для переключения редакции воспользуйтесь разделом [«Переключение без использования модуля registry»](#переключение-без-использования-модуля-registry).
 
 ### Переключение с помощью модуля registry
 
 {% alert level="warning" %}
 - Перед выполнением дальнейших шагов выполните подготовительные действия, описанные в разделе [«Подготовка к переключению»](#подготовка-к-переключению).
-- Данное переключение необходимо выполнять только в режиме `Unmanaged`. Убедитесь, что в кластере используется модуль `registry`. В moduleConfig `deckhouse` должны быть указаны параметры хранилища образов предыдущей редакции DKP в `Unmanaged` режиме работы. Если это не так, выполните [миграцию на использование модуля registry](../registry/managing-interaction.html#миграция-на-формат-управления-настройками-хранилища-образов-с-использованием-модуля-registry) и переключите режим работы с хранилищем образов в `Unmanaged`.
-- Данный способ не подходит для managed Kubernetes (EKS, AKS, GKE) и для DKP CSE **ниже** 1.73.
+- Данное переключение необходимо выполнять только в режиме `Unmanaged`. Убедитесь, что в кластере используется модуль `registry`. В moduleConfig `deckhouse` должны быть указаны параметры хранилища образов предыдущей редакции DP в `Unmanaged` режиме работы. Если это не так, выполните [миграцию на использование модуля registry](../registry/managing-interaction.html#миграция-на-формат-управления-настройками-хранилища-образов-с-использованием-модуля-registry) и переключите режим работы с хранилищем образов в `Unmanaged`.
+- Данный способ не подходит для managed Kubernetes (EKS, AKS, GKE) и для DP CSE **ниже** 1.73.
 - Переключние в CSE выполнятеся только из EE редакции.
 {% endalert %}
 
-1. **Только для DKP CSE** — удалите поле `releaseChannel` в moduleConfig `deckhouse`:
+1. **Только для DP CSE** — удалите поле `releaseChannel` в moduleConfig `deckhouse`:
 
    {{ disable_release_channel_cse | regex_replace: "^", "   " }}
 
@@ -785,7 +785,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    Выберите пример для вашей целевой редакции:
 
    {% tabs switch-registry-edition-2 %}
-   {% tab "DKP CE" %}
+   {% tab "DP CE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<КОД_РЕДАКЦИИ>", "ce"
@@ -795,7 +795,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP BE" %}
+   {% tab "DP BE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<КОД_РЕДАКЦИИ>", "be"
@@ -805,7 +805,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP SE" %}
+   {% tab "DP SE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<КОД_РЕДАКЦИИ>", "se"
@@ -815,7 +815,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP SE+" %}
+   {% tab "DP SE+" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus"
@@ -825,7 +825,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP EE" %}
+   {% tab "DP EE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<КОД_РЕДАКЦИИ>", "ee"
@@ -835,7 +835,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP CSE" %}
+   {% tab "DP CSE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
          | regex_replace: "<КОД_РЕДАКЦИИ>", "cse"
@@ -922,15 +922,15 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
    {{ check_old_pods | regex_replace: "^", "   " }}
 
-1. **Только для DKP CSE** — подтвердите перезагрузку узлов:
+1. **Только для DP CSE** — подтвердите перезагрузку узлов:
 
    {{ cse_containerd_migration | regex_replace: "^", "   " }}
 
-1. **Только для DKP CSE** — установите `releaseChannel` в moduleConfig `deckhouse`:
+1. **Только для DP CSE** — установите `releaseChannel` в moduleConfig `deckhouse`:
 
    {{ enable_release_channel_cse | regex_replace: "^", "   " }}
 
-1. **Только для DKP CSE** — включите модуль `chrony`:
+1. **Только для DP CSE** — включите модуль `chrony`:
 
    {{ enable_chrony_cse | regex_replace: "^", "   " }}
 
@@ -938,22 +938,22 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
 {% alert level="warning" %}
 - Перед выполнением дальнейших шагов выполните подготовительные действия, описанные в разделе [«Подготовка к переключению»](#подготовка-к-переключению).
-- Перед применением, убедитесь, что модуль `registry` не используется в кластере. В ModuleConfig `deckhouse` должны отсутствовать параметры `registry`. Модуль `registry` должен быть выключен. Если это не так, выполните [миграцию на устаревший формат управления настройками хранилища образов компонентов DKP](../registry/managing-interaction.html#миграция-на-устаревший-формат-управления-настройками-хранилища-образов-компонентов-dkp-без-модуля-registry).
+- Перед применением, убедитесь, что модуль `registry` не используется в кластере. В ModuleConfig `deckhouse` должны отсутствовать параметры `registry`. Модуль `registry` должен быть выключен. Если это не так, выполните [миграцию на устаревший формат управления настройками хранилища образов компонентов DP](../registry/managing-interaction.html#миграция-на-устаревший-формат-управления-настройками-хранилища-образов-компонентов-dp-без-модуля-registry).
 - Переключние в CSE выполнятеся только из EE редакции.
 {% endalert %}
 
 Выберите целевую редакцию:
 
 {% tabs switch-without-registry %}
-{% tab "DKP CE/BE/SE/SE+/EE" %}
+{% tab "DP CE/BE/SE/SE+/EE" %}
 1. Выполните команду для указания данных аутентификации в хранилище образов:
 
    {% tabs without-registry-auth %}
-   {% tab "DKP CE" %}
-      Для DKP CE данный шаг не требуется.
+   {% tab "DP CE" %}
+      Для DP CE данный шаг не требуется.
    {% endtab %}
 
-   {% tab "DKP BE" %}
+   {% tab "DP BE" %}
       {{
          ngc_auth_registry
          | regex_replace: "\$NEW_EDITION", "be"
@@ -966,7 +966,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP SE" %}
+   {% tab "DP SE" %}
       {{
          ngc_auth_registry
          | regex_replace: "\$NEW_EDITION", "se"
@@ -979,7 +979,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP SE+" %}
+   {% tab "DP SE+" %}
       {{
          ngc_auth_registry
          | regex_replace: "\$NEW_EDITION", "se-plus"
@@ -992,7 +992,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP EE" %}
+   {% tab "DP EE" %}
       {{
          ngc_auth_registry
          | regex_replace: "\$NEW_EDITION", "ee"
@@ -1009,14 +1009,14 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 1. Переключите хранилище образов контейнеров:
 
    {% tabs without-registry-switch %}
-   {% tab "DKP CE" %}
+   {% tab "DP CE" %}
       {{
          change_registry_helper_ce
          | regex_replace: "^", "   "
       }}
    {% endtab %}
 
-   {% tab "DKP BE" %}
+   {% tab "DP BE" %}
       {{
          change_registry_helper
          | regex_replace: "\$NEW_EDITION", "be"
@@ -1024,7 +1024,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP SE" %}
+   {% tab "DP SE" %}
       {{
          change_registry_helper
          | regex_replace: "\$NEW_EDITION", "se"
@@ -1032,7 +1032,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP SE+" %}
+   {% tab "DP SE+" %}
       {{
          change_registry_helper
          | regex_replace: "\$NEW_EDITION", "se-plus"
@@ -1040,7 +1040,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP EE" %}
+   {% tab "DP EE" %}
       {{
          change_registry_helper
          | regex_replace: "\$NEW_EDITION", "ee"
@@ -1051,7 +1051,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
 {{ take_care_deckhuse_imagepullbackoff }}
 
-1. Дождитесь готовности DKP:
+1. Дождитесь готовности DP:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 
@@ -1075,11 +1075,11 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 1. Выполните очистку:
 
    {% tabs without-registry-cleanup %}
-   {% tab "DKP CE" %}
-      Для DKP CE данный шаг не требуется.
+   {% tab "DP CE" %}
+      Для DP CE данный шаг не требуется.
    {% endtab %}
 
-   {% tab "DKP BE" %}
+   {% tab "DP BE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "be"
@@ -1092,7 +1092,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP SE" %}
+   {% tab "DP SE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "se"
@@ -1105,7 +1105,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP SE+" %}
+   {% tab "DP SE+" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "se-plus"
@@ -1118,7 +1118,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       }}
    {% endtab %}
 
-   {% tab "DKP EE" %}
+   {% tab "DP EE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "ee"
@@ -1133,8 +1133,8 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    {% endtabs %}
 {% endtab %}
 
-{% tab "DKP CSE v1.73" %}
-1. Укажите версию DKP CSE, которую вы хотите использовать:
+{% tab "DP CSE v1.73" %}
+1. Укажите версию DP CSE, которую вы хотите использовать:
 
    ```shell
    DECKHOUSE_VERSION=v1.73.3
@@ -1166,7 +1166,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
    {{ change_registry_helper_cse | regex_replace: "^", "   " }}
 
-1. Смените образ DKP CSE:
+1. Смените образ DP CSE:
 
    {{
       cse_set_deckhouse_images
@@ -1178,7 +1178,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
    {{ cse_containerd_migration | regex_replace: "^", "   " }}
 
-1. Дождитесь готовности DKP:
+1. Дождитесь готовности DP:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 
@@ -1215,8 +1215,8 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
 {% endtab %}
 
-{% tab "DKP CSE v1.58/v1.64/v1.67" %}
-1. Укажите версию DKP CSE, которую вы хотите использовать:
+{% tab "DP CSE v1.58/v1.64/v1.67" %}
+1. Укажите версию DP CSE, которую вы хотите использовать:
 
    {% tabs cse-switch-deckhouse-version %}
    {% tab "CSE 1.58" %}
@@ -1341,7 +1341,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
    {{ change_registry_helper_cse | regex_replace: "^", "   " }}
 
-1. Смените образ DKP CSE:
+1. Смените образ DP CSE:
 
    {% tabs cse-set-deckhouse-image %}
    {% tab "CSE 1.58" %}
@@ -1365,7 +1365,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    {% endtab %}
    {% endtabs %}
 
-1. Дождитесь готовности DKP:
+1. Дождитесь готовности DP:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 

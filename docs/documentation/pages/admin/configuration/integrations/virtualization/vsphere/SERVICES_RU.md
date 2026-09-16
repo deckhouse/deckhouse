@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/virtualization/vsphere/services.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform интегрируется с инфраструктурой VMware vSphere и использует [ресурсы VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) для описания характеристик виртуальных машин, создаваемых в составе кластера Kubernetes.
+Deckhouse Platform интегрируется с инфраструктурой VMware vSphere и использует [ресурсы VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) для описания характеристик виртуальных машин, создаваемых в составе кластера Kubernetes.
 
 Основные возможности:
 
@@ -18,7 +18,7 @@ Deckhouse Kubernetes Platform интегрируется с инфраструк
   - через MetalLB (в режиме BGP).
 
 {% alert level="info" %}
-DKP поддерживает гибридную интеграцию с VMware vSphere. Подробнее о настройке можно узнать в разделе [«Гибридный кластер с vSphere»](../../hybrid/vsphere-hybrid.html).
+DP поддерживает гибридную интеграцию с VMware vSphere. Подробнее о настройке можно узнать в разделе [«Гибридный кластер с vSphere»](../../hybrid/vsphere-hybrid.html).
 {% endalert %}
 
 ## Управление ресурсами vSphere
@@ -67,7 +67,7 @@ DKP поддерживает гибридную интеграцию с VMware v
 
    Сохраните изменения.
 
-1. [В установочном контейнере DKP](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
+1. [В установочном контейнере DP](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
 
    ```shell
    dhctl converge \
@@ -116,7 +116,7 @@ DKP поддерживает гибридную интеграцию с VMware v
 
    Сохраните изменения.
 
-1. [В установочном контейнере DKP](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
+1. [В установочном контейнере DP](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
 
    ```shell
    dhctl converge \

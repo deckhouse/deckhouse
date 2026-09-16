@@ -1,6 +1,6 @@
 ---
 title: "The user-authz module"
-description: "Authorization and role-based access control to the resources of the Deckhouse Kubernetes Platform cluster."
+description: "Authorization and role-based access control to the resources of the Deckhouse Platform cluster."
 ---
 
 The module generates role-based access model objects based on the standard Kubernetes RBAC mechanism. The module creates a set of cluster roles (ClusterRole) suitable for most user and group access management tasks.
@@ -18,7 +18,7 @@ The bindings that grant users the access levels of ClusterAuthorizationRule and 
 
 ## Granular role-based model
 
-Unlike the [basic DKP role-based model](#basic-role-based-model), the granular role-based one does not use ClusterAuthorizationRule and AuthorizationRule resources. Access rights are configured in the standard Kubernetes RBAC way: by creating RoleBinding or ClusterRoleBinding resources and specifying one of the roles prepared by the `user-authz` module in them. To grant access to all namespaces of a project at once, use the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
+Unlike the [basic DP role-based model](#basic-role-based-model), the granular role-based one does not use ClusterAuthorizationRule and AuthorizationRule resources. Access rights are configured in the standard Kubernetes RBAC way: by creating RoleBinding or ClusterRoleBinding resources and specifying one of the roles prepared by the `user-authz` module in them. To grant access to all namespaces of a project at once, use the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
 
 {% alert level="info" %}
 Access does not have to be granted by hand-writing YAML manifests: the [Deckhouse Kubernetes Platform web interface](/products/kubernetes-platform/documentation/latest/user/web/ui.html) provides an access grant wizard. It walks you through the steps (who gets access → where → at which level), picks the right binding kind itself (RoleBinding, ClusterRoleBinding, ProjectRoleBinding, or ClusterProjectRoleBinding), and lets you assemble a custom role from ready-made building blocks without writing YAML.
@@ -72,7 +72,7 @@ The namespace restrictions set in a ClusterAuthorizationRule apply only to the p
 
 For example, if a user has a ClusterAuthorizationRule with `accessLevel: Editor` limited to the `ns-a` namespace and a RoleBinding with the `view` role in the `ns-b` namespace, they get the `Editor` permissions in the `ns-a` namespace and read-only permissions in the `ns-b` namespace. Permissions granted by the RoleBinding aren't restricted by the ClusterAuthorizationRule, and the `Editor` level set in the ClusterAuthorizationRule doesn't apply to the `ns-b` namespace.
 
-Starting with DKP 1.76.5, RoleBinding and ClusterAuthorizationRule can be used together for the same user. In older DKP versions, the `user-authz` module's webhook rejected all requests to namespaces not listed in the user's ClusterAuthorizationRule, even if the user had the corresponding RoleBindings.
+Starting with DP 1.76.5, RoleBinding and ClusterAuthorizationRule can be used together for the same user. In older DP versions, the `user-authz` module's webhook rejected all requests to namespaces not listed in the user's ClusterAuthorizationRule, even if the user had the corresponding RoleBindings.
 
 <div style="height: 0;" id="use-roles"></div>
 
@@ -82,7 +82,7 @@ Starting with DKP 1.76.5, RoleBinding and ClusterAuthorizationRule can be used t
 The namespace role can only be used in the RoleBinding resource.
 {% endalert %}
 
-Namespace roles are intended to assign rights to a user **in a specific namespace**. Users refer to, for example, developers who use a cluster configured by an administrator to deploy their applications. Such users don't need to manage DKP modules or a cluster, but they need to be able to, for example, create their Ingress resources, configure application authentication, and collect logs from applications.
+Namespace roles are intended to assign rights to a user **in a specific namespace**. Users refer to, for example, developers who use a cluster configured by an administrator to deploy their applications. Such users don't need to manage DP modules or a cluster, but they need to be able to, for example, create their Ingress resources, configure application authentication, and collect logs from applications.
 
 The namespace role defines permissions for accessing namespaced resources of modules and standard namespaced resources of Kubernetes (Pod, Deployment, Secret, ConfigMap, etc.).
 
@@ -150,8 +150,8 @@ A subject that can manage the `user-authn` module can register an identity provi
 
 The system/subsystem role defines access rights:
 - to cluster-wide Kubernetes resources;
-- to manage DKP modules (ModuleConfig resource) within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all DKP modules for the role `d8:system:*`;
-- to manage cluster-wide resources of DKP modules within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all resources of DKP modules for the role `d8:system:*`;
+- to manage DP modules (ModuleConfig resource) within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all DP modules for the role `d8:system:*`;
+- to manage cluster-wide resources of DP modules within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all resources of DP modules for the role `d8:system:*`;
 - to system namespaces (starting with `d8-` or `kube-`) in which the modules of the [subsystem](#subsystems-of-the-role-based-model) of the role operate, or to all system namespaces for the role `d8:system:*`.
 
 The role name format is `d8:system:<ACCESS_LEVEL>` for the system roles and `d8:subsystem:<SUBSYSTEM>:<ACCESS_LEVEL>` for the subsystem roles, where:
@@ -159,9 +159,9 @@ The role name format is `d8:system:<ACCESS_LEVEL>` for the system roles and `d8:
 - `ACCESS_LEVEL` is the access level.
 
   Examples:
-  - `d8:system:viewer` — access to view the configuration of all DKP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in all system namespaces (starting with `d8-` or `kube-`);
-  - `d8:system:manager` — similar to the role `d8:system:viewer`, but with admin-level access, i.e., view/create/modify/delete the configuration of all DKP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects in all system namespaces (starting with `d8-` or `kube-`);
-  - `d8:subsystem:observability:viewer` — access to view the configuration of DKP modules (ModuleConfig resource) from the `observability` area, their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except secrets and RBAC resources) in the system namespaces `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
+  - `d8:system:viewer` — access to view the configuration of all DP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in all system namespaces (starting with `d8-` or `kube-`);
+  - `d8:system:manager` — similar to the role `d8:system:viewer`, but with admin-level access, i.e., view/create/modify/delete the configuration of all DP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects in all system namespaces (starting with `d8-` or `kube-`);
+  - `d8:subsystem:observability:viewer` — access to view the configuration of DP modules (ModuleConfig resource) from the `observability` area, their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except secrets and RBAC resources) in the system namespaces `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
 
 The module provides three access levels for system and subsystem roles:
 - `viewer` — allows viewing standard Kubernetes resources, the configuration of modules (ModuleConfig resources), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
@@ -201,7 +201,7 @@ The `d8:dict` role is independent of the `multitenancy-manager` cluster-wide res
 
 ### Subsystems of the role-based model
 
-Each DKP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
+Each DP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
 
 For example, for the `networking` subsystem, there are the following subsystem roles that can be used in `ClusterRoleBinding`:
 
@@ -226,7 +226,7 @@ Membership of objects in the role model is defined by the `rbac.deckhouse.io/*` 
 
 This design has two practical consequences:
 
-- DKP modules extend the roles automatically: when a module is enabled, its capabilities are added to the corresponding built-in roles; when it is disabled, they are removed. The permission list of a role always matches the set of enabled modules.
+- DP modules extend the roles automatically: when a module is enabled, its capabilities are added to the corresponding built-in roles; when it is disabled, they are removed. The permission list of a role always matches the set of enabled modules.
 - You can assemble your own roles from ready-made capabilities without writing RBAC rules by hand. How to do this is described in [the FAQ](faq.html#how-do-i-extend-a-role-or-create-a-new-one).
 
 The names of built-in roles and capabilities start with the `d8:` prefix. This namespace is reserved: you cannot create your own ClusterRole with a `d8:*` name — the only exception is the `d8:custom:*` prefix, which is dedicated to user-defined roles and capabilities. The labels `rbac.deckhouse.io/kind: role` and `rbac.deckhouse.io/kind: capability` are also reserved for built-in objects — use `custom-role` and `custom-capability` for your own.
@@ -246,7 +246,7 @@ Labels the role model uses on ClusterRole objects:
 | `rbac.deckhouse.io/namespace: <namespace>` | Capabilities | An extra namespace where a RoleBinding is automatically created for the holders of a system/subsystem role ([an example in the FAQ](faq.html#extending-subsystem-roles-and-adding-a-new-namespace)). |
 | `rbac.deckhouse.io/delegatable: "true"` | The `d8:namespace:*`, `d8:project:*`, and user-defined roles | The role may be referenced by a RoleBinding [inside project namespaces](../multitenancy-manager/usage.html#which-roles-are-available-in-a-rolebinding-inside-a-project). Add this label to your custom roles that should be available in projects. |
 | `rbac.deckhouse.io/deprecated: "true"` | [Deprecated alias roles](#deprecated-role-names) | The role is deprecated and will be removed; migrate the bindings to the new role. |
-| `module` | Built-in objects | The name of the DKP module the object belongs to. Convenient for aggregation selectors (for example, all capabilities of one module). |
+| `module` | Built-in objects | The name of the DP module the object belongs to. Convenient for aggregation selectors (for example, all capabilities of one module). |
 | `heritage: deckhouse` | Built-in objects | Marks a platform object. Must not be set on your own objects. |
 
 Annotations on ClusterRole objects:

@@ -4,7 +4,7 @@ permalink: en/user/monitoring/dashboards.html
 ---
 
 In this section, you will learn how to work with dashboards
-to analyze the state of the Deckhouse Kubernetes Platform (DKP) and the applications running in it.
+to analyze the state of the Deckhouse Platform (DP) and the applications running in it.
 
 Dashboards are collections of charts and tables that display application performance data.
 They provide information about CPU usage, memory consumption, disk and network activity,
@@ -12,17 +12,17 @@ as well as the status of Pods, controllers, nodes, and namespaces.
 
 ## Dashboard types
 
-DKP features preinstalled and custom dashboards, which can be created in several ways.
+DP features preinstalled and custom dashboards, which can be created in several ways.
 
 | Dashboard type | Description |
 | ------ | -------- |
-| [Preinstalled](#preinstalled-dashboards) | Ready-to-use dashboards that are already installed in DKP. Designed to monitor the state of running applications. |
+| [Preinstalled](#preinstalled-dashboards) | Ready-to-use dashboards that are already installed in DP. Designed to monitor the state of running applications. |
 | [Custom dashboards created using the `observability` module](#using-the-observability-module) | Custom dashboards created using the ObservabilityDashboard resource at the namespace level, with support for access control.<br><br>This is the recommended way to work with dashboards. |
-| [Custom dashboards created using GrafanaDashboardDefinition](#using-grafanadashboarddefinition) | Custom dashboards created using the GrafanaDashboardDefinition resource at the cluster level. They require elevated privileges and do not support access control.<br><br>This is a legacy approach that will be deprecated in future DKP versions. |
+| [Custom dashboards created using GrafanaDashboardDefinition](#using-grafanadashboarddefinition) | Custom dashboards created using the GrafanaDashboardDefinition resource at the cluster level. They require elevated privileges and do not support access control.<br><br>This is a legacy approach that will be deprecated in future DP versions. |
 
 ## Preinstalled dashboards
 
-DKP users have access to a basic set of dashboards for monitoring the state of running applications.
+DP users have access to a basic set of dashboards for monitoring the state of running applications.
 Dashboards are available in the [Deckhouse web UI](/modules/console/) under "Monitoring" → "Dashboards".
 
 {% alert level="info" %}
@@ -64,7 +64,7 @@ Available dashboards:
 
 ## Custom dashboards
 
-DKP users can create custom dashboards in several ways,
+DP users can create custom dashboards in several ways,
 depending on the requirements for access control and the dashboard scope.
 
 ### Using the observability module
@@ -79,7 +79,7 @@ without manually managing resources.
 
 {% alert level="info" %}
 Before using these resources, make sure that the `observability` module is enabled in the cluster.
-If necessary, contact your DKP administrator.
+If necessary, contact your DP administrator.
 {% endalert %}
 
 The following resources are available for creating dashboards:
@@ -173,7 +173,7 @@ The following access scenarios are supported:
 - Namespace users can access only the metrics of their own namespace.
   RBAC access to the `metrics.observability.deckhouse.io` resource is checked.
 
-- DKP administrators have access to all system metrics:
+- DP administrators have access to all system metrics:
   - Deckhouse metrics (`d8-*`)
   - Kubernetes metrics (`kube-*`)
   - metrics without the `namespace` label
@@ -264,7 +264,7 @@ Conversion example:
 
 {% alert level="info" %}
 This is a legacy approach and is not recommended for new dashboards.
-Support for this method will be removed in future DKP versions.
+Support for this method will be removed in future DP versions.
 {% endalert %}
 
 To add a dashboard directly to Grafana, use the [GrafanaDashboardDefinition](/modules/prometheus/cr.html#grafanadashboarddefinition) resource.

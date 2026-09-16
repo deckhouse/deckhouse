@@ -1,7 +1,7 @@
 ---
 title: "Настройка интеграций"
 permalink: ru/admin/configuration/monitoring/alerts-integrations.html
-description: "Настройка интеграций алертов в Deckhouse Kubernetes Platform с Zabbix, Slack, Telegram и другими системами. Маршрутизация алертов, настройка уведомлений и интеграция с системами мониторинга."
+description: "Настройка интеграций алертов в Deckhouse Platform с Zabbix, Slack, Telegram и другими системами. Маршрутизация алертов, настройка уведомлений и интеграция с системами мониторинга."
 lang: ru
 ---
 
@@ -9,7 +9,7 @@ lang: ru
 
 ## Перенаправление алертов в Zabbix
 
-Deckhouse Kubernetes Platform поддерживает интеграцию с системой мониторинга Zabbix. Для этого используется внешний скрипт, который получает алерты из Deckhouse через `kubectl` и передаёт их в Zabbix с помощью Zabbix-агента.
+Deckhouse Platform поддерживает интеграцию с системой мониторинга Zabbix. Для этого используется внешний скрипт, который получает алерты из Deckhouse через `kubectl` и передаёт их в Zabbix с помощью Zabbix-агента.
 
 Для работы скрипта потребуются:
 

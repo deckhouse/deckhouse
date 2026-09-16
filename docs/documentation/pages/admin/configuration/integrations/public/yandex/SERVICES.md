@@ -3,7 +3,7 @@ title: Integration with Yandex Cloud services
 permalink: en/admin/integrations/public/yandex/services.html
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports native integration with several Yandex Cloud services.
+Deckhouse Platform (DP) supports native integration with several Yandex Cloud services.
 This allows for external monitoring, secure secret management, and automated data synchronization between the infrastructure and the cluster.
 
 This section describes steps to configure the following integrations:
@@ -13,7 +13,7 @@ This section describes steps to configure the following integrations:
 
 ## Integration with Yandex Lockbox
 
-DKP supports integration with Yandex Lockbox using the External Secrets Operator (ESO).
+DP supports integration with Yandex Lockbox using the External Secrets Operator (ESO).
 This allows Kubernetes secrets in the cluster to be automatically synchronized with Lockbox secrets.
 
 To set up the integration:
@@ -157,7 +157,7 @@ To set up the integration:
    Where:
 
    - `target.name`: Name of the new secret.
-     External Secret Operator will create this secret in the DKP cluster
+     External Secret Operator will create this secret in the DP cluster
      and put the `lockbox-secret` Yandex Lockbox secret parameters into it.
    - `data[].secretKey`: Name of the key in the `.data` field of the secret created by External Secret Operator.
    - `data[].remoteRef.key`: ID of the `lockbox-secret` Yandex Lockbox secret created earlier

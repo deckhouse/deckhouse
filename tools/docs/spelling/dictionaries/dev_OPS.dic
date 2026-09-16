@@ -1,4 +1,4 @@
-2848
+2860
 1GB
 2GB
 5XX
@@ -320,6 +320,7 @@ GPG
 GPU
 GPUs
 GRPC
+GVK
 GVKs
 GateKeeper
 Gb
@@ -617,6 +618,8 @@ PV
 PVCs
 PVs
 PWD
+PackageRepository
+PackageRepositoryOperation
 PagerDuty
 PagerDutyConfig
 Passthrough
@@ -1262,6 +1265,7 @@ globalVersion
 goroutines
 govc
 grafana
+grantable
 grep
 gz
 hardcoded
@@ -1389,6 +1393,7 @@ lifecycle
 linkTitle
 linstor
 linters
+linting
 linux
 livenessProbe
 loadBalancer
@@ -1718,6 +1723,7 @@ txt
 uid
 un
 uncordoned
+unicode
 uninstall
 uninstalled
 uninstalling
@@ -1995,6 +2001,7 @@ zoneTagCategory
 валидирует
 валидируется
 валидируются
+валидирующим
 валидная
 валидной
 валидными
@@ -2056,6 +2063,8 @@ zoneTagCategory
 гитерминизма
 гитерминизмом
 гитерминизму
+грантируемый
+грантируемым
 гугл
 гуглить
 д
@@ -2092,6 +2101,7 @@ zoneTagCategory
 деплоят
 деструктивна
 детализированно
+дефолтное
 дефолтный
 донастройка
 доустановить
@@ -2238,6 +2248,7 @@ zoneTagCategory
 лексикографически
 линтеров
 линтеры
+линтинг
 логгер
 логгера
 логгеру
@@ -2462,6 +2473,7 @@ zoneTagCategory
 пересборке
 пересборку
 пересборок
+пересканирует
 пересоберется
 пересоберётся
 пересобирает

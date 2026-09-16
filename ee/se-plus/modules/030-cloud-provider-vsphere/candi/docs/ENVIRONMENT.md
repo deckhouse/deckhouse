@@ -7,7 +7,7 @@ description: "Configuring VMware vSphere for Deckhouse cloud provider operation.
 
 ## Environment requirements
 
-The following prerequisites must be met for Deckhouse Kubernetes Platform to work correctly with VMware vSphere:
+The following prerequisites must be met for Deckhouse Platform to work correctly with VMware vSphere:
 
 - Access to vCenter;
 - A user account with the required set of privileges;
@@ -51,7 +51,7 @@ The following prerequisites must be met for Deckhouse Kubernetes Platform to wor
 
 > Read the [Configuration via vSphere Client](#configuration-via-vsphere-client) and [Configuration via govc](#configuration-via-govc) sections for details on how to create and assign a role to a user.
 
-A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
+A detailed list of privileges required for Deckhouse Platform to work in vSphere:
 
 <table>
   <thead>
@@ -107,7 +107,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>Folder.Move</code><br/>
         <code>Folder.Rename</code>
       </td>
-      <td>Grouping a Deckhouse Kubernetes Platform cluster in a single <code>Folder</code> in vSphere Inventory.</td>
+      <td>Grouping a Deckhouse Platform cluster in a single <code>Folder</code> in vSphere Inventory.</td>
     </tr>
     <tr>
       <td>Global</td>
@@ -119,7 +119,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>Global.GlobalTag</code><br/>
         <code>Global.SystemTag</code>
       </td>
-      <td>Access to global and system tags used by Deckhouse Kubernetes Platform when working with vSphere objects.</td>
+      <td>Access to global and system tags used by Deckhouse Platform when working with vSphere objects.</td>
     </tr>
     <tr>
       <td>vSphere Tagging</td>
@@ -147,13 +147,13 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
         <code>InventoryService.Tagging.ModifyUsedByForTag</code>
       </td>
-      <td>Deckhouse Kubernetes Platform uses tags to identify the <code>Datacenter</code>, <code>Cluster</code>, and <code>Datastore</code> objects available to it, as well as to identify the virtual machines under its control.</td>
+      <td>Deckhouse Platform uses tags to identify the <code>Datacenter</code>, <code>Cluster</code>, and <code>Datastore</code> objects available to it, as well as to identify the virtual machines under its control.</td>
     </tr>
     <tr>
       <td>Network</td>
       <td>Assign network</td>
       <td><code>Network.Assign</code></td>
-      <td>Connecting networks and port groups to Deckhouse Kubernetes Platform cluster virtual machines.</td>
+      <td>Connecting networks and port groups to Deckhouse Platform cluster virtual machines.</td>
     </tr>
     <tr>
       <td>Resource</td>
@@ -171,7 +171,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>Resource.EditPool</code><br/>
         <code>Resource.RenamePool</code>
       </td>
-      <td>Placement of Deckhouse Kubernetes Platform cluster virtual machines into the target resource pool and management of this pool.</td>
+      <td>Placement of Deckhouse Platform cluster virtual machines into the target resource pool and management of this pool.</td>
     </tr>
     <tr>
       <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> in vSphere 7)</td>
@@ -259,7 +259,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>VirtualMachine.Config.SwapPlacement</code><br/>
         <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
       </td>
-      <td>Managing the lifecycle of Deckhouse Kubernetes Platform cluster virtual machines.</td>
+      <td>Managing the lifecycle of Deckhouse Platform cluster virtual machines.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Edit Inventory</td>
@@ -275,7 +275,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>VirtualMachine.Inventory.Delete</code><br/>
         <code>VirtualMachine.Inventory.Move</code>
       </td>
-      <td>Creating, deleting, and moving Deckhouse Kubernetes Platform cluster virtual machines in vSphere Inventory.</td>
+      <td>Creating, deleting, and moving Deckhouse Platform cluster virtual machines in vSphere Inventory.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Guest Operations</td>
@@ -325,7 +325,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
         <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
       </td>
-      <td>Cloning virtual machine templates, customizing them, and deploying them when creating Deckhouse Kubernetes Platform cluster nodes.</td>
+      <td>Cloning virtual machine templates, customizing them, and deploying them when creating Deckhouse Platform cluster nodes.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Snapshot Management</td>
@@ -541,7 +541,7 @@ The provider supports working with only one disk in the virtual machine template
 #### Preparing the virtual machine image
 
 {% alert level="warning" %}
-Disable VMware Guest OS Customization (and any vApp/OS customization mechanisms, if applicable in your setup) for the template and the cluster virtual machines. DKP performs the initial node configuration via `cloud-init` (VMware GuestInfo datasource). Enabled customization can conflict with `cloud-init` and lead to incorrect node initialization.
+Disable VMware Guest OS Customization (and any vApp/OS customization mechanisms, if applicable in your setup) for the template and the cluster virtual machines. DP performs the initial node configuration via `cloud-init` (VMware GuestInfo datasource). Enabled customization can conflict with `cloud-init` and lead to incorrect node initialization.
 {% endalert %}
 
 1. Install the required packages:
@@ -611,12 +611,12 @@ enabled
 {% endalert %}
 
 {% alert %}
-DKP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
+DP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
 For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
 {% endalert %}
 
 {% alert %}
-DKP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
+DP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
 ## Infrastructure

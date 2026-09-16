@@ -2,7 +2,7 @@
 title: "Типовые примеры сетевых политик"
 permalink: ru/admin/configuration/network/policy/examples.html
 description: |
-  Готовые рецепты сетевых политик для Deckhouse Kubernetes Platform: запрет трафика в namespace, разрешения по namespace и подам, egress к DNS, доступ к API-серверу, правила L7 и FQDN.
+  Готовые рецепты сетевых политик для Deckhouse Platform: запрет трафика в namespace, разрешения по namespace и подам, egress к DNS, доступ к API-серверу, правила L7 и FQDN.
 lang: ru
 relatedLinks:
   - title: "Стандартный NetworkPolicy Kubernetes"
@@ -195,7 +195,7 @@ spec:
 ```
 
 {% alert level="info" %}
-В DNS-правиле используется `toEntities: cluster`, а не селектор по лейблам `kube-dns`. В DKP наряду с основным DNS-сервисом работает DaemonSet `node-local-dns`, поэтому реальный путь DNS-трафика от пода может проходить через локальный экземпляр `node-local-dns`. Использование `toEntities: cluster` надёжно покрывает любой DNS-эндпоинт внутри кластера.
+В DNS-правиле используется `toEntities: cluster`, а не селектор по лейблам `kube-dns`. В DP наряду с основным DNS-сервисом работает DaemonSet `node-local-dns`, поэтому реальный путь DNS-трафика от пода может проходить через локальный экземпляр `node-local-dns`. Использование `toEntities: cluster` надёжно покрывает любой DNS-эндпоинт внутри кластера.
 {% endalert %}
 
 ## Запретить обращения к metadata-сервису облака

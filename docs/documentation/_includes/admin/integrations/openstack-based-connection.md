@@ -1,4 +1,4 @@
-To manage resources in {{ site.data.admin.cloud-types.types[page.cloud_type].name }} using Deckhouse Kubernetes Platform,
+To manage resources in {{ site.data.admin.cloud-types.types[page.cloud_type].name }} using Deckhouse Platform,
 you must connect to the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
 
 The list of {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API services required for deployment

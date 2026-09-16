@@ -1,4 +1,4 @@
-Для управления ресурсами в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} с помощью Deckhouse Kubernetes Platform необходимо подключиться к {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
+Для управления ресурсами в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} с помощью Deckhouse Platform необходимо подключиться к {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
 
 Перечень API-сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, доступ к которым необходим для развертывания, доступен в разделе [Настройки](./configuration-and-layout-scheme.html#список-необходимых-сервисов).
 

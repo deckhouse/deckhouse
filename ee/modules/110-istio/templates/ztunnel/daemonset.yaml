@@ -86,6 +86,8 @@ spec:
           value: "1"
         - name: ISTIO_META_CLUSTER_ID
           value: {{ include "istioClusterID" . }}
+        - name: CLUSTER_DOMAIN
+          value: {{ .Values.global.discovery.clusterDomain | quote }}
         - name: INPOD_ENABLED
           value: "true"
         - name: TERMINATION_GRACE_PERIOD_SECONDS

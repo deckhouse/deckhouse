@@ -33,6 +33,11 @@ type Client struct {
 	wrapped registry.Client
 }
 
+// The wrapper has to mirror registry.Client method for method, so assert it
+// here: without this, a method the interface grows shows up as four failures at
+// the constructors below instead of one line naming what is missing.
+var _ registry.Client = (*Client)(nil)
+
 // New creates a new wrapped internal registry client with options.
 // It mirrors the public pkg registry client builder style.
 func New(host string, opts ...registryClient.Option) registry.Client {
@@ -66,11 +71,18 @@ func (c *Client) GetDigest(ctx context.Context, ref string) (*v1.Hash, error) {
 	return c.wrapped.GetDigest(ctx, ref)
 }
 
-func (c *Client) GetManifest(ctx context.Context, ref string) (registry.ManifestResult, error) {
+func (c *Client) GetManifest(ctx context.Context, ref string, opts ...registry.ManifestGetOption) (registry.ManifestResult, error) {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetManifest")
 	defer span.End()
 
-	return c.wrapped.GetManifest(ctx, ref)
+	return c.wrapped.GetManifest(ctx, ref, opts...)
+}
+
+func (c *Client) GetIndex(ctx context.Context, ref string) (v1.ImageIndex, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetIndex")
+	defer span.End()
+
+	return c.wrapped.GetIndex(ctx, ref)
 }
 
 func (c *Client) GetImageConfig(ctx context.Context, ref string) (*v1.ConfigFile, error) {
@@ -108,11 +120,27 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 	return c.wrapped.ListTags(ctx, opts...)
 }
 
+// StreamTags spans the whole walk, not one page: the pages are delivered inside
+// this call, so the span is open for exactly as long as the caller is reading.
+func (c *Client) StreamTags(ctx context.Context, visit func(tags []string) error, opts ...registry.ListTagsOption) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "StreamTags")
+	defer span.End()
+
+	return c.wrapped.StreamTags(ctx, visit, opts...)
+}
+
 func (c *Client) ListRepositories(ctx context.Context, opts ...registry.ListRepositoriesOption) ([]string, error) {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "ListRepositories")
 	defer span.End()
 
 	return c.wrapped.ListRepositories(ctx, opts...)
+}
+
+func (c *Client) StreamRepositories(ctx context.Context, visit func(repos []string) error, opts ...registry.ListRepositoriesOption) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "StreamRepositories")
+	defer span.End()
+
+	return c.wrapped.StreamRepositories(ctx, visit, opts...)
 }
 
 func (c *Client) PushIndex(ctx context.Context, tag string, idx v1.ImageIndex, opts ...registry.ImagePushOption) error {

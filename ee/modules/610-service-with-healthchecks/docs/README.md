@@ -1,6 +1,6 @@
 ---
 title: "The service-with-healthchecks module"
-description: "Readiness Probes with the service-with-healthchecks Module in Deckhouse Kubernetes Platform"
+description: "Readiness Probes with the service-with-healthchecks Module in Deckhouse Platform"
 ---
 
 ## Limitations of the built-in Service load balancer

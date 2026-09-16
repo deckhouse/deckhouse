@@ -1,7 +1,7 @@
 ---
 title: "Настройка ролевой модели доступа"
 permalink: ru/admin/configuration/delivery/argocd/rbac/
-description: "Настройка ролевой модели доступа Argo CD в Deckhouse Kubernetes Platform."
+description: "Настройка ролевой модели доступа Argo CD в Deckhouse Platform."
 lang: ru
 relatedLinks:
   - title: "Официальный сайт Argo CD"
@@ -10,7 +10,7 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-Argo CD использует собственную ролевую модель (Role-based Access Control, RBAC), не основанную на ролевой модели Kubernetes и Deckhouse Kubernetes Platform. Ролевая модель Argo CD позволяет ограничивать доступ к ресурсам и операциям через собственные политики и роли.
+Argo CD использует собственную ролевую модель (Role-based Access Control, RBAC), не основанную на ролевой модели Kubernetes и Deckhouse Platform. Ролевая модель Argo CD позволяет ограничивать доступ к ресурсам и операциям через собственные политики и роли.
 
 Перед настройкой ролевой модели доступа выполните [настройку аутентификации и авторизации](../authentication/). После этого назначайте роли пользователям и группам, а также задавайте разрешения на уровне всего экземпляра Argo CD или отдельных проектов с помощью объекта [AppProject](/modules/operator-argo/cr.html#appproject).
 

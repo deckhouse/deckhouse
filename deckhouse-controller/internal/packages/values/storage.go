@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/ettle/strcase"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/swag/conv"
 
@@ -29,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 // Storage manages package values with layering, patching, and schema validation.

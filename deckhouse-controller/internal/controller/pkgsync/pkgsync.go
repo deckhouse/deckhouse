@@ -29,8 +29,10 @@
 //	  ├─ embedded-<module>-<deckhouse version>, complete: the metadata and
 //	  │  the settings/values schemas are filled from the module files on
 //	  │  disk, no repository ever serves it
-//	  └─ ModulePackage <module>, empty: the catalog entry no scan would
-//	     create, since no repository offers an embedded package
+//	  ├─ ModulePackage <module>, empty: the catalog entry no scan would
+//	  │  create, since no repository offers an embedded package
+//	  └─ Module <module>: the spec names the embedded package above, and the
+//	     embedded annotation marks where the module came from
 //
 //	global hooks dir (the running image)
 //	  ├─ embedded-global-<deckhouse version>, complete: the global module
@@ -91,6 +93,10 @@ const (
 	// packageNameGlobal is the reserved name of the global module, whose files
 	// live in the global hooks dir rather than under the embedded modules dir.
 	packageNameGlobal = "global"
+
+	// moduleNameDeckhouse is the module whose settings carry the release channel
+	// Deckhouse itself follows.
+	moduleNameDeckhouse = "deckhouse"
 )
 
 // syncer creates the missing package versions once at start, while the
@@ -103,7 +109,9 @@ type syncer struct {
 	writer client.Client
 	dc     dependency.Container
 
-	deckhouseVersion   string
+	deckhouseVersion      string
+	defaultReleaseChannel string
+
 	embeddedModulesDir string
 	globalHooksDir     string
 
@@ -118,18 +126,21 @@ type syncer struct {
 // files) is skipped with a warning; an API failure stops the sync. An embedded
 // module skipped here reconciles nowhere, since the Module reconciler resolves
 // the same version.
-func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, globalHooksDir string, logger *log.Logger) error {
-	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, globalHooksDir, logger).sync(ctx)
+func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, defaultReleaseChannel, embeddedModulesDir, globalHooksDir string, logger *log.Logger) error {
+	return newSyncer(reader, writer, dc, deckhouseVersion, defaultReleaseChannel, embeddedModulesDir, globalHooksDir, logger).sync(ctx)
 }
 
-// newSyncer builds a syncer for the given Deckhouse version, embedded modules dir and global hooks dir.
-func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, globalHooksDir string, logger *log.Logger) *syncer {
+// newSyncer builds a syncer for the given Deckhouse version, its release channel,
+// embedded modules dir and global hooks dir.
+func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, defaultReleaseChannel, embeddedModulesDir, globalHooksDir string, logger *log.Logger) *syncer {
 	return &syncer{
 		reader: reader,
 		writer: writer,
 		dc:     dc,
 
-		deckhouseVersion:   deckhouseVersion,
+		deckhouseVersion:      deckhouseVersion,
+		defaultReleaseChannel: defaultReleaseChannel,
+
 		embeddedModulesDir: embeddedModulesDir,
 		globalHooksDir:     globalHooksDir,
 
@@ -137,14 +148,18 @@ func newSyncer(reader client.Reader, writer client.Client, dc dependency.Contain
 	}
 }
 
-// sync runs the passes in order: repositories first, so the version stubs
-// find them in place.
+// sync runs the passes in order: repositories first, so the version stubs find
+// them in place, and the modules last, so the packages they point at exist.
 func (s *syncer) sync(ctx context.Context) error {
 	if err := s.syncPackageRepositories(ctx); err != nil {
 		return err
 	}
 
-	return s.syncModulePackageVersions(ctx)
+	if err := s.syncModulePackageVersions(ctx); err != nil {
+		return err
+	}
+
+	return s.syncModules(ctx)
 }
 
 // PackageRepositoryNameForModuleSource maps a ModuleSource name to the name of the

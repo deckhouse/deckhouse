@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/yandex/services.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) поддерживает нативную интеграцию с несколькими облачными сервисами Yandex Cloud. Это позволяет подключать внешний мониторинг, безопасно работать с секретами и автоматизировать синхронизацию данных между инфраструктурой и кластером.
+Deckhouse Platform (DP) поддерживает нативную интеграцию с несколькими облачными сервисами Yandex Cloud. Это позволяет подключать внешний мониторинг, безопасно работать с секретами и автоматизировать синхронизацию данных между инфраструктурой и кластером.
 
 В данном разделе описаны шаги по настройке следующих интеграций:
 
@@ -13,7 +13,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает нативную и
 
 ## Интеграция с Yandex Lockbox
 
-DKP поддерживает интеграцию с Yandex Lockbox с помощью оператора External Secrets Operator (ESO). Это позволяет автоматически синхронизировать секреты из Lockbox с секретами Kubernetes в кластере.
+DP поддерживает интеграцию с Yandex Lockbox с помощью оператора External Secrets Operator (ESO). Это позволяет автоматически синхронизировать секреты из Lockbox с секретами Kubernetes в кластере.
 
 Для интеграции выполните следующие шаги:
 
@@ -154,7 +154,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 
    Где:
 
-   - `spec.target.name` — имя нового секрета. External Secret Operator создаст этот секрет в кластере Deckhouse Kubernetes Platform и поместит в него параметры секрета Yandex Lockbox `lockbox-secret`.
+   - `spec.target.name` — имя нового секрета. External Secret Operator создаст этот секрет в кластере Deckhouse Platform и поместит в него параметры секрета Yandex Lockbox `lockbox-secret`.
    - `spec.data[].secretKey` — название ключа в поле `.data` секрета, который создаст External Secret Operator.
    - `spec.data[].remoteRef.key` — идентификатор созданного ранее секрета Yandex Lockbox `lockbox-secret`. Например, `e6q28nvfmhu539******`.
    - `spec.data[].remoteRef.property` — ключ, указанный ранее, для секрета Yandex Lockbox `lockbox-secret`.

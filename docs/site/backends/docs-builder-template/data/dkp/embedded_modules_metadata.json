@@ -1065,7 +1065,7 @@
       "namespace": "d8-system",
       "disable": {
         "confirmation": true,
-        "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+        "message": "Disabling this module will completely stop normal operation of the Deckhouse Platform."
       },
       "descriptions": {
         "en": "Configures main Deckhouse parameters: logging level, set of modules enabled by default, and release channel.",
@@ -1130,7 +1130,7 @@
       "stage": "General Availability",
       "descriptions": {
         "en": "Creates a documentation web UI for the Deckhouse version currently used in a cluster.",
-        "ru": "Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Kubernetes Platform."
+        "ru": "Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Platform."
       },
       "namespace": "d8-system",
       "oss": []
@@ -1318,8 +1318,8 @@
       ],
       "namespace": "d8-monitoring",
       "descriptions": {
-        "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
-        "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
+        "en": "Monitoring of Deckhouse Platform components and services.",
+        "ru": "Мониторинг компонентов и сервисов Deckhouse Platform."
       },
       "requirements": {
         "modules": {
@@ -1336,8 +1336,8 @@
       ],
       "namespace": "d8-monitoring",
       "descriptions": {
-        "en": "Security monitoring for the Deckhouse Kubernetes Platform..",
-        "ru": "Мониторинг безопасности Deckhouse Kubernetes Platform."
+        "en": "Security monitoring for the Deckhouse Platform..",
+        "ru": "Мониторинг безопасности Deckhouse Platform."
       },
       "requirements": {
         "modules": {
@@ -1611,7 +1611,7 @@
       "namespace": "d8-system",
       "disable": {
         "confirmation": true,
-        "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+        "message": "Disabling this module will completely stop normal operation of the Deckhouse Platform."
       },
       "descriptions": {
         "en": "Manages the configuration of the registry of Deckhouse components and provides an internal container registry.",

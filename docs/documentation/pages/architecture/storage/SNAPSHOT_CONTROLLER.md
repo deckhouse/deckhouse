@@ -2,10 +2,10 @@
 title: Snapshot-controller module
 permalink: en/architecture/storage/snapshot-controller.html
 search: snapshot-controller, snapshot
-description: Architecture of the snapshot-controller module in Deckhouse Kubernetes Platform.
+description: Architecture of the snapshot-controller module in Deckhouse Platform.
 ---
 
-The `snapshot-controller` enables snapshot support for compatible CSI-drivers in Deckhouse Kubernetes Platform (DKP).
+The `snapshot-controller` enables snapshot support for compatible CSI-drivers in Deckhouse Platform (DP).
 
 For more details about the module, refer to the [corresponding documentation section](/modules/snapshot-controller/).
 
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`snapshot-controller`](/modules/snapshot-controller/) module and its interactions with other components of DKP are shown in the following diagrams:
+The Level 2 C4 architecture of the [`snapshot-controller`](/modules/snapshot-controller/) module and its interactions with other components of DP are shown in the following diagrams:
 
 ![Snapshot-controller module architecture](../../images/architecture/storage/c4-l2-snapshot-controller.png)
 

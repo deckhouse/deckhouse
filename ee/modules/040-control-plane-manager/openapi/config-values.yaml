@@ -98,7 +98,7 @@ properties:
 
           > Note that the `PodNodeSelector` admission plugin [does not require  specifying a global configuration](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97), it relies on annotated Namespaces.
 
-          During DKP installation, Kubernetes enables the standard admission plugins. In addition to these, the module enables several more. For details, see the [“Admission plugins enabled by default”](./#admission-plugins-enabled-by-default) section.
+          During DP installation, Kubernetes enables the standard admission plugins. In addition to these, the module enables several more. For details, see the [“Admission plugins enabled by default”](./#admission-plugins-enabled-by-default) section.
 
           The `PodNodeSelector` and `PodTolerationRestriction` values are kept in the list of allowed values for backward compatibility only: these plugins are always enabled, so specifying them has no effect and causes no error.
         x-examples:
@@ -416,7 +416,7 @@ properties:
 
       The cluster Kubernetes version is resolved in the following order: this parameter, then the deprecated `ClusterConfiguration.kubernetesVersion`, then the version the current Deckhouse release defaults to. This parameter wins whenever it is set, `Default` included; while it is unset, the deprecated field still decides.
 
-      If `Default` is specified, DKP selects the version considered stable for the current release. If that version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
+      If `Default` is specified, DP selects the version considered stable for the current release. If that version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
 
       Downgrading more than 1 minor version below the highest version the cluster has ever run is forbidden.
     enum:
@@ -528,7 +528,7 @@ properties:
       List of feature gates enabled in the control plane.
 
       More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
-      The list of feature gates supported in DKP can be found on the [module overview page](./#feature-gates).
+      The list of feature gates supported in DP can be found on the [module overview page](./#feature-gates).
     items:
       type: string
       pattern: '^[a-zA-Z]+$'

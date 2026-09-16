@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/yandex/storage.html
 lang: ru
 ---
 
-Этот раздел охватывает дополнительные аспекты интеграции Deckhouse Kubernetes Platform (DKP) с Yandex Cloud:
+Этот раздел охватывает дополнительные аспекты интеграции Deckhouse Platform (DP) с Yandex Cloud:
 
 - подключение облачных дисков через CSI;
 - автоматическое создание StorageClass;
@@ -14,9 +14,9 @@ lang: ru
 
 ## Хранилище (CSI и StorageClass)
 
-DKP обеспечивает интеграцию с блочным хранилищем Yandex Cloud через компонент Container Storage Interface (CSI). Это даёт возможность кластерам DKP автоматически заказывать и подключать диски, а также использовать стандартные Kubernetes-ресурсы PersistentVolumeClaim для работы с хранилищем.
+DP обеспечивает интеграцию с блочным хранилищем Yandex Cloud через компонент Container Storage Interface (CSI). Это даёт возможность кластерам DP автоматически заказывать и подключать диски, а также использовать стандартные Kubernetes-ресурсы PersistentVolumeClaim для работы с хранилищем.
 
-DKP автоматически создает ресурсы StorageClass для всех поддерживаемых типов дисков Yandex Cloud. Это делает возможным для всех пользователей сразу использовать хранилище, не создавая вручную описания классов.
+DP автоматически создает ресурсы StorageClass для всех поддерживаемых типов дисков Yandex Cloud. Это делает возможным для всех пользователей сразу использовать хранилище, не создавая вручную описания классов.
 
 Поддерживаются следующие типы дисков:
 
@@ -43,11 +43,11 @@ settings:
     - network-hdd
 ```
 
-В приведённом примере DKP не создаст StorageClass для всех `network-ssd` дисков и для `network-hdd`.
+В приведённом примере DP не создаст StorageClass для всех `network-ssd` дисков и для `network-hdd`.
 
 ### Создание дополнительных StorageClass и размер блока
 
-Параметр [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) позволяет создавать дополнительные StorageClass или переопределять параметры StorageClass, создаваемых DKP по умолчанию.
+Параметр [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) позволяет создавать дополнительные StorageClass или переопределять параметры StorageClass, создаваемых DP по умолчанию.
 
 С помощью параметра [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision-blocksize) можно задать [размер блока](https://cloud.yandex.ru/docs/compute/operations/disk-create/empty-disk-blocksize) для создаваемых дисков. От размера блока зависит максимальный размер диска: для значения `4Ki` максимальный размер составляет `8Ti`, а при каждом последующем увеличении размера блока удваивается — вплоть до `256Ti` при `128Ki`.
 
@@ -74,9 +74,9 @@ spec:
 
 ### Назначение StorageClass по умолчанию
 
-По умолчанию DKP выбирает StorageClass на основе аннотации `storageclass.kubernetes.io/is-default-class=true`.
+По умолчанию DP выбирает StorageClass на основе аннотации `storageclass.kubernetes.io/is-default-class=true`.
 
-Чтобы задать другой StorageClass по умолчанию, необходимо использовать [глобальный параметр DKP `global.defaultClusterStorageClass`](../../../../reference/api/global.html#parameters-defaultclusterstorageclass). Изменить его можно следующей командой:
+Чтобы задать другой StorageClass по умолчанию, необходимо использовать [глобальный параметр DP `global.defaultClusterStorageClass`](../../../../reference/api/global.html#parameters-defaultclusterstorageclass). Изменить его можно следующей командой:
 
 ```shell
 d8 k edit mc global
@@ -316,7 +316,7 @@ d8 k edit mc global
 
 ### Внешний LoadBalancer
 
-DKP автоматически подписывается на Kubernetes-объекты Service с типом LoadBalancer. При их создании в кластере, он создаёт соответствующие ресурсы:
+DP автоматически подписывается на Kubernetes-объекты Service с типом LoadBalancer. При их создании в кластере, он создаёт соответствующие ресурсы:
 
 - **NetworkLoadBalancer** — сетевой балансировщик нагрузки в Yandex Cloud;
 - **TargetGroup** — группа конечных точек для балансировки трафика.
@@ -441,7 +441,7 @@ Yandex Cloud не позволяет одному целевому ресурс�
 
 ## Особенности применения изменений
 
-DKP не пересоздаёт уже существующие объекты Machine при изменении параметров.
+DP не пересоздаёт уже существующие объекты Machine при изменении параметров.
 Пересоздание узлов происходит только при изменении:
 
 - параметров в [секции NodeGroup](/modules/node-manager/cr.html#nodegroup);
@@ -461,7 +461,7 @@ dhctl converge
 
 В кластерах, использующих Machine Controller Manager (MCM), изменение параметра [`networkType`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-networktype) в ресурсе YandexInstanceClass не приводит к автоматическому пересозданию существующих CloudEphemeral-узлов. Хотя MachineClass обновляется, тип сетевого ускорения у уже созданных виртуальных машин в Yandex Cloud не изменяется.
 
-DKP намеренно не учитывает параметр `networkType` при определении необходимости пересоздания CloudEphemeral-узлов в MCM. Если бы он учитывался, обновление DKP привело бы к пересозданию CloudEphemeral-узлов во всех кластерах, где `networkType` уже указан, даже если его значение не изменялось.
+DP намеренно не учитывает параметр `networkType` при определении необходимости пересоздания CloudEphemeral-узлов в MCM. Если бы он учитывался, обновление DP привело бы к пересозданию CloudEphemeral-узлов во всех кластерах, где `networkType` уже указан, даже если его значение не изменялось.
 
 В Cluster API параметр `networkType` учитывается при определении необходимости пересоздания узлов, поэтому его изменение запускает их обновление автоматически. Новые CloudEphemeral NodeGroup в Yandex по умолчанию используют CAPI.
 
@@ -469,7 +469,7 @@ DKP намеренно не учитывает параметр `networkType` п
 
 ## Интеграция вручную созданных ВМ
 
-DKP позволяет подключать существующие виртуальные машины в Yandex Cloud к Kubernetes-кластеру в качестве узлов. Такие узлы называются CloudStatic, поскольку они не управляются напрямую [модулем `node-manager`](/modules/node-manager/), но могут использоваться в составе кластера.
+DP позволяет подключать существующие виртуальные машины в Yandex Cloud к Kubernetes-кластеру в качестве узлов. Такие узлы называются CloudStatic, поскольку они не управляются напрямую [модулем `node-manager`](/modules/node-manager/), но могут использоваться в составе кластера.
 
 Чтобы вручную подключить виртуальную машину в качестве CloudStatic-узла, необходимо:
 

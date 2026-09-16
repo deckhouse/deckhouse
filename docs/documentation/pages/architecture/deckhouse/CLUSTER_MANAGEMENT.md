@@ -1,18 +1,18 @@
 ---
-title: DKP cluster management
+title: DP cluster management
 permalink: en/architecture/deckhouse/commander.html
 search: commander, commander-agent, modules
-description: Architecture of the commander and commander-agent modules in Deckhouse Kubernetes Platform.
+description: Architecture of the commander and commander-agent modules in Deckhouse Platform.
 ---
 
-The [`commander`](/modules/commander/) and [`commander-agent`](/modules/commander-agent/) modules are used to implement cluster management in Deckhouse Kubernetes Platform (DKP).
+The [`commander`](/modules/commander/) and [`commander-agent`](/modules/commander-agent/) modules are used to implement cluster management in Deckhouse Platform (DP).
 
-A DKP cluster with the `commander` module installed is a *managing* cluster.
-A DKP cluster with the `commander-agent` module installed is a *managed* cluster.
+A DP cluster with the `commander` module installed is a *managing* cluster.
+A DP cluster with the `commander-agent` module installed is a *managed* cluster.
 
 ## Сommander module
 
-The [`commander`](/modules/commander/) module implements a web application that allows you to create standardized DKP clusters and manage their configurations and lifecycle.
+The [`commander`](/modules/commander/) module implements a web application that allows you to create standardized DP clusters and manage their configurations and lifecycle.
 
 To install the [`commander`](/modules/commander/) module, you need a PostgreSQL instance. It can be deployed inside or outside the cluster by using the [`managed-postgresql`](/modules/managed-postgresql/) module.
 
@@ -35,7 +35,7 @@ The following simplifications are made in the diagram:
 {% endalert %}
 
 The Level 2 C4 architecture of the [`commander`](/modules/commander/) module
-and its interaction with other DKP components are shown in the following
+and its interaction with other DP components are shown in the following
 diagram:
 
 ![Сommander module architecture](../../images/architecture/deckhouse/c4-l2-commander.svg)
@@ -99,11 +99,11 @@ Core components of the `commander` module include:
    * **sidekiq**: The main container.
    * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
-1. **Cluster-manager** (Deployment): Executes tasks requested by backend to deploy managed DKP clusters and manage their configuration.
+1. **Cluster-manager** (Deployment): Executes tasks requested by backend to deploy managed DP clusters and manage their configuration.
 
    When a new cluster is created, cluster-manager creates the following resources in the `d8-commander` namespace of the managing cluster:
 
-   * Deployment and Secret named `dhctl-<REGISTRY_HASH>-<VERSION>`: Runs [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) in gRPC server mode. Cluster-manager uses RPC calls to install and configure a DKP cluster.
+   * Deployment and Secret named `dhctl-<REGISTRY_HASH>-<VERSION>`: Runs [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) in gRPC server mode. Cluster-manager uses RPC calls to install and configure a DP cluster.
    * To process incoming `commander-agent` connections and implement a reverse interaction channel with the control plane of the corresponding cluster:
      * Deployment (`ampg-connector-<UUID>`)
      * Service:
@@ -133,11 +133,11 @@ Core components of the `commander` module include:
    * **cluster-manager**: The main container.
    * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
-1. **Dhctl-&lt;REGISTRY_HASH&gt;-&lt;VERSION&gt;** (Deployment): A component with a single **dhctl** container. It runs the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) utility in gRPC server mode. Cluster-manager uses RPC calls to the `dhctl` server to install or configure a managed DKP cluster.
+1. **Dhctl-&lt;REGISTRY_HASH&gt;-&lt;VERSION&gt;** (Deployment): A component with a single **dhctl** container. It runs the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) utility in gRPC server mode. Cluster-manager uses RPC calls to the `dhctl` server to install or configure a managed DP cluster.
 
-1. **Ampg-connector-&lt;UUID&gt;** (Deployment): A component with a single **main** container that establishes a tunnel and proxies requests to the control plane of a managed DKP cluster through the incoming `commander-agent` connection.
+1. **Ampg-connector-&lt;UUID&gt;** (Deployment): A component with a single **main** container that establishes a tunnel and proxies requests to the control plane of a managed DP cluster through the incoming `commander-agent` connection.
 
-   The component is created by cluster-manager for each managed DKP cluster.
+   The component is created by cluster-manager for each managed DP cluster.
 
 1. **Cluster-checker** (Deployment): Periodically starts cluster verification tasks.
 
@@ -157,7 +157,7 @@ Core components of the `commander` module include:
 
 1. **Redis** (Deployment): A component with a single **redis** container that provides a dedicated [Redis](https://github.com/redis/redis) database instance for storing task queue data and commander session states.
 
-1. **Console-frontend** (Deployment): Provides the managed DKP cluster administration web interface.
+1. **Console-frontend** (Deployment): Provides the managed DP cluster administration web interface.
 
    Contains the following containers:
 
@@ -165,9 +165,9 @@ Core components of the `commander` module include:
    * **wait-migrations**: An init container that waits for all database migrations to complete.
    * **nginx**: The main container.
 
-1. **Console-backend** (Deployment): An administration API backend for the managed DKP cluster that serves requests from the cluster-manager component.
+1. **Console-backend** (Deployment): An administration API backend for the managed DP cluster that serves requests from the cluster-manager component.
 
-   Console-backend uses Secret and Service resources created by cluster-manager to connect to the control plane of a managed DKP cluster.
+   Console-backend uses Secret and Service resources created by cluster-manager to connect to the control plane of a managed DP cluster.
 
    Contains the following containers:
 
@@ -219,7 +219,7 @@ Optional components of the `commander` module include:
 
 1. **Billing-prometheus** (StatefulSet): Runs [Deckhouse Prom++](/products/prompp/) in metrics ingestion mode over the [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) protocol.
 
-   The [`prometheus`](/modules/prometheus/) module in a managed DKP cluster sends metrics. The component stores resource usage history for all managed clusters, which is an important data source for billing reports.
+   The [`prometheus`](/modules/prometheus/) module in a managed DP cluster sends metrics. The component stores resource usage history for all managed clusters, which is an important data source for billing reports.
 
    Contains the following containers:
 
@@ -264,11 +264,11 @@ The module interacts with the following components:
    * Works with Deployment, Service, Secret, and Ingress resources in the `d8-commander` namespace.
    * Authorizes requests.
 
-1. **Container registry**: Retrieves available DKP releases by release channels.
+1. **Container registry**: Retrieves available DP releases by release channels.
 
 1. **PostgreSQL instance**: Stores cluster states and metadata, tasks, tokens, projects, billing parameters, and reports.
 
-1. **Managed cluster**: Creates, modifies, or deletes DKP clusters.
+1. **Managed cluster**: Creates, modifies, or deletes DP clusters.
 
 The following external components interact with the module:
 
@@ -278,13 +278,13 @@ The following external components interact with the module:
 
 ## Сommander-agent module
 
-The [`commander-agent`](/modules/commander-agent/) module establishes a service connection to a managing DKP cluster.
+The [`commander-agent`](/modules/commander-agent/) module establishes a service connection to a managing DP cluster.
 
 For details about module settings, see the [module documentation section](/modules/commander-agent/).
 
 ### Сommander-agent module architecture
 
-The Level 2 C4 architecture of the [`commander-agent`](/modules/commander-agent/) module and its interaction with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`commander-agent`](/modules/commander-agent/) module and its interaction with other DP components are shown in the following diagram:
 
 ![Сommander-agent module architecture](../../images/architecture/deckhouse/c4-l2-commander-agent.svg)
 
@@ -302,10 +302,10 @@ Agent performs the following actions:
   * `PVC`: Total size of attached disks in GiB.
   * `Nodes`: Total number of nodes.
 * Collects cluster availability information.
-* Establishes a secure connection to the managing DKP cluster.
-* Sends metrics and cluster availability information to the managing DKP cluster.
+* Establishes a secure connection to the managing DP cluster.
+* Sends metrics and cluster availability information to the managing DP cluster.
 * Configures user authentication via the Dex provider of the managing cluster.
-* If billing is enabled in the managing cluster, creates a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource to send metrics to the billing service of the managing DKP cluster.
+* If billing is enabled in the managing cluster, creates a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource to send metrics to the billing service of the managing DP cluster.
 
 ### Module interactions
 
