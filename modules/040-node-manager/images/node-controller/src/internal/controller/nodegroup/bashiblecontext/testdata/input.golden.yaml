@@ -65,7 +65,7 @@ nodeGroups:
     imageID: img-abc
     memory: 8192
     platformID: standard-v3
-  kubernetesVersion: "1.32"
+  kubernetesVersion: "1.33"
   manualRolloutID: rollout-1
   name: cloud-worker
   nodeDrainTimeoutSecond: 300
@@ -76,7 +76,7 @@ nodeGroups:
 - cri:
     type: Containerd
   engine: None
-  kubernetesVersion: "1.32"
+  kubernetesVersion: "1.33"
   manualRolloutID: ""
   name: static-worker
   nodeTemplate:

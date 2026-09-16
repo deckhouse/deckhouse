@@ -73,13 +73,13 @@ type ControllerTestSuite struct {
 
 func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 	synctest.Test(suite.T(), func(*testing.T) {
-		suite.T().Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
-		suite.T().Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
+		suite.T().Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.33,1.34,1.35,1.36,1.37")
+		suite.T().Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.35")
 
 		// The ConfigMap in this fixture is the dhctl seed: data.spec and the identifying labels only,
 		// which is what makes this pass the "init" trigger.
 		suite.Run("When cluster is up to date", func() {
-			suite.setVersionEnv("1.35", "Automatic", "1.35")
+			suite.setVersionEnv("1.36", "Automatic", "1.36")
 			suite.setupController(suite.fetchTestFileData("init-up-to-date.yaml"))
 
 			_, err := suite.controller.Reconcile(
@@ -90,7 +90,7 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("When control plane component was failed", func() {
-			suite.setVersionEnv("1.35", "Automatic", "1.35")
+			suite.setVersionEnv("1.36", "Automatic", "1.36")
 			suite.setupController(suite.fetchTestFileData("pods-failed.yaml"))
 
 			_, err := suite.controller.Reconcile(
@@ -101,7 +101,7 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("When supported and automatic versions are set via env", func() {
-			suite.setVersionEnv("1.33", "Automatic", "1.34")
+			suite.setVersionEnv("1.34", "Automatic", "1.35")
 			suite.setupController(suite.fetchTestFileData("versions-with-env.yaml"))
 
 			_, err := suite.controller.Reconcile(
@@ -112,7 +112,7 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("When upgrade is in progress across multiple versions", func() {
-			suite.setVersionEnv("1.35", "Automatic", "1.32")
+			suite.setVersionEnv("1.36", "Automatic", "1.33")
 			suite.setupController(suite.fetchTestFileData("upgrade-three-hops.yaml"))
 
 			_, err := suite.controller.Reconcile(
@@ -258,11 +258,11 @@ func readClusterConfigMap(t *testing.T, ctx context.Context, c client.Client) *c
 // A guessed value would be indistinguishable from a declared one to every reader.
 func TestReconcileWritesNothingOnBrokenEnvironment(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
-		t.Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
+		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.33,1.34,1.35,1.36,1.37")
+		t.Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.35")
 		t.Setenv("DESIRED_KUBERNETES_VERSION", "")
 		t.Setenv("KUBERNETES_UPDATE_MODE", "Automatic")
-		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.35")
+		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.36")
 
 		rec, k8sClient := newTestReconciler(t, "pods-failed.yaml")
 		before := readClusterConfigMap(t, context.Background(), k8sClient)
@@ -280,11 +280,11 @@ func TestReconcileWritesNothingOnBrokenEnvironment(t *testing.T) {
 // The controller writes data.spec and watches it, so its own write produces one more event.
 func TestReconcileSelfTriggerConverges(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
-		t.Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
-		t.Setenv("DESIRED_KUBERNETES_VERSION", "1.35")
+		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.33,1.34,1.35,1.36,1.37")
+		t.Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.35")
+		t.Setenv("DESIRED_KUBERNETES_VERSION", "1.36")
 		t.Setenv("KUBERNETES_UPDATE_MODE", "Automatic")
-		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.35")
+		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.36")
 
 		ctx := context.Background()
 		rec, k8sClient := newTestReconciler(t, "init-up-to-date.yaml")
@@ -306,22 +306,22 @@ func TestReconcileSelfTriggerConverges(t *testing.T) {
 // The max-k8s-version label only moves once the cluster reaches UpToDate.
 func TestAvailableVersionsFollowTheComputedMaxUsed(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
-		t.Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
-		t.Setenv("DESIRED_KUBERNETES_VERSION", "1.35")
+		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.33,1.34,1.35,1.36,1.37")
+		t.Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.35")
+		t.Setenv("DESIRED_KUBERNETES_VERSION", "1.36")
 		t.Setenv("KUBERNETES_UPDATE_MODE", "Automatic")
-		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.35")
+		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.36")
 
 		ctx := context.Background()
-		// The fixture's label still says 1.32 — the cluster has not finished the hop yet.
+		// The fixture's label still says 1.33 — the cluster has not finished the hop yet.
 		rec, k8sClient := newTestReconciler(t, "upgrade-three-hops.yaml")
 
 		_, err := rec.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
 
 		cm := readClusterConfigMap(t, ctx, k8sClient)
-		assert.Equal(t, "1.32", cm.Labels["max-k8s-version"])
-		assert.Contains(t, cm.Data["status"], "availableVersions:\n- \"1.34\"\n- \"1.35\"\n- \"1.36\"\n")
+		assert.Equal(t, "1.33", cm.Labels["max-k8s-version"])
+		assert.Contains(t, cm.Data["status"], "availableVersions:\n- \"1.35\"\n- \"1.36\"\n- \"1.37\"\n")
 	})
 }
 

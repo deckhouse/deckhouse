@@ -179,9 +179,6 @@
   # Versions mirror modules/030-cloud-provider-aws/oss.yaml (id: ccm-aws); update via tools/sync_versions/sync_oss_versions.sh (wired in tools/generate_sync_versions.go).
   versions:
     - condition:
-        k8s: "1.32"
-      version: v1.32.8
-    - condition:
         k8s: "1.33"
       version: v1.33.4
     - condition:
@@ -192,4 +189,7 @@
       version: v1.35.2
     - condition:
         k8s: "1.36"
+      version: v1.36.0
+    - condition:
+        k8s: "1.37"
       version: v1.36.0

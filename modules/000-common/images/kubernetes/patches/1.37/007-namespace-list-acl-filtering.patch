@@ -1,5 +1,5 @@
 diff --git a/pkg/controlplane/apiserver/apis.go b/pkg/controlplane/apiserver/apis.go
-index 7ed3a58489b..efd130af546 100644
+index 096ec221462..9fa86d24e94 100644
 --- a/pkg/controlplane/apiserver/apis.go
 +++ b/pkg/controlplane/apiserver/apis.go
 @@ -20,6 +20,7 @@ import (
@@ -10,7 +10,7 @@ index 7ed3a58489b..efd130af546 100644
  	genericapiserver "k8s.io/apiserver/pkg/server"
  	serverstorage "k8s.io/apiserver/pkg/server/storage"
  	"k8s.io/client-go/discovery"
-@@ -94,6 +95,15 @@ func (s *Server) InstallAPIs(restStorageProviders ...RESTStorageProvider) error
+@@ -100,6 +101,15 @@ func (s *Server) InstallAPIs(restStorageProviders ...RESTStorageProvider) error
  		return err
  	}
  
@@ -26,7 +26,7 @@ index 7ed3a58489b..efd130af546 100644
  	for _, restStorageBuilder := range restStorageProviders {
  		groupName := restStorageBuilder.GroupName()
  		apiGroupInfo, err := restStorageBuilder.NewRESTStorage(s.APIResourceConfigSource, s.RESTOptionsGetter)
-@@ -116,6 +126,11 @@ func (s *Server) InstallAPIs(restStorageProviders ...RESTStorageProvider) error
+@@ -125,6 +135,11 @@ func (s *Server) InstallAPIs(restStorageProviders ...RESTStorageProvider) error
  			continue
  		}
  
@@ -38,7 +38,7 @@ index 7ed3a58489b..efd130af546 100644
  		klog.V(1).Infof("Enabling API group %q.", groupName)
  
  		if postHookProvider, ok := restStorageBuilder.(genericapiserver.PostStartHookProvider); ok {
-@@ -140,5 +155,12 @@ func (s *Server) InstallAPIs(restStorageProviders ...RESTStorageProvider) error
+@@ -149,5 +164,12 @@ func (s *Server) InstallAPIs(restStorageProviders ...RESTStorageProvider) error
  	if err := s.GenericAPIServer.InstallAPIGroups(nonLegacy...); err != nil {
  		return fmt.Errorf("error in registering group versions: %w", err)
  	}
@@ -799,7 +799,7 @@ index 00000000000..95d89968a7e
 +	}
 +}
 diff --git a/pkg/registry/core/namespace/storage/storage.go b/pkg/registry/core/namespace/storage/storage.go
-index e88fad7fa8a..28cee394283 100644
+index e67cedeb15e..c6b940436b9 100644
 --- a/pkg/registry/core/namespace/storage/storage.go
 +++ b/pkg/registry/core/namespace/storage/storage.go
 @@ -19,19 +19,24 @@ package storage
@@ -828,7 +828,7 @@ index e88fad7fa8a..28cee394283 100644
  	"k8s.io/kubernetes/pkg/printers"
  	printersinternal "k8s.io/kubernetes/pkg/printers/internalversion"
 @@ -40,7 +45,25 @@ import (
- 	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
+ 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
  )
  
 -// rest implements a RESTStorage for namespaces
@@ -1001,10 +1001,10 @@ index e88fad7fa8a..28cee394283 100644
  	return r.store.Watch(ctx, options)
  }
 diff --git a/pkg/registry/core/rest/storage_core.go b/pkg/registry/core/rest/storage_core.go
-index 69329088a0c..1b64e793ee7 100644
+index 3d690208da4..7c34252d86d 100644
 --- a/pkg/registry/core/rest/storage_core.go
 +++ b/pkg/registry/core/rest/storage_core.go
-@@ -198,6 +198,12 @@ func (p *legacyProvider) NewRESTStorage(apiResourceConfigSource serverstorage.AP
+@@ -207,6 +207,12 @@ func (p *legacyProvider) NewRESTStorage(apiResourceConfigSource serverstorage.AP
  		return genericapiserver.APIGroupInfo{}, err
  	}
  
@@ -1018,10 +1018,10 @@ index 69329088a0c..1b64e793ee7 100644
  		restOptionsGetter,
  		p.primaryServiceClusterIPAllocator.IPFamily(),
 diff --git a/pkg/registry/core/rest/storage_core_generic.go b/pkg/registry/core/rest/storage_core_generic.go
-index 664724f3bc0..5efc7698fb1 100644
+index 4a9ce7b723f..62f52858143 100644
 --- a/pkg/registry/core/rest/storage_core_generic.go
 +++ b/pkg/registry/core/rest/storage_core_generic.go
-@@ -96,7 +96,21 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
+@@ -104,7 +104,21 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
  		return genericapiserver.APIGroupInfo{}, err
  	}
  
@@ -1045,10 +1045,10 @@ index 664724f3bc0..5efc7698fb1 100644
  		return genericapiserver.APIGroupInfo{}, err
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-index d791dd228c9..b1c03703446 100644
+index a605290fed3..7f86651086c 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-@@ -43,10 +43,12 @@ import (
+@@ -45,6 +45,7 @@ import (
  	"k8s.io/apiserver/pkg/endpoints/discovery"
  	"k8s.io/apiserver/pkg/endpoints/discovery/aggregated"
  	genericregistry "k8s.io/apiserver/pkg/registry/generic"
@@ -1056,12 +1056,7 @@ index d791dd228c9..b1c03703446 100644
  	"k8s.io/apiserver/pkg/registry/rest"
  	genericapiserver "k8s.io/apiserver/pkg/server"
  	serverstorage "k8s.io/apiserver/pkg/server/storage"
- 	"k8s.io/apiserver/pkg/util/webhook"
-+	"k8s.io/klog/v2"
- )
- 
- var (
-@@ -201,6 +203,20 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
+@@ -205,6 +206,20 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
  	if err != nil {
  		return nil, err
  	}
@@ -1083,10 +1078,10 @@ index d791dd228c9..b1c03703446 100644
  	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
  	s.GenericAPIServer.RegisterDestroyFunc(crdHandler.destroy)
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 55d31fc8eda..502b82e7fce 100644
+index 59d1f477e48..11f6b802716 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-@@ -72,6 +72,7 @@ import (
+@@ -74,6 +74,7 @@ import (
  	apirequest "k8s.io/apiserver/pkg/endpoints/request"
  	"k8s.io/apiserver/pkg/features"
  	"k8s.io/apiserver/pkg/registry/generic"
@@ -1094,7 +1089,7 @@ index 55d31fc8eda..502b82e7fce 100644
  	genericfilters "k8s.io/apiserver/pkg/server/filters"
  	utilfeature "k8s.io/apiserver/pkg/util/feature"
  	"k8s.io/apiserver/pkg/util/webhook"
-@@ -128,6 +129,14 @@ type crdHandler struct {
+@@ -130,6 +131,14 @@ type crdHandler struct {
  	// The limit on the request size that would be accepted and decoded in a write request
  	// 0 means no limit.
  	maxRequestBodyBytes int64
@@ -1109,7 +1104,7 @@ index 55d31fc8eda..502b82e7fce 100644
  }
  
  // crdInfo stores enough information to serve the storage for the custom resource
-@@ -577,6 +586,11 @@ func (r *crdHandler) tearDown(oldInfo *crdInfo) {
+@@ -582,6 +591,11 @@ func (r *crdHandler) tearDown(oldInfo *crdInfo) {
  		// destroy only the main storage. Those for the subresources share cacher and etcd clients.
  		storage.CustomResource.DestroyFunc()
  	}
@@ -1121,8 +1116,8 @@ index 55d31fc8eda..502b82e7fce 100644
  }
  
  // Destroy shuts down storage layer for all registered CRDs.
-@@ -719,6 +733,11 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
- 		replicasPathInCustomResource[schema.GroupVersion{Group: crd.Spec.Group, Version: v.Name}.String()] = path
+@@ -770,6 +784,11 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 		}
  	}
  
 +	// Deckhouse: whether at least one served version got a ScopeFilter wired
@@ -1131,9 +1126,9 @@ index 55d31fc8eda..502b82e7fce 100644
 +	scopeFilterWired := false
 +
  	for _, v := range crd.Spec.Versions {
- 		// In addition to Unstructured objects (Custom Resources), we also may sometimes need to
- 		// decode unversioned Options objects, so we delegate to parameterScheme for such types.
-@@ -850,6 +869,42 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 		// Do not construct storage if version is neither served nor stored
+ 		if !v.Storage && !v.Served {
+@@ -887,6 +906,42 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  
  		clusterScoped := crd.Spec.Scope == apiextensionsv1.ClusterScoped
  
@@ -1176,7 +1171,7 @@ index 55d31fc8eda..502b82e7fce 100644
  		// CRDs explicitly do not support protobuf, but some objects returned by the API server do
  		negotiatedSerializer := unstructuredNegotiatedSerializer{
  			typer:                 typer,
-@@ -1046,6 +1101,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1071,6 +1126,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  	storageMap2[crd.UID] = ret
  	r.customStorage.Store(storageMap2)
  
@@ -1193,16 +1188,14 @@ index 55d31fc8eda..502b82e7fce 100644
  }
  
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-index eec02e5722f..2377c2728ab 100644
+index 80f1b4a9a92..091df2ddd01 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-@@ -24,16 +24,19 @@ import (
+@@ -24,14 +24,17 @@ import (
  
  	"k8s.io/apimachinery/pkg/fields"
  	"k8s.io/apimachinery/pkg/labels"
 +	"k8s.io/apimachinery/pkg/runtime/schema"
- 	genericfeatures "k8s.io/apiserver/pkg/features"
- 	utilfeature "k8s.io/apiserver/pkg/util/feature"
  
  	"k8s.io/klog/v2"
  
@@ -1216,7 +1209,7 @@ index eec02e5722f..2377c2728ab 100644
  )
  
  const (
-@@ -45,8 +48,78 @@ const (
+@@ -43,8 +46,78 @@ const (
  	decisionAllow  = "allow"
  	decisionForbid = "forbid"
  	reasonError    = "internal error"
@@ -1295,7 +1288,7 @@ index eec02e5722f..2377c2728ab 100644
  type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
  
  // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
-@@ -68,6 +141,23 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -67,6 +140,23 @@ func withAuthorization(handler http.Handler, a authorizer.UnconditionalAuthorize
  			responsewriters.InternalError(w, req, err)
  			return
  		}
@@ -1319,7 +1312,7 @@ index eec02e5722f..2377c2728ab 100644
  		authorized, reason, err := a.Authorize(ctx, attributes)
  
  		authorizationFinish := time.Now()
-@@ -80,6 +170,24 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -80,6 +170,24 @@ func withAuthorization(handler http.Handler, a authorizer.UnconditionalAuthorize
  			audit.AddAuditAnnotations(ctx,
  				decisionAnnotationKey, decisionAllow,
  				reasonAnnotationKey, reason)
@@ -1344,7 +1337,7 @@ index eec02e5722f..2377c2728ab 100644
  			handler.ServeHTTP(w, req)
  			return
  		}
-@@ -89,6 +197,60 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -89,6 +197,60 @@ func withAuthorization(handler http.Handler, a authorizer.UnconditionalAuthorize
  			return
  		}
  
@@ -1926,7 +1919,7 @@ index 00000000000..d090b2a96e1
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
-index ba64fc367be..c31a9341348 100644
+index 8cceb13efe8..8103f4a776e 100644
 --- a/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go
 @@ -44,6 +44,7 @@ import (
@@ -1935,9 +1928,9 @@ index ba64fc367be..c31a9341348 100644
  	"k8s.io/apiserver/pkg/registry/generic"
 +	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
  	"k8s.io/apiserver/pkg/registry/rest"
+ 	"k8s.io/apiserver/pkg/sharding"
  	"k8s.io/apiserver/pkg/storage"
- 	storeerr "k8s.io/apiserver/pkg/storage/errors"
-@@ -148,6 +149,22 @@ type Store struct {
+@@ -149,6 +150,22 @@ type Store struct {
  	// object matches the given field and label selectors.
  	PredicateFunc func(label labels.Selector, field fields.Selector) storage.SelectionPredicate
  
@@ -1960,7 +1953,7 @@ index ba64fc367be..c31a9341348 100644
  	// EnableGarbageCollection affects the handling of Update and Delete
  	// requests. Enabling garbage collection allows finalizers to do work to
  	// finalize this object before the store deletes it.
-@@ -358,14 +375,32 @@ func (e *Store) GetDeleteStrategy() rest.RESTDeleteStrategy {
+@@ -419,14 +436,32 @@ func (e *Store) GetDeleteStrategy() rest.RESTDeleteStrategy {
  	return e.DeleteStrategy
  }
  
@@ -1994,7 +1987,7 @@ index ba64fc367be..c31a9341348 100644
  	label := labels.Everything()
  	if options != nil && options.LabelSelector != nil {
  		label = options.LabelSelector
-@@ -842,6 +877,17 @@ func newDeleteOptionsFromUpdateOptions(in *metav1.UpdateOptions) *metav1.DeleteO
+@@ -917,6 +952,17 @@ func newDeleteOptionsFromUpdateOptions(in *metav1.UpdateOptions) *metav1.DeleteO
  
  // Get retrieves the item from storage.
  func (e *Store) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
@@ -2012,7 +2005,7 @@ index ba64fc367be..c31a9341348 100644
  	obj := e.NewFunc()
  	key, err := e.KeyFunc(ctx, name)
  	if err != nil {
-@@ -1413,6 +1459,10 @@ func (e *Store) finalizeDelete(ctx context.Context, obj runtime.Object, runHooks
+@@ -1487,6 +1533,10 @@ func (e *Store) finalizeDelete(ctx context.Context, obj runtime.Object, runHooks
  // a matcher that matches by key. SelectionPredicate does this for you
  // automatically.
  func (e *Store) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {

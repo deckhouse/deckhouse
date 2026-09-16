@@ -421,11 +421,11 @@ var _ = Describe("NodeGroup status controller", func() {
 			// it from the control-plane Nodes' kubeletVersion would make it bound itself:
 			// control-plane-manager refuses to advance the control plane past the node kubelets,
 			// so neither side could ever move and no minor upgrade would complete. The apiserver
-			// legitimately runs one minor ahead, which is what this spec pins: kubelet 1.30,
-			// apiserver 1.32, target 1.33 -> 1.32.
-			createClusterKubernetesConfigMap("1.33")
-			createAPIServerPod("kube-apiserver-master-0", "1.32")
-			createControlPlaneNode(uniqueNG("cp-node"), "v1.30.4")
+			// legitimately runs one minor ahead, which is what this spec pins: kubelet 1.33,
+			// apiserver 1.35, target 1.36 -> 1.35.
+			createClusterKubernetesConfigMap("1.36")
+			createAPIServerPod("kube-apiserver-master-0", "1.35")
+			createControlPlaneNode(uniqueNG("cp-node"), "v1.33.4")
 
 			name := uniqueNG("kubever")
 			createNodeGroup(staticNodeGroup(name))
@@ -433,15 +433,15 @@ var _ = Describe("NodeGroup status controller", func() {
 			Eventually(func(g Gomega) {
 				ng := &v1.NodeGroup{}
 				g.Expect(k8sClient.Get(suiteCtx, client.ObjectKey{Name: name}, ng)).To(Succeed())
-				g.Expect(ng.Status.KubernetesVersion).To(Equal("1.32"))
+				g.Expect(ng.Status.KubernetesVersion).To(Equal("1.35"))
 			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 		})
 
 		It("takes the lowest apiserver version while the control plane is mid-roll", func() {
-			createClusterKubernetesConfigMap("1.33")
-			createAPIServerPod("kube-apiserver-master-0", "1.32")
-			createAPIServerPod("kube-apiserver-master-1", "1.31")
-			createAPIServerPod("kube-apiserver-master-2", "1.31")
+			createClusterKubernetesConfigMap("1.36")
+			createAPIServerPod("kube-apiserver-master-0", "1.35")
+			createAPIServerPod("kube-apiserver-master-1", "1.34")
+			createAPIServerPod("kube-apiserver-master-2", "1.34")
 
 			name := uniqueNG("kubever-min")
 			createNodeGroup(staticNodeGroup(name))
@@ -449,7 +449,7 @@ var _ = Describe("NodeGroup status controller", func() {
 			Eventually(func(g Gomega) {
 				ng := &v1.NodeGroup{}
 				g.Expect(k8sClient.Get(suiteCtx, client.ObjectKey{Name: name}, ng)).To(Succeed())
-				g.Expect(ng.Status.KubernetesVersion).To(Equal("1.31"))
+				g.Expect(ng.Status.KubernetesVersion).To(Equal("1.34"))
 			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 		})
 	})

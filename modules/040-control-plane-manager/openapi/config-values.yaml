@@ -384,11 +384,11 @@ properties:
 
       Downgrading more than 1 minor version below the highest version the cluster has ever run is forbidden.
     enum:
-      - "1.32"
       - "1.33"
       - "1.34"
       - "1.35"
       - "1.36"
+      - "1.37"
       - "Default"
     x-examples:
       - "1.35"
@@ -495,7 +495,7 @@ properties:
       The list of feature gates supported in DKP can be found on the [module overview page](./#feature-gates).
     items:
       type: string
-      pattern: '^[a-zA-Z]+$'
+      pattern: '^[a-zA-Z][a-zA-Z0-9]*$'
     default: []
   resourcesRequests:
     description: |

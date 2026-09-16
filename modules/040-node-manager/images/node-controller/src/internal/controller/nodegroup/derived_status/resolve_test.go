@@ -46,7 +46,7 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 func newTestService(t *testing.T, objs ...client.Object) *Service {
 	t.Helper()
 	if !hasClusterKubernetesConfigMap(objs) {
-		objs = append([]client.Object{kubernetesSourceConfigMap("1.32")}, objs...)
+		objs = append([]client.Object{kubernetesSourceConfigMap("1.33")}, objs...)
 	}
 	return newTestServiceRaw(t, objs...)
 }

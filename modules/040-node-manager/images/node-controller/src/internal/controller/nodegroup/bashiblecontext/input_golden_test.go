@@ -127,10 +127,10 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 			"data.json": `{"channel":"stable","version":"v1.70.0","edition":"EE"}`,
 		}),
 		configMap(kubeSystemNS, "d8-cluster-kubernetes", map[string]string{
-			"spec": "desiredVersion: \"1.32\"\nupdateMode: Manual\n",
+			"spec": "desiredVersion: \"1.33\"\nupdateMode: Manual\n",
 		}),
 		secret(kubeSystemNS, clusterConfigSecretName, map[string][]byte{
-			clusterConfigKey: []byte("kubernetesVersion: \"1.32\"\ndefaultCRI: Containerd\npodSubnetNodeCIDRPrefix: \"24\"\nclusterDomain: cluster.local\nproxy:\n  httpProxy: http://proxy.example.com\n  noProxy:\n  - 10.0.0.0/8\n"),
+			clusterConfigKey: []byte("kubernetesVersion: \"1.33\"\ndefaultCRI: Containerd\npodSubnetNodeCIDRPrefix: \"24\"\nclusterDomain: cluster.local\nproxy:\n  httpProxy: http://proxy.example.com\n  noProxy:\n  - 10.0.0.0/8\n"),
 		}),
 		secret(kubeSystemNS, "d8-static-cluster-configuration", map[string][]byte{
 			"static-cluster-configuration.yaml": []byte("internalNetworkCIDRs:\n- 172.18.200.0/24\n"),

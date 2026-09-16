@@ -1,16 +1,18 @@
 diff --git a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
+index 93da5b01f2a..a756e35fe9b 100644
 --- a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
 +++ b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
-@@ -21,6 +21,7 @@ import (
- 	"crypto/x509/pkix"
- 	"encoding/hex"
- 	"fmt"
-+	"k8s.io/klog/v2"
- 	"net/http"
- 	"strings"
+@@ -28,6 +28,8 @@ import (
+ 	"sync"
  	"time"
-@@ -150,6 +151,13 @@ func (a *Authenticator) AuthenticateRequest(req *http.Request) (*authenticator.R
-
+ 
++	"k8s.io/klog/v2"
++
+ 	asn1util "k8s.io/apimachinery/pkg/apis/asn1"
+ 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+ 	"k8s.io/apimachinery/pkg/util/sets"
+@@ -191,6 +193,13 @@ func (a *Authenticator) AuthenticateRequest(req *http.Request) (*authenticator.R
+ 
  	remaining := req.TLS.PeerCertificates[0].NotAfter.Sub(time.Now())
  	clientCertificateExpirationHistogram.WithContext(req.Context()).Observe(remaining.Seconds())
 +

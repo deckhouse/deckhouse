@@ -254,3 +254,37 @@
     - ConcurrentWatchObjectDecode
     - NativeHistograms
     - TaintTolerationComparisonOperators
+"1.37":
+  forbidden: []
+  deprecated:
+    - KubeProxyIPVS
+  kubelet:
+    - AtomicWriteVolumeUserFields
+    - ContainerStopSignals
+    - CRIListStreaming
+    - EmptyDirVolumeMode
+    - GRPCContainerProbeTLS
+    - H2CContainerProbe
+    - InPlacePodVerticalScalingMemoryBackedVolumes
+    - MutablePVNodeAffinity
+    - PodLogsQuerySplitStreams
+  apiserver:
+    - AtomicWriteVolumeUserFields
+    - ContainerStopSignals
+    - CRDObservedGenerationTracking
+    - CrossNamespaceVolumeDataSource
+    - EmptyDirVolumeMode
+    - GRPCContainerProbeTLS
+    - H2CContainerProbe
+    - InPlacePodVerticalScalingMemoryBackedVolumes
+    - MutablePVNodeAffinity
+    - PodLogsQuerySplitStreams
+    - ShardedListAndWatch
+    - StatefulSetRecreateStrategy
+    - TaintTolerationComparisonOperators
+  kubeControllerManager:
+    - ControllerManagerReleaseLeaderElectionLockOnExit
+    - CrossNamespaceVolumeDataSource
+    - StatefulSetRecreateStrategy
+  kubeScheduler:
+    - TaintTolerationComparisonOperators
