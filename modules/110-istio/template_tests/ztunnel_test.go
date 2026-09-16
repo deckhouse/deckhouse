@@ -42,6 +42,7 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 			ztunnelDs := f.KubernetesResource("DaemonSet", "d8-istio", "ztunnel")
 			Expect(ztunnelDs.Exists()).To(BeTrue())
 			Expect(ztunnelDs.Field("spec.template.spec.serviceAccountName").String()).To(Equal("ztunnel"))
+			Expect(ztunnelDs.Field("spec.template.spec.containers.0.env.#(name==CLUSTER_DOMAIN).value").String()).To(Equal("my.domain"))
 
 			ztunnelVpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ztunnel")
 			Expect(ztunnelVpa.Exists()).To(BeTrue())
