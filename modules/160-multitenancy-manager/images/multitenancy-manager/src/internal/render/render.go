@@ -170,6 +170,26 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 
 	annotations := map[string]any{}
 
+	// The free-form namespace metadata is merged first so that the dedicated fields below win a
+	// shared key. Adoption mirrors the placement annotations of a namespace into this parameter, and
+	// a stale mirror must not outrank a template that declares nodeSelector or tolerations itself.
+	if spec.NamespaceMetadata != nil {
+		if extra, ok, err := spec.NamespaceMetadata.Labels.Resolve(r.params); err != nil {
+			return nil, fmt.Errorf("resolve namespaceMetadata.labels: %w", err)
+		} else if ok {
+			for k, v := range extra {
+				labels[k] = v
+			}
+		}
+		if extra, ok, err := spec.NamespaceMetadata.Annotations.Resolve(r.params); err != nil {
+			return nil, fmt.Errorf("resolve namespaceMetadata.annotations: %w", err)
+		} else if ok {
+			for k, v := range extra {
+				annotations[k] = v
+			}
+		}
+	}
+
 	if tols, ok, err := spec.Tolerations.Resolve(r.params); err != nil {
 		return nil, fmt.Errorf("resolve tolerations: %w", err)
 	} else if ok && len(tols) > 0 {
@@ -188,23 +208,6 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 			return nil, fmt.Errorf("render nodeSelector: %w", sErr)
 		}
 		annotations[naming.NodeSelectorAnnotation] = annotation
-	}
-
-	if spec.NamespaceMetadata != nil {
-		if extra, ok, err := spec.NamespaceMetadata.Labels.Resolve(r.params); err != nil {
-			return nil, fmt.Errorf("resolve namespaceMetadata.labels: %w", err)
-		} else if ok {
-			for k, v := range extra {
-				labels[k] = v
-			}
-		}
-		if extra, ok, err := spec.NamespaceMetadata.Annotations.Resolve(r.params); err != nil {
-			return nil, fmt.Errorf("resolve namespaceMetadata.annotations: %w", err)
-		} else if ok {
-			for k, v := range extra {
-				annotations[k] = v
-			}
-		}
 	}
 
 	metadata := map[string]any{"name": r.name}
