@@ -36,6 +36,20 @@ linters:
               desc: "In public archive. Use 'github.com/gojuno/minimock' instead."
             - pkg: "github.com/samber/lo"
               desc: "This package must not be used, because of increasing cognitive complexity."
+        # The dependency on addon-operator's values machinery is re-exported by
+        # deckhouse-controller/pkg/addonutils and must stay behind that one seam,
+        # so replacing it later is a change to that package and not to every caller.
+        addonutils:
+          files:
+            - $all
+            - "!**/deckhouse-controller/pkg/addonutils/*.go"
+            # depguard matches a deny entry as a prefix, so the rule below also
+            # covers pkg/utils/stdliblogtolog, an unrelated logging bridge that
+            # main.go legitimately imports.
+            - "!**/deckhouse-controller/cmd/deckhouse-controller/main.go"
+          deny:
+            - pkg: "github.com/flant/addon-operator/pkg/utils"
+              desc: "Use github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils instead."
     errcheck:
       exclude-functions:
         - fmt:.*[rR]ead|[wW]rite|[cC]lose
