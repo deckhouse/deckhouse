@@ -413,19 +413,25 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, repo *v1alpha1.Pa
 			slog.String("namespace", app.Namespace))
 	}
 
-	original := repo.DeepCopy()
-	repo.ObjectMeta.Annotations[v1alpha1.PackageRepositoryAnnotationRegistryChecksum] = currentChecksum
-	if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("update checksum annotation: %w", err)
-	}
-
 	if len(updateErrors) > 0 {
 		r.logger.Warn("failed to update some applications",
 			slog.Int("failed", len(updateErrors)),
 			slog.Int("succeeded", updatedCount))
+
+		// Give up before the checksum is committed when not a single application could be annotated.
+		// The checksum makes the next reconcile return early, so committing it here would retire the
+		// fan-out for good and leave every application on the old registry settings, returned error or
+		// not. A partial failure still commits: replaying the fan-out would re-annotate the
+		// applications that did succeed, and each of those costs a reconcile of its own.
 		if updatedCount == 0 {
 			return fmt.Errorf("failed to update all %d application(s): %w", len(updateErrors), updateErrors[0])
 		}
+	}
+
+	original := repo.DeepCopy()
+	repo.ObjectMeta.Annotations[v1alpha1.PackageRepositoryAnnotationRegistryChecksum] = currentChecksum
+	if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update checksum annotation: %w", err)
 	}
 
 	return nil
