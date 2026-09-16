@@ -27,7 +27,7 @@ import (
 
 // Reason label values for preemptibleUnsupportedGauge.
 const (
-	preemptibleUnsupportedReasonMCM        = "mcm"
+	preemptibleUnsupportedReasonMCM         = "mcm"
 	preemptibleUnsupportedReasonNonSelectel = "non-selectel"
 )
 
