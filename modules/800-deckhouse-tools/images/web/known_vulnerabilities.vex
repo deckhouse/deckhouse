@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 25,
+  "version": 26,
   "statements": [
     {
       "vulnerability": {
@@ -710,10 +710,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
-        },
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
+          "@id": "pkg:golang/golang.org/x/crypto"
         }
       ],
       "status": "not_affected",
@@ -751,5 +748,5 @@
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-08-27T12:00:00Z"
+  "last_updated": "2026-09-16T12:00:00Z"
 }
