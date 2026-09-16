@@ -4,17 +4,17 @@ metadata:
   labels:
     heritage: deckhouse
     module: cloud-provider-metal3
-  name: metal3instances.deckhouse.io
+  name: baremetalinstances.deckhouse.io
 spec:
   group: deckhouse.io
   names:
-    kind: Metal3Instance
-    listKind: Metal3InstanceList
-    plural: metal3instances
-    singular: metal3instance
+    kind: BareMetalInstance
+    listKind: BareMetalInstanceList
+    plural: baremetalinstances
+    singular: baremetalinstance
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     served: true
     storage: true
     subresources:
@@ -31,16 +31,19 @@ spec:
       jsonPath: .spec.bootMACAddress
     - name: BMH
       type: string
-      jsonPath: .status.bareMetalHost.name
+      jsonPath: .status.host.name
     - name: State
       type: string
-      jsonPath: .status.bareMetalHost.state
+      jsonPath: .status.host.state
     - name: Consumer
       type: string
-      jsonPath: .status.bareMetalHost.consumer
-    - name: Online
+      jsonPath: .status.host.consumer
+    - name: Desired Online
       type: boolean
-      jsonPath: .status.bareMetalHost.online
+      jsonPath: .status.host.desiredOnline
+    - name: Powered On
+      type: boolean
+      jsonPath: .status.host.poweredOn
     - name: Error
       type: string
       jsonPath: .status.message
@@ -70,14 +73,14 @@ spec:
               online:
                 type: boolean
                 default: false
-                description: Desired BareMetalHost online state.
+                description: Desired physical host online state.
               bootMACAddress:
                 type: string
                 pattern: '^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'
                 description: MAC address of the NIC used for PXE boot.
               rootDeviceHints:
                 type: object
-                description: Hints for Ironic root disk selection. If omitted, an empty object is passed to BareMetalHost to avoid its unsafe /dev/sda default.
+                description: Hints for selecting the root disk. If omitted, an empty object is passed to the provisioning backend to avoid its unsafe /dev/sda default.
                 properties:
                   deviceName:
                     type: string
@@ -159,17 +162,22 @@ spec:
                 properties:
                   protocol:
                     type: string
+                    description: Resolved BMC protocol. This is a closed set of protocols supported by the controller.
                     enum:
                     - Redfish
                     - IPMI
                   address:
                     type: string
-                    description: Resolved BMC address passed to BareMetalHost.
+                    description: Resolved BMC address passed to the provisioning backend.
                   systemUUID:
                     type: string
                   credentialsVersion:
                     type: string
-              bareMetalHost:
+                  lastResolvedTime:
+                    type: string
+                    format: date-time
+                    description: Time of the most recent successful BMC endpoint resolution. The resolved endpoint can be reused from this cache until the instance specification or credentials change.
+              host:
                 type: object
                 properties:
                   name:
@@ -180,10 +188,15 @@ spec:
                     type: string
                   consumer:
                     type: string
-                  online:
+                  desiredOnline:
                     type: boolean
+                    description: Desired physical host online state.
+                  poweredOn:
+                    type: boolean
+                    description: Observed physical host power state.
                   error:
                     type: string
+                    description: Generic indication that the physical host reports an error. Inspect the host resource for details.
               credentialsSecret:
                 type: object
                 properties:
@@ -215,6 +228,7 @@ spec:
                       format: int64
                     reason:
                       type: string
+                      description: Programmatic reason for the condition. This is an open set; new reasons can be added in future releases.
                     status:
                       type: string
                       enum:
@@ -223,5 +237,6 @@ spec:
                       - Unknown
                     type:
                       type: string
+                      description: Condition type. This is an open set; new condition types can be added in future releases.
               message:
                 type: string

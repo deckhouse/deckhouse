@@ -4,17 +4,17 @@ metadata:
   labels:
     heritage: deckhouse
     module: cloud-provider-metal3
-  name: metal3ramdiskimages.deckhouse.io
+  name: baremetalramdiskimages.deckhouse.io
 spec:
   group: deckhouse.io
   names:
-    kind: Metal3RamdiskImage
-    listKind: Metal3RamdiskImageList
-    plural: metal3ramdiskimages
-    singular: metal3ramdiskimage
+    kind: BareMetalRamdiskImage
+    listKind: BareMetalRamdiskImageList
+    plural: baremetalramdiskimages
+    singular: baremetalramdiskimage
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - name: v1
     served: true
     storage: true
     additionalPrinterColumns:
@@ -55,7 +55,10 @@ spec:
                   architecture:
                     type: string
                     default: x86_64
-                    pattern: '^(x86_64|aarch64)$'
+                    description: CPU architecture of the ramdisk. This is a closed set of supported values.
+                    enum:
+                    - x86_64
+                    - aarch64
                   kernelURL:
                     type: string
                     pattern: '^https?://'

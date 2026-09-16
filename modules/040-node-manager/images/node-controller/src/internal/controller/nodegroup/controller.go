@@ -109,9 +109,9 @@ func (r *Status) SetupWatches(w register.Watcher) {
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
 			return nodecommon.InstanceClassToNodeGroups(ctx, r.Client, obj)
 		})))
-	w.WatchesRawSource(nodecommon.LazyMetal3ImageSource(r.cache, handler.EnqueueRequestsFromMapFunc(
+	w.WatchesRawSource(nodecommon.LazyBareMetalImageSource(r.cache, handler.EnqueueRequestsFromMapFunc(
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
-			return nodecommon.Metal3ImageToNodeGroups(ctx, r.Client, obj)
+			return nodecommon.BareMetalImageToNodeGroups(ctx, r.Client, obj)
 		}), predicate.GenerationChangedPredicate{}))
 }
 

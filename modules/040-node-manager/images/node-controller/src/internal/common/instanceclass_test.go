@@ -39,28 +39,28 @@ func instanceClass(kind, name string) *unstructured.Unstructured {
 	return u
 }
 
-func TestMetal3ImageToNodeGroups(t *testing.T) {
+func TestBareMetalImageToNodeGroups(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, clientgoscheme.AddToScheme(scheme))
 	require.NoError(t, v1.AddToScheme(scheme))
-	classGVK := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "Metal3InstanceClass"}
+	classGVK := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "BareMetalInstanceClass"}
 	scheme.AddKnownTypeWithName(classGVK, &unstructured.Unstructured{})
-	scheme.AddKnownTypeWithName(classGVK.GroupVersion().WithKind("Metal3InstanceClassList"), &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(classGVK.GroupVersion().WithKind("BareMetalInstanceClassList"), &unstructured.UnstructuredList{})
 
-	class := instanceClass("Metal3InstanceClass", "workers")
+	class := instanceClass("BareMetalInstanceClass", "workers")
 	class.SetAPIVersion("deckhouse.io/v1")
 	class.Object["spec"] = map[string]interface{}{
-		"imageRef": map[string]interface{}{"kind": "Metal3Image", "name": "ubuntu"},
+		"imageRef": map[string]interface{}{"kind": "BareMetalImage", "name": "ubuntu"},
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 		class,
-		cloudNodeGroup("worker", "Metal3InstanceClass", "workers"),
-		cloudNodeGroup("other", "Metal3InstanceClass", "other"),
+		cloudNodeGroup("worker", "BareMetalInstanceClass", "workers"),
+		cloudNodeGroup("other", "BareMetalInstanceClass", "other"),
 	).Build()
-	image := NewMetal3Image()
+	image := NewBareMetalImage()
 	image.SetName("ubuntu")
 
-	requests := Metal3ImageToNodeGroups(t.Context(), c, image)
+	requests := BareMetalImageToNodeGroups(t.Context(), c, image)
 	require.Len(t, requests, 1)
 	assert.Equal(t, "worker", requests[0].Name)
 }

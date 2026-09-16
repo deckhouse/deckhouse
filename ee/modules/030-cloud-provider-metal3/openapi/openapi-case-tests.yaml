@@ -3,7 +3,7 @@ positive:
   - {}
   - nodes:
       parameters:
-        ironic:
+        bareMetal:
           bmcProbeTimeoutSeconds: 30
           provisioningNetwork:
             interface: eno2
@@ -16,7 +16,7 @@ positive:
               dnsAddress: 10.222.0.10
   - nodes:
       parameters:
-        ironic:
+        bareMetal:
           externalInstance:
             endpoint: https://ironic.example.com:6385/v1/
             credentialsRef:
@@ -32,9 +32,15 @@ positive:
                 key: ca.crt
 negative:
   configValues:
+  - internal:
+      ramdiskImage:
+        direct:
+          architecture: x86_64
+          kernelURL: https://example.com/ironic-python-agent.kernel
+          initramfsURL: https://example.com/ironic-python-agent.initramfs
   - nodes:
       parameters:
-        ironic:
+        bareMetal:
           bmcProbeTimeoutSeconds: 0
           provisioningNetwork:
             interface: eno2
@@ -46,21 +52,27 @@ negative:
               rangeEnd: 172.22.0.200
   - nodes:
       parameters:
-        ironic:
+        bareMetal:
           externalInstance:
             endpoint: https://ironic.example.com:6385/v1/
           ramdiskImageRef:
-            kind: Metal3RamdiskImage
+            kind: BareMetalRamdiskImage
             name: default
   - nodes:
       parameters:
-        ironic:
+        bareMetal:
           provisioningNetwork:
             interface: eno2
             ipAddress: 172.22.0.20
+            ipAddressManager: unsupported
+          dhcp:
+            internal:
+              networkCIDR: 172.22.0.0/24
+              rangeBegin: 172.22.0.100
+              rangeEnd: 172.22.0.200
   - nodes:
       parameters:
-        ironic:
+        bareMetal:
           provisioningNetwork:
             interface: eno2
             ipAddress: 172.22.0.20
@@ -73,7 +85,7 @@ negative:
               pxeBootServer: 172.22.0.20
   - nodes:
       parameters:
-        ironic:
+        bareMetal:
           provisioningNetwork:
             interface: eno2
             ipAddress: 172.22.0.20
@@ -86,7 +98,7 @@ negative:
               serveDNS: true
   - nodes:
       parameters:
-        ironic:
+        bareMetal:
           externalInstance:
             endpoint: https://ironic.example.com:6385/v1/
             credentialsRef:

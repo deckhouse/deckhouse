@@ -81,7 +81,7 @@ var _ = Describe("Module :: cloud-provider-metal3 :: helm template ::", func() {
 		Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
 		Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
 		Expect(providerRegistrationSecret.Field("data.type").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(providerID))))
-		Expect(providerRegistrationSecret.Field("data.instanceClassKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("Metal3InstanceClass"))))
+		Expect(providerRegistrationSecret.Field("data.instanceClassKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("BareMetalInstanceClass"))))
 		Expect(providerRegistrationSecret.Field("data.capiClusterKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("Metal3Cluster"))))
 		Expect(providerRegistrationSecret.Field("data.capiMachineTemplateKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("Metal3MachineTemplate"))))
 
@@ -98,8 +98,8 @@ var _ = Describe("Module :: cloud-provider-metal3 :: helm template ::", func() {
 		Expect(providerSpecificCAPISecret.Field("data.instance-class\\.checksum").String()).NotTo(BeEmpty())
 
 		clusterAdminRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-metal3:cluster-admin")
-		Expect(clusterAdminRole.Field("rules").String()).To(ContainSubstring("metal3images"))
-		Expect(clusterAdminRole.Field("rules").String()).To(ContainSubstring("metal3ramdiskimages"))
+		Expect(clusterAdminRole.Field("rules").String()).To(ContainSubstring("baremetalimages"))
+		Expect(clusterAdminRole.Field("rules").String()).To(ContainSubstring("baremetalramdiskimages"))
 
 		ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic")
 		Expect(ironic.Exists()).To(BeFalse())
@@ -107,11 +107,10 @@ var _ = Describe("Module :: cloud-provider-metal3 :: helm template ::", func() {
 
 	Context("with managed Ironic enabled", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.ironic", `
+			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.bareMetal", `
 provisioningNetwork:
   interface: eno3
   ipAddress: 172.22.0.20
-  ipAddressManager: keepalived
 dhcp:
   internal:
     networkCIDR: 172.22.0.0/24
@@ -197,8 +196,8 @@ dhcp:
 			Expect(capm3MutatingWebhook.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("capm3-ca"))))
 		})
 
-		It("renders custom BMC probe timeout for Metal3Instance manager", func() {
-			f.ValuesSet("cloudProviderMetal3.nodes.parameters.ironic.bmcProbeTimeoutSeconds", 30)
+		It("renders custom BMC probe timeout for BareMetalInstance manager", func() {
+			f.ValuesSet("cloudProviderMetal3.nodes.parameters.bareMetal.bmcProbeTimeoutSeconds", 30)
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
@@ -211,7 +210,7 @@ dhcp:
 
 	Context("with external DHCP configured", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.ironic", `
+			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.bareMetal", `
 provisioningNetwork:
   interface: eno3
   ipAddress: 172.22.0.20
@@ -241,7 +240,7 @@ dhcp:
 
 	Context("with a resolved custom ramdisk image", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.ironic", `
+			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.bareMetal", `
 provisioningNetwork:
   interface: eno3
   ipAddress: 172.22.0.20
@@ -274,7 +273,7 @@ direct:
 
 	Context("with an external Ironic instance", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.ironic", `
+			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.bareMetal", `
 externalInstance:
   endpoint: https://external-ironic.example.com:6385/v1/
   credentialsRef:

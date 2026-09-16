@@ -4,17 +4,17 @@ metadata:
   labels:
     heritage: deckhouse
     module: cloud-provider-metal3
-  name: metal3images.deckhouse.io
+  name: baremetalimages.deckhouse.io
 spec:
   group: deckhouse.io
   names:
-    kind: Metal3Image
-    listKind: Metal3ImageList
-    plural: metal3images
-    singular: metal3image
+    kind: BareMetalImage
+    listKind: BareMetalImageList
+    plural: baremetalimages
+    singular: baremetalimage
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - name: v1
     served: true
     storage: true
     additionalPrinterColumns:
@@ -63,7 +63,14 @@ spec:
                     minLength: 1
                   checksumType:
                     type: string
-                    pattern: '^(md5|sha256|sha512)$'
+                    description: Checksum algorithm. This is a closed set of supported values.
+                    enum:
+                    - md5
+                    - sha256
+                    - sha512
                   format:
                     type: string
-                    pattern: '^(qcow2|raw)$'
+                    description: Disk image format. This is a closed set of supported values.
+                    enum:
+                    - qcow2
+                    - raw

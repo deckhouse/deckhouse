@@ -27,14 +27,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestResolveMetal3Image(t *testing.T) {
+func TestResolveBareMetalImage(t *testing.T) {
 	scheme := runtime.NewScheme()
-	gvk := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Metal3Image"}
+	gvk := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "BareMetalImage"}
 	scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
-	scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind("Metal3ImageList"), &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind("BareMetalImageList"), &unstructured.UnstructuredList{})
 	image := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "deckhouse.io/v1alpha1",
-		"kind":       "Metal3Image",
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "BareMetalImage",
 		"metadata":   map[string]interface{}{"name": "ubuntu"},
 		"spec": map[string]interface{}{
 			"direct": map[string]interface{}{
@@ -45,11 +45,11 @@ func TestResolveMetal3Image(t *testing.T) {
 	image.SetGroupVersionKind(gvk)
 	service := &Service{Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(image).Build()}
 	classSpec := map[string]interface{}{
-		"imageRef":     map[string]interface{}{"kind": "Metal3Image", "name": "ubuntu"},
+		"imageRef":     map[string]interface{}{"kind": "BareMetalImage", "name": "ubuntu"},
 		"hostSelector": map[string]interface{}{"matchLabels": map[string]interface{}{"pool": "workers"}},
 	}
 
-	resolved, err := service.resolveMetal3Image(t.Context(), classSpec)
+	resolved, err := service.resolveBareMetalImage(t.Context(), classSpec)
 	require.NoError(t, err)
 	direct := resolved["image"].(map[string]interface{})
 	assert.Equal(t, "http://images.example/ubuntu.qcow2", direct["url"])

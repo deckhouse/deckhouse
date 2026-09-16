@@ -62,15 +62,15 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 	}, eventHandler, predicates...)
 }
 
-// LazyMetal3ImageSource starts the Metal3Image watch only after Metal3 registers its
-// InstanceClass. This avoids a permanently failing informer on clusters without Metal3 while
+// LazyBareMetalImageSource starts the BareMetalImage watch only after the bare-metal provider registers its
+// InstanceClass. This avoids a permanently failing informer on clusters without the provider while
 // still handling a provider enabled after node-controller has started.
-func LazyMetal3ImageSource(informers cache.Cache, eventHandler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
+func LazyBareMetalImageSource(informers cache.Cache, eventHandler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
 	return lazyRegisteredSource(informers, func(gvks []schema.GroupVersionKind) []schema.GroupVersionKind {
-		if !HasMetal3InstanceClass(gvks) {
+		if !HasBareMetalInstanceClass(gvks) {
 			return nil
 		}
-		return []schema.GroupVersionKind{metal3ImageGVK}
+		return []schema.GroupVersionKind{bareMetalImageGVK}
 	}, eventHandler, predicates...)
 }
 

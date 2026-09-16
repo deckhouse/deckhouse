@@ -1,6 +1,6 @@
 type: object
 additionalProperties: false
-description: Describes the configuration of a Metal3 cloud provider.
+description: Describes the configuration of a bare-metal cloud provider.
 properties:
   nodes:
     type: object
@@ -12,9 +12,9 @@ properties:
         type: object
         additionalProperties: false
         required:
-        - ironic
+        - bareMetal
         properties:
-          ironic:
+          bareMetal:
             type: object
             additionalProperties: false
             oneOf:
@@ -50,7 +50,7 @@ properties:
                   endpoint:
                     type: string
                     pattern: '^https?://.+/v1/?$'
-                    description: External Ironic API endpoint reachable by Bare Metal Operator.
+                    description: External provisioning API endpoint reachable by the host management operator.
                   credentialsRef:
                     type: object
                     additionalProperties: false
@@ -137,10 +137,6 @@ properties:
                   ipAddress:
                     type: string
                     format: ipv4
-                  ipAddressManager:
-                    type: string
-                    default: keepalived
-                    pattern: '^keepalived$'
               dhcp:
                 type: object
                 additionalProperties: false
@@ -211,39 +207,7 @@ properties:
                   kind:
                     type: string
                     enum:
-                    - Metal3RamdiskImage
+                    - BareMetalRamdiskImage
                   name:
                     type: string
                     minLength: 1
-  internal:
-    type: object
-    default: {}
-    additionalProperties: false
-    properties:
-      ramdiskImage:
-        type: object
-        additionalProperties: false
-        properties:
-          direct:
-            type: object
-            additionalProperties: false
-            required:
-            - architecture
-            - kernelURL
-            - initramfsURL
-            properties:
-              architecture:
-                type: string
-                pattern: '^(x86_64|aarch64)$'
-              kernelURL:
-                type: string
-              initramfsURL:
-                type: string
-      providerDiscoveryData:
-        type: object
-        default: {}
-        properties:
-          zones:
-            type: array
-            items:
-              type: string

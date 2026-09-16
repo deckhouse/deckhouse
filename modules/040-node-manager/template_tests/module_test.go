@@ -1964,7 +1964,7 @@ internal:
   nodeGroups:
     - cloudInstances:
         classReference:
-          kind: Metal3InstanceClass
+          kind: BareMetalInstanceClass
           name: worker
         maxPerZone: 5
         minPerZone: 4
@@ -2034,7 +2034,7 @@ internal:
 
 				nodeControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-controller")
 				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
-				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("metal3instanceclasses"))
+				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("baremetalinstanceclasses"))
 
 				capiControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:capi-controller-manager:manager-role")
 				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3clusters"))

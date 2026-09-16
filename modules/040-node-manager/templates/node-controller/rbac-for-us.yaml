@@ -293,8 +293,8 @@ rules:
   - yandexinstanceclasses
   - dynamixinstanceclasses
   - huaweicloudinstanceclasses
-  - metal3instanceclasses
-  - metal3images
+  - baremetalinstanceclasses
+  - baremetalimages
   - openstackinstanceclasses
   - vcdinstanceclasses
   - vsphereinstanceclasses

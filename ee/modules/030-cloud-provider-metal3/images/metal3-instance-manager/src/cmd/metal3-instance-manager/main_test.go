@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const testSystemUUID = "00583f1d-2903-e203-0010-d21de0c7571b"
@@ -54,8 +57,8 @@ func TestReconcileCreatesResolvedBareMetalHost(t *testing.T) {
 	if err := corev1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
 	}
-	scheme.AddKnownTypeWithName(metal3InstanceGVK, &unstructured.Unstructured{})
-	scheme.AddKnownTypeWithName(metal3InstanceGVK.GroupVersion().WithKind("Metal3InstanceList"), &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(bareMetalInstanceGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(bareMetalInstanceGVK.GroupVersion().WithKind("BareMetalInstanceList"), &unstructured.UnstructuredList{})
 	scheme.AddKnownTypeWithName(bareMetalHostGVK, &unstructured.Unstructured{})
 	scheme.AddKnownTypeWithName(bareMetalHostGVK.GroupVersion().WithKind("BareMetalHostList"), &unstructured.UnstructuredList{})
 
@@ -122,6 +125,183 @@ func TestReconcileCreatesResolvedBareMetalHost(t *testing.T) {
 	if resolver.calls != 1 {
 		t.Fatalf("expected resolved BMC to be cached, got %d calls", resolver.calls)
 	}
+	updatedInstance := &unstructured.Unstructured{}
+	updatedInstance.SetGroupVersionKind(bareMetalInstanceGVK)
+	if err := kubeClient.Get(context.Background(), request.NamespacedName, updatedInstance); err != nil {
+		t.Fatalf("get updated instance: %v", err)
+	}
+	resolvedAt, found, err := unstructured.NestedString(updatedInstance.Object, "status", "bmc", "lastResolvedTime")
+	if err != nil || !found {
+		t.Fatalf("expected BMC resolution timestamp, found=%v err=%v", found, err)
+	}
+	if _, err := time.Parse(time.RFC3339, resolvedAt); err != nil {
+		t.Fatalf("parse BMC resolution timestamp %q: %v", resolvedAt, err)
+	}
+	if hostName, found, err := unstructured.NestedString(updatedInstance.Object, "status", "host", "name"); err != nil || !found || hostName != "server" {
+		t.Fatalf("expected status.host.name=server, got %q found=%v err=%v", hostName, found, err)
+	}
+	if _, found, err := unstructured.NestedMap(updatedInstance.Object, "status", "bareMetalHost"); err != nil || found {
+		t.Fatalf("obsolete status.bareMetalHost is present: found=%v err=%v", found, err)
+	}
+}
+
+func TestEnsureCredentialSecretRejectsForeignSecret(t *testing.T) {
+	instance := testInstance()
+	foreign := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "server-bmh-credentials", Namespace: "d8-cloud-instance-manager"},
+		Type:       corev1.SecretTypeOpaque,
+		Data:       map[string][]byte{"username": []byte("foreign"), "password": []byte("foreign")},
+	}
+	kubeClient := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(foreign).Build()
+	r := &reconciler{Client: kubeClient, targetNamespace: "d8-cloud-instance-manager"}
+
+	err := r.ensureCredentialSecret(context.Background(), instance, credentials{Username: "admin", Password: "password"}, foreign.Name)
+	if !errors.Is(err, errManagedResourceConflict) {
+		t.Fatalf("expected ownership conflict, got %v", err)
+	}
+	actual := &corev1.Secret{}
+	if err := kubeClient.Get(context.Background(), types.NamespacedName{Namespace: foreign.Namespace, Name: foreign.Name}, actual); err != nil {
+		t.Fatal(err)
+	}
+	if string(actual.Data["username"]) != "foreign" || len(actual.GetAnnotations()) != 0 {
+		t.Fatalf("foreign Secret was modified: %#v", actual)
+	}
+}
+
+func TestEnsureBareMetalHostRejectsForeignHost(t *testing.T) {
+	instance := testInstance()
+	foreign := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "metal3.io/v1alpha1",
+		"kind":       "BareMetalHost",
+		"metadata": map[string]interface{}{
+			"name": "server", "namespace": "d8-cloud-instance-manager",
+		},
+		"spec": map[string]interface{}{"online": false},
+	}}
+	foreign.SetGroupVersionKind(bareMetalHostGVK)
+	kubeClient := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(foreign).Build()
+	r := &reconciler{Client: kubeClient, targetNamespace: "d8-cloud-instance-manager"}
+
+	_, err := r.ensureBareMetalHost(context.Background(), instance, instanceSpec{Online: true}, ResolvedBMC{Address: "ipmi://192.0.2.10:623"}, "server-bmh-credentials")
+	if !errors.Is(err, errManagedResourceConflict) {
+		t.Fatalf("expected ownership conflict, got %v", err)
+	}
+	actual := &unstructured.Unstructured{}
+	actual.SetGroupVersionKind(bareMetalHostGVK)
+	if err := kubeClient.Get(context.Background(), types.NamespacedName{Namespace: "d8-cloud-instance-manager", Name: "server"}, actual); err != nil {
+		t.Fatal(err)
+	}
+	assertNestedBool(t, actual, false, "spec", "online")
+	if len(actual.GetAnnotations()) != 0 {
+		t.Fatalf("foreign BareMetalHost was modified: %#v", actual.GetAnnotations())
+	}
+}
+
+func TestReconcileReportsManagedResourceConflict(t *testing.T) {
+	instance := testInstance()
+	controllerutil.AddFinalizer(instance, finalizerName)
+	credentialsSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "server-bmc", Namespace: "d8-cloud-instance-manager"},
+		Type:       corev1.SecretType(credentialsSecretType),
+		Data: map[string][]byte{
+			"authScheme": []byte(authSchemeUserPassword),
+			"identity":   []byte("admin"),
+			"secret":     []byte("password"),
+		},
+	}
+	foreignGeneratedSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "server-bmh-credentials", Namespace: "d8-cloud-instance-manager"},
+		Type:       corev1.SecretTypeOpaque,
+	}
+	kubeClient := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(instance, credentialsSecret, foreignGeneratedSecret).WithStatusSubresource(instance).Build()
+	r := &reconciler{
+		Client:          kubeClient,
+		targetNamespace: "d8-cloud-instance-manager",
+		resolver:        &staticResolver{resolved: ResolvedBMC{Protocol: "Redfish", Address: "redfish+https://192.0.2.10/redfish/v1/Systems/1", SystemUUID: testSystemUUID}},
+	}
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Name: "server", Namespace: "d8-cloud-instance-manager"}}
+
+	if _, err := r.Reconcile(context.Background(), request); !errors.Is(err, errManagedResourceConflict) {
+		t.Fatalf("expected ownership conflict, got %v", err)
+	}
+	updated := &unstructured.Unstructured{}
+	updated.SetGroupVersionKind(bareMetalInstanceGVK)
+	if err := kubeClient.Get(context.Background(), request.NamespacedName, updated); err != nil {
+		t.Fatal(err)
+	}
+	conditions, found, err := unstructured.NestedSlice(updated.Object, "status", "conditions")
+	if err != nil || !found || len(conditions) != 1 {
+		t.Fatalf("expected one condition, found=%v err=%v conditions=%#v", found, err, conditions)
+	}
+	condition, ok := conditions[0].(map[string]interface{})
+	if !ok || condition["status"] != "False" || condition["reason"] != "ManagedResourceConflict" {
+		t.Fatalf("unexpected condition: %#v", conditions[0])
+	}
+	assertNestedString(t, updated, "A generated resource with the required name is owned by another object.", "status", "message")
+}
+
+func TestReconcileDeleteRejectsForeignBareMetalHost(t *testing.T) {
+	instance := testInstance()
+	now := metav1.NewTime(time.Now())
+	instance.SetDeletionTimestamp(&now)
+	controllerutil.AddFinalizer(instance, finalizerName)
+	foreign := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "metal3.io/v1alpha1",
+		"kind":       "BareMetalHost",
+		"metadata": map[string]interface{}{
+			"name": "server", "namespace": "d8-cloud-instance-manager",
+		},
+	}}
+	foreign.SetGroupVersionKind(bareMetalHostGVK)
+	kubeClient := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(instance, foreign).Build()
+	r := &reconciler{Client: kubeClient, targetNamespace: "d8-cloud-instance-manager"}
+
+	_, err := r.reconcileDelete(context.Background(), instance)
+	if !errors.Is(err, errManagedResourceConflict) {
+		t.Fatalf("expected ownership conflict, got %v", err)
+	}
+	actual := &unstructured.Unstructured{}
+	actual.SetGroupVersionKind(bareMetalHostGVK)
+	if err := kubeClient.Get(context.Background(), types.NamespacedName{Namespace: "d8-cloud-instance-manager", Name: "server"}, actual); err != nil {
+		t.Fatalf("foreign BareMetalHost was deleted: %v", err)
+	}
+}
+
+func TestReconcileDeleteRejectsForeignCredentialSecret(t *testing.T) {
+	instance := testInstance()
+	now := metav1.NewTime(time.Now())
+	instance.SetDeletionTimestamp(&now)
+	controllerutil.AddFinalizer(instance, finalizerName)
+	foreign := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "server-bmh-credentials", Namespace: "d8-cloud-instance-manager"}}
+	kubeClient := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(instance, foreign).Build()
+	r := &reconciler{Client: kubeClient, targetNamespace: "d8-cloud-instance-manager"}
+
+	_, err := r.reconcileDelete(context.Background(), instance)
+	if !errors.Is(err, errManagedResourceConflict) {
+		t.Fatalf("expected ownership conflict, got %v", err)
+	}
+	actual := &corev1.Secret{}
+	if err := kubeClient.Get(context.Background(), types.NamespacedName{Namespace: foreign.Namespace, Name: foreign.Name}, actual); err != nil {
+		t.Fatalf("foreign Secret was deleted: %v", err)
+	}
+}
+
+func TestBareMetalHostStatusSeparatesDesiredAndObservedPowerState(t *testing.T) {
+	bmh := &unstructured.Unstructured{Object: map[string]interface{}{
+		"metadata": map[string]interface{}{"name": "server", "namespace": "d8-cloud-instance-manager"},
+		"spec":     map[string]interface{}{"online": true},
+		"status": map[string]interface{}{
+			"poweredOn":    false,
+			"errorMessage": "x509: certificate signed by unknown authority",
+		},
+	}}
+	status := (&reconciler{}).bareMetalHostStatus(bmh)
+	if status["desiredOnline"] != true || status["poweredOn"] != false {
+		t.Fatalf("unexpected power status: %#v", status)
+	}
+	if status["error"] != "Physical host reported an error." {
+		t.Fatalf("unexpected BMH error status: %#v", status["error"])
+	}
 }
 
 func TestGeneratedSecretNameFitsKubernetesLimit(t *testing.T) {
@@ -140,8 +320,8 @@ func TestReconcilePassesRootDeviceHintsToBareMetalHost(t *testing.T) {
 	if err := corev1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
 	}
-	scheme.AddKnownTypeWithName(metal3InstanceGVK, &unstructured.Unstructured{})
-	scheme.AddKnownTypeWithName(metal3InstanceGVK.GroupVersion().WithKind("Metal3InstanceList"), &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(bareMetalInstanceGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(bareMetalInstanceGVK.GroupVersion().WithKind("BareMetalInstanceList"), &unstructured.UnstructuredList{})
 	scheme.AddKnownTypeWithName(bareMetalHostGVK, &unstructured.Unstructured{})
 	scheme.AddKnownTypeWithName(bareMetalHostGVK.GroupVersion().WithKind("BareMetalHostList"), &unstructured.UnstructuredList{})
 
@@ -290,8 +470,8 @@ func TestResolveRedfishBySystemUUID(t *testing.T) {
 
 func testInstance() *unstructured.Unstructured {
 	instance := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "deckhouse.io/v1alpha1",
-		"kind":       "Metal3Instance",
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "BareMetalInstance",
 		"metadata": map[string]interface{}{
 			"name": "server", "namespace": "d8-cloud-instance-manager", "labels": map[string]interface{}{"pool": "workers"},
 		},
@@ -303,8 +483,21 @@ func testInstance() *unstructured.Unstructured {
 			},
 		},
 	}}
-	instance.SetGroupVersionKind(metal3InstanceGVK)
+	instance.SetGroupVersionKind(bareMetalInstanceGVK)
 	return instance
+}
+
+func testScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	scheme.AddKnownTypeWithName(bareMetalInstanceGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(bareMetalInstanceGVK.GroupVersion().WithKind("BareMetalInstanceList"), &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(bareMetalHostGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(bareMetalHostGVK.GroupVersion().WithKind("BareMetalHostList"), &unstructured.UnstructuredList{})
+	return scheme
 }
 
 func assertNestedString(t *testing.T, obj *unstructured.Unstructured, want string, fields ...string) {

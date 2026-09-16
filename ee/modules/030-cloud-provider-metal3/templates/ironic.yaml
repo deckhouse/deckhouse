@@ -1,11 +1,11 @@
-{{- $ironic := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderMetal3 -}}
-{{- if and $ironic (not $ironic.externalInstance) }}
-{{- $provisioningNetwork := $ironic.provisioningNetwork -}}
-{{- $dhcp := $ironic.dhcp | default dict -}}
+{{- $bareMetal := dig "nodes" "parameters" "bareMetal" dict .Values.cloudProviderMetal3 -}}
+{{- if and $bareMetal (not $bareMetal.externalInstance) }}
+{{- $provisioningNetwork := $bareMetal.provisioningNetwork -}}
+{{- $dhcp := $bareMetal.dhcp | default dict -}}
 {{- $internalDHCP := $dhcp.internal | default dict -}}
 {{- $resolvedRamdisk := dig "internal" "ramdiskImage" "direct" dict .Values.cloudProviderMetal3 -}}
 {{- if and $internalDHCP.serveDNS $internalDHCP.dnsAddress -}}
-{{- fail "cloudProviderMetal3.nodes.parameters.ironic.dhcp.internal.serveDNS and dnsAddress cannot be used together" -}}
+{{- fail "cloudProviderMetal3.nodes.parameters.bareMetal.dhcp.internal.serveDNS and dnsAddress cannot be used together" -}}
 {{- end }}
 ---
 apiVersion: ironic.metal3.io/v1alpha1

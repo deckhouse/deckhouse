@@ -32,8 +32,8 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-var metal3ImageGVK = schema.GroupVersionKind{
-	Group: "deckhouse.io", Version: "v1alpha1", Kind: "Metal3Image",
+var bareMetalImageGVK = schema.GroupVersionKind{
+	Group: "deckhouse.io", Version: "v1", Kind: "BareMetalImage",
 }
 
 // RegisteredInstanceClassGVKs returns the GVK every cloud provider registered its InstanceClass
@@ -110,31 +110,31 @@ func InstanceClassToNodeGroups(ctx context.Context, r client.Reader, obj client.
 	return requests
 }
 
-// HasMetal3InstanceClass reports whether Metal3 has registered its InstanceClass API.
-func HasMetal3InstanceClass(kinds []schema.GroupVersionKind) bool {
+// HasBareMetalInstanceClass reports whether the bare-metal provider registered its InstanceClass API.
+func HasBareMetalInstanceClass(kinds []schema.GroupVersionKind) bool {
 	for _, gvk := range kinds {
-		if gvk.Group == metal3ImageGVK.Group && gvk.Kind == "Metal3InstanceClass" {
+		if gvk.Group == bareMetalImageGVK.Group && gvk.Kind == "BareMetalInstanceClass" {
 			return true
 		}
 	}
 	return false
 }
 
-// NewMetal3Image returns an unstructured Metal3Image object for controller watches.
-func NewMetal3Image() *unstructured.Unstructured {
+// NewBareMetalImage returns an unstructured BareMetalImage object for controller watches.
+func NewBareMetalImage() *unstructured.Unstructured {
 	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(metal3ImageGVK)
+	u.SetGroupVersionKind(bareMetalImageGVK)
 	return u
 }
 
-// Metal3ImageToNodeGroups maps an image event through all referencing Metal3InstanceClasses.
-func Metal3ImageToNodeGroups(ctx context.Context, r client.Reader, obj client.Object) []reconcile.Request {
+// BareMetalImageToNodeGroups maps an image event through all referencing BareMetalInstanceClasses.
+func BareMetalImageToNodeGroups(ctx context.Context, r client.Reader, obj client.Object) []reconcile.Request {
 	classes := &unstructured.UnstructuredList{}
 	classes.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: metal3ImageGVK.Group, Version: "v1", Kind: "Metal3InstanceClassList",
+		Group: bareMetalImageGVK.Group, Version: "v1", Kind: "BareMetalInstanceClassList",
 	})
 	if err := r.List(ctx, classes); err != nil {
-		log.FromContext(ctx).Error(err, "list Metal3InstanceClasses for image event", "image", obj.GetName())
+		log.FromContext(ctx).Error(err, "list BareMetalInstanceClasses for image event", "image", obj.GetName())
 		return nil
 	}
 
@@ -144,7 +144,7 @@ func Metal3ImageToNodeGroups(ctx context.Context, r client.Reader, obj client.Ob
 		class := &classes.Items[i]
 		name, _, _ := unstructured.NestedString(class.Object, "spec", "imageRef", "name")
 		kind, _, _ := unstructured.NestedString(class.Object, "spec", "imageRef", "kind")
-		if kind != "Metal3Image" || name != obj.GetName() {
+		if kind != "BareMetalImage" || name != obj.GetName() {
 			continue
 		}
 		for _, request := range InstanceClassToNodeGroups(ctx, r, class) {

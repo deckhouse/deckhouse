@@ -1,5 +1,5 @@
-{{- $ironic := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderMetal3 -}}
-{{- if $ironic }}
+{{- $bareMetal := dig "nodes" "parameters" "bareMetal" dict .Values.cloudProviderMetal3 -}}
+{{- if $bareMetal }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -17,7 +17,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - metal3instances
+  - baremetalinstances
   verbs:
   - get
   - list
@@ -27,13 +27,13 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - metal3instances/finalizers
+  - baremetalinstances/finalizers
   verbs:
   - update
 - apiGroups:
   - deckhouse.io
   resources:
-  - metal3instances/status
+  - baremetalinstances/status
   verbs:
   - get
   - patch
@@ -99,7 +99,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "metal3InstanceManager") }}
         args:
         - --target-namespace=d8-cloud-instance-manager
-        - --bmc-probe-timeout={{ dig "bmcProbeTimeoutSeconds" 15 $ironic }}s
+        - --bmc-probe-timeout={{ dig "bmcProbeTimeoutSeconds" 15 $bareMetal }}s
         resources:
           requests:
             cpu: 10m

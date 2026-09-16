@@ -35,7 +35,7 @@ import (
 func main() {
 	var targetNamespace string
 	var bmcProbeTimeout time.Duration
-	flag.StringVar(&targetNamespace, "target-namespace", "d8-cloud-instance-manager", "namespace where Metal3Instance and generated BareMetalHost resources are stored")
+	flag.StringVar(&targetNamespace, "target-namespace", "d8-cloud-instance-manager", "namespace where BareMetalInstance and generated BareMetalHost resources are stored")
 	flag.DurationVar(&bmcProbeTimeout, "bmc-probe-timeout", 15*time.Second, "timeout for a single BMC protocol probe")
 	flag.Parse()
 
@@ -64,7 +64,7 @@ func main() {
 	}
 
 	instance := &unstructured.Unstructured{}
-	instance.SetGroupVersionKind(metal3InstanceGVK)
+	instance.SetGroupVersionKind(bareMetalInstanceGVK)
 	bmh := &unstructured.Unstructured{}
 	bmh.SetGroupVersionKind(bareMetalHostGVK)
 

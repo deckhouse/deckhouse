@@ -275,38 +275,38 @@ func (s *Service) readInstanceClassSpec(ctx context.Context, version, kind, name
 		return nil, fmt.Errorf("get %s %q at %s: %w", kind, name, version, err)
 	}
 	spec, _ := obj.Object["spec"].(map[string]any)
-	if kind != "Metal3InstanceClass" {
+	if kind != "BareMetalInstanceClass" {
 		return spec, nil
 	}
 
-	return s.resolveMetal3Image(ctx, spec)
+	return s.resolveBareMetalImage(ctx, spec)
 }
 
-func (s *Service) resolveMetal3Image(ctx context.Context, spec map[string]any) (map[string]any, error) {
+func (s *Service) resolveBareMetalImage(ctx context.Context, spec map[string]any) (map[string]any, error) {
 	if spec == nil {
-		return nil, fmt.Errorf("Metal3InstanceClass spec is required")
+		return nil, fmt.Errorf("BareMetalInstanceClass spec is required")
 	}
 	ref, ok := spec["imageRef"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Metal3InstanceClass spec.imageRef is required")
+		return nil, fmt.Errorf("BareMetalInstanceClass spec.imageRef is required")
 	}
 	kind, _ := ref["kind"].(string)
 	name, _ := ref["name"].(string)
-	if kind != "Metal3Image" || name == "" {
-		return nil, fmt.Errorf("Metal3InstanceClass spec.imageRef must reference a named Metal3Image")
+	if kind != "BareMetalImage" || name == "" {
+		return nil, fmt.Errorf("BareMetalInstanceClass spec.imageRef must reference a named BareMetalImage")
 	}
 
 	image := &unstructured.Unstructured{}
-	image.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: "v1alpha1", Kind: "Metal3Image"})
+	image.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: "v1", Kind: "BareMetalImage"})
 	if err := s.Client.Get(ctx, types.NamespacedName{Name: name}, image); err != nil {
-		return nil, fmt.Errorf("get Metal3Image %q: %w", name, err)
+		return nil, fmt.Errorf("get BareMetalImage %q: %w", name, err)
 	}
 	direct, found, err := unstructured.NestedMap(image.Object, "spec", "direct")
 	if err != nil {
-		return nil, fmt.Errorf("read Metal3Image %q spec.direct: %w", name, err)
+		return nil, fmt.Errorf("read BareMetalImage %q spec.direct: %w", name, err)
 	}
 	if !found {
-		return nil, fmt.Errorf("Metal3Image %q has no spec.direct", name)
+		return nil, fmt.Errorf("BareMetalImage %q has no spec.direct", name)
 	}
 
 	resolved := make(map[string]interface{}, len(spec)+1)

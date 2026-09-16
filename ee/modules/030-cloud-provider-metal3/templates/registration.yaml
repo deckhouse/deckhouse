@@ -12,7 +12,7 @@ zones: {{ $zones | toJson | b64enc | quote }}
 {{- else }}
 zones: {{ list "default" | toJson | b64enc | quote }}
 {{- end }}
-instanceClassKind: {{ b64enc "Metal3InstanceClass" | quote }}
+instanceClassKind: {{ b64enc "BareMetalInstanceClass" | quote }}
 instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 machineClassKind: {{ b64enc "" | quote }}
 capiClusterKind: {{ b64enc "Metal3Cluster" | quote }}

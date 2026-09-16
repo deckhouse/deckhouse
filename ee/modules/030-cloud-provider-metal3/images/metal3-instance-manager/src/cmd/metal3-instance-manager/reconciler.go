@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -39,21 +40,22 @@ import (
 )
 
 const (
-	finalizerName = "metal3instance.deckhouse.io/finalizer"
+	finalizerName = "baremetalinstance.deckhouse.io/finalizer"
 
 	credentialsSecretType  = "cloud-provider.deckhouse.io/credentials"
 	authSchemeUserPassword = "userPassword"
 
-	annotationInstance          = "metal3.deckhouse.io/instance"
-	annotationInstanceNamespace = "metal3.deckhouse.io/instance-namespace"
-	managedLabelsAnnotation     = "metal3.deckhouse.io/managed-label-keys"
+	annotationInstance          = "baremetal.deckhouse.io/instance"
+	annotationInstanceNamespace = "baremetal.deckhouse.io/instance-namespace"
+	managedLabelsAnnotation     = "baremetal.deckhouse.io/managed-label-keys"
 
 	deleteRequeueAfter = 15 * time.Second
 )
 
 var (
-	metal3InstanceGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Metal3Instance"}
-	bareMetalHostGVK  = schema.GroupVersionKind{Group: "metal3.io", Version: "v1alpha1", Kind: "BareMetalHost"}
+	bareMetalInstanceGVK       = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "BareMetalInstance"}
+	bareMetalHostGVK           = schema.GroupVersionKind{Group: "metal3.io", Version: "v1alpha1", Kind: "BareMetalHost"}
+	errManagedResourceConflict = errors.New("managed resource ownership conflict")
 )
 
 type reconciler struct {
@@ -83,7 +85,7 @@ type credentials struct {
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	instance := &unstructured.Unstructured{}
-	instance.SetGroupVersionKind(metal3InstanceGVK)
+	instance.SetGroupVersionKind(bareMetalInstanceGVK)
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -100,7 +102,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if instance.GetNamespace() != r.targetNamespace {
-		return r.fail(ctx, instance, "InvalidNamespace", fmt.Errorf("Metal3Instance must be created in namespace %q", r.targetNamespace))
+		return r.fail(ctx, instance, "InvalidNamespace", fmt.Errorf("BareMetalInstance must be created in namespace %q", r.targetNamespace))
 	}
 	spec, err := readSpec(instance)
 	if err != nil {
@@ -111,23 +113,24 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.fail(ctx, instance, "CredentialsInvalid", err)
 	}
 
-	resolved, ok := cachedResolvedBMC(instance, spec, creds.ResourceVersion)
+	resolved, resolvedAt, ok := cachedResolvedBMC(instance, spec, creds.ResourceVersion)
 	if !ok {
 		resolved, err = r.resolver.Resolve(ctx, spec.BMC, creds.Username, creds.Password)
 		if err != nil {
 			return r.fail(ctx, instance, "BMCResolutionFailed", err)
 		}
+		resolvedAt = metav1.Now()
 	}
 
 	secretName := r.generatedSecretName(instance)
 	if err := r.ensureCredentialSecret(ctx, instance, creds, secretName); err != nil {
-		return ctrl.Result{}, err
+		return r.fail(ctx, instance, failureReason(err, "CredentialsSecretSyncFailed"), err)
 	}
 	bmh, err := r.ensureBareMetalHost(ctx, instance, spec, resolved, secretName)
 	if err != nil {
-		return ctrl.Result{}, err
+		return r.fail(ctx, instance, failureReason(err, "HostSyncFailed"), err)
 	}
-	if err := r.setStatus(ctx, instance, bmh, secretName, resolved, creds.ResourceVersion, "", true, "BMCResolved"); err != nil {
+	if err := r.setStatus(ctx, instance, bmh, secretName, resolved, resolvedAt, creds.ResourceVersion, "", true, "BMCResolved"); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
@@ -211,6 +214,9 @@ func (r *reconciler) ensureCredentialSecret(ctx context.Context, instance *unstr
 			Data:       desiredData,
 		})
 	}
+	if !isOwnedByInstance(target, instance) {
+		return ownershipConflict("Secret", key)
+	}
 	updated := false
 	if !reflect.DeepEqual(target.Data, desiredData) {
 		target.Data = desiredData
@@ -247,6 +253,9 @@ func (r *reconciler) ensureBareMetalHost(ctx context.Context, instance *unstruct
 			return nil, err
 		}
 		return bmh, r.Create(ctx, bmh)
+	}
+	if !isOwnedByInstance(bmh, instance) {
+		return nil, ownershipConflict("BareMetalHost", key)
 	}
 
 	updated, err := updateBareMetalHostSpec(bmh, spec, resolved, secretName)
@@ -346,34 +355,36 @@ func setNestedMap(obj *unstructured.Unstructured, value map[string]interface{}, 
 	return true, unstructured.SetNestedMap(obj.Object, value, fields...)
 }
 
-func cachedResolvedBMC(instance *unstructured.Unstructured, spec instanceSpec, credentialsVersion string) (ResolvedBMC, bool) {
+func cachedResolvedBMC(instance *unstructured.Unstructured, spec instanceSpec, credentialsVersion string) (ResolvedBMC, metav1.Time, bool) {
 	if observed, _, _ := unstructured.NestedInt64(instance.Object, "status", "observedGeneration"); observed != instance.GetGeneration() {
-		return ResolvedBMC{}, false
+		return ResolvedBMC{}, metav1.Time{}, false
 	}
 	version, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "credentialsVersion")
 	address, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "address")
 	protocol, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "protocol")
 	uuid, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "systemUUID")
-	if version != credentialsVersion || address == "" || uuid == "" || !equalUUID(uuid, spec.BMC.SystemUUID) {
-		return ResolvedBMC{}, false
+	resolvedAtRaw, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "lastResolvedTime")
+	resolvedAt, err := time.Parse(time.RFC3339, resolvedAtRaw)
+	if err != nil || version != credentialsVersion || address == "" || uuid == "" || !equalUUID(uuid, spec.BMC.SystemUUID) {
+		return ResolvedBMC{}, metav1.Time{}, false
 	}
-	return ResolvedBMC{Address: address, Protocol: protocol, SystemUUID: uuid}, true
+	return ResolvedBMC{Address: address, Protocol: protocol, SystemUUID: uuid}, metav1.NewTime(resolvedAt), true
 }
 
 func (r *reconciler) fail(ctx context.Context, instance *unstructured.Unstructured, reason string, cause error) (ctrl.Result, error) {
-	if err := r.setStatus(ctx, instance, nil, "", ResolvedBMC{}, "", cause.Error(), false, reason); err != nil {
+	if err := r.setStatus(ctx, instance, nil, "", ResolvedBMC{}, metav1.Time{}, "", failureMessage(reason), false, reason); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, cause
 }
 
-func (r *reconciler) setStatus(ctx context.Context, instance, bmh *unstructured.Unstructured, secretName string, resolved ResolvedBMC, credentialsVersion, message string, resolvedOK bool, reason string) error {
+func (r *reconciler) setStatus(ctx context.Context, instance, bmh *unstructured.Unstructured, secretName string, resolved ResolvedBMC, resolvedAt metav1.Time, credentialsVersion, message string, resolvedOK bool, reason string) error {
 	status := map[string]interface{}{
 		"observedGeneration": instance.GetGeneration(),
 		"conditions":         []interface{}{conditionMap(instance, resolvedOK, reason, message)},
 	}
 	if bmh != nil {
-		status["bareMetalHost"] = r.bareMetalHostStatus(bmh)
+		status["host"] = r.bareMetalHostStatus(bmh)
 	}
 	if secretName != "" {
 		status["credentialsSecret"] = map[string]interface{}{"name": secretName, "namespace": r.targetNamespace}
@@ -384,6 +395,7 @@ func (r *reconciler) setStatus(ctx context.Context, instance, bmh *unstructured.
 			"address":            resolved.Address,
 			"systemUUID":         resolved.SystemUUID,
 			"credentialsVersion": credentialsVersion,
+			"lastResolvedTime":   resolvedAt.Format(time.RFC3339),
 		}
 	}
 	if message != "" {
@@ -430,6 +442,9 @@ func (r *reconciler) reconcileDelete(ctx context.Context, instance *unstructured
 	bmh.SetGroupVersionKind(bareMetalHostGVK)
 	key := types.NamespacedName{Namespace: r.targetNamespace, Name: instance.GetName()}
 	if err := r.Get(ctx, key, bmh); err == nil {
+		if !isOwnedByInstance(bmh, instance) {
+			return ctrl.Result{}, ownershipConflict("BareMetalHost", key)
+		}
 		if bmh.GetDeletionTimestamp().IsZero() {
 			if err := r.Delete(ctx, bmh); err != nil && !apierrors.IsNotFound(err) {
 				return ctrl.Result{}, err
@@ -440,8 +455,16 @@ func (r *reconciler) reconcileDelete(ctx context.Context, instance *unstructured
 		return ctrl.Result{}, err
 	}
 
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: r.targetNamespace, Name: r.generatedSecretName(instance)}}
-	if err := r.Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+	secretKey := types.NamespacedName{Namespace: r.targetNamespace, Name: r.generatedSecretName(instance)}
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, secretKey, secret); err == nil {
+		if !isOwnedByInstance(secret, instance) {
+			return ctrl.Result{}, ownershipConflict("Secret", secretKey)
+		}
+		if err := r.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+	} else if !apierrors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
 	controllerutil.RemoveFinalizer(instance, finalizerName)
@@ -458,7 +481,7 @@ func (r *reconciler) bareMetalHostToInstance(_ context.Context, obj client.Objec
 
 func (r *reconciler) secretToInstances(ctx context.Context, obj client.Object) []reconcile.Request {
 	instances := &unstructured.UnstructuredList{}
-	instances.SetGroupVersionKind(metal3InstanceGVK.GroupVersion().WithKind("Metal3InstanceList"))
+	instances.SetGroupVersionKind(bareMetalInstanceGVK.GroupVersion().WithKind("BareMetalInstanceList"))
 	if err := r.List(ctx, instances, client.InNamespace(obj.GetNamespace())); err != nil {
 		return nil
 	}
@@ -478,13 +501,16 @@ func (r *reconciler) bareMetalHostStatus(bmh *unstructured.Unstructured) map[str
 		status["state"] = state
 	}
 	if online, ok, _ := unstructured.NestedBool(bmh.Object, "spec", "online"); ok {
-		status["online"] = online
+		status["desiredOnline"] = online
+	}
+	if poweredOn, ok, _ := unstructured.NestedBool(bmh.Object, "status", "poweredOn"); ok {
+		status["poweredOn"] = poweredOn
 	}
 	if consumer := bareMetalHostConsumer(bmh); consumer != "" {
 		status["consumer"] = consumer
 	}
 	if message, ok, _ := unstructured.NestedString(bmh.Object, "status", "errorMessage"); ok && message != "" {
-		status["error"] = message
+		status["error"] = "Physical host reported an error."
 	}
 	return status
 }
@@ -511,6 +537,43 @@ func (r *reconciler) generatedSecretName(instance *unstructured.Unstructured) st
 
 func instanceOwnershipAnnotations(instance *unstructured.Unstructured) map[string]string {
 	return map[string]string{annotationInstance: instance.GetName(), annotationInstanceNamespace: instance.GetNamespace()}
+}
+
+func isOwnedByInstance(obj metav1.Object, instance *unstructured.Unstructured) bool {
+	annotations := obj.GetAnnotations()
+	return annotations[annotationInstance] == instance.GetName() && annotations[annotationInstanceNamespace] == instance.GetNamespace()
+}
+
+func ownershipConflict(kind string, key types.NamespacedName) error {
+	return fmt.Errorf("%w: %s %s is not owned by this BareMetalInstance", errManagedResourceConflict, kind, key)
+}
+
+func failureReason(err error, fallback string) string {
+	if errors.Is(err, errManagedResourceConflict) {
+		return "ManagedResourceConflict"
+	}
+	return fallback
+}
+
+func failureMessage(reason string) string {
+	switch reason {
+	case "InvalidNamespace":
+		return "BareMetalInstance must be created in the configured namespace."
+	case "InvalidSpec":
+		return "BareMetalInstance specification is invalid."
+	case "CredentialsInvalid":
+		return "BMC credentials are invalid or unavailable."
+	case "BMCResolutionFailed":
+		return "Unable to resolve the BMC endpoint."
+	case "CredentialsSecretSyncFailed":
+		return "Unable to synchronize the BMC credentials Secret."
+	case "HostSyncFailed":
+		return "Unable to synchronize the physical host."
+	case "ManagedResourceConflict":
+		return "A generated resource with the required name is owned by another object."
+	default:
+		return "Unable to reconcile BareMetalInstance."
+	}
 }
 
 func ensureOwnershipAnnotations(obj metav1.Object, instance *unstructured.Unstructured) bool {

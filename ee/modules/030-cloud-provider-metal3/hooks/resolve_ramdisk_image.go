@@ -33,9 +33,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "metal3_ramdisk_images",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "Metal3RamdiskImage",
+			Name:       "baremetal_ramdisk_images",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "BareMetalRamdiskImage",
 			FilterFunc: filterRamdiskImage,
 		},
 	},
@@ -44,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func filterRamdiskImage(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	direct, found, err := unstructured.NestedMap(obj.Object, "spec", "direct")
 	if err != nil {
-		return nil, fmt.Errorf("read Metal3RamdiskImage %q spec.direct: %w", obj.GetName(), err)
+		return nil, fmt.Errorf("read BareMetalRamdiskImage %q spec.direct: %w", obj.GetName(), err)
 	}
 	if !found {
 		return nil, nil
@@ -61,15 +61,15 @@ func filterRamdiskImage(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func resolveRamdiskImage(_ context.Context, input *go_hook.HookInput) error {
-	ref, ok := input.Values.GetOk("cloudProviderMetal3.nodes.parameters.ironic.ramdiskImageRef.name")
+	ref, ok := input.Values.GetOk("cloudProviderMetal3.nodes.parameters.bareMetal.ramdiskImageRef.name")
 	if !ok || ref.String() == "" {
 		input.Values.Remove(resolvedRamdiskImagePath)
 		return nil
 	}
 
-	images, err := sdkobjectpatch.UnmarshalToStruct[ramdiskImageSnapshot](input.Snapshots, "metal3_ramdisk_images")
+	images, err := sdkobjectpatch.UnmarshalToStruct[ramdiskImageSnapshot](input.Snapshots, "baremetal_ramdisk_images")
 	if err != nil {
-		return fmt.Errorf("unmarshal Metal3RamdiskImage snapshots: %w", err)
+		return fmt.Errorf("unmarshal BareMetalRamdiskImage snapshots: %w", err)
 	}
 
 	for _, image := range images {
@@ -77,7 +77,7 @@ func resolveRamdiskImage(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 		if image.Direct.KernelURL == "" || image.Direct.InitramfsURL == "" {
-			return fmt.Errorf("Metal3RamdiskImage %q has incomplete spec.direct", image.Name)
+			return fmt.Errorf("BareMetalRamdiskImage %q has incomplete spec.direct", image.Name)
 		}
 		input.Values.Set(resolvedRamdiskImagePath, map[string]interface{}{
 			"direct": map[string]interface{}{
@@ -89,7 +89,7 @@ func resolveRamdiskImage(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	return fmt.Errorf("Metal3RamdiskImage %q not found", ref.String())
+	return fmt.Errorf("BareMetalRamdiskImage %q not found", ref.String())
 }
 
 func stringValueOrDefault(values map[string]interface{}, key, fallback string) string {

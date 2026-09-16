@@ -1,6 +1,6 @@
-{{- $ironic := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderMetal3 -}}
-{{- $externalIronic := $ironic.externalInstance | default dict -}}
-{{- if $ironic }}
+{{- $bareMetal := dig "nodes" "parameters" "bareMetal" dict .Values.cloudProviderMetal3 -}}
+{{- $externalIronic := $bareMetal.externalInstance | default dict -}}
+{{- if $bareMetal }}
 ---
 apiVersion: v1
 kind: ServiceAccount
