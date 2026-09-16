@@ -130,7 +130,7 @@
 .build_base:
   stage: build
   tags:
-    - vm-intteam-cloud-d8-ssdlc-runner
+    - deckhouse
   needs: []
   timeout: 4h
   variables:
