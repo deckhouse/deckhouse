@@ -1,0 +1,135 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-f5c0c87349bb91907e2d7736e7f67c40e423addb7354a569056472f56d116c49",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39828: сервер в пакете golang.org/x/crypto/ssh отбрасывал права, которые проверка вернула вместе с PartialSuccessError, и продолжал работу с правами по умолчанию. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39829: открытый ключ с чрезмерным числом параметров заставлял разбор в пакете golang.org/x/crypto/ssh надолго занимать процессор. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39830: ответы, которых клиент не запрашивал, накапливались в пакете golang.org/x/crypto/ssh и не освобождались. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39831: пакет golang.org/x/crypto/ssh не требовал подтверждения присутствия пользователя при работе с аппаратным ключом. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39832: пакет golang.org/x/crypto/ssh/agent неверно применял ограничения ключа и разрешал запрещённые ими операции. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39835: специально составленный сертификат заставлял разбор в пакете golang.org/x/crypto/ssh надолго занимать процессор. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42508: пакет golang.org/x/crypto/ssh/knownhosts не проверял подпись у записи об отзыве, и отзыв ключа можно было обойти. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46595: сервер в пакете golang.org/x/crypto/ssh пропускал проверку исходного адреса, записанного в сертификате. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46597: специально составленные пакеты AES-GCM заставляли расшифровку в пакете golang.org/x/crypto/ssh надолго занимать процессор. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    }
+  ],
+  "timestamp": "2026-09-16T09:37:52Z"
+}

@@ -540,9 +540,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
 	},
 	"registry": map[string]interface{}{
-		"dockerAuth":            "imageHash-registry-dockerAuth",
-		"dockerAuthVexArtifact": "imageHash-registry-dockerAuthVexArtifact",
-		"dockerDistribution":    "imageHash-registry-dockerDistribution",
+		"dockerAuth":                    "imageHash-registry-dockerAuth",
+		"dockerAuthVexArtifact":         "imageHash-registry-dockerAuthVexArtifact",
+		"dockerDistribution":            "imageHash-registry-dockerDistribution",
+		"dockerDistributionVexArtifact": "imageHash-registry-dockerDistributionVexArtifact",
 	},
 	"registryPackagesProxy": map[string]interface{}{
 		"registryPackagesProxy":            "imageHash-registryPackagesProxy-registryPackagesProxy",
