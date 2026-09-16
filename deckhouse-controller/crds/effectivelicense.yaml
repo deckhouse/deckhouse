@@ -66,14 +66,15 @@ spec:
                 properties:
                   reason:
                     description: |
-                      Why the state is not `Valid`. Absent while the state is `Valid`.
+                      Why the state is what it is. At `Valid` it is either absent or `LimitsApproaching`.
 
                       * `Unregistered` — no accepted `Workload` record has ever been installed.
                       * `Expired` — all records have expired, the state is `Grace` or `Violation` by time.
                       * `Revoked` — a record is revoked on commercial grounds.
-                      * `LimitsExceeded` — the 7-day average consumption is above a limit.
+                      * `LimitsExceeded` — consumption is above a limit: instant at `Warning`, 7-day average at `Violation`.
                       * `ExpiringSoon` — an active record expires within the warning window.
-                      * `LimitsApproaching` — instant consumption reached the warning ratio of a limit, or is above it.
+                      * `LimitsApproaching` — informational, present at `Valid`: instant consumption is at or above
+                        the warning ratio of a limit (90% by default) but not above the limit itself.
                       * `ProjectedOverLimit` — the extrapolated consumption is above a limit.
                     enum:
                     - Unregistered

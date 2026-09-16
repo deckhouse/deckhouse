@@ -270,9 +270,21 @@ func TestComplianceState(t *testing.T) {
 			want: StateGrace,
 		},
 		{
-			name:    "A13 instant at 95% of the limit",
+			name:    "A13 instant at 95% of the limit is still valid",
 			records: []RecordStatus{live},
 			metrics: map[string]MetricValue{"vCPU": {Instant: 95, Avg7d: 80, Extrapolated: 90}},
+			want:    StateValid,
+		},
+		{
+			name:    "A13a instant exactly at the limit is still valid",
+			records: []RecordStatus{live},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 100, Avg7d: 80, Extrapolated: 100}},
+			want:    StateValid,
+		},
+		{
+			name:    "A13b one over the limit warns",
+			records: []RecordStatus{live},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 101, Avg7d: 80, Extrapolated: 90}},
 			want:    StateWarning,
 		},
 		{

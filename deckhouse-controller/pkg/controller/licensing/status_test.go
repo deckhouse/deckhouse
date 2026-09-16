@@ -104,7 +104,7 @@ func TestComplianceSince(t *testing.T) {
 
 	changed := validResult()
 	changed.State = licensing.StateWarning
-	changed.Reason = licensing.ReasonLimitsApproaching
+	changed.Reason = licensing.ReasonLimitsExceeded
 
 	moved := effectiveStatus(first, changed, values, "token", later)
 	if moved.Compliance.Since == nil || !moved.Compliance.Since.Equal(&metav1.Time{Time: later}) {
