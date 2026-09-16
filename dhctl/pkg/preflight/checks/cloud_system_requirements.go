@@ -44,7 +44,7 @@ func (CloudSystemRequirementsCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.RetryPolicy{Attempts: 1}
 }
 
-func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
+func (c CloudSystemRequirementsCheck) Run(_ context.Context) error {
 	// In the ModuleConfig-only flow (no <Provider>ClusterConfiguration in the
 	// input file) the master sizing lives in NodeGroup + InstanceClass resources
 	// resolved by the provider validator, not in PCC. Skip the legacy PCC-based
@@ -62,10 +62,6 @@ func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
 	}
 
 	var coreCountPropertyPath, ramAmountPropertyPath, rootDiskPropertyPath []string
-	// Dynamix has a precondition the configuration cannot answer on its own. It
-	// is noted here and asked of the platform after the sizing validation below,
-	// so that a configuration error never waits on the network first.
-	var checkDynamixPlatform bool
 	switch configKind {
 	case "AWSClusterConfiguration", "GCPClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
@@ -100,11 +96,6 @@ func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
 		// externalDiskSizeDefault = 30
 
-		// Master sizing is not the only thing that has to hold before the first
-		// VM is created on Dynamix: the platform must be 4.6+ and the configured
-		// storage policy must be usable. See checkDynamixStoragePolicies.
-		checkDynamixPlatform = true
-
 	case "HuaweiCloudClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
 
@@ -123,10 +114,6 @@ func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
 	}
 	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, requirements.cpuCores, false); err != nil {
 		return fmt.Errorf("CPU cores count: %v", err)
-	}
-
-	if checkDynamixPlatform {
-		return checkDynamixStoragePolicies(ctx, c.InstallConfig.ProviderClusterConfig)
 	}
 
 	return nil

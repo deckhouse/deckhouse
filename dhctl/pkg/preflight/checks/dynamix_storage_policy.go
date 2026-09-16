@@ -27,7 +27,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"gopkg.in/yaml.v3"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
 // Basis Dynamix 4.6 made storage_policy_id a required field of disks/create and
@@ -50,14 +54,95 @@ const (
 	dynamixStoragePolicyStatusEnabled = "ENABLED"
 )
 
-// The check owns a bootstrap's first contact with the platform, so it must not
-// hard-fail on a single dropped connection — and must not hang either.
+// What one attempt is allowed to spend. A run makes four requests in the common
+// case — a token, the policy, the account, the policy again as the account sees
+// it — so the budget is per request as well as per run. Repeating a failed
+// attempt is the preflight framework's job, not this check's: see RetryPolicy.
 const (
-	dynamixAPIRequestTimeout = 20 * time.Second
-	dynamixAPIAttempts       = 3
-	dynamixAPIRetryInterval  = 2 * time.Second
-	dynamixAPITimeout        = 2 * time.Minute
+	dynamixAPIRequestTimeout = 15 * time.Second
+	dynamixAPITimeout        = 60 * time.Second
 )
+
+// dynamixClusterConfigurationKind is the only provider cluster configuration
+// this check has anything to say about.
+const dynamixClusterConfigurationKind = "DynamixClusterConfiguration"
+
+const DynamixStoragePolicyCheckName preflight.CheckName = "dynamix-storage-policy"
+
+// DynamixStoragePolicyCheck asks the Dynamix platform, before any infrastructure
+// exists, whether it can finish the bootstrap at all.
+type DynamixStoragePolicyCheck struct {
+	InstallConfig *config.DeckhouseInstaller
+}
+
+func (DynamixStoragePolicyCheck) Description() string {
+	return "Dynamix platform supports storage policies and the configured policy is usable"
+}
+
+func (DynamixStoragePolicyCheck) Phase() preflight.Phase {
+	return preflight.PhasePreInfra
+}
+
+// RetryPolicy is the default one because every failure this check reports is
+// either a verdict or a blip, and it says which: a verdict comes back wrapped in
+// backoff.Permanent, so only the blips are ever tried again.
+func (DynamixStoragePolicyCheck) RetryPolicy() preflight.RetryPolicy {
+	return preflight.DefaultRetryPolicy
+}
+
+func (c DynamixStoragePolicyCheck) Run(ctx context.Context) error {
+	err := c.run(ctx)
+	if err == nil || isDynamixTransient(err) {
+		return err
+	}
+	return backoff.Permanent(err)
+}
+
+func (c DynamixStoragePolicyCheck) run(ctx context.Context) error {
+	// Nothing to ask about without a provider cluster configuration: in the
+	// ModuleConfig-only flow the storage policy arrives as a DynamixInstanceClass
+	// resource, which the provider's own validator binary checks.
+	if c.InstallConfig == nil || len(c.InstallConfig.ProviderClusterConfig) == 0 {
+		return nil
+	}
+
+	configObject := make(map[string]any)
+	configKind, err := unmarshalProviderClusterConfiguration(c.InstallConfig.ProviderClusterConfig, configObject)
+	if err != nil {
+		return fmt.Errorf("unmarshal provider cluster configuration: %w", err)
+	}
+	if configKind != dynamixClusterConfigurationKind {
+		return nil
+	}
+
+	return checkDynamixStoragePolicies(ctx, c.InstallConfig.ProviderClusterConfig)
+}
+
+func DynamixStoragePolicy(installConfig *config.DeckhouseInstaller) preflight.Check {
+	check := DynamixStoragePolicyCheck{InstallConfig: installConfig}
+	return preflight.Check{
+		Name:        DynamixStoragePolicyCheckName,
+		Description: check.Description(),
+		Phase:       check.Phase(),
+		Retry:       check.RetryPolicy(),
+		Run:         check.Run,
+	}
+}
+
+// dynamixTransientError marks a failure another attempt could get past: a
+// dropped connection, or the platform answering 5xx. Everything else this check
+// reports is the platform's verdict, and repeating the request cannot change it.
+type dynamixTransientError struct{ err error }
+
+func (e dynamixTransientError) Error() string { return e.err.Error() }
+func (e dynamixTransientError) Unwrap() error { return e.err }
+
+func dynamixTransient(err error) error { return dynamixTransientError{err: err} }
+
+func isDynamixTransient(err error) bool {
+	var transient dynamixTransientError
+	return errors.As(err, &transient)
+}
 
 // ErrDynamixPlatformTooOld reports that the platform does not know the storage
 // policy API at all, which is how a pre-4.6 platform shows up here.
@@ -412,7 +497,7 @@ func (c *dynamixAPIClient) call(ctx context.Context, method, path string, params
 	header.Set("Accept", "application/json")
 	header.Set("Authorization", "bearer "+c.token)
 
-	status, body, err := c.do(ctx, method, requestURL, params.Encode(), header)
+	status, body, err := c.send(ctx, method, requestURL, params.Encode(), header)
 	if err != nil {
 		return nil, err
 	}
@@ -422,6 +507,8 @@ func (c *dynamixAPIClient) call(ctx context.Context, method, path string, params
 		return body, nil
 	case path == dynamixStoragePolicyListPath && dynamixRouteIsMissing(status):
 		return nil, ErrDynamixPlatformTooOld
+	case status >= http.StatusInternalServerError:
+		return nil, dynamixTransient(dynamixHTTPError(requestURL, status, body))
 	default:
 		return nil, dynamixHTTPError(requestURL, status, body)
 	}
@@ -459,12 +546,16 @@ func (c *dynamixAPIClient) authenticate(ctx context.Context) error {
 	header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	tokenURL := c.oAuth2URL + dynamixAccessTokenPath
-	status, body, err := c.do(ctx, http.MethodPost, tokenURL, form.Encode(), header)
+	status, body, err := c.send(ctx, http.MethodPost, tokenURL, form.Encode(), header)
 	if err != nil {
 		return err
 	}
 	if status != http.StatusOK {
-		return fmt.Errorf("cannot get a Dynamix API token from %s: %d: %s", tokenURL, status, strings.TrimSpace(string(body)))
+		tokenErr := fmt.Errorf("cannot get a Dynamix API token from %s: %d: %s", tokenURL, status, strings.TrimSpace(string(body)))
+		if status >= http.StatusInternalServerError {
+			return dynamixTransient(tokenErr)
+		}
+		return tokenErr
 	}
 
 	token := strings.TrimSpace(string(body))
@@ -476,37 +567,6 @@ func (c *dynamixAPIClient) authenticate(ctx context.Context) error {
 	return nil
 }
 
-// do sends a request, repeating it while the failure still looks transient: a
-// dropped connection or a 5xx. Anything the platform answers below 500 is its
-// verdict, not a blip, and is handed back to the caller as is.
-func (c *dynamixAPIClient) do(ctx context.Context, method, requestURL, body string, header http.Header) (int, []byte, error) {
-	var lastErr error
-
-	for attempt := 1; attempt <= dynamixAPIAttempts; attempt++ {
-		if attempt > 1 {
-			select {
-			case <-ctx.Done():
-				return 0, nil, fmt.Errorf("cannot reach %s: %w", requestURL, ctx.Err())
-			case <-time.After(dynamixAPIRetryInterval):
-			}
-		}
-
-		status, respBody, err := c.send(ctx, method, requestURL, body, header)
-		switch {
-		case err != nil:
-			lastErr = err
-		// A missing route is a verdict, not a blip, even when it arrives as a
-		// 5xx: repeating the request cannot make the endpoint exist.
-		case status >= http.StatusInternalServerError && !dynamixRouteIsMissing(status):
-			lastErr = dynamixHTTPError(requestURL, status, respBody)
-		default:
-			return status, respBody, nil
-		}
-	}
-
-	return 0, nil, lastErr
-}
-
 func (c *dynamixAPIClient) send(ctx context.Context, method, requestURL, body string, header http.Header) (int, []byte, error) {
 	req, err := http.NewRequestWithContext(ctx, method, requestURL, strings.NewReader(body))
 	if err != nil {
@@ -516,13 +576,13 @@ func (c *dynamixAPIClient) send(ctx context.Context, method, requestURL, body st
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return 0, nil, fmt.Errorf("cannot reach %s: %w", requestURL, err)
+		return 0, nil, dynamixTransient(fmt.Errorf("cannot reach %s: %w", requestURL, err))
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return 0, nil, fmt.Errorf("cannot read the response from %s: %w", requestURL, err)
+		return 0, nil, dynamixTransient(fmt.Errorf("cannot read the response from %s: %w", requestURL, err))
 	}
 
 	return resp.StatusCode, respBody, nil

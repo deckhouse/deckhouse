@@ -16,6 +16,7 @@ package checks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,10 +28,12 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	preflightnew "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
 const (
@@ -67,7 +70,7 @@ type fakeDynamixPlatform struct {
 	// tokenStatus, when non-zero, replaces the status of the SSO answer.
 	tokenStatus int
 	// transientFailures makes the first N storage_policy/list answers a 503,
-	// the shape of a platform hiccup a preflight run must ride out.
+	// the shape of a platform hiccup the check must hand back as retryable.
 	transientFailures int
 
 	// mu guards what the handler goroutines record for the test goroutine to
@@ -318,10 +321,17 @@ masterNodeGroup:
 
 func runDynamixCheck(t *testing.T, pcc []byte) error {
 	t.Helper()
-	check := CloudSystemRequirementsCheck{
+	check := DynamixStoragePolicyCheck{
 		InstallConfig: &config.DeckhouseInstaller{ProviderClusterConfig: pcc},
 	}
 	return check.Run(t.Context())
+}
+
+// isPermanent reports whether the preflight framework will stop retrying on this
+// error, which is how the check says "this is the platform's verdict".
+func isPermanent(err error) bool {
+	var permanent *backoff.PermanentError
+	return errors.As(err, &permanent)
 }
 
 func TestDynamixStoragePolicyCheck(t *testing.T) {
@@ -400,22 +410,74 @@ func TestDynamixStoragePolicyCheck(t *testing.T) {
 		assert.NotContains(t, err.Error(), "is not available to account")
 	})
 
-	t.Run("a transient platform failure is retried, not reported", func(t *testing.T) {
+	// Retrying is the preflight framework's job; the check's job is to say which
+	// failures are worth retrying at all.
+	t.Run("a platform hiccup asks to be retried", func(t *testing.T) {
 		platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
-		platform.transientFailures = dynamixAPIAttempts - 1
-		server := platform.start()
-
-		require.NoError(t, runDynamixCheck(t, dynamixPCC(server.URL, "storage_policy01")))
-	})
-
-	t.Run("a platform failing every attempt is reported", func(t *testing.T) {
-		platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
-		platform.transientFailures = dynamixAPIAttempts
+		platform.transientFailures = 1
 		server := platform.start()
 
 		err := runDynamixCheck(t, dynamixPCC(server.URL, "storage_policy01"))
 
 		assert.ErrorContains(t, err, "answered 503")
+		assert.False(t, isPermanent(err), "a 5xx must not stop the framework from retrying")
+	})
+
+	t.Run("an unreachable platform asks to be retried", func(t *testing.T) {
+		platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
+		server := platform.start()
+		serverURL := server.URL
+		server.Close()
+
+		err := runDynamixCheck(t, dynamixPCC(serverURL, "storage_policy01"))
+
+		assert.False(t, isPermanent(err), "a dropped connection must not stop the framework from retrying")
+	})
+
+	// Everything that is the platform's answer rather than a blip must stop the
+	// retrying: repeating the request cannot change a missing policy into a
+	// present one, and five backed-off attempts would only delay the report.
+	t.Run("a verdict stops the retrying", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			arrange func(*fakeDynamixPlatform)
+			policy  string
+		}{
+			{
+				name:    "the platform is older than 4.6",
+				arrange: func(f *fakeDynamixPlatform) { f.storagePolicyListStatus = http.StatusNotFound },
+				policy:  "storage_policy01",
+			},
+			{
+				name:   "the policy does not exist",
+				policy: "missing_policy",
+			},
+			{
+				name:    "the credentials are rejected",
+				arrange: func(f *fakeDynamixPlatform) { f.tokenStatus = http.StatusUnauthorized },
+				policy:  "storage_policy01",
+			},
+			{
+				name:    "the account does not exist",
+				arrange: func(f *fakeDynamixPlatform) { f.accounts = nil },
+				policy:  "storage_policy01",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
+				if tt.arrange != nil {
+					tt.arrange(platform)
+				}
+				server := platform.start()
+
+				err := runDynamixCheck(t, dynamixPCC(server.URL, tt.policy))
+
+				require.Error(t, err)
+				assert.True(t, isPermanent(err), "the framework must not retry a verdict")
+			})
+		}
 	})
 
 	t.Run("policy name matches more than one policy", func(t *testing.T) {
@@ -578,15 +640,44 @@ func TestDynamixStoragePolicyCheckMalformedConfiguration(t *testing.T) {
 	}
 }
 
-// Master sizing and the storage policy checks share one preflight check, so the
-// sizing half must keep failing on its own terms for Dynamix.
-func TestDynamixMasterSizingIsStillChecked(t *testing.T) {
-	platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
-	server := platform.start()
+// The check now stands on its own in the cloud suite, so it has to recognise
+// what it is looking at and stay out of the way of everything else.
+func TestDynamixStoragePolicyCheckSkipsWhatIsNotItsOwn(t *testing.T) {
+	tests := []struct {
+		name          string
+		installConfig *config.DeckhouseInstaller
+	}{
+		{
+			name:          "no install config",
+			installConfig: nil,
+		},
+		{
+			// The ModuleConfig-only flow carries no provider cluster
+			// configuration at all.
+			name:          "no provider cluster configuration",
+			installConfig: &config.DeckhouseInstaller{ProviderClusterConfig: nil},
+		},
+		{
+			name:          "another provider",
+			installConfig: &config.DeckhouseInstaller{ProviderClusterConfig: validPCC},
+		},
+	}
 
-	pcc := strings.ReplaceAll(string(dynamixPCC(server.URL, "storage_policy01")), "numCPUs: 6", "numCPUs: 1")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			check := DynamixStoragePolicyCheck{InstallConfig: tt.installConfig}
 
-	err := runDynamixCheck(t, []byte(pcc))
+			assert.NoError(t, check.Run(t.Context()))
+		})
+	}
+}
 
-	assert.ErrorContains(t, err, "CPU cores count: expected at least")
+func TestDynamixStoragePolicyCheckIsRegistered(t *testing.T) {
+	check := DynamixStoragePolicy(nil)
+
+	assert.Equal(t, DynamixStoragePolicyCheckName, check.Name)
+	require.NoError(t, check.Name.Validate())
+	assert.Equal(t, preflightnew.PhasePreInfra, check.Phase)
+	assert.Equal(t, preflightnew.DefaultRetryPolicy, check.Retry)
+	assert.NotEmpty(t, check.Description)
 }

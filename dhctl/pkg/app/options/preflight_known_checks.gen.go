@@ -10,6 +10,7 @@ var generatedPreflightChecks = []string{
 	"cloud-prefix",
 	"deckhouse-user",
 	"dhctl-edition",
+	"dynamix-storage-policy",
 	"host-network-cidr-intersection",
 	"immutable-installer-images",
 	"immutable-kubeconfig-kept",
