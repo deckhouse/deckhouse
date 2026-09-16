@@ -84,4 +84,20 @@ const (
 
 	// LabelNotificationNotSent indicates whether an update notification has not been sent.
 	LabelNotificationNotSent = "notificationNotSent"
+
+	// Licensing labels.
+
+	LabelResource = "resource"
+
+	LabelKind = "kind"
+
+	LabelRecordID = "record_id"
+
+	LabelLicense = "license"
+
+	LabelType = "type"
+
+	LabelStatus = "status"
+
+	LabelReason = "reason"
 )
