@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -89,6 +90,7 @@ func (f *fakeDynamixPlatform) start() *httptest.Server {
 	f.t.Cleanup(func() {
 		server.Close()
 		f.assertNoHandlerErrors()
+		f.assertOnlyCloudAPIWasUsed()
 	})
 	return server
 }
@@ -96,7 +98,7 @@ func (f *fakeDynamixPlatform) start() *httptest.Server {
 func (f *fakeDynamixPlatform) serve(w http.ResponseWriter, r *http.Request) {
 	f.record(r.URL.Path)
 
-	params, err := formValues(r)
+	params, err := dynamixFormValues(r)
 	if err != nil {
 		f.fail(w, "cannot read the request body: %v", err)
 		return
@@ -143,7 +145,7 @@ func (f *fakeDynamixPlatform) serve(w http.ResponseWriter, r *http.Request) {
 // formValues reads the parameters out of the request body: the platform takes
 // them form-encoded there even for a GET, so http.Request.ParseForm would not
 // see them.
-func formValues(r *http.Request) (url.Values, error) {
+func dynamixFormValues(r *http.Request) (url.Values, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -201,6 +203,20 @@ func (f *fakeDynamixPlatform) paths() []string {
 	return append([]string(nil), f.requestedPaths...)
 }
 
+// assertOnlyCloudAPIWasUsed holds the policy-first model's other half: with SEPs
+// out of the contract, preflight has no reason to reach past cloudapi, so an
+// account without cloudbroker rights must get through. Checked after every
+// scenario rather than in one test, so no error path can quietly grow a call.
+func (f *fakeDynamixPlatform) assertOnlyCloudAPIWasUsed() {
+	for _, path := range f.paths() {
+		if path == dynamixAccessTokenPath {
+			continue
+		}
+		assert.True(f.t, strings.HasPrefix(path, dynamixRESTPrefix+"/cloudapi/"),
+			"preflight must not call anything outside cloudapi, called %s", path)
+	}
+}
+
 func (f *fakeDynamixPlatform) assertNoHandlerErrors() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -233,7 +249,7 @@ func filterDynamixPolicies(policies []dynamixPolicyFixture, params url.Values) (
 		if name != "" && !strings.Contains(fixture.policy.Name, name) {
 			continue
 		}
-		if accountID != 0 && !containsDynamixAccount(fixture.accounts, accountID) {
+		if accountID != 0 && !slices.Contains(fixture.accounts, accountID) {
 			continue
 		}
 		result = append(result, fixture.policy)
@@ -241,19 +257,16 @@ func filterDynamixPolicies(policies []dynamixPolicyFixture, params url.Values) (
 	return result, nil
 }
 
-func containsDynamixAccount(accounts []uint64, accountID uint64) bool {
-	for _, id := range accounts {
-		if id == accountID {
-			return true
-		}
-	}
-	return false
-}
-
 // dynamixPCC renders a DynamixClusterConfiguration pointed at the fake platform.
 // Master sizing is deliberately above the requirements so that only the storage
 // policy checks can fail.
 func dynamixPCC(serverURL, clusterPolicy string, nodeGroupPolicies ...string) []byte {
+	return dynamixPCCWithMasterPolicy(serverURL, clusterPolicy, "", nodeGroupPolicies...)
+}
+
+// dynamixPCCWithMasterPolicy additionally overrides the policy on the master
+// instance class, which the cluster-wide field does not cover.
+func dynamixPCCWithMasterPolicy(serverURL, clusterPolicy, masterPolicy string, nodeGroupPolicies ...string) []byte {
 	var builder strings.Builder
 	fmt.Fprintf(&builder, `
 apiVersion: deckhouse.io/v1
@@ -279,6 +292,10 @@ masterNodeGroup:
     imageName: image
     externalNetwork: extnet
 `, testDynamixAccountName, clusterPolicy, serverURL, serverURL)
+
+	if masterPolicy != "" {
+		fmt.Fprintf(&builder, "    storagePolicy: %s\n", masterPolicy)
+	}
 
 	if len(nodeGroupPolicies) > 0 {
 		builder.WriteString("nodeGroups:\n")
@@ -413,7 +430,7 @@ func TestDynamixStoragePolicyCheck(t *testing.T) {
 		require.ErrorIs(t, err, errDynamixPolicyAmbiguous)
 	})
 
-	t.Run("instance class override is checked too", func(t *testing.T) {
+	t.Run("node group instance class override is checked too", func(t *testing.T) {
 		platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
 		server := platform.start()
 
@@ -475,25 +492,53 @@ func TestDynamixStoragePolicyCheck(t *testing.T) {
 		assert.ErrorContains(t, err, dynamixAccessTokenPath)
 	})
 
-	// The whole point of the policy-first model is that no SEP API is touched
-	// any more, so preflight must stay within cloudapi: an account without
-	// cloudbroker rights has to pass these checks.
-	t.Run("only cloudapi endpoints are used", func(t *testing.T) {
+	t.Run("master instance class override is checked too", func(t *testing.T) {
+		platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
+		server := platform.start()
+
+		err := runDynamixCheck(t, dynamixPCCWithMasterPolicy(server.URL, "storage_policy01", "master_policy"))
+
+		require.ErrorIs(t, err, errDynamixPolicyNotFound)
+		assert.ErrorContains(t, err, `storage policy "master_policy" (.masterNodeGroup.instanceClass.storagePolicy)`)
+	})
+
+	t.Run("the platform is asked something", func(t *testing.T) {
 		platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
 		server := platform.start()
 
 		require.NoError(t, runDynamixCheck(t, dynamixPCC(server.URL, "storage_policy01")))
 
-		paths := platform.paths()
-		require.NotEmpty(t, paths)
-		for _, path := range paths {
-			if path == dynamixAccessTokenPath {
-				continue
-			}
-			assert.True(t, strings.HasPrefix(path, dynamixRESTPrefix+"/cloudapi/"),
-				"preflight must not call anything outside cloudapi, called %s", path)
-		}
+		// Guards the cloudapi-only invariant asserted for every scenario in
+		// start's cleanup: it would pass vacuously on a check that called nothing.
+		require.NotEmpty(t, platform.paths())
 	})
+
+	// A pre-4.6 platform must be named as such even when something else about
+	// the configuration is wrong too — the version is what has to be fixed first.
+	t.Run("the version verdict is not masked by a bad account", func(t *testing.T) {
+		platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
+		platform.storagePolicyListStatus = http.StatusNotFound
+		platform.accounts = nil
+		server := platform.start()
+
+		err := runDynamixCheck(t, dynamixPCC(server.URL, "storage_policy01"))
+
+		require.ErrorIs(t, err, ErrDynamixPlatformTooOld)
+	})
+
+	// Whatever a gateway in front of the platform turns a missing route into,
+	// the verdict is the same: the endpoint is not served here.
+	for _, status := range []int{http.StatusNotFound, http.StatusMethodNotAllowed, http.StatusNotImplemented} {
+		t.Run(fmt.Sprintf("a missing storage policy route answering %d reads as pre-4.6", status), func(t *testing.T) {
+			platform := newFakeDynamixPlatform(t, enabledDynamixPolicy("storage_policy01", testDynamixAccountID))
+			platform.storagePolicyListStatus = status
+			server := platform.start()
+
+			err := runDynamixCheck(t, dynamixPCC(server.URL, "storage_policy01"))
+
+			require.ErrorIs(t, err, ErrDynamixPlatformTooOld)
+		})
+	}
 }
 
 func TestDynamixStoragePolicyCheckMalformedConfiguration(t *testing.T) {

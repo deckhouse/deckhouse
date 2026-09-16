@@ -62,10 +62,10 @@ func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
 	}
 
 	var coreCountPropertyPath, ramAmountPropertyPath, rootDiskPropertyPath []string
-	// Some providers have a precondition the configuration cannot answer on its
-	// own. It is collected here and run after the sizing validation below, so
-	// that a configuration error never waits on the network first.
-	var cloudAPIPrecondition func(ctx context.Context) error
+	// Dynamix has a precondition the configuration cannot answer on its own. It
+	// is noted here and asked of the platform after the sizing validation below,
+	// so that a configuration error never waits on the network first.
+	var checkDynamixPlatform bool
 	switch configKind {
 	case "AWSClusterConfiguration", "GCPClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
@@ -103,9 +103,7 @@ func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
 		// Master sizing is not the only thing that has to hold before the first
 		// VM is created on Dynamix: the platform must be 4.6+ and the configured
 		// storage policy must be usable. See checkDynamixStoragePolicies.
-		cloudAPIPrecondition = func(ctx context.Context) error {
-			return checkDynamixStoragePolicies(ctx, c.InstallConfig.ProviderClusterConfig)
-		}
+		checkDynamixPlatform = true
 
 	case "HuaweiCloudClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
@@ -127,8 +125,8 @@ func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
 		return fmt.Errorf("CPU cores count: %v", err)
 	}
 
-	if cloudAPIPrecondition != nil {
-		return cloudAPIPrecondition(ctx)
+	if checkDynamixPlatform {
+		return checkDynamixStoragePolicies(ctx, c.InstallConfig.ProviderClusterConfig)
 	}
 
 	return nil

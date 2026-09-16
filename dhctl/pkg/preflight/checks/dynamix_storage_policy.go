@@ -90,13 +90,26 @@ func checkDynamixStoragePolicies(ctx context.Context, providerClusterConfig []by
 	ctx, cancel := context.WithTimeout(ctx, dynamixAPITimeout)
 	defer cancel()
 
+	policies := clusterConfig.storagePolicies()
+
+	// The platform is asked about the policies themselves first, before the
+	// account is even resolved. On a pre-4.6 platform this is the call that
+	// answers 404, and the version is the one thing the user has to fix: any
+	// other complaint at this point — a mistyped account, say — would only
+	// distract from it.
+	for _, policy := range policies {
+		if err := client.checkStoragePolicyExists(ctx, policy); err != nil {
+			return err
+		}
+	}
+
 	accountID, err := client.accountIDByName(ctx, clusterConfig.Account)
 	if err != nil {
 		return err
 	}
 
-	for _, policy := range clusterConfig.storagePolicies() {
-		if err := client.checkStoragePolicy(ctx, policy, clusterConfig.Account, accountID); err != nil {
+	for _, policy := range policies {
+		if err := client.checkStoragePolicyAvailable(ctx, policy, clusterConfig.Account, accountID); err != nil {
 			return err
 		}
 	}
@@ -104,43 +117,44 @@ func checkDynamixStoragePolicies(ctx context.Context, providerClusterConfig []by
 	return nil
 }
 
-// checkStoragePolicy asks for the policy the way the components that will place
-// disks in it ask — narrowed to the account, as dynamix-common's
-// GetStoragePolicyByName does — so that a policy accepted here is a policy CSI,
-// CAPD and terraform will also resolve. A policy the account cannot use is
-// invisible under that filter, so a miss is re-checked without it to tell
-// "no such policy" apart from "not yours".
-func (c *dynamixAPIClient) checkStoragePolicy(ctx context.Context, policy dynamixPolicyRef, accountName string, accountID uint64) error {
-	forAccount, err := c.listStoragePolicies(ctx, policy.name, accountID)
+// checkStoragePolicyExists answers the first three questions at once, because
+// the platform answers them in one call: whether it knows the storage policy API
+// at all (it does not before 4.6), whether the policy is there, and whether it is
+// in a status a disk can be created in.
+func (c *dynamixAPIClient) checkStoragePolicyExists(ctx context.Context, policy dynamixPolicyRef) error {
+	items, err := c.listStoragePolicies(ctx, policy.name, 0)
 	if err != nil {
 		return err
 	}
 
-	found, err := matchDynamixStoragePolicy(forAccount, policy)
-	if errors.Is(err, errDynamixPolicyNotFound) {
-		anyAccount, listErr := c.listStoragePolicies(ctx, policy.name, 0)
-		if listErr != nil {
-			return listErr
-		}
-
-		found, err = matchDynamixStoragePolicy(anyAccount, policy)
-		if err != nil {
-			return err
-		}
-		// The policy exists but the account cannot see it. Its status is still
-		// worth reporting first: a disabled policy has to be fixed either way.
-		if statusErr := dynamixPolicyStatusError(found, policy); statusErr != nil {
-			return statusErr
-		}
-
-		return fmt.Errorf("%s is not available to account %q: grant the account access to the policy or name another one",
-			policy, accountName)
-	}
+	found, err := matchDynamixStoragePolicy(items, policy)
 	if err != nil {
 		return err
 	}
 
 	return dynamixPolicyStatusError(found, policy)
+}
+
+// checkStoragePolicyAvailable asks for the policy the way the components that
+// will place disks in it ask — narrowed to the account, as dynamix-common's
+// GetStoragePolicyByName does — so that a policy accepted here is a policy CSI,
+// CAPD and terraform will also resolve. The policy is already known to exist by
+// this point, so its absence under the account filter means one thing.
+func (c *dynamixAPIClient) checkStoragePolicyAvailable(ctx context.Context, policy dynamixPolicyRef, accountName string, accountID uint64) error {
+	items, err := c.listStoragePolicies(ctx, policy.name, accountID)
+	if err != nil {
+		return err
+	}
+
+	if _, err := matchDynamixStoragePolicy(items, policy); err != nil {
+		if errors.Is(err, errDynamixPolicyNotFound) {
+			return fmt.Errorf("%s is not available to account %q: grant the account access to the policy or name another one",
+				policy, accountName)
+		}
+		return err
+	}
+
+	return nil
 }
 
 func dynamixPolicyStatusError(found dynamixStoragePolicy, policy dynamixPolicyRef) error {
@@ -406,11 +420,25 @@ func (c *dynamixAPIClient) call(ctx context.Context, method, path string, params
 	switch {
 	case status == http.StatusOK || status == http.StatusNoContent:
 		return body, nil
-	case status == http.StatusNotFound && path == dynamixStoragePolicyListPath:
+	case path == dynamixStoragePolicyListPath && dynamixRouteIsMissing(status):
 		return nil, ErrDynamixPlatformTooOld
 	default:
-		return nil, fmt.Errorf("%s answered %d: %s", requestURL, status, strings.TrimSpace(string(body)))
+		return nil, dynamixHTTPError(requestURL, status, body)
 	}
+}
+
+// dynamixRouteIsMissing reports whether the answer means "this endpoint is not
+// served here", which is how a platform older than 4.6 reports the storage
+// policy API. A platform that does serve it never answers a documented GET this
+// way, so widening past 404 costs nothing and covers a gateway that rewrites it.
+func dynamixRouteIsMissing(status int) bool {
+	return status == http.StatusNotFound ||
+		status == http.StatusMethodNotAllowed ||
+		status == http.StatusNotImplemented
+}
+
+func dynamixHTTPError(requestURL string, status int, body []byte) error {
+	return fmt.Errorf("%s answered %d: %s", requestURL, status, strings.TrimSpace(string(body)))
 }
 
 // authenticate exchanges the application credentials for an access token. The
@@ -467,8 +495,10 @@ func (c *dynamixAPIClient) do(ctx context.Context, method, requestURL, body stri
 		switch {
 		case err != nil:
 			lastErr = err
-		case status >= http.StatusInternalServerError:
-			lastErr = fmt.Errorf("%s answered %d: %s", requestURL, status, strings.TrimSpace(string(respBody)))
+		// A missing route is a verdict, not a blip, even when it arrives as a
+		// 5xx: repeating the request cannot make the endpoint exist.
+		case status >= http.StatusInternalServerError && !dynamixRouteIsMissing(status):
+			lastErr = dynamixHTTPError(requestURL, status, respBody)
 		default:
 			return status, respBody, nil
 		}
