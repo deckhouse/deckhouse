@@ -86,8 +86,24 @@ func (e *PhaseError) writeResults(b *strings.Builder) {
 
 	// Both ways forward, named. The reader who can fix the configuration re-runs; the reader who
 	// cannot — a registry that is down for the afternoon, a check that is wrong about their
-	// setup — needs to know the flags exist and are printed above.
-	b.WriteString("\nRe-run the same command after fixing, or add the skip flags above to proceed anyway.")
+	// setup — needs to know the flags exist and are printed above. Unless none of them is a way
+	// out, in which case pointing at skip flags that were never printed above is an invitation
+	// to spend another bootstrap discovering that.
+	if e.anySkippable() {
+		b.WriteString("\nRe-run the same command after fixing, or add the skip flags above to proceed anyway.")
+		return
+	}
+	b.WriteString("\nRe-run the same command after fixing.")
+}
+
+// anySkippable reports whether any of these failures has a flag that would get past it.
+func (e *PhaseError) anySkippable() bool {
+	for _, r := range e.Results {
+		if !r.CannotBeSkipped && !stopsPhase(r.Err) {
+			return true
+		}
+	}
+	return false
 }
 
 // writeCause renders what the check reported: the five fields when it returned a *Failure, and
@@ -111,6 +127,18 @@ func writeSkipLine(b *strings.Builder, r Result) {
 		writeField(b, "skip", "this check cannot be skipped")
 		return
 	}
+
+	// A finding that stopped the phase was not about this check: the obstacle is underneath it,
+	// and every check behind it is asked over the same thing. The flag would turn off the name
+	// that reported, not the obstacle, so the next run stops at the next name with an identical
+	// verdict — at the price of another base infrastructure and another master. Confirmed on
+	// 2026-09-16 by running with --preflight-skip-check=ssh-credential,cloud-api-accessibility:
+	// registry-access-from-master then reported the same failure, just as quickly.
+	if stopsPhase(r.Err) {
+		writeField(b, "skip", "skipping this check does not get past it — the next one is asked over the same connection")
+		return
+	}
+
 	writeField(b, "skip", fmt.Sprintf("--preflight-skip-check=%s", r.Name))
 }
 

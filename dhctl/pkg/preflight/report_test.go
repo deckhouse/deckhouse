@@ -162,3 +162,37 @@ func TestMultiLineFixIsIndentedUnderItsLabel(t *testing.T) {
 		t.Errorf("continuation line must line up under the label, got:\n%s", err)
 	}
 }
+
+// The report used to end every failure with "skip: --preflight-skip-check=<name>", including the
+// ones where the obstacle is under the check rather than in it. The flag turns off the name that
+// reported, not the connection every check behind it is asked over, so it buys the reader another
+// base infrastructure and another master to read the same verdict under the next name. Confirmed
+// on 2026-09-16 with --preflight-skip-check=ssh-credential,cloud-api-accessibility:
+// registry-access-from-master reported the identical failure.
+func TestNoSkipHintWhenSkippingCannotHelp(t *testing.T) {
+	err := newPhaseError("Preflight checks: nodes", []Result{{
+		Name:        "cloud-api-accessibility",
+		Description: "the cloud provider API is reachable from the master node",
+		Status:      StatusFailed,
+		Err: &Failure{
+			Checked:    "an ssh connection to moobuntu@158.160.45.229:22",
+			Observed:   "the node did not accept the credentials it was offered",
+			StopsPhase: true,
+		},
+	}}, 21)
+
+	report := err.Error()
+
+	if strings.Contains(report, "--preflight-skip-check=cloud-api-accessibility") {
+		t.Errorf("the flag gets the reader as far as the next check asked over the same connection:\n%s", report)
+	}
+	if !strings.Contains(report, "skipping this check does not get past it") {
+		t.Errorf("the skip line must say the flag is not a way out, got:\n%s", report)
+	}
+	if strings.Contains(report, "add the skip flags above") {
+		t.Errorf("there are no skip flags above, got:\n%s", report)
+	}
+	if !strings.Contains(report, "Re-run the same command after fixing.") {
+		t.Errorf("the one way forward must still be named, got:\n%s", report)
+	}
+}
