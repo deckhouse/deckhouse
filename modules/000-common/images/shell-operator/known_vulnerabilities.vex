@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-a663902f1d5c6551157d78a23ea35d32aac3dbaf0ece274eb9c435105b06c843",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-46600 (panic on parsing a malformed SVCB/HTTPS RR) is located in the golang.org/x/net/dns/dnsmessage package. shell-operator only pulls http2 and idna from the golang.org/x/net module, transitively via client-go and net/http; the dns/dnsmessage package is not linked into the binary. Name resolution is performed by the Go standard library resolver, which uses its own copy of dnsmessage vendored into the toolchain and is not covered by this finding. shell-operator never parses untrusted DNS messages.",
+      "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.37.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "CVE-2026-56852 (infinite loop in norm.Iter on invalid UTF-8) is located in the golang.org/x/text/unicode/norm package. shell-operator does not import unicode/norm directly: it is reached only transitively through golang.org/x/net/idna, which net/http uses to normalize hostnames of outgoing requests. Those hostnames come from the in-cluster Kubernetes API endpoint and from URLs defined by the cluster administrator in the module configuration and hooks, so they are trusted input rather than adversary-controlled arbitrary UTF-8. No user-supplied payload processed by shell-operator (Kubernetes object data, hook output) reaches unicode/norm.",
+      "timestamp": "2026-09-16T12:00:00Z"
+    }
+  ],
+  "timestamp": "2026-09-16T12:00:00Z"
+}
