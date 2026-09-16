@@ -58,6 +58,10 @@ var (
 Infrastructure pipeline aborted.
 If you want to drop the cache and continue, please run dhctl with "--yes-i-want-to-drop-cache" flag.
 `)
+	ErrDestructiveChangesNotApproved = errors.New(`
+The infrastructure plan destroys objects and there is no terminal to approve it on.
+Run dhctl from a terminal to answer the question, or pass "--converge-destructive-auto-approve".
+`)
 )
 
 type (
@@ -430,12 +434,32 @@ func (r *Runner) isSkipChanges(ctx context.Context) (bool, error) {
 
 	if !r.changeSettings.AutoApprove {
 		if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
+			if !input.IsTerminal() {
+				return r.decideWithoutTerminal(ctx)
+			}
+
 			if r.changeSettings.SkipChangesOnDeny {
+				dhlog.FromContext(ctx).WarnContext(ctx, "Infrastructure changes were not approved. Nothing is applied.")
 				return true, nil
 			}
+
 			return false, ErrInfrastructureApplyAborted
 		}
 	}
+
+	return false, r.runBeforeActionAndWaitReady(ctx)
+}
+
+// decideWithoutTerminal answers the change question when nobody can: the default "no" of
+// a confirmation with no terminal is not a decision. An ordinary plan proceeds, so that an
+// automated run applies its changes instead of reporting success for nothing; a destructive
+// one stops and names the flag that approves it.
+func (r *Runner) decideWithoutTerminal(ctx context.Context) (bool, error) {
+	if r.changesInPlan == plan.HasDestructiveChanges {
+		return false, ErrDestructiveChangesNotApproved
+	}
+
+	dhlog.FromContext(ctx).WarnContext(ctx, "Changing objects state in the cloud: accepted without confirmation, no terminal.")
 
 	return false, r.runBeforeActionAndWaitReady(ctx)
 }
@@ -459,7 +483,9 @@ func (r *Runner) Apply(ctx context.Context) error {
 			return err
 		}
 		if skip {
-			dhlog.FromContext(ctx).InfoContext(ctx, "Skipping infrastructure apply.")
+			// Warn, not Info: the compact output drops Info, and a converge that skipped
+			// every master looked exactly like one that applied its plan.
+			dhlog.FromContext(ctx).WarnContext(ctx, "Skipping infrastructure apply.")
 			return nil
 		}
 

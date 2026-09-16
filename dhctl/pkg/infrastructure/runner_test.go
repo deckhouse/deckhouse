@@ -15,6 +15,7 @@
 package infrastructure
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -22,6 +23,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
@@ -105,6 +108,12 @@ func newTestRunnerWithChanges() *Runner {
 	return r
 }
 
+func newTestRunnerWithDestructiveChanges() *Runner {
+	r := newTestRunnerWithChanges()
+	r.changesInPlan = plan.HasDestructiveChanges
+	return r
+}
+
 func TestRunnerCreatesStateSaver(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -166,18 +175,34 @@ func TestCheckRunnerHandleChanges(t *testing.T) {
 					return input.NewConfirmation().WithYesByDefault()
 				}),
 		},
+		// Tests run without a terminal, which is the case under test: the question is
+		// never asked, so the default "no" is nobody's decision. Skipping on it left an
+		// automated converge reporting success with nothing applied.
 		{
-			name: "No and skip must skip",
-			skip: true,
+			name: "ordinary changes without a terminal are applied, skip-on-deny or not",
+			skip: false,
 			err:  nil,
 			runner: newTestRunnerWithChanges().
 				WithSkipChangesOnDeny(true),
 		},
 		{
-			name:   "No without skip must throw an error",
+			name:   "ordinary changes without a terminal are applied",
 			skip:   false,
-			err:    ErrInfrastructureApplyAborted,
+			err:    nil,
 			runner: newTestRunnerWithChanges(),
+		},
+		{
+			name:   "destructive changes without a terminal stop and name the flag",
+			skip:   false,
+			err:    ErrDestructiveChangesNotApproved,
+			runner: newTestRunnerWithDestructiveChanges(),
+		},
+		{
+			name: "destructive changes without a terminal are not skipped away",
+			skip: false,
+			err:  ErrDestructiveChangesNotApproved,
+			runner: newTestRunnerWithDestructiveChanges().
+				WithSkipChangesOnDeny(true),
 		},
 	}
 
@@ -193,6 +218,22 @@ func TestCheckRunnerHandleChanges(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The decision to apply nothing used to be an Info line, and the compact output keeps only
+// Warn and above: a converge that skipped every master printed "infrastructure apply ...
+// (0.00 seconds)" and exited 0, with nothing saying why.
+func TestSkippedApplyIsVisible(t *testing.T) {
+	var out bytes.Buffer
+
+	runner := newTestRunnerWithDestructiveChanges().
+		WithAutoDismissDestructiveChanges(true)
+
+	ctx := dhlog.ToContext(t.Context(), dhlog.NewBufferLogger(&out))
+
+	require.NoError(t, runner.Apply(ctx))
+	require.Contains(t, out.String(), "Skipping infrastructure apply.")
+	require.Contains(t, out.String(), "level=WARN")
 }
 
 func TestRunnerPlan(t *testing.T) {

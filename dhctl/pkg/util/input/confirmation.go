@@ -47,6 +47,13 @@ func (c *Confirmation) WithMessage(m string) *Confirmation {
 
 func (c *Confirmation) Ask() bool {
 	if !IsTerminal() {
+		// Nobody answered this: the default stands in for an answer. Saying so is what
+		// keeps a run that skipped its work over an unasked question from looking like a
+		// run that had nothing to do.
+		ctx := context.Background()
+		logger.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+			"%s [y/n]: no terminal to ask on, answered %q.", c.message, answerOf(c.defaultAnswer)))
+
 		return c.defaultAnswer
 	}
 
@@ -83,4 +90,12 @@ func (c *Confirmation) Ask() bool {
 
 func IsTerminal() bool {
 	return terminal.IsTerminal(int(os.Stdin.Fd()))
+}
+
+func answerOf(yes bool) string {
+	if yes {
+		return "yes"
+	}
+
+	return "no"
 }
