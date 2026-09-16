@@ -1703,6 +1703,25 @@ MY_VAR: "myvalue"
 			Expect(cniConfig.Field("data.ISTIO_OWNED_CNI_CONFIG").String()).To(Equal("false"))
 			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
 		})
+
+		It("renders istiod ClusterRole with 1.27 gateway API BackendTLSPolicy permissions", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istiodClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x27")
+			Expect(istiodClusterRole.Exists()).To(BeTrue())
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies/status"))
+		})
+
+		It("renders istiod ClusterRole with ambient status writer permissions", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istiodClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x27")
+			Expect(istiodClusterRole.Exists()).To(BeTrue())
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("services/status"))
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("serviceentries/status"))
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("authorizationpolicies/status"))
+		})
 	})
 
 	Context("operator-free sidecar with custom static resourcesManagement configuration", func() {
