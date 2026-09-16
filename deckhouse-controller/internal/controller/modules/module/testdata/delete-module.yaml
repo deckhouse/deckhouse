@@ -1,0 +1,20 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+  finalizers:
+  - module.deckhouse.io/module-registered
+  deletionTimestamp: "2024-01-01T00:00:00Z"
+spec:
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0
+  enabled: true
+status:
+  summary:
+    state: Ready
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: test-source-test-module-v1.0.0
