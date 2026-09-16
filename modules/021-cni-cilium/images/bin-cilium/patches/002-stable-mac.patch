@@ -1,0 +1,188 @@
+From 7df4ac8a93df336b8877de564588fd8d834fa2b5 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Wed, 9 Sep 2026 17:07:11 +0300
+Subject: [PATCH] endpoint: cluster-wide MAC addresses for endpoint devices
+
+Adds endpoint-interface-mac and endpoint-interface-host-mac. Needed by DVP: a VM
+keeps its MAC across a live migration, and the host side address is what the pod
+ARPs for its gateway, so it has to be the same on every node.
+
+The container side rides upstream's own plumbing, which already rewrites the
+interface with whatever the agent answers with; the host side has no such path,
+so the agent rewrites the device and records it in nodeMAC. The pod annotation
+cni.cilium.io/mac-address still overrides the cluster default.
+
+Upstream: https://github.com/cilium/cilium/pull/24100
+---
+ pkg/endpoint/api/endpoint_api_manager.go | 73 ++++++++++++++++++++++++
+ pkg/endpoint/endpoint.go                 |  9 +++
+ pkg/option/config.go                     | 34 +++++++++++
+ 3 files changed, 116 insertions(+)
+
+diff --git a/pkg/endpoint/api/endpoint_api_manager.go b/pkg/endpoint/api/endpoint_api_manager.go
+index 03da3297c2..42ae515369 100644
+--- a/pkg/endpoint/api/endpoint_api_manager.go
++++ b/pkg/endpoint/api/endpoint_api_manager.go
+@@ -202,6 +202,10 @@ func (m *endpointAPIManager) CreateEndpoint(ctx context.Context, epTemplate *mod
+ 
+ 	identityLbls := maps.Clone(apiLabels)
+ 
++	if err := m.applyDefaultMACs(ep); err != nil {
++		return invalidDataError(ep, err)
++	}
++
+ 	if ep.K8sNamespaceAndPodNameIsSet() && m.clientset.IsEnabled() {
+ 		pod, k8sMetadata, err := m.handleOutdatedPodInformer(ctx, ep)
+ 		if errors.Is(err, endpointmetadata.ErrPodStoreOutdated) {
+@@ -545,3 +549,72 @@ func (m *endpointAPIManager) ModifyEndpointIdentityLabelsFromAPI(id string, add,
+ 
+ 	return PatchEndpointIDLabelsOKCode, nil
+ }
++
++// applyDefaultMACs gives the endpoint's devices the cluster-wide MAC addresses
++// configured with option.EndpointInterfaceMAC and
++// option.EndpointInterfaceHostMAC. Deckhouse Virtualization needs both to be
++// predictable: a VM keeps its address across a live migration, and the host side
++// address is what the pod ARPs to reach its gateway, so a value that differs
++// between nodes blackholes a migrated VM until its neighbour entry expires.
++//
++// It is called before the pod's own annotations are read, so a pod carrying
++// upstream's annotation.PodAnnotationMAC still overrides the cluster default.
++// Precedence is annotation > cluster default > whatever the kernel picked.
++//
++// The two sides are applied differently because upstream only built one of them:
++//
++//   - container side: nothing to do beyond recording it. The CNI plugin creates
++//     the device with a random address, reports it, and then rewrites the
++//     interface inside the netns with whatever the agent answers with -- see the
++//     isLayer2 branch in plugins/cilium-cni/cmd/cmd.go. Setting ep.mac is enough.
++//
++//   - host side: no such path exists, ep.HostMac is only ever reported upwards.
++//     The agent runs in the host netns, so it rewrites the device itself and then
++//     records the result in nodeMAC, which is what cilium_lxc is programmed from.
++//     Doing it here keeps that ahead of regeneration, so the map and the device
++//     cannot disagree.
++//
++// netkit is deliberately not covered: it assigns device MACs only in L2 mode, and
++// the plugin likewise applies the returned address only in L2 mode, so both
++// options are inert under netkit L3. Deckhouse runs the veth datapath.
++func (m *endpointAPIManager) applyDefaultMACs(ep *endpoint.Endpoint) error {
++	if ep.IsSecondaryInterface() {
++		return nil
++	}
++
++	if addr := option.Config.EndpointInterfaceMAC; addr != "" {
++		parsed, err := mac.ParseMAC(addr)
++		if err != nil {
++			return fmt.Errorf("invalid %s %q: %w", option.EndpointInterfaceMAC, addr, err)
++		}
++		ep.SetMac(parsed)
++	}
++
++	addr := option.Config.EndpointInterfaceHostMAC
++	if addr == "" {
++		return nil
++	}
++	parsed, err := mac.ParseMAC(addr)
++	if err != nil {
++		return fmt.Errorf("invalid %s %q: %w", option.EndpointInterfaceHostMAC, addr, err)
++	}
++
++	ifName := ep.HostInterface()
++	if ifName == "" {
++		return nil
++	}
++
++	if err := mac.ReplaceMacAddressWithLinkName(ifName, parsed.String()); err != nil {
++		// Not fatal: the endpoint is otherwise healthy, and nodeMAC is left
++		// holding the address the device really has, so the datapath stays
++		// consistent with reality.
++		ep.Logger("api").Warn("Unable to set the host side MAC address of the endpoint device",
++			logfields.Error, err,
++			logfields.Interface, ifName,
++		)
++		return nil
++	}
++	ep.SetNodeMAC(parsed)
++
++	return nil
++}
+diff --git a/pkg/endpoint/endpoint.go b/pkg/endpoint/endpoint.go
+index 43dde4fd62..4fa30ecfc3 100644
+--- a/pkg/endpoint/endpoint.go
++++ b/pkg/endpoint/endpoint.go
+@@ -1470,6 +1470,15 @@ func (e *Endpoint) SetMac(mac mac.MAC) {
+ 	e.mac = mac
+ }
+ 
++// SetNodeMAC modifies the endpoint's host side MAC, which is what cilium_lxc is
++// programmed from. Only meaningful together with actually changing the address
++// of the host side device -- the two must not drift apart.
++func (e *Endpoint) SetNodeMAC(mac mac.MAC) {
++	e.unconditionalLock()
++	defer e.unlock()
++	e.nodeMAC = mac
++}
++
+ // IsSecondaryInterface reports whether this endpoint represents a seondary interface in
+ // case of more than once interface per pod.
+ func (e *Endpoint) IsSecondaryInterface() bool {
+diff --git a/pkg/option/config.go b/pkg/option/config.go
+index cfe155a7c8..bf760183e9 100644
+--- a/pkg/option/config.go
++++ b/pkg/option/config.go
+@@ -865,6 +865,15 @@ const (
+ 	// K8sHeartbeatTimeout configures the timeout for apiserver heartbeat
+ 	K8sHeartbeatTimeout = "k8s-heartbeat-timeout"
+ 
++	// EndpointInterfaceMAC defines the MAC address given to the container side
++	// of every endpoint's device, unless the pod overrides it with the
++	// annotation.PodAnnotationMAC annotation. Empty means "let the kernel pick".
++	EndpointInterfaceMAC = "endpoint-interface-mac"
++
++	// EndpointInterfaceHostMAC defines the MAC address given to the host side of
++	// every endpoint's device. Empty means "let the kernel pick".
++	EndpointInterfaceHostMAC = "endpoint-interface-host-mac"
++
+ 	// EnableIPv4FragmentsTrackingName is the name of the option to enable
+ 	// IPv4 fragments tracking for L4-based lookups. Needs LRU map support.
+ 	EnableIPv4FragmentsTrackingName = "enable-ipv4-fragment-tracking"
+@@ -1599,6 +1608,14 @@ type DaemonConfig struct {
+ 	// LocalRouterIPv6 is the link-local IPv6 address used for Cilium's router device
+ 	LocalRouterIPv6 string
+ 
++	// EndpointInterfaceMAC is the MAC address for the container side of an
++	// endpoint's device, or empty to let the kernel pick one.
++	EndpointInterfaceMAC string
++
++	// EndpointInterfaceHostMAC is the MAC address for the host side of an
++	// endpoint's device, or empty to let the kernel pick one.
++	EndpointInterfaceHostMAC string
++
+ 	// EnableEndpointRoutes enables use of per endpoint routes
+ 	EnableEndpointRoutes bool
+ 
+@@ -2492,6 +2509,23 @@ func (c *DaemonConfig) Populate(logger *slog.Logger, vp *viper.Viper) {
+ 	c.LogSystemLoadConfig = vp.GetBool(LogSystemLoadConfigName)
+ 	c.LocalRouterIPv4 = vp.GetString(LocalRouterIPv4)
+ 	c.LocalRouterIPv6 = vp.GetString(LocalRouterIPv6)
++	c.EndpointInterfaceMAC = vp.GetString(EndpointInterfaceMAC)
++	c.EndpointInterfaceHostMAC = vp.GetString(EndpointInterfaceHostMAC)
++
++	// Validate here rather than per endpoint: these are cluster-wide values, so a
++	// typo would otherwise fail every endpoint creation on the node at runtime.
++	// Refusing to start is louder and leaves nothing half-configured.
++	for name, value := range map[string]string{
++		EndpointInterfaceMAC:     c.EndpointInterfaceMAC,
++		EndpointInterfaceHostMAC: c.EndpointInterfaceHostMAC,
++	} {
++		if value == "" {
++			continue
++		}
++		if _, err := net.ParseMAC(value); err != nil {
++			logging.Fatal(logger, fmt.Sprintf("Invalid MAC address in --%s: %q", name, value), logfields.Error, err)
++		}
++	}
+ 	c.EnableBPFClockProbe = vp.GetBool(EnableBPFClockProbe)
+ 	c.EnableIPMasqAgent = vp.GetBool(EnableIPMasqAgent)
+ 	c.EnableEgressGateway = vp.GetBool(EnableEgressGateway)

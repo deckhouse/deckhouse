@@ -1,0 +1,33 @@
+From 19357c6a21d48c27a38a8cc8ddd5a5babf38092e Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Thu, 10 Sep 2026 14:44:42 +0300
+Subject: [PATCH] egressgateway: allow egress gateway together with
+ CiliumEndpointSlice
+
+Upstream fatals when both are enabled (commit 9768f15c9d, cilium#24833): an
+endpoint rebuilt from a slice has no UID, so the manager cannot key it. Deckhouse
+runs both.
+
+In 1.20 the manager reads CiliumEndpoint objects directly and CES does not stop
+those being created, so policies still resolve. Verified on two nodes: the
+gateway node programs an egress entry for a client pod hosted elsewhere. This
+would not hold with disable-endpoint-crd, which Deckhouse does not set.
+---
+ pkg/egressgateway/manager.go | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/pkg/egressgateway/manager.go b/pkg/egressgateway/manager.go
+index 0d8c62745a..ca8dcab7d1 100644
+--- a/pkg/egressgateway/manager.go
++++ b/pkg/egressgateway/manager.go
+@@ -192,10 +192,6 @@ func NewEgressGatewayManager(p Params) (out struct {
+ 		return out, fmt.Errorf("egress gateway is not supported in %s identity allocation mode", dcfg.IdentityAllocationMode)
+ 	}
+ 
+-	if dcfg.EnableCiliumEndpointSlice {
+-		return out, errors.New("egress gateway is not supported in combination with the CiliumEndpointSlice feature")
+-	}
+-
+ 	// TODO: refactor config checks for both ipv4 and ipv6, and derive whether the environment supports egress gateway policies for either protocol
+ 	// We need to make sure that ipv4/v6 only environments only create the necessary resources and don't fail if unneeded features are missing.
+ 	if !dcfg.EnableIPv4Masquerade || !dcfg.EnableBPFMasquerade {

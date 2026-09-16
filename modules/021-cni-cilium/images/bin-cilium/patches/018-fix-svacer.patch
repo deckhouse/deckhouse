@@ -1,0 +1,52 @@
+From 9faf159be52de55cb3b2f8059d3816232e017f6a Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Thu, 10 Sep 2026 16:16:04 +0300
+Subject: [PATCH] policy/api: reject an ICMP field with no type instead of
+ panicking
+
+A missing or null "type" leaves the IntOrString nil. String() tolerates that and
+returns "<nil>", so the check does not short circuit and IntValue() dereferences
+nil. Not reachable from a cluster in 1.20 -- the CRD marks type as required and
+cilium-dbg policy import is gone -- but it clears the Svace DEREF_OF_NULL
+finding in the Deckhouse build, and guards any direct caller.
+---
+ pkg/policy/api/icmp.go      | 7 +++++++
+ pkg/policy/api/icmp_test.go | 9 +++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/pkg/policy/api/icmp.go b/pkg/policy/api/icmp.go
+index a40bb882af..c5d9e30ac4 100644
+--- a/pkg/policy/api/icmp.go
++++ b/pkg/policy/api/icmp.go
+@@ -131,6 +131,13 @@ func (i *ICMPField) UnmarshalJSON(value []byte) error {
+ 		return err
+ 	}
+ 
++	// A missing or null "type" leaves this nil. IntOrString.String() tolerates a
++	// nil receiver and returns "<nil>", so the check below does not short
++	// circuit, and IntValue() then dereferences it and panics.
++	if t.Type == nil {
++		return fmt.Errorf("ICMP type must be specified")
++	}
++
+ 	// If i.Type is ICMP type name, the value should be checked if it belongs to the map for the given family.
+ 	if t.Type.String() != "0" && t.Type.IntValue() == 0 {
+ 		name := t.Type.String()
+diff --git a/pkg/policy/api/icmp_test.go b/pkg/policy/api/icmp_test.go
+index 4ed88c0e76..efcb2e4105 100644
+--- a/pkg/policy/api/icmp_test.go
++++ b/pkg/policy/api/icmp_test.go
+@@ -35,4 +35,13 @@ func TestICMPFieldUnmarshal(t *testing.T) {
+ 	err = json.Unmarshal(value3, &i)
+ 
+ 	require.Error(t, err)
++
++	// A missing or explicitly null type used to panic in IntValue().
++	value4 := []byte("{\"family\": \"IPv4\", \"type\": null}")
++	err = json.Unmarshal(value4, &i)
++	require.Error(t, err)
++
++	value5 := []byte("{\"family\": \"IPv4\"}")
++	err = json.Unmarshal(value5, &i)
++	require.Error(t, err)
+ }
