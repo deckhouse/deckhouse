@@ -14,9 +14,9 @@ The module works with the following custom resources.
 Resources managed directly by the module (the `deckhouse.io` group):
 
 * [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller): Describes an Istio ingress gateway instance serving the selected gateway class.
-* [IstioFederation](/modules/istio/cr.html#istiofederation): Marks one or more remote clusters as trusted for mesh federation (Enterprise Edition).
-* [IstioMulticluster](/modules/istio/cr.html#istiomulticluster): Marks one or more remote clusters as trusted for a multicluster configuration (Enterprise Edition).
-* [WaypointInstance](/modules/istio/cr.html#waypointinstance): Describes a waypoint ambient proxy created by the waypoint-controller component (Enterprise Edition).
+* [IstioFederation](/modules/istio/cr.html#istiofederation): Marks one or more remote clusters as trusted for mesh federation (available in the Enterprise Edition).
+* [IstioMulticluster](/modules/istio/cr.html#istiomulticluster): Marks one or more remote clusters as trusted for a multicluster configuration (available in the Enterprise Edition).
+* [WaypointInstance](/modules/istio/cr.html#waypointinstance): Describes a waypoint ambient proxy created by the waypoint-controller component (available in the Enterprise Edition).
 
 The module also installs and uses the standard [Istio](https://istio.io/) custom resources (the `networking.istio.io`, `security.istio.io`, `telemetry.istio.io`, and `extensions.istio.io` groups — VirtualService, DestinationRule, Gateway, PeerAuthentication, and others). For more details, see the [Istio custom resource reference](/modules/istio/istio-cr.html).
 

@@ -13,9 +13,9 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 Модуль работает со следующими кастомными ресурсами API-группы `deckhouse.io`:
 
 - [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller) — описывает инстанс Istio ingress gateway, обслуживающий выбранный класс шлюза;
-- [IstioFederation](/modules/istio/cr.html#istiofederation) — назначает один или несколько удалённых кластеров доверенными для федерации сервис-меш (DKP EE);
-- [IstioMulticluster](/modules/istio/cr.html#istiomulticluster) — назначает один или несколько удалённых кластеров доверенными для multicluster-конфигурации (DKP EE);
-- [WaypointInstance](/modules/istio/cr.html#waypointinstance) — описывает ambient-прокси waypoint, создаваемый компонентом waypoint-controller (DKP EE).
+- [IstioFederation](/modules/istio/cr.html#istiofederation) — назначает один или несколько удалённых кластеров доверенными для федерации сервис-меш (доступно в редакции DKP EE);
+- [IstioMulticluster](/modules/istio/cr.html#istiomulticluster) — назначает один или несколько удалённых кластеров доверенными для multicluster-конфигурации (доступно в редакции DKP EE);
+- [WaypointInstance](/modules/istio/cr.html#waypointinstance) — описывает ambient-прокси waypoint, создаваемый компонентом waypoint-controller (доступно в редакции DKP EE).
 
 Модуль также устанавливает и использует кастомные ресурсы [Istio](https://istio.io/) (API-группы `networking.istio.io`, `security.istio.io`, `telemetry.istio.io`, `extensions.istio.io`). Подробнее можно ознакомиться [в справочнике кастомных ресурсов Istio](/modules/istio/istio-cr.html).
 
