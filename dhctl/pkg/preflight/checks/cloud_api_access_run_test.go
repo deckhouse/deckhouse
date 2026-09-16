@@ -422,4 +422,16 @@ func TestCloudAPIAccessWithNoConnection(t *testing.T) {
 
 		require.True(t, isPermanent(err), "the waiting has already been done inside Get SSH client")
 	})
+
+	// Whatever the operator skipped, the checks behind this one are asked over the connection it
+	// just failed to make, and each would pay lib-connection's two minutes to learn the same
+	// thing. Live on 2026-09-16: the next check opened its own "Get SSH client" straight after
+	// this one reported.
+	t.Run("the rest of the phase is called off", func(t *testing.T) {
+		_, err := newCheck(errors.New("ssh: unable to authenticate, no supported methods remain")).Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.True(t, failure.StopsPhase, "nothing behind an unusable connection is worth asking")
+	})
 }

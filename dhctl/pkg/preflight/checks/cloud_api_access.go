@@ -173,8 +173,9 @@ func (c CloudAPICheck) masterClient(ctx context.Context) (libcon.SSHClient, erro
 	return sshClient, nil
 }
 
-// connectionFailure names a connection that was never made — the obstacle this check ran into,
-// and no more.
+// connectionFailure names a connection that was never made. The verdict is noConnection's, the
+// same one every other check gets, so the reader sees one answer to one question however they
+// arrived at it.
 //
 // It deliberately does not reproduce what ssh-credential would have said. This branch is reached
 // when that check did not run, which on a bootstrap means the operator turned it off by name: an
@@ -183,30 +184,11 @@ func (c CloudAPICheck) masterClient(ctx context.Context) (libcon.SSHClient, erro
 // advice about sshd's AllowTcpForwarding for a login that never happened, but the plain fact that
 // there was no connection, and to whom.
 func (c CloudAPICheck) connectionFailure(err error) error {
-	label := "the master node"
+	label := ""
 	if c.Endpoint != nil {
-		if endpoint := c.Endpoint(); endpoint != "" {
-			label = endpoint
-		}
+		label = c.Endpoint()
 	}
-
-	failure := &preflight.Failure{
-		Checked:  fmt.Sprintf("an ssh connection to %s", label),
-		Observed: classifyNetworkError(err),
-		Expected: "the node to accept an SSH connection",
-		Fix:      "let ssh-credential run — it is the check that diagnoses this, and the cloud API cannot be asked until it passes",
-		Err:      err,
-	}
-
-	if sshNeverConnected(err) {
-		failure.Observed = "the node did not accept the credentials it was offered"
-	}
-
-	// Permanent whatever the cause: the waiting has already been done. Getting a client is itself
-	// a retry loop inside lib-connection — 50 attempts, about two minutes — so this check's own
-	// NetworkRetry does not wait longer, it waits the same two minutes three times over. Seen
-	// live: "Get SSH client FAILED (118.78 seconds)" followed by "attempt 1/3".
-	return preflight.Permanent(failure)
+	return noConnection(label, err)
 }
 
 // request asks the endpoint through the tunnel and turns the answer into a verdict.

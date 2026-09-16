@@ -734,3 +734,29 @@ func TestDisabledReasonTellsTheTwoApart(t *testing.T) {
 		t.Error("a check nobody disabled must not report itself disabled")
 	}
 }
+
+// The brake belongs to the connection, not to whoever asked first. ssh-credential carries
+// StopsPhaseOnFailure, and skipping it by name used to take the brake with it: the connection was
+// just as absent, and every check after it paid lib-connection's own two-minute retry loop to
+// find that out. Bought live on 2026-09-16 with --preflight-skip-check=ssh-credential and a wrong
+// --ssh-user: "Get SSH client FAILED (118.61 seconds)", then the next check opening another one.
+func TestAFindingCanStopThePhase(t *testing.T) {
+	ctx, _ := testContext(t)
+	r := newRecorder()
+
+	connection := r.check("cloud-api-accessibility", PhasePreInfra, func() (string, error) {
+		return "", &Failure{Observed: "no connection", StopsPhase: true}
+	})
+	overIt := r.check("node-hostname", PhasePreInfra, func() (string, error) {
+		return "", nil
+	})
+
+	p := New(NewSuite(connection, overIt))
+	if err := p.Run(ctx, PhasePreInfra); err == nil {
+		t.Fatal("the phase must fail")
+	}
+
+	if got := r.count("node-hostname"); got != 0 {
+		t.Errorf("the checks after an unusable connection must not be asked at all, ran %d times", got)
+	}
+}

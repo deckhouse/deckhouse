@@ -49,6 +49,17 @@ type Failure struct {
 	// printed verbatim under `details:` so a support ticket carries it, and it keeps errors.Is
 	// and errors.As working through the Failure.
 	Err error
+	// StopsPhase says this particular failure leaves the rest of the phase unaskable, whichever
+	// check happened to report it. Check.StopsPhaseOnFailure says the same thing about a check;
+	// this says it about a finding, and the two exist because the thing being guarded is not
+	// always a check.
+	//
+	// The SSH connection is the case. Every node check is made over it, and the brake used to
+	// belong to ssh-credential, which carries StopsPhaseOnFailure. Skip that check by name and
+	// the brake goes with it, though the connection is just as absent: every check after it then
+	// pays lib-connection's own two-minute retry loop to discover the same thing, twenty times
+	// over. The connection is what the phase stands on, so the connection is what stops it.
+	StopsPhase bool
 }
 
 func (f *Failure) Error() string {

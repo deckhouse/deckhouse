@@ -273,7 +273,7 @@ var ErrNodeConnectionGone = errors.New("the ssh connection to the node is no lon
 func ResolveNodeInterface(ctx context.Context, initializer *providerinitializer.SSHProviderInitializer) (libcon.Interface, error) {
 	nodeInterface, err := helper.GetNodeInterface(ctx, initializer, initializer.GetSettings())
 	if err != nil {
-		return nil, err
+		return nil, noConnection(EndpointOfConfig(initializer.GetConfig())(), err)
 	}
 
 	wrapper, overSSH := nodeInterface.(*ssh.NodeInterfaceWrapper)
@@ -284,11 +284,46 @@ func ResolveNodeInterface(ctx context.Context, initializer *providerinitializer.
 
 	client := wrapper.Client()
 	if client == nil || !client.Live() {
-		return nil, fmt.Errorf("%w: it was working earlier in this phase, so something closed it "+
-			"— the checks after this one cannot be asked", ErrNodeConnectionGone)
+		failure := noConnection(EndpointOfConfig(initializer.GetConfig())(), ErrNodeConnectionGone)
+		var f *preflight.Failure
+		if errors.As(failure, &f) {
+			f.Observed = "it was working earlier in this phase, so something closed it"
+		}
+		return nil, failure
 	}
 
 	return nodeInterface, nil
+}
+
+// noConnection is the one verdict for "there is no usable SSH connection", whichever check was
+// the one to find out.
+//
+// Two properties, and both were bought live rather than reasoned out. Permanent: getting a client
+// is already a retry loop inside lib-connection — 50 attempts, about two minutes — so retrying on
+// top of it does not wait longer, it waits the same two minutes again. StopsPhase: every check
+// after this one is asked over the same connection, and the brake used to belong to
+// ssh-credential, so skipping that check by name left none — each of the twenty checks behind it
+// paid its own two minutes to learn the same thing. Nothing they could report is news next to
+// "there is no connection to the node", so the phase ends here and says that once.
+func noConnection(label string, err error) error {
+	if label == "" {
+		label = "the node"
+	}
+
+	failure := &preflight.Failure{
+		Checked:    fmt.Sprintf("an ssh connection to %s", label),
+		Observed:   classifyNetworkError(err),
+		Expected:   "the node to accept an SSH connection",
+		Fix:        "let ssh-credential run — it is the check that diagnoses this, and nothing on the node can be asked until it passes",
+		Err:        err,
+		StopsPhase: true,
+	}
+
+	if sshNeverConnected(err) {
+		failure.Observed = "the node did not accept the credentials it was offered"
+	}
+
+	return preflight.Permanent(failure)
 }
 
 // proxyConnectStatus recovers the status a proxy answered a CONNECT with, or 0 when err is not

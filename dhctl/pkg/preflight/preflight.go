@@ -176,10 +176,11 @@ func (p *Preflight) runChecks(ctx context.Context, checks []Check, title string)
 			continue
 		}
 
-		// A check on the critical path, or --preflight-fail-fast. Either way the phase ends on
-		// the failure, which is then the last thing the reader is looking at rather than the
-		// first line above a page of records saying nothing happened.
-		if check.StopsPhaseOnFailure || p.failFast {
+		// A check on the critical path, a finding that leaves the rest unaskable, or
+		// --preflight-fail-fast. Either way the phase ends on the failure, which is then the last
+		// thing the reader is looking at rather than the first line above a page of records
+		// saying nothing happened.
+		if check.StopsPhaseOnFailure || stopsPhase(result.Err) || p.failFast {
 			notRun = len(checks) - i - 1
 			break
 		}
@@ -253,6 +254,12 @@ func (p *Preflight) evaluate(ctx context.Context, check Check, broken map[CheckN
 		result.Err = err
 	}
 	return result
+}
+
+// stopsPhase reports whether the failure itself says the rest of the phase cannot be asked.
+func stopsPhase(err error) bool {
+	var failure *Failure
+	return errors.As(err, &failure) && failure.StopsPhase
 }
 
 func firstBroken(deps []CheckName, broken map[CheckName]struct{}) (CheckName, bool) {

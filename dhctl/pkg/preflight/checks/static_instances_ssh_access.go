@@ -35,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -297,7 +296,7 @@ type masterConnection struct {
 }
 
 func masterConnectionFor(ctx context.Context, initializer *providerinitializer.SSHProviderInitializer) (*masterConnection, error) {
-	nodeInterface, err := helper.GetNodeInterface(ctx, initializer, initializer.GetSettings())
+	nodeInterface, err := ResolveNodeInterface(ctx, initializer)
 	if err != nil {
 		return nil, err
 	}

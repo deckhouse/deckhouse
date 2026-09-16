@@ -21,7 +21,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -46,7 +45,7 @@ func (PortsCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c PortsCheck) Run(ctx context.Context) error {
-	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
+	nodeInterface, err := ResolveNodeInterface(ctx, c.SSHProviderInitializer)
 	if err != nil {
 		return err
 	}
