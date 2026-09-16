@@ -319,19 +319,21 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
     @include breakpoints.min-w(xl) {
       position: absolute;
-      // Anchored right under the link text, exactly as _header.scss:216-222 does it
-      // (top: 14px there). Starting the box inside the row means the pointer is already
-      // over the panel before it can touch the next menu item, so the far columns stay
-      // reachable without any script. The padding drops the visible panel to the bottom
-      // edge of the bar.
-      top: 24px;
+      // The reference gives the container no "top" at all, so it sits at its static
+      // position - the bottom edge of the item - and the gap down to the visible panel
+      // is the container's own padding. 100% is that same edge here. The padding is
+      // part of the container, so the pointer is over the dropdown while it crosses
+      // the gap and the far columns stay reachable without any script.
+      top: 100%;
       left: -28px; // .sub-menu-container left: -2em on a 14px item
       z-index: 20;
       display: block;
       visibility: hidden;
       opacity: 0;
-      padding-top: 26px;
-      transition: opacity .15s ease;
+      // Closed state. The reference declares the gap only in its :hover rule, so the
+      // padding grows from zero and the panel slides down 14px as it fades in.
+      padding-top: 0;
+      transition: opacity .2s ease, padding-top .2s ease;
     }
   }
 
@@ -339,6 +341,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     @include breakpoints.min-w(xl) {
       visibility: visible;
       opacity: 1;
+      padding-top: 14px; // .sub-menu-container padding-top: 1em on a 14px item
     }
   }
 
@@ -741,24 +744,25 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     transform: translateY(2px);
   }
 
+  // The product bar's dropdown is anchored and animated differently from the top one:
+  // the reference puts it at "top: 85%" of the item with a 1.25rem gap, flush with the
+  // item's left edge, and brings it in by sliding 10px down rather than by growing the
+  // gap (.sub-menu__wrapper in its own stylesheet). 85% of the 21px item plus the gap,
+  // minus the item height, is the same 17px it measures.
   .header__nav--bottom > .menu-item-has-children > .sub-menu-container {
     display: none;
 
     @include breakpoints.min-w(l) {
       position: absolute;
-      // Anchored right under the link text, exactly as _header.scss:216-222 does it
-      // (top: 14px there). Starting the box inside the row means the pointer is already
-      // over the panel before it can touch the next menu item, so the far columns stay
-      // reachable without any script. The padding drops the visible panel to the bottom
-      // edge of the bar.
-      top: 24px;
-      left: -28px; // .sub-menu-container left: -2em on a 14px item
+      top: 85%;
+      left: 0;
       z-index: 20;
       display: block;
       visibility: hidden;
       opacity: 0;
-      padding-top: 26px;
-      transition: opacity .15s ease;
+      padding-top: 20px; // .sub-menu__wrapper padding-top: 1.25rem
+      transform: translateY(-10px);
+      transition: opacity .3s ease, transform .3s ease;
     }
   }
 
@@ -826,6 +830,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     @include breakpoints.min-w(l) {
       visibility: visible;
       opacity: 1;
+      transform: translateY(0);
     }
   }
 
