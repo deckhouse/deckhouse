@@ -773,6 +773,90 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.55.0 (deadlock соединения при флуде channel request до установления канала). Пакет попадает в бинарь d8 транзитивно через werf (pkg/ssh_agent), go-git (transport/ssh), buildkit (session/sshforward) и vault sdk. Собственных SSH-соединений d8 не устанавливает и SSH-сервер не поднимает: подкоманды работают с container registry по HTTPS, уязвимый код не выполняется. Исправленная версия v0.56.0 требует Go 1.26; закроется бампом Go в deckhouse-cli.",
       "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-71556"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. github.com/go-git/go-git/v5 v5.16.2 поступает транзитивно из werf/delivery-kit для git-операций. Уязвимость (чтение и запись файлов вне worktree через symlink при checkout/status/add) требует клонирования вредоносного репозитория; источники Git-репозиториев задаются и контролируются администратором, недоверенные репозитории в штатных операциях d8 не обрабатываются.",
+      "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-71557"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. github.com/go-git/go-git/v5 v5.16.2 поступает транзитивно из werf/delivery-kit для git-операций. Уязвимость (запись файлов вне каталога refs через несанитизированные имена ссылок) требует вредоносного удалённого репозитория; источники Git-репозиториев задаются и контролируются администратором, недоверенные репозитории в штатных операциях d8 не обрабатываются.",
+      "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-53495"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.27"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Использование github.com/containerd/containerd ограничено операциями с OCI-образами и манифестами, а уязвимость проявляется в CRI-плагине containerd (утечка goroutine drainExecSyncIO при ExecSync), который в d8 не запускается.",
+      "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-61711"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/moby/buildkit@v0.13.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. github.com/moby/buildkit v0.13.1 поступает транзитивно через werf. Уязвимость находится в executor buildkitd (обработка некорректного SecurityMode из запроса custom frontend отключает seccomp и AppArmor); d8 не запускает buildkitd и не принимает запросы от frontend, уязвимый код не выполняется.",
+      "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-61712"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/moby/buildkit@v0.13.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. github.com/moby/buildkit v0.13.1 поступает транзитивно через werf. Уязвимость находится в executor и llbsolver buildkitd (разбор /etc/passwd и /etc/group без ограничения размера при резолве пользователя); d8 не запускает buildkitd, уязвимый код не выполняется.",
+      "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-10722"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/cilium/ebpf@v0.12.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. github.com/cilium/ebpf v0.12.3 поступает транзитивно через werf/buildkit в Linux-сборку d8. Уязвимость (integer overflow в btf.loadRawSpec при разборе BTF) требует локальной подачи вредоносного BTF/ELF-файла в LoadCollectionSpec; d8 не загружает eBPF-программы, уязвимый код не выполняется.",
+      "timestamp": "2026-09-16T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
