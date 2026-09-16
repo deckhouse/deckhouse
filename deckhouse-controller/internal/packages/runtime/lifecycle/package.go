@@ -17,6 +17,7 @@ package lifecycle
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
@@ -30,8 +31,13 @@ type Package struct {
 	settingsVersion int               // schema version of pending settings (from ModuleConfig.Spec.Version)
 	settings        addonutils.Values // pending settings, consumed by GetPendingSettings
 	maintenance     string            // pending maintenance mode, consumed by GetPendingMaintenance
-	removing        bool              // a teardown has begun and has not finished
-	operations      map[OperationKind]operation
+
+	// resourceRequests are the pending per-workload resource overrides, consumed by
+	// GetPendingResourceRequests. Always nil for packages whose CR has no such field.
+	resourceRequests []resourcerequests.Request
+
+	removing   bool // a teardown has begun and has not finished
+	operations map[OperationKind]operation
 }
 
 // beginOperation supersedes any operation of the same kind and returns the new one's context.

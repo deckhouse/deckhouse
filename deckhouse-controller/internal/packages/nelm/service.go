@@ -36,10 +36,13 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/drift"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -111,6 +114,13 @@ type Package interface {
 type application interface {
 	GetInstance() string
 	GetPackage() string
+}
+
+// resourceSizer is implemented by packages that carry per-workload resource
+// overrides from their CR. Optional, like application above: modules do not
+// implement it.
+type resourceSizer interface {
+	GetResourceRequests() []resourcerequests.Request
 }
 
 // Service manages Helm release lifecycle via nelm client.
@@ -222,14 +232,113 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 	}
 	defer os.Remove(valuesPath)
 
-	return s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+	opts := nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		RootValues:  pkg.GetRuntimeValues(),
 		ResourcesLabels: map[string]string{
 			health.LabelKey: pkg.GetName(),
 		},
-	})
+	}
+
+	requests := resourceRequests(pkg)
+	if len(requests) == 0 {
+		return s.client.Render(ctx, namespace, pkg.GetName(), opts)
+	}
+
+	// Render what the package actually gets: the runtime dump reads this, and it
+	// would be misleading if it showed the chart's own sizing rather than the
+	// overlay the install applies.
+	rendered, err := s.renderResized(ctx, namespace, pkg.GetName(), opts, requests)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", err
+	}
+
+	return nelm.JoinManifests(rendered)
+}
+
+// resourceRequests returns the package's per-workload resource overrides, or nil
+// when the feature gate is off or the package carries none.
+//
+// The gate is read here, at the single point the overlay enters the release path,
+// so turning it off leaves both the rendered manifests and the chart the release
+// installs from exactly as they were.
+func resourceRequests(pkg Package) []resourcerequests.Request {
+	if !app.ResourceRequestsEnabled() {
+		return nil
+	}
+
+	sizer, ok := pkg.(resourceSizer)
+	if !ok {
+		return nil
+	}
+
+	return sizer.GetResourceRequests()
+}
+
+// renderResized renders the chart and overlays the package's resource requests on
+// the result, returning the resources with the classification nelm gave them.
+func (s *Service) renderResized(ctx context.Context, namespace, name string, opts nelm.InstallOptions, requests []resourcerequests.Request) ([]nelm.RenderedResource, error) {
+	rendered, err := s.client.RenderResources(ctx, namespace, name, opts)
+	if err != nil {
+		return nil, fmt.Errorf("render resources: %w", err)
+	}
+
+	resources := make([]*unstructured.Unstructured, 0, len(rendered))
+	for _, resource := range rendered {
+		resources = append(resources, resource.Unstruct)
+	}
+
+	unmatched, err := resourcerequests.Apply(resources, requests)
+	if err != nil {
+		return nil, fmt.Errorf("apply resource requests: %w", err)
+	}
+
+	// A chart may render a workload conditionally, so a dormant request is not an
+	// error — but a typo in kind or name looks exactly the same from here, and
+	// silently sizing nothing is the worse failure of the two.
+	for _, request := range unmatched {
+		s.logger.Warn("resource request matches no rendered workload",
+			slog.String("name", name),
+			slog.String("kind", request.Kind),
+			slog.String("workload", request.Name))
+	}
+
+	return rendered, nil
+}
+
+// writeResizedChart materialises the overlaid resources as a chart to install
+// from, and returns its path along with the cleanup the caller must defer.
+//
+// Standalone crds/ CRDs are left out: Install passes NoInstallStandaloneCRDs, so
+// carrying them into the overlay's templates/ would start applying CRDs this
+// release has never applied. Hooks are carried over, and nelm reclassifies them
+// from their own annotations when it renders the overlay.
+func (s *Service) writeResizedChart(name, srcChart string, rendered []nelm.RenderedResource) (string, func(), error) {
+	resources := make([]*unstructured.Unstructured, 0, len(rendered))
+	for _, resource := range rendered {
+		if !resource.Regular && !resource.Hook {
+			continue
+		}
+
+		resources = append(resources, resource.Unstruct)
+	}
+
+	dir := filepath.Join(s.tmpDir, fmt.Sprintf("%s.package-chart-%s", name, uuid.New().String()))
+	cleanup := func() {
+		if err := os.RemoveAll(dir); err != nil {
+			s.logger.Warn("failed to remove overlay chart", slog.String("path", dir), log.Err(err))
+		}
+	}
+
+	if err := resourcerequests.WriteChart(dir, srcChart, resources); err != nil {
+		cleanup()
+
+		return "", func() {}, fmt.Errorf("write overlay chart: %w", err)
+	}
+
+	return dir, cleanup, nil
 }
 
 // Delete uninstalls a Helm release by name.
@@ -348,14 +457,35 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		slog.String("name", pkg.GetName()),
 		slog.String("namespace", namespace))
 
-	// Render chart to get manifests for checksum calculation
-	renderedManifests, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+	renderOptions := nelm.InstallOptions{
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
 		ResourcesLabels: resourcesLabels,
-	})
-	if err != nil {
+	}
+
+	// Render chart to get manifests for checksum calculation
+	var (
+		renderedManifests string
+
+		// resized holds the overlaid resources, kept around to build the chart the
+		// release is installed from. Only the resource-requests path fills it.
+		resized []nelm.RenderedResource
+	)
+
+	if requests := resourceRequests(pkg); len(requests) > 0 {
+		if resized, err = s.renderResized(ctx, namespace, pkg.GetName(), renderOptions, requests); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return status.NewError(conditionReasonRenderFailed, err)
+		}
+
+		// The checksum, the absent-resources monitor and the install all have to
+		// see the same manifests, so the overlay is folded in before any of them.
+		if renderedManifests, err = nelm.JoinManifests(resized); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return status.NewError(conditionReasonRenderFailed, err)
+		}
+	} else if renderedManifests, err = s.client.Render(ctx, namespace, pkg.GetName(), renderOptions); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return status.NewError(conditionReasonRenderFailed, err)
 	}
@@ -382,6 +512,24 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		return nil
 	}
 
+	// chartPath is what the release is installed from: the package's own chart, or
+	// an overlay chart holding the resized manifests, since nelm renders the chart
+	// it is handed rather than taking manifests. Built here and not next to the
+	// render because most calls stop at the check above, and the overlay is a
+	// directory written to disk.
+	chartPath := pkg.GetPath()
+
+	if len(resized) > 0 {
+		dir, cleanup, err := s.writeResizedChart(pkg.GetName(), pkg.GetPath(), resized)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return status.NewError(conditionReasonRenderFailed, err)
+		}
+		defer cleanup()
+
+		chartPath = dir
+	}
+
 	// Tracking still holds the previous apply's report, which a deadline reached
 	// before this one reports anything would name as ours.
 	s.status.ResetTracking(pkg.GetName())
@@ -395,7 +543,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		OnTrackingEvent: s.status.UpdateTracking,
 		TrackingOptions: trackingOptions,
-		Path:            pkg.GetPath(),
+		Path:            chartPath,
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
 		ReleaseLabels: map[string]string{

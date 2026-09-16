@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
@@ -93,6 +94,11 @@ type Application struct {
 	// maintenance is the package maintenance mode, set by the Configure task and
 	// read by the Run/nelm layer. Empty (Managed) means reconcile normally.
 	maintenance nelm.MaintenanceState
+
+	// resourceRequests are the per-workload replicas and container resources from
+	// Application.spec.resourceRequests, set by the Configure task and read back
+	// by the nelm layer on the same path as maintenance.
+	resourceRequests []resourcerequests.Request
 
 	// grantResolver resolves per-project cluster resource grants for settings
 	// fields tagged with x-deckhouse-grantable-resource. Never nil (defaults to NoopResolver).
@@ -522,6 +528,18 @@ func (a *Application) GetSettings() addonutils.Values {
 // task on the package's serialized queue.
 func (a *Application) SetMaintenance(state nelm.MaintenanceState) {
 	a.maintenance = state
+}
+
+// SetResourceRequests records the per-workload resource overrides so the nelm
+// layer can overlay them on the rendered manifests.
+func (a *Application) SetResourceRequests(requests []resourcerequests.Request) {
+	a.resourceRequests = requests
+}
+
+// GetResourceRequests returns the per-workload resource overrides. Nil means the
+// chart's own sizing stands.
+func (a *Application) GetResourceRequests() []resourcerequests.Request {
+	return a.resourceRequests
 }
 
 // GetMaintenance returns the application maintenance mode. Empty (Managed) means

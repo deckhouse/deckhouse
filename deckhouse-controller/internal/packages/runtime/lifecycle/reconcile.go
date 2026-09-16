@@ -15,6 +15,7 @@
 package lifecycle
 
 import (
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
@@ -42,6 +43,7 @@ type Changes struct {
 	Settings        bool
 	SettingsVersion bool
 	Maintenance     bool
+	Resources       bool
 	Forced          bool
 }
 
@@ -51,6 +53,7 @@ func (c Changes) Any() bool {
 		c.Settings ||
 		c.SettingsVersion ||
 		c.Maintenance ||
+		c.Resources ||
 		c.Forced
 }
 
@@ -61,6 +64,7 @@ type DesiredState struct {
 	Settings        addonutils.Values
 	SettingsVersion int
 	Maintenance     string
+	Resources       []resourcerequests.Request
 	ForceReload     bool
 }
 
@@ -83,6 +87,7 @@ func (p *Package) reconcile(desired DesiredState) Decision {
 		Settings:        p.settings.Checksum() != desired.Settings.Checksum(),
 		SettingsVersion: p.settingsVersion != desired.SettingsVersion,
 		Maintenance:     p.maintenance != desired.Maintenance,
+		Resources:       !resourcerequests.Equal(p.resourceRequests, desired.Resources),
 		Forced:          desired.ForceReload,
 	}
 
@@ -94,6 +99,7 @@ func (p *Package) reconcile(desired DesiredState) Decision {
 	p.settings = desired.Settings
 	p.settingsVersion = desired.SettingsVersion
 	p.maintenance = desired.Maintenance
+	p.resourceRequests = desired.Resources
 
 	switch {
 	case changes.Version, changes.Forced:

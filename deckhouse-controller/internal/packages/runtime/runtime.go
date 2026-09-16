@@ -606,7 +606,7 @@ func (r *Runtime) scheduleGlobal(enabled []string, reason string) {
 	// UpdateGlobalSettings since the last pass are picked up here, and their schema version
 	// with them, so the conversions in the global hooks dir apply.
 	settings, settingsVersion := r.packages.GetPendingSettings(r.global.GetName())
-	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, settingsVersion, nelm.Managed, r.status, r.logger))
+	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, settingsVersion, nelm.Managed, nil, r.status, r.logger))
 
 	// Enable initializes and syncs the global hooks; its OnStartup step is a no-op
 	// because global has no OnStartup hooks. globalrun then runs BeforeAll, ensures
@@ -650,21 +650,24 @@ func (r *Runtime) schedulePackage(name, reason string) {
 
 	settings, settingsVersion := r.packages.GetPendingSettings(name)
 	maintenance := nelm.MaintenanceState(r.packages.GetPendingMaintenance(name))
+	resourceRequests := r.packages.GetPendingResourceRequests(name)
 
 	if pkg := r.apps[name]; pkg != nil {
 		// Only applications support maintenance; publish (or clear) the gauge so the
 		// ApplicationIsInMaintenanceMode alert reflects the current mode.
 		r.setMaintenanceMetric(name, maintenance)
 
-		// Configure applies the maintenance mode onto the package; Run reads it back
-		// via the package's GetMaintenance.
-		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, settingsVersion, maintenance, r.status, r.logger))
+		// Configure applies the maintenance mode and the per-workload resource
+		// overrides onto the package; Run reads them back via the package's
+		// GetMaintenance and GetResourceRequests.
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, settingsVersion, maintenance, resourceRequests, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, settingsVersion, maintenance, r.status, r.logger))
+		// Modules have no resource overrides: the field is only on Application.
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, settingsVersion, maintenance, nil, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, app.NamespaceDeckhouse, r.nelmService, r.status, r.logger), onDone)
 	}
@@ -975,6 +978,10 @@ func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, sett
 
 // rescheduleReason names the changes behind a reschedule, for the scheduler's log line.
 func rescheduleReason(changes lifecycle.Changes) string {
+	if changes.Resources {
+		return "ResourceRequestsChanged"
+	}
+
 	if changes.Settings {
 		return "SettingsChanged"
 	}
