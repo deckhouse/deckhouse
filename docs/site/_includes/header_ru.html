@@ -23,7 +23,7 @@
 {%- endcomment -%}
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 <!--noindex-->
-<div class='header-container {%- if site.mode == "module" %} header-container--module{%- endif %}'>
+<div class='header-container {%- if site.mode == "module" %} header-container--module{%- endif %}' data-burger-breakpoint="1200">
   <header class="header header--ru header_float">
     <div class="header__content container">
       <div class="header__logo">

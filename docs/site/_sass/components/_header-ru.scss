@@ -18,6 +18,8 @@ $text-tertiary: #6e7084; // --text-tertiary
 $text-inverse-primary: #fff; // --text-inverse-primary
 $bg-brand: #0a6eff; // --bg-brand
 $brand-hover: #004df2; // --text-brand-hover / --border-primary-hover
+$bg-inverse: #000; // --bg-inverse
+$bg-inverse-pressed: #42424c; // --bg-inverse-surface-pressed
 $border-primary: #000; // --border-primary
 $border-tertiary: #e8e9f3; // --border-tertiary
 $radius-pill: 666px; // --radius-pill
@@ -56,6 +58,8 @@ $solution-col: 324px; // .solutions a min-width, 20.25rem
 // flipping it. Inlined so the data-driven items coming from header-menu-fill-items.html
 // get it without touching that shared include.
 $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='none'%3E%3Cpath d='m.75.75 3 3 3-3' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+// The 16x16 caret the reference uses for .nav__trigger below 1200.
+$chevron-16: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='17' fill='none'%3E%3Cpath d='m4 8.5 4 4 4-4' stroke='%23000' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none'%3E%3Cpath d='M10.172 1 5.557 5.615.94 1' stroke='%23222A5D' stroke-width='1.846' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
 @mixin chevron-after($image: $chevron, $w: 10px, $h: 5px) {
@@ -66,7 +70,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   top: auto;
   right: auto;
   margin: 0;
-  flex: 0 0 $w;
+  flex: 0 0 auto;
   width: $w;
   height: $h;
   transform: translateY(1px);
@@ -75,7 +79,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 }
 
 @mixin nav-link {
-  display: flex;
+  display: inline-flex;
   padding-right: 0;
   align-items: center;
   gap: 2px;
@@ -95,12 +99,11 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  // 44px at >=1664, measured on test.deckhouse.ru (14px/1.5 text + 10px padding +
-  // 2px border on each side). Figma's Button/S is 39px; the shipped header runs a size
-  // up. The primary button carries a transparent border so both match exactly.
-  height: 44px;
-  padding: 0 16px;
-  border: 1.5px solid transparent;
+  // Driven by padding, not by a fixed height - that is how a.button is built in the
+  // reference's new-base.min.css. 14px/20px text with 12/24 padding and a 1px border is
+  // 46px; from 1024 the line box grows to 22px and the drawer buttons become 48px.
+  padding: 12px 24px;
+  border: 1px solid transparent;
   border-radius: $radius-pill;
   font-family: 'Onest', sans-serif;
   font-size: 14px;
@@ -109,24 +112,48 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   text-align: center;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
 
+  @include breakpoints.min-w(l) {
+    line-height: 22px;
+  }
+
+  // Hover on BOTH buttons fills them with --bg-inverse and turns the text white; pressed
+  // goes to --bg-inverse-surface-pressed. Not the brand blue this file used before.
   &--ghost {
     border-color: $border-primary;
+    background-color: transparent;
     @include mixins.color($text-primary);
 
-    &:hover {
-      border-color: $brand-hover;
-      @include mixins.color($brand-hover);
+    &:hover,
+    &:focus-visible {
+      border-color: $bg-inverse;
+      @include mixins.bg-color($bg-inverse);
+      @include mixins.color($text-inverse-primary);
+    }
+
+    &:active {
+      border-color: $bg-inverse-pressed;
+      @include mixins.bg-color($bg-inverse-pressed);
+      @include mixins.color($text-inverse-primary);
     }
   }
 
   &--primary {
+    border-color: $bg-brand;
     @include mixins.bg-color($bg-brand);
     @include mixins.color($text-inverse-primary);
 
-    &:hover {
-      @include mixins.bg-color($brand-hover);
+    &:hover,
+    &:focus-visible {
+      border-color: $bg-inverse;
+      @include mixins.bg-color($bg-inverse);
+      @include mixins.color($text-inverse-primary);
+    }
+
+    &:active {
+      border-color: $bg-inverse-pressed;
+      @include mixins.bg-color($bg-inverse-pressed);
       @include mixins.color($text-inverse-primary);
     }
   }
@@ -138,7 +165,8 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   font-family: 'Onest', sans-serif;
   font-weight: 400;
   @include mixins.bg-color($bg-primary);
-  border-bottom: 2px solid $border-tertiary;
+  // No separator here on purpose: on the reference only .header__product-menu carries
+  // the 2px bottom border, the top bar has none.
 
   // The RU header carries header_float unconditionally (header_ru.html) so that
   // customscripts.js never binds its scroll-shadow listener. The design has a border
@@ -160,8 +188,12 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     padding-bottom: $bar-pad-y;
   }
 
-  .header__logo {
+  // body.sidebar-opened .header__logo gets width: inherit from the legacy sheet, which
+  // resolves to the full width of .header__content and shoves the burger off the row.
+  .header__logo,
+  .header__logo:is(:root *) {
     flex: 0 0 auto;
+    width: $wordmark-width;
     overflow: visible;
   }
 
@@ -173,14 +205,19 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
     // Scaled to the full width of the box; the height follows from the 104.789x24.001
     // viewBox, and the mark is centred in whatever is left.
+    // The reference ships the same wordmark on a 105x28 canvas and renders it at
+    // height: 30px, so the glyphs end up 112.27x25.72 sitting at the TOP of the box with
+    // the spare 4.3px below. Our inline copy is cropped to 104.789x24.001, so centring it
+    // would drop the glyphs ~2px lower than the reference. Scale by height and pin to the
+    // top instead, and the two land on the same pixels.
     svg {
       position: absolute;
-      top: 50%;
+      top: 0;
       left: 0;
       display: block;
-      width: $wordmark-width;
-      height: 25.882px; // $wordmark-width * 24.001 / 104.789
-      transform: translateY(-50%);
+      width: 112.27px; // 104.789 * 30 / 28
+      height: 25.72px; // 24.001 * 30 / 28
+      transform: none;
     }
   }
 
@@ -192,13 +229,13 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     padding: 0;
     list-style: none;
 
-    @include breakpoints.min-w(l) {
+    @include breakpoints.min-w(xl) {
       display: flex;
       flex: 0 1 auto;
-      // Stretching the items to the full height of the bar puts the dropdown edge
-      // exactly at 64px and leaves no unhoverable gap above the panel.
-      align-self: stretch;
-      align-items: stretch;
+      // The reference keeps the items at their text height and centres them in the bar
+      // (.header__nav.nav { align-items: center }); the dropdown is anchored to the link,
+      // not to the item box, so it does not need a stretched row.
+      align-items: center;
       gap: $item-gap;
       margin-left: $logo-gap;
     }
@@ -206,8 +243,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
   .header__nav--top > .header__navigation-item {
     position: relative;
-    display: flex;
-    align-items: center;
+    display: block;
     padding: 0;
     background: none;
 
@@ -232,7 +268,6 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     &.active,
     &.active-mobile,
     &.header__navigation-item--open {
-      margin: 0;
       padding: 0;
       background: none;
       @include mixins.color($text-primary);
@@ -256,7 +291,6 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
     @include breakpoints.min-w(xxl) {
       &:after {
-        flex-basis: 12px;
         width: 12px;
         height: 6px;
       }
@@ -277,7 +311,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   .header__nav--top > .menu-item-has-children > .sub-menu-container {
     display: none;
 
-    @include breakpoints.min-w(l) {
+    @include breakpoints.min-w(xl) {
       position: absolute;
       // Anchored right under the link text, exactly as _header.scss:216-222 does it
       // (top: 14px there). Starting the box inside the row means the pointer is already
@@ -296,7 +330,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   }
 
   .header__nav--top > .menu-item-has-children:hover > .sub-menu-container {
-    @include breakpoints.min-w(l) {
+    @include breakpoints.min-w(xl) {
       visibility: visible;
       opacity: 1;
     }
@@ -324,12 +358,13 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       }
     }
 
-    // 16/20 regular. Medium reads too heavy next to the site; only the product and
-    // solution titles keep the medium weight, and they set it themselves.
+    // 16/20 medium: .header__nav .menu-item-has-children:hover .sub-menu-container a is
+    // font-weight 500 on the reference. Only the grey descriptions drop back to 400, and
+    // they do that in their own rule.
     a {
       display: block;
       font-size: 16px;
-      font-weight: 400;
+      font-weight: 500;
       line-height: 20px;
       text-decoration: none;
       @include mixins.color($text-primary);
@@ -432,7 +467,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   .header__right-box {
     display: none;
 
-    @include breakpoints.min-w(l) {
+    @include breakpoints.min-w(xl) {
       display: flex;
       flex: 0 0 auto;
       align-items: center;
@@ -453,34 +488,40 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   // ----------------------------------------------------------------- burger / close
   .header__hamburger {
     position: relative;
+    // Mandatory: the legacy .header__hamburger hides itself from 1024 up. This header
+    // collapses at 1200, so without restating display here the 1024-1199 band loses the
+    // burger while the top row is still hidden - no navigation at all.
+    display: block;
     width: 24px;
-    height: 24px;
+    height: 16px;
     margin: 0 0 0 auto;
     cursor: pointer;
 
-    @include breakpoints.min-w(l) {
+    @include breakpoints.min-w(xl) {
       display: none;
     }
 
     span {
       position: absolute;
-      left: 3px;
-      width: 18px;
-      height: 1.5px;
-      border-radius: 2px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      border-radius: 8px;
       transition: transform .2s ease, opacity .2s ease, top .2s ease;
       @include mixins.bg-color($text-primary);
 
       &:nth-child(1) {
-        top: 7px;
+        top: 0;
       }
 
       &:nth-child(2) {
-        top: 11.25px;
+        top: 50%;
+        transform: translateY(-50%);
       }
 
       &:nth-child(3) {
-        top: 15.5px;
+        top: auto;
+        bottom: 0;
       }
     }
 
@@ -488,8 +529,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     // in place, which is exactly where the design puts it.
     &.show span {
       &:nth-child(1) {
-        top: 11.25px;
-        transform: rotate(45deg);
+        transform: rotate(-45deg) translate(-4px, 6px);
       }
 
       // transform is restated because the legacy open state
@@ -502,8 +542,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       }
 
       &:nth-child(3) {
-        top: 11.25px;
-        transform: rotate(-45deg);
+        transform: rotate(45deg) translate(-4px, -6px);
       }
     }
   }
@@ -533,17 +572,13 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     position: relative;
     display: flex;
     flex-direction: row;
-    align-items: stretch;
+    align-items: center;
     justify-content: flex-start;
-    gap: 16px;
+    gap: 20px $l2-logo-gap; // .header__product-menu .container { gap: 1.25rem 2rem }
     padding-right: 20px;
 
     @include breakpoints.min-w(s) {
       padding-right: 32px;
-    }
-
-    @include breakpoints.min-w(l) {
-      gap: $l2-logo-gap;
     }
 
     @include breakpoints.min-w(xl) {
@@ -553,11 +588,14 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
   .header__product-menu-logo {
     display: flex;
-    flex: 0 0 auto;
+    // Shrinks with the row exactly as on the reference, where the lockup is an <img>
+    // with width: 100% inside a flex item: 108px at 1200, 116px at 1280, its natural
+    // 120px from 1440 up.
+    flex: 0 1 auto;
     align-items: center;
-    gap: 8px;
-    min-width: $logo-width;
-    min-height: $logo-height;
+    gap: 12px; // .header__product-menu-logo { gap: .75rem }
+    max-width: $logo-width;
+    min-height: 0;
     font-size: 14px;
     font-weight: 500;
     line-height: 18px;
@@ -573,31 +611,38 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     // 120x36 logo box at its natural size, as in the design.
     .header__product-lockup {
       display: block;
-      width: auto;
+      width: 100%;
       height: auto;
       max-width: $logo-width;
-      max-height: $logo-height;
     }
   }
 
+  // Shown from 1200, not from 1024: on the reference both rows are .header__nav.nav, and
+  // that selector is display:none until the 1200 media query turns it into a flex row.
+  // Between 1024 and 1199 only the trigger is on screen there.
   .header__nav--bottom {
     display: none;
     margin: 0;
     padding: 0;
     list-style: none;
 
-    @include breakpoints.min-w(l) {
+    @include breakpoints.min-w(xl) {
       display: flex;
-      align-self: stretch;
-      align-items: stretch;
+      align-items: center;
+      gap: 8px;
+    }
+
+    @include breakpoints.min-w(xxl) {
       gap: $item-gap;
     }
   }
 
   .header__nav--bottom > .header__navigation-item {
     position: relative;
-    display: flex;
-    align-items: center;
+    // Left as the default list-item with a 21px strut, exactly as on the reference: the
+    // active pill is sized from this line box, so 20px here would make it 1px short.
+    font-size: 14px;
+    line-height: 21px;
     margin: 0 2px; // .header__product-menu ul li margin
     padding: 0;
     background: none;
@@ -607,9 +652,20 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       display: none;
     }
 
+    // 12px/16px inside the mobile card, 14px/20px in the desktop row - the reference's
+    // own split at 1024.
     > a {
       @include nav-link;
       position: relative; // keeps the text above the active pill
+      // 14px/16px inside the mobile card, 14px/20px in the desktop row. The 12px of the
+      // reference's base rule is never on screen: below 1200 only the card is shown, and
+      // there .header__product-menu .nav li a puts it back to .875rem.
+      font-size: 14px;
+      line-height: 16px;
+
+      @include breakpoints.min-w(l) {
+        line-height: 20px;
+      }
     }
 
     &:not(.menu-item-has-children):hover > a {
@@ -628,22 +684,21 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       // matching padding) and 32px tall, the 20px line box plus .375rem above and
       // below. Here the item is stretched to the full height of the bar, so the height
       // is pinned instead of derived and the bleed is folded into the width.
+      // The reference's own numbers: the box is the item itself, grown by .375rem above
+      // and below and .75rem left and right through content-box padding. Now that the
+      // item is no longer stretched to the height of the bar, this is a direct copy.
       &:before {
         content: '';
         position: absolute;
-        top: 50%;
+        top: -6px;
         left: -12px;
         display: block;
-        // Both are mandatory. The legacy .active::before (_header.scss:96-106) ships
-        // padding: .411rem .75rem, this rule does not inherit it away, and under
-        // content-box that padding is painted on top of the width and height: the pill
-        // came out 24px wider on the right only, and 45px tall instead of 32.
-        box-sizing: border-box;
-        padding: 0;
-        width: calc(100% + 24px);
-        height: 32px;
+        box-sizing: content-box;
+        width: 100%;
+        height: 100%;
+        padding: 6px 12px;
         border-radius: 32px;
-        transform: translateY(-50%);
+        transform: none;
         @include mixins.bg-color($bg-active);
       }
     }
@@ -653,13 +708,26 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   .header__nav--bottom > .menu-item-has-children > a {
     gap: 8px;
 
+    // Two different marks: the 16x16 icon inside the mobile card, the small caret in the
+    // desktop row. That is the reference's own split at 1024.
     &:after {
-      @include chevron-after($chevron-l2, 10px, 5px);
+      @include chevron-after($chevron-16, 16px, 16px);
+      position: relative;
+      transform-origin: center 62%;
+
+      @include breakpoints.min-w(l) {
+        position: static;
+        flex: 0 0 auto;
+        width: 10px;
+        height: 5px;
+        background-image: $chevron-l2;
+        transform: none;
+      }
     }
   }
 
   .header__nav--bottom > .menu-item-has-children:hover > a:after {
-    transform: translateY(3px);
+    transform: translateY(2px);
   }
 
   .header__nav--bottom > .menu-item-has-children > .sub-menu-container {
@@ -685,19 +753,37 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
   // The product bar's own dropdown. Without this it falls through to the legacy
   // .header__nav .sub-menu rules and comes out at 14px/300 in a 315px box.
+  // Flat inside the mobile card and a floating panel in the desktop row, exactly as the
+  // reference splits it at 1024.
   .header__nav--bottom .sub-menu {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    width: max-content;
-    min-width: 250px;
-    max-width: 275px;
+    width: auto;
+    min-width: 100%;
     margin: 0;
-    padding: 18px;
-    border-radius: $panel-radius;
+    padding: 8px 0 0 8px;
     list-style: none;
-    @include mixins.bg-color($bg-primary);
-    box-shadow: 2px 3px 8px 0 rgba(70, 63, 102, .12);
+    background: none;
+    box-shadow: none;
+
+    @include breakpoints.min-w(l) {
+      flex-wrap: wrap;
+      width: max-content;
+      min-width: 250px;
+      max-width: 275px;
+      // No gap: the reference spaces these with padding-bottom on each item and zeroes
+      // the panel's own bottom padding, so the last row is not double-spaced.
+      gap: 0;
+      padding: 18px 18px 0;
+      border-radius: $panel-radius;
+      @include mixins.bg-color($bg-primary);
+      box-shadow: 2px 3px 8px 0 rgba(70, 63, 102, .12);
+
+      li {
+        padding-bottom: 16px;
+      }
+    }
 
     li {
       padding: 0;
@@ -710,7 +796,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     a {
       display: block;
       font-size: 16px;
-      font-weight: 400;
+      font-weight: 500; // .header__nav .level-1 .submenu-item a
       line-height: 20px;
       text-decoration: none;
       @include mixins.color($text-primary);
@@ -732,8 +818,10 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   // Below l the L2 list turns into a dropdown card opened by .nav__trigger (the .active
   // class comes from adaptive/header-mobile.js). Ported from _header.scss:793-855, which
   // is scoped to ".header__product-menu .container" and so never reaches this markup.
+  // Up to 1199, not 1023: the reference leaves the trigger on screen there with nothing
+  // behind it. At rest the two look identical; here the control actually opens.
   .header__product-menu--ru .header__nav--bottom {
-    @include breakpoints.max-w(l) {
+    @include breakpoints.max-w(xl) {
       position: absolute;
       top: 100%;
       right: 16px;
@@ -741,7 +829,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       display: none;
       box-sizing: border-box;
       flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
       min-width: 268px;
       max-width: calc(100vw - 32px);
       margin-top: 12px;
@@ -749,7 +837,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       overflow-x: hidden;
       overflow-y: auto;
       border-radius: 4px;
-      row-gap: 20px;
+      row-gap: 20px; // .header__product-menu .nav { row-gap: 1.25rem }
       -webkit-overflow-scrolling: touch;
       @include mixins.bg-color($bg-primary);
       box-shadow: 0 4px 8px -2px rgba(16, 24, 40, .1), 0 2px 4px -2px rgba(16, 24, 40, .06);
@@ -818,19 +906,25 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
   // .nav__trigger is filled and toggled by adaptive/header-mobile.js; on mobile it is
   // the right-hand control of the product bar, exactly as in the design.
+  // 12px/16px up to 1024 and 14px/20px above it, with the big 16x16 caret - the
+  // reference's own ladder. It stays on screen until 1200, where the L2 row is fully
+  // laid out; between 1024 and 1200 both are visible there too.
   .header__product-menu--ru .nav__trigger {
     display: flex;
-    align-items: center;
-    gap: 2px;
+    align-items: flex-end;
+    gap: 4px;
     margin-left: auto;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 400;
-    line-height: 20px;
+    line-height: 16px;
     cursor: pointer;
     @include mixins.color($text-primary);
 
     &:after {
-      @include chevron-after;
+      @include chevron-after($chevron-16, 16px, 16px);
+      position: relative;
+      transform: none;
+      transition: transform .3s ease;
     }
 
     &.rotated:after {
@@ -838,6 +932,11 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     }
 
     @include breakpoints.min-w(l) {
+      font-size: 14px;
+      line-height: 20px;
+    }
+
+    @include breakpoints.min-w(xl) {
       display: none;
     }
   }
@@ -846,14 +945,16 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   // shrink it. This header keeps the row from 1024 (the burger breakpoint the shared
   // adaptive/header-mobile.js works to), so the 1024-1199 band reuses the site's
   // 1200 values and is allowed to wrap rather than overflow.
+  // The reference never wraps this row - it switches to the burger before the row runs
+  // out of space. Gap is 8px from 1200 and 24px from 1440, exactly as there.
   .header__nav--top {
-    @include breakpoints.min-w(l) {
-      flex-wrap: wrap;
+    @include breakpoints.min-w(xl) {
+      flex-wrap: nowrap;
       gap: 8px;
     }
 
     @include breakpoints.min-w(xxl) {
-      gap: 8px $item-gap;
+      gap: $item-gap;
     }
   }
 
@@ -865,17 +966,26 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   // Four classes on purpose. Carrying .container in the markup brought the legacy
   // ".header__product-menu .container .header__nav.nav" into range, and it sets
   // gap: .82rem 1rem from 1200 up; a two-class selector loses to it.
+  // Four classes on purpose: carrying .container in the markup brought the legacy
+  // ".header__product-menu .container .header__nav.nav" into range, and a two-class
+  // selector loses to it. 8px from 1200 and 24px from 1440, as on the reference.
   .header__product-menu--ru .header__nav--bottom.nav {
     flex-wrap: wrap;
-    gap: 18.4px $item-gap;
+    // 20px between rows inside the mobile card (.header__product-menu .nav row-gap),
+    // then the flat 8/24 of the desktop row.
+    gap: 20px $item-gap;
 
-    @include breakpoints.min-w(l) {
+    @include breakpoints.min-w(xl) {
+      gap: 8px;
+    }
+
+    @include breakpoints.min-w(xxl) {
       gap: $item-gap;
     }
 }
 
 .header__nav--top {
-  @include breakpoints.min-w(l) {
+  @include breakpoints.min-w(xl) {
     margin-left: 24px; // .header__left-box gap below 1440
     // Keeps the last item off the buttons when the row is tight; if that is not
     // enough the row wraps rather than collide.
@@ -887,50 +997,32 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   }
 }
 
-.header__product-menu-inner {
-  @include breakpoints.min-w(l) {
-    gap: 24px;
-  }
 
-  @include breakpoints.min-w(xl) {
-    gap: $l2-logo-gap;
-  }
-}
 
-// Only the buttons inside the bar shrink; the drawer keeps the full size. The three
-// steps are the site's own (.header__right-box .button at 1200 / 1440 / 1664): 12px
-// text with 8x10 padding, then 14px with 8x12, then 14px with 10x16.
+// Only the buttons inside the bar shrink; the drawer keeps the full size. The steps are
+// the reference's own (.header__right-box .button at 1200 / 1440 / 1664): 12px text with
+// 8x10 padding, then 14px with 8x12, then 14px with 10x16 - 40 / 40 / 44px tall.
+// Keyed off l rather than xl because this header still shows the row from 1024.
 .header__btn {
-  @include breakpoints.min-w(l) {
-    height: 38px;
-    padding: 0 10px;
+  @include breakpoints.min-w(xl) {
+    padding: 8px 10px;
     font-size: 12px;
   }
 
   @include breakpoints.min-w(xxl) {
-    height: 41px;
-    padding: 0 12px;
+    padding: 8px 12px;
     font-size: 14px;
   }
 
   @include breakpoints.min-w(xxxl) {
-    height: 44px;
-    padding: 0 16px;
-    font-size: 14px;
+    padding: 10px 16px;
   }
 }
 }
 
-// While the burger drawer is open the product bar is hidden, matching the design and
-// keeping the drawer's top padding equal to the height of the top bar alone.
-// The test is the drawer's own .show class, NOT body.sidebar-opened: header-mobile.js
-// sets that class for the L2 doc-modal as well (:344), and keying off it would hide the
-// very bar that opens the modal.
-body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
-  @include breakpoints.max-w(l) {
-    display: none;
-  }
-}
+// The product bar stays visible with the drawer open - that is what the reference does,
+// and the drawer's top padding is measured from the whole header rather than from the
+// top bar alone (see .header__sidebar--ru padding-top below).
 
 // ----------------------------------------------------------------- mobile drawer
 // .header__sidebar is rendered outside .header-container, so it cannot be nested under
@@ -942,10 +1034,11 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
   z-index: 80;
   width: 100%;
   height: 100%;
-  // 82px, the value the site's own drawer uses (.sidebar padding-top). The sticky top
-  // bar stays visible above the overlay on z-index 100 and supplies the logo and the
-  // close icon; the bar is 56px tall here, so this leaves the same 26px of air.
-  padding-top: 82px;
+  // The reference clears the whole header and adds 16px: 132px at 728, 230px at 360.
+  // navigation.js:4-14 already publishes the live height of <header> as --header-offset
+  // through a ResizeObserver, so this needs no script of its own. The fallback is the
+  // site drawer's own 82px, used only if that script has not run yet.
+  padding-top: calc(var(--header-offset, 82px) + 16px);
   overflow-y: auto;
   transform: translateX(-100%);
   transition: transform .3s ease;
@@ -955,7 +1048,7 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
     transform: translateX(0);
   }
 
-  @include breakpoints.min-w(l) {
+  @include breakpoints.min-w(xl) {
     display: none;
   }
 }
@@ -967,7 +1060,8 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
     flex-direction: column;
     justify-content: space-between;
     gap: 32px;
-    padding: 0 20px 32px;
+    // The bottom space belongs to the footer on the reference, not to this box.
+    padding: 0 20px;
 
     @include breakpoints.min-w(s) {
       padding-left: 32px;
@@ -980,7 +1074,8 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
     flex-direction: column;
     // _base.scss:21 gives every ul.nav "gap: 12px 32px" and "align-items: center";
     // both have to be reset explicitly or the rows shrink to their text and centre.
-    align-items: stretch;
+    // baseline is what the reference uses; the rows are full width either way.
+    align-items: baseline;
     gap: 0;
     margin: 0;
     padding: 0;
@@ -990,6 +1085,10 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
   // The separator is above every row, including the first, and the rows are 24px tall
   // top and bottom - the site draws the drawer exactly this way.
   .header__sidebar--nav > li {
+    // width is mandatory next to align-items: baseline on the list, otherwise the row
+    // shrinks to its text and the separator above it stops short. The reference carries
+    // exactly this pair (.sidebar .container .sidebar__nav > li { width: 100% }).
+    width: 100%;
     padding: 24px 0;
     border-top: 2px solid $border-tertiary;
 
@@ -1007,11 +1106,19 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
       line-height: 16px;
       text-decoration: none;
       @include mixins.color($text-primary);
+
+      // .sidebar a grows one step from 1024, where this drawer is still in use.
+      @include breakpoints.min-w(l) {
+        font-size: 16px;
+        line-height: 20px;
+      }
     }
   }
 
   .menu-item-has-children > a:after {
-    @include chevron-after;
+    // 8x5 and flat: the drawer caret is not nudged down like the top-bar one.
+    @include chevron-after($chevron, 8px, 5px);
+    transform: none;
   }
 
   .menu-item-has-children:has(.sub-menu_open) > a:after {
@@ -1126,7 +1233,7 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 0;
+    padding: 0 0 16px;
     border: 0;
 
     .header__btn {
