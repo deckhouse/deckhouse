@@ -21,30 +21,56 @@ $brand-hover: #004df2; // --text-brand-hover / --border-primary-hover
 $border-primary: #000; // --border-primary
 $border-tertiary: #e8e9f3; // --border-tertiary
 $radius-pill: 666px; // --radius-pill
+// Current-page pill on the product bar. Not a DDS token: it is the marker the site
+// already uses (_header.scss:85 and :104), kept because it is what tells the reader
+// where they are.
+$bg-active: #e1f0ff;
+$text-active: #004df2;
 
 $bar-height: 64px;
-$bar-pad-y: 14px;
+// 12px, as on test.deckhouse.ru (.header__content and .header__product-menu both use
+// .75rem). The bar height follows from the tallest child rather than being pinned.
+$bar-pad-y: 12px;
+// The L2 product lockup box, measured on test.deckhouse.ru.
 $logo-width: 120px;
 $logo-height: 36px;
-$item-gap: 24px;
-$logo-gap: 64px; // distance from the logo to the first menu item, same on both rows
-$panel-pad: 24px 26px;
-$product-col: 274px;
+// The Deckhouse wordmark box is smaller than the lockup one: 113x30, also measured on
+// test.deckhouse.ru. Figma draws it as 104.789x24.001 inside a 120x36 box, which comes
+// out visibly smaller than the shipped header.
+$wordmark-width: 113px;
+$wordmark-height: 30px;
+// Everything below is measured off test.deckhouse.ru, not off the Figma frame: the
+// shipped header is tighter than the 1440 mock in almost every dimension.
+$item-gap: 24px; // .header__nav.nav gap at >=1440 (8px below that)
+$logo-gap: 40px; // .header__left-box gap at >=1440 (24px below that)
+$l2-logo-gap: 32px; // .header__product-menu .container column gap
+$panel-pad: 24px;
+$panel-gap: 32px; // .sub-menu_products gap
+$panel-radius: 4px;
+$panel-shadow: 0 4px 9px 0 rgba(34, 42, 94, .11);
+$product-col: 290px;
+$solution-col: 324px; // .solutions a min-width, 20.25rem
 
-// Chevron: DDS. Icons/Arrows/chevron-down, inlined so the data-driven items coming from
-// header-menu-fill-items.html can get it without touching that shared include.
-$chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+// Chevron. Not the 16x16 DDS icon from the mock: the shipped header draws a small
+// caret, 10x5 up to 1440 and 12x6 above it, and nudges it down 2px on hover instead of
+// flipping it. Inlined so the data-driven items coming from header-menu-fill-items.html
+// get it without touching that shared include.
+$chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='none'%3E%3Cpath d='m.75.75 3 3 3-3' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+$chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none'%3E%3Cpath d='M10.172 1 5.557 5.615.94 1' stroke='%23222A5D' stroke-width='1.846' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
-@mixin chevron-after {
+@mixin chevron-after($image: $chevron, $w: 10px, $h: 5px) {
   content: '';
+  // The legacy caret is absolutely positioned at top: 33%; this one is an ordinary
+  // flex child, so those offsets have to be cleared.
   position: static;
   top: auto;
   right: auto;
   margin: 0;
-  flex: 0 0 16px;
-  width: 16px;
-  height: 16px;
-  background: $chevron no-repeat center / 16px 16px;
+  flex: 0 0 $w;
+  width: $w;
+  height: $h;
+  transform: translateY(1px);
+  background: $image no-repeat center / contain;
   transition: transform .15s ease;
 }
 
@@ -69,7 +95,10 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  height: 36px;
+  // 44px at >=1664, measured on test.deckhouse.ru (14px/1.5 text + 10px padding +
+  // 2px border on each side). Figma's Button/S is 39px; the shipped header runs a size
+  // up. The primary button carries a transparent border so both match exactly.
+  height: 44px;
   padding: 0 16px;
   border: 1.5px solid transparent;
   border-radius: $radius-pill;
@@ -118,20 +147,17 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
     box-shadow: none;
   }
 
+  // Horizontal gutters come from the shared .container carried in the markup, so the
+  // bar lines up with the page content and the footer at every width. Only the vertical
+  // padding is set here, and it must stay split so .container keeps its own left/right.
+  // The height is whatever the tallest child needs plus 12px, exactly as on the site.
   .header__content {
     display: flex;
     align-items: center;
     justify-content: flex-start;
     gap: 0;
-    padding: $bar-pad-y 16px;
-
-    @include breakpoints.min-w(m) {
-      padding: $bar-pad-y 32px;
-    }
-
-    @include breakpoints.min-w(xl) {
-      padding: $bar-pad-y 60px;
-    }
+    padding-top: $bar-pad-y;
+    padding-bottom: $bar-pad-y;
   }
 
   .header__logo {
@@ -142,17 +168,19 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
   .header__logo-link {
     position: relative;
     display: block;
-    width: $logo-width;
-    height: $logo-height;
+    width: $wordmark-width;
+    height: $wordmark-height;
 
+    // Scaled to the full width of the box; the height follows from the 104.789x24.001
+    // viewBox, and the mark is centred in whatever is left.
     svg {
       position: absolute;
       top: 50%;
       left: 0;
       display: block;
-      width: 104.789px;
-      height: 24.001px;
-      transform: translateY(calc(-50% - 2px));
+      width: $wordmark-width;
+      height: 25.882px; // $wordmark-width * 24.001 / 104.789
+      transform: translateY(-50%);
     }
   }
 
@@ -192,7 +220,9 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
       @include nav-link;
     }
 
-    &:hover > a {
+    // Only leaf items take the hover colour. An item that opens a panel stays black
+    // while the panel is up, as on the site.
+    &:not(.menu-item-has-children):hover > a {
       @include mixins.color($brand-hover);
     }
   }
@@ -223,10 +253,18 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
     &:after {
       @include chevron-after;
     }
+
+    @include breakpoints.min-w(xxl) {
+      &:after {
+        flex-basis: 12px;
+        width: 12px;
+        height: 6px;
+      }
+    }
   }
 
   .header__nav--top > .menu-item-has-children:hover > a:after {
-    transform: rotate(180deg);
+    transform: translateY(3px);
   }
 
   // ----------------------------------------------------------------- dropdown panels
@@ -247,7 +285,7 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
       // reachable without any script. The padding drops the visible panel to the bottom
       // edge of the bar.
       top: 24px;
-      left: -26px;
+      left: -28px; // .sub-menu-container left: -2em on a 14px item
       z-index: 20;
       display: block;
       visibility: hidden;
@@ -269,12 +307,14 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
     flex-direction: column;
     gap: 16px;
     width: max-content;
+    min-width: 180px;
     max-width: calc(100vw - 32px);
     margin: 0;
     padding: $panel-pad;
+    border-radius: $panel-radius;
     list-style: none;
     @include mixins.bg-color($bg-primary);
-    box-shadow: 0 8px 24px rgba(28, 27, 31, .08);
+    box-shadow: $panel-shadow;
 
     li {
       padding: 0;
@@ -284,9 +324,12 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
       }
     }
 
+    // 16/20 regular. Medium reads too heavy next to the site; only the product and
+    // solution titles keep the medium weight, and they set it themselves.
     a {
       display: block;
-      font-size: 14px;
+      font-size: 16px;
+      font-weight: 400;
       line-height: 20px;
       text-decoration: none;
       @include mixins.color($text-primary);
@@ -298,38 +341,79 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
   }
 
   // Products panel: icon + title on the first row, description indented under the title.
+  // Three 290px columns with a 32px gutter and a 20px icon column, as on the site.
   .header__nav--top .sub-menu_products {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, $product-col));
-    gap: 24px;
+    gap: $panel-gap;
 
     a {
       display: grid;
-      grid-template-columns: 24px minmax(0, 1fr);
-      column-gap: 12px;
-      row-gap: 8px;
+      grid-template-columns: 20px minmax(0, 1fr);
+      align-items: center;
+      column-gap: 8px;
+      row-gap: 5.6px;
     }
 
     .products__icon {
       grid-column: 1;
       grid-row: 1;
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
     }
 
     span {
       grid-column: 2;
       grid-row: 1;
       align-self: center;
-      font-size: 16px;
       font-weight: 500;
-      line-height: 20px;
       @include mixins.color($text-primary);
+    }
+
+    // Only the title takes the hover colour; the description stays grey.
+    a:hover span {
+      @include mixins.color($brand-hover);
     }
 
     p {
       grid-column: 2;
       grid-row: 2;
+      margin: 0;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 20px;
+      @include mixins.color($text-tertiary);
+    }
+  }
+
+  // Solutions panel: the same two-line item as the products panel, without the icon
+  // column. The site narrows this one to two columns of 20.25rem; Figma drafts it as
+  // four narrow columns, which makes the panel overrun the right-hand gutter.
+  .header__nav--top .sub-menu_solutions {
+    // Fixed columns, not 1fr: the panel is sized by max-content, so flexible columns
+    // stretch to the longest description and every line fits on one row. At 324px the
+    // descriptions wrap to two lines, as they do on the site.
+    display: grid;
+    grid-template-columns: repeat(2, $solution-col);
+    gap: $panel-gap;
+
+    a {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5.6px;
+    }
+
+    span {
+      font-weight: 500;
+      @include mixins.color($text-primary);
+    }
+
+    a:hover span {
+      @include mixins.color($brand-hover);
+    }
+
+    p {
       margin: 0;
       font-size: 14px;
       font-weight: 400;
@@ -354,6 +438,10 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
     display: flex;
     align-items: center;
     gap: 8px;
+
+    @include breakpoints.min-w(xxxl) {
+      gap: 16px;
+    }
   }
 
   // ----------------------------------------------------------------- burger / close
@@ -412,28 +500,39 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
   // ----------------------------------------------------------------- level 2 bar
   .header__product-menu--ru {
     padding: $bar-pad-y 0;
+    // 12 + 36 + 12 + 2px border = 62px, the height the site's product bar has.
     box-shadow: none;
+    border-bottom: 2px solid $border-tertiary;
     @include mixins.bg-color($bg-surface);
   }
 
+  // Same as .header__content: .container in the markup owns the horizontal gutters, so
+  // the product lockup sits exactly under the Deckhouse logo.
+  //
+  // Carrying .container here also brings the legacy ".header__product-menu .container"
+  // rules into range for the first time. Two of them have to be put back: below l it
+  // replaces padding-right with room for a nav trigger this bar places differently, and
+  // below xxs it turns the row into a column. The padding-right values are .container's
+  // own (_container.scss:16-37), restated so the bar keeps lining up with the page.
   .header__product-menu-inner {
     position: relative;
     display: flex;
+    flex-direction: row;
     align-items: stretch;
     justify-content: flex-start;
     gap: 16px;
-    padding: 0 16px;
+    padding-right: 20px;
 
-    @include breakpoints.min-w(m) {
-      padding: 0 32px;
+    @include breakpoints.min-w(s) {
+      padding-right: 32px;
     }
 
     @include breakpoints.min-w(l) {
-      gap: 64px;
+      gap: $l2-logo-gap;
     }
 
     @include breakpoints.min-w(xl) {
-      padding: 0 60px;
+      padding-right: 48px;
     }
   }
 
@@ -484,6 +583,7 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
     position: relative;
     display: flex;
     align-items: center;
+    margin: 0 2px; // .header__product-menu ul li margin
     padding: 0;
     background: none;
 
@@ -494,24 +594,57 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
 
     > a {
       @include nav-link;
+      position: relative; // keeps the text above the active pill
     }
 
-    &:hover > a {
+    &:not(.menu-item-has-children):hover > a {
       @include mixins.color($brand-hover);
     }
 
-    // The legacy .active pill does not exist in the design; a medium weight is enough.
-    &.active > a {
-      font-weight: 500;
+    // Current page. The shared .active block above strips the legacy pill; here it is
+    // put back the way the site draws it - an overlay ::before that bleeds 12px to each
+    // side and 6px up and down, so it adds no width and the neighbours do not move.
+    // The text stays black and regular weight. This rule sits after that block, so at
+    // equal specificity it wins.
+    &.active {
+      position: relative;
+
+      // The site's own numbers: 12px of bleed on each side (left: -.75rem plus the
+      // matching padding) and 32px tall, the 20px line box plus .375rem above and
+      // below. Here the item is stretched to the full height of the bar, so the height
+      // is pinned instead of derived and the bleed is folded into the width.
+      &:before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: -12px;
+        display: block;
+        // Both are mandatory. The legacy .active::before (_header.scss:96-106) ships
+        // padding: .411rem .75rem, this rule does not inherit it away, and under
+        // content-box that padding is painted on top of the width and height: the pill
+        // came out 24px wider on the right only, and 45px tall instead of 32.
+        box-sizing: border-box;
+        padding: 0;
+        width: calc(100% + 24px);
+        height: 32px;
+        border-radius: 32px;
+        transform: translateY(-50%);
+        @include mixins.bg-color($bg-active);
+      }
     }
   }
 
-  .header__nav--bottom > .menu-item-has-children > a:after {
-    @include chevron-after;
+  // The L2 caret is bigger, darker and sits further from the text than the top one.
+  .header__nav--bottom > .menu-item-has-children > a {
+    gap: 8px;
+
+    &:after {
+      @include chevron-after($chevron-l2, 10px, 5px);
+    }
   }
 
   .header__nav--bottom > .menu-item-has-children:hover > a:after {
-    transform: rotate(180deg);
+    transform: translateY(3px);
   }
 
   .header__nav--bottom > .menu-item-has-children > .sub-menu-container {
@@ -525,7 +658,7 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
       // reachable without any script. The padding drops the visible panel to the bottom
       // edge of the bar.
       top: 24px;
-      left: -26px;
+      left: -28px; // .sub-menu-container left: -2em on a 14px item
       z-index: 20;
       display: block;
       visibility: hidden;
@@ -535,24 +668,21 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
     }
   }
 
-  .header__nav--bottom > .menu-item-has-children:hover > .sub-menu-container {
-    @include breakpoints.min-w(l) {
-      visibility: visible;
-      opacity: 1;
-    }
-  }
-
+  // The product bar's own dropdown. Without this it falls through to the legacy
+  // .header__nav .sub-menu rules and comes out at 14px/300 in a 315px box.
   .header__nav--bottom .sub-menu {
     display: flex;
     flex-direction: column;
     gap: 16px;
     width: max-content;
-    min-width: 315px;
+    min-width: 250px;
+    max-width: 275px;
     margin: 0;
-    padding: $panel-pad;
+    padding: 18px;
+    border-radius: $panel-radius;
     list-style: none;
     @include mixins.bg-color($bg-primary);
-    box-shadow: 0 8px 24px rgba(28, 27, 31, .08);
+    box-shadow: 2px 3px 8px 0 rgba(70, 63, 102, .12);
 
     li {
       padding: 0;
@@ -564,7 +694,8 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
 
     a {
       display: block;
-      font-size: 14px;
+      font-size: 16px;
+      font-weight: 400;
       line-height: 20px;
       text-decoration: none;
       @include mixins.color($text-primary);
@@ -574,6 +705,14 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
       }
     }
   }
+
+  .header__nav--bottom > .menu-item-has-children:hover > .sub-menu-container {
+    @include breakpoints.min-w(l) {
+      visibility: visible;
+      opacity: 1;
+    }
+  }
+
 
   // Below l the L2 list turns into a dropdown card opened by .nav__trigger (the .active
   // class comes from adaptive/header-mobile.js). Ported from _header.scss:793-855, which
@@ -688,40 +827,44 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
     }
   }
 
-  // The design is drawn at 1440. Seven Russian menu items plus the two buttons need
-  // about 1340px at those values, so below xxl the row is scaled down the way the
-  // legacy header did (it dropped to 11.9px/16px gap at 1024). At xxl and above the
-  // numbers are exactly the ones from the mock.
-  .header__nav--top,
-  .header__nav--bottom {
-    // Rows wrap rather than push the page into a horizontal scrollbar. Nothing wraps at
-    // the design width, so the 64px bars are preserved; narrower viewports grow instead
-    // of breaking - exactly what the legacy header did (its L2 row went to two lines at
-    // 1024 and the bar grew from 64 to 94px).
+  // The site collapses the top row into the burger below 1200 and so never has to
+  // shrink it. This header keeps the row from 1024 (the burger breakpoint the shared
+  // adaptive/header-mobile.js works to), so the 1024-1199 band reuses the site's
+  // 1200 values and is allowed to wrap rather than overflow.
+  .header__nav--top {
     @include breakpoints.min-w(l) {
       flex-wrap: wrap;
-      gap: 8px 14px;
-    }
-
-    @include breakpoints.min-w(xl) {
-      gap: 8px 18px;
+      gap: 8px;
     }
 
     @include breakpoints.min-w(xxl) {
       gap: 8px $item-gap;
     }
+  }
+
+  // The product bar never shrinks on the site (.header__product-menu ul keeps
+  // 1.15rem/1.5rem, then 1.5rem from 1024 up), and it must not shrink here either:
+  // the current-page pill bleeds 12px into the gap on each side, so a 16px gap leaves
+  // it 6px from its neighbours and it reads as touching the next word.
+  //
+  // Four classes on purpose. Carrying .container in the markup brought the legacy
+  // ".header__product-menu .container .header__nav.nav" into range, and it sets
+  // gap: .82rem 1rem from 1200 up; a two-class selector loses to it.
+  .header__product-menu--ru .header__nav--bottom.nav {
+    flex-wrap: wrap;
+    gap: 18.4px $item-gap;
+
+    @include breakpoints.min-w(l) {
+      gap: $item-gap;
+    }
 }
 
 .header__nav--top {
   @include breakpoints.min-w(l) {
-    margin-left: 24px;
+    margin-left: 24px; // .header__left-box gap below 1440
     // Keeps the last item off the buttons when the row is tight; if that is not
     // enough the row wraps rather than collide.
     margin-right: 8px;
-  }
-
-  @include breakpoints.min-w(xl) {
-    margin-left: 40px;
   }
 
   @include breakpoints.min-w(xxl) {
@@ -735,47 +878,28 @@ $chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' widt
   }
 
   @include breakpoints.min-w(xl) {
-    gap: 40px;
-  }
-
-  @include breakpoints.min-w(xxl) {
-    gap: $logo-gap;
+    gap: $l2-logo-gap;
   }
 }
 
-.header__nav--top > .header__navigation-item > a,
-.header__nav--bottom > .header__navigation-item > a {
-  @include breakpoints.min-w(l) {
-    font-size: 12px;
-    line-height: 18px;
-  }
-
-  @include breakpoints.min-w(xl) {
-    font-size: 13px;
-    line-height: 20px;
-  }
-
-  @include breakpoints.min-w(xxl) {
-    font-size: 14px;
-  }
-}
-
-// Only the buttons inside the bar shrink; the drawer keeps the full size.
+// Only the buttons inside the bar shrink; the drawer keeps the full size. The three
+// steps are the site's own (.header__right-box .button at 1200 / 1440 / 1664): 12px
+// text with 8x10 padding, then 14px with 8x12, then 14px with 10x16.
 .header__btn {
   @include breakpoints.min-w(l) {
-    height: 32px;
-    padding: 0 12px;
+    height: 38px;
+    padding: 0 10px;
     font-size: 12px;
   }
 
-  @include breakpoints.min-w(xl) {
-    height: 34px;
-    padding: 0 14px;
-    font-size: 13px;
+  @include breakpoints.min-w(xxl) {
+    height: 41px;
+    padding: 0 12px;
+    font-size: 14px;
   }
 
-  @include breakpoints.min-w(xxl) {
-    height: 36px;
+  @include breakpoints.min-w(xxxl) {
+    height: 44px;
     padding: 0 16px;
     font-size: 14px;
   }
@@ -909,7 +1033,8 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
 
   // From the m breakpoint up the drawer is wide enough for the two-column product
   // grid shown in the design; below that it stays a single column.
-  .sub-menu_products {
+  .sub-menu_products,
+  .sub-menu_solutions {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
@@ -917,6 +1042,25 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
     @include breakpoints.min-w(m) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       column-gap: 24px;
+    }
+  }
+
+  .sub-menu_solutions a {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    span {
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 20px;
+    }
+
+    p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 20px;
+      @include mixins.color($text-tertiary);
     }
   }
 

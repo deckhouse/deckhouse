@@ -31,7 +31,7 @@
   {%- when "code" %}{% assign productLockup = "code" %}{% assign lockupW = "72" %}{% assign lockupH = "21" %}
 {%- endcase %}
 <div class="header header__product-menu header__product-menu--ru">
-  <div class="header__product-menu-inner">
+  <div class="header__product-menu-inner container">
     <div class="header__product-menu-logo">
       {%- if productLockup != "" %}
         <img class="header__product-lockup" src="/images/header/logo-{{ productLockup }}.svg" width="{{ lockupW }}" height="{{ lockupH }}" alt="{{ productName }}">

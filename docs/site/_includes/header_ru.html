@@ -11,17 +11,21 @@
   The Ru/En switcher is intentionally absent - the design has none. language-switch.js
   bails out on a missing #language-switch, so it becomes a no-op on Russian pages.
 
-  Product icons: the five products covered by the design (Platform, Stronghold,
-  Observability, Code, Development Portal) carry the new brand marks inline. The
-  remaining four (Virtualization Platform, Delivery Kit, Commander, Prom++) have no
-  mark in the design yet and keep the existing sprite reference, so swapping them in
-  later is one line per product.
+  Products and Solutions are hardcoded here on purpose. The API feed still sends a
+  "Produkty" top-level item, which header-menu-fill-items.html skips by title, and it
+  sends no "Resheniya" item at all. The Russian list is the five products the design
+  ships brand marks for; the Solutions URLs follow the /solutions/<slug>/ convention
+  and point at pages that do not exist yet.
+
+  .header__content carries the shared .container so the bar lines up with the page
+  content and the footer (max-width 1664, side padding 48/32/20). The design is drawn
+  on a 1440 frame with 60px gutters, which is the same idea at that one width.
 {%- endcomment -%}
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 <!--noindex-->
 <div class='header-container {%- if site.mode == "module" %} header-container--module{%- endif %}'>
   <header class="header header--ru header_float">
-    <div class="header__content">
+    <div class="header__content container">
       <div class="header__logo">
         <a href="/" class="header__logo-link" aria-label="Deckhouse">
           <svg width="104.789" height="24.001" viewBox="0 0 104.789 24.001" fill="none" xmlns="http://www.w3.org/2000/svg"><g><g><path fill-rule="evenodd" clip-rule="evenodd" d="M9.00674 23.6302H5.76329L5.88682 23.0743L6.35017 21.6842H6.25764C5.39275 23.1669 4.09536 24.001 2.6436 24.001C-0.0437312 24.001 -0.445363 21.8078 0.388614 17.7614L1.84043 11.0892C2.64355 7.19716 3.97186 4.94232 6.72099 4.94232C8.14181 4.94235 9.03754 5.71449 9.31556 7.25884H9.40833L9.56262 5.65273L10.7674 0H14.0416L9.00674 23.6302ZM7.4004 7.81495C5.94866 7.815 5.45442 9.35954 5.11465 10.9966L3.63206 18.0084C3.23051 19.9235 3.16876 21.1281 4.55876 21.1281C5.88692 21.128 6.56651 19.7381 6.90628 18.0702L8.41986 10.9966C8.75964 9.32863 8.8213 7.81495 7.4004 7.81495Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19.8445 4.94232C22.9333 4.94233 24.1689 6.88825 23.335 10.9346L22.3465 15.5064H16.0759L15.4272 18.6261C15.0875 20.1705 15.2729 21.1899 16.3849 21.1899C17.4969 21.1898 18.0529 20.5411 18.3926 19.2129L18.7195 17.6253H21.8762L21.5743 19.1822C20.833 22.1784 18.7943 24.0009 15.7363 24.001C12.4621 24.001 11.4734 21.5606 12.2766 18.0392L13.7901 10.9039C14.5624 7.35163 16.4775 4.94232 19.8445 4.94232ZM19.2576 7.75319C18.1765 7.75319 17.5586 8.52536 17.1879 10.286L16.601 13.0351H19.6899L20.246 10.317C20.6167 8.52544 20.3387 7.7532 19.2576 7.75319Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M66.2213 4.94232C69.4956 4.94232 70.8855 6.91918 70.0824 10.9039L68.5689 18.0084C67.7657 22.024 65.758 24.001 62.5455 24.001C59.2713 24.001 57.9121 21.9622 58.7152 18.0084L60.2288 10.9039C61.0319 6.91919 63.0089 4.94233 66.2213 4.94232ZM65.789 7.81495C64.7388 7.81495 63.9974 8.58722 63.6268 10.2552L61.8659 18.6571C61.4953 20.325 61.9277 21.1281 62.9779 21.1281C64.059 21.1281 64.8006 20.3251 65.1403 18.6571L66.9317 10.2552C67.2715 8.58726 66.87 7.81499 65.789 7.81495Z" fill="black"/><path d="M73.6692 19.0277C73.3912 20.325 73.8237 21.0046 74.7504 21.0046C75.9859 21.0046 76.7583 19.7072 77.0671 18.2245L79.847 5.31291H83.0905L79.1984 23.6302H75.9552L76.0787 23.105L76.542 21.6842H76.4493C75.5226 23.2286 74.2871 24.0009 72.8662 24.001C70.6113 24.001 69.6229 22.6418 70.3024 19.4602L73.3296 5.31291H76.5728L73.6692 19.0277Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M101.044 4.94232C104.133 4.94234 105.369 6.88826 104.535 10.9346L103.546 15.5064H97.2757L96.6271 18.6261C96.2873 20.1705 96.4728 21.1899 97.5848 21.1899C98.6967 21.1898 99.2527 20.5411 99.5925 19.2129L99.9194 17.6253H103.076L102.774 19.1822C102.033 22.1784 99.9939 24.001 96.9359 24.001C93.6617 24.0009 92.6733 21.5605 93.4764 18.0392L94.99 10.9039C95.7622 7.35163 97.6774 4.94232 101.044 4.94232ZM100.457 7.75319C99.3763 7.75319 98.7584 8.52537 98.3877 10.286L97.8008 13.0351H100.89L101.446 10.317C101.817 8.52545 101.539 7.75321 100.457 7.75319Z" fill="black"/><path d="M31.0387 4.94232C33.8187 4.94234 35.4557 6.61033 34.6835 10.2552L34.1893 12.51H30.9769L31.5328 9.94641C31.8725 8.37108 31.4402 7.81497 30.5135 7.81495C29.4633 7.81495 28.7838 8.61805 28.4131 10.2242L26.6524 18.6571C26.2509 20.4486 26.7142 21.1281 27.7027 21.1281C28.7528 21.1281 29.3706 20.3559 29.7104 18.8116L30.2972 16.0315H33.4789L32.9538 18.5025C32.1507 22.3328 30.0192 23.97 27.2083 23.97C23.965 23.97 22.6678 21.9621 23.5018 17.9774L25.0153 10.9039C25.8493 6.95007 27.7953 4.94232 31.0387 4.94232Z" fill="black"/><path d="M89.8142 4.94232C92.9339 4.94237 93.9842 6.64118 93.4901 9.17401L93.0575 11.0892H89.9995L90.4011 9.11224C90.5555 8.40182 90.3392 7.72219 89.3199 7.72219C88.3315 7.72219 87.8991 8.24742 87.7756 8.80342L87.3122 10.9656C87.096 12.0159 87.7446 12.3865 88.9801 12.788C91.513 13.5603 92.5941 14.7342 92.069 17.2363L91.4821 20.0161C90.957 22.4564 89.1037 23.97 86.0457 23.97C82.8332 23.97 81.4432 22.2711 82.0301 19.3985L82.5552 16.989H85.8604L85.3353 19.4292C85.0882 20.6957 85.4896 21.2208 86.6016 21.2209C87.4356 21.2209 88.0535 20.7884 88.2079 19.9544L88.7948 17.2363C89.011 16.186 88.4241 15.7844 87.0959 15.3211C84.5322 14.518 83.5436 13.375 84.0378 10.9966L84.5011 8.77242C84.9954 6.51755 86.7563 4.94232 89.8142 4.94232Z" fill="black"/><path d="M39.4234 12.8808H40.5971L44.2112 5.31291H47.7324L43.1299 14.3326L44.3039 23.6302H40.6899L40.0102 15.7227H38.8055L37.1376 23.6302H33.8324L38.8673 0H42.1725L39.4234 12.8808Z" fill="black"/><path d="M52.7028 5.86902L52.2394 7.25884H52.3629C53.2587 5.71442 54.5253 4.94232 55.9462 4.94232C58.1702 4.94236 59.1896 6.30143 58.51 9.45206L55.4829 23.6302H52.2086L55.112 9.94641C55.39 8.64907 54.9885 7.93848 54.0618 7.93848C52.7954 7.93854 52.0232 9.23594 51.7143 10.7186L48.9652 23.6302H45.691L50.7258 0H53.9693L52.7028 5.86902Z" fill="black"/></g></g></svg>
@@ -37,23 +41,7 @@
                 <a href="/products/kubernetes-platform/">
                   <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.7092 5.18213L24 9.69664L21.627 20.8583H9.40828L6.81922 15.0697L8.28881 11.8035L3.70761 11.3297L0 3L20.7092 5.18213ZM11.8848 16.399L20.098 17.2454L20.2801 16.3953L18.6619 12.8768L9.9059 11.9708L11.8848 16.399Z" fill="#0A6EFF"/></svg>
                   <span>Kubernetes Platform</span>
-                  <p>Создание идентичных Kubernetes-кластеров и&nbsp;управление ими</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/virtualization-platform/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#virtualization-platform-icon"></use>
-                  </svg>
-                  <span>Virtualization Platform</span>
-                  <p>Управление виртуальными машинами</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/observability-platform/">
-                  <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.85737 2L0 14.336L9.22715 22.9991L22.5705 23L24 16L22.4336 8.27797L3.85737 2ZM21.2541 16L14.1979 15.996L6.0741 6.56592L6.31957 5.77894L20.1247 10.4438L21.2541 16Z" fill="#FC4257"/></svg>
-                  <span>Observability Platform</span>
-                  <p>Мониторинг и&nbsp;журналирование инфраструктуры и&nbsp;приложений</p>
+                  <p>Единое управление любыми нагрузками поверх любой инфраструктуры</p>
                 </a>
               </li>
               <li>
@@ -64,44 +52,73 @@
                 </a>
               </li>
               <li>
-                <a href="/products/delivery-kit/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#delivery-icon"></use>
-                  </svg>
-                  <span>Delivery Kit</span>
-                  <p>Сборка и&nbsp;доставка контейнеризованного ПО</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/commander/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#commander-icon"></use>
-                  </svg>
-                  <span>Commander</span>
-                  <p>Центр управления парком кластеров</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/prompp/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#prompp-icon"></use>
-                  </svg>
-                  <span>Prom++</span>
-                  <p>Open Source-система мониторинга</p>
+                <a href="/products/observability-platform/">
+                  <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.85737 2L0 14.336L9.22715 22.9991L22.5705 23L24 16L22.4336 8.27797L3.85737 2ZM21.2541 16L14.1979 15.996L6.0741 6.56592L6.31957 5.77894L20.1247 10.4438L21.2541 16Z" fill="#FC4257"/></svg>
+                  <span>Observability Platform</span>
+                  <p>Единая наблюдаемость инфраструктуры и&nbsp;приложений</p>
                 </a>
               </li>
               <li>
                 <a href="/products/code/">
                   <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.01591 18.1384L3.88902 15.3939L21.8414 11.4801L24 1.00007L4.27731 5.32153L0 18.8073L3.68418 23.0001L19.4446 23L20.5796 17.5028L3.56608 18.7726L3.01591 18.1384Z" fill="#FFA903"/></svg>
                   <span>Code</span>
-                  <p>Управление разработкой через&nbsp;единое окно</p>
+                  <p>Управление разработкой и&nbsp;жизненным циклом ПО</p>
                 </a>
               </li>
               <li>
                 <a href="/products/development-platform/">
                   <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.76339 2.83653L21.2021 1L24.3091 8.00192L15.2254 22L-0.309089 22L3.76339 2.83653ZM16.4085 7.46792L8.79675 19.1891L3.15432 19.1891L5.58951 7.77314L16.0707 6.68601L16.4085 7.46792Z" fill="#7960FB"/></svg>
                   <span>Development Platform</span>
-                  <p>Непрерывная разработка и&nbsp;управление жизненным циклом ПО</p>
+                  <p>Управление процессами всех команд разработки в&nbsp;одном окне</p>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </li>
+        <li class="header__navigation-item current-menu-parent menu-item-has-children menu-item-has-children--top" data-proofer-ignore>
+          <a href="#">Решения</a>
+          <div class="sub-menu-container">
+            <ul class="sub-menu sub-menu_solutions">
+              <li data-proofer-ignore>
+                <a href="/solutions/containers">
+                  <span>Для контейнеров</span>
+                  <p>Запустить контейнеры и&nbsp;виртуальные машины под&nbsp;единым управлением</p>
+                </a>
+              </li>
+              <li data-proofer-ignore>
+                <a href="/solutions/virtualization">
+                  <span>Для виртуализации</span>
+                  <p>Запустить виртуальные машины на&nbsp;современной платформе виртуализации</p>
+                </a>
+              </li>
+              <li data-proofer-ignore>
+                <a href="/solutions/mixed-workloads">
+                  <span>Для комбинированных нагрузок</span>
+                  <p>Запустить микросервисные приложения на&nbsp;любой инфраструктуре</p>
+                </a>
+              </li>
+              <li data-proofer-ignore>
+                <a href="/solutions/ai">
+                  <span>Для искусственного интеллекта</span>
+                  <p>Запустить ИИ-нагрузки в&nbsp;своей инфраструктуре</p>
+                </a>
+              </li>
+              <li data-proofer-ignore>
+                <a href="/solutions/data-orchestration">
+                  <span>Для данных</span>
+                  <p>Построить платформу хранения и&nbsp;обработки данных</p>
+                </a>
+              </li>
+              <li data-proofer-ignore>
+                <a href="/solutions/private-cloud">
+                  <span>Для частного облака</span>
+                  <p>Создать частное облако с&nbsp;биллингом и&nbsp;управляемыми сервисами</p>
+                </a>
+              </li>
+              <li data-proofer-ignore>
+                <a href="/solutions/hybrid-infrastructure">
+                  <span>Для гибридной инфраструктуры</span>
+                  <p>Запустить приложения в&nbsp;любых средах и&nbsp;управлять инфраструктурой из&nbsp;единой точки</p>
                 </a>
               </li>
             </ul>
