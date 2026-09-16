@@ -11,6 +11,15 @@
 // regardless of @use order. Where the legacy rule already has two classes we add the
 // modifier onto the block itself (".header.header--ru").
 
+// Font weight note: every weight in this file is deliberately one step LIGHTER than the
+// number the reference's own stylesheet writes. The reference's fonts.min.css maps
+// "font-weight: 400" to the onest-*-300-normal.woff2 file and "font-weight: 500" to
+// onest-*-400-normal.woff2, so its whole scale is shifted down by 100. Our assets/css/
+// fonts.css maps each weight to its own file, so writing the reference's numbers here
+// would paint one step bolder than the reference does. 300/400 in this file therefore
+// load exactly the face files the reference loads for its 400/500. Do not "fix" these
+// numbers back without re-checking fonts.css first.
+
 $bg-primary: #fff; // --bg-primary
 $bg-surface: #f6f6fd; // --bg-surface
 $text-primary: #000; // --text-primary
@@ -84,7 +93,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   align-items: center;
   gap: 2px;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 300;
   line-height: 20px;
   text-decoration: none;
   white-space: nowrap;
@@ -100,23 +109,20 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   justify-content: center;
   box-sizing: border-box;
   // Driven by padding, not by a fixed height - that is how a.button is built in the
-  // reference's new-base.min.css. 14px/20px text with 12/24 padding and a 1px border is
-  // 46px; from 1024 the line box grows to 22px and the drawer buttons become 48px.
+  // reference's new-base.min.css. This is the drawer size: 14px/20px text with 12/24
+  // padding and a 2px border is 48px, the same at 430 and at 1023. The bar row overrides
+  // padding and border below; it is the only place the reference uses a 1px edge.
   padding: 12px 24px;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   border-radius: $radius-pill;
   font-family: 'Onest', sans-serif;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 20px;
   text-align: center;
   text-decoration: none;
   white-space: nowrap;
   transition: background-color .2s ease, border-color .2s ease, color .2s ease;
-
-  @include breakpoints.min-w(l) {
-    line-height: 22px;
-  }
 
   // Hover on BOTH buttons fills them with --bg-inverse and turns the text white; pressed
   // goes to --bg-inverse-surface-pressed. Not the brand blue this file used before.
@@ -163,7 +169,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 .header--ru {
   position: relative;
   font-family: 'Onest', sans-serif;
-  font-weight: 400;
+  font-weight: 300;
   @include mixins.bg-color($bg-primary);
   // No separator here on purpose: on the reference only .header__product-menu carries
   // the 2px bottom border, the top bar has none.
@@ -359,12 +365,13 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     }
 
     // 16/20 medium: .header__nav .menu-item-has-children:hover .sub-menu-container a is
-    // font-weight 500 on the reference. Only the grey descriptions drop back to 400, and
+    // font-weight 500 on the reference (400 here, see the note at the top of the file).
+    // Only the grey descriptions drop back a step, and
     // they do that in their own rule.
     a {
       display: block;
       font-size: 16px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: 20px;
       text-decoration: none;
       @include mixins.color($text-primary);
@@ -407,7 +414,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       grid-column: 2;
       grid-row: 1;
       align-self: center;
-      font-weight: 500;
+      font-weight: 400;
       @include mixins.color($text-primary);
     }
 
@@ -421,7 +428,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       grid-row: 2;
       margin: 0;
       font-size: 14px;
-      font-weight: 400;
+      font-weight: 300;
       line-height: 20px;
       @include mixins.color($text-tertiary);
     }
@@ -446,7 +453,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     }
 
     span {
-      font-weight: 500;
+      font-weight: 400;
       @include mixins.color($text-primary);
     }
 
@@ -457,7 +464,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     p {
       margin: 0;
       font-size: 14px;
-      font-weight: 400;
+      font-weight: 300;
       line-height: 20px;
       @include mixins.color($text-tertiary);
     }
@@ -552,7 +559,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     // This div carries .header as well, and the legacy .header sets font-weight: 300.
     // .header--ru wins on the outer header but not here, so the whole product bar and
     // its dropdown inherit 300 unless every text node restates its weight.
-    font-weight: 400;
+    font-weight: 300;
     padding: $bar-pad-y 0;
     // 12 + 36 + 12 + 2px border = 62px, the height the site's product bar has.
     box-shadow: none;
@@ -597,7 +604,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     max-width: $logo-width;
     min-height: 0;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 400;
     line-height: 18px;
     @include mixins.color($text-primary);
 
@@ -661,9 +668,13 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       // reference's base rule is never on screen: below 1200 only the card is shown, and
       // there .header__product-menu .nav li a puts it back to .875rem.
       font-size: 14px;
+      // Medium inside the mobile card, regular in the desktop row - the reference's own
+      // split, same 1024 boundary as the line height.
+      font-weight: 400;
       line-height: 16px;
 
       @include breakpoints.min-w(l) {
+        font-weight: 300;
         line-height: 20px;
       }
     }
@@ -779,14 +790,18 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       border-radius: $panel-radius;
       @include mixins.bg-color($bg-primary);
       box-shadow: 2px 3px 8px 0 rgba(70, 63, 102, .12);
-
-      li {
-        padding-bottom: 16px;
-      }
     }
 
     li {
       padding: 0;
+
+      // The reference spaces the rows with padding-bottom on each item and zeroes the
+      // panel's own bottom padding, so the last row is not double-spaced. This must live
+      // inside the same "li" block as the reset above: an earlier media-query block of
+      // equal specificity loses to the later flat one and the spacing silently vanishes.
+      @include breakpoints.min-w(l) {
+        padding-bottom: 17px;
+      }
 
       &:before {
         display: none;
@@ -796,7 +811,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     a {
       display: block;
       font-size: 16px;
-      font-weight: 500; // .header__nav .level-1 .submenu-item a
+      font-weight: 400; // .header__nav .level-1 .submenu-item a, 500 on the reference
       line-height: 20px;
       text-decoration: none;
       @include mixins.color($text-primary);
@@ -870,7 +885,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       padding-right: 0;
       overflow: visible;
       font-size: 13px;
-      font-weight: 400;
+      font-weight: 300;
       line-height: 20px;
       @include mixins.color(variables.$ntrl-800);
 
@@ -915,7 +930,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     gap: 4px;
     margin-left: auto;
     font-size: 12px;
-    font-weight: 400;
+    font-weight: 300;
     line-height: 16px;
     cursor: pointer;
     @include mixins.color($text-primary);
@@ -999,23 +1014,17 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
 
 
-// Only the buttons inside the bar shrink; the drawer keeps the full size. The steps are
-// the reference's own (.header__right-box .button at 1200 / 1440 / 1664): 12px text with
-// 8x10 padding, then 14px with 8x12, then 14px with 10x16 - 40 / 40 / 44px tall.
-// Keyed off l rather than xl because this header still shows the row from 1024.
+// Only the buttons inside the bar are resized; the drawer keeps the full 48px size, which
+// is what the base rule above gives. The reference has no size ladder here at all any
+// more: .header__right-box .button is 8x16 with 14px/20px text - 38px tall - at every
+// width from 1200 up, so this is one step, not three. Safe to key off xl for both places:
+// the drawer is display:none from 1200 and the bar row does not exist below it.
 .header__btn {
   @include breakpoints.min-w(xl) {
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-
-  @include breakpoints.min-w(xxl) {
-    padding: 8px 12px;
+    padding: 8px 16px;
+    border-width: 1px;
     font-size: 14px;
-  }
-
-  @include breakpoints.min-w(xxxl) {
-    padding: 10px 16px;
+    line-height: 20px;
   }
 }
 }
@@ -1102,7 +1111,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       justify-content: space-between;
       gap: 8px;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: 16px;
       text-decoration: none;
       @include mixins.color($text-primary);
@@ -1180,14 +1189,14 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
     span {
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: 16px;
     }
 
     p {
       margin: 0;
       font-size: 12px;
-      font-weight: 400;
+      font-weight: 300;
       line-height: 16px;
       @include mixins.color($text-tertiary);
     }
@@ -1213,7 +1222,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       align-self: center;
       margin: auto 0;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: 16px;
       white-space: nowrap;
     }
@@ -1223,7 +1232,7 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       grid-row: 2;
       margin: 0;
       font-size: 12px;
-      font-weight: 400;
+      font-weight: 300;
       line-height: 16px;
       @include mixins.color($text-tertiary);
     }
