@@ -1,6 +1,34 @@
 {{- if eq .nodeGroup.name "master" }}
 
-# Terraform-only deterministic mode (no autodiscovery)
+# Terraform-only deterministic mode (no autodiscovery).
+# LUN is provided by dhctl:
+#   - first master: written to /var/lib/bashible/kubernetes_data_device_path by dhctl bootstrap
+#   - additional masters: fetched from Secret d8-system/d8-masters-kubernetes-data-device-path,
+#     which dhctl updates after Terraform apply for each master node.
+
+function get_data_device_secret() {
+  local secret="d8-masters-kubernetes-data-device-path"
+
+  if [ -f /var/lib/bashible/bootstrap-token ]; then
+    while true; do
+      for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
+        if d8-curl -sS -f -x "" --connect-timeout 10 -X GET \
+          "https://$server/api/v1/namespaces/d8-system/secrets/$secret" \
+          --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
+          --cacert "$BOOTSTRAP_DIR/ca.crt"
+        then
+          return 0
+        else
+          >&2 echo "Failed to get secret $secret from $server"
+        fi
+      done
+      sleep 10
+    done
+  else
+    >&2 echo "Failed to get secret $secret: bootstrap-token is not available"
+    return 1
+  fi
+}
 
 kubernetes_data_device_id="$(cat /var/lib/bashible/kubernetes_data_device_path 2>/dev/null || true)"
 
@@ -9,8 +37,14 @@ if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
 fi
 
 if [ -z "$kubernetes_data_device_id" ]; then
-  >&2 echo "kubernetes_data_device_path is not set. Provide it via Terraform/cloud-init."
-  return 1
+  # `jq -r` (not `-re`): with `set -eEo pipefail` the `-e` flag would fail the
+  # pipeline when the secret has no key for this node, killing the step before
+  # the emptiness check below can produce a readable error.
+  kubernetes_data_device_id="$(get_data_device_secret | jq -r --arg hostname "$(bb-d8-node-name)" '.data[$hostname] // empty' | base64 -d)"
+  if [ -z "$kubernetes_data_device_id" ]; then
+    >&2 echo "kubernetes_data_device_path is not set. Provide it via Terraform/cloud-init or Secret d8-masters-kubernetes-data-device-path."
+    return 1
+  fi
 fi
 
 kubernetes_data_device_path=""
@@ -63,4 +97,10 @@ fi
 
 echo "kubernetes_data_device: $kubernetes_data_device_path"
 blkid
+
+# Persist the resolved block device path for the subsequent common step 005,
+# which runs in a fresh `bash -c` and would otherwise re-read the raw LUN
+# ("10") and fall back to unused-disk autodiscovery — the very behavior #18839
+# set out to remove.
+echo "$kubernetes_data_device_path" > /var/lib/bashible/kubernetes_data_device_path
 {{- end }}
