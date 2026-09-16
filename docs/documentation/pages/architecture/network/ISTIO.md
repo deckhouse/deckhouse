@@ -253,7 +253,7 @@ The following external components interact with the module:
    * Mutates pods to add init and sidecar containers.
 
 1. **Prometheus-main**: Collects metrics from all module components.
-1. **Containerd**: Runs the plugin binary.
+1. **Containerd**: Runs CNI plugin binaries.
 1. **Load balancer**: Balances incoming traffic to ingress-gateway-controller.
 1. **Controller nginx**: Forwards the authenticated user request to the Kiali web interface.
 1. **Remote DKP cluster**:
