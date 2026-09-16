@@ -200,6 +200,12 @@ spec:
               value: "false"
             - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
               value: "false"
+            # Honour Application.spec.resourceRequests. The install path it turns on
+            # renders the package chart, overlays the requested replicas and container
+            # resources, and installs the release from the rendered manifests instead
+            # of the chart itself.
+            - name: DECKHOUSE_ENABLE_RESOURCE_REQUESTS
+              value: "false"
             - name: USE_NELM
               value: "true"
             # Adopt fields owned by the legacy "deckhouse-controller" field manager

@@ -177,6 +177,10 @@ type ApplicationContainerResourceRequest struct {
 	// Compute resources the container requests and is limited to, in the same
 	// form as a Pod container's `resources`: `cpu`, `memory` and
 	// `ephemeral-storage` for disk.
+	//
+	// Merged into what the package ships resource by resource, so setting only
+	// `memory` leaves the package's `cpu` in place. A resource the package
+	// declares cannot be removed here, only given a different value.
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }

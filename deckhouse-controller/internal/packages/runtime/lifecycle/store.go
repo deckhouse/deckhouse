@@ -17,6 +17,7 @@ package lifecycle
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
@@ -39,10 +40,11 @@ func NewStore() *Store {
 
 // NeedUpdate reports whether the package needs processing: true if the package
 // is new or being removed, the version changed, the settings checksum differs,
-// the settings schema version changed, or the maintenance mode changed.
+// the settings schema version changed, the maintenance mode changed, or the
+// per-workload resource overrides changed.
 // Used as a fast-path check before the more expensive Update call. It cannot see content
 // changes behind a mutable tag: those callers skip it and pass force to Update.
-func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, maintenance string) bool {
+func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, maintenance string, resourceRequests []resourcerequests.Request) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
 		return true
@@ -68,6 +70,10 @@ func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, 
 		return true
 	}
 
+	if !resourcerequests.Equal(pkg.resourceRequests, resourceRequests) {
+		return true
+	}
+
 	return false
 }
 
@@ -80,22 +86,24 @@ func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, 
 //     an unchanged version is stale (a mutable tag re-pushed under the same version)
 //  4. Package is being removed → cancels teardown and starts the re-created generation
 //
-// Returns nil when only settings, settingsVersion or maintenance changed (no new
-// context needed — the new values are stored and will be picked up by the scheduler
-// via GetPendingSettings/GetPendingMaintenance on next Reschedule, or by the next
-// Configure task in the schedule pipeline).
+// Returns nil when only settings, settingsVersion, maintenance or the resource
+// overrides changed (no new context needed — the new values are stored and will be
+// picked up by the scheduler via GetPendingSettings/GetPendingMaintenance/
+// GetPendingResourceRequests on next Reschedule, or by the next Configure task in
+// the schedule pipeline).
 //
-// Callers should check for nil: a nil return with a settings- or maintenance-only
-// change means the caller should trigger Reschedule to re-apply them.
-func (s *Store) Update(name, version string, settingsVersion int, settings addonutils.Values, maintenance string, force bool) context.Context {
+// Callers should check for nil: a nil return with a settings-, maintenance- or
+// overrides-only change means the caller should trigger Reschedule to re-apply them.
+func (s *Store) Update(name, version string, settingsVersion int, settings addonutils.Values, maintenance string, resourceRequests []resourcerequests.Request, force bool) context.Context {
 	pkg, ok := s.packages[name]
 	if !ok {
 		s.packages[name] = &Package{
-			version:         version,
-			settingsVersion: settingsVersion,
-			settings:        settings,
-			maintenance:     maintenance,
-			cancels:         make(map[int]context.CancelCauseFunc),
+			version:          version,
+			settingsVersion:  settingsVersion,
+			settings:         settings,
+			maintenance:      maintenance,
+			resourceRequests: resourceRequests,
+			cancels:          make(map[int]context.CancelCauseFunc),
 		}
 
 		ctx := s.packages[name].newContext(EventUpdate, errVersionChanged)
@@ -107,6 +115,7 @@ func (s *Store) Update(name, version string, settingsVersion int, settings addon
 		pkg.settingsVersion = settingsVersion
 		pkg.settings = settings
 		pkg.maintenance = maintenance
+		pkg.resourceRequests = resourceRequests
 		pkg.removing = false
 
 		ctx := pkg.newContext(EventUpdate, errVersionChanged)
@@ -124,6 +133,7 @@ func (s *Store) Update(name, version string, settingsVersion int, settings addon
 	}
 
 	pkg.maintenance = maintenance
+	pkg.resourceRequests = resourceRequests
 
 	return nil
 }
@@ -197,6 +207,18 @@ func (s *Store) HandleEvent(event int, name string, cause error) context.Context
 // and schedule are automatically picked up.
 func (s *Store) GetPendingSettings(name string) (addonutils.Values, int) {
 	return s.packages[name].settings, s.packages[name].settingsVersion
+}
+
+// GetPendingResourceRequests returns the latest per-workload resource overrides
+// stored for a package. Nil for a package that is not tracked, or whose CR has no
+// such field.
+func (s *Store) GetPendingResourceRequests(name string) []resourcerequests.Request {
+	pkg, ok := s.packages[name]
+	if !ok {
+		return nil
+	}
+
+	return pkg.resourceRequests
 }
 
 // GetPendingMaintenance returns the latest maintenance mode stored for a package.
