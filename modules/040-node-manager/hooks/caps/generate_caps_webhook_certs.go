@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cloud
+package caps
 
 import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"

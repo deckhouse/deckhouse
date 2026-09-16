@@ -6,7 +6,8 @@ Go hooks of the module, grouped by the team that owns the feature a hook serves.
 |---|---|---|
 | `core` | NodeGroup lifecycle, bashible, CAPI and MCM plumbing, certificates of the module's own components | node-manager team, the module default in CODEOWNERS |
 | `scheduling` | cluster-autoscaler, standby nodes, NodeGroup priorities, fencing | owners of `templates/cluster-autoscaler` and `templates/fencing-agent` |
-| `cloud` | cloud providers and CAPS (Cluster API provider for static nodes) | owners of `templates/caps-controller-manager` and `030-cloud-provider-*` |
+| `cloud` | cloud providers | owners of `030-cloud-provider-*` |
+| `caps` | CAPS, the Cluster API provider for static nodes | owners of `templates/caps-controller-manager` |
 | `kubernetes` | containerd and kubelet | owners of the containerd and kubelet images |
 | `gpu` | NVIDIA GPU support | owners of `templates/nvidia-gpu` |
 | `upmeter` | bridge to the upmeter module | owners of the observability modules |
