@@ -1,0 +1,167 @@
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    kind: ClusterLicense
+    listKind: ClusterLicenseList
+    plural: clusterlicenses
+    singular: clusterlicense
+    shortNames:
+    - cl
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |
+          Хранит один лицензионный ключ Deckhouse, установленный в кластере.
+
+          На каждый ключ — отдельный ресурс. Ключи независимы: добавление или удаление одного не затрагивает остальные.
+          Сводная политика, вычисленная по всем ключам, публикуется в ресурсе `EffectiveLicense` с именем `dkp`.
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              alias:
+                description: |
+                  Понятное человеку имя ключа. На политику никак не влияет.
+                type: string
+              licenseKey:
+                description: |
+                  Лицензионный ключ — голый compact JWT, выданный сервером лицензий.
+
+                  Ключ привязан к кластеру, для которого выдан, и вне его бесполезен,
+                  поэтому конфиденциальности не требует и в Secret не хранится.
+
+                  Пробелы и переносы строк внутри сегментов и вокруг них допускаются: ключ,
+                  перенесённый через чат, PDF или терминал, приходит с переносами, и контроллер
+                  убирает их перед проверкой подписи.
+                type: string
+            required:
+            - licenseKey
+            type: object
+          status:
+            properties:
+              accepted:
+                description: |
+                  Прошёл ли ключ проверку подписи и формата.
+
+                  Ключ остаётся принятым, даже когда ни одна его запись больше не вносит вклад в политику:
+                  вердикты по отдельным записям публикуются в `records`.
+                type: boolean
+              conditions:
+                description: Условия, отражающие последнее известное состояние лицензионного
+                  ключа.
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Время последнего перехода условия из одного состояния
+                        в другое.
+                      type: string
+                    message:
+                      description: Понятное человеку описание перехода.
+                      type: string
+                    observedGeneration:
+                      description: Значение `.metadata.generation`, по которому было
+                        вычислено условие.
+                      type: integer
+                    reason:
+                      description: Машиночитаемый идентификатор причины последнего
+                        перехода.
+                      type: string
+                    status:
+                      description: Статус условия — `True`, `False` или `Unknown`.
+                      type: string
+                    type:
+                      description: Тип условия.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              customerName:
+                description: Имя клиента, указанное в пакете.
+                type: string
+              message:
+                description: Понятное человеку описание состояния ключа.
+                type: string
+              packageJti:
+                description: Claim `jti` пакета, идентифицирует сам ключ.
+                type: string
+              records:
+                description: |
+                  Вердикт по каждой записи пакета — по одной записи на элемент.
+
+                  Погашенная запись остаётся здесь и не является мусором: она объясняет, почему изменилась квота.
+                items:
+                  properties:
+                    accepted:
+                      description: |
+                        Вносит ли запись вклад в действующую политику сейчас или в будущем.
+                      type: boolean
+                    expireAt:
+                      description: |
+                        Когда запись перестаёт действовать. `null` — бессрочная запись.
+                      type: string
+                    graceDays:
+                      description: |
+                        Льготный период записи в днях. Отсчитывается от `expireAt`.
+
+                        `null` — запись не объявляет собственного льготного периода,
+                        применяется умолчание контроллера.
+                      type: integer
+                    grants:
+                      additionalProperties:
+                        type: integer
+                      description: |
+                        Вклад записи в действующие лимиты (`resource_limits`), ключ — имя ресурса.
+
+                        `null` означает, что ресурс не ограничен; отсутствующий ключ означает,
+                        что лимит на этот ресурс не выдан.
+                      type: object
+                    id:
+                      description: Идентификатор записи, выданный сервером лицензий.
+                      type: string
+                    message:
+                      description: Понятное человеку объяснение причины.
+                      type: string
+                    origin:
+                      description: |
+                        Происхождение записи: `purchase`, `demo` или `self-service`.
+                      type: string
+                    reason:
+                      description: |
+                        Почему запись не принята.
+
+                        `Renewed`, `Superseded` и `NotYetValid` — нормальные состояния, а не ошибки пользователя:
+                        такую запись удалять не нужно.
+                      type: string
+                    renewedBy:
+                      description: Идентификатор записи, погасившей эту.
+                      type: string
+                    startAt:
+                      description: |
+                        Когда запись начинает действовать. `null`, если запись была отклонена
+                        раньше, чем удалось прочитать её сроки.
+                      type: string
+                    type:
+                      description: |
+                        Тип записи, например `Workload`. Тип, неизвестный этой версии Deckhouse,
+                        игнорируется и никогда не отклоняет ключ целиком.
+                      type: string
+                  required:
+                  - id
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
+        type: object

@@ -1,0 +1,235 @@
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    kind: EffectiveLicense
+    listKind: EffectiveLicenseList
+    plural: effectivelicenses
+    singular: effectivelicense
+    shortNames:
+    - el
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |
+          Сводная лицензионная политика кластера.
+
+          Объект целиком вычисляется контроллером по всем ресурсам `ClusterLicense`.
+          Единственный экземпляр называется `dkp`, настроек у него нет: `spec` не принимает ни одного поля.
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |
+              Не используется. Ресурс вычисляется контроллером, желаемое состояние в нём не задаётся.
+
+              Любое поле здесь отклоняется, а не отбрасывается молча: настройка, которая выглядит
+              принятой и ничего не делает, хуже ошибки.
+            type: object
+          status:
+            properties:
+              compliance:
+                description: Сводный вердикт о соблюдении лицензионной политики.
+                properties:
+                  reason:
+                    description: |
+                      Почему состояние отличается от `Valid`. Отсутствует, пока состояние — `Valid`.
+
+                      * `Unregistered` — ни одной принятой записи типа `Workload` никогда не устанавливалось.
+                      * `Expired` — все записи истекли, состояние `Grace` или `Violation` наступило по времени.
+                      * `Revoked` — запись отозвана по коммерческим основаниям.
+                      * `LimitsExceeded` — среднее потребление за 7 дней превышает лимит.
+                      * `ExpiringSoon` — действующая запись истекает в пределах окна предупреждения.
+                      * `LimitsApproaching` — мгновенное потребление достигло предупредительной доли лимита или превысило его.
+                      * `ProjectedOverLimit` — экстраполированное потребление превышает лимит.
+                    type: string
+                  since:
+                    description: |
+                      Когда наступило текущее состояние. `null`, пока контроллер не наблюдал
+                      ни одного перехода.
+                    type: string
+                  state:
+                    description: |
+                      * `Valid` — политика соблюдается.
+                      * `Warning` — политика соблюдается, но что-то скоро потребует внимания.
+                      * `Grace` — права закончились, идёт льготный период.
+                      * `Violation` — права закончились, льготный период истёк.
+                      * `NoUpdateRight` — у кластера нет права на получение обновлений.
+                    type: string
+                type: object
+              conditions:
+                description: |
+                  Условия, отражающие последнее известное состояние лицензионной политики.
+
+                  Контроллер публикует следующие типы условий:
+
+                  * `LimitsSatisfied` — `False`, пока мгновенное потребление превышает какой-либо лимит;
+                    `lastTransitionTime` показывает, когда превышение началось.
+                  * `SomeRecordsExpiring` — `True`, когда действующая и непогашенная запись истекает
+                    в пределах окна предупреждения; в сообщении указаны идентификатор записи и дата в формате RFC 3339.
+                  * `RejectedRecords` — `True`, когда есть отклонённые записи с причиной, отличной от
+                    `UnsupportedType`, `Renewed`, `Superseded` и `Expired`.
+                  * `Registered` — `True`, когда есть хотя бы одна принятая запись типа `Workload`.
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Время последнего перехода условия из одного состояния
+                        в другое.
+                      type: string
+                    message:
+                      description: Понятное человеку описание перехода.
+                      type: string
+                    observedGeneration:
+                      description: Значение `.metadata.generation`, по которому было
+                        вычислено условие.
+                      type: integer
+                    reason:
+                      description: Машиночитаемый идентификатор причины последнего
+                        перехода.
+                      type: string
+                    status:
+                      description: Статус условия — `True`, `False` или `Unknown`.
+                      type: string
+                    type:
+                      description: Тип условия.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              counts:
+                description: Состав установленного набора ключей.
+                properties:
+                  accepted:
+                    description: Число принятых записей.
+                    type: integer
+                  packages:
+                    description: Число установленных ключей.
+                    type: integer
+                  records:
+                    description: Общее число записей во всех ключах.
+                    type: integer
+                  rejected:
+                    description: Число отклонённых записей.
+                    type: integer
+                type: object
+              effective:
+                description: Действующая в данный момент квота.
+                properties:
+                  grantedBy:
+                    additionalProperties:
+                      items:
+                        type: string
+                      type: array
+                    description: |
+                      Все записи, дающие вклад в ресурс, ключ — имя ресурса.
+
+                      Перечисление всех оснований важно: когда одно из них истекает, должно быть видно,
+                      что квота осталась по другому.
+                    type: object
+                  limits:
+                    additionalProperties:
+                      type: integer
+                    description: |
+                      Суммарная квота, ключ — имя ресурса.
+
+                      `null` означает, что ресурс не ограничен; отсутствующий ключ означает,
+                      что лимит на этот ресурс не выдан.
+                    type: object
+                  unlimited:
+                    description: |
+                      Есть ли в `limits` хотя бы один неограниченный ресурс, то есть значение `null`.
+                    type: boolean
+                type: object
+              metrics:
+                additionalProperties:
+                  properties:
+                    avg_7d:
+                      description: Среднее за окно наблюдения.
+                      type: number
+                    extrapolated:
+                      description: |
+                        Значение, спроецированное на ближайшее будущее истечение линейной регрессией
+                        по окну наблюдения.
+                      type: number
+                    instant:
+                      description: Значение последнего наблюдения.
+                      type: number
+                  type: object
+                description: Наблюдаемое потребление, ключ — имя ресурса.
+                type: object
+              nextReduction:
+                description: |
+                  Ближайший момент снижения действующих лимитов. `null`, если снижение неизвестно.
+                properties:
+                  at:
+                    description: Когда лимиты снизятся.
+                    type: string
+                  in:
+                    description: Понятное человеку время до снижения, например `61d`.
+                    type: string
+                  limits:
+                    additionalProperties:
+                      properties:
+                        from:
+                          description: |
+                            Текущий лимит. `null` означает, что ресурс сейчас не ограничен.
+                          type: integer
+                        to:
+                          description: |
+                            Лимит после снижения. `null` означает, что ресурс останется неограниченным.
+                          type: integer
+                      type: object
+                    description: Изменение каждого затронутого ресурса, ключ — имя
+                      ресурса.
+                    type: object
+                type: object
+              registrationRequest:
+                description: |
+                  Голый compact JWT, который нужно вставить на сервере лицензий для получения или продления ключа.
+
+                  Перевыпускается раз в час, чтобы цифры потребления в нём оставались свежими.
+                type: string
+              timeline:
+                description: |
+                  Действующие лимиты во времени, начиная с текущего отрезка.
+                items:
+                  properties:
+                    from:
+                      description: Начало отрезка.
+                      type: string
+                    limits:
+                      additionalProperties:
+                        type: integer
+                      description: |
+                        Действующая на отрезке квота, ключ — имя ресурса.
+
+                        `null` означает, что ресурс не ограничен; отсутствующий ключ означает,
+                        что лимит на этот ресурс не выдан.
+                      type: object
+                    state:
+                      description: Состояние политики на отрезке.
+                      type: string
+                    to:
+                      description: Конец отрезка. `null` для последнего, незамкнутого
+                        отрезка.
+                      type: string
+                  required:
+                  - from
+                  type: object
+                type: array
+              withinLimits:
+                description: |
+                  Укладывается ли каждый наблюдаемый ресурс в свой действующий лимит.
+                type: boolean
+            type: object
+        type: object

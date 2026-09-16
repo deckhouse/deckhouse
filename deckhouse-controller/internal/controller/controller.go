@@ -48,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/licensing"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
@@ -190,6 +191,11 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
+	err = licensing.RegisterController(runtime, ms, logger.Named("licensing-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register licensing controller: %w", err)
+	}
+
 	settingsCh := make(chan addonutils.Values, 1)
 
 	return &Controller{
@@ -289,6 +295,8 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 				},
 			},
 		},
+		// for the licensing controller
+		&corev1.Node{}: {},
 		// for deckhouse.io apis
 		&v1alpha1.Module{}:                     {},
 		&v1alpha1.ModuleConfig{}:               {},

@@ -1,0 +1,203 @@
+# Metric contract for the rules below.
+#
+# The absence of a series is meaningful here, and it is the only way "there is
+# no limit" is expressed:
+#
+#   * d8_license_effective_limit        - absent for an unlimited resource, and
+#                                         for a resource no key grants at all.
+#                                         Never 0 for "unlimited": 0 is a real
+#                                         quota of nothing.
+#   * d8_license_limit_after_reduction  - absent when no reduction is upcoming,
+#     d8_license_next_reduction_seconds   or when the resource stays unlimited
+#                                         after it.
+#   * d8_license_record_expires_in_seconds
+#                                       - absent for a perpetual record and for
+#                                         a record already renewed by a
+#                                         successor. It reaches 0 and stops,
+#                                         it never goes negative.
+#
+# Every comparison below is therefore written as `consumption > on(resource)
+# limit`: an absent limit drops the pair and the rule stays silent, which is
+# exactly what an unlimited resource should do. Emitting 0 instead of nothing
+# would fire every one of these rules on the customers who bought the most.
+- name: d8.deckhouse.licensing
+  rules:
+  - alert: D8LicenseConsumptionOverLimit
+    expr: d8_license_consumption{kind="instant"} > on(resource) d8_license_effective_limit
+    for: 1h
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "resource"
+      summary: Resource consumption exceeds the license limit.
+      description: |
+        Current consumption of `{{ $labels.resource }}` is above the quota granted by the installed license keys.
+
+        The alert waits for one hour on purpose: adding a replacement node before draining the old one
+        briefly puts the cluster over the limit, and that is a normal rotation, not a violation.
+        If it keeps firing, the excess is real.
+
+        What to do:
+
+        1. Compare consumption with the quota:
+
+           ```bash
+           d8 k get effectivelicense dkp -o yaml
+           ```
+
+        2. Either reduce consumption, or obtain an additional license key from the supplier.
+
+  - alert: D8LicenseExtrapolatedOverLimit
+    expr: d8_license_consumption{kind="extrapolated"} > on(resource) d8_license_effective_limit
+    for: 6h
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "resource"
+      summary: Resource consumption is projected to exceed the license limit.
+      description: |
+        Consumption of `{{ $labels.resource }}` grows steadily and, extrapolated to the nearest license
+        expiration, ends up above the quota. Nothing is violated yet — this is an early warning
+        that arrives weeks before the average crosses the limit.
+
+        Plan the additional quota now, while it can still be ordered without a rush.
+
+  - alert: D8LicenseQuotaReductionAhead
+    expr: d8_license_consumption{kind="avg_7d"} > on(resource) d8_license_limit_after_reduction and on() d8_license_next_reduction_seconds < 60 * 24 * 3600
+    for: 1h
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "resource"
+      summary: The license quota will drop below the current consumption.
+      description: |
+        One of the license keys expires within 60 days, and after that the quota for `{{ $labels.resource }}`
+        becomes lower than the average consumption over the last 7 days.
+
+        Nothing is wrong right now, and nothing breaks at the moment of the reduction either —
+        but from that date on the cluster is over the limit.
+
+        Check the reduction date and the resulting quota:
+
+        ```bash
+        d8 k get effectivelicense dkp -o jsonpath='{.status.nextReduction}'
+        ```
+
+        Renew the expiring key, or order the missing quota before that date.
+
+  # d8_license_compliance_state carries a `reason` label, and it is what keeps
+  # these two rules honest. A cluster that was never registered sits in
+  # Violation/Unregistered from its first boot: that is the state of every
+  # cluster before the first key is installed, it is plainly visible in
+  # EffectiveLicense, and paging somebody about it at 3am is noise. In phase 1
+  # an unregistered cluster therefore never alerts; it becomes an alert only
+  # once rights that did exist ran out.
+  - alert: D8LicenseComplianceGrace
+    expr: d8_license_compliance_state == 2
+    for: 10m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "reason"
+      summary: The cluster license is in the grace period.
+      description: |
+        The license rights of the cluster have run out and the grace period is running.
+        When it ends, the cluster moves into violation.
+
+        Install a valid license key:
+
+        ```bash
+        d8 k get clusterlicenses
+        ```
+
+  - alert: D8LicenseComplianceViolation
+    expr: d8_license_compliance_state{reason!="Unregistered"} == 3
+    for: 1h
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "reason"
+      summary: The cluster license is violated.
+      description: |
+        The license rights of the cluster have run out and the grace period is over.
+
+        Workloads keep running: the platform is not blocked. Contact the supplier and install a valid
+        license key — loading a new key is the way out of the violation.
+
+  - alert: D8LicenseRecordExpiresSoon
+    # The lower bound is not cosmetic: the series reaches 0 at the expiry, and
+    # an already expired record is the business of D8LicenseComplianceGrace and
+    # D8LicenseComplianceViolation, not of an "expires soon" warning.
+    expr: (d8_license_record_expires_in_seconds > 0) and (d8_license_record_expires_in_seconds < 30 * 24 * 3600)
+    for: 1h
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "record_id,license"
+      summary: A license record expires soon.
+      description: |
+        Record `{{ $labels.record_id }}` of the license key `{{ $labels.license }}` expires within 30 days.
+
+        Only active, not-renewed records are counted here: a record already renewed by a successor
+        does not raise this alert.
+
+        Renew the key before the date shown in:
+
+        ```bash
+        d8 k get clusterlicense {{ $labels.license }} -o yaml
+        ```
+
+  - alert: D8LicenseRejectedRecords
+    expr: sum(d8_license_records{status!~"accepted|UnsupportedType|Renewed|Superseded|Expired"}) > 0
+    for: 30m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: There are rejected license records.
+      description: |
+        At least one record of an installed license key was rejected for a reason that does not resolve
+        by itself: a cluster mismatch, a revocation, a duplicate or a malformed record.
+
+        Records that are merely renewed, superseded, expired or of an unknown type are excluded —
+        those are normal states.
+
+        Find the rejected records and their reasons:
+
+        ```bash
+        d8 k get clusterlicenses -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.records}{"\n"}{end}'
+        ```

@@ -449,4 +449,99 @@ spec:
   policyName: {{ $policyName }}
   validationActions: [Deny, Audit]
 
+---
+{{- $policyName := "licensing.deckhouse.io" }}
+# The licensing state is computed by the deckhouse controller and read by the
+# license server: EffectiveLicense is its output in full, and the status of a
+# ClusterLicense is its verdict on one key. Neither is a knob. ClusterLicense
+# itself stays open, that is how a customer installs a key.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["effectivelicenses", "effectivelicenses/status"]
+      - apiGroups: ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["UPDATE"]
+        resources:   ["clusterlicenses/status"]
+  validations:
+    # Strictly one writer: unlike the policies above, no other system account
+    # and no dhctl has any business writing the licensing state.
+    - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"'
+      reason: Forbidden
+      messageExpression: "'Licensing state is managed by Deckhouse and cannot be modified manually'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change the licensing state'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+
+---
+{{- $policyName := "licensing-storage.deckhouse.io" }}
+# The same single writer, for the two objects the licensing state is kept in: the
+# cluster identity and the consumption journal. They are guarded by their own
+# policy rather than by a third rule of the one above, because matchConditions are
+# ANDed across the whole policy and a condition on the object name would switch
+# the rules for the custom resources off along with it.
+#
+# The `heritage: deckhouse` label these objects carry puts them under
+# label-objects.deckhouse.io as well, but that one is off in dev clusters and lets
+# every d8-system service account through; this one lets through nobody else.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["secrets", "configmaps"]
+  matchConditions:
+    # The binding already selects the namespace by label; a request carries its
+    # own namespace, so the policy does not have to trust that alone.
+    - name: 'only-system-namespace'
+      expression: 'request.namespace == "d8-system"'
+    # A DELETE has no new object, so the name is read off whichever side exists.
+    - name: 'only-licensing-storage'
+      expression: '(object == null ? oldObject : object).metadata.name in ["cluster-key", "consumption-journal"]'
+  validations:
+    - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"'
+      reason: Forbidden
+      messageExpression: "'Licensing state is managed by Deckhouse and cannot be modified manually'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change the licensing state'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: d8-system
+
 {{- end }}
