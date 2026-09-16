@@ -48,6 +48,7 @@ If multitenancy mode is enabled in the cluster (the parameter [`enableMultiTenan
 The namespace restrictions of a CAR limit only the permissions granted by that CAR. They do not cancel permissions granted via RoleBinding, ClusterRoleBinding, or AuthorizationRule in other namespaces; likewise, the CAR access level does not extend to those namespaces. For example, if a user has a CAR with `accessLevel: Editor` limited to the `ns-a` namespace and a RoleBinding with the `view` role in the `ns-b` namespace, the user gets Editor permissions in `ns-a` and read-only permissions in `ns-b`: the RoleBinding is not blocked by the CAR restrictions, and the CAR Editor level does not leak into `ns-b`.
 
 Starting with DP 1.76.5, RoleBinding and ClusterAuthorizationRule can be used together for the same user. In older DP versions, the `user-authz` module's webhook rejected all requests to namespaces not listed in the user's ClusterAuthorizationRule, even if the user had the corresponding RoleBindings.
+{% endalert %}
 
 ### Use roles
 
