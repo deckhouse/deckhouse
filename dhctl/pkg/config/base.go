@@ -828,6 +828,14 @@ func RegistryConfigProvider(docs []string) (*registry.ConfigProvider, error) {
 		}
 	}
 
+	// Before Resolve, so that a cluster carrying both this section and a registry ModuleConfig is
+	// installed from the latter: the module's own configuration is the deliberate statement, and
+	// until now the deckhouse ModuleConfig took precedence over it.
+	initConfig, deckhouseSettings, err := registry.FoldLegacyDirectIntoInit(initConfig, deckhouseSettings)
+	if err != nil {
+		return nil, err
+	}
+
 	deckhouseSettings, opts := bundleFacts.Resolve(deckhouseSettings)
 
 	return registry.NewConfigProvider(initConfig, deckhouseSettings, opts...), nil

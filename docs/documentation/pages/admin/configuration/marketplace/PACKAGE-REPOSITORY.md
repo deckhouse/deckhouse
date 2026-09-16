@@ -77,7 +77,7 @@ Output columns:
 
 | Column | Description |
 |---|---|
-| `Phase` | Current state of the repository: `Active` after a successful scan, `Error` when the last scan failed |
+| `Phase` | Current state of the repository |
 | `Scan` | Timestamp of the last scan |
 | `MSG` | Message from the last scan condition |
 | `Packages` | Total number of packages discovered (hidden by default, use `-o wide`) |
@@ -92,8 +92,7 @@ Key status fields:
 
 | Field | Description |
 |---|---|
-| `status.phase` | Current repository phase: `Active` after a successful scan, `Error` when the last scan failed |
-| `status.message` | Why the last scan failed; empty after a successful scan |
+| `status.phase` | Current repository phase |
 | `status.lastScanTime` | Time of the most recent scan of any outcome |
 | `status.lastChangeTime` | Time of the last scan that found at least one new version |
 | `status.lastNewVersions` | Number of new versions found in the most recent scan |
@@ -107,15 +106,6 @@ The `LastScanSucceeded` condition:
 d8 k get packagerepository my-registry \
   -o jsonpath='{.status.conditions[?(@.type=="LastScanSucceeded")].message}'
 ```
-
-When a scan fails, the condition `reason` names the cause:
-
-| Reason | Meaning |
-|---|---|
-| `AccessDenied` | The registry rejected the credentials from `spec.registry` |
-| `RepositoryNotFound` | The registry has no repository at `spec.registry.repo` |
-| `RegistryUnavailable` | The registry could not be reached |
-| `ScanFailed` | Any other error; the message carries the details |
 
 ## Viewing discovered package versions
 

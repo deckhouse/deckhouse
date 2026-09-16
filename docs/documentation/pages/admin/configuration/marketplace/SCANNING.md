@@ -30,7 +30,7 @@ Output columns:
 | Column | Description |
 |---|---|
 | `Count` | Total number of packages found during the scan |
-| `Completed` | Whether the operation finished (`True` / `False`); whether it succeeded is in the condition `reason` |
+| `Completed` | Whether the operation finished (`True` / `False`) |
 | `MSG` | Message from the `Completed` condition |
 | `CompletionTime` | Time when the operation completed |
 
@@ -54,7 +54,6 @@ Key status fields:
 |---|---|
 | `status.startTime` | When the operation started |
 | `status.completionTime` | When the operation completed |
-| `status.conditions[]` | The `Completed` condition: `reason` is `ScanSucceeded` or a failure reason (`AccessDenied`, `RepositoryNotFound`, `RegistryUnavailable`, `ScanFailed`), `message` explains it |
 | `status.packages.total` | Total packages found |
 | `status.packages.processedOverall` | Total packages successfully processed |
 | `status.packages.newVersionsOverall` | Total new versions across all packages |

@@ -32,7 +32,7 @@ test-scan-1780053890   23      True              3h22m
 | Колонка | Описание |
 |---|---|
 | `Count` | Общее количество пакетов, найденных при сканировании |
-| `Completed` | Завершена ли операция (`True` / `False`); успешно или нет - показывает поле `reason` условия |
+| `Completed` | Завершена ли операция (`True` / `False`) |
 | `MSG` | Сообщение из условия `Completed` |
 | `CompletionTime` | Время завершения операции |
 
@@ -56,7 +56,6 @@ d8 k get pro <имя-операции> -o yaml
 |---|---|
 | `status.startTime` | Время начала операции |
 | `status.completionTime` | Время завершения операции |
-| `status.conditions[]` | Условие `Completed`: `reason` равен `ScanSucceeded` или причине ошибки (`AccessDenied`, `RepositoryNotFound`, `RegistryUnavailable`, `ScanFailed`), `message` поясняет её |
 | `status.packages.total` | Всего найдено пакетов |
 | `status.packages.processedOverall` | Всего успешно обработано пакетов |
 | `status.packages.newVersionsOverall` | Суммарное количество новых версий по всем пакетам |

@@ -38,11 +38,6 @@ const (
 	PackageRepositoryOperationReasonScanSucceeded = "ScanSucceeded"
 	PackageRepositoryOperationReasonScanFailed    = "ScanFailed"
 
-	// Terminal failure reasons that name the cause when the scan could not reach the packages.
-	PackageRepositoryOperationReasonAccessDenied        = "AccessDenied"
-	PackageRepositoryOperationReasonRepositoryNotFound  = "RepositoryNotFound"
-	PackageRepositoryOperationReasonRegistryUnavailable = "RegistryUnavailable"
-
 	// PackagesRepositoryOperationLabelRepository is the label used to identify PackageRepositoryOperations
 	// that belong to a specific PackageRepository
 	PackagesRepositoryOperationLabelRepository = "packages.deckhouse.io/repository"
@@ -141,16 +136,13 @@ type PackageRepositoryOperationStatus struct {
 	// Conditions reflecting the latest observations of the operation state.
 	// The operation phase is determined by the `Completed` condition: while its status is `False`,
 	// the operation is in one of the intermediate phases (`Discover`, `Processing`);
-	// when the status is `True`, the operation has finished with reason `ScanSucceeded`
-	// or with one of the failure reasons: `AccessDenied` (the registry rejected the credentials),
-	// `RepositoryNotFound` (no repository at the packages path), `RegistryUnavailable`
-	// (the registry could not be reached), `ScanFailed` (any other error, see the message).
+	// when the status is `True`, the operation has finished with reason `Succeeded` or `Failed`.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	// +crd-enricher:raw:items.properties.reason.x-doc-examples=[Discover, Processing, ScanSucceeded, ScanFailed, AccessDenied, RepositoryNotFound, RegistryUnavailable]
+	// +crd-enricher:raw:items.properties.reason.x-doc-examples=[Discover, Processing, Succeeded, Failed]
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 

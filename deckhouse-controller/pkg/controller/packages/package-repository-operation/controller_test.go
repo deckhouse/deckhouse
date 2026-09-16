@@ -16,10 +16,8 @@ package packagerepositoryoperation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"regexp"
 	"testing"
 
@@ -111,45 +109,18 @@ func invalidTypeVersionImage() *fakeRegistry.ImageBuilder {
 // ----- error injection wrappers -----
 
 // errorListTagsClient wraps a registry.Client and forces ListTags to
-// return err. Used by the tests that fail the package listing.
+// return an error. Used by the "package listing failed" test.
 type errorListTagsClient struct {
 	registry.Client
-	err error
 }
 
 func (c *errorListTagsClient) WithSegment(segments ...string) registry.Client {
-	return &errorListTagsClient{Client: c.Client.WithSegment(segments...), err: c.err}
+	return &errorListTagsClient{Client: c.Client.WithSegment(segments...)}
 }
 
 func (c *errorListTagsClient) ListTags(_ context.Context, _ ...registry.ListTagsOption) ([]string, error) {
-	return nil, c.err
+	return nil, assert.AnError
 }
-
-// Errors shaped the way pkg/registry returns them: the sentinel first, the
-// transport error it classified second.
-var (
-	errRegistryAccessDenied = fmt.Errorf("%w: %w", registry.ErrAccessDenied, &transport.Error{
-		Errors: []transport.Diagnostic{{
-			Code:    transport.UnauthorizedErrorCode,
-			Message: "HTTP Basic: Access denied",
-		}},
-		StatusCode: http.StatusUnauthorized,
-	})
-
-	errRegistryRepositoryNotFound = fmt.Errorf("%w: %w", registry.ErrRepositoryNotFound, &transport.Error{
-		Errors: []transport.Diagnostic{{
-			Code:    transport.NameUnknownErrorCode,
-			Message: "repository name not known to registry",
-		}},
-		StatusCode: http.StatusNotFound,
-	})
-
-	errRegistryUnreachable = &url.Error{
-		Op:  "Get",
-		URL: "https://registry.example.com/v2/",
-		Err: errors.New("dial tcp 10.0.0.1:443: connect: connection refused"),
-	}
-)
 
 // legacyRegistryClient wraps a registry.Client and overrides ListTags
 // on the "version" segment to return a NAME_UNKNOWN transport error, simulating
@@ -323,7 +294,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	suite.Run("package listing failed", func() {
 		// ListTags at root level returns an error.
 		reg := fakeRegistry.NewRegistry(registryHost)
-		ic := &errorListTagsClient{Client: newInternalClient(reg), err: assert.AnError}
+		ic := &errorListTagsClient{Client: newInternalClient(reg)}
 		psm := createFakePSM(ic)
 
 		suite.setupController("package-listing-failed.yaml", withPackageServiceManager(psm))
@@ -339,37 +310,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		require.NoError(suite.T(), err)
 	})
-
-	// The three listing failures the controller names: the operation gets the
-	// matching reason and a one-line message, the repository goes to phase Error
-	// with the same message.
-	for name, tc := range map[string]struct {
-		fixture string
-		err     error
-	}{
-		"registry access denied":    {fixture: "access-denied.yaml", err: errRegistryAccessDenied},
-		"repository path not found": {fixture: "repository-not-found.yaml", err: errRegistryRepositoryNotFound},
-		"registry unavailable":      {fixture: "registry-unavailable.yaml", err: errRegistryUnreachable},
-	} {
-		suite.Run(name, func() {
-			reg := fakeRegistry.NewRegistry(registryHost)
-			ic := &errorListTagsClient{Client: newInternalClient(reg), err: tc.err}
-			psm := createFakePSM(ic)
-
-			suite.setupController(tc.fixture, withPackageServiceManager(psm))
-			operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
-
-			err := repeat(func() error {
-				_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-					NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
-				})
-
-				return err
-			})
-
-			require.NoError(suite.T(), err)
-		})
-	}
 
 	suite.Run("successful package discovery", func() {
 		// Root has "test-package" (non-semver → 0 versions → discovery only, no version resources).
