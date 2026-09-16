@@ -313,8 +313,8 @@ The same rule governs OperationPolicy and SecurityPolicy resources.
 A policy with `enforcementAction: Deny` blocks workloads in ordinary namespaces,
 only warns in system ones, and blocks in system namespaces that carry the label.
 
-Splitting a policy this way produces extra constraints named `d8ape-system-warn-<policy>` and
-`d8ape-system-enforce-<policy>`, which appear in the audit and in Grafana next to the original one.
+Splitting a policy this way produces extra constraints named `d8-system-warn-<policy>` and
+`d8-system-enforce-<policy>`, which appear in the audit and in Grafana next to the original one.
 Both prefixes are reserved: a policy whose own name starts with one of them is rejected on creation.
 A policy stays a single constraint whenever the split would change nothing: when it warns or runs
 in dryrun, when the namespaces it names hold no system namespace, when it already excludes every

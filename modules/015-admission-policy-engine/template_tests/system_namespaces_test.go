@@ -76,18 +76,18 @@ internal:
 			// The selectors are checked for every defaultPolicy further down; what matters here is
 			// that the warning constraint carries the same checks as the enforcing one, so that a
 			// system namespace is measured against the full restricted set.
-			restricted := f.KubernetesGlobalResource("D8AllowedUsers", "d8ape-pod-security-restricted-warn-system")
+			restricted := f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-warn-system")
 			Expect(restricted.Field("spec.parameters.runAsUser.rule").String()).To(Equal("MustRunAsNonRoot"))
 
 			// The restricted standard builds on baseline, so hostNetwork and the other baseline
 			// checks have to reach system namespaces as well.
-			baseline := f.KubernetesGlobalResource("D8HostNetwork", "d8ape-pod-security-baseline-warn-system")
+			baseline := f.KubernetesGlobalResource("D8HostNetwork", "d8-pod-security-baseline-warn-system")
 			Expect(baseline.Exists()).To(BeTrue())
 			Expect(baseline.Field("spec.parameters.allowHostNetwork").Bool()).To(BeFalse())
 		})
 
 		It("Leaves the pod exemption labels working", func() {
-			constraint := f.KubernetesGlobalResource("D8AllowedUsers", "d8ape-pod-security-restricted-warn-system")
+			constraint := f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-warn-system")
 			Expect(constraint.Field("spec.match.labelSelector.matchExpressions").String()).To(MatchJSON(
 				`[{"key":"security.deckhouse.io/skip-pss-check","operator":"NotIn","values":["true"]},
 				  {"key":"gatekeeper.sh/operation","operator":"NotIn","values":["webhook"]}]`))
@@ -100,11 +100,11 @@ internal:
 		})
 
 		It("Renders the system constraint once, independently of the action", func() {
-			constraint := f.KubernetesGlobalResource("D8AllowedUsers", "d8ape-pod-security-restricted-warn-system")
+			constraint := f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-warn-system")
 			Expect(constraint.Exists()).To(BeTrue())
 			Expect(constraint.Field("spec.enforcementAction").String()).To(Equal("warn"))
 			// The per-action naming of the non-system constraints must not leak into it.
-			Expect(f.KubernetesGlobalResource("D8AllowedUsers", "d8ape-pod-security-restricted-warn-system-default").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-warn-system-default").Exists()).To(BeFalse())
 		})
 	})
 
@@ -140,7 +140,7 @@ internal:
 					{"D8HostNetwork", "baseline"},
 					{"D8AllowedUsers", "restricted"},
 				} {
-					warning := f.KubernetesGlobalResource(c.kind, fmt.Sprintf("d8ape-pod-security-%s-warn-system", c.standard))
+					warning := f.KubernetesGlobalResource(c.kind, fmt.Sprintf("d8-pod-security-%s-warn-system", c.standard))
 					Expect(warning.Exists()).To(BeTrue(), c.standard)
 					Expect(warning.Field("spec.enforcementAction").String()).To(Equal("warn"), c.standard)
 					Expect(warning.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces), c.standard)
