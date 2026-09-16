@@ -153,8 +153,12 @@ github.com/deckhouse/deckhouse/pkg/log v0.2.1 h1:7SSD+QJPnziAO3l8ycgRwN5wlQeC312
 github.com/deckhouse/deckhouse/pkg/log v0.2.1/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n3UC7XbOb9QNLbm8UhcGZ2R1I=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
-github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7 h1:vi6Wxo7djSckxxcK1oWiZfx7hfRqAbowR6rM0rozO/s=
-github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.1 h1:Ob6NpHRsVwHci1uK+6wLZ1NQxr5QS+e5ergFIkt7odI=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.1/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916082903-d9f239389fe3 h1:fLo+rEx0WmJMNrzCTyssgeQevAScdkWILDkTn/rw7Fs=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916082903-d9f239389fe3/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084219-04ecff6aaa5a h1:pqNA4DXqkpbvF2LL8otuNpjrWQmCQnArmy2boBRfSoc=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084219-04ecff6aaa5a/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/lib-connection v0.15.0 h1:FViYUgQsEckmbSzgXakHrdqysCzN3PSyEZ3ySCM+PRQ=
 github.com/deckhouse/lib-connection v0.15.0/go.mod h1:G75rHXcFDeoTubX9Dj2SUVfBf3wSO+D6hDM022+CAzQ=
 github.com/deckhouse/lib-dhctl v0.22.0 h1:TzrizsVjK5IjTUetZ/3lb+21pusV/ldNz8CszFDCrgk=
