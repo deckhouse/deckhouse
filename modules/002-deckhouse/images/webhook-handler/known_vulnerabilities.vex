@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 19,
+  "version": 20,
   "statements": [
     {
       "vulnerability": {
@@ -913,8 +913,106 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (net/textproto — инъекция вводимых данных в сообщения об ошибках). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не использует net/textproto для разбора недоверенного протокольного ввода, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
       "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56854"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 (обход ограничения source-address для Permissions из PasswordCallback/KeyboardInteractiveCallback на стороне SSH-сервера). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: SSH-сервер не поднимается, уязвимый код не выполняется.",
+      "timestamp": "2026-09-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 (DoS: deadlock соединения из-за некорректных сообщений после установления канала). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: SSH-соединения не устанавливаются, уязвимый код не выполняется.",
+      "timestamp": "2026-09-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 (DoS: flood запросов в ещё не установленный канал). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: SSH-соединения не устанавливаются, уязвимый код не выполняется.",
+      "timestamp": "2026-09-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-84304"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.80.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (DoS: рост памяти при приёме множества фрагментированных HTTP/2 DATA-фреймов gRPC-сервером). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: gRPC-сервер не запускается и gRPC-соединения не принимаются, уязвимый код не выполняется.",
+      "timestamp": "2026-09-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-84303"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.80.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (xDS RBAC HTTP-фильтр не приводит имена заголовков к нижнему регистру, DENY-политика не срабатывает). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: xDS и RBAC-фильтры gRPC не используются, уязвимый код не выполняется.",
+      "timestamp": "2026-09-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-84445"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.80.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (panic xDS-сервера при RPC без заголовков :authority и Host). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: xDS gRPC-сервер не создаётся, уязвимый код не выполняется.",
+      "timestamp": "2026-09-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-w67g-5rqw-f597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gorilla/websocket@v1.5.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в github.com/gorilla/websocket версии v1.5.0 (использование криптографически слабого math/rand для генерации masking key WebSocket-фреймов, до v1.5.3). Приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не устанавливает WebSocket-соединения — promtool применяется только для валидации правил Prometheus, уязвимый код gorilla/websocket не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-09-16T12:00:00Z"
     }
   ],
   "timestamp": "2026-02-16T12:00:00Z",
-  "last_updated": "2026-08-20T12:00:00Z"
+  "last_updated": "2026-09-15T12:00:00Z"
 }
