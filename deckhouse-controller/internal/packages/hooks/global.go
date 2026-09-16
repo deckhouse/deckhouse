@@ -21,10 +21,11 @@ import (
 
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
-	"github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	"github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
+
+	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 type GlobalHook interface {
