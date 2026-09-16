@@ -1,7 +1,7 @@
 properties:
   storageClass:
     description: |
-      Автоматическое создание StorageClass'а для каждой storage policy, доступной аккаунту кластера.
+      Автоматическое создание StorageClass'а для каждой storage policy со статусом `ENABLED`, доступной аккаунту кластера.
     properties:
       exclude:
         description: |

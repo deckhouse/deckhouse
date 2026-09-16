@@ -4,7 +4,7 @@ properties:
     type: object
     default: {}
     description: |
-      The module automatically creates a StorageClass for every storage policy available to the cluster account.
+      The module automatically creates a StorageClass for every `ENABLED` storage policy available to the cluster account.
     properties:
       exclude:
         type: array
