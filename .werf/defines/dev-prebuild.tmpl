@@ -142,21 +142,23 @@ shell:
     {{- range $_, $tfProvider := $edition.terraformProviders }}
       {{- $tf := index $context.TF $tfProvider }}
         {{- $cloudName := lower $tf.cloudName }}
-        {{- $providers = append $providers $cloudName }}
+        {{- $providers = append $providers (dict "module" $cloudName "provider" $cloudName) }}
     {{- end }}
   {{- end }}
 {{- end }}
 {{- /* External cloud providers carry no terraform_versions.yml entry,
        but they ship the capi templates node-manager links here. */}}
-{{- $providers = append $providers "dvp" }}
-{{- $providers = append $providers "metal3" }}
+{{- $providers = append $providers (dict "module" "dvp" "provider" "dvp") }}
+{{- $providers = append $providers (dict "module" "baremetal" "provider" "metal3") }}
 rm /deckhouse/modules/040-node-manager/capi/* /deckhouse/modules/040-node-manager/cloud-providers/*
-for item in {{ join " " $providers }}; do
-  if [ -d /deckhouse/modules/030-cloud-provider-${item}/capi ]; then
-    ln -s /deckhouse/modules/030-cloud-provider-${item}/capi /deckhouse/modules/040-node-manager/capi/${item}
+{{- range $_, $item := $providers }}
+{{- $module := index $item "module" }}
+{{- $provider := index $item "provider" }}
+if [ -d /deckhouse/modules/030-cloud-provider-{{ $module }}/capi ]; then
+  ln -s /deckhouse/modules/030-cloud-provider-{{ $module }}/capi /deckhouse/modules/040-node-manager/capi/{{ $provider }}
   fi
-  if [ -d /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager ]; then
-    ln -s /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager/ /deckhouse/modules/040-node-manager/cloud-providers/${item}
+if [ -d /deckhouse/modules/030-cloud-provider-{{ $module }}/cloud-instance-manager ]; then
+  ln -s /deckhouse/modules/030-cloud-provider-{{ $module }}/cloud-instance-manager/ /deckhouse/modules/040-node-manager/cloud-providers/{{ $provider }}
   fi
-done
+{{- end }}
 {{- end }}

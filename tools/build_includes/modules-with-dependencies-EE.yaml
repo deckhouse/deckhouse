@@ -375,6 +375,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/030-cloud-provider-baremetal/hooks
+  to: /deckhouse/modules/030-cloud-provider-baremetal/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix/hooks
   to: /deckhouse/modules/030-cloud-provider-dynamix/hooks
   excludePaths:
@@ -385,14 +393,6 @@
         - '**/*'
 - add: /ee/modules/030-cloud-provider-huaweicloud/hooks
   to: /deckhouse/modules/030-cloud-provider-huaweicloud/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/030-cloud-provider-baremetal/hooks
-  to: /deckhouse/modules/030-cloud-provider-baremetal/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
