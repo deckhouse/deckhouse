@@ -26,7 +26,6 @@ import (
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/kube-client/manifest"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	"go.opentelemetry.io/otel"
@@ -38,6 +37,7 @@ import (
 	taskensurewebhooks "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurewebhooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 

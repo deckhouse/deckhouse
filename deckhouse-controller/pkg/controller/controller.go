@@ -30,7 +30,6 @@ import (
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -55,6 +54,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"

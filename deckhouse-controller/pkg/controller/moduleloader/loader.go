@@ -30,7 +30,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
@@ -41,6 +40,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
