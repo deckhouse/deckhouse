@@ -182,7 +182,11 @@ $wordmark-width: 417px;
       }
     }
 
-    svg {
+    // The Habr mark is a file rather than an inline svg: its single path is 32KB, too
+    // much to repeat in the markup of every page. It carries its own white fill, so it
+    // does not follow "color: inherit" the way the inline marks do.
+    svg,
+    img {
       display: block;
       width: 100%;
       height: auto;
