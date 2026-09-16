@@ -56,10 +56,10 @@ index 000000000..7470ed702
 +	return nil
 +}
 diff --git a/plugins/snapshots/erofs/erofs.go b/plugins/snapshots/erofs/erofs.go
-index 0cf36a207..57860e51e 100644
+index 19d124f..324cd2e 100644
 --- a/plugins/snapshots/erofs/erofs.go
 +++ b/plugins/snapshots/erofs/erofs.go
-@@ -30,6 +30,7 @@ import (
+@@ -31,6 +31,7 @@ import (
  	"github.com/containerd/containerd/v2/core/mount"
  	"github.com/containerd/containerd/v2/core/snapshots"
  	"github.com/containerd/containerd/v2/core/snapshots/storage"
@@ -67,7 +67,7 @@ index 0cf36a207..57860e51e 100644
  	"github.com/containerd/containerd/v2/internal/fsverity"
  )
  
-@@ -484,6 +485,15 @@ func (s *snapshotter) Commit(ctx context.Context, name, key string, opts ...snap
+@@ -478,6 +479,15 @@ func (s *snapshotter) Commit(ctx context.Context, name, key string, opts ...snap
  		}
  	}
  
@@ -80,6 +80,6 @@ index 0cf36a207..57860e51e 100644
 +		return err
 +	}
 +
- 	return s.ms.WithTransaction(ctx, true, func(ctx context.Context) error {
- 		if _, err := os.Stat(layerBlob); err != nil {
- 			return fmt.Errorf("failed to get the converted erofs blob: %w", err)
+ 	// Enable fsverity on the EROFS layer if configured
+ 	if s.enableFsverity {
+ 		if err := fsverity.Enable(layerBlob); err != nil {
