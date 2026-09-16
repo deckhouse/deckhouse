@@ -606,6 +606,17 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/modules/030-cloud-provider-baremetal
+  to: /deckhouse/modules/030-cloud-provider-baremetal
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   excludePaths:

@@ -55,6 +55,13 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
 		"terraformManager":          "imageHash-cloudProviderAzure-terraformManager",
 	},
+	"cloudProviderBaremetal": map[string]interface{}{
+		"baremetalInstanceManager": "imageHash-cloudProviderBaremetal-baremetalInstanceManager",
+		"baremetalOperator":        "imageHash-cloudProviderBaremetal-baremetalOperator",
+		"capm3ControllerManager":   "imageHash-cloudProviderBaremetal-capm3ControllerManager",
+		"ironic":                   "imageHash-cloudProviderBaremetal-ironic",
+		"ironicStandaloneOperator": "imageHash-cloudProviderBaremetal-ironicStandaloneOperator",
+	},
 	"cloudProviderDvp": map[string]interface{}{
 		"capdvpControllerManager": "imageHash-cloudProviderDvp-capdvpControllerManager",
 		"cloudControllerManager":  "imageHash-cloudProviderDvp-cloudControllerManager",

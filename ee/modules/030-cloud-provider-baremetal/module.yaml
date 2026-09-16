@@ -1,0 +1,10 @@
+name: cloud-provider-baremetal
+critical: true
+weight: 30
+subsystems:
+  - infrastructure
+namespace: d8-cloud-provider-baremetal
+stage: General Availability
+descriptions:
+  en: Manages physical host resources for provisioning nodes.
+  ru: Управляет физическими серверами для создания узлов.

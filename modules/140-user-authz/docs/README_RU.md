@@ -281,6 +281,10 @@ read:
     - deckhouse.io/applications
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
+    - deckhouse.io/baremetalimages
+    - deckhouse.io/baremetalinstanceclasses
+    - deckhouse.io/baremetalinstances
+    - deckhouse.io/baremetalramdiskimages
     - deckhouse.io/deschedulers
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -607,6 +611,10 @@ write:
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
+    - deckhouse.io/baremetalimages
+    - deckhouse.io/baremetalinstanceclasses
+    - deckhouse.io/baremetalinstances
+    - deckhouse.io/baremetalramdiskimages
     - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/deschedulers
     - deckhouse.io/dvpinstanceclasses

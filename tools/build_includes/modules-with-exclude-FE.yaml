@@ -1105,6 +1105,27 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/modules/030-cloud-provider-baremetal
+  to: /deckhouse/modules/030-cloud-provider-baremetal
+  excludePaths:
+    - docs
+    - README.md
+    - '*-threat-model.md'
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+    - e2e
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   excludePaths:

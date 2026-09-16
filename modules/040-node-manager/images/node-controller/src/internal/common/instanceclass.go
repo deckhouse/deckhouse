@@ -32,6 +32,10 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
+var bareMetalImageGVK = schema.GroupVersionKind{
+	Group: "deckhouse.io", Version: "v1", Kind: "BareMetalImage",
+}
+
 // RegisteredInstanceClassGVKs returns the GVK every cloud provider registered its InstanceClass
 // under: for each registration Secret, the instanceClassKind it names at the
 // instanceClassAPIVersion it declares. Registrations are found by label rather than by the fixed
@@ -101,6 +105,54 @@ func InstanceClassToNodeGroups(ctx context.Context, r client.Reader, obj client.
 		ref := ng.Spec.CloudInstances.ClassReference
 		if ref.Kind == u.GetKind() && ref.Name == u.GetName() {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
+		}
+	}
+	return requests
+}
+
+// HasBareMetalInstanceClass reports whether the bare-metal provider registered its InstanceClass API.
+func HasBareMetalInstanceClass(kinds []schema.GroupVersionKind) bool {
+	for _, gvk := range kinds {
+		if gvk.Group == bareMetalImageGVK.Group && gvk.Kind == "BareMetalInstanceClass" {
+			return true
+		}
+	}
+	return false
+}
+
+// NewBareMetalImage returns an unstructured BareMetalImage object for controller watches.
+func NewBareMetalImage() *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(bareMetalImageGVK)
+	return u
+}
+
+// BareMetalImageToNodeGroups maps an image event through all referencing BareMetalInstanceClasses.
+func BareMetalImageToNodeGroups(ctx context.Context, r client.Reader, obj client.Object) []reconcile.Request {
+	classes := &unstructured.UnstructuredList{}
+	classes.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: bareMetalImageGVK.Group, Version: "v1", Kind: "BareMetalInstanceClassList",
+	})
+	if err := r.List(ctx, classes); err != nil {
+		log.FromContext(ctx).Error(err, "list BareMetalInstanceClasses for image event", "image", obj.GetName())
+		return nil
+	}
+
+	requests := make([]reconcile.Request, 0)
+	seen := make(map[types.NamespacedName]struct{})
+	for i := range classes.Items {
+		class := &classes.Items[i]
+		name, _, _ := unstructured.NestedString(class.Object, "spec", "imageRef", "name")
+		kind, _, _ := unstructured.NestedString(class.Object, "spec", "imageRef", "kind")
+		if kind != "BareMetalImage" || name != obj.GetName() {
+			continue
+		}
+		for _, request := range InstanceClassToNodeGroups(ctx, r, class) {
+			if _, ok := seen[request.NamespacedName]; ok {
+				continue
+			}
+			seen[request.NamespacedName] = struct{}{}
+			requests = append(requests, request)
 		}
 	}
 	return requests

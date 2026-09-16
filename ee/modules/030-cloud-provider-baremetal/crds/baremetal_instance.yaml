@@ -1,0 +1,244 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-baremetal
+  name: baremetalinstances.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: BareMetalInstance
+    listKind: BareMetalInstanceList
+    plural: baremetalinstances
+    singular: baremetalinstance
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: BMC
+      type: string
+      jsonPath: .spec.bmc.ipAddress
+    - name: Protocol
+      type: string
+      jsonPath: .status.bmc.protocol
+    - name: Boot MAC
+      type: string
+      jsonPath: .spec.bootMACAddress
+    - name: BMH
+      type: string
+      jsonPath: .status.host.name
+    - name: State
+      type: string
+      jsonPath: .status.host.state
+    - name: Consumer
+      type: string
+      jsonPath: .status.host.consumer
+    - name: Desired Online
+      type: boolean
+      jsonPath: .status.host.desiredOnline
+    - name: Powered On
+      type: boolean
+      jsonPath: .status.host.poweredOn
+    - name: Error
+      type: string
+      jsonPath: .status.message
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        required:
+        - spec
+        properties:
+          apiVersion:
+            type: string
+            x-doc-skip: true
+          kind:
+            type: string
+            x-doc-skip: true
+          metadata:
+            type: object
+          spec:
+            type: object
+            required:
+            - bootMACAddress
+            - bmc
+            properties:
+              online:
+                type: boolean
+                default: false
+                description: Desired physical host online state.
+              bootMACAddress:
+                type: string
+                pattern: '^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'
+                description: MAC address of the NIC used for PXE boot.
+              rootDeviceHints:
+                type: object
+                description: Hints for selecting the root disk. If omitted, an empty object is passed to the provisioning backend to avoid its unsafe /dev/sda default.
+                properties:
+                  deviceName:
+                    type: string
+                    description: A Linux device name like "/dev/vda", or a by-path link. The hint must match the actual value exactly.
+                  hctl:
+                    type: string
+                    description: A SCSI bus address like 0:0:0:0. The hint must match the actual value exactly.
+                  minSizeGigabytes:
+                    type: integer
+                    minimum: 0
+                    description: The minimum size of the device in Gigabytes.
+                  model:
+                    type: string
+                    description: A vendor-specific device identifier. The hint can be a substring of the actual value.
+                  rotational:
+                    type: boolean
+                    description: True if the device should use spinning media, false otherwise.
+                  serialNumber:
+                    type: string
+                    description: Device serial number. The hint must match the actual value exactly.
+                  vendor:
+                    type: string
+                    description: The name of the vendor or manufacturer of the device. The hint can be a substring of the actual value.
+                  wwn:
+                    type: string
+                    description: Unique storage identifier. The hint must match the actual value exactly.
+                  wwnVendorExtension:
+                    type: string
+                    description: Unique vendor storage identifier. The hint must match the actual value exactly.
+                  wwnWithExtension:
+                    type: string
+                    description: Unique storage identifier with the vendor extension appended. The hint must match the actual value exactly.
+              bmc:
+                type: object
+                required:
+                - ipAddress
+                - systemUUID
+                - credentialsRef
+                properties:
+                  ipAddress:
+                    type: string
+                    format: ipv4
+                    description: BMC IPv4 address.
+                  port:
+                    type: integer
+                    format: int32
+                    minimum: 1
+                    maximum: 65535
+                    description: Optional BMC port. Standard Redfish and IPMI ports are probed when omitted.
+                  systemUUID:
+                    type: string
+                    format: uuid
+                    description: UUID of the physical ComputerSystem managed by this BMC.
+                  credentialsRef:
+                    type: object
+                    required:
+                    - kind
+                    - name
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                        - Secret
+                      name:
+                        type: string
+                        minLength: 1
+                  insecure:
+                    type: boolean
+                    default: false
+                    description: Disables TLS certificate verification while accessing Redfish.
+          status:
+            type: object
+            properties:
+              observedGeneration:
+                type: integer
+                format: int64
+              bmc:
+                type: object
+                properties:
+                  protocol:
+                    type: string
+                    description: Resolved BMC protocol. This is a closed set of protocols supported by the controller.
+                    enum:
+                    - Redfish
+                    - IPMI
+                  address:
+                    type: string
+                    description: Resolved BMC address passed to the provisioning backend.
+                  systemUUID:
+                    type: string
+                  credentialsVersion:
+                    type: string
+                  lastResolvedTime:
+                    type: string
+                    format: date-time
+                    description: Time of the most recent successful BMC endpoint resolution. The resolved endpoint can be reused from this cache until the instance specification or credentials change.
+              host:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                  state:
+                    type: string
+                  consumer:
+                    type: string
+                  desiredOnline:
+                    type: boolean
+                    description: Desired physical host online state.
+                  poweredOn:
+                    type: boolean
+                    description: Observed physical host power state.
+                  error:
+                    type: string
+                    description: Generic indication that the physical host reports an error. Inspect the host resource for details.
+              credentialsSecret:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+              conditions:
+                type: array
+                description: |
+                  Conditions describe the state of the instance. `BMCResolved` is a permanent condition: `True` means that the BMC endpoint was resolved and the physical host resource was synchronized; `False` means that reconciliation could not complete this step. The set of condition types and reasons is open. Clients must treat an unknown type or reason as an unknown state, not as an error.
+                x-kubernetes-list-type: map
+                x-kubernetes-list-map-keys:
+                - type
+                items:
+                  type: object
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  properties:
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    message:
+                      type: string
+                    observedGeneration:
+                      type: integer
+                      format: int64
+                    reason:
+                      type: string
+                      description: Programmatic reason for the condition. This is an open set; new reasons can be added in future releases.
+                    status:
+                      type: string
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                    type:
+                      type: string
+                      description: Condition type. This is an open set; new condition types can be added in future releases.
+              message:
+                type: string

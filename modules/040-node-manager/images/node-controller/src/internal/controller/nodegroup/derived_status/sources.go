@@ -275,7 +275,46 @@ func (s *Service) readInstanceClassSpec(ctx context.Context, version, kind, name
 		return nil, fmt.Errorf("get %s %q at %s: %w", kind, name, version, err)
 	}
 	spec, _ := obj.Object["spec"].(map[string]any)
-	return spec, nil
+	if kind != "BareMetalInstanceClass" {
+		return spec, nil
+	}
+
+	return s.resolveBareMetalImage(ctx, spec)
+}
+
+func (s *Service) resolveBareMetalImage(ctx context.Context, spec map[string]any) (map[string]any, error) {
+	if spec == nil {
+		return nil, fmt.Errorf("BareMetalInstanceClass spec is required")
+	}
+	ref, ok := spec["imageRef"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("BareMetalInstanceClass spec.imageRef is required")
+	}
+	kind, _ := ref["kind"].(string)
+	name, _ := ref["name"].(string)
+	if kind != "BareMetalImage" || name == "" {
+		return nil, fmt.Errorf("BareMetalInstanceClass spec.imageRef must reference a named BareMetalImage")
+	}
+
+	image := &unstructured.Unstructured{}
+	image.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: "v1", Kind: "BareMetalImage"})
+	if err := s.Client.Get(ctx, types.NamespacedName{Name: name}, image); err != nil {
+		return nil, fmt.Errorf("get BareMetalImage %q: %w", name, err)
+	}
+	direct, found, err := unstructured.NestedMap(image.Object, "spec", "direct")
+	if err != nil {
+		return nil, fmt.Errorf("read BareMetalImage %q spec.direct: %w", name, err)
+	}
+	if !found {
+		return nil, fmt.Errorf("BareMetalImage %q has no spec.direct", name)
+	}
+
+	resolved := make(map[string]interface{}, len(spec)+1)
+	for key, value := range spec {
+		resolved[key] = value
+	}
+	resolved["image"] = direct
+	return resolved, nil
 }
 
 // readInstanceTypesCatalog returns the built-in instance types. An absent catalog is a legitimate

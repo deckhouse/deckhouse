@@ -109,6 +109,10 @@ func (r *Status) SetupWatches(w register.Watcher) {
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
 			return nodecommon.InstanceClassToNodeGroups(ctx, r.Client, obj)
 		})))
+	w.WatchesRawSource(nodecommon.LazyBareMetalImageSource(r.cache, handler.EnqueueRequestsFromMapFunc(
+		func(ctx context.Context, obj client.Object) []reconcile.Request {
+			return nodecommon.BareMetalImageToNodeGroups(ctx, r.Client, obj)
+		}), predicate.GenerationChangedPredicate{}))
 }
 
 func (r *Status) secretToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
