@@ -1,10 +1,16 @@
       </div>
       {{ if eq (extra "lang") "en" }}
       <a href="https://flant.com" target="_blank" class="layout-logo">
-          <img src="{{ url .ReqPath "static/img/flant-logo-en.svg" }}" />
+          <picture>
+            <source srcset="{{ url .ReqPath "static/img/flant-logo-en-theme-dark.svg" }}" media="(prefers-color-scheme: dark)" />
+            <img src="{{ url .ReqPath "static/img/flant-logo-en-theme-light.svg" }}" />
+          </picture>
      {{ else }}
       <a href="https://flant.ru" target="_blank" class="layout-logo">
-          <img src="{{ url .ReqPath "static/img/flant-logo-ru.svg" }}" />
+          <picture>
+            <source srcset="{{ url .ReqPath "static/img/flant-logo-ru-theme-dark.svg" }}" media="(prefers-color-scheme: dark)" />
+            <img src="{{ url .ReqPath "static/img/flant-logo-ru-theme-light.svg" }}" />
+          </picture>
       {{ end }}
       </a>
     </div>
