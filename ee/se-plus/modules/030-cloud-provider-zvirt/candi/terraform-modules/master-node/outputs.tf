@@ -7,7 +7,7 @@ data "ovirt_wait_for_ip" "master_vm" {
 
 locals {
   master_vm_interface = tolist(data.ovirt_wait_for_ip.master_vm.interfaces)[0]
-  master_vm_ip = tolist(local.master_vm_interface.ipv4_addresses)[0]
+  master_vm_ip        = tolist(local.master_vm_interface.ipv4_addresses)[0]
 }
 
 output "master_ip_address_for_ssh" {
