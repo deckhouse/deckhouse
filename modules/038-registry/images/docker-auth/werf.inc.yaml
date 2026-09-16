@@ -73,3 +73,5 @@ git:
 imageSpec:
   config:
     entrypoint: ["/auth_server"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
