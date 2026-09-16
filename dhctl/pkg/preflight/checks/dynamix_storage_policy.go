@@ -23,6 +23,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -54,13 +55,15 @@ const (
 	dynamixStoragePolicyStatusEnabled = "ENABLED"
 )
 
-// What one attempt is allowed to spend. A run makes four requests in the common
-// case — a token, the policy, the account, the policy again as the account sees
-// it — so the budget is per request as well as per run. Repeating a failed
-// attempt is the preflight framework's job, not this check's: see RetryPolicy.
+// What one attempt is allowed to spend, matching what CloudAPICheck gives itself
+// under the same retry policy. A run makes four requests in the common case — a
+// token, the policy, the account, the policy again as the account sees it — so
+// the budget is per request as well as per attempt, and five attempts of it is
+// the whole check's worst case. Repeating a failed attempt is the preflight
+// framework's job, not this check's: see RetryPolicy.
 const (
-	dynamixAPIRequestTimeout = 15 * time.Second
-	dynamixAPITimeout        = 60 * time.Second
+	dynamixAPIRequestTimeout = 10 * time.Second
+	dynamixAPITimeout        = 20 * time.Second
 )
 
 // dynamixClusterConfigurationKind is the only provider cluster configuration
@@ -106,16 +109,47 @@ func (c DynamixStoragePolicyCheck) run(ctx context.Context) error {
 		return nil
 	}
 
-	configObject := make(map[string]any)
-	configKind, err := unmarshalProviderClusterConfiguration(c.InstallConfig.ProviderClusterConfig, configObject)
+	clusterConfig, err := parseDynamixClusterConfiguration(c.InstallConfig.ProviderClusterConfig)
 	if err != nil {
-		return fmt.Errorf("unmarshal provider cluster configuration: %w", err)
+		return err
 	}
-	if configKind != dynamixClusterConfigurationKind {
+	if clusterConfig.Kind != dynamixClusterConfigurationKind {
 		return nil
 	}
+	if err := clusterConfig.validate(); err != nil {
+		return err
+	}
 
-	return checkDynamixStoragePolicies(ctx, c.InstallConfig.ProviderClusterConfig)
+	client, err := newDynamixAPIClient(clusterConfig.Provider)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, dynamixAPITimeout)
+	defer cancel()
+
+	policies := clusterConfig.storagePolicies()
+
+	// The version question is asked first and on its own, before the account is
+	// even resolved: on a pre-4.6 platform this is the call that answers 404, and
+	// the version is the one thing the user has to fix. Any other complaint at
+	// this point — a mistyped account, say — would only distract from it.
+	if err := client.probeStoragePolicyAPI(ctx, policies[0].name); err != nil {
+		return err
+	}
+
+	accountID, err := client.accountIDByName(ctx, clusterConfig.Account)
+	if err != nil {
+		return err
+	}
+
+	for _, policy := range policies {
+		if err := client.checkStoragePolicy(ctx, policy, clusterConfig.Account, accountID); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func DynamixStoragePolicy(installConfig *config.DeckhouseInstaller) preflight.Check {
@@ -155,64 +189,32 @@ var (
 	errDynamixPolicyAmbiguous = errors.New("storage policy name is ambiguous")
 )
 
-// checkDynamixStoragePolicies verifies, before any infrastructure is created,
-// that the platform is 4.6+ and that every storage policy named in the cluster
-// configuration can actually be used: it exists, it is ENABLED, and it is
-// available to the configured account. Without this the user learns about it
-// halfway through master creation, as an opaque `400 storage_policy_id Field
-// required` from the platform.
-func checkDynamixStoragePolicies(ctx context.Context, providerClusterConfig []byte) error {
-	clusterConfig, err := parseDynamixClusterConfiguration(providerClusterConfig)
-	if err != nil {
-		return err
-	}
-
-	client, err := newDynamixAPIClient(clusterConfig.Provider)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, dynamixAPITimeout)
-	defer cancel()
-
-	policies := clusterConfig.storagePolicies()
-
-	// The platform is asked about the policies themselves first, before the
-	// account is even resolved. On a pre-4.6 platform this is the call that
-	// answers 404, and the version is the one thing the user has to fix: any
-	// other complaint at this point — a mistyped account, say — would only
-	// distract from it.
-	for _, policy := range policies {
-		if err := client.checkStoragePolicyExists(ctx, policy); err != nil {
-			return err
-		}
-	}
-
-	accountID, err := client.accountIDByName(ctx, clusterConfig.Account)
-	if err != nil {
-		return err
-	}
-
-	for _, policy := range policies {
-		if err := client.checkStoragePolicyAvailable(ctx, policy, clusterConfig.Account, accountID); err != nil {
-			return err
-		}
-	}
-
-	return nil
+// probeStoragePolicyAPI asks whether this platform knows the storage policy API
+// at all. Nothing is read from the answer: the endpoint does not exist before
+// 4.6, and its mere presence is the version signal — the platform offers no
+// version endpoint to lean on, and zone/list, the other candidate, answers 404
+// on 4.6 too.
+func (c *dynamixAPIClient) probeStoragePolicyAPI(ctx context.Context, name string) error {
+	_, err := c.listStoragePolicies(ctx, name, 0)
+	return err
 }
 
-// checkStoragePolicyExists answers the first three questions at once, because
-// the platform answers them in one call: whether it knows the storage policy API
-// at all (it does not before 4.6), whether the policy is there, and whether it is
-// in a status a disk can be created in.
-func (c *dynamixAPIClient) checkStoragePolicyExists(ctx context.Context, policy dynamixPolicyRef) error {
-	items, err := c.listStoragePolicies(ctx, policy.name, 0)
+// checkStoragePolicy resolves the policy exactly the way the components that
+// will place disks in it resolve it — narrowed to the account, as
+// dynamix-common's GetStoragePolicyByName does — so that preflight is neither
+// stricter nor laxer than the runtime it is standing in for. In particular a
+// name is ambiguous only when it is ambiguous *within the account*: another
+// account's policy of the same name is none of this cluster's business.
+func (c *dynamixAPIClient) checkStoragePolicy(ctx context.Context, policy dynamixPolicyRef, accountName string, accountID uint64) error {
+	items, err := c.listStoragePolicies(ctx, policy.name, accountID)
 	if err != nil {
 		return err
 	}
 
 	found, err := matchDynamixStoragePolicy(items, policy)
+	if errors.Is(err, errDynamixPolicyNotFound) {
+		return c.explainInvisibleStoragePolicy(ctx, policy, accountName)
+	}
 	if err != nil {
 		return err
 	}
@@ -220,26 +222,32 @@ func (c *dynamixAPIClient) checkStoragePolicyExists(ctx context.Context, policy 
 	return dynamixPolicyStatusError(found, policy)
 }
 
-// checkStoragePolicyAvailable asks for the policy the way the components that
-// will place disks in it ask — narrowed to the account, as dynamix-common's
-// GetStoragePolicyByName does — so that a policy accepted here is a policy CSI,
-// CAPD and terraform will also resolve. The policy is already known to exist by
-// this point, so its absence under the account filter means one thing.
-func (c *dynamixAPIClient) checkStoragePolicyAvailable(ctx context.Context, policy dynamixPolicyRef, accountName string, accountID uint64) error {
-	items, err := c.listStoragePolicies(ctx, policy.name, accountID)
+// explainInvisibleStoragePolicy says why the account cannot see the policy. The
+// same question is asked again without the account filter, because "there is no
+// such policy" and "it is not yours" are different things to the user and only
+// this second answer separates them.
+func (c *dynamixAPIClient) explainInvisibleStoragePolicy(ctx context.Context, policy dynamixPolicyRef, accountName string) error {
+	items, err := c.listStoragePolicies(ctx, policy.name, 0)
 	if err != nil {
 		return err
 	}
 
-	if _, err := matchDynamixStoragePolicy(items, policy); err != nil {
-		if errors.Is(err, errDynamixPolicyNotFound) {
-			return fmt.Errorf("%s is not available to account %q: grant the account access to the policy or name another one",
-				policy, accountName)
-		}
-		return err
+	matches := dynamixExactMatches(items, policy.name, func(item dynamixStoragePolicy) string { return item.Name })
+	if len(matches) == 0 {
+		return fmt.Errorf("%s does not exist: %w", policy, errDynamixPolicyNotFound)
 	}
 
-	return nil
+	// A policy that could not be used even if it were granted is worth reporting
+	// as such: the status has to be fixed either way, and fixing the grant first
+	// would only buy the user a second refusal.
+	if !slices.ContainsFunc(matches, func(item dynamixStoragePolicy) bool {
+		return item.Status == dynamixStoragePolicyStatusEnabled
+	}) {
+		return dynamixPolicyStatusError(matches[0], policy)
+	}
+
+	return fmt.Errorf("%s is not available to account %q: grant the account access to the policy or name another one",
+		policy, accountName)
 }
 
 func dynamixPolicyStatusError(found dynamixStoragePolicy, policy dynamixPolicyRef) error {
@@ -302,6 +310,7 @@ type dynamixProvider struct {
 }
 
 type dynamixClusterConfiguration struct {
+	Kind            string          `yaml:"kind"`
 	Account         string          `yaml:"account"`
 	StoragePolicy   string          `yaml:"storagePolicy"`
 	Provider        dynamixProvider `yaml:"provider"`
@@ -342,25 +351,27 @@ func (c dynamixClusterConfiguration) storagePolicies() []dynamixPolicyRef {
 	return policies
 }
 
-// parseDynamixClusterConfiguration re-states the presence of the fields the
-// check reads. The OpenAPI schema already lists them in `required`, so a
-// configuration that came through `dhctl config parse` cannot miss them — the
-// guards are here so that one which reached preflight some other way fails
-// loudly instead of skipping the check on an empty policy name.
 func parseDynamixClusterConfiguration(providerClusterConfig []byte) (dynamixClusterConfiguration, error) {
 	var clusterConfig dynamixClusterConfiguration
 	if err := yaml.Unmarshal(providerClusterConfig, &clusterConfig); err != nil {
 		return dynamixClusterConfiguration{}, fmt.Errorf("malformed provider cluster configuration: %w", err)
 	}
-
-	if clusterConfig.Account == "" {
-		return dynamixClusterConfiguration{}, errors.New("malformed provider cluster configuration: reading .account: no such property")
-	}
-	if clusterConfig.StoragePolicy == "" {
-		return dynamixClusterConfiguration{}, errors.New("malformed provider cluster configuration: reading .storagePolicy: no such property")
-	}
-
 	return clusterConfig, nil
+}
+
+// validate re-states the presence of the fields the check reads. The OpenAPI
+// schema already lists them in `required`, so a configuration that came through
+// `dhctl config parse` cannot miss them — the guards are here so that one which
+// reached preflight some other way fails loudly instead of quietly checking
+// nothing on an empty policy name.
+func (c dynamixClusterConfiguration) validate() error {
+	if c.Account == "" {
+		return errors.New("malformed provider cluster configuration: reading .account: no such property")
+	}
+	if c.StoragePolicy == "" {
+		return errors.New("malformed provider cluster configuration: reading .storagePolicy: no such property")
+	}
+	return nil
 }
 
 // dynamixStoragePolicy is the part of a storage policy preflight needs. The

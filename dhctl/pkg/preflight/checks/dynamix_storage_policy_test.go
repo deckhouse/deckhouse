@@ -33,7 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	preflightnew "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
 const (
@@ -327,9 +327,9 @@ func runDynamixCheck(t *testing.T, pcc []byte) error {
 	return check.Run(t.Context())
 }
 
-// isPermanent reports whether the preflight framework will stop retrying on this
-// error, which is how the check says "this is the platform's verdict".
-func isPermanent(err error) bool {
+// dynamixIsPermanent reports whether the preflight framework will stop retrying
+// on this error, which is how the check says "this is the platform's verdict".
+func dynamixIsPermanent(err error) bool {
 	var permanent *backoff.PermanentError
 	return errors.As(err, &permanent)
 }
@@ -420,7 +420,7 @@ func TestDynamixStoragePolicyCheck(t *testing.T) {
 		err := runDynamixCheck(t, dynamixPCC(server.URL, "storage_policy01"))
 
 		assert.ErrorContains(t, err, "answered 503")
-		assert.False(t, isPermanent(err), "a 5xx must not stop the framework from retrying")
+		assert.False(t, dynamixIsPermanent(err), "a 5xx must not stop the framework from retrying")
 	})
 
 	t.Run("an unreachable platform asks to be retried", func(t *testing.T) {
@@ -431,7 +431,7 @@ func TestDynamixStoragePolicyCheck(t *testing.T) {
 
 		err := runDynamixCheck(t, dynamixPCC(serverURL, "storage_policy01"))
 
-		assert.False(t, isPermanent(err), "a dropped connection must not stop the framework from retrying")
+		assert.False(t, dynamixIsPermanent(err), "a dropped connection must not stop the framework from retrying")
 	})
 
 	// Everything that is the platform's answer rather than a blip must stop the
@@ -475,12 +475,25 @@ func TestDynamixStoragePolicyCheck(t *testing.T) {
 				err := runDynamixCheck(t, dynamixPCC(server.URL, tt.policy))
 
 				require.Error(t, err)
-				assert.True(t, isPermanent(err), "the framework must not retry a verdict")
+				assert.True(t, dynamixIsPermanent(err), "the framework must not retry a verdict")
 			})
 		}
 	})
 
-	t.Run("policy name matches more than one policy", func(t *testing.T) {
+	// dynamix-common resolves the name inside the account, so a namesake in
+	// somebody else's account resolves fine at runtime. Preflight refusing it
+	// would block a bootstrap the platform would have completed.
+	t.Run("a namesake in another account is not ambiguity", func(t *testing.T) {
+		platform := newFakeDynamixPlatform(t,
+			enabledDynamixPolicy("storage_policy01", testDynamixAccountID),
+			enabledDynamixPolicy("storage_policy01", testDynamixAccountID+1),
+		)
+		server := platform.start()
+
+		require.NoError(t, runDynamixCheck(t, dynamixPCC(server.URL, "storage_policy01")))
+	})
+
+	t.Run("policy name matches more than one policy in the account", func(t *testing.T) {
 		platform := newFakeDynamixPlatform(t,
 			enabledDynamixPolicy("storage_policy01", testDynamixAccountID),
 			enabledDynamixPolicy("storage_policy01", testDynamixAccountID),
@@ -677,7 +690,7 @@ func TestDynamixStoragePolicyCheckIsRegistered(t *testing.T) {
 
 	assert.Equal(t, DynamixStoragePolicyCheckName, check.Name)
 	require.NoError(t, check.Name.Validate())
-	assert.Equal(t, preflightnew.PhasePreInfra, check.Phase)
-	assert.Equal(t, preflightnew.DefaultRetryPolicy, check.Retry)
+	assert.Equal(t, preflight.PhasePreInfra, check.Phase)
+	assert.Equal(t, preflight.DefaultRetryPolicy, check.Retry)
 	assert.NotEmpty(t, check.Description)
 }
