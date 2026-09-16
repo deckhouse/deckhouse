@@ -37,4 +37,5 @@ type RunnerInterface interface {
 	GetChangesInPlan() int
 	GetPlanDestructiveChanges() *plan.DestructiveChanges
 	HasVMDestruction() bool
+	VMDestructionApplied() bool
 }

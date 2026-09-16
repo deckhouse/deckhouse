@@ -100,6 +100,7 @@ type Runner struct {
 	changesInPlan          int
 	planDestructiveChanges *plan.DestructiveChanges
 	hasVMDestruction       bool
+	vmDestructionApplied   bool
 	stateCache             state.Cache
 
 	stateSaver   *StateSaver
@@ -463,6 +464,8 @@ func (r *Runner) Apply(ctx context.Context) error {
 			return nil
 		}
 
+		r.vmDestructionApplied = r.hasVMDestruction
+
 		if !govalue.IsNil(r.stateChecker) {
 			err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure state check before apply...", func(ctx context.Context) error {
 				if r.statePath == "" {
@@ -807,6 +810,13 @@ func (r *Runner) GetChangesInPlan() int {
 
 func (r *Runner) HasVMDestruction() bool {
 	return r.hasVMDestruction
+}
+
+// VMDestructionApplied reports a machine the apply actually rebuilt. HasVMDestruction is a
+// fact about the plan, and a destructive plan is routinely dismissed instead of applied:
+// whatever the new cloud-config would have baked into the machine never reached it then.
+func (r *Runner) VMDestructionApplied() bool {
+	return r.vmDestructionApplied
 }
 
 func (r *Runner) GetPlanDestructiveChanges() *plan.DestructiveChanges {

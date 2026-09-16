@@ -534,9 +534,10 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return err
 	}
 
-	// The payload with the converge user reached the machine only if the VM was built
-	// anew; an update in place leaves the account that booted with it.
-	if nodeRunner.HasVMDestruction() {
+	// The payload with the converge user reached the machine only if the apply actually
+	// built the VM anew; an update in place, or a destructive plan dismissed instead of
+	// applied, leaves the account that booted with the machine.
+	if nodeRunner.VMDestructionApplied() {
 		if err := c.rememberConvergeUserNode(ctx, nodeName); err != nil {
 			return err
 		}

@@ -445,3 +445,38 @@ var destructiveChangesReportWithoutVM = &destructiveChangesReport{
 	changes:      destructivelyChangedWithoutVM,
 	hasVMChanges: false,
 }
+
+// Converge records a master as carrying the converge user on this fact, and only a
+// machine built anew ever boots with that account. A destructive plan is routinely
+// dismissed instead of applied, and the plan alone then claims accounts that no node has.
+func TestRunnerVMDestructionAppliedOnlyWhenApplyRan(t *testing.T) {
+	newPlannedRunner := func(t *testing.T) *Runner {
+		t.Helper()
+
+		runner := newTestRunner(&fakeExecutor{
+			showResp:   fakeResponse{resp: mustReadFile(t, "./mocks/checkplan/destructively_changed.json")},
+			planResp:   fakeResponse{code: infraexec.HasChangesExitCode},
+			VMResource: "yandex_compute_instance",
+		})
+
+		require.NoError(t, runner.Plan(t.Context(), false, false))
+		require.True(t, runner.HasVMDestruction(), "the plan destroys a VM")
+
+		return runner
+	}
+
+	t.Run("a dismissed destructive plan rebuilds nothing", func(t *testing.T) {
+		runner := newPlannedRunner(t).WithAutoDismissDestructiveChanges(true)
+
+		require.NoError(t, runner.Apply(t.Context()))
+		require.False(t, runner.VMDestructionApplied(),
+			"the apply was skipped, so no machine booted with a payload of this converge")
+	})
+
+	t.Run("an applied destructive plan rebuilds the machine", func(t *testing.T) {
+		runner := newPlannedRunner(t).WithAutoApprove(true)
+
+		require.NoError(t, runner.Apply(t.Context()))
+		require.True(t, runner.VMDestructionApplied())
+	})
+}
