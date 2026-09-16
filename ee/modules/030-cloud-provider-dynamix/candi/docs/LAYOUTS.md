@@ -3,6 +3,10 @@ title: "Cloud provider - Basis Dynamix: Layouts"
 description: "Schemes of placement and interaction of resources in Basis Dynamix when working with the Deckhouse cloud provider."
 ---
 
+{% alert level="warning" %}
+Changing `storagePolicy` recreates CloudEphemeral nodes: the platform picks the disk placement when the virtual machine is created, and the module never moves a disk afterwards. Editing the cluster-wide value recreates the CloudEphemeral nodes of every node group, including those that override the policy in their own instanceClass.
+{% endalert %}
+
 ## Standard
 
 ![resources](images/dynamix-standard.png)

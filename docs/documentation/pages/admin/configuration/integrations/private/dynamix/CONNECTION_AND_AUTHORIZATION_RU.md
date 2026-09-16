@@ -15,7 +15,7 @@ lang: ru
 - настройку параметров виртуальных машин (CPU, RAM, диск, сеть);
 - поддержку внешней и внутренней сетей, включая настройку CIDR и DNS;
 - работу с несколькими схемами размещения — с внешней или комбинированной сетью;
-- управление хранением данных через pool и storage endpoint.
+- размещение дисков через storage policy.
 
 ## Требования
 
@@ -25,11 +25,12 @@ lang: ru
 
 Для интеграции Deckhouse Platform (DP) с Basis Dynamix необходимы:
 
+- платформа Basis Dynamix версии 4.6 или новее (на более старой `dhctl bootstrap` отказывается разворачивать кластер);
 - доступ к API-контроллеру и SSO-контур Basis Dynamix;
 - данные учётной записи (account) и параметры приложения ([`appId`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-provider-appid) и [`appSecret`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-provider-appsecret));
 - размещённый в облаке cloud-образ операционной системы;
 - внешняя сеть ([`externalNetwork`](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass-v1-spec-externalnetwork)) и, при необходимости, параметры внутренней сети (CIDR, DNS);
-- сведения о хранилище (pool и storage endpoint);
+- имя доступной аккаунту storage policy ([`storagePolicy`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy)); storage endpoint и пул внутри политики выбирает сама платформа;
 - публичный SSH-ключ для доступа к узлам кластера.
 
 ## Подготовка cloud-образа

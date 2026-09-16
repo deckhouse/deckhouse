@@ -5,6 +5,12 @@ description: "Configuring Basis Dynamix for Deckhouse cloud provider operation."
 
 <!-- AUTHOR! Don't forget to update getting started if necessary -->
 
+### Platform version
+
+The module requires **Basis Dynamix 4.6 or newer**.
+
+Starting with 4.6, the platform requires a storage policy for every disk and every virtual machine it creates: `storage_policy_id` is a mandatory field of `disks/create` and `kvmx86/create`. The module resolves a policy by name and discovers the policies available to the account through the `/restmachine/cloudapi/storage_policy/list` endpoint, which does not answer on earlier versions. A preflight check probes that endpoint, so `dhctl bootstrap` refuses to deploy a cluster on an older platform before any resource is created.
+
 ### Account permissions
 
 The module operates entirely within the user API of Basis Dynamix (`/restmachine/cloudapi/*`). An account with administrative (`/restmachine/cloudbroker/*`) permissions is **not** required and should not be used: it widens the visibility scope beyond the cluster owner's account and breaks tenant isolation.
@@ -16,13 +22,13 @@ The account specified in `DynamixClusterConfiguration.provider` must be allowed 
 | `account`, `locations`, `rg` | all components | resolving the account, the location and the resource group by name |
 | `extnet`, `vins` | terraform, CAPD | external and internal networks |
 | `image` | terraform, CAPD | OS images for the nodes |
-| `sep` | terraform, CSI, cloud-data-discoverer | listing the storage endpoints and pools available to the account |
+| `storage_policy` | terraform, CAPD, CSI, cloud-data-discoverer | listing the storage policies available to the account and resolving a policy by name |
 | `disks` | terraform, CSI | disks of the master nodes and persistent volumes |
 | `compute`, `kvmx86` | terraform, CCM, CAPD, CSI | virtual machines and disk attachment |
 | `lb` | CCM | load balancers for `LoadBalancer` services |
 
-{% alert level="warning" %}
-The module requires a version of Basis Dynamix that provides the `/restmachine/cloudapi/sep/listAvailableSepAndPools` endpoint. Storage endpoints and pools are discovered through it; on earlier platform versions the storage classes will not be created and the master node will fail to get its etcd disk.
+{% alert level="info" %}
+The module never chooses a storage endpoint or a pool for a disk. It only names a storage policy, and Basis Dynamix picks the placement within that policy itself.
 {% endalert %}
 
 ### Prepare an operating system image

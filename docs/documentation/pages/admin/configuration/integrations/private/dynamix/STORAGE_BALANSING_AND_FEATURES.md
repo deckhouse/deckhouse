@@ -24,6 +24,12 @@ masterNodeGroup:
 Set `storagePolicy` on an instanceClass only when that node group must use a storage policy different from the one set at the root of DynamixClusterConfiguration.
 {% endalert %}
 
+{% alert level="warning" %}
+Changing a storage policy recreates CloudEphemeral nodes: the platform picks the disk placement when the virtual machine is created, and the module never moves a disk afterwards.
+
+Editing the cluster-wide `storagePolicy` recreates the CloudEphemeral nodes of every node group, including those that override the policy in their own instanceClass and whose configuration therefore has not changed.
+{% endalert %}
+
 ## Load balancing
 
 The Basis Dynamix platform doesn't provide a built-in load balancer. To handle inbound traffic to a Deckhouse Kubernetes Platform cluster, the following approaches are recommended:

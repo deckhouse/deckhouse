@@ -56,7 +56,7 @@ spec:
                   description: |
                     The name of the storage policy to use for this instance class instead of the cluster-wide `storagePolicy`.
 
-                    > **Warning.** Changing the storage policy causes the recreation of CloudEphemeral nodes: the platform picks the disk placement when the VM is created and cannot move a disk afterwards.
+                    > **Warning.** Changing the storage policy causes the recreation of CloudEphemeral nodes: the platform picks the disk placement when the VM is created, and the module never moves a disk afterwards.
                   x-doc-examples: ['storage_policy01']
                   type: string
                 externalNetwork:

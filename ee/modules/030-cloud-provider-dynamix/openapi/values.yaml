@@ -82,7 +82,7 @@ properties:
 
               A storage policy defines a set of available storage endpoints and pools, as well as an IOPS limit; the platform chooses the exact placement within the policy. Can be overridden per instance class.
 
-              > **Warning.** Changing the storage policy causes the recreation of CloudEphemeral nodes: the platform picks the disk placement when the VM is created and cannot move a disk afterwards.
+              > **Warning.** Changing the storage policy causes the recreation of CloudEphemeral nodes: the platform picks the disk placement when the VM is created, and the module never moves a disk afterwards.
             example: storage_policy01
           masterNodeGroup:
             type: object

@@ -84,4 +84,8 @@ masterNodeGroup:
 - `externalNetwork` — имя внешней сети;
 - `nodeNetworkCIDR` и `nameservers` — параметры внутренней сети (только для схемы StandardWithInternalNetwork).
 
+{% alert level="warning" %}
+Смена `storagePolicy` приводит к пересозданию узлов типа CloudEphemeral: платформа выбирает размещение диска при создании виртуальной машины, а модуль не переносит диск позже. Правка общего для кластера значения пересоздаёт узлы CloudEphemeral всех групп, включая те, что переопределяют политику в своём instanceClass.
+{% endalert %}
+
 После изменения параметров необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
