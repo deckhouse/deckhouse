@@ -1,4 +1,4 @@
-2860
+2864
 1GB
 2GB
 5XX
@@ -49,6 +49,7 @@ Authy
 AutoPatch
 Autoloading
 AutoplaceTarget
+AvailableClusterResource
 Avi
 AzureClusterConfiguration
 AzureInstanceClass
@@ -344,6 +345,7 @@ GrafanaAlertsChannel
 GrafanaCloud
 GrafanaDashboardDefinition
 Grafanas
+GrantableClusterResourceDefinition
 GraphQL
 Graylog
 GuestInfo
@@ -764,6 +766,7 @@ SecurityGroups
 SecurityPolicy
 SecurityPolicyException
 Selectel
+SemVer
 Sep
 ServiceAccount
 ServiceAccountJSON
@@ -2401,6 +2404,7 @@ zoneTagCategory
 отрисовки
 офлайн
 п
+пайплайн
 пайплайна
 пайплайнами
 пайплайнов
