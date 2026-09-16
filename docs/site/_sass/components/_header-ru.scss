@@ -341,11 +341,17 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
   }
 
   // Products panel: icon + title on the first row, description indented under the title.
-  // Three 290px columns with a 32px gutter and a 20px icon column, as on the site.
+  // Two 300px columns, three 290px ones from xl - the site's own breakdown. Three
+  // columns everywhere would be 982px wide and, since the panel is only hidden through
+  // visibility, it pushes a horizontal scrollbar onto the page at 1024.
   .header__nav--top .sub-menu_products {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, $product-col));
+    grid-template-columns: repeat(2, minmax(0, 300px));
     gap: $panel-gap;
+
+    @include breakpoints.min-w(xl) {
+      grid-template-columns: repeat(3, minmax(0, $product-col));
+    }
 
     a {
       display: grid;
@@ -486,8 +492,13 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
         transform: rotate(45deg);
       }
 
+      // transform is restated because the legacy open state
+      // (body.sidebar-opened .header__hamburger span:nth-child(2)) slides this bar out
+      // by translate(100%), and although it is transparent it still counts towards the
+      // page width - 7px of horizontal scroll with the drawer open at 728.
       &:nth-child(2) {
         opacity: 0;
+        transform: none;
       }
 
       &:nth-child(3) {
@@ -499,6 +510,10 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 
   // ----------------------------------------------------------------- level 2 bar
   .header__product-menu--ru {
+    // This div carries .header as well, and the legacy .header sets font-weight: 300.
+    // .header--ru wins on the outer header but not here, so the whole product bar and
+    // its dropdown inherit 300 unless every text node restates its weight.
+    font-weight: 400;
     padding: $bar-pad-y 0;
     // 12 + 36 + 12 + 2px border = 62px, the height the site's product bar has.
     box-shadow: none;
@@ -927,9 +942,10 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
   z-index: 80;
   width: 100%;
   height: 100%;
-  // Clears the sticky top bar (64px + its 2px border), which stays visible above the
-  // overlay on z-index 100 and supplies the logo and the close icon, as in the design.
-  padding-top: calc(#{$bar-height} + 2px);
+  // 82px, the value the site's own drawer uses (.sidebar padding-top). The sticky top
+  // bar stays visible above the overlay on z-index 100 and supplies the logo and the
+  // close icon; the bar is 56px tall here, so this leaves the same 26px of air.
+  padding-top: 82px;
   overflow-y: auto;
   transform: translateX(-100%);
   transition: transform .3s ease;
@@ -945,11 +961,18 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
 }
 
 .header__sidebar--ru {
+  // Gutters and the 32px column gap are .container's and the site drawer's own values.
   .header__sidebar-inner {
     display: flex;
     flex-direction: column;
-    gap: 40px;
-    padding: 16px 16px 32px;
+    justify-content: space-between;
+    gap: 32px;
+    padding: 0 20px 32px;
+
+    @include breakpoints.min-w(s) {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
   }
 
   .header__sidebar--nav {
@@ -964,13 +987,11 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
     list-style: none;
   }
 
+  // The separator is above every row, including the first, and the rows are 24px tall
+  // top and bottom - the site draws the drawer exactly this way.
   .header__sidebar--nav > li {
     padding: 24px 0;
-    border-bottom: 1px solid $border-tertiary;
-
-    &:first-child {
-      padding-top: 0;
-    }
+    border-top: 2px solid $border-tertiary;
 
     &:before {
       display: none;
@@ -982,8 +1003,8 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
       justify-content: space-between;
       gap: 8px;
       font-size: 14px;
-      font-weight: 400;
-      line-height: 20px;
+      font-weight: 500;
+      line-height: 16px;
       text-decoration: none;
       @include mixins.color($text-primary);
     }
@@ -1037,7 +1058,7 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
   .sub-menu_solutions {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    gap: 12px; // .sidebar ul.sub-menu_products gap
 
     @include breakpoints.min-w(m) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1048,50 +1069,55 @@ body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
   .sub-menu_solutions a {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 
     span {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 500;
-      line-height: 20px;
+      line-height: 16px;
     }
 
     p {
       margin: 0;
-      font-size: 14px;
-      line-height: 20px;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 16px;
       @include mixins.color($text-tertiary);
     }
   }
 
+  // 28px icon column and a 12px gutter; the description runs the full width under the
+  // icon rather than staying indented, as it does on the site.
   .sub-menu_products a {
     display: grid;
-    grid-template-columns: 24px minmax(0, 1fr);
-    column-gap: 12px;
-    row-gap: 8px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 12px;
 
     .products__icon {
       grid-column: 1;
       grid-row: 1;
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
     }
 
     span {
       grid-column: 2;
       grid-row: 1;
       align-self: center;
-      font-size: 16px;
+      margin: auto 0;
+      font-size: 14px;
       font-weight: 500;
-      line-height: 20px;
+      line-height: 16px;
+      white-space: nowrap;
     }
 
     p {
-      grid-column: 2;
+      grid-column: 1 / -1;
       grid-row: 2;
       margin: 0;
-      font-size: 14px;
-      line-height: 20px;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 16px;
       @include mixins.color($text-tertiary);
     }
   }
