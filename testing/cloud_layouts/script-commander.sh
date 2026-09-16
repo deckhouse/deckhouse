@@ -209,7 +209,9 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -232,7 +234,9 @@ function prepare_environment() {
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -256,7 +260,9 @@ function prepare_environment() {
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -272,7 +278,9 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -289,7 +297,9 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -308,7 +318,9 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -324,7 +336,9 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -349,7 +363,9 @@ function prepare_environment() {
       \"sshBastionUser\": \"${bastion_user}\",
       \"sshBastionPort\": \"${bastion_port}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
 
     ;;
@@ -383,7 +399,9 @@ function prepare_environment() {
     \"sshBastionHost\": \"${ssh_bastion_ip}\",
     \"sshBastionUser\": \"${ssh_user}\",
     \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-    \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+    \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+    \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
   }"
     ;;
 
