@@ -159,6 +159,8 @@ github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916082903-d9f239389fe3
 github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916082903-d9f239389fe3/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084219-04ecff6aaa5a h1:pqNA4DXqkpbvF2LL8otuNpjrWQmCQnArmy2boBRfSoc=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084219-04ecff6aaa5a/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084840-a97e86c61556 h1:knIw8XMoq5XC1aaeTf3+Qo6KtU9nMOuNV3rsACxtZEU=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084840-a97e86c61556/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/lib-connection v0.15.0 h1:FViYUgQsEckmbSzgXakHrdqysCzN3PSyEZ3ySCM+PRQ=
 github.com/deckhouse/lib-connection v0.15.0/go.mod h1:G75rHXcFDeoTubX9Dj2SUVfBf3wSO+D6hDM022+CAzQ=
 github.com/deckhouse/lib-dhctl v0.22.0 h1:TzrizsVjK5IjTUetZ/3lb+21pusV/ldNz8CszFDCrgk=
