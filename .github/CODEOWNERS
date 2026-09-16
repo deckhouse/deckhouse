@@ -78,6 +78,7 @@
 **/040-node-manager/templates/nvidia-gpu                                    @serg-su
 **/040-node-manager/hooks/scheduling                                        @yalosev @ergoz
 **/040-node-manager/hooks/cloud                                             @aleksey-su @pabateman
+**/040-node-manager/hooks/caps                                              @aleksey-su @pabateman
 **/040-node-manager/hooks/kubernetes                                        @sprait
 **/040-node-manager/hooks/gpu                                               @serg-su
 **/040-node-manager/hooks/upmeter                                           @vladimirGuryanov @lazovskiy @maksimmadzhuga

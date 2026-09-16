@@ -70,6 +70,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks/autotune"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/requirements"
+	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/caps"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/cloud"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/core"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/gpu"
