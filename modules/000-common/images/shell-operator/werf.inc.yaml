@@ -205,3 +205,5 @@ shell:
   - chown -R 64535:64535 /shell-operator
   - chmod 700 /shell-operator/shell-operator
   - ln -s /bin/bash /shell-operator/sh
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

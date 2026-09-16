@@ -250,6 +250,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pause":                                "imageHash-common-pause",
 		"redisStatic":                          "imageHash-common-redisStatic",
 		"shellOperator":                        "imageHash-common-shellOperator",
+		"shellOperatorVexArtifact":             "imageHash-common-shellOperatorVexArtifact",
 		"vxlanOffloadingFixer":                 "imageHash-common-vxlanOffloadingFixer",
 	},
 	"controlPlaneManager": map[string]interface{}{
