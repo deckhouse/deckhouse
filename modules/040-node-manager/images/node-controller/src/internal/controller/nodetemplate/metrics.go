@@ -57,7 +57,7 @@ func (r *Reconciler) syncUnmanagedNodesMetric(nodes []corev1.Node) {
 func (r *Reconciler) syncMissingMasterTaintMetric(nodeGroups []v1.NodeGroup, nodes []corev1.Node) {
 	missingMasterTaintGauge.Reset()
 	for i := range nodeGroups {
-		if nodeGroups[i].Name != "master" {
+		if nodeGroups[i].Name != masterNodeGroupName {
 			continue
 		}
 		if len(nodeGroups) == 1 && len(nodes) == 1 {
@@ -72,7 +72,7 @@ func (r *Reconciler) syncMissingMasterTaintMetric(nodeGroups []v1.NodeGroup, nod
 			}
 		}
 		if controlPlaneTaintMissing {
-			missingMasterTaintGauge.WithLabelValues("master").Set(1)
+			missingMasterTaintGauge.WithLabelValues(masterNodeGroupName).Set(1)
 		}
 		return
 	}

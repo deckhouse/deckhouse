@@ -11,6 +11,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -18,10 +21,17 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/server/healthz"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	kcache "k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/metrics"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/source"
 
 	"permission-browser-apiserver/pkg/apis/authorization"
 	"permission-browser-apiserver/pkg/apis/authorization/install"
@@ -31,6 +41,23 @@ import (
 	"permission-browser-apiserver/pkg/authorizer/scopefilter"
 	"permission-browser-apiserver/pkg/registry"
 	"permission-browser-apiserver/pkg/resolver"
+)
+
+const (
+	// metricsNamespace prefixes the rules metrics of this apiserver; the webhook uses its own, so
+	// the two consumers can be compared side by side.
+	metricsNamespace = "user_authz_permission_browser"
+
+	// metricsListenAddr is a plaintext listener that serves only /metrics. A kube-rbac-proxy
+	// sidecar fronts it on the pod IP for Prometheus, so the aggregated API server's own port stays
+	// behind the aggregation layer. The address is the loopback one, so nothing outside the Pod
+	// reaches it directly.
+	//
+	// 4277, not 4276: 4276 is where the sidecar listens for Prometheus. The two are different
+	// addresses in the same network namespace, so the pod does start - but a sidecar told to
+	// listen on 0.0.0.0 would collide with this listener and, worse, proxy to itself. The webhook
+	// has always kept the two apart (4233 outside, 4243 loopback); this one did not.
+	metricsListenAddr = "127.0.0.1:4277"
 )
 
 var (
@@ -57,11 +84,9 @@ func init() {
 	)
 }
 
-// ExtraConfig holds custom apiserver config
-type ExtraConfig struct {
-	// ConfigPath is the path to the user-authz-webhook config file
-	ConfigPath string
-}
+// ExtraConfig holds custom apiserver config. The multi-tenancy rules are read from the
+// ClusterAuthorizationRules of the cluster, so there is nothing to configure at the moment.
+type ExtraConfig struct{}
 
 // Config defines the config for the apiserver
 type Config struct {
@@ -97,11 +122,37 @@ func (cfg *Config) Complete() CompletedConfig {
 // initResult holds the initialization results
 type initResult struct {
 	clientset       *kubernetes.Clientset
+	dynamicClient   dynamic.Interface
 	informerFactory informers.SharedInformerFactory
 	restConfig      *rest.Config
 }
 
-// initInformers initializes the Kubernetes client and shared informer factory.
+// discoveryRefreshTimeout bounds one discovery listing by the scope cache.
+//
+// The in-cluster config sets no client timeout, and the refresh loop is sequential, so a single
+// connection that hangs stops the snapshot from ever updating again - with readiness still green,
+// because the check asks whether the cache has data and it does: the data is simply frozen. A
+// deadline turns that into a failed refresh, which the loop retries and the log reports.
+const discoveryRefreshTimeout = 30 * time.Second
+
+// discoveryClientWithDeadline is the discovery client for the scope cache: the shared one, but
+// with a deadline. Falls back to the shared client if the config cannot be copied, which leaves
+// the previous behaviour rather than starting without a scope cache at all.
+func discoveryClientWithDeadline(initRes *initResult) discovery.DiscoveryInterface {
+	if initRes.restConfig == nil {
+		return initRes.clientset.Discovery()
+	}
+	config := rest.CopyConfig(initRes.restConfig)
+	config.Timeout = discoveryRefreshTimeout
+	client, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		klog.Warningf("Failed to build a discovery client with a %s deadline, using the shared one: %v", discoveryRefreshTimeout, err)
+		return initRes.clientset.Discovery()
+	}
+	return client
+}
+
+// initInformers initializes the Kubernetes clients and the shared informer factory.
 func initInformers() (*initResult, error) {
 	result := &initResult{}
 
@@ -119,14 +170,85 @@ func initInformers() (*initResult, error) {
 	}
 	result.clientset = clientset
 
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	result.dynamicClient = dynamicClient
+
 	// Create shared informer factory with 30 minute resync
 	result.informerFactory = informers.NewSharedInformerFactory(clientset, 30*time.Minute)
 
 	return result, nil
 }
 
+// rulesInputs are the two feeds of the multi-tenancy engine: the rules themselves and the index of
+// the ClusterRoleBindings user-authz-controller created for them.
+type rulesInputs struct {
+	rules    *source.Source
+	bindings *binding.Index
+	// bindingsSynced reports that the index has actually been fed. The informer reports synced once
+	// the initial list has been popped, while handlers are fed from a separate queue, so a report
+	// built on the informer's word alone could miss the bindings that make a subject restricted.
+	bindingsSynced kcache.InformerSynced
+	registry       *prometheus.Registry
+}
+
+// serveMetrics runs the plaintext /metrics listener until the context is cancelled. A failure to
+// listen is logged, not fatal: the apiserver answers requests whether or not its metrics are
+// scraped.
+func (in *rulesInputs) serveMetrics(ctx context.Context) {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(in.registry, promhttp.HandlerOpts{}))
+
+	srv := &http.Server{
+		Addr:         metricsListenAddr,
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	go func() {
+		<-ctx.Done()
+		_ = srv.Close()
+	}()
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		klog.Warningf("metrics listener on %s stopped: %v", metricsListenAddr, err)
+	}
+}
+
+// initRules wires the rules feeds. The bindings index is fed from the same ClusterRoleBinding
+// informer the RBAC authorizer uses; the rules come from their own informer on
+// ClusterAuthorizationRules, run in the background from New.
+func initRules(init *initResult) (*rulesInputs, error) {
+	bindings := binding.NewIndex()
+	bindingsSynced, err := init.informerFactory.Rbac().V1().ClusterRoleBindings().Informer().AddEventHandler(bindings.EventHandler())
+	if err != nil {
+		return nil, fmt.Errorf("register rule bindings index: %w", err)
+	}
+
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	rulesMetrics := metrics.New(metricsNamespace)
+	if err := rulesMetrics.Register(registry); err != nil {
+		return nil, fmt.Errorf("register rules metrics: %w", err)
+	}
+
+	rules := source.New(init.dynamicClient, source.Options{
+		Observer: rulesMetrics,
+		Logf:     klog.Infof,
+	})
+	return &rulesInputs{
+		rules:          rules,
+		bindings:       bindings,
+		bindingsSynced: bindingsSynced.HasSynced,
+		registry:       registry,
+	}, nil
+}
+
 // initAuthorizers creates the composite authorizer from RBAC and multi-tenancy engines.
-func initAuthorizers(init *initResult, configPath string, scopeCache *resolver.ResourceScopeCache) (authorizer.Authorizer, *multitenancy.Engine, error) {
+func initAuthorizers(init *initResult, inputs *rulesInputs, scopeCache *resolver.ResourceScopeCache) (authorizer.Authorizer, *multitenancy.Engine, error) {
 	if init.informerFactory == nil {
 		return nil, nil, fmt.Errorf("informer factory is not available, cannot initialize authorizers")
 	}
@@ -141,11 +263,6 @@ func initAuthorizers(init *initResult, configPath string, scopeCache *resolver.R
 	// Create RBAC authorizer
 	rbacAuth := rbacadapter.NewRBACAuthorizer(init.informerFactory)
 
-	// Resolve config path
-	if configPath == "" {
-		configPath = "/etc/user-authz-webhook/config.json"
-	}
-
 	// Same guard for the engine: a nil *ResourceScopeCache must arrive as a nil
 	// interface, not as a non-nil interface holding a nil pointer.
 	var resourceScope multitenancy.ResourceScope
@@ -155,17 +272,23 @@ func initAuthorizers(init *initResult, configPath string, scopeCache *resolver.R
 
 	// Create multi-tenancy engine
 	var mtEngine *multitenancy.Engine
-	if init.clientset != nil {
+	if inputs != nil {
 		var err error
 		mtEngine, err = multitenancy.NewEngine(
-			configPath,
+			inputs.rules,
+			inputs.bindings,
 			init.informerFactory.Core().V1().Namespaces().Lister(),
 			init.informerFactory.Core().V1().Namespaces().Informer().HasSynced,
 			resourceScope,
 		)
 		if err != nil {
-			klog.Warningf("Failed to initialize multi-tenancy engine: %v. Multi-tenancy restrictions will not be applied.", err)
-			mtEngine = nil
+			// Not a warning. NewEngine only refuses inputs it cannot decide with - a nil rules
+			// provider, a nil bindings index - which is a wiring mistake in this file, and
+			// carrying on without the engine means every answer this apiserver gives omits
+			// multi-tenancy: it would report namespaces the cluster does not let the user into,
+			// with nothing in the response to say so. A process that will not start is a visible
+			// failure; one that reports confidently wrong access is not.
+			return nil, nil, fmt.Errorf("multi-tenancy engine: %w", err)
 		}
 	}
 
@@ -242,7 +365,7 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	// authorizers below consult it, so it has to exist before them.
 	var scopeCache *resolver.ResourceScopeCache
 	if initRes.clientset != nil {
-		scopeCache = resolver.NewResourceScopeCache(initRes.clientset.Discovery())
+		scopeCache = resolver.NewResourceScopeCache(discoveryClientWithDeadline(initRes))
 		go scopeCache.StartRefreshLoop(ctx.Done())
 		klog.Info("Resource scope cache initialized and refresh loop started")
 
@@ -257,8 +380,43 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		}
 	}
 
+	// The multi-tenancy rules and the bindings that point at them. Registered before the informer
+	// factory starts so the bindings index sees the initial list.
+	var inputs *rulesInputs
+	if initRes.informerFactory != nil && initRes.dynamicClient != nil {
+		inputs, err = initRules(initRes)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("failed to initialize the rules feeds: %w", err)
+		}
+
+		// A report built before the rules were listed once would show every subject of a rule as
+		// maximally restricted. Readiness waits for the list; a cluster without the CRD is ready,
+		// there are no rules to wait for.
+		if err := genericServer.AddReadyzChecks(healthz.NamedCheck("user-authz-rules", func(_ *http.Request) error {
+			if !inputs.bindingsSynced() {
+				return fmt.Errorf("the ClusterRoleBindings of the rules are not indexed yet")
+			}
+			switch inputs.rules.State() {
+			case source.StateUnsynced:
+				if lastErr := inputs.rules.LastError(); lastErr != nil {
+					return fmt.Errorf("ClusterAuthorizationRules are not listed yet: %v", lastErr)
+				}
+				return fmt.Errorf("ClusterAuthorizationRules are not listed yet")
+			case source.StateStale:
+				// Listed once, and the watch has been failing since. The report this apiserver
+				// serves is a snapshot of whenever that happened, and saying so is the whole
+				// difference between a stale answer and a wrong one.
+				return fmt.Errorf("ClusterAuthorizationRules are no longer being tracked: %v", inputs.rules.LastError())
+			}
+			return nil
+		})); err != nil {
+			klog.Warningf("Failed to add user-authz-rules readyz check: %v", err)
+		}
+	}
+
 	// Initialize authorizers
-	compositeAuth, mtEngine, err := initAuthorizers(initRes, c.ExtraConfig.ConfigPath, scopeCache)
+	compositeAuth, mtEngine, err := initAuthorizers(initRes, inputs, scopeCache)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to initialize authorizers: %w", err)
@@ -267,9 +425,12 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	// Start informers
 	startInformers(ctx, initRes.informerFactory)
 
-	// Start multi-tenancy config renewal
-	if mtEngine != nil {
-		go mtEngine.StartRenewConfigLoop(ctx.Done())
+	// Start the rules informer. It is not part of the caches waited for above: at bootstrap the CRD
+	// may not exist yet, and until the rules are listed the bindings index keeps every subject of a
+	// rule maximally restricted.
+	if inputs != nil {
+		go inputs.rules.Run(ctx)
+		go inputs.serveMetrics(ctx)
 	}
 
 	// Create namespace resolver for AccessibleNamespace API

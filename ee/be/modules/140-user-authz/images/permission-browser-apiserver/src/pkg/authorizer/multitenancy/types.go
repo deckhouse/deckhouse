@@ -5,82 +5,27 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package multitenancy
 
-import (
-	"regexp"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-)
+import "github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 
 // NamespaceAccessType represents the result of namespace access evaluation.
 type NamespaceAccessType int
 
 const (
-	// AllNamespacesAllowed means user has no MT restrictions (privileged or no filters).
+	// AllNamespacesAllowed: a rule names this subject and imposes no namespace filter.
 	AllNamespacesAllowed NamespaceAccessType = iota
-	// NoNamespacesAllowed means user has no CAR and is not privileged (deny-by-default).
+	// NoNamespacesAllowed: no rule names this subject at all.
+	//
+	// The name reads as a verdict and is not one. Both callers treat it exactly like
+	// AllNamespacesAllowed, and deliberately: a subject without a ClusterAuthorizationRule is the
+	// norm under the newer role model, where access comes from RoleBindings, and zeroing them out
+	// of a report would hide access they genuinely have. Multi-tenancy simply has no opinion here,
+	// which is also what the enforcement webhook answers for the same subject.
 	NoNamespacesAllowed
-	// FilteredAccess means user has CAR with restrictions, each namespace must be checked.
+	// FilteredAccess: a rule names this subject and limits it, so each namespace must be checked
+	// against the returned entry.
 	FilteredAccess
 )
 
-// DirectoryEntry describes an entry with limited namespaces options for a single user
-type DirectoryEntry struct {
-	AllowAccessToSystemNamespaces bool
-	LimitNamespaces               []*regexp.Regexp
-	NamespaceSelectors            []*NamespaceSelector
-	// compiledSelectors are LabelSelectorAsSelector results from
-	// NamespaceSelectors, built once in renewDirectories and index-aligned
-	// with it. A nil element means the selector carries no LabelSelector or
-	// failed to compile; the matcher then falls back to compiling that one
-	// entry on the fly, which keeps a malformed rule local to itself. Callers
-	// that build a DirectoryEntry by hand may leave the whole slice nil.
-	compiledSelectors []labels.Selector
-	// If there is no LimitNamespaces nor NamespaceSelectors options, the user has access to all namespaces except system namespaces.
-	// If LimitNamespaces is present, we do not need to mind about allowed access to system namespaces.
-	// Thus presence of LimitNamespaces matters when we summarise rules from all CRs to get the allowed namespaces.
-	NamespaceFiltersAbsent  bool
-	AllowedSystemNamespaces map[string]struct{}
-}
-
-// NamespaceSelector defines a selector for namespaces
-type NamespaceSelector struct {
-	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
-	MatchAny      bool                  `json:"matchAny"`
-}
-
-// UserAuthzConfig is a config composed from ClusterAuthorizationRules collected
-// from a Kubernetes cluster.
-//
-// CRDs holds cluster-scoped ClusterAuthorizationRules with full multi-tenancy
-// options (limitNamespaces, namespaceSelector, allowAccessToSystemNamespaces).
-//
-// NOTE: namespaced AuthorizationRules ("ars" in config.json) are deliberately
-// NOT modeled here. The engine mirrors the real kube-apiserver user-authz
-// webhook authorizer (images/webhook), which only honors CARs and ignores ARs.
-// AR-derived access is surfaced via the RBAC path (the RoleBinding each AR
-// creates), not via this deny-only multi-tenancy engine. Any "ars" key present
-// in config.json is silently ignored by json.Unmarshal.
-type UserAuthzConfig struct {
-	CRDs []struct {
-		Name string `json:"name"`
-		Spec struct {
-			AccessLevel                   string             `json:"accessLevel"`
-			PortForwarding                bool               `json:"portForwarding"`
-			AllowScale                    bool               `json:"allowScale"`
-			AllowAccessToSystemNamespaces bool               `json:"allowAccessToSystemNamespaces"`
-			LimitNamespaces               []string           `json:"limitNamespaces"`
-			NamespaceSelector             *NamespaceSelector `json:"namespaceSelector"`
-			AdditionalRoles               []struct {
-				APIGroup string `json:"apiGroup"`
-				Kind     string `json:"kind"`
-				Name     string `json:"name"`
-			} `json:"additionalRoles"`
-			Subjects []struct {
-				Kind      string `json:"kind"`
-				Name      string `json:"name"`
-				Namespace string `json:"namespace"`
-			} `json:"subjects"`
-		} `json:"spec,omitempty"`
-	} `json:"crds"`
-}
+// DirectoryEntry is the combined multi-tenancy scope of a subject: the entry of the rules
+// directory the webhook enforces, as the library builds it.
+type DirectoryEntry = rules.Entry

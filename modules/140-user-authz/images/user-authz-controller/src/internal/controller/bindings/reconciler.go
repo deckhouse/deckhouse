@@ -55,6 +55,7 @@ import (
 	v1 "user-authz-controller/api/v1"
 	"user-authz-controller/api/v1alpha1"
 	"user-authz-controller/internal/desired"
+	"user-authz-controller/internal/metrics"
 )
 
 const (
@@ -109,18 +110,27 @@ type Reconciler struct {
 	// deleted and to adopt an object the cache did not know about yet.
 	reader     client.Reader
 	recorder   events.EventRecorder
+	metrics    *metrics.Collector
 	log        logr.Logger
 	namespaced bool
 }
 
 // NewCluster constructs the ClusterAuthorizationRule reconciler.
-func NewCluster(c client.Client, reader client.Reader, recorder events.EventRecorder, log logr.Logger) *Reconciler {
-	return &Reconciler{client: c, reader: reader, recorder: recorder, log: log, namespaced: false}
+func NewCluster(c client.Client, reader client.Reader, recorder events.EventRecorder, m *metrics.Collector, log logr.Logger) *Reconciler {
+	return &Reconciler{client: c, reader: reader, recorder: recorder, metrics: m, log: log, namespaced: false}
 }
 
 // NewNamespaced constructs the AuthorizationRule reconciler.
-func NewNamespaced(c client.Client, reader client.Reader, recorder events.EventRecorder, log logr.Logger) *Reconciler {
-	return &Reconciler{client: c, reader: reader, recorder: recorder, log: log, namespaced: true}
+func NewNamespaced(c client.Client, reader client.Reader, recorder events.EventRecorder, m *metrics.Collector, log logr.Logger) *Reconciler {
+	return &Reconciler{client: c, reader: reader, recorder: recorder, metrics: m, log: log, namespaced: true}
+}
+
+// kind is the value of the kind label of the metrics.
+func (r *Reconciler) kind() string {
+	if r.namespaced {
+		return metrics.KindAuthorizationRule
+	}
+	return metrics.KindClusterAuthorizationRule
 }
 
 // IsModuleBinding reports whether obj carries the module labels and a rule binding name.
@@ -183,12 +193,12 @@ func Register(ctx context.Context, mgr manager.Manager, opts Options) error {
 
 	recorder := mgr.GetEventRecorder("user-authz-controller")
 
-	cluster := NewCluster(mgr.GetClient(), mgr.GetAPIReader(), recorder, mgr.GetLogger().WithName("clusterauthorizationrule"))
+	cluster := NewCluster(mgr.GetClient(), mgr.GetAPIReader(), recorder, metrics.Default, mgr.GetLogger().WithName("clusterauthorizationrule"))
 	if err := cluster.SetupWithManager(mgr, opts); err != nil {
 		return fmt.Errorf("setup clusterauthorizationrule controller: %w", err)
 	}
 
-	namespaced := NewNamespaced(mgr.GetClient(), mgr.GetAPIReader(), recorder, mgr.GetLogger().WithName("authorizationrule"))
+	namespaced := NewNamespaced(mgr.GetClient(), mgr.GetAPIReader(), recorder, metrics.Default, mgr.GetLogger().WithName("authorizationrule"))
 	if err := namespaced.SetupWithManager(mgr, opts); err != nil {
 		return fmt.Errorf("setup authorizationrule controller: %w", err)
 	}
@@ -245,6 +255,8 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager, opts Options) error {
 
 // Reconcile brings the bindings of the rule named in req to the desired state.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	kind, key := r.kind(), req.NamespacedName.String()
+
 	rule, obj, found, err := r.getRule(ctx, r.client, req.NamespacedName)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -266,6 +278,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		r.metrics.Forget(kind, key)
 		// Whatever is left with the rule's prefix is a leftover: ownerReferences take care of the
 		// controller-created bindings, this covers the ones inherited from the chart.
 		return reconcile.Result{}, r.deleteAll(ctx, existing)
@@ -279,19 +292,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	wanted, err := desired.Bindings(rule)
 	if errors.Is(err, desired.ErrInvalidSpec) {
 		r.recorder.Eventf(obj, nil, corev1.EventTypeWarning, ReasonInvalidSpec, "Reconcile", "%s", err.Error())
+		r.metrics.SetInvalid(kind, key, rule.Name, rule.Namespace, ReasonInvalidSpec)
+		r.metrics.Observe(kind, key, metrics.Observation{Actual: len(existing)})
 		return reconcile.Result{}, r.setStatus(ctx, obj, rule, metav1.ConditionFalse, ReasonInvalidSpec, err.Error(), int32(len(existing)))
 	}
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.apply(ctx, rule, wanted, existing); err != nil {
+	drift, err := r.apply(ctx, rule, wanted, existing)
+	if err != nil {
 		r.recorder.Eventf(obj, nil, corev1.EventTypeWarning, ReasonApplyError, "Reconcile", "%s", err.Error())
+		r.metrics.SetInvalid(kind, key, rule.Name, rule.Namespace, ReasonApplyError)
+		r.metrics.Observe(kind, key, metrics.Observation{Desired: len(wanted), Actual: len(wanted) - drift.Missing, Drift: drift})
 		if statusErr := r.setStatus(ctx, obj, rule, metav1.ConditionFalse, ReasonApplyError, err.Error(), int32(len(wanted))); statusErr != nil {
 			r.log.Error(statusErr, "set status after apply error", "rule", req.NamespacedName)
 		}
 		return reconcile.Result{}, err
 	}
+
+	r.metrics.ClearInvalid(kind, key)
+	r.metrics.Observe(kind, key, metrics.Observation{Desired: len(wanted), Actual: len(wanted)})
 
 	return reconcile.Result{}, r.setStatus(ctx, obj, rule, metav1.ConditionTrue, ReasonBindingsApplied, fmt.Sprintf("%d bindings applied", len(wanted)), int32(len(wanted)))
 }
@@ -356,7 +377,11 @@ func (r *Reconciler) existingBindings(ctx context.Context, ruleName, namespace s
 // retrying cannot fix it, the rule status reports it and the controller waits for the next change
 // of the rule. A differing roleRef is not such a case: the name of a binding fixes its roleRef, so
 // an object with another one was planted or edited by hand and is replaced (see update).
-func (r *Reconciler) apply(ctx context.Context, rule desired.Rule, wanted []desired.Binding, existing []client.Object) error {
+//
+// The returned drift is what is still wrong after the writes: bindings whose create or update
+// failed, and superfluous bindings that were not (or could not be) removed.
+func (r *Reconciler) apply(ctx context.Context, rule desired.Rule, wanted []desired.Binding, existing []client.Object) (metrics.Drift, error) {
+	var drift metrics.Drift
 	owner := desired.OwnerReference(rule)
 
 	byName := make(map[string]client.Object, len(existing))
@@ -381,18 +406,30 @@ func (r *Reconciler) apply(ctx context.Context, rule desired.Rule, wanted []desi
 
 		want := r.materialise(b, owner)
 		if current, exists := byName[b.Name]; exists {
-			collect(r.update(ctx, current, want))
-		} else {
-			collect(r.create(ctx, want))
+			if err := r.update(ctx, current, want); err != nil {
+				drift.Changed++
+				collect(err)
+			}
+		} else if err := r.create(ctx, want); err != nil {
+			drift.Missing++
+			collect(err)
 		}
 	}
 
-	if len(retryable) == 0 && len(terminal) == 0 {
-		for _, obj := range existing {
-			if _, wantedStill := keep[obj.GetName()]; wantedStill {
-				continue
-			}
-			collect(r.delete(ctx, obj, "binding removed"))
+	writesFailed := len(retryable) != 0 || len(terminal) != 0
+	for _, obj := range existing {
+		if _, wantedStill := keep[obj.GetName()]; wantedStill {
+			continue
+		}
+		// Nothing is deleted while a wanted binding could not be written: the old bindings are
+		// the fallback for the missing replacement, and they count as drift until then.
+		if writesFailed {
+			drift.Extra++
+			continue
+		}
+		if err := r.delete(ctx, obj, "binding removed"); err != nil {
+			drift.Extra++
+			collect(err)
 		}
 	}
 
@@ -403,9 +440,9 @@ func (r *Reconciler) apply(ctx context.Context, rule desired.Rule, wanted []desi
 		for _, err := range terminal {
 			retryable = append(retryable, errors.New(err.Error()))
 		}
-		return errors.Join(retryable...)
+		return drift, errors.Join(retryable...)
 	}
-	return errors.Join(terminal...)
+	return drift, errors.Join(terminal...)
 }
 
 func (r *Reconciler) materialise(b desired.Binding, owner metav1.OwnerReference) client.Object {
@@ -436,6 +473,7 @@ func (r *Reconciler) empty() client.Object {
 // there: it is read from the API server and adopted like any other existing binding.
 func (r *Reconciler) create(ctx context.Context, want client.Object) error {
 	err := r.client.Create(ctx, want)
+	r.metrics.RecordApply(r.kind(), metrics.OpCreate, err)
 	if err == nil {
 		r.log.V(1).Info("binding created", "name", want.GetName(), "namespace", want.GetNamespace())
 		return nil
@@ -475,7 +513,9 @@ func (r *Reconciler) update(ctx context.Context, current, want client.Object) er
 	if err != nil {
 		return err
 	}
-	if err := r.client.Update(ctx, updated); err != nil {
+	err = r.client.Update(ctx, updated)
+	r.metrics.RecordApply(r.kind(), metrics.OpUpdate, err)
+	if err != nil {
 		return classify(fmt.Errorf("update %s: %w", want.GetName(), err))
 	}
 	r.log.V(1).Info("binding updated", "name", want.GetName(), "namespace", want.GetNamespace())
@@ -489,7 +529,12 @@ func (r *Reconciler) delete(ctx context.Context, obj client.Object, msg string) 
 	if uid := obj.GetUID(); uid != "" {
 		opts = append(opts, client.Preconditions{UID: &uid})
 	}
-	if err := r.client.Delete(ctx, obj, opts...); err != nil && !apierrors.IsNotFound(err) {
+	err := r.client.Delete(ctx, obj, opts...)
+	if apierrors.IsNotFound(err) {
+		err = nil
+	}
+	r.metrics.RecordApply(r.kind(), metrics.OpDelete, err)
+	if err != nil {
 		return fmt.Errorf("delete %s: %w", obj.GetName(), err)
 	}
 	r.log.Info(msg, "name", obj.GetName(), "namespace", obj.GetNamespace())

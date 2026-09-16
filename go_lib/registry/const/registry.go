@@ -18,7 +18,9 @@ package constant
 
 import (
 	"fmt"
+	"net"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -42,10 +44,16 @@ func NodeRegistryAddr(addr string) string {
 	return fmt.Sprintf("%s:%d/%s", addr, Port, strings.TrimLeft(Path, "/"))
 }
 
+// GenerateProxyEndpoints builds the upstream list of the node load balancer from
+// the InternalIP addresses of the control plane nodes.
+//
+// net.JoinHostPort is used rather than string concatenation so that an IPv6
+// address is bracketed: `fd00::1:5001` is ambiguous and would be rejected by
+// both the NGINX `server` directive and the endpoint validation.
 func GenerateProxyEndpoints(masterNodesIPs []string) []string {
 	proxyEndpoints := make([]string, 0, len(masterNodesIPs))
 	for _, ip := range masterNodesIPs {
-		proxyEndpoints = append(proxyEndpoints, fmt.Sprintf("%s:%d", ip, Port))
+		proxyEndpoints = append(proxyEndpoints, net.JoinHostPort(ip, strconv.Itoa(Port)))
 	}
 	return proxyEndpoints
 }

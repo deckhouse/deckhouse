@@ -52,9 +52,34 @@ properties:
     description: |
       Общие параметры модулей Deckhouse.
     properties:
+      gatewayAPI:
+        description: |
+          Общие параметры использования Gateway API модулями DKP.
+        properties:
+          enabled:
+            description: |
+              Включает использование ресурсов Gateway API (Gateway, HTTPRoute и т. д.) модулями DKP, которые его поддерживают.
+
+              В отличие от [ingressClass](#parameters-modules-ingress-ingressclass), встроенного Gateway по умолчанию не существует, поэтому Gateway API фактически используется модулем только если этот флаг включён **и** для него удалось определить Gateway — либо из параметра [gateway](#parameters-modules-gatewayAPI-gateway), либо из переопределения на уровне модуля, либо из Gateway, автоматически обнаруженного в кластере.
+
+              Модули, поддерживающие Gateway API, могут переопределить этот параметр собственным параметром `gatewayAPI.enabled`.
+          gateway:
+            description: |
+              Ссылка на объект Gateway (из Gateway API), используемый модулями DKP при создании ресурсов Gateway API.
+
+              Если параметр не указан, модули используют Gateway, автоматически обнаруженный в кластере (если он есть).
+            properties:
+              name:
+                description: |
+                  Имя объекта Gateway.
+              namespace:
+                description: |
+                  Неймспейс объекта Gateway.
       gatewayAPIGateway:
         description: |
-          Ссылка на объект Gateway (из Gateway API), используемый модулями экосистемы Deckhouse при создании ресурсов Gateway API.
+          > **Устарел**. Используйте параметр [settings.modules.gatewayAPI.gateway](#parameters-modules-gatewayAPI-gateway).
+          
+          Ссылка на объект Gateway (из Gateway API), используемый модулями DKP при создании ресурсов Gateway API.
 
           Если параметр не указан, модули используют Gateway, автоматически обнаруженный в кластере (если он есть).
         properties:
@@ -64,9 +89,25 @@ properties:
           namespace:
             description: |
               Неймспейс объекта Gateway.
+      ingress:
+        description: |
+          Общие параметры использования Ingress модулями DKP.
+        properties:
+          ingressClass:
+            description: |
+              Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями DKP по умолчанию при создании Ingress-ресурсов.
+
+              Некоторые модули поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
+          enabled:
+            description: |
+              Включает создание Ingress-ресурсов модулями DKP, которые это поддерживают.
+
+              Модули, поддерживающие Ingress, могут переопределить этот параметр собственным параметром `ingress.enabled`.
       ingressClass:
         description: |
-          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями экосистемы Deckhouse по умолчанию при создании Ingress-ресурсов.
+          > **Устарел**. Используйте параметр [settings.modules.ingress.ingressClass](#parameters-modules-ingress-ingressClass).
+          
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями DKP по умолчанию при создании Ingress-ресурсов.
 
           Некоторые модули поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
       publicDomainTemplate:

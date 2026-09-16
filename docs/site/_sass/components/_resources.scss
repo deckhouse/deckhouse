@@ -48,8 +48,8 @@
     }
 
     &_name {
-      display: flex;
-      gap: 11px;
+      position: relative;
+      padding-left: 21px;
       color: variables.$color-main;
       font-weight: variables.$font-weight-bold;
       font-family: monospace, 'Source Code Pro';
@@ -57,7 +57,25 @@
       margin-bottom: 6px;
       cursor: pointer;
 
+      .plus-icon,
+      .minus-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+
+      > div {
+        display: inline;
+      }
+
+      a.anchorjs-link {
+        display: inline;
+        vertical-align: middle;
+      }
+
       & .resources__prop_is_deprecated {
+        display: inline-block;
+        margin-left: 11px;
         font-family: monospace, monospace;
         font-size: 90%;
         font-weight: normal;

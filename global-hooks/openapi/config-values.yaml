@@ -2,7 +2,7 @@
 # if you change this file please evaluate to change files
 # /global-hooks/openapi/config-values.yaml
 # /ee/cse/global-hooks/openapi/config-values.yaml
-x-config-version: 2
+x-config-version: 3
 type: object
 default: {}
 additionalProperties: false
@@ -64,8 +64,42 @@ properties:
     default: {}
     type: object
     properties:
+      gatewayAPI:
+        description: |
+          Common parameters for Gateway API usage by DKP modules.
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            type: boolean
+            description: |
+              Enables the use of Gateway API resources (Gateway, HTTPRoute, etc.) by the DKP modules that support it.
+
+              Unlike [ingressClass](#parameters-modules-ingress-ingressclass), there is no built-in default Gateway, so Gateway API is only actually used by a module if this flag is enabled **and** a Gateway can be resolved for it — either from this parameter's [gateway](#parameters-modules-gatewayAPI-gateway) field, a module-specific override, or a Gateway automatically discovered in the cluster.
+
+              Modules that support Gateway API can override this setting with their own `gatewayAPI.enabled` parameter.
+          gateway:
+            description: |
+              Reference to the Gateway object (from the Gateway API) used by DKP modules when creating Gateway API resources.
+
+              If not specified, modules use the Gateway automatically discovered in the cluster (if any).
+            type: object
+            required:
+              - name
+              - namespace
+            properties:
+              name:
+                type: string
+                description: |
+                  Name of the Gateway object.
+              namespace:
+                type: string
+                description: |
+                  Namespace of the Gateway object.
       gatewayAPIGateway:
         type: object
+        deprecated: true
+        x-doc-deprecated: true
         properties:
           name:
             type: string
@@ -79,14 +113,41 @@ properties:
           - name
           - namespace
         description: |
-          Reference to the Gateway object (from the Gateway API) used by modules of the Deckhouse ecosystem when creating Gateway API resources.
+          > **Deprecated**. Use [settings.modules.gatewayAPI.gateway](#parameters-modules-gatewayAPI-gateway) instead.
+          
+          Reference to the Gateway object (from the Gateway API) used by DKP modules when creating Gateway API resources.
 
           If not specified, modules use the Gateway automatically discovered in the cluster (if any).
+      ingress:
+        description: |
+          Common parameters for Ingress usage by DKP modules.
+        default: {}
+        type: object
+        additionalProperties: false
+        properties:
+          ingressClass:
+            type: string
+            default: nginx
+            description: |
+              Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by DKP modules when creating Ingress resources.
+
+              Some modules support their own `ingressClass` parameter, which lets you use a different IngressClass instead of the default one.
+          enabled:
+            type: boolean
+            default: true
+            description: |
+              Enables the creation of Ingress resources by the DKP modules that support it.
+
+              Modules that support Ingress can override this setting with their own `ingress.enabled` parameter.
       ingressClass:
         type: string
+        deprecated: true
         default: nginx
+        x-doc-deprecated: true
         description: |
-          Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem modules when creating Ingress resources.
+          > **Deprecated**. Use [settings.modules.ingress.ingressClass](#parameters-modules-ingress-ingressClass) instead.
+          
+          Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by DKP modules when creating Ingress resources.
 
           Some modules support their own `ingressClass` parameter, which lets you use a different IngressClass instead of the default one.
         x-examples: [ "nginx" ]

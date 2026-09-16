@@ -145,4 +145,5 @@ go_lib/cloud-data/                                                          @ale
 go_lib/cloud-provider                                                       @aleksey-su @pabateman
 go_lib/registry/                                                            @nabokihms @vadimartynov
 go_lib/controlplane/                                                        @sprait @AmazinMax
+go_lib/user-authz/                                                          @nabokihms @AlwxSin
 /Makefile				                                                    @Nikolay1224 @himax1991
