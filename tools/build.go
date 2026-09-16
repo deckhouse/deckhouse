@@ -69,6 +69,7 @@ var testsExcludes = []string{
 var defaultModulesExcludes = []string{
 	"docs",
 	"README.md",
+	"*-threat-model.md",
 	"images",
 	"hooks/**/*.go",
 	"hooks/*.go",
@@ -80,6 +81,7 @@ var defaultModulesExcludes = []string{
 	".namespace",
 	"values_matrix_test.yaml",
 	".build.yaml",
+	"e2e",
 }
 
 var nothingButGoHooksExcludes = []string{
@@ -827,11 +829,11 @@ func (e *executor) executeEdition(editionName string) {
 		// Process .build.yaml in an edition's global-hooks directory (if present)
 		// to add override entries to modules-with-exclude-<edition>.yaml.
 		writeGlobalHooksBuildYaml(writeSettings{
-			Edition:          editionName,
-			SaveTo:           modulesWithExcludeFileName,
-			Prefix:           prefix,
-			Dir:              "global-hooks",
-			ExcludePaths:     defaultModulesExcludes,
+			Edition:           editionName,
+			SaveTo:            modulesWithExcludeFileName,
+			Prefix:            prefix,
+			Dir:               "global-hooks",
+			ExcludePaths:      defaultModulesExcludes,
 			StageDependencies: stageDependenciesSetup,
 		})
 
