@@ -24,7 +24,7 @@ import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 
 	ycicv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/instanceclass/v1"
 	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/pcc/v1"
@@ -60,7 +60,7 @@ func yandexInstanceClass(name string, etcdDiskSizeGB *int) *ycicv1.YandexInstanc
 func TestValidatePreflightNilState(t *testing.T) {
 	t.Parallel()
 
-	result := ValidatePreflight(nil, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(nil, validatev1.OperationBootstrap, testClusterPrefix)
 	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
 		t.Fatalf("ValidatePreflight(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
@@ -72,7 +72,7 @@ func TestValidatePreflightSkipsPendingMigration(t *testing.T) {
 	state := &ycval.State{
 		MigrationStatus: cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true},
 	}
-	if result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix); result.HasErrors() {
+	if result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix); result.HasErrors() {
 		t.Fatalf("ValidatePreflight() during migration = %q, want no errors", result.Error())
 	}
 }
@@ -83,7 +83,7 @@ func TestValidatePreflightRequiresCredentialSecret(t *testing.T) {
 	state := validState(t)
 	state.CredentialSecrets = nil
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if !hasViolationCode(result, cpval.CodeCredentialSecretRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
@@ -95,7 +95,7 @@ func TestValidatePreflightRejectsInvalidCredentialSecretType(t *testing.T) {
 	state := validState(t)
 	state.CredentialSecrets[0].Type = string(corev1.SecretTypeTLS)
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if !hasViolationCode(result, cpval.CodeCredentialSecretRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
@@ -107,7 +107,7 @@ func TestValidatePreflightInvalidCredentialSecretServiceAccount(t *testing.T) {
 	state := validState(t)
 	state.CredentialSecrets[0].StringData.Secret = "invalid"
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if !hasViolationCode(result, cpval.CodeInvalidServiceAccountSecret) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
@@ -119,7 +119,7 @@ func TestValidatePreflightRequiresMasterNodeGroup(t *testing.T) {
 	state := validState(t)
 	state.NodeGroups = nil
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if !hasViolationCode(result, cpval.CodeMasterNodeGroupRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
@@ -131,7 +131,7 @@ func TestValidatePreflightAllowsNilCloudInstancesOnMaster(t *testing.T) {
 	state := validState(t)
 	state.NodeGroups[0].Spec.CloudInstances = nil
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if result.HasErrors() {
 		t.Fatalf("ValidatePreflight() unexpected errors for master without CloudInstances: %s", result.Error())
 	}
@@ -143,7 +143,7 @@ func TestValidatePreflightRequiresInstanceClassName(t *testing.T) {
 	state := validState(t)
 	state.NodeGroups[0].Spec.CloudInstances.ClassReference.Name = "  "
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if !hasViolationCode(result, cpval.CodeNodeGroupClassReferenceNameRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
@@ -155,7 +155,7 @@ func TestValidatePreflightRequiresExistingInstanceClass(t *testing.T) {
 	state := validState(t)
 	state.InstanceClasses = nil
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if !hasViolationCode(result, cpval.CodeInstanceClassNotFound) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
@@ -167,7 +167,7 @@ func TestValidatePreflightRequiresMasterEtcdDisk(t *testing.T) {
 	state := validState(t)
 	state.InstanceClasses[0].Spec.EtcdDiskSizeGB = nil
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if !hasViolationCode(result, cpval.CodeMasterEtcdDiskRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
@@ -182,7 +182,7 @@ func TestValidatePreflightRejectsRepeatedProvisionedStorageClassNames(t *testing
 		{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "128Ki"},
 	}
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if !hasViolationCode(result, ycval.CodeProvisionedStorageClassNamesUnique) {
 		t.Fatalf("ValidatePreflight() = %q, want %s", result.Error(), ycval.CodeProvisionedStorageClassNamesUnique)
 	}
@@ -197,7 +197,7 @@ func TestValidatePreflightAllowsUniqueProvisionedStorageClassNames(t *testing.T)
 		{Name: "network-ssd", Type: "network-ssd", BlockSize: "128Ki"},
 	}
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if result.HasErrors() {
 		t.Fatalf("ValidatePreflight() = %q, want no errors", result.Error())
 	}
@@ -215,7 +215,7 @@ func TestValidatePreflightSkipsProvisionedStorageClassesDuringMigration(t *testi
 		{Name: "network-ssd-64k", Type: "network-ssd"},
 	}
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if result.HasErrors() {
 		t.Fatalf("ValidatePreflight() during migration = %q, want no errors", result.Error())
 	}
@@ -224,7 +224,7 @@ func TestValidatePreflightSkipsProvisionedStorageClassesDuringMigration(t *testi
 func TestValidatePreflightSuccess(t *testing.T) {
 	t.Parallel()
 
-	result := ValidatePreflight(validState(t), proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(validState(t), validatev1.OperationBootstrap, testClusterPrefix)
 	if result.HasErrors() {
 		t.Fatalf("ValidatePreflight() unexpected errors: %s", result.Error())
 	}
@@ -237,7 +237,7 @@ func TestValidatePreflightInvalidKindStillChecksNameWhenPresent(t *testing.T) {
 	state.NodeGroups[0].Spec.CloudInstances.ClassReference.Kind = "WrongKind"
 	state.NodeGroups[0].Spec.CloudInstances.ClassReference.Name = ""
 
-	result := ValidatePreflight(state, proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
 	if !strings.Contains(result.Error(), "node_group_class_reference_name_required") &&
 		!hasViolationCode(result, cpval.CodeNodeGroupClassReferenceNameRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
@@ -294,7 +294,7 @@ func TestValidateWithNATInstanceLayoutRequiresSubnetOnBootstrap(t *testing.T) {
 		Layout: ycval.LayoutWithNATInstance,
 	}
 
-	result := validateWithNATInstanceLayout(pcc, proto.OperationBootstrap)
+	result := validateWithNATInstanceLayout(pcc, validatev1.OperationBootstrap)
 	if !hasViolationCode(result, CodePCCNATInstanceSubnetRequired) {
 		t.Fatalf("validateWithNATInstanceLayout() = %q, want %s", result.Error(), CodePCCNATInstanceSubnetRequired)
 	}
@@ -307,7 +307,7 @@ func TestValidateWithNATInstanceLayoutSkipsCheckOnConverge(t *testing.T) {
 		Layout: ycval.LayoutWithNATInstance,
 	}
 
-	if result := validateWithNATInstanceLayout(pcc, proto.OperationConverge); result.HasErrors() {
+	if result := validateWithNATInstanceLayout(pcc, validatev1.OperationConverge); result.HasErrors() {
 		t.Fatalf("validateWithNATInstanceLayout() on converge = %q, want no errors", result.Error())
 	}
 }
@@ -321,7 +321,7 @@ func TestPCCChecksEmptyPCC(t *testing.T) {
 	result.Merge(
 		validateMasterNodeGroupReplicasAndIPAddresses(pcc),
 		validateNodeGroupsReplicasAndIPAddresses(pcc),
-		validateWithNATInstanceLayout(pcc, proto.OperationBootstrap),
+		validateWithNATInstanceLayout(pcc, validatev1.OperationBootstrap),
 	)
 	if result.HasErrors() {
 		t.Fatalf("PCC checks on empty PCC = %q, want no errors", result.Error())
@@ -395,7 +395,7 @@ func TestValidatePreflightReportsInvalidClusterPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := ValidatePreflight(tt.state(t), proto.OperationBootstrap, "Invalid_Prefix")
+			result := ValidatePreflight(tt.state(t), validatev1.OperationBootstrap, "Invalid_Prefix")
 			if !hasViolationCode(result, CodeInvalidClusterPrefix) {
 				t.Fatalf("ValidatePreflight() with an invalid prefix = %q, want %s", result.Error(), CodeInvalidClusterPrefix)
 			}
@@ -408,7 +408,7 @@ func TestValidatePreflightReportsInvalidClusterPrefix(t *testing.T) {
 func TestValidatePreflightChecksClusterPrefixOnConverge(t *testing.T) {
 	t.Parallel()
 
-	result := ValidatePreflight(validState(t), proto.OperationConverge, "Invalid_Prefix")
+	result := ValidatePreflight(validState(t), validatev1.OperationConverge, "Invalid_Prefix")
 	if !hasViolationCode(result, CodeInvalidClusterPrefix) {
 		t.Fatalf("ValidatePreflight() on converge = %q, want %s", result.Error(), CodeInvalidClusterPrefix)
 	}
@@ -419,7 +419,7 @@ func TestValidatePreflightChecksClusterPrefixOnConverge(t *testing.T) {
 func TestValidatePreflightAcceptsValidClusterPrefix(t *testing.T) {
 	t.Parallel()
 
-	result := ValidatePreflight(validState(t), proto.OperationBootstrap, testClusterPrefix)
+	result := ValidatePreflight(validState(t), validatev1.OperationBootstrap, testClusterPrefix)
 	if hasViolationCode(result, CodeInvalidClusterPrefix) {
 		t.Fatalf("ValidatePreflight() with prefix %q = %q, want no prefix violation", testClusterPrefix, result.Error())
 	}

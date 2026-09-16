@@ -18,16 +18,30 @@ import (
 	"context"
 	"fmt"
 
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
 	ycval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/validation"
 	ycpreflight "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/validation/preflight"
 )
 
-func validate(_ context.Context, input proto.ValidateInput) error {
-	if input.Operation == proto.OperationDestroy {
-		return nil
+type Validator struct{}
+
+func (Validator) Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
+	ret, err := validate(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return toResponse(ret), nil
+}
+
+func validate(_ context.Context, input validatev1.Input) (cpvalapi.Result, error) {
+	result := cpvalapi.Result{}
+
+	if input.Operation == validatev1.OperationDestroy {
+		return result, nil
 	}
 
 	stateBuilderFactory := ycval.NewProtocolStateBuilderFactory(cpvalprotocol.StateBuilderConfig{
@@ -37,8 +51,38 @@ func validate(_ context.Context, input proto.ValidateInput) error {
 
 	state, err := stateBuilderFactory.CreateBuilder().Build(input)
 	if err != nil {
-		return fmt.Errorf("internal error: build validation state: %w", err)
+		return result, fmt.Errorf("internal error: build validation state: %w", err)
 	}
 
-	return ycpreflight.ValidatePreflight(state, input.Operation, input.ClusterPrefix).ErrorOrNil()
+	result.Merge(
+		ycpreflight.ValidatePreflight(state, input.Operation, input.ClusterPrefix),
+	)
+
+	return result, nil
+}
+func toResponse(result cpvalapi.Result) *validatev1.ValidateResponse {
+	ret := &validatev1.ValidateResponse{}
+
+	for _, violation := range result.Errors() {
+		ret.Errors = append(ret.Errors, toViolationResponse(violation))
+	}
+
+	for _, violation := range result.Warnings() {
+		ret.Warnings = append(ret.Warnings, toViolationResponse(violation))
+	}
+
+	return ret
+}
+
+func toViolationResponse(violation cpvalapi.Violation) *validatev1.ViolationResponse {
+	ret := &validatev1.ViolationResponse{
+		Path:    violation.Path,
+		Code:    violation.Code,
+		Message: violation.Message,
+	}
+
+	if violation.Value != nil {
+		ret.Value = fmt.Sprint(violation.Value)
+	}
+	return ret
 }

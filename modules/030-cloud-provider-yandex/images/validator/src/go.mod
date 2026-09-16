@@ -6,9 +6,12 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000
+	github.com/spf13/cobra v1.9.1
 )
 
 require (
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
@@ -21,6 +24,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect

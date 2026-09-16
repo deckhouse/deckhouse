@@ -21,7 +21,7 @@ import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 
 	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/pcc/v1"
 	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
@@ -45,7 +45,7 @@ var (
 )
 
 // ValidatePreflight checks resources required before cluster bootstrap or converge.
-func ValidatePreflight(state *ycval.State, operation string, clusterPrefix string) cpvalapi.Result {
+func ValidatePreflight(state *ycval.State, operation validatev1.Operation, clusterPrefix string) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
@@ -161,14 +161,14 @@ func validateNodeGroupsReplicasAndIPAddresses(pcc *ycpccv1.YandexProviderCluster
 	return result
 }
 
-func validateWithNATInstanceLayout(pcc *ycpccv1.YandexProviderClusterConfiguration, operation string) cpvalapi.Result {
+func validateWithNATInstanceLayout(pcc *ycpccv1.YandexProviderClusterConfiguration, operation validatev1.Operation) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
 	if pcc.Layout != ycval.LayoutWithNATInstance {
 		return result
 	}
 
-	if operation != proto.OperationBootstrap {
+	if operation != validatev1.OperationBootstrap {
 		return result
 	}
 

@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
 )
 
@@ -224,10 +224,10 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validate(context.Background(), proto.ValidateInput{
-				Operation:     proto.OperationBootstrap,
+			result, err := validate(context.Background(), validatev1.Input{
+				Operation:     validatev1.OperationBootstrap,
 				ClusterPrefix: testClusterPrefix,
-				CloudProviderVars: &proto.CloudProviderVars{
+				CloudProviderVars: &validatev1.CloudProviderVars{
 					Settings:        testModuleSettings(),
 					Secrets:         tt.secrets,
 					NodeGroups:      tt.nodeGroups,
@@ -235,11 +235,14 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 				},
 				ProviderClusterConfig: tt.providerClusterConfig,
 			})
-			if err == nil {
-				t.Fatalf("validate() error = nil, want %q", tt.want)
+			if err != nil {
+				t.Fatalf("validate() error = %v, want no internal error", err)
 			}
-			if !strings.Contains(err.Error(), tt.want) {
-				t.Fatalf("validate() error = %q, want to contain %q", err, tt.want)
+			if !result.HasErrors() {
+				t.Fatalf("validate() violations = none, want %q", tt.want)
+			}
+			if !strings.Contains(result.Error(), tt.want) {
+				t.Fatalf("validate() violations = %q, want to contain %q", result.Error(), tt.want)
 			}
 		})
 	}
@@ -248,10 +251,10 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.ValidateInput{
-		Operation:     proto.OperationBootstrap,
+	result, err := validate(context.Background(), validatev1.Input{
+		Operation:     validatev1.OperationBootstrap,
 		ClusterPrefix: testClusterPrefix,
-		CloudProviderVars: &proto.CloudProviderVars{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: testModuleSettings(),
 			NodeGroups: map[string]map[string]any{
 				"master": {
@@ -261,21 +264,21 @@ func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
-		t.Fatal("validate() error = nil, want missing credential secret")
+	if err != nil {
+		t.Fatalf("validate() error = %v, want no internal error", err)
 	}
-	if strings.Count(err.Error(), `credential Secret "d8-credentials" is required`) != 1 {
-		t.Fatalf("validate() error = %q, want single credential requirement message", err)
+	if strings.Count(result.Error(), `credential Secret "d8-credentials" is required`) != 1 {
+		t.Fatalf("validate() violations = %q, want single credential requirement message", result.Error())
 	}
 }
 
 func TestValidateConvergeRunsPreflight(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.ValidateInput{
-		Operation:     proto.OperationConverge,
+	result, err := validate(context.Background(), validatev1.Input{
+		Operation:     validatev1.OperationConverge,
 		ClusterPrefix: testClusterPrefix,
-		CloudProviderVars: &proto.CloudProviderVars{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
 				"storage":  map[string]any{"disabled": true},
@@ -286,17 +289,20 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 			},
 		},
 	})
-	if err == nil || !strings.Contains(err.Error(), `NodeGroup "master" is required`) {
-		t.Fatalf("validate() error = %v, want master NodeGroup preflight error", err)
+	if err != nil {
+		t.Fatalf("validate() error = %v, want no internal error", err)
+	}
+	if !strings.Contains(result.Error(), `NodeGroup "master" is required`) {
+		t.Fatalf("validate() violations = %q, want master NodeGroup preflight error", result.Error())
 	}
 }
 
 func TestValidateDestroySkipsValidation(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.ValidateInput{
-		Operation: proto.OperationDestroy,
-		CloudProviderVars: &proto.CloudProviderVars{
+	result, err := validate(context.Background(), validatev1.Input{
+		Operation: validatev1.OperationDestroy,
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
 			},
@@ -304,6 +310,9 @@ func TestValidateDestroySkipsValidation(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("validate() error = %v, want nil for destroy", err)
+	}
+	if result.HasErrors() {
+		t.Fatalf("validate() violations = %q, want none for destroy", result.Error())
 	}
 }
 
@@ -334,11 +343,11 @@ func TestValidateClusterPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validate(context.Background(), proto.ValidateInput{
-				Operation:     proto.OperationBootstrap,
+			result, err := validate(context.Background(), validatev1.Input{
+				Operation:     validatev1.OperationBootstrap,
 				ClusterPrefix: tt.prefix,
 				ProviderName:  "yandex",
-				CloudProviderVars: &proto.CloudProviderVars{
+				CloudProviderVars: &validatev1.CloudProviderVars{
 					Settings: testModuleSettings(),
 					Secrets: map[string]map[string]any{
 						cpapi.CredentialSecretName: testCredentialSecretObject(),
@@ -360,19 +369,13 @@ func TestValidateClusterPrefix(t *testing.T) {
 				},
 			})
 
-			if !tt.wantErr {
-				if err != nil && strings.Contains(err.Error(), "invalid prefix") {
-					t.Fatalf("validate() rejected valid prefix %q: %v", tt.prefix, err)
-				}
-
-				return
+			if err != nil {
+				t.Fatalf("validate() error = %v, want no internal error", err)
 			}
 
-			if err == nil {
-				t.Fatalf("validate() error = nil, want invalid prefix error for %q", tt.prefix)
-			}
-			if !strings.Contains(err.Error(), "invalid prefix") {
-				t.Fatalf("validate() error = %q, want invalid prefix error for %q", err, tt.prefix)
+			gotErr := strings.Contains(result.Error(), "invalid prefix")
+			if gotErr != tt.wantErr {
+				t.Fatalf("validate() invalid prefix violation for %q = %v, want %v (%s)", tt.prefix, gotErr, tt.wantErr, result.Error())
 			}
 		})
 	}
