@@ -108,6 +108,148 @@ spec:
                 type: string
                 x-doc-examples:
                 - stable
+              resourceRequests:
+                description: |-
+                  Resource footprint of the workloads the application deploys: how many
+                  replicas each workload runs and what its containers may consume. Entries
+                  override what the application package ships; a workload or container that
+                  is not listed keeps the package defaults.
+
+                  A workload is addressed by its kind and name, so at most one entry exists
+                  per pair.
+                items:
+                  description: |-
+                    ApplicationResourceRequest pins the resource footprint of a single workload
+                    that the application deploys.
+                  properties:
+                    containers:
+                      description: |-
+                        Compute resources of the workload's containers. A container the workload
+                        does not have is ignored.
+                      items:
+                        description: |-
+                          ApplicationContainerResourceRequest pins the compute resources of a single
+                          container inside a workload.
+                        properties:
+                          name:
+                            description: Name of the container inside the workload.
+                            minLength: 1
+                            type: string
+                            x-doc-examples:
+                            - controller
+                          resources:
+                            description: |-
+                              Compute resources the container requests and is limited to, in the same
+                              form as a Pod container's `resources`: `cpu`, `memory` and
+                              `ephemeral-storage` for disk.
+                            properties:
+                              claims:
+                                description: |-
+                                  Claims lists the names of resources, defined in spec.resourceClaims,
+                                  that are used by this container.
+
+                                  This field depends on the
+                                  DynamicResourceAllocation feature gate.
+
+                                  This field is immutable. It can only be set for containers.
+                                items:
+                                  description: ResourceClaim references one entry
+                                    in PodSpec.ResourceClaims.
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Name must match the name of one entry in pod.spec.resourceClaims of
+                                        the Pod where this field is used. It makes that resource available
+                                        inside a container.
+                                      type: string
+                                    request:
+                                      description: |-
+                                        Request is the name chosen for a request in the referenced claim.
+                                        If empty, everything from the claim is made available, otherwise
+                                        only the result of this request.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                                x-kubernetes-list-map-keys:
+                                - name
+                                x-kubernetes-list-type: map
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  Limits describes the maximum amount of compute resources allowed.
+                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  Requests describes the minimum amount of compute resources required.
+                                  If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                                  otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                type: object
+                            type: object
+                        required:
+                        - name
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - name
+                      x-kubernetes-list-type: map
+                    kind:
+                      description: Kind of the workload to size.
+                      enum:
+                      - Deployment
+                      - StatefulSet
+                      - DaemonSet
+                      - ReplicaSet
+                      - Pod
+                      - Job
+                      - CronJob
+                      type: string
+                      x-doc-examples:
+                      - Deployment
+                    name:
+                      description: Name of the workload to size, as the application
+                        package names it.
+                      minLength: 1
+                      type: string
+                      x-doc-examples:
+                      - controller
+                    replicas:
+                      description: |-
+                        Number of replicas the workload runs. Only meaningful for the kinds that
+                        have a replica count: `Deployment`, `StatefulSet` and `ReplicaSet`.
+                      format: int32
+                      minimum: 0
+                      type: integer
+                      x-doc-examples:
+                      - 3
+                  required:
+                  - kind
+                  - name
+                  type: object
+                  x-kubernetes-validations:
+                  - message: replicas can only be set for Deployment, StatefulSet
+                      and ReplicaSet
+                    rule: 'has(self.replicas) ? self.kind in [''Deployment'',''StatefulSet'',''ReplicaSet'']
+                      : true'
+                type: array
+                x-kubernetes-list-map-keys:
+                - kind
+                - name
+                x-kubernetes-list-type: map
               settings:
                 description: Configuration settings for the application.
                 type: object
