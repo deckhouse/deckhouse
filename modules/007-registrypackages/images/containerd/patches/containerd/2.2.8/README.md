@@ -120,6 +120,6 @@ Any options supported by [deprecated `registry.configs.*.auth`](https://github.c
 
 ## 005-erofs-fsync-layer-blob.patch
 
-Fsyncs an EROFS layer blob and its directory entry at the end of `snapshotter.Commit()`, before the metadata transaction.
+Fsyncs an EROFS layer blob and its directory entry in `snapshotter.Commit()`, after the blob is converted and before the metadata transaction that marks the snapshot committed.
 
 Without it the blob stays in the page cache while the snapshot metadata is already fsynced to boltdb, so an unclean shutdown leaves a committed snapshot whose `layer.erofs` is truncated or empty and can never be mounted again. Reported upstream as [containerd#14164](https://github.com/containerd/containerd/issues/14164).
