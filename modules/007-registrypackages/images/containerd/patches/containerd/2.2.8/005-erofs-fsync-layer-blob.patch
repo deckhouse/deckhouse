@@ -1,0 +1,85 @@
+diff --git a/internal/erofsutils/sync.go b/internal/erofsutils/sync.go
+new file mode 100644
+index 000000000..2baba24b2
+--- /dev/null
++++ b/internal/erofsutils/sync.go
+@@ -0,0 +1,27 @@
++package erofsutils
++
++import (
++	"fmt"
++	"os"
++	"path/filepath"
++)
++
++func SyncLayerBlob(path string) error {
++	if err := syncPath(path); err != nil {
++		return err
++	}
++	return syncDir(filepath.Dir(path))
++}
++
++func syncPath(path string) error {
++	f, err := os.Open(path)
++	if err != nil {
++		return fmt.Errorf("failed to open %s: %w", path, err)
++	}
++	defer f.Close()
++
++	if err := f.Sync(); err != nil {
++		return fmt.Errorf("failed to fsync %s: %w", path, err)
++	}
++	return nil
++}
+diff --git a/internal/erofsutils/sync_linux.go b/internal/erofsutils/sync_linux.go
+new file mode 100644
+index 000000000..73dadac1d
+--- /dev/null
++++ b/internal/erofsutils/sync_linux.go
+@@ -0,0 +1,5 @@
++package erofsutils
++
++func syncDir(path string) error {
++	return syncPath(path)
++}
+diff --git a/internal/erofsutils/sync_other.go b/internal/erofsutils/sync_other.go
+new file mode 100644
+index 000000000..7470ed702
+--- /dev/null
++++ b/internal/erofsutils/sync_other.go
+@@ -0,0 +1,7 @@
++//go:build !linux
++
++package erofsutils
++
++func syncDir(string) error {
++	return nil
++}
+diff --git a/plugins/snapshots/erofs/erofs.go b/plugins/snapshots/erofs/erofs.go
+index 0cf36a207..57860e51e 100644
+--- a/plugins/snapshots/erofs/erofs.go
++++ b/plugins/snapshots/erofs/erofs.go
+@@ -30,6 +30,7 @@ import (
+ 	"github.com/containerd/containerd/v2/core/mount"
+ 	"github.com/containerd/containerd/v2/core/snapshots"
+ 	"github.com/containerd/containerd/v2/core/snapshots/storage"
++	"github.com/containerd/containerd/v2/internal/erofsutils"
+ 	"github.com/containerd/containerd/v2/internal/fsverity"
+ )
+ 
+@@ -484,6 +485,15 @@ func (s *snapshotter) Commit(ctx context.Context, name, key string, opts ...snap
+ 		}
+ 	}
+ 
++	// Nothing forces the blob out of the page cache, while the metadata
++	// transaction below is fsynced: an unclean shutdown in between would leave
++	// a committed snapshot whose layer.erofs can never be mounted again.
++	// A layer blob is a single regular file created from scratch, so fsyncing
++	// the file and then its parent directory is enough to make it durable.
++	if err := erofsutils.SyncLayerBlob(layerBlob); err != nil {
++		return err
++	}
++
+ 	return s.ms.WithTransaction(ctx, true, func(ctx context.Context) error {
+ 		if _, err := os.Stat(layerBlob); err != nil {
+ 			return fmt.Errorf("failed to get the converted erofs blob: %w", err)
