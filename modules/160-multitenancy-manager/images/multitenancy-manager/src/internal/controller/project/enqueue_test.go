@@ -123,7 +123,7 @@ func TestCustomPredicate_StatusOnlyWriteDoesNotRequeue(t *testing.T) {
 	old.Status.State = v1alpha3.ProjectStateDeployed
 	cur := old.DeepCopy()
 	cur.Status.State = v1alpha3.ProjectStateError
-	cur.Status.Conditions = []v1alpha3.Condition{{Type: v1alpha3.ProjectConditionTemplateRequiresRewrite, Status: corev1.ConditionFalse}}
+	cur.Status.Conditions = []v1alpha3.Condition{{Type: v1alpha3.ProjectConditionProjectTemplateUsable, Status: corev1.ConditionFalse}}
 	if p.Update(event.TypedUpdateEvent[client.Object]{ObjectOld: old, ObjectNew: cur}) {
 		t.Fatal("a status-only update must not requeue the project")
 	}

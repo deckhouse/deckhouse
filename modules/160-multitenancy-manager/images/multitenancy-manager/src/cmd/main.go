@@ -228,7 +228,9 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		// The grant-violation series (d8_cluster_objects_grant_violated) is served from here; the
 		// PodMonitor of the module scrapes this port.
 		Metrics: metrics.Options{
-			BindAddress: ":9091",
+			// Loopback only: the series name projects and the objects inside them, so the endpoint is
+			// published through the kube-rbac-proxy sidecar, which authorizes every scrape.
+			BindAddress: "127.0.0.1:9091",
 		},
 	}
 

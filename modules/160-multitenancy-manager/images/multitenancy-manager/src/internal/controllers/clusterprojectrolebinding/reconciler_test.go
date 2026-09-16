@@ -250,9 +250,11 @@ func (c *countingLimiter) Wait(ctx context.Context) error {
 	return c.RateLimiter.Wait(ctx)
 }
 
-// TestReconcile_FanOutTakesOneTokenPerNamespace: every RoleBinding write of a fan-out goes through
-// the limiter, so a cluster with thousands of namespaces spreads its writes instead of bursting.
-func TestReconcile_FanOutTakesOneTokenPerNamespace(t *testing.T) {
+// TestReconcile_FanOutTakesOneTokenPerWrittenNamespace: every RoleBinding write of a fan-out goes
+// through the limiter, so a cluster with thousands of namespaces spreads its writes instead of
+// bursting -- and a resync that writes nothing spends nothing, or one idle CPRB would hold the
+// single worker for minutes and queue every other one behind it.
+func TestReconcile_FanOutTakesOneTokenPerWrittenNamespace(t *testing.T) {
 	objs := []client.Object{cprb("ops", "d8:project:viewer")}
 	for i := 0; i < 5; i++ {
 		name := fmt.Sprintf("p%d", i)
@@ -266,6 +268,12 @@ func TestReconcile_FanOutTakesOneTokenPerNamespace(t *testing.T) {
 
 	if limiter.waits != 10 {
 		t.Fatalf("fan-out into 10 namespaces must take 10 tokens, took %d", limiter.waits)
+	}
+
+	limiter.waits = 0
+	reconcileCPRB(t, r, "ops")
+	if limiter.waits != 0 {
+		t.Fatalf("a resync that writes nothing must take no tokens, took %d", limiter.waits)
 	}
 }
 

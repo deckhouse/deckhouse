@@ -37,6 +37,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/naming"
 	"controller/internal/validate"
 )
 
@@ -176,7 +177,7 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 		if mErr != nil {
 			return nil, fmt.Errorf("marshal tolerations: %w", mErr)
 		}
-		annotations["scheduler.alpha.kubernetes.io/defaultTolerations"] = string(raw)
+		annotations[naming.TolerationsAnnotation] = string(raw)
 	}
 
 	if nodeSel, ok, err := spec.NodeSelector.Resolve(r.params); err != nil {
@@ -186,7 +187,7 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 		if sErr != nil {
 			return nil, fmt.Errorf("render nodeSelector: %w", sErr)
 		}
-		annotations["scheduler.alpha.kubernetes.io/node-selector"] = annotation
+		annotations[naming.NodeSelectorAnnotation] = annotation
 	}
 
 	if spec.NamespaceMetadata != nil {

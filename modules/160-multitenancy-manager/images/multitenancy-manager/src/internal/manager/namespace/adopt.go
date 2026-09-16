@@ -143,10 +143,26 @@ func namespaceMeta(namespace *corev1.Namespace) map[string]any {
 }
 
 // managedMetaExact are platform-owned keys that must match in full ("heritage" among them: a
-// HasPrefix match would also strip user keys such as heritageSomething). The list is the one the
-// protective admission policy enforces on the namespace, so what adoption refuses to mirror and
-// what the policy refuses to let a user change is the same set.
-var managedMetaExact = append(append([]string{}, naming.ManagedNamespaceLabels...), naming.ManagedNamespaceAnnotations...)
+// HasPrefix match would also strip user keys such as heritageSomething). It is the list the
+// protective admission policy enforces on the namespace, minus the scheduler annotations.
+//
+// Those two are the exception on purpose. The policy owns them, so a user cannot edit them on the
+// namespace, and they are rendered from spec.nodeSelector/spec.tolerations of a template -- but
+// adoption only ever picks simple, default or secure, and none of those declares either field. Were
+// they dropped here as well, an adopted namespace would keep its placement annotations (the Helm
+// three-way merge leaves them) in no one's desired state, with no way left to change or remove
+// them. Mirroring them into the namespace parameter puts them back under the Project, which is
+// where every other owned key is changed from.
+var managedMetaExact = func() []string {
+	out := append([]string{}, naming.ManagedNamespaceLabels...)
+	for _, key := range naming.ManagedNamespaceAnnotations {
+		if key == naming.NodeSelectorAnnotation || key == naming.TolerationsAnnotation {
+			continue
+		}
+		out = append(out, key)
+	}
+	return out
+}()
 
 // managedMetaPrefixes are platform-owned key prefixes that are never mirrored into project
 // parameters. The controller applies them itself, and the three template-rendered labels are

@@ -436,3 +436,54 @@ func TestHandle_LiteralValidation(t *testing.T) {
 		assert.True(t, resp.Allowed, resp.Result.Message)
 	})
 }
+
+// TestHandle_InlineGrantSelectors: the template schema accepts selector shapes the
+// ClusterResourceGrantPolicy schema refuses, and the managed policy built from them is then rejected
+// at admission on every reconcile, with nothing on the template to say why.
+func TestHandle_InlineGrantSelectors(t *testing.T) {
+	ctx := context.Background()
+
+	withResources := func(res ...grantsv1alpha1.GrantResource) *v1alpha2.ProjectTemplate {
+		tmpl := structuredTemplate("tmpl")
+		tmpl.Spec.Resources = res
+		return tmpl
+	}
+
+	t.Run("an empty allowedSelector is refused", func(t *testing.T) {
+		resp := newValidator(t).Handle(ctx, createRequest(t, withResources(grantsv1alpha1.GrantResource{
+			ResourceName: "storageclasses", AllowedSelector: &metav1.LabelSelector{},
+		})))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "empty selector")
+	})
+
+	t.Run("an empty deniedSelector is refused", func(t *testing.T) {
+		resp := newValidator(t).Handle(ctx, createRequest(t, withResources(grantsv1alpha1.GrantResource{
+			ResourceName: "storageclasses", DeniedSelector: &metav1.LabelSelector{},
+		})))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "deniedSelector")
+	})
+
+	t.Run("In without values is refused", func(t *testing.T) {
+		resp := newValidator(t).Handle(ctx, createRequest(t, withResources(grantsv1alpha1.GrantResource{
+			ResourceName: "storageclasses",
+			AllowedSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key: "tier", Operator: metav1.LabelSelectorOpIn,
+			}}},
+		})))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "not a valid selector")
+	})
+
+	t.Run("a usable selector and an entry without one are accepted", func(t *testing.T) {
+		resp := newValidator(t).Handle(ctx, createRequest(t, withResources(
+			grantsv1alpha1.GrantResource{
+				ResourceName:    "storageclasses",
+				AllowedSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"shared": "true"}},
+			},
+			grantsv1alpha1.GrantResource{ResourceName: "ingressclasses", Allowed: []string{"nginx"}},
+		)))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+}

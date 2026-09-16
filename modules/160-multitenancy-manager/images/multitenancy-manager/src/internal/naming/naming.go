@@ -70,11 +70,19 @@ var ManagedNamespaceLabels = []string{
 	"security-scanning.deckhouse.io/enabled",
 }
 
+// NodeSelectorAnnotation and TolerationsAnnotation carry the default pod placement of a namespace.
+// The renderer writes them from the template's nodeSelector/tolerations, and adoption mirrors the
+// ones a namespace already had, so they are named rather than spelled out in each place.
+const (
+	NodeSelectorAnnotation = "scheduler.alpha.kubernetes.io/node-selector"
+	TolerationsAnnotation  = "scheduler.alpha.kubernetes.io/defaultTolerations"
+)
+
 // ManagedNamespaceAnnotations are the annotations on a project namespace that the module owns; see
 // ManagedNamespaceLabels.
 var ManagedNamespaceAnnotations = []string{
 	"meta.helm.sh/release-name",
 	"meta.helm.sh/release-namespace",
-	"scheduler.alpha.kubernetes.io/node-selector",
-	"scheduler.alpha.kubernetes.io/defaultTolerations",
+	NodeSelectorAnnotation,
+	TolerationsAnnotation,
 }

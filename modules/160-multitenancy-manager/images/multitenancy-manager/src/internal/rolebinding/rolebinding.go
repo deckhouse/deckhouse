@@ -137,13 +137,15 @@ type UpsertParams struct {
 	RoleRef string
 }
 
-// UpsertServiceRoleBinding creates or updates the service RoleBinding described by params. roleRef is
+// UpsertServiceRoleBinding creates or updates the service RoleBinding described by params, and
+// reports whether the API server was actually written to -- the fan-out paces itself by that, not by
+// the number of namespaces it walks. roleRef is
 // immutable in the Kubernetes API, so a change of role recreates the binding; the change is detected
 // inside the mutate function, which avoids a redundant pre-Get on the hot fan-out path (one read in
 // the steady state, an extra read only on the rare role change). setOwner, when non-nil, installs a
 // controller owner reference and is only valid for a same-namespace owner — cross-namespace owner
 // references are not allowed, so additional namespaces rely on label-based cleanup.
-func UpsertServiceRoleBinding(ctx context.Context, c client.Client, params UpsertParams, setOwner func(*rbacv1.RoleBinding) error) error {
+func UpsertServiceRoleBinding(ctx context.Context, c client.Client, params UpsertParams, setOwner func(*rbacv1.RoleBinding) error) (bool, error) {
 	apply := func(rb *rbacv1.RoleBinding) error {
 		if rb.Labels == nil {
 			rb.Labels = map[string]string{}
@@ -169,7 +171,7 @@ func UpsertServiceRoleBinding(ctx context.Context, c client.Client, params Upser
 
 	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: params.Name, Namespace: params.Namespace}}
 	recreate := false
-	if _, err := controllerutil.CreateOrUpdate(ctx, c, rb, func() error {
+	result, err := controllerutil.CreateOrUpdate(ctx, c, rb, func() error {
 		// A populated, differing roleRef means the binding already exists with another (immutable)
 		// role: leave it untouched here and recreate it below instead of issuing a doomed update.
 		if rb.RoleRef.Name != "" && rb.RoleRef.Name != params.RoleRef {
@@ -177,21 +179,22 @@ func UpsertServiceRoleBinding(ctx context.Context, c client.Client, params Upser
 			return nil
 		}
 		return apply(rb)
-	}); err != nil {
-		return fmt.Errorf("upsert RoleBinding %s/%s: %w", params.Namespace, params.Name, err)
+	})
+	if err != nil {
+		return false, fmt.Errorf("upsert RoleBinding %s/%s: %w", params.Namespace, params.Name, err)
 	}
 	if !recreate {
-		return nil
+		return result != controllerutil.OperationResultNone, nil
 	}
 
 	if err := c.Delete(ctx, rb); err != nil && !k8serrors.IsNotFound(err) {
-		return fmt.Errorf("recreate RoleBinding %s/%s on roleRef change: %w", params.Namespace, params.Name, err)
+		return false, fmt.Errorf("recreate RoleBinding %s/%s on roleRef change: %w", params.Namespace, params.Name, err)
 	}
 	fresh := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: params.Name, Namespace: params.Namespace}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, c, fresh, func() error { return apply(fresh) }); err != nil {
-		return fmt.Errorf("upsert RoleBinding %s/%s: %w", params.Namespace, params.Name, err)
+		return false, fmt.Errorf("upsert RoleBinding %s/%s: %w", params.Namespace, params.Name, err)
 	}
-	return nil
+	return true, nil
 }
 
 // PruneServiceRoleBindings deletes the service RoleBindings matching selector whose namespace is not

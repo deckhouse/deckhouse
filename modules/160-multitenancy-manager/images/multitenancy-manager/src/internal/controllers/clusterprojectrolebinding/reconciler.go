@@ -73,12 +73,13 @@ func init() {
 	metrics.Registry.MustRegister(fanOutDuration)
 }
 
-// limiter returns the configured limiter, building the default one on first use.
-func (r *Reconciler) limiter() flowcontrol.RateLimiter {
+// wait spends one token of the fan-out budget. SetupWithManager always installs a limiter, so a nil
+// one means a Reconciler built by hand -- a unit test -- and those are not worth pacing.
+func (r *Reconciler) wait(ctx context.Context) error {
 	if r.Limiter == nil {
-		r.Limiter = flowcontrol.NewTokenBucketRateLimiter(fanOutQPS, fanOutBurst)
+		return nil
 	}
-	return r.Limiter
+	return r.Limiter.Wait(ctx)
 }
 
 // Reconcile keeps the service RoleBindings of a single ClusterProjectRoleBinding in sync with the
@@ -161,24 +162,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Fan out into every namespace, accumulating per-namespace errors so a single bad namespace
-	// does not block the rest of the cluster (CPRB can span thousands of namespaces). Each write
-	// takes a token first, so the burst a large cluster would otherwise see is spread out.
+	// does not block the rest of the cluster (CPRB can span thousands of namespaces). A token is
+	// taken for each namespace actually written to, so the burst a large cluster sees on a real
+	// change is spread out while a resync that changes nothing costs no waiting at all -- the walk
+	// is cheap, the writes are not, and this controller runs one reconcile at a time.
 	started := time.Now()
-	limiter := r.limiter()
+	defer func() { fanOutDuration.Observe(time.Since(started).Seconds()) }()
 	var errs []error
 	for ns, project := range target {
-		if err := limiter.Wait(ctx); err != nil {
-			return ctrl.Result{}, fmt.Errorf("fan-out rate limiter: %w", err)
-		}
-		if err := r.upsertRoleBinding(ctx, cprb, ns, project); err != nil {
+		wrote, err := r.upsertRoleBinding(ctx, cprb, ns, project)
+		if err != nil {
 			errs = append(errs, err)
+			continue
+		}
+		if !wrote {
+			continue
+		}
+		if err := r.wait(ctx); err != nil {
+			return ctrl.Result{}, fmt.Errorf("fan-out rate limiter: %w", err)
 		}
 	}
 
 	if err := r.pruneRoleBindings(ctx, cprb.Name, target); err != nil {
 		errs = append(errs, err)
 	}
-	fanOutDuration.Observe(time.Since(started).Seconds())
 
 	if len(errs) > 0 {
 		return ctrl.Result{}, errors.Join(errs...)
@@ -209,7 +216,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) upsertRoleBinding(ctx context.Context, cprb *v1alpha3.ClusterProjectRoleBinding, ns, project string) error {
+func (r *Reconciler) upsertRoleBinding(ctx context.Context, cprb *v1alpha3.ClusterProjectRoleBinding, ns, project string) (bool, error) {
 	return rolebinding.UpsertServiceRoleBinding(ctx, r.Client, rolebinding.UpsertParams{
 		Name:        rolebinding.CPRBServiceName(cprb.Name),
 		Namespace:   ns,
@@ -239,6 +246,12 @@ func (r *Reconciler) cleanup(ctx context.Context, name string) error {
 // SetupWithManager wires the reconciler and its watches. The fan-out is sequential
 // (MaxConcurrentReconciles: 1) because every reconcile walks the full project list.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Built here rather than lazily on first reconcile: a lazy initializer writes r.Limiter from the
+	// reconcile goroutine, which is a data race the moment MaxConcurrentReconciles stops being 1.
+	if r.Limiter == nil {
+		r.Limiter = flowcontrol.NewTokenBucketRateLimiter(fanOutQPS, fanOutBurst)
+	}
+
 	enqueueAll := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
 		list := &v1alpha3.ClusterProjectRoleBindingList{}
 		if err := r.List(ctx, list); err != nil {

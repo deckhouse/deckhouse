@@ -11,6 +11,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 
   Parameters:
   - `namespace.labels` and `namespace.annotations` — extra labels and annotations for the project namespace.
+  - `requiredRequests` (default `false`) — when true, workloads in the project must specify CPU and memory requests (a Deny-mode OperationPolicy). This template creates the namespace and nothing else, so it is off by default.
 
 - `default` — a template that covers basic project use cases. On top of the namespace, it sets up network isolation, a pod security profile, extended monitoring and log shipping.
 
@@ -19,7 +20,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
   - `podSecurityProfile` — the [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) profile for the project namespaces: `Baseline` (default) prevents known privilege escalations, `Restricted` applies the strictest hardening practices, `Privileged` restricts nothing.
   - `extendedMonitoringEnabled` (default `true`) — alerts on controller outages and restarts, 5xx errors in ingress-nginx and low free space on the project's persistent volumes.
   - `clusterLogDestinationName` — the name of the ClusterLogDestination to ship the project logs to. Left unset, the project logs are not shipped anywhere.
-  - `requiredRequests` (default `true`) — when true, workloads in the project must specify CPU and memory requests (a Deny-mode OperationPolicy). Adoption of an existing namespace seeds this to `false` so running workloads are not blocked.
+  - `requiredRequests` (default `true` in this template) — when true, workloads in the project must specify CPU and memory requests (a Deny-mode OperationPolicy). Adoption of an existing namespace seeds this to `false` so running workloads are not blocked.
 
 - `secure` — includes all the capabilities of the `default` template, and additionally restricts the users and groups inside containers, audits their calls to the kernel and scans images for vulnerabilities.
 
@@ -475,7 +476,10 @@ The following rules apply to template operations:
 
 - A template used by at least one project cannot be deleted.
 - A change to a template is automatically applied to all projects created from it.
-- The `deckhouse.io/v1alpha1` version of ProjectTemplate with the text `resourcesTemplate` field (Helm templating) is no longer served, and `v1alpha2` has no such field. A template that was stored as `v1alpha1` with a non-empty `resourcesTemplate` comes up in `v1alpha2` without the Helm text and with the `projects.deckhouse.io/legacy-helm-template: "true"` annotation. The controller does not render the projects of such a template: they switch to the `Error` state with the `TemplateRequiresRewrite` condition, and their objects stay exactly as they were. To bring them back, rewrite the template with structured fields and remove the annotation.
+- The `deckhouse.io/v1alpha1` version of ProjectTemplate with the text `resourcesTemplate` field (Helm templating) is no longer served, and `v1alpha2` has no such field. A template that was stored as `v1alpha1` with a non-empty `resourcesTemplate` comes up in `v1alpha2` without the Helm text and with the `projects.deckhouse.io/legacy-helm-template: "true"` annotation:
+  - the controller does not render the projects of such a template. They switch to the `Error` state with the `ProjectTemplateUsable` condition set to `False`, and their objects stay exactly as they were;
+  - the Helm text is kept in the `projects.deckhouse.io/legacy-helm-template-body` annotation of the template, so you can read what it used to render. A text over 64 KiB is not kept: all annotations of an object together may not exceed 256 KiB;
+  - to bring the projects back, rewrite the template with structured fields and remove the mark annotation in the same request — `d8 k edit` and `d8 k apply` do that. Removing the mark on its own is refused, because the template would then render a bare namespace and Helm would delete every object the Helm text used to produce.
 
 ## Creating your own project template
 
@@ -671,7 +675,9 @@ The following sections provide common scenarios for configuring and using the me
 
 The following examples show how to configure project access to cluster-wide resources using ClusterResourceGrantPolicy.
 
-`projectSelector` is matched against the union of the labels of the Project object and the labels of each namespace of the project; when the same key is set on both, the namespace value wins. A label on the Project therefore selects its main namespace and all its additional namespaces, and a label set on one namespace through the template or a ProjectNamespace selects that namespace only. The examples below put the label on the Project.
+`projectSelector` is matched against the union of the labels of the Project object and the labels of each namespace of the project; when the same key is set on both, the namespace value wins. A label on the Project therefore selects its main namespace and all its additional namespaces. The examples below put the label on the Project, which is the only place a project's own labels are set: a ProjectNamespace does not carry labels, and the labels a template adds through `namespaceMetadata.labels` are the same in every namespace of the project.
+
+Because the namespace labels take part in the match, writing labels on a Namespace object decides which policies apply to it. That permission is cluster-level (`d8:manage:permission:subsystem:kubernetes:manage_resources`); the project roles `d8:project:*` and `d8:namespace:*` only read namespaces, so a project user cannot bring another project's policy onto their namespace.
 
 #### Restricting StorageClass for a project
 

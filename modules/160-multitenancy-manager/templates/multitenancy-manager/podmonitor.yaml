@@ -17,7 +17,13 @@ spec:
     matchNames:
     - d8-{{ $.Chart.Name }}
   podMetricsEndpoints:
-  - port: metrics
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
     relabelings:
     - targetLabel: tier
       replacement: cluster

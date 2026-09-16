@@ -56,7 +56,9 @@ func TestManagedNamespaceKeysMatchThePolicy(t *testing.T) {
 	path := filepath.Join("..", "..", "..", "..", "..", "templates", "validation.yaml")
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		t.Skipf("policy template not reachable from here (%v); run from the module tree", err)
+		// The only job of this test is to fail when the copies drift; skipping itself when it cannot
+		// read one of them is the same as not having it.
+		t.Fatalf("read the admission policy template at %s: %v", path, err)
 	}
 	policy := string(raw)
 
