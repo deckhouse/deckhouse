@@ -1,0 +1,191 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-f310ec14e6bc8e4e0c82d328a252d86f51efe3a134d87998fdff120924852513",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39828: сервер в пакете golang.org/x/crypto/ssh отбрасывал права, которые проверка вернула вместе с PartialSuccessError, и продолжал работу с правами по умолчанию. Бинарь auth_server использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль пользователя из секции users конфига. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39829: открытый ключ с чрезмерным числом параметров заставлял разбор в пакете golang.org/x/crypto/ssh надолго занимать процессор. Бинарь auth_server использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль пользователя из секции users конфига. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39830: ответы, которых клиент не запрашивал, накапливались в пакете golang.org/x/crypto/ssh и не освобождались. Бинарь auth_server использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль пользователя из секции users конфига. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39831: пакет golang.org/x/crypto/ssh не требовал подтверждения присутствия пользователя при работе с аппаратным ключом. Бинарь auth_server использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль пользователя из секции users конфига. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39832: пакет golang.org/x/crypto/ssh/agent неверно применял ограничения ключа и разрешал запрещённые ими операции. Бинарь auth_server использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль пользователя из секции users конфига. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39835: специально составленный сертификат заставлял разбор в пакете golang.org/x/crypto/ssh надолго занимать процессор. Бинарь auth_server использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль пользователя из секции users конфига. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42508: пакет golang.org/x/crypto/ssh/knownhosts не проверял подпись у записи об отзыве, и отзыв ключа можно было обойти. Бинарь auth_server использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль пользователя из секции users конфига. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46595: сервер в пакете golang.org/x/crypto/ssh пропускал проверку исходного адреса, записанного в сертификате. Бинарь auth_server использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль пользователя из секции users конфига. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46597: специально составленные пакеты AES-GCM заставляли расшифровку в пакете golang.org/x/crypto/ssh надолго занимать процессор. Бинарь auth_server использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль пользователя из секции users конфига. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-25681: разбор специально составленного HTML в пакете golang.org/x/net/html давал разметку, через которую на страницу попадал чужой скрипт. Пакет golang.org/x/net/html в сборку auth_server не попадает: он приходит только из тестовых зависимостей gomega и kube-openapi, в go list -deps его нет. Из модуля golang.org/x/net в бинарь попадают http2, idna, httpguts и trace.",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-27136: разбор HTML в пакете golang.org/x/net/html расходился с браузерным, и фильтр разметки можно было обойти. Пакет golang.org/x/net/html в сборку auth_server не попадает: он приходит только из тестовых зависимостей gomega и kube-openapi, в go list -deps его нет. Из модуля golang.org/x/net в бинарь попадают http2, idna, httpguts и trace.",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33814: кадр SETTINGS с испорченным значением MAX_FRAME_SIZE заставлял обмен по HTTP/2 в пакете golang.org/x/net/http2 надолго занимать процессор. Пакет http2 попадает в бинарь из k8s.io/client-go/rest. Этот клиент создаётся только при проверке прав через Kubernetes, а она включается секцией kubernetes_auth в конфиге (server/server.go:84). Модуль 038-registry рендерит конфиг с секцией users и списком acl, секции kubernetes_auth там нет (templates/inclusterproxy/secret.yaml). Свой порт auth_server слушает через net/http, вызовов x/net/http2 в коде нет.",
+      "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39821: пакет golang.org/x/net/idna неверно разбирал метку Punycode, и имя хоста превращалось в другое. Пакет idna попадает в бинарь из golang.org/x/net/http2, а тот из k8s.io/client-go/rest. Этот клиент создаётся только при проверке прав через Kubernetes, а она включается секцией kubernetes_auth в конфиге (server/server.go:84). Модуль 038-registry рендерит конфиг с секцией users и списком acl, секции kubernetes_auth там нет (templates/inclusterproxy/secret.yaml). Свой порт auth_server слушает через net/http, вызовов x/net/http2 в коде нет.",
+      "timestamp": "2026-09-16T09:37:52Z"
+    }
+  ],
+  "timestamp": "2026-09-16T09:37:52Z"
+}
