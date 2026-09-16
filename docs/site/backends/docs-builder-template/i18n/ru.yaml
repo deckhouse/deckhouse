@@ -4,8 +4,8 @@ allowed_values: допустимые значения
 additional_property_name: имя параметра (ключ объекта)
 pattern_property_name: регулярное выражение для имени параметра
 search_placeholder_text: Поиск по документации
-search_context_dkpdocs_and_modules: Поиск выполняется по всей документации DP и модулям.
-search_context_modules: Поиск выполняется по всем модулям, не включая документацию DP.
+search_context_dkpdocs_and_modules: Поиск выполняется по всей документации Deckhouse Platform и модулям.
+search_context_modules: Поиск выполняется по всем модулям, не включая документацию Deckhouse Platform.
 search_context_only_product_docs: Поиск выполняется по всей документации продукта, не включая модули.
 modules: модули
 modules2: модулей

@@ -7,8 +7,8 @@ title: "Built-in audit rules"
 
 ## What is Audit Policy
 
-Audit Policy is a YAML file that defines which events the API server should record.  
-When a request occurs, Kubernetes checks it against the rules in the file.  
+Audit Policy is a YAML file that defines which events the API server should record.
+When a request occurs, Kubernetes checks it against the rules in the file.
 The **first matching rule** determines the logging level.
 
 ## Policy structure

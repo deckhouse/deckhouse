@@ -923,7 +923,7 @@ $ ls -lh
 * `<PASSWORD>` — токен, выданный при создании robot-аккаунта.
 
 ```bash
-d8 mirror push $(pwd)/d8-bundle 'registry.local:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
+d8 mirror push $(pwd)/d8-bundle 'registry.local:443/deckhouse/<РЕДАКЦИЯ_DP>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
 
 > Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
@@ -1416,7 +1416,7 @@ internalNetworkCIDRs:
 Перенесите подготовленный конфигурационный файл на хост, с которого выполняется установка, например в директорию `~/deckhouse`. Перейдите в директорию и запустите установщик командой:
 
 ```bash
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" registry.local/deckhouse/<РЕДАКЦИЯ_DKP>/install:stable bash
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" registry.local/deckhouse/<РЕДАКЦИЯ_DP>/install:stable bash
 ```
 
 {% offtopic title="Если появилась ошибка `509: certificate signed by unknown authority`..." %}
