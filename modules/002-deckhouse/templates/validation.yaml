@@ -204,6 +204,27 @@ spec:
     # allow users to delete application pods
     - name: 'exclude-delete-pods-operations'
       expression: '!(request.operation == "DELETE" && request.resource.resource == "pods")'
+    # An application under maintenance is not reconciled any more, and every object
+    # it renders carries both the `heritage: deckhouse` label and the maintenance one,
+    # so let users edit those by hand. This is the exemption the heritage-label-objects
+    # binding makes with its objectSelector, spelled here as a matchCondition because
+    # a selector can only narrow a binding, never carve an exception out of it.
+    # matchConditions are ANDed, so a false one switches the whole policy off for the
+    # request: this one may only do that when every object of the request is such a
+    # maintained object, the way an objectSelector matches on either the old or the
+    # new one.
+    - name: 'exclude-maintenance-objects'
+      expression: |
+        [object, oldObject].exists(o,
+          o != null
+          && !(
+            has(o.metadata) && has(o.metadata.labels)
+            && "heritage" in o.metadata.labels
+            && o.metadata.labels["heritage"] == "deckhouse"
+            && "maintenance.deckhouse.io/no-resource-reconciliation" in o.metadata.labels
+            && o.metadata.labels["maintenance.deckhouse.io/no-resource-reconciliation"] in ["", "true"]
+          )
+        )
   validations:
     # deny all operations with any objects with `d8a-` prefix, except for Pods deletions
     - expression: |
