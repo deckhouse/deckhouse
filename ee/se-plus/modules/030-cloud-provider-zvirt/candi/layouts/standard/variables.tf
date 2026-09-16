@@ -6,22 +6,40 @@ variable "clusterConfiguration" {
 }
 
 variable "providerClusterConfiguration" {
-  type = any
+  type    = any
+  default = null
 }
 
-variable "url" {
-  description = "zVirt API URL"
+variable "clusterUUID" {
+  type    = string
+  default = ""
 }
 
-variable "username" {
-  description = "zVirt Admin user"
+variable "nodeGroups" {
+  type    = any
+  default = {}
 }
 
-variable "password" {
-  description = "zVirt Admin password"
+variable "instanceClasses" {
+  type    = any
+  default = {}
 }
 
-variable "insecure_mode" {
-  description = "TLS validation"
+variable "secrets" {
+  type    = any
+  default = {}
 }
 
+variable "settings" {
+  type    = any
+  default = null
+}
+
+module "migration" {
+  source                       = "../../../terraform-modules/migration"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  nodeGroups                   = var.nodeGroups
+  instanceClasses              = var.instanceClasses
+  secrets                      = var.secrets
+  settings                     = var.settings
+}
