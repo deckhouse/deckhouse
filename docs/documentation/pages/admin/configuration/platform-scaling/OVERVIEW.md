@@ -14,3 +14,5 @@ Management capabilities include:
 These capabilities allow the creation of reliable, scalable, and self-healing clusters, adapting them to any requirements for performance, high availability, and infrastructure constraints.
 
 The following sections provide detailed descriptions of features, configuration examples, and best practices for effective control plane and node management in Deckhouse Platform.
+
+If a cluster runs virtual machines, taking a node out for maintenance affects them as well. How to move machines to other nodes, what limits the migration, and what to do with machines that can't be migrated is described in [Maintenance of nodes running virtual machines](./node/vm-node-maintenance.html).
