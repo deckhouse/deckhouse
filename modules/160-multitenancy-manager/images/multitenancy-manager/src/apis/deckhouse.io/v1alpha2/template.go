@@ -184,13 +184,28 @@ type ProjectTemplateSpec struct {
 // It answers one question: would applying this template to a project that already has a release
 // delete everything in it. The legacy-Helm mark exists for exactly that case, and dropping the mark
 // while this is false is what the template webhook refuses.
+//
+// Every optional stanza is judged by its content, not by its presence: `networkPolicy: {}` is a
+// pointer to an empty mode, and the renderer produces nothing from it, so counting it as rendering
+// would let a half-finished rewrite through the very guard this feeds.
 func (p *ProjectTemplateSpec) RendersObjects() bool {
 	if !p.PodSecurityStandard.IsZero() || !p.NodeSelector.IsZero() || !p.Tolerations.IsZero() ||
 		!p.AllowedUIDs.IsZero() || !p.AllowedGIDs.IsZero() {
 		return true
 	}
-	return p.NetworkPolicy != nil || p.NamespaceMetadata != nil || p.Features != nil ||
-		p.LogShipping != nil || p.RuntimeAudit != nil
+	if p.NetworkPolicy != nil && !p.NetworkPolicy.Mode.IsZero() {
+		return true
+	}
+	if p.NamespaceMetadata != nil && (!p.NamespaceMetadata.Labels.IsZero() || !p.NamespaceMetadata.Annotations.IsZero()) {
+		return true
+	}
+	if p.Features != nil && (!p.Features.Monitoring.IsZero() || !p.Features.VulnerabilityScanning.IsZero()) {
+		return true
+	}
+	if p.LogShipping != nil && !p.LogShipping.ClusterDestinationRef.IsZero() {
+		return true
+	}
+	return p.RuntimeAudit != nil && !p.RuntimeAudit.Enabled.IsZero()
 }
 
 // ParamRef pairs a structured field path (for diagnostics) with the parameter it references.

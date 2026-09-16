@@ -338,3 +338,50 @@ func TestHandle_LegacyMarkRemoval(t *testing.T) {
 		assert.True(t, resp.Allowed, resp.Result)
 	})
 }
+
+// TestHandle_LegacyMarkRemoval_EmptyStanzas: an optional stanza with nothing in it renders nothing,
+// so it must not pass for a rewrite. Otherwise `networkPolicy: {}` plus an unmark in one request --
+// the shape the guard is built to accept -- still leaves the projects with a bare namespace.
+func TestHandle_LegacyMarkRemoval_EmptyStanzas(t *testing.T) {
+	ctx := context.Background()
+	v := newValidator(t)
+
+	empty := func(mutate func(*v1alpha2.ProjectTemplateSpec)) *v1alpha2.ProjectTemplate {
+		tmpl := &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "legacy"}}
+		mutate(&tmpl.Spec)
+		return tmpl
+	}
+
+	for name, mutate := range map[string]func(*v1alpha2.ProjectTemplateSpec){
+		"networkPolicy":     func(s *v1alpha2.ProjectTemplateSpec) { s.NetworkPolicy = &v1alpha2.NetworkPolicySpec{} },
+		"namespaceMetadata": func(s *v1alpha2.ProjectTemplateSpec) { s.NamespaceMetadata = &v1alpha2.NamespaceMetadata{} },
+		"features":          func(s *v1alpha2.ProjectTemplateSpec) { s.Features = &v1alpha2.FeaturesSpec{} },
+		"logShipping":       func(s *v1alpha2.ProjectTemplateSpec) { s.LogShipping = &v1alpha2.LogShippingSpec{} },
+		"runtimeAudit":      func(s *v1alpha2.ProjectTemplateSpec) { s.RuntimeAudit = &v1alpha2.RuntimeAuditSpec{} },
+	} {
+		t.Run("an empty "+name+" stanza does not count as a rewrite", func(t *testing.T) {
+			resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), empty(mutate)))
+			assert.False(t, resp.Allowed)
+			assert.Contains(t, resp.Result.Message, "delete every object")
+		})
+	}
+
+	t.Run("a stanza with a value counts", func(t *testing.T) {
+		filled := empty(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.NetworkPolicy = &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.LiteralParam(v1alpha2.NetworkPolicyModeIsolated)}
+		})
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), filled))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("a fromParam reference counts", func(t *testing.T) {
+		ref := empty(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.NetworkPolicy = &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.FromParamRef[string]("mode")}
+			s.ParametersSchema = v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+				"type": "object", "properties": map[string]any{"mode": map[string]any{"type": "string"}},
+			}}
+		})
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), ref))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+}
