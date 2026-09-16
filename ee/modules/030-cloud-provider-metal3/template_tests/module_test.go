@@ -166,7 +166,7 @@ dhcp:
 			irso := f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "ironic-standalone-operator-controller-manager")
 			Expect(irso.Exists()).To(BeTrue())
 
-			instanceManager := f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "metal3-instance-manager")
+			instanceManager := f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "baremetal-instance-manager")
 			Expect(instanceManager.Exists()).To(BeTrue())
 			instanceManagerArgs := instanceManager.Field("spec.template.spec.containers.0.args").String()
 			Expect(instanceManagerArgs).To(ContainSubstring("--target-namespace=d8-cloud-instance-manager"))
@@ -201,7 +201,7 @@ dhcp:
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			instanceManager := f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "metal3-instance-manager")
+			instanceManager := f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "baremetal-instance-manager")
 			Expect(instanceManager.Exists()).To(BeTrue())
 			instanceManagerArgs := instanceManager.Field("spec.template.spec.containers.0.args").String()
 			Expect(instanceManagerArgs).To(ContainSubstring("--bmc-probe-timeout=30s"))
@@ -303,7 +303,7 @@ externalInstance:
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "ironic-standalone-operator-controller-manager").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "baremetal-operator-controller-manager").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "capm3-controller-manager").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "metal3-instance-manager").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "baremetal-instance-manager").Exists()).To(BeTrue())
 
 			config := f.KubernetesResource("ConfigMap", "d8-cloud-provider-metal3", "ironic")
 			Expect(config.Field("data.IRONIC_ENDPOINT").String()).To(Equal("https://external-ironic.example.com:6385/v1/"))

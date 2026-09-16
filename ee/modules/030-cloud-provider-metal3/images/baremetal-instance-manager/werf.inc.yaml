@@ -3,12 +3,12 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /metal3-instance-manager
-    to: /metal3-instance-manager
+    add: /baremetal-instance-manager
+    to: /baremetal-instance-manager
     before: setup
 imageSpec:
   config:
-    entrypoint: ["/metal3-instance-manager"]
+    entrypoint: ["/baremetal-instance-manager"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -38,8 +38,8 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src
     - go mod download
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /metal3-instance-manager ./cmd/metal3-instance-manager
-    - chown 64535:64535 /metal3-instance-manager
-    - chmod 0755 /metal3-instance-manager
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /baremetal-instance-manager ./cmd/baremetal-instance-manager
+    - chown 64535:64535 /baremetal-instance-manager
+    - chmod 0755 /baremetal-instance-manager
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

@@ -98,7 +98,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err := r.Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, nil
 	}
 
 	if instance.GetNamespace() != r.targetNamespace {

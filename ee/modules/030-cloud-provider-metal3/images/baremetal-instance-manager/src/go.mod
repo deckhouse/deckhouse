@@ -1,4 +1,4 @@
-module github.com/deckhouse/metal3-instance-manager
+module github.com/deckhouse/baremetal-instance-manager
 
 go 1.24.0
 

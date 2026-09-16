@@ -206,6 +206,8 @@ spec:
                     type: string
               conditions:
                 type: array
+                description: |
+                  Conditions describe the state of the instance. `BMCResolved` is a permanent condition: `True` means that the BMC endpoint was resolved and the physical host resource was synchronized; `False` means that reconciliation could not complete this step. The set of condition types and reasons is open. Clients must treat an unknown type or reason as an unknown state, not as an error.
                 x-kubernetes-list-type: map
                 x-kubernetes-list-map-keys:
                 - type

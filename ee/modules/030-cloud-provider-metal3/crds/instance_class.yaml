@@ -70,6 +70,7 @@ spec:
                       type: string
                   matchExpressions:
                     type: array
+                    x-kubernetes-list-type: atomic
                     items:
                       type: object
                       required:
@@ -87,6 +88,7 @@ spec:
                           - DoesNotExist
                         values:
                           type: array
+                          x-kubernetes-list-type: set
                           items:
                             type: string
               disableAutomatedCleaning:
@@ -117,5 +119,6 @@ spec:
             properties:
               nodeGroupConsumers:
                 type: array
+                x-kubernetes-list-type: set
                 items:
                   type: string

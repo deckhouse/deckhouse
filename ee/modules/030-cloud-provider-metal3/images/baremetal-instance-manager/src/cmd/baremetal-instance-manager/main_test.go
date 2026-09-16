@@ -86,10 +86,24 @@ func TestReconcileCreatesResolvedBareMetalHost(t *testing.T) {
 	request := ctrl.Request{NamespacedName: types.NamespacedName{Name: "server", Namespace: "d8-cloud-instance-manager"}}
 
 	if _, err := r.Reconcile(context.Background(), request); err != nil {
-		t.Fatalf("add finalizer: %v", err)
-	}
-	if _, err := r.Reconcile(context.Background(), request); err != nil {
 		t.Fatalf("reconcile resources: %v", err)
+	}
+	updatedAfterFirstReconcile := &unstructured.Unstructured{}
+	updatedAfterFirstReconcile.SetGroupVersionKind(bareMetalInstanceGVK)
+	if err := kubeClient.Get(context.Background(), request.NamespacedName, updatedAfterFirstReconcile); err != nil {
+		t.Fatalf("get instance after first reconcile: %v", err)
+	}
+	conditions, found, err := unstructured.NestedSlice(updatedAfterFirstReconcile.Object, "status", "conditions")
+	if err != nil || !found || len(conditions) != 1 {
+		t.Fatalf("expected BMCResolved condition after first reconcile, found=%v conditions=%#v err=%v", found, conditions, err)
+	}
+	firstCondition := conditions[0].(map[string]interface{})
+	if firstCondition["type"] != "BMCResolved" || firstCondition["status"] != "True" || firstCondition["reason"] != "BMCResolved" {
+		t.Fatalf("unexpected first condition: %#v", firstCondition)
+	}
+	statusResourceVersion := updatedAfterFirstReconcile.GetResourceVersion()
+	if _, err := r.Reconcile(context.Background(), request); err != nil {
+		t.Fatalf("reconcile cached BMC: %v", err)
 	}
 
 	bmh := &unstructured.Unstructured{}
@@ -130,6 +144,9 @@ func TestReconcileCreatesResolvedBareMetalHost(t *testing.T) {
 	if err := kubeClient.Get(context.Background(), request.NamespacedName, updatedInstance); err != nil {
 		t.Fatalf("get updated instance: %v", err)
 	}
+	if updatedInstance.GetResourceVersion() != statusResourceVersion {
+		t.Fatalf("unchanged reconcile rewrote instance: resourceVersion %q -> %q", statusResourceVersion, updatedInstance.GetResourceVersion())
+	}
 	resolvedAt, found, err := unstructured.NestedString(updatedInstance.Object, "status", "bmc", "lastResolvedTime")
 	if err != nil || !found {
 		t.Fatalf("expected BMC resolution timestamp, found=%v err=%v", found, err)
@@ -142,6 +159,28 @@ func TestReconcileCreatesResolvedBareMetalHost(t *testing.T) {
 	}
 	if _, found, err := unstructured.NestedMap(updatedInstance.Object, "status", "bareMetalHost"); err != nil || found {
 		t.Fatalf("obsolete status.bareMetalHost is present: found=%v err=%v", found, err)
+	}
+
+	updatedInstance.Object["status"] = map[string]interface{}{}
+	if err := kubeClient.Status().Update(context.Background(), updatedInstance); err != nil {
+		t.Fatalf("clear instance status: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), request); err != nil {
+		t.Fatalf("restore cleared status: %v", err)
+	}
+	if resolver.calls != 2 {
+		t.Fatalf("expected BMC resolution after status loss, got %d calls", resolver.calls)
+	}
+	restoredInstance := &unstructured.Unstructured{}
+	restoredInstance.SetGroupVersionKind(bareMetalInstanceGVK)
+	if err := kubeClient.Get(context.Background(), request.NamespacedName, restoredInstance); err != nil {
+		t.Fatalf("get restored instance: %v", err)
+	}
+	if hostName, found, err := unstructured.NestedString(restoredInstance.Object, "status", "host", "name"); err != nil || !found || hostName != "server" {
+		t.Fatalf("expected restored status.host.name=server, got %q found=%v err=%v", hostName, found, err)
+	}
+	if _, found, err := unstructured.NestedString(restoredInstance.Object, "status", "bmc", "address"); err != nil || !found {
+		t.Fatalf("expected restored BMC status, found=%v err=%v", found, err)
 	}
 }
 
