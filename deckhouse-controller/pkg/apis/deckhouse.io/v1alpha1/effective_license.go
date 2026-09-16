@@ -110,7 +110,8 @@ type LicenseCompliance struct {
 	// +optional
 	State LicenseComplianceState `json:"state,omitempty"`
 
-	// Reason explains why the state is not Valid, it is empty while the state is Valid.
+	// Reason explains the state. At Valid it is either empty or the informational
+	// LimitsApproaching.
 	// One of Unregistered, Expired, Revoked, LimitsExceeded, ExpiringSoon,
 	// LimitsApproaching, ProjectedOverLimit.
 	// +optional

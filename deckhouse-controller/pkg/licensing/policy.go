@@ -31,9 +31,11 @@ const (
 	StateViolation = "Violation"
 )
 
-// Compliance reasons. They explain a non-Valid state and are published as
-// EffectiveLicense .status.compliance.reason. ReasonExpired and ReasonRevoked
-// are shared with the record level reasons above: same word, same meaning.
+// Compliance reasons. They are published as EffectiveLicense
+// .status.compliance.reason. All of them but ReasonLimitsApproaching explain a
+// non-Valid state; ReasonLimitsApproaching is informational and appears at
+// StateValid. ReasonExpired and ReasonRevoked are shared with the record level
+// reasons above: same word, same meaning.
 const (
 	ReasonUnregistered       = "Unregistered"
 	ReasonLimitsExceeded     = "LimitsExceeded"
@@ -54,14 +56,16 @@ type KeyRecords struct {
 type Thresholds struct {
 	// DefaultGrace applies only to expired records that carry no grace_days.
 	DefaultGrace time.Duration
-	// WarningRatio is the share of the limit at which instant consumption warns.
+	// WarningRatio is the share of the limit at which instant consumption is
+	// reported as approaching it. It is informational: it does not warn.
+	// Consuming the whole paid quota is normal.
 	WarningRatio float64
 	// ExpiringSoon is how long before its expiry an active record warns.
 	ExpiringSoon time.Duration
 }
 
-// DefaultThresholds returns the controller defaults: 14 days of grace, a
-// warning at 90% of the limit and 30 days of expiry notice.
+// DefaultThresholds returns the controller defaults: 14 days of grace, the
+// approaching notice at 90% of the limit and 30 days of expiry notice.
 func DefaultThresholds() Thresholds {
 	return Thresholds{
 		DefaultGrace: 14 * 24 * time.Hour,
@@ -90,8 +94,8 @@ type Reduction struct {
 // Result is the whole computed policy at a point in time.
 type Result struct {
 	State string
-	// Reason names the check that produced a non-Valid State. It is empty while
-	// the state is Valid.
+	// Reason names the check that produced a non-Valid State. At StateValid it is
+	// either empty or the informational ReasonLimitsApproaching.
 	Reason string
 	// Effective maps a metric to its limit; a nil value means unlimited.
 	Effective map[string]*int64
@@ -252,16 +256,11 @@ func state(base, final []RecordStatus, effective map[string]*int64, metrics map[
 		return s, ReasonExpired
 	}
 
+	// Instant overuse. Spending the whole paid quota is what the customer bought,
+	// so only going over it warns.
 	for _, name := range names {
-		limit := effective[name]
-		m := metrics[name]
-		if over(m.Instant, limit) {
-			return StateWarning, ReasonLimitsApproaching
-		}
-		// The ratio check is skipped for a zero limit: everything is at 90% of
-		// zero, and the plain over-limit check above already covers real usage.
-		if limit != nil && *limit > 0 && m.Instant >= th.WarningRatio*float64(*limit) {
-			return StateWarning, ReasonLimitsApproaching
+		if over(metrics[name].Instant, effective[name]) {
+			return StateWarning, ReasonLimitsExceeded
 		}
 	}
 	for _, name := range names {
@@ -272,6 +271,16 @@ func state(base, final []RecordStatus, effective map[string]*int64, metrics map[
 	for _, r := range final {
 		if Active(r, now) && r.ExpireAt != nil && r.ExpireAt.Sub(now) < th.ExpiringSoon {
 			return StateWarning, ReasonExpiringSoon
+		}
+	}
+
+	// Nothing is wrong, but the quota is nearly spent. This is a note on a Valid
+	// state, not a warning: it tells the customer when to start ordering more.
+	// The ratio check is skipped for a zero limit: everything is at 90% of zero.
+	for _, name := range names {
+		if limit := effective[name]; limit != nil && *limit > 0 &&
+			metrics[name].Instant >= th.WarningRatio*float64(*limit) {
+			return StateValid, ReasonLimitsApproaching
 		}
 	}
 	return StateValid, ""
