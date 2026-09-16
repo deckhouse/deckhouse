@@ -49,7 +49,7 @@ spec:
                     - "Unlock"
                   description: |
                     Type of the user operation. Possible values:
-                    
+
                     * `ResetPassword`: Password reset.
                     * `Reset2FA`: Two-factor authentication reset.
                     * `Lock`: User lock.
@@ -58,7 +58,7 @@ spec:
                   type: string
                   description: |
                     Indicates who initiated the operation. Possible values:
- 
+
                     * `admin`: By an administrator.
                     * `system`: Automatically by the system.
                     * `self`: By the user.
@@ -98,7 +98,7 @@ spec:
                   type: string
                   description: |
                     Current phase of the operation. Possible values:
- 
+
                     * `Succeeded`: Operation completed successfully.
                     * `Failed`: Operation failed.
                   enum:
@@ -160,8 +160,8 @@ spec:
                     Name (username) of the target local User resource.
 
                     Used for operations on users that are managed
-                    by DKP via the User CRD (the built-in local connector).
-                    
+                    by DP via the User CRD (the built-in local connector).
+
                     > Only one of the fields can be specified at the same time: `user` or `target`.
                   x-doc-examples: ['jane.doe']
                 target:
@@ -173,7 +173,7 @@ spec:
                     The `Lock` and `Unlock` operations against `target` are performed against the
                     OfflineSessions object that holds the failed-attempt counter and lock state for
                     the corresponding `(connectorID, email)` pair.
-                    
+
                     > Only one of the fields can be specified at the same time: `user` or `target`.
                   required:
                     - connectorID
@@ -200,7 +200,7 @@ spec:
                     - "Unlock"
                   description: |
                     Type of the user operation. Possible values:
-                    
+
                     * `ResetPassword`: Password reset.
                     * `Reset2FA`: Two-factor authentication reset.
                     * `Lock`: User lock.
@@ -209,10 +209,10 @@ spec:
                   type: string
                   description: |
                     Indicates who initiated the operation. Possible values:
- 
-                    * `admin`: By an administrator.
-                    * `system`: Automatically by the system.
-                    * `self`: By the user.
+
+                    * `admin`: By an administrator (e.g. via `d8 iam user` CLI or a manual UserOperation).
+                    * `system`: Automatically by the system (e.g. automatic lockout after exceeding `passwordPolicy.lockout.maxAttempts`).
+                    * `self`: By the user (self-service password reset in the DP authentication interface).
                 resetPassword:
                   type: object
                   description: "Parameters for password reset."
@@ -249,7 +249,7 @@ spec:
                   type: string
                   description: |
                     Current phase of the operation. Possible values:
- 
+
                     * `Succeeded`: Operation was completed successfully.
                     * `Failed`: Operation failed.
                   enum:

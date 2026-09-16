@@ -1,10 +1,10 @@
 ---
 title: Configuring updates
 permalink: en/admin/configuration/update/configuration.html
-description: "Configure update settings for Deckhouse Kubernetes Platform including release channels, update modes, and update policies. Automatic and manual update configuration guide."
+description: "Configure update settings for Deckhouse Platform including release channels, update modes, and update policies. Automatic and manual update configuration guide."
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports a flexible update mechanism,
+Deckhouse Platform (DP) supports a flexible update mechanism,
 allowing you to select [release channels](../../../architecture/updating.html#release-channels) and configure the update mode.
 Release channels help you balance stability with the speed of receiving new features.
 
@@ -13,7 +13,7 @@ and define update windows during which new versions can be installed.
 Together, these features help you avoid updates at inconvenient times and control migration to new releases.
 
 {% alert level="info" %}
-Up-to-date information about DKP versions available on different release channels is available at [releases.deckhouse.io](https://releases.deckhouse.io).
+Up-to-date information about DP versions available on different release channels is available at [releases.deckhouse.io](https://releases.deckhouse.io).
 {% endalert %}
 
 ## Checking the current release channel
@@ -49,7 +49,7 @@ spec:
 
 ## Update modes
 
-DKP supports two update modes that [determine](/modules/deckhouse/configuration.html#parameters-update-mode) how new versions are applied:
+DP supports two update modes that [determine](/modules/deckhouse/configuration.html#parameters-update-mode) how new versions are applied:
 
 - **Automatic mode** — the cluster updates as soon as a new version appears on the [selected release channel](../../../architecture/updating.html#release-channels). Two configuration options are available:
   - `AutoPatch` — only patch version updates within the current minor version are applied;
@@ -66,9 +66,9 @@ If a module has no dedicated update policy ([ModuleUpdatePolicy](/products/kuber
 
 ### Patch versions only within the current minor (AutoPatch)
 
-To keep DKP updates within the current minor version (apply patch versions only), use the `AutoPatch` mode.
+To keep DP updates within the current minor version (apply patch versions only), use the `AutoPatch` mode.
 
-For example, if version `v1.70.1` is installed, DKP can automatically update to `v1.70.2`,
+For example, if version `v1.70.1` is installed, DP can automatically update to `v1.70.2`,
 but will not move to `v1.71.*` without [manual approval](#manual-update-approval).
 
 This is the default value. To set the `AutoPatch` mode explicitly, run the following command:
@@ -78,7 +78,7 @@ d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"
 ```
 
 To approve a minor version update,
-run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP version:
+run the following command, replacing `<DECKHOUSE-VERSION>` with the target DP version:
 
 ```shell
 d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
@@ -86,7 +86,7 @@ d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": tr
 
 ### Automatic updates for all versions (Auto)
 
-In the `Auto` mode, DKP automatically applies both patch and minor versions,
+In the `Auto` mode, DP automatically applies both patch and minor versions,
 taking [update windows](#update-windows) into account if they are configured.
 
 To enable the `Auto` mode, the following command:
@@ -97,7 +97,7 @@ d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"
 
 ### Manual mode (Manual)
 
-In the `Manual` mode, DKP receives information about new versions in the cluster,
+In the `Manual` mode, DP receives information about new versions in the cluster,
 but applying both patch and minor versions requires [manual approval](#manual-update-approval).
 
 To enable the `Manual` mode, the following command:
@@ -135,10 +135,10 @@ spec:
 Automatic update mode is enabled when the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter is specified in the [`deckhouse`](/modules/deckhouse/) module configuration.
 When this condition is met:
 
-1. DKP checks the release channel every minute for new releases.
-1. When a new release appears, DKP downloads it into the cluster and creates a [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) custom resource.
+1. DP checks the release channel every minute for new releases.
+1. When a new release appears, DP downloads it into the cluster and creates a [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) custom resource.
 1. Once the DeckhouseRelease resource appears in the cluster,
-   DKP applies the corresponding update according to the configured update settings
+   DP applies the corresponding update according to the configured update settings
    (by default — automatically, at any time).
 
 To view the list and status of all releases in the cluster, run the following command:
@@ -148,7 +148,7 @@ d8 k get deckhousereleases
 ```
 
 {% alert level="warning" %}
-Starting from DKP 1.70, patch version updates (for example, an update to version `1.70.2` when version `1.70.1` is installed) are applied taking update windows into account. Prior to DKP 1.70, patch version updates are applied without regard to the update mode and windows.
+Starting from DP 1.70, patch version updates (for example, an update to version `1.70.2` when version `1.70.1` is installed) are applied taking update windows into account. Prior to DP 1.70, patch version updates are applied without regard to the update mode and windows.
 {% endalert %}
 
 #### Release pinning
@@ -159,7 +159,7 @@ There are three ways to restrict automatic updates in Deckhouse:
 
 - Enable manual update approval mode.
 
-  In this mode, DKP will receive updates into the cluster,
+  In this mode, DP will receive updates into the cluster,
   but applying patch and minor versions will require [manual approval](#manual-update-approval).
   
   To enable manual update approval mode,
@@ -169,7 +169,7 @@ There are three ways to restrict automatic updates in Deckhouse:
   d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
   ```
 
-  To approve an update, run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP version:
+  To approve an update, run the following command, replacing `<DECKHOUSE-VERSION>` with the target DP version:
 
   ```shell
   d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
@@ -177,12 +177,12 @@ There are three ways to restrict automatic updates in Deckhouse:
 
 - Enable automatic updates for patch versions only.
 
-  In this mode, DKP will receive updates into the cluster,
+  In this mode, DP will receive updates into the cluster,
   but applying minor versions will require [manual approval](#manual-update-approval).
   Patch versions within the current minor version will be applied automatically,
   taking update windows into account if they are configured.
 
-  For example, if you have DKP version `v1.70.1` installed,
+  For example, if you have DP version `v1.70.1` installed,
   after enabling this mode, Deckhouse can automatically update to `v1.70.2`,
   but it will not update to `v1.71.*` without manual approval.
 
@@ -194,16 +194,16 @@ There are three ways to restrict automatic updates in Deckhouse:
   ```
 
   To approve a minor version update,
-  run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP version:
+  run the following command, replacing `<DECKHOUSE-VERSION>` with the target DP version:
 
   ```shell
   d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
 
-- Manually set the target DKP version tag for the `deckhouse` Deployment
+- Manually set the target DP version tag for the `deckhouse` Deployment
   and remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the [`deckhouse`](/modules/deckhouse/) module configuration.
 
-In this case, DKP will remain at the specified version,
+In this case, DP will remain at the specified version,
 and no information about newer available versions (DeckhouseRelease objects) will appear in the cluster.
 
 > **Important**. This mode blocks the installation of patch releases,
@@ -211,7 +211,7 @@ and no information about newer available versions (DeckhouseRelease objects) wil
 > If you need to receive patches within the current minor version, use the [`AutoPatch`](#patch-versions-only-within-the-current-minor-autopatch) mode
 > instead of hard pinning.
 
-Example of pinning version `v1.66.3` for DKP EE
+Example of pinning version `v1.66.3` for DP EE
 and removing the `releaseChannel` parameter from the [`deckhouse`](/modules/deckhouse/) module configuration:
 
 ```shell
@@ -224,9 +224,9 @@ d8 k patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/setting
 
 ### Manual update approval
 
-Manual approval of DKP updates is required in the following cases:
+Manual approval of DP updates is required in the following cases:
 
-- The DKP update confirmation mode is enabled.
+- The DP update confirmation mode is enabled.
 
   This means the [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) parameter of the [`deckhouse`](/modules/deckhouse/) module is set to either
   `Manual` (confirmation required for both patch and minor updates) or
@@ -253,19 +253,19 @@ Manual approval of DKP updates is required in the following cases:
 
 ## Update windows
 
-DKP allows you to define *update windows*, which are specific time intervals during which automatic updates are allowed.
+DP allows you to define *update windows*, which are specific time intervals during which automatic updates are allowed.
 Using update windows ensures that updates won’t be installed at inconvenient times
 or during periods of high cluster load.
 
 ### Applying updates when update windows are configured
 
-- If update windows are configured, DKP installs new versions only during the specified windows.
+- If update windows are configured, DP installs new versions only during the specified windows.
 - If no update windows are configured,
   the update is applied as soon as a new version appears on the configured release channel.
 
 ### Configuring update windows
 
-You can manage DKP update windows in the following ways:
+You can manage DP update windows in the following ways:
 
 - **To control general updates**, use the [`update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows) parameter in the [`deckhouse`](/modules/deckhouse/) module configuration;
 - **To control updates that may lead to short-term downtime of system components**,

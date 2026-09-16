@@ -2,7 +2,7 @@
 title: Metallb module
 permalink: en/architecture/network/metallb.html
 search: metallb, bgp mode, layer 2 mode, load balancer
-description: Architecture of the metallb module in Deckhouse Kubernetes Platform.
+description: Architecture of the metallb module in Deckhouse Platform.
 ---
 
 The `metallb` module implements the LoadBalancer mechanism for services in bare-metal clusters.
@@ -23,7 +23,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`metallb`](/modules/metallb/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagrams.
+The Level 2 C4 architecture of the [`metallb`](/modules/metallb/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagrams.
 
 MetalLB in Layer 2 mode:
 

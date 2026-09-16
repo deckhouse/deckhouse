@@ -1,14 +1,14 @@
 ---
 title: "Module development and debugging"
 permalink: en/architecture/module-development/development/
-description: Tools and approaches for developing and debugging Deckhouse Kubernetes Platform modules, including local testing and troubleshooting.
+description: Tools and approaches for developing and debugging Deckhouse Platform modules, including local testing and troubleshooting.
 ---
 
 When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) resource is used for this purpose.
 
 {% alert level="warning" %}
 The ModulePullOverride resource is intended **for development and debugging environments only**.
-Using it in production clusters is **not recommended*. Support for the resource might be removed in future Deckhouse Kubernetes Platform versions.
+Using it in production clusters is **not recommended*. Support for the resource might be removed in future Deckhouse Platform versions.
 {% endalert %}
 
 {% raw %}
@@ -152,7 +152,7 @@ accessibility:
         - Default
 ```
 
-In this configuration, the module will be available in `ee` (DKP Enterprise Edition)  
+In this configuration, the module will be available in `ee` (DP Enterprise Edition)  
 and can be enabled using the ModuleConfig object, and will be enabled by default in the `Default` bundle.
 
 {% endraw %}
@@ -220,7 +220,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
 
 ### An example
 
-1. Suppose there are two modules, `echo` and `hello-world`, defined in [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). The update policy is set for them, and they are pulled in and installed in DKP:
+1. Suppose there are two modules, `echo` and `hello-world`, defined in [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). The update policy is set for them, and they are pulled in and installed in DP:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -333,7 +333,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
 
 ## Skipping intermediate releases (from-to)
 
-The `from-to` mechanism allows you to skip [step-by-step module updates](../development/#module-auto-update-logic). If the current installed module version (status `Deployed`) falls within the `from-to` range, DKP skips intermediate releases and installs the latest available version within `to`.
+The `from-to` mechanism allows you to skip [step-by-step module updates](../development/#module-auto-update-logic). If the current installed module version (status `Deployed`) falls within the `from-to` range, DP skips intermediate releases and installs the latest available version within `to`.
 
 To enable the mechanism, set transition rules in the module configuration (`module.yaml`). Example:
 
@@ -355,9 +355,9 @@ Conditions for applying `from-to`:
 - If multiple releases match at the same time, the option with the largest `to` is chosen (the rules may reside in different ModuleRelease objects of the same module).
 - If no release meets these conditions, the update proceeds as usual — without skipping intermediate versions.
 
-If a release with [update.versions](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update) appears in the cluster, DKP does not require updating in order — such a release appears “as is” in the list, DKP automatically selects a suitable option and, if necessary, waits for approval. You can immediately approve installation of the latest available version within `to`. After approval, intermediate releases between `from` and `to` get the `Skipped` status after reconciliation (not immediately); for some time between `Superseded` and `Deployed` there may be releases in the `Pending` status.
+If a release with [update.versions](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update) appears in the cluster, DP does not require updating in order — such a release appears “as is” in the list, DP automatically selects a suitable option and, if necessary, waits for approval. You can immediately approve installation of the latest available version within `to`. After approval, intermediate releases between `from` and `to` get the `Skipped` status after reconciliation (not immediately); for some time between `Superseded` and `Deployed` there may be releases in the `Pending` status.
 
-![From-to mechanism logic](../../../images/architecture/module-development/from_to.svg)
+![From-to mechanism logic](../../../images/architecture/module-development/from_to.png)
 
 Check available releases (ModuleRelease) with:
 
@@ -406,7 +406,7 @@ Whether an annotation is required depends on the module’s update policy. More 
 
 **Example 1.** The target release contains the rule, and its version equals `to` — the transition is performed.
 
-In this example, the `from-to` rule is defined in the **target** release, and the `to` value equals the version of that release. The current installed version (`Deployed`) is not lower than `from`, so the transition is possible. As soon as the release appears in the cluster, DKP prepares the update. If the update policy requires approval, mark the release with the annotation. After approval, intermediate releases will be skipped and the target release becomes `Deployed`:
+In this example, the `from-to` rule is defined in the **target** release, and the `to` value equals the version of that release. The current installed version (`Deployed`) is not lower than `from`, so the transition is possible. As soon as the release appears in the cluster, DP prepares the update. If the update policy requires approval, mark the release with the annotation. After approval, intermediate releases will be skipped and the target release becomes `Deployed`:
 
 ```yaml
 # Module version (Deployed): v1.67.23 (≥ 1.67) → the 'from' condition is satisfied.
@@ -488,7 +488,7 @@ update:
 
 ## Module artifacts in the container registry
 
-After a module has been built, its artifacts must be pushed to the container registry at a path that is the *source* path for pulling and running modules in DKP. The path where module artifacts are pushed to the registry is specified in the [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource.
+After a module has been built, its artifacts must be pushed to the container registry at a path that is the *source* path for pulling and running modules in DP. The path where module artifacts are pushed to the registry is specified in the [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource.
 
 Below is an example of the container image hierarchy after pushing the `module-1` and `modules-2` module artifacts into the registry:
 

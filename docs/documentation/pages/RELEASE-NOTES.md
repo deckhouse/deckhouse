@@ -1,7 +1,7 @@
 ---
-title: Release notes for Deckhouse Kubernetes Platform
+title: Release notes for Deckhouse Platform
 permalink: en/release-notes.html
-description: Release notes for Deckhouse Kubernetes Platform
+description: Release notes for Deckhouse Platform
 editionsNotAvailable: [cse]
 ---
 

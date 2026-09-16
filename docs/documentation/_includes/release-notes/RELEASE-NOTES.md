@@ -15,10 +15,10 @@
   Before updating, review the RoleBinding and ClusterRoleBinding objects assigned to users,
   and modify or remove those that should not grant access.
 
-- If the DKP cluster uses custom roles based on the legacy RBACv2 scheme,
+- If the DP cluster uses custom roles based on the legacy RBACv2 scheme,
   the [`D8UserAuthzLegacyRBACv2CustomRoleFound`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#user-authz-d8userauthzlegacyrbacv2customrolefound) alert will fire after the update.
-  Such roles must be migrated to the new scheme before updating to DKP 1.78, otherwise the update will be blocked.
-  The migration procedure is described in the [`user-authz` module FAQ](https://deckhouse.io/modules/user-authz/v1.77/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178).
+  Such roles must be migrated to the new scheme before updating to DP 1.78, otherwise the update will be blocked.
+  The migration procedure is described in the [`user-authz` module FAQ](https://deckhouse.io/modules/user-authz/v1.77/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dp-178).
 
 - If the [`metallb`](https://deckhouse.io/modules/metallb/v1.77/) module configuration is managed through GitOps,
   temporarily disable synchronization from your repository before the update.
@@ -71,7 +71,7 @@
 ### Deckhouse subsystem
 
 - A policy has been added to the [`deckhouse`](https://deckhouse.io/modules/deckhouse/v1.77/) module that prevents non-system users from setting or modifying the `heritage` label.
-  This prevents accidental creation of resources that DKP may recognize as its own.
+  This prevents accidental creation of resources that DP may recognize as its own.
 
 - The reliability of updating clusters that use external modules (ModuleSource) has been improved.
   The update starts only after the modules have been preloaded, preventing their temporary unavailability during the update.
@@ -153,11 +153,11 @@
 
 - Changes in the [`user-authz`](https://deckhouse.io/modules/user-authz/v1.77/) module:
 
-  - The RBACv2 role model aggregation label scheme changes in DKP 1.78.
+  - The RBACv2 role model aggregation label scheme changes in DP 1.78.
     Added the [`D8UserAuthzLegacyRBACv2CustomRoleFound`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#user-authz-d8userauthzlegacyrbacv2customrolefound) alert, which detects custom roles based on the legacy scheme.
-    Such roles must be migrated to the new scheme before updating to DKP 1.78;
+    Such roles must be migrated to the new scheme before updating to DP 1.78;
     otherwise, they will stop working and the update will be blocked.
-    The migration procedure is described in the [module FAQ](https://deckhouse.io/modules/user-authz/v1.77/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178).
+    The migration procedure is described in the [module FAQ](https://deckhouse.io/modules/user-authz/v1.77/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dp-178).
 
   - If the [`enableMultiTenancy`](https://deckhouse.io/modules/user-authz/v1.77/configuration.html#parameters-enablemultitenancy) setting is enabled, user permissions are now determined
     by the combination of ClusterAuthorizationRule, AuthorizationRule, and standard RBAC rules (RoleBinding/ClusterRoleBinding).
@@ -184,8 +184,8 @@
     This prevents incorrect object deletion and the creation of orphan resources.
 
 - Added a mechanism to the `multitenancy-manager` module for [granting cluster-wide resources to projects](https://deckhouse.io/modules/multitenancy-manager/v1.77/usage.html#granting-cluster-scoped-resources-to-projects).
-  DKP administrators can now define which cluster resources are available to each project and specify default values for them.
-  The mechanism can be used by any DKP module to publish its own cluster resources.
+  DP administrators can now define which cluster resources are available to each project and specify default values for them.
+  The mechanism can be used by any DP module to publish its own cluster resources.
 
 - Added the ability to list resources across all accessible namespaces without cluster-wide permissions.
   The `d8 k get <resource> -A --scope=<accessible|projects|system|project:NAME>` command returns only the objects
@@ -245,8 +245,8 @@
     Permanent and Ephemeral nodes are now configured in the same way through InstanceClass and NodeGroup,
     without a separate ProviderClusterConfiguration.
     This simplifies cluster configuration, enables schema versioning and conversion without breaking compatibility,
-    and prepares cloud providers for an independent release cycle outside the DKP core.
-    For details, refer to ["Cluster and Infrastructure"](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/faq.html#subsystem-cluster-infrastructure) in the DKP FAQ.
+    and prepares cloud providers for an independent release cycle outside the DP core.
+    For details, refer to ["Cluster and Infrastructure"](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/faq.html#subsystem-cluster-infrastructure) in the DP FAQ.
 
   - Fixed an issue that could leave LoadBalancer Services in the `Pending` state without creating the parent load balancer.
     Improved conflict handling during ServiceWithHealthchecks updates and load balancer status synchronization.
@@ -339,7 +339,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
 
 ### Deckhouse subsystem
 
-- Added support for deploying a DKP cluster using the [`Proxy`](https://deckhouse.io/modules/deckhouse/v1.76/configuration.html#parameters-registry-proxy) mode for accessing the container registry.
+- Added support for deploying a DP cluster using the [`Proxy`](https://deckhouse.io/modules/deckhouse/v1.76/configuration.html#parameters-registry-proxy) mode for accessing the container registry.
 
 - `Kubectl` on cluster nodes has been replaced with the `d8 k` alias ([Deckhouse CLI utility](https://deckhouse.io/products/kubernetes-platform/documentation/v1.76/cli/d8/)).
 
@@ -403,7 +403,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
     Any integrations using the Authorization Code Flow are unaffected.
 
   - Added SAML 2.0 support via the [DexProvider](https://deckhouse.io/modules/user-authn/v1.76/cr.html#dexprovider-v1-spec-saml) resource.
-    DKP clusters can now be connected to such identity providers as AD FS, Okta, Keycloak, OneLogin, and Shibboleth.
+    DP clusters can now be connected to such identity providers as AD FS, Okta, Keycloak, OneLogin, and Shibboleth.
 
   - Added refresh token support for SAML in Dex.
     This allows DexAuthenticator и kubeconfig-generator to refresh tokens without a manual user login.
@@ -464,7 +464,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
 
 - Changes in the [`cloud-provider-aws`](https://deckhouse.io/modules/cloud-provider-aws/v1.76/) module:
 
-  - Spot node draining logic was moved into DKP, making the spot node handling more unified.
+  - Spot node draining logic was moved into DP, making the spot node handling more unified.
 
   - Fixed handling of regions without `DescribeInstanceTopology`, reducing the number of false IAM errors.
 
@@ -503,7 +503,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
 
   - Added ICMP (ping) support via ExternalIP for LoadBalancer services with MetalLB.
 
-- Added support for [switching between supported CNI plugins](https://deckhouse.io/products/kubernetes-platform/guides/cni-migration.html) in DKP clusters.
+- Added support for [switching between supported CNI plugins](https://deckhouse.io/products/kubernetes-platform/guides/cni-migration.html) in DP clusters.
 
 - In the `node-local-dns` module, added [`disableIPv6`](https://deckhouse.io/modules/node-local-dns/v1.76/configuration.html#parameters-disableipv6) parameter to disable IPv6 DNS resolution.
 

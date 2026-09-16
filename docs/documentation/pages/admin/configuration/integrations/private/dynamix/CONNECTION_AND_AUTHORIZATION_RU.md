@@ -23,7 +23,7 @@ lang: ru
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
 {% endalert %}
 
-Для интеграции Deckhouse Kubernetes Platform (DKP) с Basis Dynamix необходимы:
+Для интеграции Deckhouse Platform (DP) с Basis Dynamix необходимы:
 
 - доступ к API-контроллеру и SSO-контур Basis Dynamix;
 - данные учётной записи (account) и параметры приложения ([`appId`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-provider-appid) и [`appSecret`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-provider-appsecret));
@@ -34,7 +34,7 @@ lang: ru
 
 ## Подготовка cloud-образа
 
-Для развёртывания виртуальных машин DKP использует cloud-образы операционных систем, подготовленные вендорами для работы в виртуальной среде. Эти образы, как правило, включают:
+Для развёртывания виртуальных машин DP использует cloud-образы операционных систем, подготовленные вендорами для работы в виртуальной среде. Эти образы, как правило, включают:
 
 - `cloud-init`;
 - драйверы виртуального оборудования;

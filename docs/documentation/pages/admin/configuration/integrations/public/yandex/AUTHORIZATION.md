@@ -3,7 +3,7 @@ title: Connection and authorization in Yandex Cloud
 permalink: en/admin/integrations/public/yandex/authorization.html
 ---
 
-To allow Deckhouse Kubernetes Platform (DKP) to manage resources in Yandex Cloud, you need to:
+To allow Deckhouse Platform (DP) to manage resources in Yandex Cloud, you need to:
 
 - Create a service account.
 - Assign the required IAM roles to it.
@@ -42,7 +42,7 @@ Make sure all nodes run Linux kernel 5.8 or newer and that security groups allow
 
 ## Creating a service account
 
-To enable DKP to manage Yandex Cloud resources, create a service account and assign it editing permissions.
+To enable DP to manage Yandex Cloud resources, create a service account and assign it editing permissions.
 You can find detailed instructions on service account creation in the [Yandex Cloud documentation](https://yandex.cloud/en/docs/resource-manager/operations/cloud/set-access-bindings).
 
 To create the service account, run the following command:
@@ -66,7 +66,7 @@ Save the `userID` and `folderID` as they will be needed in the following steps.
 
 ## Assigning IAM roles
 
-To allow DKP to work with cloud resources, assign the following roles to the service account:
+To allow DP to work with cloud resources, assign the following roles to the service account:
 
 ```shell
 yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>

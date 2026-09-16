@@ -3,11 +3,11 @@ title: "Internal network configuration"
 permalink: en/admin/configuration/network/internal/configuration.html
 ---
 
-In Deckhouse Kubernetes Platform, networking is configured using CNI plugins.
+In Deckhouse Platform, networking is configured using CNI plugins.
 The recommended option is Cilium, which suits most use cases.
 Other supported CNIs include Flannel and Simple Bridge, typically used with cloud providers.
 
-Network parameters are specified during the deployment of the DKP cluster:
+Network parameters are specified during the deployment of the DP cluster:
 
 - Address ranges for Pods and Services are defined.
 - The network operation mode for Cilium is selected (this can be changed later).
@@ -63,7 +63,7 @@ Otherwise, Pod availability issues may occur.
 
 ## Services
 
-Services in DKP are implemented either using the selected CNI plugin or through `kube-proxy`.
+Services in DP are implemented either using the selected CNI plugin or through `kube-proxy`.
 
 They provide access to groups of Pods performing the same function and balance traffic between them.
 Each Service object defines:
@@ -81,9 +81,9 @@ Each Service object defines:
   In that case, the service will not be assigned an IP address from the service network, and it will resolve to the Pod IPs.
   Load balancing will be done using DNS (round-robin).
 - **NodePort**: Opens the specified port on each cluster node and forwards incoming traffic to the Pods.
-  For security reasons, DKP only listens on the node's internal IP.
+  For security reasons, DP only listens on the node's internal IP.
   This behavior can be overridden by adding the annotation `node.deckhouse.io/nodeport-bind-internal-ip: "false"` to a node group.
-- **LoadBalancer**: Created in the cloud provider where DKP is deployed and accepts external traffic.
+- **LoadBalancer**: Created in the cloud provider where DP is deployed and accepts external traffic.
   In bare-metal clusters, similar functionality is implemented using the [`metalLb`](/modules/metallb/configuration.html) module.
 - **ExternalName**: A DNS record for accessing the service (acting as a CNAME).
 

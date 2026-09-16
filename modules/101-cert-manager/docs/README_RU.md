@@ -1,6 +1,6 @@
 ---
 title: "Модуль cert-manager"
-description: "Управление сертификатами в кластере Deckhouse Kubernetes Platform."
+description: "Управление сертификатами в кластере Deckhouse Platform."
 ---
 
 {%- assign target_item = site.data.modules.metadata.modules[page['module-kebab-name']]['oss'] | where: "id", "cert-manager" | first -%}

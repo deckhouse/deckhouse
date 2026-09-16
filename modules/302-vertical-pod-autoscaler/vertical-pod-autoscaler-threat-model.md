@@ -392,7 +392,7 @@
 | **RBAC** | Управление доступом на основе ролей (`Role-Based Access Control`) |
 | **CA** | Удостоверяющий центр (`Certificate Authority`) |
 | **CGO** | Механизм вызова кода на C из Go и линковки с C-библиотеками (в сборке используется `CGO_ENABLED=0`) |
-| **DKP** | Deckhouse Kubernetes Platform |
+| **DKP** | Deckhouse Platform |
 | **ПО** | Программное обеспечение |
 
 ---

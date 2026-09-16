@@ -1,6 +1,6 @@
 {
-    "name": "Deckhouse Kubernetes Platform Documentation",
-    "short_name": "DKP Docs",
+    "name": "Deckhouse Platform Documentation",
+    "short_name": "DP Docs",
     "icons": [
         {
             "src": "/images/android-chrome-192x192.png",

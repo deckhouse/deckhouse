@@ -780,7 +780,7 @@ Additional node configuration steps are set via the [NodeGroupConfiguration](cr.
 When adding a node to the cluster, the labels specified in the files will be automatically affixed to the node.
 
 {% alert level="warning" %}
-Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
+Please note that it is not possible to add labels used in DP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
 {% endalert %}
 
 ## How to deploy custom containerd configuration?
@@ -793,7 +793,7 @@ The example of `NodeGroupConfiguration` uses functions of the script [032_config
 Adding custom settings causes a restart of the containerd service.
 {% endalert %}
 
-Bashible on nodes merges main DKP containerd configuration with the following configuration files:
+Bashible on nodes merges main DP containerd configuration with the following configuration files:
 
 - `/etc/containerd/conf.d/*.toml`: If containerd v1 is used as the CRI on the cluster nodes.
 - `/etc/containerd/conf2.d/*.toml`: If containerd v2 is used as the CRI on the cluster nodes.
@@ -1569,11 +1569,11 @@ Node reboots may be required after configuration changes. For example, after cha
 ## How to enable a delay before a node shutdown or restart while critical pods are running on it?
 
 {% alert level="info" %}
-Available in the **EE** edition.
+Available in the EE and Ultimate editions.
 {% endalert %}
 
 {% alert level="warning" %}
-To decide whether to block a node shutdown, DKP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
+To decide whether to block a node shutdown, DP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
 {% endalert %}
 
 To enable the mechanism that delays a pod's restart or shutdown, add the label `pod.deckhouse.io/inhibit-node-shutdown` to the Pod (for a Deployment, specify the label in the pod template).
@@ -1660,7 +1660,7 @@ If you observe a scenario where a node with `fencing` enabled returns to the clu
 ## How do I work with GPU nodes?
 
 {% alert level="info" %}
-GPU-node management is available in DKP Enterprise Edition only.
+GPU-node management is available in DP Enterprise Edition and DP Ultimate.
 {% endalert %}
 
 ### Step-by-step procedure for adding a GPU node to the cluster
@@ -1923,7 +1923,7 @@ To add a GPU node to the cluster, perform the following steps:
 
 ## How to monitor GPUs?
 
-Deckhouse Kubernetes Platform automatically deploys **DCGM Exporter**; GPU metrics are scraped by Prometheus and available in Grafana.
+Deckhouse Platform automatically deploys **DCGM Exporter**; GPU metrics are scraped by Prometheus and available in Grafana.
 
 ## Which GPU modes are supported?
 
@@ -2015,4 +2015,4 @@ A separate `custom-<ng>-<hash>` configuration is created for each group of nodes
 
 ## Are AMD or Intel GPUs supported?
 
-At this time, Deckhouse Kubernetes Platform automatically configures **NVIDIA GPUs only**. Support for **AMD (ROCm)** and **Intel GPUs** is being worked on and is planned for future releases.
+At this time, Deckhouse Platform automatically configures **NVIDIA GPUs only**. Support for **AMD (ROCm)** and **Intel GPUs** is being worked on and is planned for future releases.

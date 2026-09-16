@@ -98,7 +98,7 @@ spec:
       memory: 500Mi
 ```
 
-Указанные значения используются как общий бюджет запросов для компонентов control plane на каждом master-узле. Deckhouse Kubernetes Platform (DKP) распределяет этот бюджет между статическими подами control plane при формировании их манифестов.
+Указанные значения используются как общий бюджет запросов для компонентов control plane на каждом master-узле. Deckhouse Platform (DP) распределяет этот бюджет между статическими подами control plane при формировании их манифестов.
 
 {% alert level="info" %}
 Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например в GKE, AKS или EKS.
@@ -106,7 +106,7 @@ spec:
 
 ## Управление версиями
 
-Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии DKP. Управлять обновлением patch-версий нельзя.
+Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии DP. Управлять обновлением patch-версий нельзя.
 
 Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
@@ -153,7 +153,7 @@ spec:
 
 Если требуется журналировать операции с API или отдебажить неожиданное поведение, для этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/). Его можно настроить путем создания правил [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy), а результатом работы аудита будет лог-файл `/var/log/kube-audit/audit.log` со всеми интересующими операциями.
 
-В установках DKP по умолчанию созданы базовые политики, которые отвечают за логирование событий, которые:
+В установках DP по умолчанию созданы базовые политики, которые отвечают за логирование событий, которые:
 
 - связаны с операциями создания, удаления и изменения ресурсов;
 - совершаются от имен сервисных аккаунтов из системных Namespace `kube-system`, `d8-*`;
@@ -179,7 +179,7 @@ spec:
 
 ## Admission-плагины, включаемые по умолчанию
 
-При установке Deckhouse Kubernetes Platform помимо стандартных admission-плагинов, включаемых Kubernetes, модуль включает несколько дополнительных. Подробнее об admission-плагинах — в [документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook).
+При установке Deckhouse Platform помимо стандартных admission-плагинов, включаемых Kubernetes, модуль включает несколько дополнительных. Подробнее об admission-плагинах — в [документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook).
 
 ### Стандартные admission-плагины, включаемые Kubernetes
 

@@ -1,15 +1,15 @@
 ---
 title: "Настройка сборки логов приложений"
-description: "Настройка сбора и доставки логов в Deckhouse Kubernetes Platform. Работа с PodLoggingConfig, фильтрация логов, отправка в Loki и Elasticsearch, обогащение метаданными Kubernetes."
+description: "Настройка сбора и доставки логов в Deckhouse Platform. Работа с PodLoggingConfig, фильтрация логов, отправка в Loki и Elasticsearch, обогащение метаданными Kubernetes."
 permalink: ru/user/logging/
 lang: ru
 search: logging configuration, log collection, log filtering, log shipping, centralized logging, настройка логирования, сбор логов, фильтрация логов, отправка логов, централизованное логирование
 ---
 
-В Deckhouse Kubernetes Platform (DKP) предусмотрен сбор и доставка логов из узлов и подов кластера
+В Deckhouse Platform (DP) предусмотрен сбор и доставка логов из узлов и подов кластера
 во внутреннюю или внешние системы хранения.
 
-DKP позволяет:
+DP позволяет:
 
 - собирать логи из всех или отдельных подов и пространств имён;
 - фильтровать логи по лейблам, содержимому сообщений и другим признакам;
@@ -20,11 +20,11 @@ DKP позволяет:
 
 Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](../../architecture/observability/logging.html).
 
-Пользователям DKP доступна настройка параметров сбора логов из приложения с помощью ресурса [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig), который описывает источник логов в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга.
+Пользователям DP доступна настройка параметров сбора логов из приложения с помощью ресурса [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig), который описывает источник логов в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга.
 
 ## Настройка сбора логов из приложения
 
-1. Уточните у администратора DKP, настроен ли сбор логов и хранилище в вашем кластере.
+1. Уточните у администратора DP, настроен ли сбор логов и хранилище в вашем кластере.
    Также попросите сообщить вам название хранилища, которое вы укажете в параметре [`clusterDestinationRefs`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-clusterdestinationrefs).
 1. Создайте ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) в своём пространстве имён.
 

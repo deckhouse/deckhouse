@@ -1,10 +1,10 @@
 ---
 title: "Cluster admin access model"
 permalink: en/admin/configuration/access/authorization/cluster-admin-access-model.html
-description: "Admin access model for the Deckhouse Kubernetes Platform cluster"
+description: "Admin access model for the Deckhouse Platform cluster"
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports the presence of multiple kubeconfig files on master nodes (this feature is implemented by the [`control-plane-manager`](/modules/control-plane-manager/) module). Understanding their purpose is important for secure cluster administration.
+Deckhouse Platform (DP) supports the presence of multiple kubeconfig files on master nodes (this feature is implemented by the [`control-plane-manager`](/modules/control-plane-manager/) module). Understanding their purpose is important for secure cluster administration.
 
 ## Kubeconfig files on master nodes
 
@@ -21,7 +21,7 @@ The following kubeconfig files are located on the master nodes:
 
 Starting from Kubernetes 1.29, kubeadm generates `admin.conf` with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the `kubeadm:cluster-admins` ClusterRoleBinding(s).
 
-If the [`user-authz`](/modules/user-authz/) module is **disabled**, DKP binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
+If the [`user-authz`](/modules/user-authz/) module is **disabled**, DP binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
 
 If `user-authz`is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second ClusterRoleBinding adds ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the high-level role, e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
 

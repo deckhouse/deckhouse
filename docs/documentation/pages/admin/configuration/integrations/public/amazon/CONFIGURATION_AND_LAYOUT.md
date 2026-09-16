@@ -123,7 +123,7 @@ tags:
 
 ## Defining AWSClusterConfiguration
 
-The [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) resource describes the cluster settings and is used by Deckhouse Kubernetes Platform (DKP) to:
+The [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) resource describes the cluster settings and is used by Deckhouse Platform (DP) to:
 
 - Define the layout and network CIDRs.
 - Configure master and worker nodes.
@@ -171,13 +171,13 @@ vpcNetworkCIDR: 10.241.0.0/16
 ## Security groups
 
 AWS security groups are used to manage incoming and outgoing traffic to virtual machines.
-In DKP, they can be used to:
+In DP, they can be used to:
 
 - Allow access to cluster nodes from other subnets.
 - Open access to applications running on static nodes.
 - Restrict or allow access to external resources based on security policies.
 
-When the [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, DKP creates the following default security groups when a cluster is created:
+When the [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, DP creates the following default security groups when a cluster is created:
 
 - `<CLUSTER_PREFIX>-node`, assigned to cluster nodes:
   - Allows any outgoing traffic to `0.0.0.0/0`.
@@ -283,7 +283,7 @@ The following scenarios are supported:
 ## Using an existing VPC (existingVPCID)
 
 The [`existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) parameter in the AWSClusterConfiguration resource lets you use an existing VPC
-for DKP cluster deployment instead of automatically creating a new one.
+for DP cluster deployment instead of automatically creating a new one.
 
 This may be useful when:
 
@@ -293,7 +293,7 @@ This may be useful when:
 
 {% alert level="warning" %}
 If the existing VPC already has an Internet Gateway, the base infrastructure bootstrap will fail.
-Reusing an existing Internet Gateway is not supported in the current DKP version.
+Reusing an existing Internet Gateway is not supported in the current DP version.
 {% endalert %}
 
 Compatibility with other parameters:

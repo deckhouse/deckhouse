@@ -5,7 +5,7 @@ search: "release.deckhouse.io/approved"
 
 ## Setting up the update mode
 
-You can manage DKP updates in the following ways:
+You can manage DP updates in the following ways:
 
 - Using the [`settings.update`](configuration.html#parameters-update) parameter of the ModuleConfig `deckhouse` resource.
 - Using the [`disruptions`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions) parameters section of the NodeGroup resource.
@@ -121,7 +121,7 @@ After a new minor Deckhouse version appears on the selected release channel, but
 The [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows you to postpone the update installation for the specified period, providing time to react to the notification while respecting update windows. If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same duration, which may lead to the update being deferred indefinitely.
 
 {% alert level="warning" %}
-If your webhook returns any status code out of 2xx range, DKP retries sending the notification up to five times with exponential backoff. If all attempts fail, the release is blocked until the webhook becomes available again.
+If your webhook returns any status code out of 2xx range, DP retries sending the notification up to five times with exponential backoff. If all attempts fail, the release is blocked until the webhook becomes available again.
 {% endalert %}
 
 For easier error handling and debugging, when returning error codes the webhook should return a JSON response with the following structure:
@@ -129,7 +129,7 @@ For easier error handling and debugging, when returning error codes the webhook 
 - `code` — optional internal error code for programmatic handling;
 - `message` — a human-readable description of what went wrong.
 
-If the webhook returns a successful HTTP status (2xx), DKP treats the notification as successful regardless of the response body.
+If the webhook returns a successful HTTP status (2xx), DP treats the notification as successful regardless of the response body.
 
 Example:
 
@@ -230,7 +230,7 @@ func main() {
 
 ## Reserving the hostnames of the platform web interfaces
 
-DKP publishes its own web interfaces under hostnames rendered from the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter: the API, the web interface, Grafana, Dex, the kubeconfig generator and others.
+DP publishes its own web interfaces under hostnames rendered from the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter: the API, the web interface, Grafana, Dex, the kubeconfig generator and others.
 Those hostnames are reserved cluster-wide.
 An Ingress, HTTPRoute, GRPCRoute, TLSRoute, ListenerSet or Gateway resource created outside a namespace labeled `heritage: deckhouse` cannot claim such a name, and such a request is rejected with a message naming the hostname:
 
@@ -247,13 +247,13 @@ An object that already claims a reserved hostname keeps serving traffic until it
 The reserved set is controlled by the `settings.reservedPublicHosts.mode` parameter of the ModuleConfig `deckhouse`:
 
 - `Template` (by default): Every hostname the template can render are reserved.
-- `List`: Only the hostnames of the services DKP knows it publishes.
+- `List`: Only the hostnames of the services DP knows it publishes.
 
 For details on each reservation method, refer to the [parameter description](configuration.html#parameters-reservedpublichosts-mode).
 
 ### Excluding a name from reservation
 
-Under `Template` mode, the reservation covers not only the hostnames used by DKP but also others matching the template. A workload that requires such a hostname can be excluded from reservation in one of the following ways:
+Under `Template` mode, the reservation covers not only the hostnames used by DP but also others matching the template. A workload that requires such a hostname can be excluded from reservation in one of the following ways:
 
 - Free a single hostname with the [`settings.reservedPublicHosts.excludedServices`](configuration.html#parameters-reservedpublichosts-excludedservices) parameter.
 
@@ -293,7 +293,7 @@ To allow a workload to use a wildcard name (such as `*.example.com`), disable th
 
 ### Excluding the shared Gateway
 
-The Gateway to which DKP module ListenerSet resources are attached is automatically excluded from reservation, regardless of the hostnames specified in its listeners.
+The Gateway to which DP module ListenerSet resources are attached is automatically excluded from reservation, regardless of the hostnames specified in its listeners.
 
 The following Gateway is considered the shared Gateway:
 
@@ -303,7 +303,7 @@ The following Gateway is considered the shared Gateway:
 The exclusion applies by name and namespace and only to the Gateway resource. It does not apply to other resources using the same hostnames, such as Ingress, HTTPRoute, or another Gateway.
 
 This exclusion is necessary because such a Gateway typically has a listener with a wildcard hostname and wildcard certificate and is often located in a dedicated namespace without the `heritage: deckhouse` label.
-Without the exclusion, the Gateway could not be modified after hostname reservation is enabled, even though the attached DKP routes continue to depend on it.
+Without the exclusion, the Gateway could not be modified after hostname reservation is enabled, even though the attached DP routes continue to depend on it.
 
 Any other Gateway with a `*.example.com` listener is rejected, even if that hostname was already in use when reservation was enabled.
 To use such a Gateway, add the `security.deckhouse.io/reserved-hosts-bypass: "true"` label to its namespace or enable `List` mode.
@@ -322,10 +322,10 @@ If an application that used a hostname allowed this way is removed and the hostn
 
 Before being stored, hostnames are converted to lowercase and any trailing dot is removed. Invalid values, such as a URL instead of a hostname, are ignored. If a resource uses the corresponding reserved hostname, its next modification will be rejected.
 
-Wildcard hostnames, such as `*.example.com`, are not added to `grandfatheredHosts`. Otherwise, an application could use any hostname matching the template, including hostnames of services that DKP may publish in the future.
+Wildcard hostnames, such as `*.example.com`, are not added to `grandfatheredHosts`. Otherwise, an application could use any hostname matching the template, including hostnames of services that DP may publish in the future.
 To allow an application to use a wildcard hostname in the platform domain, add the `security.deckhouse.io/reserved-hosts-bypass: "true"` label to its namespace or enable `List` mode.
 
-This restriction does not apply to the Gateway to which DKP is attached. This Gateway is automatically excluded from the check.
+This restriction does not apply to the Gateway to which DP is attached. This Gateway is automatically excluded from the check.
 
 Switching from `Template` mode to `List` mode and back does not regenerate `grandfatheredHosts`. Therefore, hostnames that applications start using while `List` mode is enabled are not added to the list of allowed hostnames after switching back to `Template` mode. When the corresponding resources are modified, these hostnames are checked according to the standard reservation rules.
 
@@ -349,8 +349,8 @@ The ConfigMap contains the following keys:
 | `allowedHosts` | Hostnames excluded from matching against `hostPattern`: hostnames from `excludedServices` and `grandfatheredHosts` |
 | `excludedHosts` | Hostnames excluded from reservation using `excludedServices` |
 | `grandfatheredHosts` | Hostnames that were already used by applications when reservation was enabled and were automatically added to the list of allowed hostnames |
-| `sharedGateway` | Gateway to which DKP is attached, in the `<NAMESPACE>/<NAME>` format. The value is empty if no such Gateway is configured or detected |
-| `platformHosts` | Hostnames of services published by DKP. Used as a reference in both reservation modes |
+| `sharedGateway` | Gateway to which DP is attached, in the `<NAMESPACE>/<NAME>` format. The value is empty if no such Gateway is configured or detected |
+| `platformHosts` | Hostnames of services published by DP. Used as a reference in both reservation modes |
 | `unknownExcludedServices` | Names from `excludedServices` that are not published by any module. A value in this key most likely indicates a typo in the service name |
 
 ## Collect debug info

@@ -1,7 +1,7 @@
 ---
 title: "How to configure?"
 permalink: en/admin/configuration/
-description: "Learn how to configure Deckhouse Kubernetes Platform using global settings, module configurations, and custom resources."
+description: "Learn how to configure Deckhouse Platform using global settings, module configurations, and custom resources."
 ---
 
 ## Deckhouse configuration
@@ -82,7 +82,7 @@ Changes are applied automatically once the resource configuration is saved.
 ### Modifying cluster configuration
 
 {% alert level="warning" %}
-To apply changes related to node configuration, you must run the `dhctl converge` command using the DKP installer.  
+To apply changes related to node configuration, you must run the `dhctl converge` command using the DP installer.  
 This command synchronizes the actual node state with the specified configuration.
 {% endalert %}
 
@@ -94,7 +94,7 @@ To modify these parameters, run the following command:
 d8 system edit cluster-configuration
 ```
 
-After saving the changes, DKP will automatically reconcile the cluster state with the new configuration.
+After saving the changes, DP will automatically reconcile the cluster state with the new configuration.
 Depending on the cluster size, this process may take some time.
 
 #### Modifying protected parameters
@@ -126,7 +126,7 @@ Even with the protection mechanism bypassed, there is **no guarantee** that the 
 
 ##### Modifying protected parameters using dhctl
 
-Use the `dhctl` tool from the DKP installer container with the `--yes-i-am-sane-and-i-understand-what-i-am-doing` flag.
+Use the `dhctl` tool from the DP installer container with the `--yes-i-am-sane-and-i-understand-what-i-am-doing` flag.
 
 It will automatically:
 
@@ -136,14 +136,14 @@ It will automatically:
 
  To change protected settings using `dhctl`, follow these steps:
 
-1. Get the current DKP version and edition from your cluster. To do this, run the DKP installer container of the appropriate edition and version **on your local machine**:
+1. Get the current DP version and edition from your cluster. To do this, run the DP installer container of the appropriate edition and version **on your local machine**:
 
    ```shell
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
    ```
 
-1. Run the DKP installer container (adjust the registry address if needed):
+1. Run the DP installer container (adjust the registry address if needed):
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
@@ -220,7 +220,7 @@ If you forget to remove the `deckhouse.io/allow-unsafe` annotation, this protect
 
 ### Viewing current configuration
 
-DKP is managed through global settings, module configurations, and various custom resources.
+DP is managed through global settings, module configurations, and various custom resources.
 
 1. To view global settings, run:
 
@@ -306,7 +306,7 @@ user-authn   false     1         12h
 Depending on the [bundle used](/modules/deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
 {% alert level="warning" %}
-The table below describes module bundles only for built-in modules of Deckhouse Kubernetes Platform.  
+The table below describes module bundles only for built-in modules of Deckhouse Platform.  
 Modules from sources are not included in this table.
 {% endalert %}
 
@@ -335,10 +335,10 @@ Modules from sources are not included in this table.
 {% alert level="warning" %}
 **Note** that several basic modules are not included in the `Minimal` set of modules (for example, the CNI module).
 
-Deckhouse Kubernetes Platform with the `Minimal` module set and no basic modules included will only be able to operate in an already deployed cluster.
+Deckhouse Platform with the `Minimal` module set and no basic modules included will only be able to operate in an already deployed cluster.
 {% endalert %}
 
-To install DKP with the `Minimal` module set, enable at least the following modules by specifying them in the installer configuration file:
+To install DP with the `Minimal` module set, enable at least the following modules by specifying them in the installer configuration file:
 
 * cloud provider module (for example, [`cloud-provider-aws`](/modules/cloud-provider-aws/) for AWS), in a case of deploying a cloud cluster;
 * [`cni-cilium`](/modules/cni-cilium/) or another CNI control module (if necessary);
