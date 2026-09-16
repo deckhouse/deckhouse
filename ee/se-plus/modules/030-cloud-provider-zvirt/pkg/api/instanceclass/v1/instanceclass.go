@@ -174,6 +174,12 @@ func (c *ZvirtInstanceClass) GetEtcdDisk() any {
 	return c.Spec.EtcdDiskSizeGb
 }
 
+// EtcdDiskFieldName reports the field zVirt declares the etcd disk in, so the shared rules point
+// the operator at etcdDiskSizeGb rather than at the etcdDisk other providers use.
+func (c *ZvirtInstanceClass) EtcdDiskFieldName() string {
+	return "etcdDiskSizeGb"
+}
+
 // GetNodeGroupConsumers returns names of NodeGroups that use the class.
 func (c *ZvirtInstanceClass) GetNodeGroupConsumers() []string {
 	if c == nil {
