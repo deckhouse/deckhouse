@@ -92,12 +92,12 @@ var DefaultImagesDigests = map[string]interface{}{
 		"huaweicloudCsiDriver":   "imageHash-cloudProviderHuaweicloud-huaweicloudCsiDriver",
 		"terraformManager":       "imageHash-cloudProviderHuaweicloud-terraformManager",
 	},
-	"cloudProviderMetal3": map[string]interface{}{
-		"baremetalOperator":        "imageHash-cloudProviderMetal3-baremetalOperator",
-		"capm3ControllerManager":   "imageHash-cloudProviderMetal3-capm3ControllerManager",
-		"ironic":                   "imageHash-cloudProviderMetal3-ironic",
-		"ironicStandaloneOperator": "imageHash-cloudProviderMetal3-ironicStandaloneOperator",
-		"baremetalInstanceManager": "imageHash-cloudProviderMetal3-baremetalInstanceManager",
+	"cloudProviderBaremetal": map[string]interface{}{
+		"baremetalOperator":        "imageHash-cloudProviderBaremetal-baremetalOperator",
+		"capm3ControllerManager":   "imageHash-cloudProviderBaremetal-capm3ControllerManager",
+		"ironic":                   "imageHash-cloudProviderBaremetal-ironic",
+		"ironicStandaloneOperator": "imageHash-cloudProviderBaremetal-ironicStandaloneOperator",
+		"baremetalInstanceManager": "imageHash-cloudProviderBaremetal-baremetalInstanceManager",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
 		"capoControllerManager":     "imageHash-cloudProviderOpenstack-capoControllerManager",

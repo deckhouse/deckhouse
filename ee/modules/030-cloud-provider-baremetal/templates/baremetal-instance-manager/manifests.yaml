@@ -1,0 +1,110 @@
+{{- $bareMetal := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderBaremetal -}}
+{{- if $bareMetal }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: baremetal-instance-manager
+  namespace: d8-cloud-provider-baremetal
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: baremetal-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - baremetalinstances
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - baremetalinstances/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - baremetalinstances/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: baremetal-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: baremetal-instance-manager
+subjects:
+- kind: ServiceAccount
+  name: baremetal-instance-manager
+  namespace: d8-cloud-provider-baremetal
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: baremetal-instance-manager
+  namespace: d8-cloud-provider-baremetal
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: baremetal-instance-manager
+  template:
+    metadata:
+      labels:
+        app: baremetal-instance-manager
+    spec:
+      serviceAccountName: baremetal-instance-manager
+      containers:
+      - name: manager
+        image: {{ include "helm_lib_module_image" (list . "baremetalInstanceManager") }}
+        args:
+        - --target-namespace=d8-cloud-instance-manager
+        - --bmc-probe-timeout={{ dig "bmcProbeTimeoutSeconds" 15 $bareMetal }}s
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+{{- end }}
