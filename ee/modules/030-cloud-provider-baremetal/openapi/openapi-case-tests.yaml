@@ -32,12 +32,6 @@ positive:
                 key: ca.crt
 negative:
   configValues:
-  - internal:
-      ramdiskImage:
-        direct:
-          architecture: x86_64
-          kernelURL: https://example.com/ironic-python-agent.kernel
-          initramfsURL: https://example.com/ironic-python-agent.initramfs
   - nodes:
       parameters:
         ironic:

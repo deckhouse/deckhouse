@@ -260,10 +260,6 @@ properties:
             properties:
               architecture:
                 type: string
-                description: CPU architecture of the ramdisk. This is a closed set of supported values.
-                enum:
-                - x86_64
-                - aarch64
               kernelURL:
                 type: string
               initramfsURL:

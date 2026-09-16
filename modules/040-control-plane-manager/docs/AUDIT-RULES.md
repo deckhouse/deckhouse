@@ -402,11 +402,11 @@ namespaces:
   - d8-cloud-instance-manager
   - d8-cloud-provider-aws
   - d8-cloud-provider-azure
+  - d8-cloud-provider-baremetal
   - d8-cloud-provider-dvp
   - d8-cloud-provider-dynamix
   - d8-cloud-provider-gcp
   - d8-cloud-provider-huaweicloud
-  - d8-cloud-provider-baremetal
   - d8-cloud-provider-openstack
   - d8-cloud-provider-vcd
   - d8-cloud-provider-vsphere
@@ -874,11 +874,11 @@ rules:
       - d8-cloud-instance-manager
       - d8-cloud-provider-aws
       - d8-cloud-provider-azure
+      - d8-cloud-provider-baremetal
       - d8-cloud-provider-dvp
       - d8-cloud-provider-dynamix
       - d8-cloud-provider-gcp
       - d8-cloud-provider-huaweicloud
-      - d8-cloud-provider-baremetal
       - d8-cloud-provider-openstack
       - d8-cloud-provider-vcd
       - d8-cloud-provider-vsphere

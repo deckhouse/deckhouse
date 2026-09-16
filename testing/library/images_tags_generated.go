@@ -55,6 +55,13 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
 		"terraformManager":          "imageHash-cloudProviderAzure-terraformManager",
 	},
+	"cloudProviderBaremetal": map[string]interface{}{
+		"baremetalInstanceManager": "imageHash-cloudProviderBaremetal-baremetalInstanceManager",
+		"baremetalOperator":        "imageHash-cloudProviderBaremetal-baremetalOperator",
+		"capm3ControllerManager":   "imageHash-cloudProviderBaremetal-capm3ControllerManager",
+		"ironic":                   "imageHash-cloudProviderBaremetal-ironic",
+		"ironicStandaloneOperator": "imageHash-cloudProviderBaremetal-ironicStandaloneOperator",
+	},
 	"cloudProviderDvp": map[string]interface{}{
 		"capdvpControllerManager": "imageHash-cloudProviderDvp-capdvpControllerManager",
 		"cloudControllerManager":  "imageHash-cloudProviderDvp-cloudControllerManager",
@@ -91,13 +98,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscoverer":    "imageHash-cloudProviderHuaweicloud-cloudDataDiscoverer",
 		"huaweicloudCsiDriver":   "imageHash-cloudProviderHuaweicloud-huaweicloudCsiDriver",
 		"terraformManager":       "imageHash-cloudProviderHuaweicloud-terraformManager",
-	},
-	"cloudProviderBaremetal": map[string]interface{}{
-		"baremetalOperator":        "imageHash-cloudProviderBaremetal-baremetalOperator",
-		"capm3ControllerManager":   "imageHash-cloudProviderBaremetal-capm3ControllerManager",
-		"ironic":                   "imageHash-cloudProviderBaremetal-ironic",
-		"ironicStandaloneOperator": "imageHash-cloudProviderBaremetal-ironicStandaloneOperator",
-		"baremetalInstanceManager": "imageHash-cloudProviderBaremetal-baremetalInstanceManager",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
 		"capoControllerManager":     "imageHash-cloudProviderOpenstack-capoControllerManager",
