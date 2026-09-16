@@ -82,7 +82,7 @@ apiVersion: v1
 type: "Application"
 name: redis
 descriptions:
-  ru: "Redis — база данных в оперативной памяти"
+  ru: "<RU_DESCRIPTION>"
   en: "Redis — in-memory database"
 # Injected automatically at build time.
 version: "v1.0.1"

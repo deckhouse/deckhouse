@@ -1,4 +1,4 @@
-2885
+2889
 1GB
 2GB
 5XX
@@ -50,6 +50,7 @@ Authy
 AutoPatch
 Autoloading
 AutoplaceTarget
+AvailableClusterResource
 Avi
 AzureClusterConfiguration
 AzureInstanceClass
@@ -347,6 +348,7 @@ GrafanaAlertsChannel
 GrafanaCloud
 GrafanaDashboardDefinition
 Grafanas
+GrantableClusterResourceDefinition
 GraphQL
 Graylog
 GuestInfo
@@ -701,6 +703,11 @@ RefreshToken
 RegExp
 Regex
 RegionOne
+RegistryConfig
+RegistryNode
+RegistryNodes
+RegistryStorage
+RegistryUpstream
 Rego
 RemoveDuplicates
 RemovePodsHavingTooManyRestarts
@@ -773,6 +780,7 @@ SecurityGroups
 SecurityPolicy
 SecurityPolicyException
 Selectel
+SemVer
 Sep
 ServiceAccount
 ServiceAccountJSON
@@ -1608,14 +1616,9 @@ regex
 regexes
 regexp
 regionTagCategory
-RegistryConfig
 registryDockerCfg
 registryImagesRepo
-RegistryNode
-RegistryNodes
 registrysecret
-RegistryStorage
-RegistryUpstream
 reindex
 releaseChannel
 repo
@@ -2421,6 +2424,7 @@ zoneTagCategory
 отрисовки
 офлайн
 п
+пайплайн
 пайплайна
 пайплайнами
 пайплайнов
