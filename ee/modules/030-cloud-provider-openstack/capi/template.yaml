@@ -116,8 +116,21 @@ template: |
         {{- range $k, $v := $tags }}
          - {{ (printf "%s=%s" $k $v) | quote }}
         {{- end }}
+        {{- /*
+          spec.preemptible is a Selectel-only mechanism: on other OpenStack providers Nova will
+          attach the tag to the VM but ignore it, so setting the flag would look like a request for
+          preemption that never happens. The template gates emission on connection.authURL and,
+          when the tag is dropped, the OpenStackPreemptibleUnsupportedProvider alert tells the
+          operator why (surfacing the same request that .status.error used to carry in earlier PRs).
+        */}}
         {{- if get .instanceClass "preemptible" }}
+          {{- $authURL := "" }}
+          {{- if hasKey .provider "connection" }}
+            {{- $authURL = get .provider.connection "authURL" | default "" | lower }}
+          {{- end }}
+          {{- if or (contains "selcloud.ru" $authURL) (contains "selectel" $authURL) }}
          - "preemptible"
+          {{- end }}
         {{- end }}
           # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
          - "deckhouse-{{ .cluster.uuid }}=1"

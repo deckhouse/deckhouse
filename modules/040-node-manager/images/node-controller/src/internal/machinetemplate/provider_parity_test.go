@@ -165,6 +165,10 @@ func providerFixtures() []providerFixture {
 				"podNetworkMode":       "DirectRoutingWithPortSecurityEnabled",
 				"internalNetworkNames": []any{"internal"},
 				"tags":                 map[string]any{"env": "test"},
+				// The openstack fixture is a Selectel-hosted cluster on purpose: `spec.preemptible`
+				// only reaches Nova on Selectel (see the authURL gate in capi/template.yaml). Non-
+				// Selectel behaviour has its own test — TestOpenstackPreemptibleNotEmittedOffSelectel.
+				"connection": map[string]any{"authURL": "https://cloud.api.selcloud.ru/identity/v3"},
 			},
 			instanceClass: map[string]any{
 				"flavorName":               "m1.large",

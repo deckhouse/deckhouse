@@ -104,18 +104,24 @@ func TestRenderMachineClass_OpenstackByteParity(t *testing.T) {
 	assert.Equal(t, "1", tags["kubernetes.io-cluster-deckhouse-aaaa-bbbb"])
 }
 
-// TestRenderMachineClass_OpenstackMCM_PreemptibleRejected guards that the MCM template refuses
-// to render when OpenStackInstanceClass.spec.preemptible is true — MCM has no way to emit the raw
-// Nova `preemptible` tag, so tolerating the field would silently drop it and mislead users into
-// thinking preemptible instances were requested.
-func TestRenderMachineClass_OpenstackMCM_PreemptibleRejected(t *testing.T) {
+// TestRenderMachineClass_OpenstackMCM_PreemptibleSilentlyIgnored pins that spec.preemptible does
+// NOT change the rendered MCM MachineClass at all — the field has no MCM analogue, and the render
+// path does not fail on it. Operators learn about the ignored request via the
+// OpenStackPreemptibleUnsupportedEngine Prometheus alert rather than a render fail buried in
+// controller logs. Compares the fully-rendered YAML with and without the field to guarantee it
+// touches nothing on the MCM path.
+func TestRenderMachineClass_OpenstackMCM_PreemptibleSilentlyIgnored(t *testing.T) {
 	tmpl, err := os.ReadFile(openstackMachineClassTemplatePath)
+	require.NoError(t, err)
+
+	baseline, err := RenderMachineClass(tmpl, openstackRenderContext())
 	require.NoError(t, err)
 
 	ctx := openstackRenderContext()
 	ctx["nodeGroup"].(map[string]interface{})["instanceClass"].(map[string]interface{})["preemptible"] = true
+	withPreemptible, err := RenderMachineClass(tmpl, ctx)
+	require.NoError(t, err, "MCM render must not fail on spec.preemptible: the field is silently ignored")
 
-	_, err = RenderMachineClass(tmpl, ctx)
-	require.Error(t, err, "MCM must refuse OpenStackInstanceClass.spec.preemptible")
-	assert.Contains(t, err.Error(), "supported only with the CAPI engine")
+	assert.Equal(t, string(baseline), string(withPreemptible),
+		"MCM MachineClass must render identically with and without spec.preemptible — the field has no MCM analogue")
 }

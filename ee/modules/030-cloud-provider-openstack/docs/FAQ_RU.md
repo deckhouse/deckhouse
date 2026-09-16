@@ -404,9 +404,10 @@ spec:
 
 Ограничения:
 
-* Тег `preemptible` — Selectel-специфичный механизм. В других OpenStack-облаках тег будет прикреплён к виртуальной машине, но проигнорирован — инстанс создастся, но прерываемым не будет.
-* Параметр поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI. Если OpenStackInstanceClass с `preemptible: true` используется в NodeGroup на движке MCM, рендер MCM machine-class завершается ошибкой и виртуальные машины не создаются; причина указывается в `.status.error` NodeGroup.
-* Движок управления выбирается отдельно для каждой NodeGroup. Если один OpenStackInstanceClass с `preemptible: true` используется одновременно в NodeGroup на движках CAPI и MCM, NodeGroup на MCM станет невалидной — для NodeGroup, работающих на разных движках, используйте отдельные ресурсы OpenStackInstanceClass.
+* Тег `preemptible` — Selectel-специфичный механизм. CAPI-шаблон эмитит тег только когда `connection.authURL` кластера указывает на Selectel (`selcloud.ru` / `selectel`). В других OpenStack-облаках тег молча дропается: узел всё равно создаётся, но как обычная (не прерываемая) VM.
+* Параметр поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI. Если OpenStackInstanceClass с `preemptible: true` используется в NodeGroup на движке MCM, параметр молча игнорируется — в MCM MachineClass нет поля для raw Nova-тегов. Узлы создаются как обычные VM.
+* В обоих случаях выше срабатывает Prometheus-алерт **OpenStackPreemptibleUnsupported** (с `reason=mcm` или `reason=non-selectel`), чтобы оператор узнал о молчаливом дропе, а не обнаружил его через недели по неизменившемуся счёту за облако. В описании алерта — точные команды для исправления каждого случая.
+* Движок управления выбирается отдельно для каждой NodeGroup. Если один OpenStackInstanceClass с `preemptible: true` используется одновременно в NodeGroup на движках CAPI и MCM, на стороне MCM алерт будет висеть постоянно — используйте отдельные OpenStackInstanceClass ресурсы для NodeGroup, работающих на разных движках, когда контракт по прерываемости различается.
 
 {% alert level="warning" %}
 Изменение параметра [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) в существующем OpenStackInstanceClass приводит к изменению OpenStackMachineTemplate и пересозданию всех узлов соответствующей NodeGroup.

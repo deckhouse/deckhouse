@@ -534,9 +534,10 @@ spec:
 
 Limitations:
 
-- The `preemptible` tag is a Selectel-specific mechanism. On other OpenStack providers the tag is attached to the VM but ignored — the instance will be created but will not be preemptible.
-- Supported only for CloudEphemeral NodeGroups running on the CAPI engine. If an OpenStackInstanceClass with `preemptible: true` is used by a NodeGroup running on the MCM engine, the MCM machine-class render fails and no machine is created; the reason is written to the NodeGroup `.status.error`.
-- The management engine is selected per NodeGroup. If the same OpenStackInstanceClass with `preemptible: true` is used simultaneously by NodeGroups running on CAPI and MCM, the MCM NodeGroup becomes invalid — use separate OpenStackInstanceClass resources for different engines.
+- The `preemptible` tag is a Selectel-specific mechanism, and the CAPI provider template emits it only when the cluster's `connection.authURL` points at Selectel (`selcloud.ru` / `selectel`). On other OpenStack providers the tag is silently dropped: the node is still created, but as a regular (non-preemptible) VM.
+- Supported only for CloudEphemeral NodeGroups running on the CAPI engine. If an OpenStackInstanceClass with `preemptible: true` is used by a NodeGroup running on the MCM engine, the field is silently ignored — no MCM MachineClass field maps to a raw Nova tag. Nodes are created as regular VMs.
+- Both situations above raise the **OpenStackPreemptibleUnsupported** Prometheus alert (with `reason=mcm` or `reason=non-selectel`) so the operator learns about the silent drop instead of discovering it weeks later from an unchanged billing line. The alert description carries the exact commands to fix each case.
+- The management engine is selected per NodeGroup. If the same OpenStackInstanceClass with `preemptible: true` is used simultaneously by NodeGroups running on CAPI and MCM, the MCM NodeGroup keeps firing the alert — use separate OpenStackInstanceClass resources for different engines when the preemptibility contract differs.
 
 {% alert level="warning" %}
 Changing the [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) parameter in an existing OpenStackInstanceClass changes the OpenStackMachineTemplate and causes all nodes in the corresponding NodeGroup to be recreated.
