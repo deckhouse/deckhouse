@@ -111,7 +111,7 @@ spec:
             - name: KUBE_RBAC_PROXY_CONFIG
               value: |
                 upstreams:
-                - upstream: http://127.0.0.1:9091/
+                - upstream: http://127.0.0.1:9191/
                   path: /
                   authorization:
                     resourceAttributes:

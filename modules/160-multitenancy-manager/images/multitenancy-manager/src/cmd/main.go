@@ -230,7 +230,7 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		Metrics: metrics.Options{
 			// Loopback only: the series name projects and the objects inside them, so the endpoint is
 			// published through the kube-rbac-proxy sidecar, which authorizes every scrape.
-			BindAddress: "127.0.0.1:9091",
+			BindAddress: "127.0.0.1:9191",
 		},
 	}
 
