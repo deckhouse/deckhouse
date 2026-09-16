@@ -60,6 +60,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/licensing"
 	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/config"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	moduleoverride "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/override"
@@ -199,6 +200,8 @@ func NewDeckhouseController(
 						},
 					},
 				},
+				// for the licensing controller
+				&corev1.Node{}: {},
 				// for deckhouse.io apis
 				&v1alpha1.Module{}:              {},
 				&v1alpha1.ModuleConfig{}:        {},
@@ -376,6 +379,11 @@ func NewDeckhouseController(
 	err = objectkeeper.RegisterController(runtimeManager, dc, logger.Named("objectkeeper-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
+	}
+
+	err = licensing.RegisterController(runtimeManager, operator.MetricStorage, logger.Named("licensing-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register licensing controller: %w", err)
 	}
 
 	// package should not run before converge done
