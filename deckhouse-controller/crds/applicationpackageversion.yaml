@@ -248,7 +248,7 @@ spec:
                     description: The system requirements for this package.
                     properties:
                       deckhouse:
-                        description: Required Deckhouse Kubernetes Platform version.
+                        description: Required Deckhouse Platform version.
                         properties:
                           constraint:
                             description: Semver constraint expression.

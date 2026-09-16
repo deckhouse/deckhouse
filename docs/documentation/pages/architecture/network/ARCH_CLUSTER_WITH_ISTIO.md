@@ -2,7 +2,7 @@
 title: "Cluster-level Istio architecture"
 permalink: en/architecture/network/cluster-with-istio.html
 search: control plane, data plane, istio architecture
-description: Istio architecture at the Deckhouse Kubernetes Platform cluster level.
+description: Istio architecture at the Deckhouse Platform cluster level.
 ---
 
 {% alert level="info" %}

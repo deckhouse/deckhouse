@@ -1,10 +1,10 @@
 ---
 title: "Accessing the Kubernetes API via load balancer"
 permalink: en/admin/configuration/access/authentication/k8s-api-lb.html
-description: "Configure authenticated access to Kubernetes API through load balancer in Deckhouse Kubernetes Platform. Secure kubectl access via Ingress controller with authentication."
+description: "Configure authenticated access to Kubernetes API through load balancer in Deckhouse Platform. Secure kubectl access via Ingress controller with authentication."
 ---
 
-DKP allows using authentication when accessing the Kubernetes API. In this case, a user can generate a `kubectl` configuration via the DKP kubeconfig web interface to securely access the Kubernetes API through a traffic balancer (Ingress controller).
+DP allows using authentication when accessing the Kubernetes API. In this case, a user can generate a `kubectl` configuration via the DP kubeconfig web interface to securely access the Kubernetes API through a traffic balancer (Ingress controller).
 
 To configure access, follow these steps:
 
@@ -22,7 +22,7 @@ To configure access, follow these steps:
    ```
 
 1. Open the [kubeconfig](../../../../user/web/kubeconfig.html) web interface.  
-   The kubeconfig generation interface in DKP is automatically activated after enabling the `publishAPI` parameter in the `user-authn` module.  
+   The kubeconfig generation interface in DP is automatically activated after enabling the `publishAPI` parameter in the `user-authn` module.  
    This web interface is available at the following URL:
 
    ```console
@@ -51,7 +51,7 @@ To configure access, follow these steps:
 
 ## How API access protection works in Kubernetes
 
-In Deckhouse Kubernetes Platform, you can safely expose the Kubernetes API externally using an Ingress controller while maintaining access control.
+In Deckhouse Platform, you can safely expose the Kubernetes API externally using an Ingress controller while maintaining access control.
 API exposure and authentication configuration are handled via the [`user-authn`](/modules/user-authn/) module. You can configure:
 
 - A list of trusted IP addresses or networks allowed to access the API.

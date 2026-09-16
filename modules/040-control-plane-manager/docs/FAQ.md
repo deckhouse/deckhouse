@@ -12,8 +12,8 @@ title: "Managing control plane: FAQ"
 If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
-When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
-To avoid this "interception", after installing DKP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
+When installing Deckhouse Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
+To avoid this "interception", after installing DP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -89,7 +89,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
 
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
@@ -155,7 +155,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
-1. Make sure the DKP queue is empty:
+1. Make sure the DP queue is empty:
 
    ```shell
    d8 system queue list
@@ -169,9 +169,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
 
-1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
+1. On the **local machine**, run the DP installer container for the corresponding edition and version (change the container registry address if needed):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -294,7 +294,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
 
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
@@ -423,7 +423,7 @@ To change the OS of a manually added master node, follow these steps:
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-1. Clean up the DKP data on the removed master node. This command irreversibly removes Kubernetes and DKP data from the node. Before running it, make sure you have selected the correct node and created the required backups:
+1. Clean up the DP data on the removed master node. This command irreversibly removes Kubernetes and DP data from the node. Before running it, make sure you have selected the correct node and created the required backups:
 
    ```shell
    bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
@@ -505,7 +505,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 ## How to configure HA mode with two master nodes and an arbiter node?
 
-Deckhouse Kubernetes Platform allows you to configure HA mode with two master nodes and an arbiter node. This approach allows you to meet HA requirements in conditions of limited resources.
+Deckhouse Platform allows you to configure HA mode with two master nodes and an arbiter node. This approach allows you to meet HA requirements in conditions of limited resources.
 
 Only etcd is placed on the arbiter node, without the other control plane components. This node is used to ensure the etcd quorum.
 
@@ -535,7 +535,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (for example, to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
-1. Make sure the DKP queue is empty:
+1. Make sure the DP queue is empty:
 
    ```shell
    d8 system queue list
@@ -549,9 +549,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
 
-1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
+1. On the **local machine**, run the DP installer container for the corresponding edition and version (change the container registry address if needed):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -1127,15 +1127,15 @@ CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. 
 
 ### How to manually backup etcd
 
-#### Using Deckhouse CLI (Deckhouse Kubernetes Platform v1.65+)
+#### Using Deckhouse CLI (Deckhouse Platform v1.65+)
 
-Starting with Deckhouse Kubernetes Platform v1.65, a new `d8 backup etcd` tool is available for taking snapshots of etcd state.
+Starting with Deckhouse Platform v1.65, a new `d8 backup etcd` tool is available for taking snapshots of etcd state.
 
 ```bash
 d8 backup etcd ./etcd-backup.snapshot
 ```
 
-#### Using bash (Deckhouse Kubernetes Platform v1.64 and older)
+#### Using bash (Deckhouse Platform v1.64 and older)
 
 Login into any control-plane node with `root` user and use next script:
 
@@ -1536,7 +1536,7 @@ When using the `failurePolicy: Fail` option, in case of an error in the webhook'
 
 ## How does kubelet certificate rotation work?
 
-In Deckhouse Kubernetes Platform, kubelet certificate rotation is automatic.
+In Deckhouse Platform, kubelet certificate rotation is automatic.
 
 The kubelet uses a client TLS certificate (`/var/lib/kubelet/pki/kubelet-client-current.pem`) with which it can request a new client certificate or a new server certificate (`/var/lib/kubelet/pki/kubelet-server-current.pem`) from kube-apiserver.
 
@@ -1550,9 +1550,9 @@ By default, lifetime of certificates is 1 year (8760 hours).
 If the client certificate lifetime has expired, kubelet will not be able to make requests to kube-apiserver and will not be able to renew certificates. In this case, the node will be marked as `NotReady` and recreated.
 {% endalert %}
 
-### Specifics of working with kubelet server certificates in Deckhouse Kubernetes Platform
+### Specifics of working with kubelet server certificates in Deckhouse Platform
 
-Deckhouse Kubernetes Platform uses IP addresses for kubelet API requests. The kubelet configuration does not use the `tlsCertFile` and `tlsPrivateKeyFile` fields, but uses a dynamic certificate that kubelet generates itself. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the Deckhouse Kubernetes Platform (in the `operator-trivy` module).
+Deckhouse Platform uses IP addresses for kubelet API requests. The kubelet configuration does not use the `tlsCertFile` and `tlsPrivateKeyFile` fields, but uses a dynamic certificate that kubelet generates itself. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the Deckhouse Platform (in the `operator-trivy` module).
 
 {% offtopic title="Information about the logic of working with server certificates in Kubernetes" %}
 

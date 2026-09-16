@@ -154,7 +154,7 @@ nodegroups`. Подробнее об этом в [документации](/mod
 <div markdown="1">
 ## Следующие шаги
 
-Подробная информация о системе в целом и по каждому компоненту Deckhouse Kubernetes Platform расположена в [документации](/products/kubernetes-platform/documentation/v1/).
+Подробная информация о системе в целом и по каждому компоненту Deckhouse Platform расположена в [документации](/products/kubernetes-platform/documentation/v1/).
 
 По всем возникающим вопросам вы можете связаться с [онлайн-сообществом](/community/about.html#online-community).
 </div>

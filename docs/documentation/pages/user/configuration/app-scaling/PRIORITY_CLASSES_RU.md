@@ -1,7 +1,7 @@
 ---
 title: "Классы приоритета"
 permalink: ru/user/configuration/app-scaling/priority-classes.html
-description: "Использование классов приоритета в Deckhouse Kubernetes Platform: примеры настройки, демонстрация вытеснения и практическая диагностика."
+description: "Использование классов приоритета в Deckhouse Platform: примеры настройки, демонстрация вытеснения и практическая диагностика."
 lang: ru
 ---
 
@@ -9,9 +9,9 @@ lang: ru
 
 ## Использование класса приоритета в Deployment
 
-В Deckhouse Kubernetes Platform (DKP) уже есть набор классов приоритета. Далее приведён пример использования класса приоритета в шаблоне пода в Deployment.
+В Deckhouse Platform (DP) уже есть набор классов приоритета. Далее приведён пример использования класса приоритета в шаблоне пода в Deployment.
 
-Создайте файл `deployment-with-priority.yaml`, чтобы развернуть приложение с предустановленным в DKP классом `production-high` (значение `9000`, [в разделе «Доступные классы приоритета»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#доступные-классы-приоритета)):
+Создайте файл `deployment-with-priority.yaml`, чтобы развернуть приложение с предустановленным в DP классом `production-high` (значение `9000`, [в разделе «Доступные классы приоритета»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#доступные-классы-приоритета)):
 
 ```yaml
 apiVersion: apps/v1

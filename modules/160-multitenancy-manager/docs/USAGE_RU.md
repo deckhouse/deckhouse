@@ -5,7 +5,7 @@ title: "Модуль multitenancy-manager: примеры использован
 
 ## Шаблоны для проектов доступные по умолчанию
 
-В Deckhouse Kubernetes Platform есть набор шаблонов для создания проектов:
+В Deckhouse Platform есть набор шаблонов для создания проектов:
 
 - `default` — шаблон для базовых сценариев использования проектов:
   - ограничение ресурсов;
@@ -668,9 +668,9 @@ spec:
 
 1. После регистрации cluster-wide-ресурса настройте ссылки на него с помощью GrantableClusterResourceReference, как описано [в подразделе «Настройка проверки ссылки на cluster-wide-ресурс»](#настройка-проверки-ссылки-на-cluster-wide-ресурс).
 
-#### Использование x-deckhouse-grantable-resource в настройках приложений DKP
+#### Использование x-deckhouse-grantable-resource в настройках приложений DP
 
-Для управления доступом к cluster-wide-ресурсам в настройках приложений DKP используйте OpenAPI-расширение `x-deckhouse-grantable-resource`. В этом случае deckhouse-контроллер автоматически проверяет доступность указанного ресурса и при необходимости подставляет значение по умолчанию. Создавать GrantableClusterResourceReference вручную не требуется.
+Для управления доступом к cluster-wide-ресурсам в настройках приложений DP используйте OpenAPI-расширение `x-deckhouse-grantable-resource`. В этом случае deckhouse-контроллер автоматически проверяет доступность указанного ресурса и при необходимости подставляет значение по умолчанию. Создавать GrantableClusterResourceReference вручную не требуется.
 
 Описание расширения и примеры использования приведены [в разделе «Разработка приложений»](/products/kubernetes-platform/documentation/v1/architecture/marketplace/application-development.html#подстановка-значения-из-грантов-на-ресурсы-кластера-x-deckhouse-grantable-resource).
 

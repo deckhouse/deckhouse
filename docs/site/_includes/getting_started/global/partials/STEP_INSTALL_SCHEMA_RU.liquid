@@ -2,7 +2,7 @@
 
 {% if page.platform_code == "bm-private" and page.lang == "ru" %}
 {% alert level="info" %}
-В [Deckhouse Академии](https://deckhouse.ru/academy/) доступен для прохождения курс обучения [«Установка Deckhouse Kubernetes Platform в закрытом окружении»](https://education.flant.ru/course/ustanovka-deckhouse-kubernetes-platform-v-zakrytom-okruzhenii/).
+В [Deckhouse Академии](https://deckhouse.ru/academy/) доступен для прохождения курс обучения [«Установка Deckhouse Platform в закрытом окружении»](https://education.flant.ru/course/ustanovka-deckhouse-kubernetes-platform-v-zakrytom-okruzhenii/).
 {% endalert %}
 {% endif %}
 
@@ -68,7 +68,7 @@
 Установка в закрытом окружении в целом аналогична установке [на bare metal](../bm/step2.html). Отличие только в некоторых дополнительных параметрах настройки.
 
 {% alert level="info" %}
-Подробнее с установкой и обновлением DKP в закрытом окружении можно ознакомиться в руководствах [«Установка DKP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DKP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
+Подробнее с установкой и обновлением DP в закрытом окружении можно ознакомиться в руководствах [«Установка DP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
 {% endalert %}
 
 Схема развертывания Deckhouse в закрытом окружении:<br />
@@ -147,7 +147,7 @@
    <p><strong>Физический сервер или виртуальная машина для master-узла.</strong></p>
    {% offtopic title="Требования..." %}
    {% alert level="info" %}
-   Deckhouse Kubernetes Platform, начиная с версии 1.74, имеет механизм контроля целостности модулей, который защищает их от подмены и изменения. Этот механизм включается автоматически при поддержке операционной системой на узлах, где установлен Deckhouse, модуля ядра `erofs`. При отсутствии этого модуля ядра Deckhouse продолжит работу без механизма контроля целостности модулей, при этом появится алерт о неработоспособности этой функциональности.
+   Deckhouse Platform, начиная с версии 1.74, имеет механизм контроля целостности модулей, который защищает их от подмены и изменения. Этот механизм включается автоматически при поддержке операционной системой на узлах, где установлен Deckhouse, модуля ядра `erofs`. При отсутствии этого модуля ядра Deckhouse продолжит работу без механизма контроля целостности модулей, при этом появится алерт о неработоспособности этой функциональности.
    {% endalert %}
    {% alert level="warning" %}
    На следующем шаге данного руководства в качестве container runtime по умолчанию на узлах кластера указан `ContainerdV2`.
@@ -158,7 +158,7 @@
    - поддержка модуля ядра `erofs`;
    - версия ядра Linux не входит в диапазоны 6.12.0–6.12.28 или 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS).
 
-   Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Kubernetes Platform. Подробнее — [в документации](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+   Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Platform. Подробнее — [в документации](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
    {% endalert %}
 
    - не менее 4 ядер CPU (_рекомендовано  8 ядер CPU_);
@@ -174,7 +174,7 @@
    {% if page.platform_code == "bm-private" %}
    - доступ до проксирующего registry или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
    - при использовании частного хранилища образов необходимо предварительно [загрузить образы](/products/kubernetes-platform/documentation/v1/admin/configuration/security/scanning.html)
-     Deckhouse Kubernetes Platform, БД сканера уязвимостей и модулей Deckhouse в частное хранилище;
+     Deckhouse Platform, БД сканера уязвимостей и модулей Deckhouse в частное хранилище;
    - доступ к стандартным для используемой ОС репозиториям пакетов (через прокси-сервер или до внутреннего сервера-репозитория пакетов);
    {%- else %}
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;

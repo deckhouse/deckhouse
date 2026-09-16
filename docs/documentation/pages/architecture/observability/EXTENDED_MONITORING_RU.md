@@ -3,7 +3,7 @@ title: Модуль extended-monitoring
 permalink: ru/architecture/observability/extended-monitoring.html
 lang: ru
 search: extended-monitoring, extended monitoring, image monitoring, certificate control, cluster events, расширенный мониторинг, мониторинг образов, контроль сертификатов, события кластера
-description: Архитектура модуля extended-monitoring в Deckhouse Kubernetes Platform.
+description: Архитектура модуля extended-monitoring в Deckhouse Platform.
 ---
 
 Модуль [`extended-monitoring`](/modules/extended-monitoring/) расширяет возможности мониторинга кластера за счёт дополнительных экспортеров Prometheus, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов.
@@ -26,7 +26,7 @@ description: Архитектура модуля extended-monitoring в Deckhous
 * Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура модуля [`extended-monitoring`](/modules/extended-monitoring/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`extended-monitoring`](/modules/extended-monitoring/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля extended-monitoring](../../images/architecture/observability/c4-l2-extended-monitoring.ru.png)
 

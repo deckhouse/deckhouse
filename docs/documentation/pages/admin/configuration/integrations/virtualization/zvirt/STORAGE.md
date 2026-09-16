@@ -54,7 +54,7 @@ Recommendations:
 - Define an IP address pool that MetalLB can use for announcements.
 - Ensure this network is accessible from the cluster's frontend nodes.
 - Leave the network interface configuration empty in the VirtualMachine Template.
-  Deckhouse Kubernetes Platform will automatically attach them during VM creation.
+  Deckhouse Platform will automatically attach them during VM creation.
 
 {% alert level="info" %}
 Support for MetalLB in BGP mode is not guaranteed in zVirt and depends on your network infrastructure.

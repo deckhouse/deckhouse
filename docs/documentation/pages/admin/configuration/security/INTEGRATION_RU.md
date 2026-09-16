@@ -4,13 +4,13 @@ permalink: ru/admin/configuration/security/integration.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) поддерживает интеграцию с [Kaspersky Unified Monitoring and Analysis Platform (KUMA)](https://lp.kaspersky.com/ru/kuma/),
+Deckhouse Platform (DP) поддерживает интеграцию с [Kaspersky Unified Monitoring and Analysis Platform (KUMA)](https://lp.kaspersky.com/ru/kuma/),
 единой системой мониторинга и анализа от «Лаборатории Касперского».
 В рамках интеграции события безопасности и журналы аудита из кластера передаются в KUMA для дальнейшего анализа.
 
 ## Отправка логов в KUMA
 
-Для отправки логов в систему KUMA настройте [сбор и доставку логов на стороне DKP](../logging/delivery.html),
+Для отправки логов в систему KUMA настройте [сбор и доставку логов на стороне DP](../logging/delivery.html),
 используя следующие ресурсы:
 
 - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов;
@@ -190,7 +190,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает интеграци�
 
 Kaspersky Container Security (KCS) для мониторинга среды выполнения требует расширенных прав доступа к ядру ОС. В частности, компонент `kcs-ih` (Image Hub) должен работать в привилегированном режиме. При этом некоторые механизмы управления привилегиями процессов на уровне ядра ОС Linux должны быть отключены. Подробнее — в документации [Kaspersky Container Security](https://support.kaspersky.ru/container-security/2.1/306180).
 
-Чтобы мониторинг среды выполнения с KCS работал в кластере DKP, назначьте лейбл `security.deckhouse.io/pod-policy=privileged` пространству имён, в котором размещаются компоненты KCS.
+Чтобы мониторинг среды выполнения с KCS работал в кластере DP, назначьте лейбл `security.deckhouse.io/pod-policy=privileged` пространству имён, в котором размещаются компоненты KCS.
 
 Пример команды для назначения лейбла:
 
@@ -200,7 +200,7 @@ d8 k label namespace kcs security.deckhouse.io/pod-policy=privileged
 
 ## Исключения при антивирусном сканировании узлов
 
-Если на узлах кластера DKP используются антивирусные средства (например, Kaspersky Endpoint Security (KESL)),
+Если на узлах кластера DP используются антивирусные средства (например, Kaspersky Endpoint Security (KESL)),
 вам может понадобиться исключить из анализа служебные директории Deckhouse, чтобы избежать ложных срабатываний.
 
 Перечень служебных директорий Deckhouse ([также доступен в CSV](/products/kubernetes-platform/documentation/v1/deckhouse-directories.csv)):
@@ -224,7 +224,7 @@ d8 k label namespace kcs security.deckhouse.io/pod-policy=privileged
 
 ### Рекомендации по настройке KESL
 
-Для корректной работы DKP при наличии установленного решения KESL выполните следующие шаги:
+Для корректной работы DP при наличии установленного решения KESL выполните следующие шаги:
 
 1. Отключите следующие задачи на стороне KESL:
 
@@ -237,7 +237,7 @@ d8 k label namespace kcs security.deckhouse.io/pod-policy=privileged
 
 1. Убедитесь, что ресурсы узлов соответствуют требованиям:
 
-   - [DKP](/products/kubernetes-platform/guides/production.html#%D1%82%D1%80%D0%B5%D0%B1%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F-%D0%BA-%D1%80%D0%B5%D1%81%D1%83%D1%80%D1%81%D0%B0%D0%BC);
+   - [DP](/products/kubernetes-platform/guides/production.html#%D1%82%D1%80%D0%B5%D0%B1%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F-%D0%BA-%D1%80%D0%B5%D1%81%D1%83%D1%80%D1%81%D0%B0%D0%BC);
    - [KESL](https://support.kaspersky.com/KES4Linux/12.1.0/ru-RU/197642.htm).
 
 1. Для оптимизации производительности следуйте [официальным рекомендациям «Лаборатории Касперского»](https://support.kaspersky.com/KES4Linux/12.1.0/ru-RU/206054.htm).

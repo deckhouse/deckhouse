@@ -1,14 +1,14 @@
 ---
 title: "Configuring integrations"
 permalink: en/admin/configuration/monitoring/alerts-integrations.html
-description: "Configure alert integrations in Deckhouse Kubernetes Platform with Zabbix, Slack, Telegram, and other systems. Alert routing, notification setup, and monitoring system integration."
+description: "Configure alert integrations in Deckhouse Platform with Zabbix, Slack, Telegram, and other systems. Alert routing, notification setup, and monitoring system integration."
 ---
 
 {% raw %}
 
 ## Redirecting alerts to Zabbix
 
-Deckhouse Kubernetes Platform supports integration with the Zabbix monitoring system. For this purpose, an external script is used that receives alerts from Deckhouse via `kubectl` and sends them to Zabbix using the Zabbix agent.
+Deckhouse Platform supports integration with the Zabbix monitoring system. For this purpose, an external script is used that receives alerts from Deckhouse via `kubectl` and sends them to Zabbix using the Zabbix agent.
 
 The script requires:
 

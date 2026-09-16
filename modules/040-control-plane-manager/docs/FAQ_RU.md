@@ -12,8 +12,8 @@ title: "Управление control plane: FAQ"
 Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
 {% endalert %}
 
-В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
-Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
+В процессе установки Deckhouse Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
+Чтобы избежать этого «перехвата», после установки DP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -89,7 +89,7 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -156,7 +156,7 @@ spec:
 1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
-1. Убедитесь, что очередь DKP пуста:
+1. Убедитесь, что очередь DP пуста:
 
    ```shell
    d8 system queue list
@@ -170,9 +170,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
+1. **На локальной машине** запустите контейнер установщика DP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -297,7 +297,7 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -426,7 +426,7 @@ spec:
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-1. На удаляемом master-узле очистите данные DKP. Команда необратимо удаляет данные Kubernetes и DKP с узла. Перед выполнением убедитесь, что выбран правильный узел и созданы необходимые резервные копии:
+1. На удаляемом master-узле очистите данные DP. Команда необратимо удаляет данные Kubernetes и DP с узла. Перед выполнением убедитесь, что выбран правильный узел и созданы необходимые резервные копии:
 
    ```shell
    bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
@@ -510,7 +510,7 @@ spec:
 
 ## Как настроить режим HA c двумя master-узлами и arbiter-узлом?
 
-В Deckhouse Kubernetes Platform возможна настройка режима HA c двумя master-узлами и arbiter-узлом. Такой подход позволяет обеспечить требования по HA в условиях ограниченных ресурсов.
+В Deckhouse Platform возможна настройка режима HA c двумя master-узлами и arbiter-узлом. Такой подход позволяет обеспечить требования по HA в условиях ограниченных ресурсов.
 
 На arbiter-узле размещается только etcd, без остальных компонентов control plane. Этот узел используется для обеспечения кворума etcd.
 
@@ -539,7 +539,7 @@ spec:
 1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
-1. Убедитесь, что очередь DKP пуста:
+1. Убедитесь, что очередь DP пуста:
 
    ```shell
    d8 system queue list
@@ -553,9 +553,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
+1. **На локальной машине** запустите контейнер установщика DP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -1136,15 +1136,15 @@ spec:
 
 ### Как сделать резервную копию etcd вручную
 
-#### Используя Deckhouse CLI (Deckhouse Kubernetes Platform v1.65+)
+#### Используя Deckhouse CLI (Deckhouse Platform v1.65+)
 
-Начиная с релиза Deckhouse Kubernetes Platform v1.65, стала доступна утилита `d8 backup etcd`, которая предназначена для быстрого создания снимков состояния etcd.
+Начиная с релиза Deckhouse Platform v1.65, стала доступна утилита `d8 backup etcd`, которая предназначена для быстрого создания снимков состояния etcd.
 
 ```bash
 d8 backup etcd ./etcd-backup.snapshot
 ```
 
-#### Используя bash (Deckhouse Kubernetes Platform v1.64 и старше)
+#### Используя bash (Deckhouse Platform v1.64 и старше)
 
 Войдите на любой control-plane узел под пользователем `root` и используйте следующий bash-скрипт:
 
@@ -1545,7 +1545,7 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 
 ## Как происходит ротация сертификатов kubelet?
 
-В Deckhouse Kubernetes Platform ротация сертификатов kubelet происходит автоматически.
+В Deckhouse Platform ротация сертификатов kubelet происходит автоматически.
 
 Kubelet использует клиентский TLS-сертификат (`/var/lib/kubelet/pki/kubelet-client-current.pem`), при помощи которого может запросить у kube-apiserver новый клиентский сертификат или новый серверный сертификат (`/var/lib/kubelet/pki/kubelet-server-current.pem`).
 
@@ -1559,9 +1559,9 @@ Kubelet использует клиентский TLS-сертификат (`/va
 Если истекло время жизни клиентского сертификата, то kubelet не сможет делать запросы к kube-apiserver и не сможет обновить сертификаты. В данном случае узел (Node) будет помечен как `NotReady` и пересоздан.
 {% endalert %}
 
-### Особенности работы с серверными сертификатами kubelet в Deckhouse Kubernetes Platform
+### Особенности работы с серверными сертификатами kubelet в Deckhouse Platform
 
-В Deckhouse Kubernetes Platform для запросов в kubelet API используются IP-адреса. Поэтому в конфигурации kubelet поля `tlsCertFile` и `tlsPrivateKeyFile` не указываются, а используется динамический сертификат, который kubelet генерирует самостоятельно. Также, из-за использования динамического сертификата, в Deckhouse Kubernetes Platform (в модуле `operator-trivy`) отключены проверки CIS benchmark `AVD-KCV-0088` и `AVD-KCV-0089`, которые отслеживают, были ли переданы аргументы `--tls-cert-file` и `--tls-private-key-file` для kubelet.
+В Deckhouse Platform для запросов в kubelet API используются IP-адреса. Поэтому в конфигурации kubelet поля `tlsCertFile` и `tlsPrivateKeyFile` не указываются, а используется динамический сертификат, который kubelet генерирует самостоятельно. Также, из-за использования динамического сертификата, в Deckhouse Platform (в модуле `operator-trivy`) отключены проверки CIS benchmark `AVD-KCV-0088` и `AVD-KCV-0089`, которые отслеживают, были ли переданы аргументы `--tls-cert-file` и `--tls-private-key-file` для kubelet.
 
 {% offtopic title="Информация о логике работы с серверными сертификатами в Kubernetes" %}
 

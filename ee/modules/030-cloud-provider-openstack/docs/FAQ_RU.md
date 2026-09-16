@@ -18,7 +18,7 @@ title: "Cloud provider — OpenStack: FAQ"
 * `loadbalancer.openstack.deckhouse.io/load-balancer-id` — указывает OpenStack CCM использовать заранее созданный Octavia-балансировщик.
 * `loadbalancer.openstack.deckhouse.io/load-balancer-address` — указывает OpenStack CCM привязать заранее выделенный floating IP к создаваемому им балансировщику.
 
-DKP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
+DP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
 
 Если используется аннотация`loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
 
@@ -34,7 +34,7 @@ DKP автоматически добавит указанные аннотац�
 
 Если указанный floating IP недоступен, OpenStack CCM не сможет назначить внешний IP-адрес объекту Service.
 
-Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DKP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
+Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
 
 ### IngressNginxController с заранее созданным балансировщиком
 
@@ -143,7 +143,7 @@ spec:
 Гибридный кластер представляет собой кластер, в котором могут быть как узлы bare metal, так и узлы OpenStack. Для создания такого кластера необходимо наличие L2-сети между всеми узлами кластера.
 
 {% alert level="info" %}
-В Deckhouse Kubernetes Platform есть возможность задавать префикс для имени CloudEphemeral-узлов, добавляемых в гибридный кластер c master-узлами типа Static.
+В Deckhouse Platform есть возможность задавать префикс для имени CloudEphemeral-узлов, добавляемых в гибридный кластер c master-узлами типа Static.
 Для этого используйте параметр [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) модуля `node-manager`. Префикс, указанный в параметре, будет добавляться к имени всех добавляемых в кластер узлов типа CloudEphemeral. Задать префикс для определенной NodeGroup нельзя.
 {% endalert %}
 

@@ -1,27 +1,27 @@
 ---
 title: "Общее управление и конфигурация control plane"
 permalink: ru/admin/configuration/platform-scaling/control-plane/control-plane-management-and-configuration.html
-description: "Настройка и управление Kubernetes control plane в Deckhouse Kubernetes Platform. Высокая доступность, управление сертификатами и конфигурация компонентов control plane."
+description: "Настройка и управление Kubernetes control plane в Deckhouse Platform. Высокая доступность, управление сертификатами и конфигурация компонентов control plane."
 lang: ru
 ---
 
 ## Основные возможности
 
-Deckhouse Kubernetes Platform (DKP) управляет компонентами управляющего слоя кластера (control plane) с помощью модуля [`control-plane-manager`](/modules/control-plane-manager/). Этот модуль запускается на всех управляющих узлах (master-узлах) с лейблом `node-role.kubernetes.io/control-plane: ""`.
+Deckhouse Platform (DP) управляет компонентами управляющего слоя кластера (control plane) с помощью модуля [`control-plane-manager`](/modules/control-plane-manager/). Этот модуль запускается на всех управляющих узлах (master-узлах) с лейблом `node-role.kubernetes.io/control-plane: ""`.
 
 Функционал управления control plane включает:
 
 - Управление сертификатами необходимых для работы control plane, в том числе их продление и выпуск при изменении конфигурации. Автоматически поддерживается безопасная конфигурация и возможность быстрого добавления дополнительных SAN для организации защищённого доступа к API Kubernetes.
 
-- Настройка компонентов. DKP генерирует все необходимые конфигурации и манифесты (kube-apiserver, etcd и др.), снижая вероятность ручных ошибок.
+- Настройка компонентов. DP генерирует все необходимые конфигурации и манифесты (kube-apiserver, etcd и др.), снижая вероятность ручных ошибок.
 
-- Upgrade/downgrade компонентов. DKP поддерживает согласованное обновление или понижение версии control plane, что позволяет поддерживать единообразие версий в кластере. В редакциях CSE поддерживается только upgrade.
+- Upgrade/downgrade компонентов. DP поддерживает согласованное обновление или понижение версии control plane, что позволяет поддерживать единообразие версий в кластере. В редакциях CSE поддерживается только upgrade.
 
-- Управление конфигурацией etcd-кластера и его членов. DKP масштабирует master-узлы, выполняет миграцию из single-master в multi-master и обратно.
+- Управление конфигурацией etcd-кластера и его членов. DP масштабирует master-узлы, выполняет миграцию из single-master в multi-master и обратно.
   
 - Периодическая дефрагментация etcd. В кластерах с тремя и более членами etcd эта функция включена по умолчанию.
 
-- Настройка kubeconfig. DKP формирует актуальный конфигурационный файл (с правами `cluster-admin`), генерирует, продлевает и обновляет kubeconfig для компонентов control plane и административный kubeconfig (`admin.conf`), а также создает символическую ссылку для пользователя `root` (`/root/.kube/config` -> `admin.conf`). При включённом модуле [`user-authz`](/modules/user-authz/) символическую ссылку можно отключить параметром [`rootKubeconfigSymlink`](/modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) в модуле `control-plane-manager` (подробнее — в [«FAQ»](/modules/control-plane-manager/faq.html#модель-административного-доступа-к-кластеру) модуля `control-plane-manager`). Также DKP ужесточает права доступа к файлам `admin.conf` и `super-admin.conf` для усиления безопасности.
+- Настройка kubeconfig. DP формирует актуальный конфигурационный файл (с правами `cluster-admin`), генерирует, продлевает и обновляет kubeconfig для компонентов control plane и административный kubeconfig (`admin.conf`), а также создает символическую ссылку для пользователя `root` (`/root/.kube/config` → `admin.conf`). При включённом модуле [`user-authz`](/modules/user-authz/) символическую ссылку можно отключить параметром [`rootKubeconfigSymlink`](/modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) в модуле `control-plane-manager` (подробнее — в [«FAQ»](/modules/control-plane-manager/faq.html#модель-административного-доступа-к-кластеру) модуля `control-plane-manager`). Также DP ужесточает права доступа к файлам `admin.conf` и `super-admin.conf` для усиления безопасности.
 
 > Некоторые параметры, влияющие на работу control plane, берутся из ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
 
@@ -83,9 +83,9 @@ spec:
       publishAPI: {}
 ```
 
-### Проверка состояния и очередей DKP
+### Проверка состояния и очередей DP
 
-Как проверить, что [`control-plane-manager`](/modules/control-plane-manager/) корректно запущен и не находится в состоянии ожидания, а также как проверить активные задачи (очереди) в DKP:
+Как проверить, что [`control-plane-manager`](/modules/control-plane-manager/) корректно запущен и не находится в состоянии ожидания, а также как проверить активные задачи (очереди) в DP:
 
 1. Убедитесь, что модуль включён:
 
@@ -134,7 +134,7 @@ spec:
 
 ## Управление сертификатами
 
-В DKP за выпуск и продление всех SSL-сертификатов компонентов control plane отвечает модуль [`control-plane-manager`](/modules/control-plane-manager/). Он контролирует:
+В DP за выпуск и продление всех SSL-сертификатов компонентов control plane отвечает модуль [`control-plane-manager`](/modules/control-plane-manager/). Он контролирует:
 
 1. **Серверные сертификаты** для kube-apiserver и etcd, хранящиеся в секрете `d8-pki` (пространство имён `kube-system`):
    - Корневой CA Kubernetes (`ca.crt`, `ca.key`);
@@ -146,12 +146,12 @@ spec:
 
 ### Управление PKI
 
-DKP также управляет инфраструктурой приватных ключей (PKI), которая необходима для шифрования и аутентификации во всём кластере Kubernetes:
+DP также управляет инфраструктурой приватных ключей (PKI), которая необходима для шифрования и аутентификации во всём кластере Kubernetes:
 
 - PKI для компонентов control plane (kube-apiserver, kube-controller-manager, kube-scheduler и т. д.).
 - PKI для кластера etcd (сертификаты etcd и межузлового взаимодействия).
 
-DKP «забирает» управление этими PKI после завершения первоначальной установки кластера и запуска своих подов. Таким образом, все операции по выпуску, продлению и обновлению ключей (как для control plane, так и для etcd) выполняются автоматически и централизованно, без необходимости ручного вмешательства.
+DP «забирает» управление этими PKI после завершения первоначальной установки кластера и запуска своих подов. Таким образом, все операции по выпуску, продлению и обновлению ключей (как для control plane, так и для etcd) выполняются автоматически и централизованно, без необходимости ручного вмешательства.
 
 ### Дополнительные SAN и автоматическое обновление
 
@@ -159,16 +159,16 @@ Deckhouse упрощает добавление новых точек входа
 
 Чтобы добавить дополнительные SAN (дополнительные DNS-имена или IP-адреса) для API Kubernetes пропишите новые SAN в [параметре `spec.settings.apiserver.certSANs`](/modules/control-plane-manager/configuration.html#parameters-apiserver-certsans) вашего ресурса ModuleConfig/control-plane-manager.
 
-DKP автоматически сгенерирует новые сертификаты и обновит все необходимые конфигурационные файлы (включая kubeconfig).
+DP автоматически сгенерирует новые сертификаты и обновит все необходимые конфигурационные файлы (включая kubeconfig).
 
 ### Ротация сертификатов kubelet
 
-В Deckhouse Kubernetes Platform ротация сертификатов kubelet происходит автоматически.
+В Deckhouse Platform ротация сертификатов kubelet происходит автоматически.
 Параметры `--tls-cert-file` и `--tls-private-key-file` для kubelet не задаются напрямую. Вместо этого используется механизм динамических TLS-сертификатов: kubelet применяет клиентский сертификат по пути `/var/lib/kubelet/pki/kubelet-client-current.pem`, с помощью которого он запрашивает у kube-apiserver новый клиентский или серверный сертификат (файл `/var/lib/kubelet/pki/kubelet-server-current.pem`).
 
 Из-за использования динамических TLS механизмов, [модуль `operator-trivy`](/modules/operator-trivy/) исключает проверки CIS Benchmark AVD-KCV-0088 и AVD-KCV-0089, так как они предполагают явную передачу параметров `--tls-cert-file` и `--tls-private-key-file` в конфигурации kubelet.
 
-Особенности ротации сертификатов kubelet в Deckhouse Kubernetes Platform:
+Особенности ротации сертификатов kubelet в Deckhouse Platform:
 
 - По умолчанию kubelet генерирует собственные ключи в каталоге `/var/lib/kubelet/pki/` и при необходимости самостоятельно запрашивает продление сертификатов у kube-apiserver.
 - Срок действия выданных сертификатов составляет 1 год (8760 часов). Когда до истечения срока действия остаётся от 5 до 10% времени (точное значение выбирается случайным образом из этого диапазона), kubelet автоматически инициирует запрос на новый сертификат. Подробнее см. в [официальной документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization). При необходимости срок действия сертификатов можно изменить с помощью параметра `--cluster-signing-duration` в манифесте `/etc/kubernetes/manifests/kube-controller-manager.yaml`. Однако, чтобы kubelet успел получить и установить новый сертификат до истечения текущего, рекомендуется устанавливать срок действия сертификатов не менее чем на 1 час.
@@ -224,9 +224,9 @@ spec:
 
 ## Принудительное отключение IPv6 на узлах кластера
 
-Внутреннее взаимодействие между компонентами кластера DKP осуществляется по протоколу IPv4. Однако, на уровне операционной системы узлов кластера, как правило, по умолчанию активен IPv6. Это приводит к автоматическому присвоению IPv6-адресов всем сетевым интерфейсам, включая интерфейсы подов. В результате возникает нежелательный сетевой трафик — например, избыточные DNS-запросы типа `AAAA`, которые могут повлиять на производительность и усложнить отладку сетевых взаимодействий.
+Внутреннее взаимодействие между компонентами кластера DP осуществляется по протоколу IPv4. Однако, на уровне операционной системы узлов кластера, как правило, по умолчанию активен IPv6. Это приводит к автоматическому присвоению IPv6-адресов всем сетевым интерфейсам, включая интерфейсы подов. В результате возникает нежелательный сетевой трафик — например, избыточные DNS-запросы типа `AAAA`, которые могут повлиять на производительность и усложнить отладку сетевых взаимодействий.
 
-Для корректного отключения IPv6 на уровне узлов в кластере, управляемом DKP, достаточно задать необходимые параметры через ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
+Для корректного отключения IPv6 на уровне узлов в кластере, управляемом DP, достаточно задать необходимые параметры через ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

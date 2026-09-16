@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — OpenStack"
-description: "Cloud resource management in Deckhouse Kubernetes Platform using OpenStack."
+description: "Cloud resource management in Deckhouse Platform using OpenStack."
 ---
 
-The `cloud-provider-openstack` module integrates Deckhouse Kubernetes Platform with [OpenStack](https://www.openstack.org/)-based clouds. It allows the [`node-manager`](/modules/node-manager/) module to use OpenStack resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+The `cloud-provider-openstack` module integrates Deckhouse Platform with [OpenStack](https://www.openstack.org/)-based clouds. It allows the [`node-manager`](/modules/node-manager/) module to use OpenStack resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Features of the `cloud-provider-openstack` module:
 
