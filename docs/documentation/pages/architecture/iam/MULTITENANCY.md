@@ -3,10 +3,10 @@ title: Multitenancy
 permalink: en/architecture/iam/multitenancy.html
 lang: en
 search: multitenancy, ProjectTemplate, Project, project isolation
-description: How multitenancy works in Deckhouse Kubernetes Platform.
+description: How multitenancy works in Deckhouse Platform.
 ---
 
-The [`multitenancy-manager`](/modules/multitenancy-manager/) module allows you to create isolated projects within the Deckhouse Kubernetes Platform (DKP). Projects provide resource quotas, network isolation, and security features that go beyond standard namespaces.
+The [`multitenancy-manager`](/modules/multitenancy-manager/) module allows you to create isolated projects within the Deckhouse Platform (DP). Projects provide resource quotas, network isolation, and security features that go beyond standard namespaces.
 
 For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/multitenancy-manager/).
 
@@ -60,7 +60,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The architecture of the [`multitenancy-manager`](/modules/multitenancy-manager/) module at Level 2 of the C4 model and its interactions with other DKP components are shown in the following diagram.
+The architecture of the [`multitenancy-manager`](/modules/multitenancy-manager/) module at Level 2 of the C4 model and its interactions with other DP components are shown in the following diagram.
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Multitenancy-manager module architecture](../../images/architecture/iam/c4-l2-multitenancy-manager.png)

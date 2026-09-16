@@ -3,10 +3,10 @@ title: Подсистема Virtualization
 permalink: ru/architecture/virtualization/
 lang: ru
 search: virtualization, virtualization subsystem, подсистема виртуализации, dvp
-description: Архитектура подсистемы Virtualization в Deckhouse Kubernetes Platform.
+description: Архитектура подсистемы Virtualization в Deckhouse Platform.
 ---
 
-В данном подразделе описана архитектура подсистемы Virtualization (подсистемы виртуализации) Deckhouse Kubernetes Platform (DKP).
+В данном подразделе описана архитектура подсистемы Virtualization (подсистемы виртуализации) Deckhouse Platform (DP).
 
 Подсистема Virtualization представлена модулем [`virtualization`](/modules/virtualization/), который позволяет декларативно создавать, запускать и управлять виртуальными машинами (ВМ) и их ресурсами.
 

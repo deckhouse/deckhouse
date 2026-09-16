@@ -1,25 +1,25 @@
 ---
 title: Platform update
 permalink: en/admin/configuration/update/
-description: "Manage updates for Deckhouse Kubernetes Platform. Safe rolling updates, notifications, and configuration management for platform and cluster components."
+description: "Manage updates for Deckhouse Platform. Safe rolling updates, notifications, and configuration management for platform and cluster components."
 ---
 
-Deckhouse Kubernetes Platform (DKP) includes a built-in update management mechanism
+Deckhouse Platform (DP) includes a built-in update management mechanism
 for both the platform itself and Kubernetes cluster components.
-To roll out new versions consistently and safely, DKP uses a five-channel update system
+To roll out new versions consistently and safely, DP uses a five-channel update system
 ranging from the newest and unstable (Alpha) to the most thoroughly tested (Rock Solid).
 Each new version gradually moves through these channels,
 helping identify issues early and ensuring stability in production environments.
 For details on each channel, refer to the [Architecture](../../../architecture/updating.html#release-channels) section.
 
 {% alert level="warning" %}
-DKP does not support version downgrades.
+DP does not support version downgrades.
 After a release is installed, rolling the platform back to an earlier minor or patch version is not possible.
 
 When [switching to a more stable channel](../../../architecture/updating.html#switching-to-a-more-stable-channel),
 the platform remains on the current release until a newer version becomes available on that channel.
 
-Rolling back by one minor version is possible only for the [Kubernetes (control plane) version](../platform-scaling/control-plane/updating-and-versioning.html), not for the DKP version.
+Rolling back by one minor version is possible only for the [Kubernetes (control plane) version](../platform-scaling/control-plane/updating-and-versioning.html), not for the DP version.
 {% endalert %}
 
 You can configure the update process.
@@ -31,10 +31,10 @@ For more information, refer to [Notification settings](notifications.html).
 
 The following features are supported:
 
-- [Release notifications](notifications.html#configuring-notifications): DKP can send release notifications via webhooks.
+- [Release notifications](notifications.html#configuring-notifications): DP can send release notifications via webhooks.
 - [Retrieving the changelog](../../../architecture/updating.html#retrieving-the-changelog):
-  Each DKP release includes a changelog, available both in the cluster and as part of the release notification.
+  Each DP release includes a changelog, available both in the cluster and as part of the release notification.
 - [Checking dependencies before update](../../../architecture/updating.html#checking-dependencies-before-update):
   Checks for component dependencies before proceeding with an update to prevent conflicts.
 
-For more details on updating DKP in air-gapped environment, see the ["Updating DKP in air-gapped environment"](/products/kubernetes-platform/guides/airgapped-update.html) guide.
+For more details on updating DP in air-gapped environment, see the ["Updating DP in air-gapped environment"](/products/kubernetes-platform/guides/airgapped-update.html) guide.

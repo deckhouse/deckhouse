@@ -1,12 +1,12 @@
 ---
 title: "Настройка системы сбора и хранения метрик"
 permalink: ru/admin/configuration/monitoring/prometheus.html
-description: "Настройка сбора и хранения метрик Prometheus в Deckhouse Kubernetes Platform. Установка Deckhouse Prom++, настройка метрик и управление системой мониторинга."
+description: "Настройка сбора и хранения метрик Prometheus в Deckhouse Platform. Установка Deckhouse Prom++, настройка метрик и управление системой мониторинга."
 lang: ru
 ---
 
 {% alert %}
-Начиная с версии 1.71, в Deckhouse Kubernetes Platform используется [Deckhouse Prom++](/products/prompp/) вместо Prometheus.
+Начиная с версии 1.71, в Deckhouse Platform используется [Deckhouse Prom++](/products/prompp/) вместо Prometheus.
 {% endalert %}
 
 ## Что делает Prometheus?
@@ -20,7 +20,7 @@ Prometheus собирает метрики и выполняет правила:
 
 ## Как работает Prometheus?
 
-Prometheus устанавливается [модулем `prometheus`](/modules/prometheus/) DKP, который выполняет следующие функции:
+Prometheus устанавливается [модулем `prometheus`](/modules/prometheus/) DP, который выполняет следующие функции:
 - определяет следующие кастомные ресурсы:
   - `Prometheus` — определяет инсталляцию (кластер) *Prometheus*.
   - `ServiceMonitor` — определяет, как собирать метрики с сервисов.

@@ -12,7 +12,7 @@
 
 ### Deckhouse subsystem
 
-- Added support for deploying a DKP cluster using the [`Proxy`](https://deckhouse.io/modules/deckhouse/v1.76/configuration.html#parameters-registry-proxy) mode for accessing the container registry.
+- Added support for deploying a DP cluster using the [`Proxy`](https://deckhouse.io/modules/deckhouse/v1.76/configuration.html#parameters-registry-proxy) mode for accessing the container registry.
 
 - `Kubectl` on cluster nodes has been replaced with the `d8 k` alias ([Deckhouse CLI utility](https://deckhouse.io/products/kubernetes-platform/documentation/v1.76/cli/d8/)).
 
@@ -76,7 +76,7 @@
     Any integrations using the Authorization Code Flow are unaffected.
 
   - Added SAML 2.0 support via the [DexProvider](https://deckhouse.io/modules/user-authn/v1.76/cr.html#dexprovider-v1-spec-saml) resource.
-    DKP clusters can now be connected to such identity providers as AD FS, Okta, Keycloak, OneLogin, and Shibboleth.
+    DP clusters can now be connected to such identity providers as AD FS, Okta, Keycloak, OneLogin, and Shibboleth.
 
   - Added refresh token support for SAML in Dex.
     This allows DexAuthenticator и kubeconfig-generator to refresh tokens without a manual user login.
@@ -137,7 +137,7 @@
 
 - Changes in the [`cloud-provider-aws`](https://deckhouse.io/modules/cloud-provider-aws/v1.76/) module:
 
-  - Spot node draining logic was moved into DKP, making the spot node handling more unified.
+  - Spot node draining logic was moved into DP, making the spot node handling more unified.
 
   - Fixed handling of regions without `DescribeInstanceTopology`, reducing the number of false IAM errors.
 
@@ -176,7 +176,7 @@
 
   - Added ICMP (ping) support via ExternalIP for LoadBalancer services with MetalLB.
 
-- Added support for [switching between supported CNI plugins](https://deckhouse.io/products/kubernetes-platform/guides/cni-migration.html) in DKP clusters.
+- Added support for [switching between supported CNI plugins](https://deckhouse.io/products/kubernetes-platform/guides/cni-migration.html) in DP clusters.
 
 - In the `node-local-dns` module, added [`disableIPv6`](https://deckhouse.io/modules/node-local-dns/v1.76/configuration.html#parameters-disableipv6) parameter to disable IPv6 DNS resolution.
 

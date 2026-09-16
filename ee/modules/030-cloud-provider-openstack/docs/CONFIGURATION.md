@@ -30,7 +30,7 @@ If you need to configure a module because, say, you have a bare metal cluster an
 
 ## List of required OpenStack services
 
-A list of OpenStack services required for Deckhouse Kubernetes Platform to work in OpenStack:
+A list of services required for Deckhouse Platform to work in OpenStack:
 
 | Service                           | API Version |
 |:----------------------------------|:-----------:|
@@ -42,6 +42,10 @@ A list of OpenStack services required for Deckhouse Kubernetes Platform to work 
 
 \* If you need to order a Load Balancer.
 
-To ensure proper integration and functionality, the OpenStack user associated with the Deckhouse Kubernetes Platform should be granted the "member" role. This role assignment is essential to provide the necessary permissions for interacting with the listed services and managing resources within the OpenStack environment.
+{% alert level="info" %}
+For Compute and Block Storage, the supported microversion depends on the installed OpenStack release. For Block Storage, microversion `3.0` is the minimum version and is used by default.
+{% endalert %}
+
+To ensure proper integration and functionality, the OpenStack user associated with the Deckhouse Platform should be granted the "member" role. This role assignment is essential to provide the necessary permissions for interacting with the listed services and managing resources within the OpenStack environment.
 
 {% include module-settings.liquid %}

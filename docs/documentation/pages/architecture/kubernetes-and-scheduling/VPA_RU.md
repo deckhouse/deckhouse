@@ -3,13 +3,13 @@ title: "Вертикальное масштабирование"
 permalink: ru/architecture/kubernetes-and-scheduling/vpa.html
 lang: ru
 search: архитектура автомасштабирования, вертикальное масштабирование, оптимизация ресурсов, масштабирование подов, vpa, vertical pod autoscaler, vertical-pod-autoscaler
-description: Режимы работы и ограничения VPA в Deckhouse Kubernetes Platform.
+description: Режимы работы и ограничения VPA в Deckhouse Platform.
 relatedLinks:
   - title: "Включение вертикального масштабирования"
     url: /products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/vpa.html
 ---
 
-Модуль [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) обеспечивает работу [Vertical Pod Autoscaler (VPA)](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) в Deckhouse Kubernetes Platform (DKP).
+Модуль [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) обеспечивает работу [Vertical Pod Autoscaler (VPA)](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) в Deckhouse Platform (DP).
 
 Подробнее о настройках модуля и примерах его использования можно узнать [в соответствующем разделе документации](/modules/vertical-pod-autoscaler/configuration.html).
 
@@ -68,7 +68,7 @@ VPA может работать в двух режимах:
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP показаны на следующей диаграмме:
+Архитектура модуля [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP показаны на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля vertical-pod-autoscaler](../../images/architecture/kubernetes-and-scheduling/c4-l2-vertical-pod-autoscaler.ru.png)

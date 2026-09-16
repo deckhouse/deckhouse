@@ -3,7 +3,7 @@ title: "Inter-cluster cooperation (cluster alliance)"
 permalink: en/admin/configuration/network/alliance/
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports two inter-cluster communication models:
+Deckhouse Platform (DP) supports two inter-cluster communication models:
 
 - [Multicluster](../alliance/multicluster.html)
 - [Federation](../alliance/federation.html)
@@ -11,7 +11,7 @@ Deckhouse Kubernetes Platform (DKP) supports two inter-cluster communication mod
 Both models can be implemented using Istio (via the [`istio`](/modules/istio/) module) or Cilium (via the [`cni-cilium`](/modules/cni-cilium/) module).
 Both tools provide deployment of a service mesh for managing and configuring network interactions between applications within a cluster.
 
-## Service mesh usage specifics in DKP
+## Service mesh usage specifics in DP
 
 Available scenarios depend on the platform edition.
 

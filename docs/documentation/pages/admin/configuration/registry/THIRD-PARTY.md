@@ -1,5 +1,5 @@
 ---
-title: Switching a running DKP cluster to use an external registry
+title: Switching a running DP cluster to use an external registry
 permalink: en/admin/configuration/registry/third-party.html
 ---
 
@@ -8,7 +8,7 @@ When using the [registry](/modules/registry/) module, change the address and par
 {% endalert %}
 
 {% alert level="warning" %}
-Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of the Deckhouse Kubernetes Platform.
+Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of the Deckhouse Platform.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -17,14 +17,14 @@ If, during the switching process, the image of a module did not reload and the m
 
 To switch the cluster to use an external registry, follow these steps:
 
-1. Run the `deckhouse-controller helper change-registry` command from the DKP pod with the parameters of the new registry.  
+1. Run the `deckhouse-controller helper change-registry` command from the DP pod with the parameters of the new registry.  
    Example:
 
    ```shell
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
    ```
 
-1. If the registry uses self-signed certificates, place the corresponding root certificate in the file `/tmp/ca.crt` inside the DKP pod and add the -`-ca-file /tmp/ca.crt` option to the command.
+1. If the registry uses self-signed certificates, place the corresponding root certificate in the file `/tmp/ca.crt` inside the DP pod and add the -`-ca-file /tmp/ca.crt` option to the command.
    Alternatively, insert the CA content into a variable, as shown below:
 
    ```shell

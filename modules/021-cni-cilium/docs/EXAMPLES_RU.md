@@ -5,7 +5,9 @@ description: Примеры настройки Egress Gateway и экспорт�
 
 ## Egress Gateway
 
-{% alert level="warning" %}Доступно в следующих редакциях: SE+, EE, CSE Lite (1.73), CSE Pro (1.73).{% endalert %}
+{% alert level="warning" %}
+Доступно в следующих редакциях: SE+, EE, Ultimate, CSE Lite (1.73), CSE Pro (1.73), DP Certified Pro, DP Certified Lite.
+{% endalert %}
 
 ### Принцип работы
 

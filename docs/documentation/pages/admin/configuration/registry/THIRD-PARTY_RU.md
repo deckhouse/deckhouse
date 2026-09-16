@@ -1,7 +1,7 @@
 ---
-title: Переключение работающего кластера DKP на использование стороннего registry
+title: Переключение работающего кластера DP на использование стороннего registry
 permalink: ru/admin/configuration/registry/third-party.html
-description: "Переключение Deckhouse Kubernetes Platform на использование стороннего container registry. Настройка внешних registry и миграция с официального registry."
+description: "Переключение Deckhouse Platform на использование стороннего container registry. Настройка внешних registry и миграция с официального registry."
 lang: ru
 ---
 
@@ -10,7 +10,7 @@ lang: ru
 {% endalert %}
 
 {% alert level="warning" %}
-Использование registries, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
+Использование хранилищ образов контейнеров, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Platform.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -19,14 +19,14 @@ lang: ru
 
 Для переключения кластера на использование стороннего registry выполните следующие действия:
 
-1. Выполните команду `deckhouse-controller helper change-registry` из пода DKP с параметрами нового registry.
+1. Выполните команду `deckhouse-controller helper change-registry` из пода DP с параметрами нового хранилища образов.
    Пример запуска:
 
    ```shell
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
    ```
 
-1. Если registry использует самоподписанные сертификаты, положите корневой сертификат соответствующего сертификата registry в файл `/tmp/ca.crt` в поде DKP и добавьте к вызову опцию `--ca-file /tmp/ca.crt` или вставьте содержимое CA в переменную, как в примере ниже:
+1. Если хранилище образов контейнеров использует самоподписанные сертификаты, положите корневой сертификат соответствующего CA (центра сертификатов) в файл `/tmp/ca.crt` в поде DP и добавьте к вызову опцию `--ca-file /tmp/ca.crt` или вставьте содержимое сертификата CA в переменную, как в примере ниже:
 
    ```shell
    CA_CONTENT=$(cat <<EOF
@@ -93,7 +93,8 @@ lang: ru
    Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Consumed 1.075s CPU time.
    ```
 
-1. Если необходимо отключить автоматическое обновление registry через сторонний registry, удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
+1. Если необходимо отключить автоматическое обновление DP до новых версий через стороннее хранилище образов, удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
+   После этого автоматическое обновление платформы будет отключено, и управлять версией DP потребуется вручную.
 
 1. Проверьте, не осталось ли в кластере подов с оригинальным адресом registry:
 

@@ -3,10 +3,10 @@ title: Модуль managed-valkey
 permalink: ru/architecture/managed-services/managed-valkey.html
 lang: ru
 search: managed-valkey, valkey
-description: Архитектура модуля managed-valkey в Deckhouse Kubernetes Platform.
+description: Архитектура модуля managed-valkey в Deckhouse Platform.
 ---
 
-Модуль [`managed-valkey`](/modules/managed-valkey/) управляет инстансами [Valkey](https://github.com/valkey-io/valkey) (Redis-совместимое хранилище данных в оперативной памяти) в Deckhouse Kubernetes Platform (DKP). Он предоставляет:
+Модуль [`managed-valkey`](/modules/managed-valkey/) управляет инстансами [Valkey](https://github.com/valkey-io/valkey) (Redis-совместимое хранилище данных в оперативной памяти) в Deckhouse Platform (DP). Он предоставляет:
 
 * **Автоматическое развёртывание** — создаёт инстанс Valkey при помощи простой YAML-конфигурации;
 * **Standalone** — поддерживает установку одиночного инстанса;
@@ -25,7 +25,7 @@ description: Архитектура модуля managed-valkey в Deckhouse Kub
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`managed-valkey`](/modules/managed-valkey/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`managed-valkey`](/modules/managed-valkey/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля managed-valkey](../../images/architecture/managed-services/c4-l2-managed-valkey.ru.svg)
 

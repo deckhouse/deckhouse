@@ -137,7 +137,7 @@ The name `kubeconfig` is reserved for the kubeconfig generation web interface. T
 
 ### Configuring kube-apiserver
 
-Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DKP automatically configures `kube-apiserver` with the following flags so that the `dashboard` and `kubeconfig-generator` modules can work in the cluster.
+Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DP automatically configures `kube-apiserver` with the following flags so that the `dashboard` and `kubeconfig-generator` modules can work in the cluster.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 
@@ -177,7 +177,7 @@ To rotate the secret, do the following:
    d8 k -n d8-user-authn patch secret kubernetes-dex-client-app-secret --type merge -p '{"data":{"secret":""}}'
    ```
 
-1. Restart DKP so that the hook picks the empty field up and generates a new value:
+1. Restart DP so that the hook picks the empty field up and generates a new value:
 
    ```shell
    d8 k -n d8-system rollout restart deployment/deckhouse
@@ -189,7 +189,7 @@ To rotate the secret, do the following:
    d8 k -n d8-user-authn get secret kubernetes-dex-client-app-secret -o jsonpath='{.data.secret}'
    ```
 
-   If it did not, repeat the steps 2 and 3. The module may have restored the previous before DKP was restarted.
+   If it did not, repeat the steps 2 and 3. The module may have restored the previous before DP was restarted.
 
 One the secret has been rotated, the configuration of components that use it will be updated automatically and the corresponding pods will be restarted.
 

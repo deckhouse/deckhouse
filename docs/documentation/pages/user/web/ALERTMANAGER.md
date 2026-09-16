@@ -1,6 +1,6 @@
 ---
 title: Web interface for managing alerts
-description: "Alertmanager web interface for managing alerts in Deckhouse Kubernetes Platform. Viewing alert information, severity levels, temporary silencing of notifications."
+description: "Alertmanager web interface for managing alerts in Deckhouse Platform. Viewing alert information, severity levels, temporary silencing of notifications."
 permalink: en/user/web/alertmanager.html
 ---
 
@@ -8,7 +8,7 @@ The alert management web UI can be used for handling alerts in a Deckhouse clust
 It allows you to view detailed information about alerts, including the source, severity, and trigger time,
 and to temporarily silence alert notifications when needed.
 
-For the list of all available alerts in the Deckhouse Kubernetes Platform monitoring system, refer to the [corresponding documentation page](../../reference/alerts.html).
+For the list of all available alerts in the Deckhouse Platform monitoring system, refer to the [corresponding documentation page](../../reference/alerts.html).
 
 ## Accessing the web UI
 

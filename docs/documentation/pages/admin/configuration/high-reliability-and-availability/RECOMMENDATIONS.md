@@ -43,7 +43,7 @@ This ensures Deckhouse modules will run on them without interfering with user ap
 
 ## Preventing Kubernetes API overload (FlowSchema)
 
-By default, a DKP cluster includes a component that implements [FlowSchema](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/#flowschema) and [PriorityLevelConfiguration](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/#prioritylevelconfiguration) to prevent Kubernetes API overload.
+By default, a DP cluster includes a component that implements [FlowSchema](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/#flowschema) and [PriorityLevelConfiguration](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/#prioritylevelconfiguration) to prevent Kubernetes API overload.
 
 `FlowSchema` assigns `PriorityLevel` for `list` requests from all service accounts in Deckhouse namespaces
 (with the label `heritage: deckhouse`) to the following apiGroups:
@@ -82,17 +82,17 @@ The component also provides the following metrics to Grafana:
 ## Delaying node reboot or shutdown while critical pods are running
 
 {% alert level="info" %}
-Available in the **EE** edition.
+Available in the EE and Ultimate editions.
 {% endalert %}
 
-DKP supports a mechanism for delaying the shutdown or reboot of a node if it is running stateful applications or virtual machines (VMs). This is implemented by the `d8-shutdown-inhibitor` service of the [`node-manager`](/modules/node-manager/) module.
+DP supports a mechanism for delaying the shutdown or reboot of a node if it is running stateful applications or virtual machines (VMs). This is implemented by the `d8-shutdown-inhibitor` service of the [`node-manager`](/modules/node-manager/) module.
 
-The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are running on the node. DKP delays the shutdown or restart of the node so that the user can migrate critical pods or terminate them in a controlled manner. This is useful, for example, for stateful workloads and other cases where data loss must be avoided. For information about the mechanism's principles and features, refer to the [`node-manager` module documentation](/modules/node-manager/#delaying-node-reboot-or-shutdown-while-critical-pods-are-running).
+The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are running on the node. DP delays the shutdown or restart of the node so that the user can migrate critical pods or terminate them in a controlled manner. This is useful, for example, for stateful workloads and other cases where data loss must be avoided. For information about the mechanism's principles and features, refer to the [`node-manager` module documentation](/modules/node-manager/#delaying-node-reboot-or-shutdown-while-critical-pods-are-running).
 
 ### Enabling a node shutdown delay
 
 {% alert level="warning" %}
-To decide whether to block a node shutdown, DKP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
+To decide whether to block a node shutdown, DP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
 {% endalert %}
 
 To enable the mechanism that delays a node's restart or shutdown, add the label `pod.deckhouse.io/inhibit-node-shutdown` to the Pod (for a Deployment, specify the label in the pod template).

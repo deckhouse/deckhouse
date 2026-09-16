@@ -626,8 +626,8 @@ entries:
                         ru: Обзор
                       url: /admin/configuration/network/sdn/
                     - title:
-                        en: Configuring SDN in a DKP cluster
-                        ru: Настройка SDN в кластере DKP
+                        en: Configuring SDN in a DP cluster
+                        ru: Настройка SDN в кластере DP
                       url: /admin/configuration/network/sdn/configure.html
                 - title:
                     en: Other network configuration options
@@ -1263,8 +1263,8 @@ entries:
           draft: true
           url: /architecture/system-requirements/
         - title:
-            en: DKP architecture (C4 model)
-            ru: Архитектура DKP (модель C4)
+            en: DP architecture (C4 model)
+            ru: Архитектура DP (модель C4)
           url: /architecture/c4-model.html
         - title:
             en: Modules
@@ -1753,7 +1753,7 @@ entries:
             - title:
                 en: Extended-monitoring module
                 ru: Модуль extended-monitoring
-              url: /architecture/observability/extended-monitoring.html              
+              url: /architecture/observability/extended-monitoring.html
             - title:
                 en: Monitoring-kubernetes module
                 ru: Модуль monitoring-kubernetes

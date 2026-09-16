@@ -2,7 +2,7 @@
 title: Deckhouse Virtualization Container Registry (DVCR)
 permalink: en/architecture/virtualization/dvcr.html
 search: deckhouse virtualization container registry, dvcr 
-description: Architecture of the DVCR component of virtualization module in Deckhouse Kubernetes Platform.
+description: Architecture of the DVCR component of virtualization module in Deckhouse Platform.
 ---
 
 The Deckhouse Virtualization Container Registry (DVCR) component of the [`virtualization`](/modules/virtualization/) module is a specialized container registry for storing and caching virtual machine (VM) images. The [CDI](cdi.html) component of the [`virtualization`](/modules/virtualization/) module uses images stored in DVCR as a source for InternalVirtualizationDataVolume resources, which are used to create disks for KubeVirt-managed VMs.
@@ -16,7 +16,7 @@ The following simplifications are made in the diagram:
 - Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the DVCR component of [`virtualization`](/modules/virtualization/) module and its interactions with other components of DKP are shown in the following diagrams:
+The Level 2 C4 architecture of the DVCR component of [`virtualization`](/modules/virtualization/) module and its interactions with other components of DP are shown in the following diagrams:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Architecture of the DVCR component of virtualization module](../../images/architecture/virtualization/c4-l2-virtualization-dvcr.png)

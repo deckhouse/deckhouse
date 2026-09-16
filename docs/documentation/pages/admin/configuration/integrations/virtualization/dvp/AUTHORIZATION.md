@@ -3,7 +3,7 @@ title: Connection and authorization in Deckhouse Virtualization Platform
 permalink: en/admin/integrations/virtualization/dvp/authorization.html
 ---
 
-To interact with DVP resources, Deckhouse Kubernetes Platform components use the DVP API. To configure access, create a user (ServiceAccount), assign the necessary permissions, and generate a kubeconfig.
+To interact with virtualization resources, Deckhouse Platform components use the virtualization API. To configure access, create a user (ServiceAccount), assign the necessary permissions, and generate a kubeconfig.
 
 {% alert level="warning" %}
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
@@ -27,7 +27,7 @@ The `update-hostname` module can also be disabled completely by removing it from
 
 ## Creating a user
 
-Create a new user in the DVP cluster using the following command:
+Create a new user in the virtualization cluster using the following command:
 
 ```bash
 d8 k create -f -<<EOF
@@ -50,7 +50,7 @@ EOF
 
 ## Assigning a role
 
-Assign a role to the created user in the DVP cluster using the following command:
+Assign a role to the created user in the virtualization cluster using the following command:
 
 ```bash
 d8 k create -f -<<EOF

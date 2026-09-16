@@ -1,13 +1,13 @@
 ---
 title: Public cloud providers
 permalink: en/admin/integrations/public/overview.html
-description: "Deploy Deckhouse Kubernetes Platform on public cloud providers including AWS, Azure, GCP, OpenStack, OVH, Selectel, VK, and Yandex. Complete cloud integration guide."
+description: "Deploy Deckhouse Platform on public cloud providers including AWS, Azure, GCP, OpenStack, OVH, Selectel, VK, and Yandex. Complete cloud integration guide."
 ---
 
-Deckhouse Kubernetes Platform (DKP) can be deployed in various public clouds,
+Deckhouse Platform (DP) can be deployed in various public clouds,
 enabling the use of scalable infrastructure and flexible integration with cloud services.
 
-DKP supports the following providers:
+DP supports the following providers:
 
 - [Amazon Web Services (AWS)](./amazon/authorization.html)
 - [Google Cloud Platform (GCP)](./gcp/connection-and-authorization.html)

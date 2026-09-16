@@ -35,7 +35,7 @@ spec:
                   properties:
                     newPasswordHash:
                       description: |
-                        Новый пароль в виде bcrypt-хеша.  
+                        Новый пароль в виде bcrypt-хеша.
                         Хеш должен быть получен заранее и передан в поле CR.
                 lock:
                   description: |
@@ -43,7 +43,7 @@ spec:
                   properties:
                     for:
                       description: |
-                        Длительность блокировки.  
+                        Длительность блокировки.
                         Указывается в формате: `30s`, `10m`, `1h`, `2h30m`.
             status:
               type: object
@@ -85,16 +85,16 @@ spec:
                   description: |
                     Указывает, кем инициирована операция. Возможные значения:
 
-                    * `admin` — администратором;
-                    * `system` — автоматически системой;
-                    * `self` — самим пользователем.
+                    * `admin` — администратором (например, через CLI `d8 iam user` или ручное создание UserOperation);
+                    * `system` — автоматически системой (например, автоблокировка при превышении `passwordPolicy.lockout.maxAttempts`);
+                    * `self` — самим пользователем (самостоятельный сброс пароля в интерфейсе аутентификации DP).
                 resetPassword:
                   description: |
                     Параметры операции по сбросу пароля.
                   properties:
                     newPasswordHash:
                       description: |
-                        Новый пароль в виде bcrypt-хеша.  
+                        Новый пароль в виде bcrypt-хеша.
                         Хеш должен быть получен заранее и передан в поле CR.
                 lock:
                   description: |
@@ -102,7 +102,7 @@ spec:
                   properties:
                     for:
                       description: |
-                        Длительность блокировки.  
+                        Длительность блокировки.
                         Указывается в формате: `30s`, `10m`, `1h`, `2h30m`.
             status:
               type: object

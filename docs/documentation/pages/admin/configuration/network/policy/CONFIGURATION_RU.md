@@ -2,12 +2,12 @@
 title: "Настройка сетевых политик"
 permalink: ru/admin/configuration/network/policy/configuration.html
 description: |
-  Настройка сетевых политик Deckhouse Kubernetes Platform. Условия для включения режимов туннелирования трафика подов.
+  Настройка сетевых политик Deckhouse Platform. Условия для включения режимов туннелирования трафика подов.
 lang: ru
 search: network policy configuration, network policies, traffic tunneling, pod traffic, network security, настройка сетевых политик, сетевые политики, сетевая безопасность
 ---
 
-Если на уровне инфраструктуры, где работает Deckhouse Kubernetes Platform, есть требования для ограничения сетевого взаимодействия между серверами, то необходимо соблюсти следующие условия:
+Если на уровне инфраструктуры, где работает Deckhouse Platform, есть требования для ограничения сетевого взаимодействия между серверами, то необходимо соблюсти следующие условия:
 
 * Включен режим туннелирования трафика между подами ([настройки](/modules/cni-cilium/configuration.html#parameters-tunnelmode) для CNI Cilium, [настройки](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) для CNI Flannel).
 * Разрешена передача трафика между [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr), инкапсулированного внутри VXLAN (если выполняется инспектирование и фильтрация трафика внутри VXLAN-туннеля).

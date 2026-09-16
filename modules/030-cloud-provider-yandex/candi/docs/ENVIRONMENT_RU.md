@@ -11,7 +11,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 ## Создание сервисного аккаунта
 
-Чтобы Deckhouse Kubernetes Platform (DKP) могла управлять ресурсами в облаке Yandex Cloud, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Далее представлена краткая последовательность необходимых действий:
+Чтобы Deckhouse Platform (DP) могла управлять ресурсами в облаке Yandex Cloud, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Далее представлена краткая последовательность необходимых действий:
 
 1. Создайте пользователя с именем `deckhouse`:
 
@@ -60,7 +60,7 @@ description: "Настройка Yandex Cloud для работы облачно
 ## Интеграция с Yandex Cloud
 
 {% alert level="warning" %}
-Начиная с версии DKP 1.76, в Yandex Cloud CNI `cilium` используется по умолчанию для новых кластеров.
+Начиная с версии DP 1.76, в Yandex Cloud CNI `cilium` используется по умолчанию для новых кластеров.
 
 При использовании CentOS 8 необходимо явно включить модуль `cni-simple-bridge` в файле `config.yml`.
 
@@ -80,7 +80,7 @@ spec:
 
 ### Настройка групп безопасности
 
-При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех подключенных сетей, включая сеть кластера Deckhouse Kubernetes Platform. Эта группа безопасности по умолчанию содержит правила разрешающие любой входящий и исходящий трафик и применяется для всех подсетей облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности.
+При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех подключенных сетей, включая сеть кластера Deckhouse Platform. Эта группа безопасности по умолчанию содержит правила разрешающие любой входящий и исходящий трафик и применяется для всех подсетей облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности.
 
 {% alert level="danger" %}
 Не удаляйте правила по умолчанию, разрешающие любой трафик, до того как закончите настройку правил группы безопасности. Это может нарушить работоспособность кластера.
@@ -88,7 +88,7 @@ spec:
 
 Ниже приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста, ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
 
-1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
+1. Определите облачную сеть, в которой работает кластер Deckhouse Platform.
 
    Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). Его можно узнать с помощью команды:
 
@@ -109,7 +109,7 @@ spec:
 
 ### Интеграция с Yandex Lockbox
 
-С помощью инструмента [External Secrets Operator](https://github.com/external-secrets/external-secrets) вы можете настроить синхронизацию секретов [Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/concepts/) с секретами кластера Deckhouse Kubernetes Platform.
+С помощью инструмента [External Secrets Operator](https://github.com/external-secrets/external-secrets) вы можете настроить синхронизацию секретов [Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/concepts/) с секретами кластера Deckhouse Platform.
 
 Приведенную инструкцию следует рассматривать как *Быстрый старт*. Для использования интеграции в продуктивных средах ознакомьтесь со следующими ресурсами:
 
@@ -238,7 +238,7 @@ spec:
 
    Где:
 
-   - `spec.target.name` — имя нового секрета. External Secrets Operator создаст этот секрет в кластере Deckhouse Kubernetes Platform и поместит в него параметры секрета Yandex Lockbox `lockbox-secret`.
+   - `spec.target.name` — имя нового секрета. External Secrets Operator создаст этот секрет в кластере Deckhouse Platform и поместит в него параметры секрета Yandex Lockbox `lockbox-secret`.
    - `spec.data[].secretKey` — название ключа в поле `.data` секрета, который создаст External Secrets Operator.
    - `spec.data[].remoteRef.key` — идентификатор созданного ранее секрета Yandex Lockbox `lockbox-secret`. Например, `e6q28nvfmhu539******`.
    - `spec.data[].remoteRef.property` — **ключ**, указанный ранее, для секрета Yandex Lockbox `lockbox-secret`.

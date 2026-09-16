@@ -71,7 +71,7 @@ There are three options to limit the automatic update of Deckhouse:
 
   In this case, Deckhouse holds on a current version and will automatically update to patch versions of the current release (taking into account the update windows). To apply a minor version update, a [manual action](usage.html#manual-update-confirmation) will need to be performed.
   
-  For example: the current version of DKP is `v1.70.1`, after setting the automatic update mode for patch versions, Deckhouse can be updated to version `v1.70.2`, but will not update to version `v1.71.*` or higher.
+  For example: the current version of DP is `v1.70.1`, after setting the automatic update mode for patch versions, Deckhouse can be updated to version `v1.70.2`, but will not update to version `v1.71.*` or higher.
 
   To set the automatic update mode for patch versions, you need to set the parameter [settings.update.mode](configuration.html#parameters-update-mode) to `AutoPatch` in the ModuleConfig `deckhouse`:
 
@@ -81,9 +81,9 @@ There are three options to limit the automatic update of Deckhouse:
 
 - Set a specified image tag for Deployment `deckhouse` and remove [releaseChannel](configuration.html#parameters-releasechannel) parameter from `deckhouse` module configuration.
 
-  In that case, DKP holds on a current version, and no information about new available versions in the cluster (DeckhouseRelease objects) will be received.
+  In that case, DP holds on a current version, and no information about new available versions in the cluster (DeckhouseRelease objects) will be received.
 
-  An example of installing version `v1.66.3` for DKP EE and removing the `releaseChannel` parameter from the configuration of the `deckhouse` module:
+  An example of installing version `v1.66.3` for DP EE and removing the `releaseChannel` parameter from the configuration of the `deckhouse` module:
   
   ```shell
   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3

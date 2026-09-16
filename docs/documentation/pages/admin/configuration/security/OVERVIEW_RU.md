@@ -1,12 +1,17 @@
 ---
 title: Безопасность
 permalink: ru/admin/configuration/security/
-description: "Настройка функций безопасности в Deckhouse Kubernetes Platform включая сертификаты, аудит логирование, runtime безопасность, сканирование и политики безопасности."
+description: "Настройка функций безопасности в Deckhouse Platform включая сертификаты, аудит логирование, runtime безопасность, сканирование и политики безопасности."
 lang: ru
 search: security overview, security configuration, security management, platform security, обзор безопасности, конфигурация безопасности, управление безопасностью, безопасность платформы
 ---
 
-Раздел «Безопасность» посвящён вопросам обеспечения безопасности в Deckhouse Kubernetes Platform.
+Раздел «Безопасность» содержит информацию о механизмах защиты, реализованных в Deckhouse Platform.
+
+{% alert level="info" %}
+Обзор возможностей платформы в этой области подробно разобран в курсе [«Инструменты безопасности в Deckhouse Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+{% endalert %}
+
 Здесь собраны рекомендации, инструкции и примеры настройки встроенных механизмов защиты,
 а также интеграции с внешними системами.
 

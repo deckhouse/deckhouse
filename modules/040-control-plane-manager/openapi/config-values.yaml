@@ -88,7 +88,7 @@ properties:
               cacheSize: 2000
             ```
 
-          > Note that th `PodNodeSelector` admission plugin [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
+          > Note that the `PodNodeSelector` admission plugin [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
         x-examples:
           - ["AlwaysPullImages", "NamespaceAutoProvision"]
         items:
@@ -334,7 +334,7 @@ properties:
       List of feature gates enabled in the control plane.
 
       More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
-      The list of feature gates supported in DKP can be found on the [module overview page](./#feature-gates).
+      The list of feature gates supported in DP can be found on the [module overview page](./#feature-gates).
     items:
       type: string
       pattern: '^[a-zA-Z]+$'

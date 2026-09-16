@@ -254,7 +254,7 @@ type ApplicationPackageVersionList struct {
 // PackageRequirements describes the platform and module dependencies of a package,
 // surfaced as part of the package version status.
 type PackageRequirements struct {
-	// Required Deckhouse version.
+	// Required Deckhouse Platform version.
 	// +optional
 	Deckhouse *VersionConstraint `json:"deckhouse,omitempty"`
 

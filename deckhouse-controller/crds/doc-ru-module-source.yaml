@@ -7,7 +7,7 @@ spec:
           description: |
             Определяет конфигурацию источника модулей Deckhouse.
 
-            Подробнее об установке модуля из источника — в разделе [«Запуск модуля в кластере DKP»](../../architecture/module-development/run/#запуск-модуля-в-кластере-dkp)
+            Подробнее об установке модуля из источника — в разделе [«Запуск модуля в кластере DP»](../../architecture/module-development/run/#запуск-модуля-в-кластере-dp)
           properties:
             spec:
               properties:

@@ -10,7 +10,7 @@ and the related configuration options.
 The selected layout affects networking behavior, availability of public IP addresses, outgoing traffic routing,
 and how nodes are accessed.
 
-Deckhouse Kubernetes Platform (DKP) supports two layouts for deploying resources in GCP.
+Deckhouse Platform (DP) supports two layouts for deploying resources in GCP.
 
 ### Standard
 
@@ -157,7 +157,7 @@ provider:
 Integration with GCP is handled via the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource,
 which describes the cloud cluster configuration in GCP
 and is used by the cloud provider when the control plane is hosted in the cloud.
-The responsible DKP module configures itself automatically based on the selected layout.
+The responsible DP module configures itself automatically based on the selected layout.
 
 To update the configuration of a running cluster, run the following command:
 
@@ -207,7 +207,7 @@ Machine provisioning and parameters are configured in the [NodeGroup](/modules/n
 where the instance class for the node group is specified (the [`cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) parameter).
 For GCP, the instance class is a [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) custom resource that defines the machine parameters.
 
-DKP also automatically creates StorageClasses that cover all available disk types in GCP:
+DP also automatically creates StorageClasses that cover all available disk types in GCP:
 
 | Disk type | Replication | StorageClass name |
 |---|---|---|

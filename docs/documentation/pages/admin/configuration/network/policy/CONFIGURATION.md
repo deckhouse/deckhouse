@@ -2,10 +2,10 @@
 title: "Network policy configuration"
 permalink: en/admin/configuration/network/policy/configuration.html
 description: |
-  Setting up network policies for the Deckhouse Kubernetes Platform. Conditions for enabling pod traffic tunneling modes.
+  Setting up network policies for the Deckhouse Platform. Conditions for enabling pod traffic tunneling modes.
 ---
 
-If there are requirements to restrict network interaction between servers at the infrastructure level where the Deckhouse Kubernetes Platform operates, the following conditions must be met:
+If there are requirements to restrict network interaction between servers at the infrastructure level where the Deckhouse Platform operates, the following conditions must be met:
 
 * Tunneling mode for traffic between pods is enabled ([configuration](/modules/cni-cilium/configuration.html#parameters-tunnelmode) for CNI Cilium, [configuration](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) for CNI Flannel).
 * Traffic between [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) encapsulated within a VXLAN is allowed (if inspection and filtering of traffic within a VXLAN tunnel is performed).

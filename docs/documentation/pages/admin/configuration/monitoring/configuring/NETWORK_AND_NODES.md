@@ -5,7 +5,7 @@ permalink: en/admin/configuration/monitoring/configuring/network-and-nodes.html
 
 ## Network interaction monitoring
 
-DKP can perform monitoring of network interaction between all cluster nodes, as well as between cluster nodes and external hosts. When monitoring is configured, each node sends ICMP packets twice per second to all other cluster nodes (and to optional external nodes) and exports data to the monitoring system.
+DP can perform monitoring of network interaction between all cluster nodes, as well as between cluster nodes and external hosts. When monitoring is configured, each node sends ICMP packets twice per second to all other cluster nodes (and to optional external nodes) and exports data to the monitoring system.
 
 Features of network interaction monitoring:
 

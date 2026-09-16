@@ -3,10 +3,10 @@ title: Мультитенантность
 permalink: ru/architecture/iam/multitenancy.html
 lang: ru
 search: мультитенантность, ProjectTemplate, Project, изоляция проекта
-description: Как устроена мультитенантность в Deckhouse Kubernetes Platform.
+description: Как устроена мультитенантность в Deckhouse Platform.
 ---
 
-Модуль [`multitenancy-manager`](/modules/multitenancy-manager/) позволяет создавать изолированные проекты в Deckhouse Kubernetes Platform (DKP). Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных неймспейсов.
+Модуль [`multitenancy-manager`](/modules/multitenancy-manager/) позволяет создавать изолированные проекты в Deckhouse Platform (DP). Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных неймспейсов.
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться в [соответствующем разделе документации](/modules/multitenancy-manager/).
 
@@ -53,7 +53,7 @@ description: Как устроена мультитенантность в Deckh
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`multitenancy-manager`](/modules/multitenancy-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме.
+Архитектура модуля [`multitenancy-manager`](/modules/multitenancy-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме.
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля multitenancy-manager](../../images/architecture/iam/c4-l2-multitenancy-manager.ru.png)

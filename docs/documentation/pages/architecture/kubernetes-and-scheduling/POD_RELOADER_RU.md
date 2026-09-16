@@ -3,7 +3,7 @@ title: Модуль pod-reloader
 permalink: ru/architecture/kubernetes-and-scheduling/pod-reloader.html
 lang: ru
 search: pod-reloader
-description: Архитектура модуля pod-reloader в Deckhouse Kubernetes Platform.
+description: Архитектура модуля pod-reloader в Deckhouse Platform.
 ---
 
 Модуль [`pod-reloader`](/modules/pod-reloader/) создан на основе [Reloader](https://github.com/stakater/Reloader) и предназначен для автоматического обновления подов при изменении ConfigMap и Secret. Для управления используются аннотации. Модуль запускается на **системных** узлах.
@@ -19,7 +19,7 @@ description: Архитектура модуля pod-reloader в Deckhouse Kuber
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`pod-reloader`](/modules/pod-reloader/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP показаны на следующей диаграмме:
+Архитектура модуля [`pod-reloader`](/modules/pod-reloader/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP показаны на следующей диаграмме:
 
 ![Архитектура модуля pod-reloader](../../images/architecture/kubernetes-and-scheduling/c4-l2-pod-reloader.ru.png)
 

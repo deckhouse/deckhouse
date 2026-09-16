@@ -3,7 +3,7 @@ title: Вспомогательные компоненты
 permalink: ru/architecture/virtualization/auxiliary.html
 lang: ru
 search: virtualization-audit, virtualization-dra, dra
-description: Архитектура вспомогательных компонентов модуля virtualization в Deckhouse Kubernetes Platform.
+description: Архитектура вспомогательных компонентов модуля virtualization в Deckhouse Platform.
 ---
 
 В модуле [`virtualization`](/modules/virtualization/) используются компоненты, реализующие следующие вспомогательные функции:
@@ -26,7 +26,7 @@ description: Архитектура вспомогательных компон�
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура компонентов, реализующих аудит событий безопасности модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура компонентов, реализующих аудит событий безопасности модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура компонента virtualization-audit модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-audit.ru.png)
@@ -55,7 +55,7 @@ Virtualization-audit взаимодействует со следующими к
 
 ### Архитектура
 
-Архитектура прочих вспомогательных компонентов модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура прочих вспомогательных компонентов модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура прочих вспомогательных компонентов модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-misc.ru.png)

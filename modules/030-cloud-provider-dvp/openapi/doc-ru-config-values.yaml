@@ -6,7 +6,7 @@ properties:
     properties:
       kubeconfigDataBase64:
         description: |
-          Kubeconfig для подключения к API Deckhouse Kubernetes Platform, закодированный в base64.
+          Kubeconfig для подключения к API Deckhouse Platform, закодированный в base64.
       namespace:
         description: |
           Namespace, в котором будут создаваться ресурсы кластера DKP.

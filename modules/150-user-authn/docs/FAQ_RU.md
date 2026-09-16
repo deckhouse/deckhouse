@@ -136,7 +136,7 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
 
 ### Настройка kube-apiserver
 
-С помощью функций модуля [`control-plane-manager`](/modules/control-plane-manager/) DKP автоматически настраивает `kube-apiserver`, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
+С помощью функций модуля [`control-plane-manager`](/modules/control-plane-manager/) DP автоматически настраивает `kube-apiserver`, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 
@@ -176,7 +176,7 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
    d8 k -n d8-user-authn patch secret kubernetes-dex-client-app-secret --type merge -p '{"data":{"secret":""}}'
    ```
 
-1. Перезапустите DKP, чтобы хук зарегистрировал пустое поле и сгенерировал новый секрет:
+1. Перезапустите DP, чтобы хук зарегистрировал пустое поле и сгенерировал новый секрет:
 
    ```shell
    d8 k -n d8-system rollout restart deployment/deckhouse
@@ -188,7 +188,7 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
    d8 k -n d8-user-authn get secret kubernetes-dex-client-app-secret -o jsonpath='{.data.secret}'
    ```
 
-   Если значение не изменилось, повторите шаги 2 и 3. Модуль мог восстановить прежнее значение до перезапуска DKP.
+   Если значение не изменилось, повторите шаги 2 и 3. Модуль мог восстановить прежнее значение до перезапуска DP.
 
 После смены секрета конфигурация использующих его компонентов в кластере обновится автоматически, а их поды будут перезапущены.
 

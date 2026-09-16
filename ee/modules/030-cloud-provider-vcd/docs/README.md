@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — VMware Cloud Director"
-description: "Cloud resource management in Deckhouse Kubernetes Platform using VMware Cloud Director."
+description: "Cloud resource management in Deckhouse Platform using VMware Cloud Director."
 ---
 
-The `cloud-provider-vcd` module integrates Deckhouse Kubernetes Platform with [VMware Cloud Director](https://www.vmware.com/products/cloud-director.html). It allows the [`node-manager`](/modules/node-manager/) module to use VCD resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+The `cloud-provider-vcd` module integrates Deckhouse Platform with [VMware Cloud Director](https://www.vmware.com/products/cloud-director.html). It allows the [`node-manager`](/modules/node-manager/) module to use VCD resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Features of the `cloud-provider-vcd` module:
 

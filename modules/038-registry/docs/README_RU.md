@@ -1,11 +1,11 @@
 ---
 title: "Модуль registry"
-description: "Управление конфигурацией registry компонентов DKP."
+description: "Управление конфигурацией registry компонентов DP."
 ---
 
 ## Описание
 
-Модуль отвечает за управление настройками registry компонентов DKP.
+Модуль отвечает за управление настройками registry компонентов DP.
 
 Модуль работает в следующих режимах:
 
@@ -26,7 +26,7 @@ description: "Управление конфигурацией registry комп�
 
 ### Ограничения при установке кластера
 
-- Bootstrap кластера DKP поддерживается только в `Direct`, `Unmanaged` и `Proxy` режимах (bootstrap в `Local` режиме не поддерживается). Registry во время установки кластера настраивается через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry).
+- Bootstrap кластера DP поддерживается только в `Direct`, `Unmanaged` и `Proxy` режимах (bootstrap в `Local` режиме не поддерживается). Registry во время установки кластера настраивается через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry).
 - Для запуска кластера в неконфигурируемом `Unmanaged` режиме (Legacy), необходимо указать параметры registry в [`initConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
 ### Ограничения по условиям работы
@@ -34,7 +34,7 @@ description: "Управление конфигурацией registry комп�
 Модуль работает при соблюдении следующих условий:
 
 - Если на узлах кластера используется CRI containerd или containerd v2. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
-- Кластер полностью управляется DKP. В Managed Kubernetes кластерах он работать не будет.
+- Кластер полностью управляется DP. В Managed Kubernetes кластерах он работать не будет.
 - Работа режимов `Local` и `Proxy` поддерживаются только на статичных кластерах.
 
 ### Ограничения по переключению режимов
