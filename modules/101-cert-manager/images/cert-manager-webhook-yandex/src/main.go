@@ -1,5 +1,6 @@
 /*
-Copyright 2026 Flant JSC
+Copyright 2022 YANDEX LLC
+Modifications Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,6 +23,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -35,6 +37,7 @@ import (
 	"github.com/yandex-cloud/go-sdk/v2/credentials"
 	"github.com/yandex-cloud/go-sdk/v2/pkg/iamkey"
 	"github.com/yandex-cloud/go-sdk/v2/pkg/options"
+	"google.golang.org/grpc"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -44,7 +47,15 @@ import (
 const (
 	defaultAPIEndpoint = "api.cloud.yandex.net:443"
 	apiRequestTimeout  = 2 * time.Minute
+	sdkShutdownTimeout = 10 * time.Second
 )
+
+var zoneNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
+
+// dnsZoneLister is the subset of dnssdk.DnsZoneClient used by getDNSZone.
+type dnsZoneLister interface {
+	List(context.Context, *dns.ListDnsZonesRequest, ...grpc.CallOption) (*dns.ListDnsZonesResponse, error)
+}
 
 func main() {
 	if GroupName := os.Getenv("GROUP_NAME"); GroupName == "" {
@@ -110,10 +121,11 @@ func (c *yandexCloudDNSSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiRequestTimeout)
 	defer cancel()
 
-	dnsClient, folder, err := c.buildDNSClient(ctx, ch)
+	dnsClient, sdk, folder, err := c.buildDNSClient(ctx, ch)
 	if err != nil {
 		return err
 	}
+	defer shutdownSDK(sdk)
 
 	zone, err := getDNSZone(ctx, dnsClient, folder, ch.ResolvedZone)
 	if err != nil {
@@ -156,10 +168,11 @@ func (c *yandexCloudDNSSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 
 	// Always rebuild the client: CleanUp may run on another replica or after a
 	// restart, so it must not rely on Present having initialized shared state.
-	dnsClient, folder, err := c.buildDNSClient(ctx, ch)
+	dnsClient, sdk, folder, err := c.buildDNSClient(ctx, ch)
 	if err != nil {
 		return err
 	}
+	defer shutdownSDK(sdk)
 
 	zone, err := getDNSZone(ctx, dnsClient, folder, ch.ResolvedZone)
 	if err != nil {
@@ -190,10 +203,13 @@ func (c *yandexCloudDNSSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	return nil
 }
 
-func getDNSZone(ctx context.Context, dnsClient dnssdk.DnsZoneClient, folder, resolvedZone string) (*dns.DnsZone, error) {
+func getDNSZone(ctx context.Context, dnsClient dnsZoneLister, folder, resolvedZone string) (*dns.DnsZone, error) {
 	// cert-manager already resolved the authoritative zone (SOA recursion) into
 	// ChallengeRequest.ResolvedZone. Do not re-query public NS from the webhook.
-	zoneName := normalizeZone(resolvedZone)
+	zoneName, err := normalizeZone(resolvedZone)
+	if err != nil {
+		return nil, err
+	}
 	if zoneName == "" {
 		return nil, errors.New("resolved zone is empty")
 	}
@@ -212,7 +228,7 @@ func getDNSZone(ctx context.Context, dnsClient dnssdk.DnsZoneClient, folder, res
 		}
 
 		for _, dnsZone := range resp.DnsZones {
-			if isPublicDNSZone(dnsZone) && normalizeZone(dnsZone.Zone) == zoneName {
+			if isPublicDNSZone(dnsZone) && canonicalZone(dnsZone.Zone) == zoneName {
 				return dnsZone, nil
 			}
 		}
@@ -261,30 +277,30 @@ func loadConfig(cfgJSON *extapi.JSON) (yandexCloudDNSConfig, error) {
 	return cfg, nil
 }
 
-func (c *yandexCloudDNSSolver) buildDNSClient(ctx context.Context, ch *v1alpha1.ChallengeRequest) (dnssdk.DnsZoneClient, string, error) {
+func (c *yandexCloudDNSSolver) buildDNSClient(ctx context.Context, ch *v1alpha1.ChallengeRequest) (dnssdk.DnsZoneClient, *ycsdk.SDK, string, error) {
 	apiEndpoint := defaultAPIEndpoint
 	cfg, err := loadConfig(ch.Config)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 	if cfg.Folder == "" {
-		return nil, "", errors.New("folder must be specified in solver config")
+		return nil, nil, "", errors.New("folder must be specified in solver config")
 	}
 
 	saBytes, err := c.loadSecretData(ctx, cfg.ServiceAccountKey, ch.ResourceNamespace)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
 	key := &iamkey.Key{}
 	err = key.UnmarshalJSON(saBytes)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
 	saKey, err := credentials.ServiceAccountKey(key)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
 	if c.apiEndpoint != "" {
@@ -293,10 +309,20 @@ func (c *yandexCloudDNSSolver) buildDNSClient(ctx context.Context, ch *v1alpha1.
 
 	sdk, err := ycsdk.Build(ctx, options.WithCredentials(saKey), options.WithDiscoveryEndpoint(apiEndpoint))
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
-	return dnssdk.NewDnsZoneClient(sdk), cfg.Folder, nil
+	return dnssdk.NewDnsZoneClient(sdk), sdk, cfg.Folder, nil
+}
+
+func shutdownSDK(sdk *ycsdk.SDK) {
+	if sdk == nil {
+		return
+	}
+	// Do not reuse the request context: it may already be cancelled/expired.
+	ctx, cancel := context.WithTimeout(context.Background(), sdkShutdownTimeout)
+	defer cancel()
+	_ = sdk.Shutdown(ctx)
 }
 
 func (c *yandexCloudDNSSolver) loadSecretData(ctx context.Context, selector capi.SecretKeySelector, ns string) ([]byte, error) {
@@ -313,7 +339,7 @@ func (c *yandexCloudDNSSolver) loadSecretData(ctx context.Context, selector capi
 	return data, nil
 }
 
-func normalizeZone(zone string) string {
+func canonicalZone(zone string) string {
 	zone = strings.TrimSpace(zone)
 	if zone == "" {
 		return ""
@@ -322,6 +348,17 @@ func normalizeZone(zone string) string {
 		zone += "."
 	}
 	return zone
+}
+
+func normalizeZone(zone string) (string, error) {
+	zone = canonicalZone(zone)
+	if zone == "" {
+		return "", nil
+	}
+	if !zoneNameRegexp.MatchString(zone) {
+		return "", errors.Errorf("invalid DNS zone name %q", zone)
+	}
+	return zone, nil
 }
 
 func isPublicDNSZone(dnsZone *dns.DnsZone) bool {
