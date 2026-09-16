@@ -82,13 +82,22 @@ func NewManifestResultFromBytes(manifestBytes []byte) *ManifestResult {
 	return res
 }
 
+// ManifestResult is one manifest as the registry served it. Both fields are set
+// when it is built and never written again, so a result is safe to read from
+// several goroutines - which is what a caller that keeps one and reads it from
+// wherever ends up doing.
+//
+// Nothing decoded is kept on it, deliberately. Caching the decoded manifest
+// here would mean writing to the struct from a read, and that write is what
+// made concurrent reads a race; carrying the decode error alongside it would
+// pin a transient failure for the life of the object as well. The accessors
+// therefore decode into a value of their own and hand it over - a manifest is a
+// few kilobytes of JSON, and a caller that needs it more than once keeps what
+// it was given.
 type ManifestResult struct {
 	rawManifest []byte
 
 	descriptor *v1.Descriptor
-
-	manifest      *v1.Manifest
-	indexManifest *v1.IndexManifest
 }
 
 func (m *ManifestResult) IsIndex() bool {
@@ -124,16 +133,12 @@ func (m *ManifestResult) GetManifest() (registry.Manifest, error) {
 		return nil, ErrIsIndexManifest
 	}
 
-	if m.manifest != nil {
-		return &Manifest{manifest: m.manifest}, nil
-	}
-
-	err := json.NewDecoder(bytes.NewReader(m.rawManifest)).Decode(&m.manifest)
-	if err != nil {
+	manifest := new(v1.Manifest)
+	if err := json.Unmarshal(m.rawManifest, manifest); err != nil {
 		return nil, fmt.Errorf("failed to decode manifest: %w", err)
 	}
 
-	return &Manifest{manifest: m.manifest}, nil
+	return &Manifest{manifest: manifest}, nil
 }
 
 func (m *ManifestResult) GetIndexManifest() (registry.IndexManifest, error) {
@@ -141,16 +146,12 @@ func (m *ManifestResult) GetIndexManifest() (registry.IndexManifest, error) {
 		return nil, ErrIsNotIndexManifest
 	}
 
-	if m.indexManifest != nil {
-		return &IndexManifest{indexManifest: m.indexManifest}, nil
-	}
-
-	err := json.NewDecoder(bytes.NewReader(m.rawManifest)).Decode(&m.indexManifest)
-	if err != nil {
+	indexManifest := new(v1.IndexManifest)
+	if err := json.Unmarshal(m.rawManifest, indexManifest); err != nil {
 		return nil, fmt.Errorf("failed to decode index manifest: %w", err)
 	}
 
-	return &IndexManifest{indexManifest: m.indexManifest}, nil
+	return &IndexManifest{indexManifest: indexManifest}, nil
 }
 
 type Manifest struct {
