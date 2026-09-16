@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -114,6 +115,63 @@ type ApplicationSpec struct {
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=NoResourceReconciliation
 	Maintenance string `json:"maintenance,omitempty"`
+
+	// Resource footprint of the workloads the application deploys: how many
+	// replicas each workload runs and what its containers may consume. Entries
+	// override what the application package ships; a workload or container that
+	// is not listed keeps the package defaults.
+	//
+	// A workload is addressed by its kind and name, so at most one entry exists
+	// per pair.
+	// +listType=map
+	// +listMapKey=kind
+	// +listMapKey=name
+	// +optional
+	ResourceRequests []ApplicationResourceRequest `json:"resourceRequests,omitempty"`
+}
+
+// ApplicationResourceRequest pins the resource footprint of a single workload
+// that the application deploys.
+// +kubebuilder:validation:XValidation:rule="has(self.replicas) ? self.kind in ['Deployment','StatefulSet','ReplicaSet'] : true",message="replicas can only be set for Deployment, StatefulSet and ReplicaSet"
+type ApplicationResourceRequest struct {
+	// Kind of the workload to size.
+	// +kubebuilder:validation:Enum=Deployment;StatefulSet;DaemonSet;ReplicaSet;Pod;Job;CronJob
+	// +crd-enricher:deckhouse:documentation:examples=Deployment
+	Kind string `json:"kind"`
+
+	// Name of the workload to size, as the application package names it.
+	// +kubebuilder:validation:MinLength=1
+	// +crd-enricher:deckhouse:documentation:examples=controller
+	Name string `json:"name"`
+
+	// Number of replicas the workload runs. Only meaningful for the kinds that
+	// have a replica count: `Deployment`, `StatefulSet` and `ReplicaSet`.
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=3
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// Compute resources of the workload's containers. A container the workload
+	// does not have is ignored.
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	Containers []ApplicationContainerResourceRequest `json:"containers,omitempty"`
+}
+
+// ApplicationContainerResourceRequest pins the compute resources of a single
+// container inside a workload.
+type ApplicationContainerResourceRequest struct {
+	// Name of the container inside the workload.
+	// +kubebuilder:validation:MinLength=1
+	// +crd-enricher:deckhouse:documentation:examples=controller
+	Name string `json:"name"`
+
+	// Compute resources the container requests and is limited to, in the same
+	// form as a Pod container's `resources`: `cpu`, `memory` and
+	// `ephemeral-storage` for disk.
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ApplicationStatus struct {
