@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 15,
+  "version": 16,
   "statements": [
     {
       "vulnerability": {
@@ -255,8 +255,50 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux",
       "timestamp": "2026-04-10T08:22:34.246444Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp попадает в бинарь как зависимость werf в составе подкоманды d8 delivery-kit (импортируется кодом werf и containers/image при сборке с тегом containers_image_openpgp). Это advisory о неподдерживаемом пакете без исправленной версии, а не конкретная уязвимость; OpenPGP-операции не вызываются в сценариях работы d8.",
+      "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.55.0 (deadlock соединения от специально сформированных сообщений после установления канала). Пакет попадает в бинарь d8 транзитивно через werf (pkg/ssh_agent), go-git (transport/ssh), buildkit (session/sshforward) и vault sdk. Собственных SSH-соединений d8 не устанавливает и SSH-сервер не поднимает: подкоманды работают с container registry по HTTPS, уязвимый код не выполняется. Исправленная версия v0.56.0 требует Go 1.26; закроется бампом Go в deckhouse-cli.",
+      "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.55.0 (deadlock соединения при флуде channel request до установления канала). Пакет попадает в бинарь d8 транзитивно через werf (pkg/ssh_agent), go-git (transport/ssh), buildkit (session/sshforward) и vault sdk. Собственных SSH-соединений d8 не устанавливает и SSH-сервер не поднимает: подкоманды работают с container registry по HTTPS, уязвимый код не выполняется. Исправленная версия v0.56.0 требует Go 1.26; закроется бампом Go в deckhouse-cli.",
+      "timestamp": "2026-09-16T12:00:00Z"
     }
   ],
   "timestamp": "2026-01-16T12:00:00Z",
-  "last_updated": "2026-04-10T08:22:34Z"
+  "last_updated": "2026-09-16T12:00:00Z"
 }
