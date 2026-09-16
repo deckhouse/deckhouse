@@ -255,7 +255,7 @@ The following external components interact with the module:
 1. **Prometheus-main**: Collects metrics from all module components.
 1. **Containerd**: Runs CNI plugin binaries.
 1. **Load balancer**: Balances incoming traffic to ingress-gateway-controller.
-1. **Controller nginx**: Forwards the authenticated user request to the Kiali web interface.
+1. **Gateway/Ingress controller**: Forwards the authenticated user request to the Kiali web interface. Depends on the chosen method of publishing resources: using the Ingress controller of the [`ingress-nginx`](/modules/ingress-nginx/) module or the Gateway controller of the [`alb`](/modules/alb/) module.
 1. **Remote DKP cluster**:
 
    * Requests the cluster's public metadata.
