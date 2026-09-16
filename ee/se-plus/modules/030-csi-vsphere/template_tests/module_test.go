@@ -220,6 +220,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 			csiCongrollerPluginSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.vsphere.vmware.com")
 			csiNodePluginDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			csiNodeLegacyPluginDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node-legacy")
 			csiSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "csi")
 			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:csi-vsphere:csi:controller:external-provisioner")
 			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:csi-vsphere:csi:controller:external-provisioner")
@@ -236,6 +237,12 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 			Expect(csiDriver.Exists()).To(BeTrue())
 			Expect(csiNodePluginDS.Exists()).To(BeTrue())
 			Expect(csiNodePluginDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(csiNodePluginDS.Field("spec.template.spec.serviceAccountName").String()).To(Equal("csi"))
+			// csi-vsphere is a static-cluster module, so csi-node is rendered only when
+			// forceCsiNodeAndStaticNodesDepoloy is set. The legacy manifest does not set it,
+			// hence csi-node-legacy is never deployed here. If that ever changes, the assertion
+			// below fails and the legacy DaemonSet must be checked for the csi ServiceAccount too.
+			Expect(csiNodeLegacyPluginDS.Exists()).To(BeFalse())
 			Expect(csiSA.Exists()).To(BeTrue())
 			Expect(csiCongrollerPluginSS.Exists()).To(BeTrue())
 			Expect(csiCongrollerPluginSS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))

@@ -301,6 +301,7 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			Expect(azureCSIDriver.Exists()).To(BeTrue())
 			Expect(azureNodePluginDS.Exists()).To(BeTrue())
 			Expect(azureNodePluginDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(azureNodePluginDS.Field("spec.template.spec.serviceAccountName").String()).To(Equal("csi"))
 			Expect(azureControllerPluginSA.Exists()).To(BeTrue())
 			Expect(azureControllerPluginSS.Exists()).To(BeTrue())
 			Expect(azureControllerPluginSS.Field("spec.template.spec.containers.0.args").String()).ToNot(ContainSubstring("--enable-capacity"))
