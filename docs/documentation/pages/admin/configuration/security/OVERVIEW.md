@@ -16,6 +16,10 @@ In this section, you will find information on:
     using the platform's built-in capabilities (Falco).
   - How to configure audit rules and receive alerts on suspicious activity.
 
+- Virtualization event audit:
+  - How to enable the log of actions on virtual machines.
+  - Which events it records and how to view them.
+
 - Security policies:
   - Support for Pod Security Standards.
   - Configuring operational and advanced security policies using Gatekeeper.

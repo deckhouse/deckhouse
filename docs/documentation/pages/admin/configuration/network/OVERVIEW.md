@@ -57,3 +57,7 @@ For more information on configuring inter-cluster communication, refer to [Inter
 [Network policies](./policy/configuration.html) in DP define rules that regulate traffic flow between pods, nodes, namespaces, and external systems.
 Network policies ensure pod isolation, protect against internal cluster attacks,
 and provide control over access to external services as well as incoming and outgoing connections.
+
+## Virtual machine networking
+
+Virtual machines get their addresses from separate subnets listed in the `virtualMachineCIDRs` parameter of the virtualization settings. Which subnets to choose, how they differ from the pod and service networks, and how a machine gets its address is described in [Virtual machine networking](./vm-network.html).
