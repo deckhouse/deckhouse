@@ -5,7 +5,7 @@ description: A guide to installing Deckhouse Kubernetes Platform in an existing 
 lang: en
 layout: sidebar-guides
 ---
-  
+
 This guide applies to an existing, operational Talos cluster: the control plane is running, worker nodes have joined the cluster, a CNI is installed, and the Kubernetes API is accessible with `kubectl`.
 
 Deckhouse is installed on top of the existing Kubernetes cluster in existing-cluster mode. This example uses Community Edition, the `EarlyAccess` release channel, and the `Managed` bundle.
@@ -17,9 +17,11 @@ In this setup:
 - the external provisioner or the user continues to create and delete machines;
 - Deckhouse installs and updates platform modules but does not manage Talos or the node lifecycle.
 
-> **Important.** The `bundle` value is selected during installation and cannot be changed afterwards. You cannot install `Managed` and then switch it to `Minimal` or `Default` with a regular patch.
+{% alert level="warning" %}
+The `bundle` value is selected during installation and cannot be changed afterwards. You cannot install `Managed` and then switch it to `Minimal` or `Default` with a regular patch.
+{% endalert %}
 
-## 1. Prerequisites
+## Prerequisites
 
 The following tools and access are required on the computer from which the installation will be performed:
 
@@ -35,7 +37,7 @@ SSH access to Talos nodes is not required: the installer communicates with the c
 
 Before installation, it is recommended to create an etcd snapshot using Talos and save the original `talosconfig` and Kubernetes kubeconfig.
 
-## 2. Set the Working Paths
+## Setting the working paths
 
 Create a separate directory for the installation files and change to it:
 
@@ -64,7 +66,7 @@ The files are used as follows:
 
 If you open a new terminal, return to this directory and repeat the block that defines the four variables.
 
-## 3. Prepare an Administrative Kubernetes Kubeconfig
+## Preparing an administrative Kubernetes kubeconfig
 
 ### If you already have a kubeconfig
 
@@ -89,7 +91,7 @@ chmod 600 "$TALOSCONFIG"
 Specify the address of a control-plane node:
 
 ```bash
-CONTROL_PLANE_ADDRESS=<control-plane-node-IP-or-DNS>
+CONTROL_PLANE_ADDRESS=<CONTROL_PLANE_IP_OR_DNS>
 ```
 
 Obtain an administrative Kubernetes kubeconfig:
@@ -106,12 +108,12 @@ chmod 600 "$ADMIN_KUBECONFIG"
 By default, `talosctl` uses the Talos API endpoints from the current `talosconfig` context. If a different endpoint is required, add:
 
 ```text
---endpoints=<accessible-Talos-API-endpoint>
+--endpoints=<TALOS_API_ENDPOINT>
 ```
 
 Use `--force` only when you intentionally want to overwrite an existing file.
 
-### Verify permissions
+### Verifying permissions
 
 Check which identity Kubernetes sees:
 
@@ -136,7 +138,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
 
 All three commands must return `yes`.
 
-## 4. Verify the Existing Cluster
+## Verifying the existing cluster
 
 Check the nodes:
 
@@ -170,7 +172,7 @@ Before installing Deckhouse, the following components must already be running:
 
 Also make sure that the Kubernetes version is supported by the selected DKP version.
 
-## 5. Verify Component Ownership
+## Verifying component ownership
 
 Deckhouse must not manage the same components as Talos or an external provisioner.
 
@@ -209,7 +211,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" get crd
 
 If a component is already installed, choose a single owner before proceeding. Do not run two ingress controllers, two cert-manager installations, or two VPA installations at the same time.
 
-## 6. Prepare a Kubeconfig for the Installer Container
+## Preparing a kubeconfig for the installer container
 
 The installer runs inside Docker. It requires a portable kubeconfig that does not reference certificate and key files available only on the user's computer.
 
@@ -251,7 +253,7 @@ This address must be reachable from the Docker container. A reachable Kubernetes
 
 If the address is `https://127.0.0.1:6443`, the installer cannot use it directly: inside the container, `127.0.0.1` refers to the container itself. Make the Kubernetes API accessible from the container before continuing with the installation.
 
-## 7. Create `config.yml`
+## Creating `config.yml`
 
 Create the `$CONFIG_FILE` file with the following content and replace `example.com` with your domain:
 
@@ -292,7 +294,7 @@ grep -n $'\t' "$CONFIG_FILE"
 
 The first command must print `YAML OK`; the second command must not print anything.
 
-## 8. Run the Official CE Installer
+## Running the official CE installer
 
 The installer tag must match the `releaseChannel` in the configuration. The `early-access` tag is used for `EarlyAccess`.
 
@@ -322,9 +324,9 @@ dhctl bootstrap-phase install-deckhouse \
 
 Do not close the terminal until the bootstrap process completes. Installation usually takes between 5 and 30 minutes.
 
-## 9. Monitor the Installation
+## Monitoring the installation
 
-In a separate terminal, change to the same working directory and define the variables from section 2 again. Then monitor Deckhouse:
+In a separate terminal, change to the same working directory and define the variables from the "Setting the working paths" section again. Then monitor Deckhouse:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
@@ -348,7 +350,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
   -n <NAMESPACE> describe pod <POD_NAME>
 ```
 
-## 10. Verify the Installation
+## Verifying the installation
 
 Wait for the main Deployment to become ready:
 
@@ -397,7 +399,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
 
 An old warning does not necessarily indicate a current problem. Consider the event timestamp, repetition count, and the current state of the related resource.
 
-### Verify that Deckhouse has not taken over Talos-managed components
+### Verifying that Deckhouse has not taken over Talos-managed components
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" get modules \
@@ -425,7 +427,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
 
 All Talos nodes must remain `Ready`, and the original CNI, CoreDNS, kube-proxy, and control-plane components must continue to run.
 
-## 11. Successful Installation Criteria
+## Successful installation criteria
 
 The installation is considered successful when all of the following conditions are met:
 
@@ -437,9 +439,9 @@ The installation is considered successful when all of the following conditions a
 - Deckhouse lifecycle modules remain disabled;
 - administrative access through the Talos administrative kubeconfig is preserved.
 
-## Useful Links
+## Useful links
 
-- [Installing Deckhouse in an existing cluster](https://deckhouse.io/products/kubernetes-platform/gs/existing/step2.html)
+- [Installing Deckhouse in existing cluster](https://deckhouse.io/products/kubernetes-platform/gs/existing/step2.html)
 - [Deckhouse module configuration](https://deckhouse.io/modules/deckhouse/configuration.html)
 - [Bundles and module management](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/)
 - [Patching Talos MachineConfig](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/patching)
