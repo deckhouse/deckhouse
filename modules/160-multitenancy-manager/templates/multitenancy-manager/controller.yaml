@@ -103,6 +103,17 @@ spec:
             - "--v=2"
             - "--logtostderr=true"
             - "--stale-cache-interval=1h30m"
+            - "--livez-path=/livez"
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 9091
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: 9091
+              scheme: HTTPS
           env:
             - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
               valueFrom:
@@ -111,8 +122,8 @@ spec:
             - name: KUBE_RBAC_PROXY_CONFIG
               value: |
                 upstreams:
-                - upstream: http://127.0.0.1:9191/
-                  path: /
+                - upstream: http://127.0.0.1:9191/metrics
+                  path: /metrics
                   authorization:
                     resourceAttributes:
                       namespace: d8-multitenancy-manager
