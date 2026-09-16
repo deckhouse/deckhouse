@@ -5,7 +5,11 @@ One patch per commit on the `d8/v1.20.1` branch of the cilium fork
 details live in the commit message and in the code comments the patch adds, not
 here. Regenerate with:
 
-    git format-patch --no-signature --no-numbered v1.20.1..d8/v1.20.1 -o <dir>
+    git format-patch --no-signature --no-numbered --binary v1.20.1..d8/v1.20.1 -o <dir>
+
+`--binary` matters: 012 adds two BPF maps, which regenerates
+`pkg/datapath/maps/mapkv.btf`. Without it that hunk exports as "Binary files
+differ" and the patch will not apply.
 
 ## 000-go-mod.patch
 
@@ -217,6 +221,45 @@ writes no wildcard entry for a classless LoadBalancer service -- so this patch i
 still required. Needs `kubeProxyReplacement`.
 
 Test `~/src/kind/d8-1.20-tests/017-lb-icmp-reply/`
+
+## 012-add-least-conn-lb-algorithm.patch
+
+A `least-conn` load balancing algorithm, selected per service:
+
+    service.cilium.io/lb-algorithm: least-conn
+
+`cilium_lb4_leastconn_backend` counts open connections per backend and
+`cilium_lb4_leastconn_service` remembers which backend to hand out next. Picking
+the minimum is too expensive per packet, so a BPF timer re-scans off the packet
+path and the datapath reads the remembered choice; the conntrack GC recounts the
+live entries on its first pass, because the pinned counters outlive an agent
+restart while the agent's view of them does not.
+
+Much smaller than on 1.17 because upstream added a hook for exactly this
+(`004dd6d4e4`): `lb4_select_backend_id_custom()` plus
+`RegisterSVCLoadBalancingAlgorithm`, so registering the algorithm is four lines
+and the datapath hookup is one include. The annotation, and the `bpf_lxc`
+ClusterIP override the 1.17 patch carried, are both upstream now.
+
+The maps are declared outside the feature `#ifdef`, as upstream does for
+`cilium_lb_act`: `tools/dpgen` builds the map registry from objects compiled with
+the standard define set, so a map behind a feature guard would never be
+registered. That registration is what regenerates `mapkv.btf`.
+
+The scan runs at once when it has been idle and is otherwise rate limited to
+`LEAST_CONN_TIMEOUT`, set to 3ms: a burst arriving inside one interval all lands
+on the backend selected when it started, so the interval sets how coarsely load
+is spread. Measured over three 200-connection bursts across three backends, as
+max:min skew of what each backend received -- 10ms gives 2.15x/1.72x/2.15x, 3ms
+gives 1.20x/1.05x/1.03x, and 1ms only reaches 1.02x. The table is in
+`bpf/lib/least_conn.h`. Not measured: the scan cost on a service with many
+backends, which is what to check before shortening it further.
+
+Reachable only through the annotation -- `bpf-lb-algorithm` is validated against
+`random`/`maglev`, so least-conn cannot be a node-wide default. Needs
+`kubeProxyReplacement` and `bpf-lb-sock-hostns-only`.
+
+Test `~/src/kind/d8-1.20-tests/012-least-conn/`
 
 ## Dropped
 
