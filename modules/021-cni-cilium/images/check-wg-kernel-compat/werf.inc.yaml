@@ -1,6 +1,12 @@
+{{/*
+Description: check-wg-kernel-compat, verifies the node kernel can run WireGuard before the agent enables it
+Target: final image
+Sources:
+- Deckhouse specific, no upstream counterpart
+*/}}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
@@ -12,11 +18,11 @@ shell:
   install:
   - cd /src
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-build
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src
   add: /src
   to: /src
   before: install
@@ -27,25 +33,22 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-  - cd /src
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  setup:
-  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o check-wg-kernel-compat .` -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o /out/check-wg-kernel-compat .` -}}
     {{- include "image-build.build" $buildContext | indent 4 }}
-  - chown 64535:64535 /src/check-wg-kernel-compat
-  - chmod 0755 /src/check-wg-kernel-compat
+  - chown 64535:64535 /out/check-wg-kernel-compat
+  - chmod 0755 /out/check-wg-kernel-compat
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: {{ index $.Images "base/distroless-fin" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /src/check-wg-kernel-compat
+- image: {{ .ModuleName }}/{{ .ImageName }}-build
+  add: /out/check-wg-kernel-compat
   to: /check-wg-kernel-compat
   before: install
 {{- include "image mount points" . }}

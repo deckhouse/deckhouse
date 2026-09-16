@@ -24,6 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -110,6 +111,9 @@ func TestCheckAgentPodGeneration(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 				},
 				&v1.Pod{
@@ -125,6 +129,9 @@ func TestCheckAgentPodGeneration(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 				},
 			},
@@ -166,6 +173,9 @@ func TestCheckAgentPodGeneration(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 				},
 			},
@@ -207,6 +217,9 @@ func TestCheckAgentPodGeneration(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 				},
 			},
@@ -248,6 +261,9 @@ func TestCheckAgentPodGeneration(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 				},
 			},
@@ -324,7 +340,7 @@ func TestDeletePod(t *testing.T) {
 			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
 			err := deletePod(fakeClientset, test.podName)
 			// Check Pod in cluster
-			pod, _ := fakeClientset.CoreV1().Pods(ciliumNS).Get(context.TODO(), test.podName, metav1.GetOptions{})
+			_, getErr := fakeClientset.CoreV1().Pods(ciliumNS).Get(context.TODO(), test.podName, metav1.GetOptions{})
 
 			switch test.expectSuccess {
 			case false:
@@ -336,7 +352,7 @@ func TestDeletePod(t *testing.T) {
 			case true:
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
-				} else if pod != nil {
+				} else if !apierrors.IsNotFound(getErr) {
 					t.Fatal("expected pod will be deleted, but it still exist")
 				}
 			}
@@ -378,6 +394,9 @@ func TestWaitUntilNewPodCreatedAndBecomeReady(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 					Status: v1.PodStatus{
 						Conditions: []v1.PodCondition{
@@ -409,6 +428,9 @@ func TestWaitUntilNewPodCreatedAndBecomeReady(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 					Status: v1.PodStatus{
 						Conditions: []v1.PodCondition{
@@ -440,6 +462,9 @@ func TestWaitUntilNewPodCreatedAndBecomeReady(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 					Status: v1.PodStatus{
 						Conditions: []v1.PodCondition{
@@ -463,6 +488,9 @@ func TestWaitUntilNewPodCreatedAndBecomeReady(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 					Status: v1.PodStatus{
 						Conditions: []v1.PodCondition{
@@ -494,6 +522,9 @@ func TestWaitUntilNewPodCreatedAndBecomeReady(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						NodeName: testNodeName,
+						Containers: []v1.Container{
+							{Name: "agent", Image: "registry.example.com/agent@sha256:deadbeef"},
+						},
 					},
 					Status: v1.PodStatus{
 						Conditions: []v1.PodCondition{
