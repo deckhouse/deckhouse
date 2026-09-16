@@ -449,7 +449,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"basicAuthProxy":      "imageHash-userAuthn-basicAuthProxy",
 		"dex":                 "imageHash-userAuthn-dex",
 		"dexAuthenticator":    "imageHash-userAuthn-dexAuthenticator",
-		"kubeconfigGenerator": "imageHash-userAuthn-kubeconfigGenerator",
 		"selfSignedGenerator": "imageHash-userAuthn-selfSignedGenerator",
 		"userApi":             "imageHash-userAuthn-userApi",
 		"userAuthnController": "imageHash-userAuthn-userAuthnController",

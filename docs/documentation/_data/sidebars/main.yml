@@ -1256,10 +1256,6 @@ entries:
                     ru: Управление алертами
                   url: /user/web/alertmanager.html
                 - title:
-                    en: Kubeconfig generator
-                    ru: Генератор kubeconfig
-                  url: /user/web/kubeconfig.html
-                - title:
                     en: Downloading Deckhouse utilities
                     ru: Загрузка утилит Deckhouse
                   url: /user/web/deckhouse-tools.html

@@ -1,4 +1,4 @@
-2860
+2869
 1GB
 2GB
 5XX
@@ -7,6 +7,7 @@ ACS
 AEAD
 AES
 AKS
+ALBInstance
 AMD
 AMIs
 ANDed
@@ -135,6 +136,7 @@ CloudProviderAWS
 CloudStatic
 CloudYuga
 Cloudflare
+ClusterALBInstance
 ClusterAlert
 ClusterAuthorizationRule
 ClusterAuthorizationRules
@@ -354,6 +356,7 @@ HPAs
 HPE
 HSTS
 HTML
+HTTPRoute
 HTTPS
 HWE
 Habr
@@ -421,6 +424,7 @@ JWK
 JWKS
 JWT
 K8s
+KDC
 KESL
 KLLRCODA
 KUMA
@@ -464,6 +468,7 @@ LVS
 Laravel
 LetsEncrypt
 Linstor
+ListenerSet
 LmRlY
 LoadBalanacer
 LoadBalancer
@@ -736,6 +741,7 @@ SLA
 SNAT
 SPE
 SPIFFE
+SPN
 SPNEGO
 SQL
 SQLite
@@ -1722,6 +1728,7 @@ tunnelMode
 txt
 uid
 un
+unboundedly
 uncordoned
 unicode
 uninstall
@@ -2558,6 +2565,7 @@ zoneTagCategory
 псевдоселектор
 пуллинга
 разблокировка
+разблокируется
 раннера
 рантайма
 рантайме
@@ -2738,6 +2746,7 @@ zoneTagCategory
 терминирования
 терминирующих
 тикет
+тикета
 тикету
 токен
 токена
