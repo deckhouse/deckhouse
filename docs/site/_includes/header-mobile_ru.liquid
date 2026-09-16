@@ -1,0 +1,109 @@
+{%- comment -%}
+  Russian mobile drawer (DDS-Foundations redesign). Rendered from _includes/header_ru.html.
+  The English drawer stays in _includes/header-mobile.liquid and is untouched.
+
+  .header__sidebar, .header__sidebar--nav, .menu-item-has-children and .sub-menu-container
+  are kept so adaptive/header-mobile.js keeps driving the burger, the accordion and the
+  cloning of the documentation sidebar without any change.
+
+  No language toggle here - the design has none, and language-switch.js no-ops without it.
+
+  Product icons: the five products covered by the design (Platform, Stronghold,
+  Observability, Code, Development Portal) carry the new brand marks inline. The
+  remaining four (Virtualization Platform, Delivery Kit, Commander, Prom++) have no
+  mark in the design yet and keep the existing sprite reference, so swapping them in
+  later is one line per product.
+{%- endcomment -%}
+<div class="header__sidebar header__sidebar--ru">
+  <div class="header__sidebar-inner">
+    <ul id="bottom-header-nav" class="nav header__sidebar--nav">
+      {%- unless site.mode == "module" %}
+      <li class="header__navigation-item current-menu-parent menu-item-has-children menu-item-has-children--top">
+        <a href="#">Продукты</a>
+        <div class="sub-menu-container">
+          <ul class="sub-menu sub-menu_products">
+            <li>
+              <a href="/products/kubernetes-platform/">
+                <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.7092 5.18213L24 9.69664L21.627 20.8583H9.40828L6.81922 15.0697L8.28881 11.8035L3.70761 11.3297L0 3L20.7092 5.18213ZM11.8848 16.399L20.098 17.2454L20.2801 16.3953L18.6619 12.8768L9.9059 11.9708L11.8848 16.399Z" fill="#0A6EFF"/></svg>
+                <span>Kubernetes Platform</span>
+                <p>Создание идентичных Kubernetes-кластеров и&nbsp;управление ими</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/virtualization-platform/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg?v2#virtualization-platform-icon"></use>
+                </svg>
+                <span>Virtualization Platform</span>
+                <p>Управление виртуальными машинами</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/observability-platform/">
+                <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.85737 2L0 14.336L9.22715 22.9991L22.5705 23L24 16L22.4336 8.27797L3.85737 2ZM21.2541 16L14.1979 15.996L6.0741 6.56592L6.31957 5.77894L20.1247 10.4438L21.2541 16Z" fill="#FC4257"/></svg>
+                <span>Observability Platform</span>
+                <p>Мониторинг и&nbsp;журналирование инфраструктуры и&nbsp;приложений</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/stronghold/">
+                <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 -2.28645 24 24" fill="none" aria-hidden="true"><path d="M9.90318 1.48919L24 0L22.9428 4.96494L15.8216 5.71627L15.6577 6.47412L23.0718 8.04888L20.6482 19.4271L0 19.4271L3.24496 12.1634L14.1539 9.82216L14.3206 9.04969L7.19728 7.54353L9.90318 1.48919Z" fill="#25D981"/></svg>
+                <span>Stronghold</span>
+                <p>Безопасное управление жизненным циклом секретов</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/delivery-kit/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg?v2#delivery-icon"></use>
+                </svg>
+                <span>Delivery Kit</span>
+                <p>Сборка и&nbsp;доставка контейнеризованного ПО</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/commander/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg?v2#commander-icon"></use>
+                </svg>
+                <span>Commander</span>
+                <p>Центр управления парком кластеров</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/prompp/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg?v2#prompp-icon"></use>
+                </svg>
+                <span>Prom++</span>
+                <p>Open Source-система мониторинга</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/code/">
+                <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.01591 18.1384L3.88902 15.3939L21.8414 11.4801L24 1.00007L4.27731 5.32153L0 18.8073L3.68418 23.0001L19.4446 23L20.5796 17.5028L3.56608 18.7726L3.01591 18.1384Z" fill="#FFA903"/></svg>
+                <span>Code</span>
+                <p>Управление разработкой через&nbsp;единое окно</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/development-platform/">
+                <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.76339 2.83653L21.2021 1L24.3091 8.00192L15.2254 22L-0.309089 22L3.76339 2.83653ZM16.4085 7.46792L8.79675 19.1891L3.15432 19.1891L5.58951 7.77314L16.0707 6.68601L16.4085 7.46792Z" fill="#7960FB"/></svg>
+                <span>Development Platform</span>
+                <p>Непрерывная разработка и&nbsp;управление жизненным циклом ПО</p>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </li>
+      {%- endunless %}
+      {%- include header-menu-fill-items.html %}
+    </ul>
+    {%- unless site.mode == "module" %}
+    <div class="sidebar__footer">
+      <a data-open-modal="request_callback" href="#" class="header__btn header__btn--primary">{{ site.data.i18n.common['contact_us_button'][page.lang] }}</a>
+      <a href="/docs/" class="header__btn header__btn--ghost">{{ site.data.i18n.common['documentation'][page.lang] }}</a>
+    </div>
+    {%- endunless %}
+  </div>
+</div>

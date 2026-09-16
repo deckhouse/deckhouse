@@ -182,12 +182,6 @@
             "url": "/products/development-platform/",
             "target": "",
             "rel": ""
-          },
-          {
-            "title": "Deckhouse Airlock",
-            "url": "/products/airlock/",
-            "target": "",
-            "rel": ""
           }
         ]
       },

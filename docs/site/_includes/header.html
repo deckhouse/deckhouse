@@ -1,3 +1,4 @@
+{%- if page.lang == 'ru' -%}{% include header_ru.html %}{%- else -%}
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 <!--noindex-->
 <div class='header-container {%- if site.mode == "module" %} header-container--module{%- endif %}'>
@@ -254,4 +255,4 @@
   </header>
 </div>
 {% include header-mobile.liquid %}
-<!--/noindex-->
+<!--/noindex-->{% endif %}

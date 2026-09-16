@@ -1,0 +1,70 @@
+{%- comment -%}
+  Russian second-level product bar (DDS-Foundations redesign, Figma variant Type=Second level).
+  The English bar stays in _includes/header-l2-menu.liquid and is untouched.
+  The product lookup below is copied from it verbatim; only the markup around it is new.
+
+  #bottom-header-nav, .nav__trigger, .menu-item-has-children--bottom and the
+  ".header.header__product-menu ul.nav li" selector used by the inline scripts in the
+  layouts are all preserved.
+{%- endcomment -%}
+{%- assign productCode = page.product_code | default: "kubernetes-platform" %}
+{%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
+{%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
+{%- assign productMenuDataFallback = l2MenuDataFallback | where: "url", _conditionProductURL | first %}
+{%- assign productLogoURL = "/images/sprite.svg?v2#" | append: productCode | append: "-icon" %}
+{%- assign productName = productMenuData.title %}
+{%- unless productMenuData %}
+  {%- assign productName = productMenuDataFallback.title %}
+{%- endunless %}
+{%- comment -%}
+  Products the design ships a finished brand lockup for. Everything else keeps the
+  previous mark + title, so an uncovered product still renders correctly.
+  Development Portal is deliberately absent: its lockup is live text in Figma set in
+  "Heading Now Bold Italic", so only the coloured mark exports - it needs a re-export
+  with the text outlined before it can be added here.
+{%- endcomment -%}
+{%- assign productLockup = "" %}
+{%- case productCode %}
+  {%- when "kubernetes-platform" %}{% assign productLockup = "platform" %}{% assign lockupW = "107" %}{% assign lockupH = "34" %}
+  {%- when "stronghold" %}{% assign productLockup = "stronghold" %}{% assign lockupW = "104" %}{% assign lockupH = "23" %}
+  {%- when "observability-platform" %}{% assign productLockup = "observability" %}{% assign lockupW = "120" %}{% assign lockupH = "23" %}
+  {%- when "code" %}{% assign productLockup = "code" %}{% assign lockupW = "72" %}{% assign lockupH = "21" %}
+{%- endcase %}
+<div class="header header__product-menu header__product-menu--ru">
+  <div class="header__product-menu-inner">
+    <div class="header__product-menu-logo">
+      {%- if productLockup != "" %}
+        <img class="header__product-lockup" src="/images/header/logo-{{ productLockup }}.svg" width="{{ lockupW }}" height="{{ lockupH }}" alt="{{ productName }}">
+      {%- else %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 20 20" fill="none">
+          <use xlink:href="{{ productLogoURL }}"></use>
+        </svg>
+        <span>{{ productName }}</span>
+      {%- endif %}
+    </div>
+    <div class="nav__trigger"></div>
+    <ul id="bottom-header-nav" class="nav header__nav header__nav--bottom">
+      {%- if productMenuData.items %}
+        {%- for item in productMenuData.items %}
+          {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif item.items %}{% assign itemClass='class="header__navigation-item menu-item-has-children menu-item-has-children--bottom"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
+          <li {{ itemClass }} {%- if item.items %} data-proofer-ignore{% endif %}>
+            <a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a>
+            {% if item.items %}
+              <div class="sub-menu-container">
+                <ul class="sub-menu">
+                  {% for item in item.items %}
+                    <li data-proofer-ignore><a href="{{ item.url }}">{{ item.title }}</a></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+          </li>
+        {%- endfor %}
+      {%- else %}
+        <li class="header__navigation-item active" data-proofer-ignore>
+          <a href="#">{{ site.data.i18n.common['documentation'][page.lang] | capitalize }}</a>
+        </li>
+      {%- endif %}
+    </ul>
+  </div>
+</div>

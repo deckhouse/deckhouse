@@ -1,0 +1,966 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+// Header redesign, Russian version only (_includes/header_ru.html and friends).
+// The English header keeps using _header.scss; this file never touches it - every
+// rule is scoped under .header--ru, .header__sidebar--ru or the new .header__btn block.
+//
+// Specificity note: no partial other than _header.scss styles .header*, so a rule like
+// ".header--ru .header__nav" (0-2-0) always beats the legacy ".header__nav" (0-1-0)
+// regardless of @use order. Where the legacy rule already has two classes we add the
+// modifier onto the block itself (".header.header--ru").
+
+$bg-primary: #fff; // --bg-primary
+$bg-surface: #f6f6fd; // --bg-surface
+$text-primary: #000; // --text-primary
+$text-tertiary: #6e7084; // --text-tertiary
+$text-inverse-primary: #fff; // --text-inverse-primary
+$bg-brand: #0a6eff; // --bg-brand
+$brand-hover: #004df2; // --text-brand-hover / --border-primary-hover
+$border-primary: #000; // --border-primary
+$border-tertiary: #e8e9f3; // --border-tertiary
+$radius-pill: 666px; // --radius-pill
+
+$bar-height: 64px;
+$bar-pad-y: 14px;
+$logo-width: 120px;
+$logo-height: 36px;
+$item-gap: 24px;
+$logo-gap: 64px; // distance from the logo to the first menu item, same on both rows
+$panel-pad: 24px 26px;
+$product-col: 274px;
+
+// Chevron: DDS. Icons/Arrows/chevron-down, inlined so the data-driven items coming from
+// header-menu-fill-items.html can get it without touching that shared include.
+$chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+@mixin chevron-after {
+  content: '';
+  position: static;
+  top: auto;
+  right: auto;
+  margin: 0;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  background: $chevron no-repeat center / 16px 16px;
+  transition: transform .15s ease;
+}
+
+@mixin nav-link {
+  display: flex;
+  padding-right: 0;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  text-decoration: none;
+  white-space: nowrap;
+  @include mixins.color($text-primary);
+}
+
+// ----------------------------------------------------------------- shared button
+// New block, not reused anywhere else, so it needs no modifier scope. It is used both
+// inside the header and inside the mobile drawer, which lives outside .header--ru.
+.header__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 16px;
+  border: 1.5px solid transparent;
+  border-radius: $radius-pill;
+  font-family: 'Onest', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+
+  &--ghost {
+    border-color: $border-primary;
+    @include mixins.color($text-primary);
+
+    &:hover {
+      border-color: $brand-hover;
+      @include mixins.color($brand-hover);
+    }
+  }
+
+  &--primary {
+    @include mixins.bg-color($bg-brand);
+    @include mixins.color($text-inverse-primary);
+
+    &:hover {
+      @include mixins.bg-color($brand-hover);
+      @include mixins.color($text-inverse-primary);
+    }
+  }
+}
+
+// ----------------------------------------------------------------- top bar
+.header--ru {
+  position: relative;
+  font-family: 'Onest', sans-serif;
+  font-weight: 400;
+  @include mixins.bg-color($bg-primary);
+  border-bottom: 2px solid $border-tertiary;
+
+  // The RU header carries header_float unconditionally (header_ru.html) so that
+  // customscripts.js never binds its scroll-shadow listener. The design has a border
+  // instead of a shadow, so the shadow is switched off here.
+  &.header_float {
+    box-shadow: none;
+  }
+
+  .header__content {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0;
+    padding: $bar-pad-y 16px;
+
+    @include breakpoints.min-w(m) {
+      padding: $bar-pad-y 32px;
+    }
+
+    @include breakpoints.min-w(xl) {
+      padding: $bar-pad-y 60px;
+    }
+  }
+
+  .header__logo {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .header__logo-link {
+    position: relative;
+    display: block;
+    width: $logo-width;
+    height: $logo-height;
+
+    svg {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      display: block;
+      width: 104.789px;
+      height: 24.001px;
+      transform: translateY(calc(-50% - 2px));
+    }
+  }
+
+  // ----------------------------------------------------------------- level 1 nav
+  // ul.nav is display:none in _base.scss:21; two classes here are enough to win.
+  .header__nav--top {
+    display: none;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include breakpoints.min-w(l) {
+      display: flex;
+      flex: 0 1 auto;
+      // Stretching the items to the full height of the bar puts the dropdown edge
+      // exactly at 64px and leaves no unhoverable gap above the panel.
+      align-self: stretch;
+      align-items: stretch;
+      gap: $item-gap;
+      margin-left: $logo-gap;
+    }
+  }
+
+  .header__nav--top > .header__navigation-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    background: none;
+
+    &:before,
+    &:after {
+      display: none;
+    }
+
+    > a {
+      @include nav-link;
+    }
+
+    &:hover > a {
+      @include mixins.color($brand-hover);
+    }
+  }
+
+  .header__nav--top > .header__navigation-item,
+  .header__nav--bottom > .header__navigation-item {
+    &.active,
+    &.active-mobile,
+    &.header__navigation-item--open {
+      margin: 0;
+      padding: 0;
+      background: none;
+      @include mixins.color($text-primary);
+
+      > a {
+        @include mixins.color($text-primary);
+      }
+
+      &:before,
+      &:after {
+        content: none;
+        display: none;
+      }
+    }
+  }
+
+  .header__nav--top > .menu-item-has-children > a {
+    &:after {
+      @include chevron-after;
+    }
+  }
+
+  .header__nav--top > .menu-item-has-children:hover > a:after {
+    transform: rotate(180deg);
+  }
+
+  // ----------------------------------------------------------------- dropdown panels
+  // The container has no background and starts right at the item, so there is no dead
+  // gap to cross with the pointer; the visible white panel is the inner ul.
+  // Reaching a link in the right-hand column means moving the pointer diagonally, which
+  // crosses the neighbouring menu item; with a plain display toggle :hover is lost there
+  // and the panel disappears mid-move. Hiding through visibility with a delayed
+  // transition keeps it alive long enough to get back inside.
+  .header__nav--top > .menu-item-has-children > .sub-menu-container {
+    display: none;
+
+    @include breakpoints.min-w(l) {
+      position: absolute;
+      // Anchored right under the link text, exactly as _header.scss:216-222 does it
+      // (top: 14px there). Starting the box inside the row means the pointer is already
+      // over the panel before it can touch the next menu item, so the far columns stay
+      // reachable without any script. The padding drops the visible panel to the bottom
+      // edge of the bar.
+      top: 24px;
+      left: -26px;
+      z-index: 20;
+      display: block;
+      visibility: hidden;
+      opacity: 0;
+      padding-top: 26px;
+      transition: opacity .15s ease;
+    }
+  }
+
+  .header__nav--top > .menu-item-has-children:hover > .sub-menu-container {
+    @include breakpoints.min-w(l) {
+      visibility: visible;
+      opacity: 1;
+    }
+  }
+
+  .header__nav--top .sub-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    margin: 0;
+    padding: $panel-pad;
+    list-style: none;
+    @include mixins.bg-color($bg-primary);
+    box-shadow: 0 8px 24px rgba(28, 27, 31, .08);
+
+    li {
+      padding: 0;
+
+      &:before {
+        display: none;
+      }
+    }
+
+    a {
+      display: block;
+      font-size: 14px;
+      line-height: 20px;
+      text-decoration: none;
+      @include mixins.color($text-primary);
+
+      &:hover {
+        @include mixins.color($brand-hover);
+      }
+    }
+  }
+
+  // Products panel: icon + title on the first row, description indented under the title.
+  .header__nav--top .sub-menu_products {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, $product-col));
+    gap: 24px;
+
+    a {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      column-gap: 12px;
+      row-gap: 8px;
+    }
+
+    .products__icon {
+      grid-column: 1;
+      grid-row: 1;
+      width: 24px;
+      height: 24px;
+    }
+
+    span {
+      grid-column: 2;
+      grid-row: 1;
+      align-self: center;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 20px;
+      @include mixins.color($text-primary);
+    }
+
+    p {
+      grid-column: 2;
+      grid-row: 2;
+      margin: 0;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 20px;
+      @include mixins.color($text-tertiary);
+    }
+  }
+
+  // ----------------------------------------------------------------- buttons
+  .header__right-box {
+    display: none;
+
+    @include breakpoints.min-w(l) {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      margin-left: auto;
+    }
+  }
+
+  .header__buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  // ----------------------------------------------------------------- burger / close
+  .header__hamburger {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    margin: 0 0 0 auto;
+    cursor: pointer;
+
+    @include breakpoints.min-w(l) {
+      display: none;
+    }
+
+    span {
+      position: absolute;
+      left: 3px;
+      width: 18px;
+      height: 1.5px;
+      border-radius: 2px;
+      transition: transform .2s ease, opacity .2s ease, top .2s ease;
+      @include mixins.bg-color($text-primary);
+
+      &:nth-child(1) {
+        top: 7px;
+      }
+
+      &:nth-child(2) {
+        top: 11.25px;
+      }
+
+      &:nth-child(3) {
+        top: 15.5px;
+      }
+    }
+
+    // .show is toggled by adaptive/header-mobile.js - the burger becomes the close icon
+    // in place, which is exactly where the design puts it.
+    &.show span {
+      &:nth-child(1) {
+        top: 11.25px;
+        transform: rotate(45deg);
+      }
+
+      &:nth-child(2) {
+        opacity: 0;
+      }
+
+      &:nth-child(3) {
+        top: 11.25px;
+        transform: rotate(-45deg);
+      }
+    }
+  }
+
+  // ----------------------------------------------------------------- level 2 bar
+  .header__product-menu--ru {
+    padding: $bar-pad-y 0;
+    box-shadow: none;
+    @include mixins.bg-color($bg-surface);
+  }
+
+  .header__product-menu-inner {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 0 16px;
+
+    @include breakpoints.min-w(m) {
+      padding: 0 32px;
+    }
+
+    @include breakpoints.min-w(l) {
+      gap: 64px;
+    }
+
+    @include breakpoints.min-w(xl) {
+      padding: 0 60px;
+    }
+  }
+
+  .header__product-menu-logo {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: $logo-width;
+    min-height: $logo-height;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 18px;
+    @include mixins.color($text-primary);
+
+    svg {
+      flex: 0 0 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    // Finished brand lockup: sits left-aligned and optically centred inside the
+    // 120x36 logo box at its natural size, as in the design.
+    .header__product-lockup {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: $logo-width;
+      max-height: $logo-height;
+    }
+  }
+
+  .header__nav--bottom {
+    display: none;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include breakpoints.min-w(l) {
+      display: flex;
+      align-self: stretch;
+      align-items: stretch;
+      gap: $item-gap;
+    }
+  }
+
+  .header__nav--bottom > .header__navigation-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    background: none;
+
+    &:before,
+    &:after {
+      display: none;
+    }
+
+    > a {
+      @include nav-link;
+    }
+
+    &:hover > a {
+      @include mixins.color($brand-hover);
+    }
+
+    // The legacy .active pill does not exist in the design; a medium weight is enough.
+    &.active > a {
+      font-weight: 500;
+    }
+  }
+
+  .header__nav--bottom > .menu-item-has-children > a:after {
+    @include chevron-after;
+  }
+
+  .header__nav--bottom > .menu-item-has-children:hover > a:after {
+    transform: rotate(180deg);
+  }
+
+  .header__nav--bottom > .menu-item-has-children > .sub-menu-container {
+    display: none;
+
+    @include breakpoints.min-w(l) {
+      position: absolute;
+      // Anchored right under the link text, exactly as _header.scss:216-222 does it
+      // (top: 14px there). Starting the box inside the row means the pointer is already
+      // over the panel before it can touch the next menu item, so the far columns stay
+      // reachable without any script. The padding drops the visible panel to the bottom
+      // edge of the bar.
+      top: 24px;
+      left: -26px;
+      z-index: 20;
+      display: block;
+      visibility: hidden;
+      opacity: 0;
+      padding-top: 26px;
+      transition: opacity .15s ease;
+    }
+  }
+
+  .header__nav--bottom > .menu-item-has-children:hover > .sub-menu-container {
+    @include breakpoints.min-w(l) {
+      visibility: visible;
+      opacity: 1;
+    }
+  }
+
+  .header__nav--bottom .sub-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: max-content;
+    min-width: 315px;
+    margin: 0;
+    padding: $panel-pad;
+    list-style: none;
+    @include mixins.bg-color($bg-primary);
+    box-shadow: 0 8px 24px rgba(28, 27, 31, .08);
+
+    li {
+      padding: 0;
+
+      &:before {
+        display: none;
+      }
+    }
+
+    a {
+      display: block;
+      font-size: 14px;
+      line-height: 20px;
+      text-decoration: none;
+      @include mixins.color($text-primary);
+
+      &:hover {
+        @include mixins.color($brand-hover);
+      }
+    }
+  }
+
+  // Below l the L2 list turns into a dropdown card opened by .nav__trigger (the .active
+  // class comes from adaptive/header-mobile.js). Ported from _header.scss:793-855, which
+  // is scoped to ".header__product-menu .container" and so never reaches this markup.
+  .header__product-menu--ru .header__nav--bottom {
+    @include breakpoints.max-w(l) {
+      position: absolute;
+      top: 100%;
+      right: 16px;
+      z-index: 61;
+      display: none;
+      box-sizing: border-box;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 268px;
+      max-width: calc(100vw - 32px);
+      margin-top: 12px;
+      padding: 20px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      border-radius: 4px;
+      row-gap: 20px;
+      -webkit-overflow-scrolling: touch;
+      @include mixins.bg-color($bg-primary);
+      box-shadow: 0 4px 8px -2px rgba(16, 24, 40, .1), 0 2px 4px -2px rgba(16, 24, 40, .06);
+
+      &.active {
+        display: flex;
+      }
+
+      &.header__nav--doc-modal {
+        overflow: auto;
+      }
+    }
+
+    @include breakpoints.max-w(xxs) {
+      top: 100%;
+      right: 0;
+      min-width: 100%;
+      border-radius: 0;
+    }
+  }
+
+  // The documentation sidebar that adaptive/header-mobile.js:290-358 clones into the
+  // active L2 item. Ported from _header.scss:856-897 for the same reason as above -
+  // losing it would leave RU documentation pages without mobile navigation.
+  .header__product-menu--ru .header__sidebar-nav {
+    @include breakpoints.max-w(l) {
+      display: none;
+      flex-direction: column;
+      align-items: flex-start;
+      padding-right: 0;
+      overflow: visible;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 20px;
+      @include mixins.color(variables.$ntrl-800);
+
+      a:before {
+        top: 9px;
+        right: 0;
+        width: 7px;
+        height: 5px;
+      }
+
+      .sidebar__submenu-item_parent > a:before {
+        top: 16px;
+      }
+
+      &.header__sidebar-nav--show {
+        display: flex;
+
+        li {
+          width: 100%;
+        }
+      }
+
+      .sidebar__container,
+      .sidebar__wrapper-inner {
+        padding: 0;
+      }
+    }
+
+    @include breakpoints.min-w(l) {
+      display: none !important;
+    }
+  }
+
+  // .nav__trigger is filled and toggled by adaptive/header-mobile.js; on mobile it is
+  // the right-hand control of the product bar, exactly as in the design.
+  .header__product-menu--ru .nav__trigger {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    cursor: pointer;
+    @include mixins.color($text-primary);
+
+    &:after {
+      @include chevron-after;
+    }
+
+    &.rotated:after {
+      transform: rotate(180deg);
+    }
+
+    @include breakpoints.min-w(l) {
+      display: none;
+    }
+  }
+
+  // The design is drawn at 1440. Seven Russian menu items plus the two buttons need
+  // about 1340px at those values, so below xxl the row is scaled down the way the
+  // legacy header did (it dropped to 11.9px/16px gap at 1024). At xxl and above the
+  // numbers are exactly the ones from the mock.
+  .header__nav--top,
+  .header__nav--bottom {
+    // Rows wrap rather than push the page into a horizontal scrollbar. Nothing wraps at
+    // the design width, so the 64px bars are preserved; narrower viewports grow instead
+    // of breaking - exactly what the legacy header did (its L2 row went to two lines at
+    // 1024 and the bar grew from 64 to 94px).
+    @include breakpoints.min-w(l) {
+      flex-wrap: wrap;
+      gap: 8px 14px;
+    }
+
+    @include breakpoints.min-w(xl) {
+      gap: 8px 18px;
+    }
+
+    @include breakpoints.min-w(xxl) {
+      gap: 8px $item-gap;
+    }
+}
+
+.header__nav--top {
+  @include breakpoints.min-w(l) {
+    margin-left: 24px;
+    // Keeps the last item off the buttons when the row is tight; if that is not
+    // enough the row wraps rather than collide.
+    margin-right: 8px;
+  }
+
+  @include breakpoints.min-w(xl) {
+    margin-left: 40px;
+  }
+
+  @include breakpoints.min-w(xxl) {
+    margin-left: $logo-gap;
+  }
+}
+
+.header__product-menu-inner {
+  @include breakpoints.min-w(l) {
+    gap: 24px;
+  }
+
+  @include breakpoints.min-w(xl) {
+    gap: 40px;
+  }
+
+  @include breakpoints.min-w(xxl) {
+    gap: $logo-gap;
+  }
+}
+
+.header__nav--top > .header__navigation-item > a,
+.header__nav--bottom > .header__navigation-item > a {
+  @include breakpoints.min-w(l) {
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  @include breakpoints.min-w(xl) {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  @include breakpoints.min-w(xxl) {
+    font-size: 14px;
+  }
+}
+
+// Only the buttons inside the bar shrink; the drawer keeps the full size.
+.header__btn {
+  @include breakpoints.min-w(l) {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
+  @include breakpoints.min-w(xl) {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  @include breakpoints.min-w(xxl) {
+    height: 36px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+}
+}
+
+// While the burger drawer is open the product bar is hidden, matching the design and
+// keeping the drawer's top padding equal to the height of the top bar alone.
+// The test is the drawer's own .show class, NOT body.sidebar-opened: header-mobile.js
+// sets that class for the L2 doc-modal as well (:344), and keying off it would hide the
+// very bar that opens the modal.
+body:has(.header__sidebar--ru.show) .header--ru .header__product-menu--ru {
+  @include breakpoints.max-w(l) {
+    display: none;
+  }
+}
+
+// ----------------------------------------------------------------- mobile drawer
+// .header__sidebar is rendered outside .header-container, so it cannot be nested under
+// .header--ru; the modifier is doubled up on the block instead.
+.header__sidebar.header__sidebar--ru {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  width: 100%;
+  height: 100%;
+  // Clears the sticky top bar (64px + its 2px border), which stays visible above the
+  // overlay on z-index 100 and supplies the logo and the close icon, as in the design.
+  padding-top: calc(#{$bar-height} + 2px);
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform .3s ease;
+  @include mixins.bg-color($bg-primary);
+
+  &.show {
+    transform: translateX(0);
+  }
+
+  @include breakpoints.min-w(l) {
+    display: none;
+  }
+}
+
+.header__sidebar--ru {
+  .header__sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    padding: 16px 16px 32px;
+  }
+
+  .header__sidebar--nav {
+    display: flex;
+    flex-direction: column;
+    // _base.scss:21 gives every ul.nav "gap: 12px 32px" and "align-items: center";
+    // both have to be reset explicitly or the rows shrink to their text and centre.
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .header__sidebar--nav > li {
+    padding: 24px 0;
+    border-bottom: 1px solid $border-tertiary;
+
+    &:first-child {
+      padding-top: 0;
+    }
+
+    &:before {
+      display: none;
+    }
+
+    > a {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 20px;
+      text-decoration: none;
+      @include mixins.color($text-primary);
+    }
+  }
+
+  .menu-item-has-children > a:after {
+    @include chevron-after;
+  }
+
+  .menu-item-has-children:has(.sub-menu_open) > a:after {
+    transform: rotate(180deg);
+  }
+
+  .sub-menu-container {
+    display: none;
+
+    &.sub-menu_open {
+      display: block;
+      padding-top: 32px;
+    }
+  }
+
+  .sub-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      padding: 0;
+
+      &:before {
+        display: none;
+      }
+    }
+
+    a {
+      display: block;
+      font-size: 14px;
+      line-height: 20px;
+      text-decoration: none;
+      @include mixins.color($text-primary);
+    }
+  }
+
+  // From the m breakpoint up the drawer is wide enough for the two-column product
+  // grid shown in the design; below that it stays a single column.
+  .sub-menu_products {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+
+    @include breakpoints.min-w(m) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 24px;
+    }
+  }
+
+  .sub-menu_products a {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 8px;
+
+    .products__icon {
+      grid-column: 1;
+      grid-row: 1;
+      width: 24px;
+      height: 24px;
+    }
+
+    span {
+      grid-column: 2;
+      grid-row: 1;
+      align-self: center;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 20px;
+    }
+
+    p {
+      grid-column: 2;
+      grid-row: 2;
+      margin: 0;
+      font-size: 14px;
+      line-height: 20px;
+      @include mixins.color($text-tertiary);
+    }
+  }
+
+  .sidebar__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+
+    .header__btn {
+      width: 100%;
+    }
+  }
+}

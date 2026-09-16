@@ -181,6 +181,8 @@ git:
     - site/_includes/header.html
     - site/_includes/header-menu-fill-items.html
     - site/_includes/header-mobile.liquid
+    - site/_includes/header_ru.html
+    - site/_includes/header-mobile_ru.liquid
 {{ end }}
     - documentation
   excludePaths:
