@@ -204,27 +204,6 @@ spec:
     # allow users to delete application pods
     - name: 'exclude-delete-pods-operations'
       expression: '!(request.operation == "DELETE" && request.resource.resource == "pods")'
-    # An application under maintenance is not reconciled any more, and every object
-    # it renders carries both the `heritage: deckhouse` label and the maintenance one,
-    # so let users edit those by hand. This is the exemption the heritage-label-objects
-    # binding makes with its objectSelector, spelled here as a matchCondition because
-    # a selector can only narrow a binding, never carve an exception out of it.
-    # matchConditions are ANDed, so a false one switches the whole policy off for the
-    # request: this one may only do that when every object of the request is such a
-    # maintained object, the way an objectSelector matches on either the old or the
-    # new one.
-    - name: 'exclude-maintenance-objects'
-      expression: |
-        [object, oldObject].exists(o,
-          o != null
-          && !(
-            has(o.metadata) && has(o.metadata.labels)
-            && "heritage" in o.metadata.labels
-            && o.metadata.labels["heritage"] == "deckhouse"
-            && "maintenance.deckhouse.io/no-resource-reconciliation" in o.metadata.labels
-            && o.metadata.labels["maintenance.deckhouse.io/no-resource-reconciliation"] in ["", "true"]
-          )
-        )
   validations:
     # deny all operations with any objects with `d8a-` prefix, except for Pods deletions
     - expression: |
@@ -239,6 +218,14 @@ spec:
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with an application prefix'"
 
 ---
+# The prefix guards every object of an application but the ones the platform no
+# longer reconciles: an application under maintenance carries the maintenance label
+# on the resources it renders, which are labeled `heritage: deckhouse` as well, and
+# a user is meant to be able to tweak those by hand. One selector cannot say "unless
+# both labels are set", since matchExpressions are ANDed, so the policy is bound
+# twice and the union of the two bindings does: everything that is not ours, plus
+# everything of ours that is not under maintenance. The second half is the selector
+# the heritage-label-objects binding carries, with the same values.
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
@@ -249,6 +236,37 @@ spec:
   validationActions:
   - Deny
   - Audit
+  matchResources:
+    objectSelector:
+      matchExpressions:
+      - key: "heritage"
+        operator: NotIn
+        values:
+        - "deckhouse"
+
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "heritage-d8a-prefix.deckhouse.io"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions:
+  - Deny
+  - Audit
+  matchResources:
+    objectSelector:
+      matchExpressions:
+      - key: "heritage"
+        operator: In
+        values:
+        - "deckhouse"
+      - key: maintenance.deckhouse.io/no-resource-reconciliation
+        operator: NotIn
+        values:
+        - ""
+        - "true"
 
 ---
 {{- $policyName := "d8a5e-prefix.deckhouse.io" }}

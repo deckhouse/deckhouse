@@ -409,10 +409,9 @@ func TestLabelObjectsPolicy(t *testing.T) {
 // This test covers the d8a-prefix.deckhouse.io ValidatingAdmissionPolicy, which
 // guards every object named after the prefix an application renders its own
 // objects with. Its exemptions are read and evaluated exactly like the ones
-// above. The binding is out of scope: it matches every object, so a request that
-// reaches the policy is decided by the matchConditions and the validation alone.
-
-const maintenanceLabel = "maintenance.deckhouse.io/no-resource-reconciliation"
+// above. What the policy no longer decides is the exemption for an application
+// under maintenance: that one lives in the bindings, and TestApplicationPrefixBindings
+// covers it.
 
 func TestApplicationPrefixPolicy(t *testing.T) {
 	policy := loadPolicy(t, "templates/validation.yaml", "exclude-application-serviceaccounts")
@@ -476,66 +475,6 @@ func TestApplicationPrefixPolicy(t *testing.T) {
 			object:    nil,
 			want:      skipped,
 			detail:    "exclude-delete-pods-operations",
-		},
-
-		// -- exclude-maintenance-objects --------------------------------------
-		{
-			name:      "an object of an application under maintenance may be edited by hand",
-			request:   applicationRequest("UPDATE", "Deployment", "deployments", "victor"),
-			oldObject: application(maintained),
-			object: applicationUpdate(func(o object) {
-				maintained(o)
-				container(o)["image"] = "example.com/console:debug"
-			}),
-			want:   skipped,
-			detail: "exclude-maintenance-objects",
-		},
-		{
-			name:      "an object of an application under maintenance may be deleted by hand",
-			request:   applicationRequest("DELETE", "Deployment", "deployments", "victor"),
-			oldObject: application(maintained),
-			object:    nil,
-			want:      skipped,
-			detail:    "exclude-maintenance-objects",
-		},
-		{
-			name:      "the maintenance label may not be put on an object by hand",
-			request:   applicationRequest("UPDATE", "Deployment", "deployments", "victor"),
-			oldObject: application(nil),
-			object:    applicationUpdate(maintained),
-			want:      denied,
-			detail:    "application prefix",
-		},
-		{
-			name:      "the maintenance label may not be taken off an object by hand",
-			request:   applicationRequest("UPDATE", "Deployment", "deployments", "victor"),
-			oldObject: application(maintained),
-			object:    applicationUpdate(nil),
-			want:      denied,
-			detail:    "application prefix",
-		},
-		{
-			name:    "the maintenance label alone unlocks nothing, the object must be ours",
-			request: applicationRequest("UPDATE", "Deployment", "deployments", "victor"),
-			oldObject: application(func(o object) {
-				delete(labels(o), "heritage")
-				maintained(o)
-			}),
-			object: serverSideBump(application(func(o object) {
-				delete(labels(o), "heritage")
-				maintained(o)
-			}), func(o object) { container(o)["image"] = "example.com/console:debug" }),
-			want:   denied,
-			detail: "application prefix",
-		},
-		{
-			name:      "a maintenance label of another value unlocks nothing",
-			request:   applicationRequest("UPDATE", "Deployment", "deployments", "victor"),
-			oldObject: application(func(o object) { labels(o)[maintenanceLabel] = "later" }),
-			object: serverSideBump(application(func(o object) { labels(o)[maintenanceLabel] = "later" }),
-				func(o object) { container(o)["image"] = "example.com/console:debug" }),
-			want:   denied,
-			detail: "application prefix",
 		},
 
 		// -- validations ------------------------------------------------------
@@ -636,10 +575,6 @@ func application(mutate func(o object)) object {
 }
 
 func applicationUpdate(mutate func(o object)) object { return serverSideBump(application(nil), mutate) }
-
-// maintained stamps the label nelm puts on every resource of an application under
-// maintenance, with the empty value it writes.
-func maintained(o object) { labels(o)[maintenanceLabel] = "" }
 
 // applicationRequest builds a request for the prefix policy, which - unlike the
 // label-objects one - reads request.resource.resource to let pod deletions pass.
