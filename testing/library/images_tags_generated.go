@@ -157,6 +157,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager": "imageHash-cloudProviderZvirt-cloudControllerManager",
 		"cloudDataDiscoverer":    "imageHash-cloudProviderZvirt-cloudDataDiscoverer",
 		"terraformManager":       "imageHash-cloudProviderZvirt-terraformManager",
+		"validationWebhook":      "imageHash-cloudProviderZvirt-validationWebhook",
+		"validator":              "imageHash-cloudProviderZvirt-validator",
 		"zvirtCsiDriver":         "imageHash-cloudProviderZvirt-zvirtCsiDriver",
 	},
 	"cniCilium": map[string]interface{}{
