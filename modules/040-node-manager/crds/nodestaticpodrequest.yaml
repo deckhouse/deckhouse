@@ -1,0 +1,159 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodestaticpodrequests.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: nodestaticpodrequests
+    singular: nodestaticpodrequest
+    kind: NodeStaticPodRequest
+    shortNames:
+      - nspr
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Phase
+          jsonPath: .status.phase
+          type: string
+        - name: Applied
+          jsonPath: .status.appliedNodes
+          type: integer
+        - name: Failed
+          jsonPath: .status.failedNodes
+          type: integer
+        - name: Age
+          jsonPath: .metadata.creationTimestamp
+          type: date
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Asks kubelet to run one pod outside the scheduler on the nodes it selects.
+
+            kubelet starts it from a manifest on disk, so it runs before the API server answers and before CNI is up — which is what a pod on the pull path of every image needs. node-controller compiles the object into `spec.staticPods` of the NodeConfig of every node it matches, and reports back what those nodes made of it.
+
+            The object carries the manifest and nothing else. The node prepares two things for such a pod — an image in containerd and this file on disk — and knows nothing about what is inside: certificates the pod issues itself, the kubeconfig it takes from the node, its state directories it mounts as `hostPath` with `DirectoryOrCreate`.
+
+            Whoever may create one of these runs a manifest of their choosing, as root, on every node it selects. The default RBAC grants create to the platform and to nobody else.
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - manifest
+              properties:
+                nodeGroupSelector:
+                  type: object
+                  description: |
+                    Narrows the pod to nodes of the named NodeGroups. Naming none selects every immutable group.
+                  properties:
+                    matchNames:
+                      type: array
+                      items:
+                        type: string
+                      description: |
+                        The set of NodeGroup names the pod runs on.
+                manifest:
+                  type: string
+                  minLength: 1
+                  maxLength: 32768
+                  description: |
+                    The whole Pod document. `metadata.name` and `metadata.namespace` must be set; neither has anything to do with the name of this object, which is only the manifest's file name on the node — kubelet names the mirror pod from the document, never from the file. `$MY_IP` is replaced with the node's address on the way to disk, as in the control-plane manifests.
+
+                    Two objects whose manifests name one pod (`namespace/metadata.name`) would put two entries for it into one NodeConfig, which the node refuses whole; the younger of the two is refused instead, with `Conflict` on its `Ready` condition.
+
+                    Bounded at 32 KiB, nine times the registry agent's manifest: a node takes at most sixteen of these, and the whole NodeConfig has to stay under the API server's request limit.
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  description: |
+                    The generation of the spec this status reflects.
+                phase:
+                  type: string
+                  enum: ["Ready", "Degraded"]
+                  description: |
+                    `Ready` when the pod resolved and the nodes accept it, `Degraded` when it did not — the `Ready` condition carries the reason: `ReservedName`, `InvalidManifest`, `Conflict` or `RefusedByNodes`.
+                matchedNodeGroups:
+                  type: array
+                  items:
+                    type: string
+                  description: |
+                    The NodeGroups the selector currently matches.
+                appliedNodes:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                  description: |
+                    How many of the selected nodes report the manifest written. Reported by the nodes themselves: a pod can resolve here and still be refused by every node it reaches.
+                failedNodes:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                  description: |
+                    How many of the selected nodes report the manifest refused.
+                failureMessage:
+                  type: string
+                  description: |
+                    What the nodes say about the refusal, taken from one of them.
+                conditions:
+                  type: array
+                  description: |
+                    The latest details of the pod's progress.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        type: string
+                        maxLength: 316
+                        pattern: '^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$'
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      reason:
+                        type: string
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: '^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$'
+                      message:
+                        type: string
+                        maxLength: 32768
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        minimum: 0
