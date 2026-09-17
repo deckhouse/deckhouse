@@ -36,12 +36,12 @@ else
   echo "Checking required tools on ${CLUSTER_SSH_HOST}..."
 fi
 
-# jq/yq are assumed already present for root on the target host, so the only
-# thing this installs is chainsaw (via `go install`), and Go itself if it's
-# missing. Go is fetched straight from go.dev (linux-amd64), not the distro
-# package manager: distro Go packages lag well behind upstream and are
-# routinely too old to build current chainsaw releases.
-ssh "${SSH_OPTS[@]}" "${SSH_TARGET}" bash -s <<'REMOTE'
+# chainsaw itself is installed straight from its GitHub release binary
+# (linux_amd64) — no Go toolchain needed at all.
+# bash -l loads the login profile (PATH additions like /opt/deckhouse/bin for
+# yq, etc.) the same way run-tests.sh's `sudo bash -lc` does for the actual
+# test run — plain `ssh ... bash -s` is a non-login shell and would miss it.
+ssh "${SSH_OPTS[@]}" "${SSH_TARGET}" bash -l -s <<'REMOTE'
 set -e
 
 if command -v apt-get >/dev/null 2>&1; then
@@ -61,35 +61,33 @@ pkg_install() {
   esac
 }
 
-if ! command -v go >/dev/null 2>&1; then
-  echo "go not found, installing latest release from go.dev..."
-  command -v curl >/dev/null 2>&1 || pkg_install curl
-  command -v tar >/dev/null 2>&1 || pkg_install tar
-  GO_VERSION="$(curl -fsSL 'https://go.dev/VERSION?m=text' | head -n1)"
-  echo "Installing ${GO_VERSION} (linux-amd64)..."
-  curl -fsSL "https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz
-  sudo rm -rf /usr/local/go
-  sudo tar -C /usr/local -xzf /tmp/go.tar.gz
-  rm -f /tmp/go.tar.gz
-  # Symlink into /usr/local/bin (already on PATH everywhere) so `go` resolves
-  # for the rest of this script and for every later run/session, the same way
-  # chainsaw itself gets symlinked below.
-  sudo ln -sf /usr/local/go/bin/go /usr/local/bin/go
-  sudo ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
-else
-  echo "go is already installed ($(go version))"
+MISSING_PKGS=()
+command -v curl  >/dev/null 2>&1 || MISSING_PKGS+=(curl)
+command -v tar   >/dev/null 2>&1 || MISSING_PKGS+=(tar)
+command -v rsync >/dev/null 2>&1 || MISSING_PKGS+=(rsync)
+command -v jq    >/dev/null 2>&1 || MISSING_PKGS+=(jq)
+command -v yq    >/dev/null 2>&1 || MISSING_PKGS+=(yq)
+
+if [ "${#MISSING_PKGS[@]}" -gt 0 ]; then
+  echo "Installing missing packages: ${MISSING_PKGS[*]}"
+  pkg_install "${MISSING_PKGS[@]}"
 fi
 
 if ! command -v chainsaw >/dev/null 2>&1; then
-  echo "chainsaw not found, installing..."
-  go install github.com/kyverno/chainsaw@latest
-  sudo ln -sf "$(go env GOPATH)/bin/chainsaw" /usr/local/bin/chainsaw
+  echo "chainsaw not found, installing latest release from GitHub..."
+  CHAINSAW_VERSION="$(curl -fsSL https://api.github.com/repos/kyverno/chainsaw/releases/latest | jq -r .tag_name)"
+  echo "Installing chainsaw ${CHAINSAW_VERSION} (linux_amd64)..."
+  curl -fsSL "https://github.com/kyverno/chainsaw/releases/download/${CHAINSAW_VERSION}/chainsaw_linux_amd64.tar.gz" -o /tmp/chainsaw.tar.gz
+  rm -rf /tmp/chainsaw-extract
+  mkdir -p /tmp/chainsaw-extract
+  tar -C /tmp/chainsaw-extract -xzf /tmp/chainsaw.tar.gz
+  sudo install -m 0755 /tmp/chainsaw-extract/chainsaw /usr/local/bin/chainsaw
+  rm -rf /tmp/chainsaw.tar.gz /tmp/chainsaw-extract
 else
   echo "chainsaw is already installed"
 fi
 
-
-echo -e  "\n$(go version)\nChainsaw $(chainsaw version | head -n1)"
+echo -e "\nChainsaw $(chainsaw version | head -n1)"
 REMOTE
 
 echo "Binary installation check complete."
