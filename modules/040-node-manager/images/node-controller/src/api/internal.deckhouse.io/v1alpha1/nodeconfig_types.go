@@ -88,6 +88,7 @@ type NodeConfigStatus struct {
 	// +listType=map
 	// +listMapKey=name
 	Images []ImageStatus `json:"images"`
+	// StaticPods is one entry per spec.staticPods item the node wrote or failed to.
 	// +optional
 	// +listType=map
 	// +listMapKey=name

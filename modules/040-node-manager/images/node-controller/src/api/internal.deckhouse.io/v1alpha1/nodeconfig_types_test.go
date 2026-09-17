@@ -24,8 +24,9 @@ import (
 )
 
 // Covers the API type's own marshalling, not the on-disk userdata (built from
-// a spec-only type in nodebootstrap/render.go). An unreported status must not
-// marshal empty lists: without omitempty they came out as "extensions: null".
+// a spec-only type in nodebootstrap/render.go). Extensions and units must not
+// marshal as "extensions: null" when unreported. Images and staticPods do, on
+// purpose: the status subresource drops them before the API validates a create.
 func TestNodeConfigStatusMarshalsNothingItDoesNotHave(t *testing.T) {
 	config := &NodeConfig{Spec: NodeSpec{NodeName: "master-0"}}
 
