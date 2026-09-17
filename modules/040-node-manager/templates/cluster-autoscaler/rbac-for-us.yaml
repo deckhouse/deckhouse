@@ -229,6 +229,7 @@ subjects:
 # Aggregates rules from provider modules (e.g. cloud-provider-dvp) that label their
 # ClusterRole fragments node-manager.deckhouse.io/aggregate-to-cluster-autoscaler: "true".
 # Only the CAPI-mode cluster-autoscaler SA needs this, not cluster-autoscaler-mcm.
+# Invariant: the macro must be instantiated with $name "cluster-autoscaler" at most once per render, otherwise these two objects would be emitted twice.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
