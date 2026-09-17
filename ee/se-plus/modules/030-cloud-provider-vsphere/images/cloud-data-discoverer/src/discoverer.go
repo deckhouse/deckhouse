@@ -375,7 +375,6 @@ func vsphereZonedDataStoresToV1(in []vsphere.ZonedDataStore) []v1.VsphereDatasto
 // verify against" case, and CAPV would in any event fall back to insecure without a
 // thumbprint. Read-only, side-effect free.
 func (d *Discoverer) discoverThumbprint(ctx context.Context) (string, error) {
-	dialer := &net.Dialer{Timeout: 10 * time.Second}
 	addr := d.host
 	if _, _, err := net.SplitHostPort(addr); err != nil {
 		addr = net.JoinHostPort(addr, "443")
@@ -385,10 +384,18 @@ func (d *Discoverer) discoverThumbprint(ctx context.Context) (string, error) {
 		InsecureSkipVerify: d.insecureFlag, //nolint:gosec // matches session verification policy
 		RootCAs:            d.caCertPool,
 	}
-	conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsCfg)
+	// DialContext honors caller cancellation and the reconcile-loop timeout, so a hung
+	// vCenter cannot pin the discoverer goroutine forever. Timeout is set as a hard
+	// upper bound on top of ctx to protect against callers passing context.Background().
+	dialer := &tls.Dialer{
+		NetDialer: &net.Dialer{Timeout: 10 * time.Second},
+		Config:    tlsCfg,
+	}
+	rawConn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return "", fmt.Errorf("dial %s: %w", addr, err)
 	}
+	conn := rawConn.(*tls.Conn)
 	defer conn.Close()
 	certs := conn.ConnectionState().PeerCertificates
 	if len(certs) == 0 {
