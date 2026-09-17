@@ -209,7 +209,6 @@ configure the module parameters and create a Certificate that references the `ya
 > **before** enabling the module settings below.
 > The built-in webhook registers the same APIService name; leaving the manual install in place
 > can break the whole `cert-manager` release or silently break renewals for an existing custom ClusterIssuer.
-
 > The built-in `yandex` ClusterIssuer uses the **production** Let's Encrypt directory
 > (same as Cloudflare, Route53, and CloudDNS issuers in this module).
 > Confirm that the folder ID, service account role (`dns.editor`), and public DNS zone are correct
