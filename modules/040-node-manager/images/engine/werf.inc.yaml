@@ -32,4 +32,53 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
+---
+# The bootable media of the same build: an ISO for bare metal and a nocloud qcow2
+# for virtual machines. Republished here so an installation takes them from the
+# platform registry it already has credentials and a mirror for.
+image: {{ .ModuleName }}/{{ .ImageName }}-metal-iso-artifact
+final: false
+from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}-metal-iso
+---
+# /disk is not ours to choose: that is where DVP looks for the disk file when a
+# VirtualImage names a container image as its source.
+image: {{ .ModuleName }}/{{ .ImageName }}-metal-iso
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-metal-iso-artifact
+  add: /disk
+  to: /disk
+  includePaths:
+  - metal.iso
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "deckhouse-engine", "version": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-nocloud-qcow2-artifact
+final: false
+from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}-nocloud-qcow2
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-nocloud-qcow2
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-nocloud-qcow2-artifact
+  add: /disk
+  to: /disk
+  includePaths:
+  - nocloud.qcow2
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "deckhouse-engine", "version": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 {{- end }}
