@@ -339,6 +339,15 @@ var _ = Describe("NodeConfig controller", func() {
 			// The preload list stays: it never belonged to the object.
 			g.Expect(nc.Spec.Images).To(HaveLen(2))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("taking registry.d back when the agent mode is switched off")
+		Expect(k8sClient.Delete(ctx, bashibleConfig)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
+			g.Expect(nc.Spec.Images).To(HaveLen(1))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// User story: As a platform module, I want two objects that ask for the same
