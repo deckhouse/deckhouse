@@ -145,10 +145,10 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 }
 
 // An external provider ships its settings inside its OCI bundle, not in the
-// candi image. The fixture is the artifact werf actually packs (see
-// modules/030-cloud-provider-dvp/images/terraform-manager/werf.inc.yaml), not a
-// hand-written copy: the real file carries no `terraform:` key, and a fixture
-// that invents one hides that the loader rejects it.
+// candi image. The fixture mirrors the shape DVP's bundle actually shipped
+// before it moved out of this repository (see testdata/dvp-bundle): the real
+// file carries no `terraform:` key, and a fixture that invents one hides that
+// the loader rejects it.
 func TestBundleSettingsMergedFromDownloadDir(t *testing.T) {
 	downloadDir := t.TempDir()
 	installDVPBundle(t, downloadDir, "dvp")
@@ -222,17 +222,18 @@ yandex:
 	return path
 }
 
-// installDVPBundle lays out an unpacked bundle from the files the DVP module
-// ships, so the test breaks whenever the shipped artifact stops loading.
+// installDVPBundle lays out an unpacked bundle from the fixture in
+// testdata/dvp-bundle, shaped like the real bundle DVP shipped before it moved
+// out of this repository, so the test breaks whenever that shape stops loading.
 func installDVPBundle(t *testing.T, downloadDir, dirName string) {
 	t.Helper()
 
-	moduleCandi := filepath.Join("..", "..", "..", "..", "..", "modules", "030-cloud-provider-dvp", "candi")
+	fixtureDir := filepath.Join("testdata", "dvp-bundle")
 	tm := filepath.Join(downloadDir, dirName, "terraform-manager")
 	require.NoError(t, os.MkdirAll(tm, 0o755))
 
 	for _, name := range []string{versionFile, planRulesFilename} {
-		data, err := os.ReadFile(filepath.Join(moduleCandi, name))
+		data, err := os.ReadFile(filepath.Join(fixtureDir, name))
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(filepath.Join(tm, name), data, 0o644))
 	}
