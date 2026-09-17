@@ -68,6 +68,10 @@ func readAnnotationOutcomes(ctx context.Context, reader client.Reader, immutable
 			continue
 		}
 		for _, name := range staticPodsWritten(node) {
+			// A stray comma yields "", which no object ever collects.
+			if name == "" {
+				continue
+			}
 			outcome := outcomes[name]
 			outcome.applied++
 			outcomes[name] = outcome
