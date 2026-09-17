@@ -1029,7 +1029,7 @@ func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 	staticPods := crdField(t, schema, "spec", "staticPods")
 	require.Equal(t, "map", staticPods["x-kubernetes-list-type"])
 	require.Equal(t, []any{"name"}, staticPods["x-kubernetes-list-map-keys"])
-	require.Equal(t, float64(16), staticPods["maxItems"])
+	require.Equal(t, float64(maxStaticPods), staticPods["maxItems"])
 
 	manifest := crdField(t, crdItems(t, staticPods), "manifest")
 	require.Equal(t, float64(1), manifest["minLength"])
@@ -1039,7 +1039,7 @@ func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 	// that never heard of an agent behaving exactly as it did before.
 	owner := crdField(t, schema, "spec", "containerRuntime", "registryOwner")
 	require.Equal(t, "nodelet", owner["default"])
-	require.Equal(t, []any{"nodelet", "agent"}, owner["enum"])
+	require.Equal(t, []any{registryOwnerNodelet, registryOwnerAgent}, owner["enum"])
 
 	// The node reports one entry per image and per static pod, the way it already
 	// does for extensions and units.
