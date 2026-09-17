@@ -41,6 +41,7 @@ metadata:
   uid: package-uid
 status:
   usedBy:
+    repositoryName: deckhouse
     version: v1.0.1
 ---
 apiVersion: deckhouse.io/v1alpha1
