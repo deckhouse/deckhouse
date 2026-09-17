@@ -168,7 +168,7 @@ properties:
         description: |
           Включение пробы `monitoring-and-autoscaling/alertmanager`. Также требуется включенный модуль `observability`.
 
-          По умолчанию проба выключена, потому что ее проверка `observability-rules-group-alert` зажигает синтетический алерт `UpmeterObservabilityMiniE2EAlert`. Проверка отключает уведомления по этому алерту через `ObservabilityNotificationSilence`, но это отключение действует только в alertmanager'е модуля `observability`: каналы оповещений, подключенные к Prometheus напрямую (например, внешний Alertmanager из ресурса `CustomAlertmanager`), все равно получают алерт.
+          По умолчанию проба выключена, так как ее проверка `observability-rules-group-alert` зажигает синтетический алерт `UpmeterObservabilityMiniE2EAlert`. Проверка отключает уведомления по этому алерту через `ObservabilityNotificationSilence`, но это отключение действует только в alertmanager'е модуля `observability`: каналы оповещений, подключенные к Prometheus напрямую (например, внешний Alertmanager из ресурса `CustomAlertmanager`), все равно получают алерт.
   disabledProbes:
     description: |
       Массив строк из названий групп или определенных проб из группы. Названия можно подсмотреть в веб-интерфейсе.
