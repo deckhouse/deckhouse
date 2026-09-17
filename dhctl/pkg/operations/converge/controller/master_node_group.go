@@ -109,19 +109,19 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not read master hosts from cache: %v", err))
 	}
 
-	// The hosts of --ssh-host carry no node name, so on their own they map to nothing and
-	// every readiness check refuses the master it cannot address. The node's own state
-	// names it.
-	userPassedHosts := state.MergeMasterHosts(
-		state.MasterHostsFromState(c.state.State),
-		sessionHosts,
-		cachedHosts,
-	)
-
 	nodesNames := make([]string, 0, len(c.state.State))
 	for nodeName := range c.state.State {
 		nodesNames = append(nodesNames, nodeName)
 	}
+
+	// The hosts of --ssh-host carry no node name, so on their own they map to nothing and
+	// every readiness check refuses the master it cannot address. The node's own state
+	// names it.
+	userPassedHosts := masterHostsToCheck(state.MergeMasterHosts(
+		state.MasterHostsFromState(c.state.State),
+		sessionHosts,
+		cachedHosts,
+	), nodesNames)
 
 	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), confirmOrProceed(ctx))
 	if err != nil {
@@ -131,6 +131,46 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	c.nodeToHost = nodeToHost
 
 	return nil
+}
+
+// nodesActuallyDeleted names the masters this converge removes. deleteRedundantNodes skips
+// an excluded node, so that node survives still carrying the converge user: counting it as
+// deleted drops it from the record and leaves the account on a live master, out of reach of
+// the cleanup that runs at the end of converge.
+func nodesActuallyDeleted(nodes []nodeToDeleteInfo, excluded map[string]bool) []string {
+	names := make([]string, 0, len(nodes))
+
+	for _, node := range nodes {
+		if excluded[node.name] {
+			continue
+		}
+
+		names = append(names, node.name)
+	}
+
+	return names
+}
+
+// masterHostsToCheck keeps the hosts some node claims, once any node does. CheckSSHHosts
+// counts what it is given against the replica count, and an address of --ssh-host carries
+// no node name: left in beside the named one it resolves to, it makes every converge look
+// over-supplied and silences the exemption that covers the 1->3->1 scale dance.
+func masterHostsToCheck(hosts []session.Host, nodesNames []string) []session.Host {
+	named := make([]session.Host, 0, len(hosts))
+
+	for _, host := range hosts {
+		if slices.Contains(nodesNames, host.Name) {
+			named = append(named, host)
+		}
+	}
+
+	// A cluster whose state names no host at all is still reached by what the operator
+	// passed, in the order it was given.
+	if len(named) == 0 {
+		return hosts
+	}
+
+	return named
 }
 
 // confirmOrProceed answers the questions converge asks before it recreates a master: the
@@ -627,10 +667,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", global.MasterNodeGroupName, c.desiredReplicas)
 	return dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), title, func(gocontext.Context) error {
 		// Collect names of nodes to be deleted for cache cleanup
-		nodesToDelete := make([]string, 0, len(nodesToDeleteInfo))
-		for _, nodeInfo := range nodesToDeleteInfo {
-			nodesToDelete = append(nodesToDelete, nodeInfo.name)
-		}
+		nodesToDelete := nodesActuallyDeleted(nodesToDeleteInfo, c.excludedNodes)
 
 		sshProvider, err := c.sshProviderForHooks(ctx)
 		if err != nil {

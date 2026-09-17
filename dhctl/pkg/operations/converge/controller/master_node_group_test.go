@@ -459,3 +459,71 @@ func TestForgetConvergeUserNodes(t *testing.T) {
 		require.Equal(t, []string{"cluster-master-0"}, controller.convergeState.ConvergeUserNodes)
 	})
 }
+
+// CheckSSHHosts counts the hosts it is given against the replica count. An address of
+// --ssh-host carries no node name, so it survives the merge beside the named entry it
+// resolves to: three masters then look like four hosts, every converge reports "too many"
+// and the exemption that covers the 1->3->1 scale dance never matches.
+func TestMasterHostsToCheck(t *testing.T) {
+	names := []string{"cluster-master-0", "cluster-master-1", "cluster-master-2"}
+
+	t.Run("the raw --ssh-host entry is dropped", func(t *testing.T) {
+		hosts := []session.Host{
+			{Host: "10.12.1.33", Name: "10.12.1.33"},
+			{Host: "10.12.0.174", Name: "cluster-master-0"},
+			{Host: "10.12.0.230", Name: "cluster-master-1"},
+			{Host: "10.12.1.33", Name: "cluster-master-2"},
+		}
+
+		require.Equal(t, []session.Host{
+			{Host: "10.12.0.174", Name: "cluster-master-0"},
+			{Host: "10.12.0.230", Name: "cluster-master-1"},
+			{Host: "10.12.1.33", Name: "cluster-master-2"},
+		}, masterHostsToCheck(hosts, names),
+			"one host per master, or CheckSSHHosts warns about a count nobody passed")
+	})
+
+	// The scale dance reaches a single replica while three hosts are still configured, and
+	// CheckSSHHosts has an exemption for exactly that shape. A fourth entry misses it.
+	t.Run("three hosts stay three during the scale dance", func(t *testing.T) {
+		hosts := []session.Host{
+			{Host: "10.12.1.33", Name: "10.12.1.33"},
+			{Host: "10.12.0.174", Name: "cluster-master-0"},
+			{Host: "10.12.0.230", Name: "cluster-master-1"},
+			{Host: "10.12.1.33", Name: "cluster-master-2"},
+		}
+
+		require.Len(t, masterHostsToCheck(hosts, names), 3)
+	})
+
+	// Nothing names a node on the first converge of a cluster whose state carries no
+	// address. Dropping every host there would report "no hosts passed" instead.
+	t.Run("hosts nobody claims are kept when they are all there is", func(t *testing.T) {
+		hosts := []session.Host{
+			{Host: "10.12.1.33", Name: "10.12.1.33"},
+			{Host: "10.12.0.174", Name: "10.12.0.174"},
+		}
+
+		require.Equal(t, hosts, masterHostsToCheck(hosts, names))
+	})
+}
+
+// deleteRedundantNodes skips an excluded node, so that master lives on with the converge
+// user on it. Counting it as deleted drops it from the record CleanupConvergeUser reads,
+// and the account with its passwordless sudo stays until its expiry.
+func TestNodesActuallyDeleted(t *testing.T) {
+	nodes := []nodeToDeleteInfo{
+		{name: "cluster-master-1", index: 1},
+		{name: "cluster-master-2", index: 2},
+	}
+
+	t.Run("an excluded master is not forgotten", func(t *testing.T) {
+		require.Equal(t, []string{"cluster-master-2"},
+			nodesActuallyDeleted(nodes, map[string]bool{"cluster-master-1": true}))
+	})
+
+	t.Run("without exclusions every deleted master is forgotten", func(t *testing.T) {
+		require.Equal(t, []string{"cluster-master-1", "cluster-master-2"},
+			nodesActuallyDeleted(nodes, nil))
+	})
+}
