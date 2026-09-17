@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
@@ -136,6 +137,44 @@ func TestReleaseFromBootstrappingFallsBackToPending(t *testing.T) {
 
 	require.Equal(t, deckhousev1.StaticInstanceStatusCurrentStatusPhasePending, instanceScope.GetPhase())
 	require.Nil(t, instanceScope.Instance.Status.MachineRef)
+}
+
+// A host that keeps refusing ssh must not produce a write per attempt: the failure condition
+// is already there, so setting it again has to be a no-op for the API server. Together with
+// keeping the reservation this is what makes a repeated failure cost zero etcd writes.
+func TestSSHCheckFailureConditionIsIdempotent(t *testing.T) {
+	instance := newPendingStaticInstance()
+
+	failed := metav1.Condition{
+		Type:               infrav1.StaticInstanceCheckSSHCondition,
+		Status:             metav1.ConditionFalse,
+		Reason:             "FailedToConnectViaSsh",
+		Message:            "failed to connect via ssh with address 192.168.0.1:22: handshake failed",
+		LastTransitionTime: metav1.Now(),
+	}
+
+	conditions.Set(instance, failed)
+	settled := instance.DeepCopy()
+
+	failed.LastTransitionTime = metav1.NewTime(time.Now().Add(time.Minute))
+	conditions.Set(instance, failed)
+
+	require.Equal(t, settled.Status, instance.Status)
+}
+
+// Only a successful check may reset the backoff. If Forget is called on every attempt, the
+// delay stays at the base value and the rate limiter never limits anything.
+func TestSSHCheckRateLimiterBacksOffUntilSuccess(t *testing.T) {
+	c := NewClient(nil)
+	const address = "192.168.0.1:22"
+
+	first := c.sshCheckRateLimiter.When(address)
+	second := c.sshCheckRateLimiter.When(address)
+	require.Greater(t, second, first)
+
+	c.sshCheckRateLimiter.Forget(address)
+
+	require.Equal(t, first, c.sshCheckRateLimiter.When(address))
 }
 
 func TestReleaseIgnoresInstanceReservedByAnotherMachine(t *testing.T) {

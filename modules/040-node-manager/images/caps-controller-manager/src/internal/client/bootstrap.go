@@ -293,6 +293,8 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	sshCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSSHCondition)
 	if sshCondition == nil || sshCondition.Status != metav1.ConditionTrue {
+		delay := c.sshCheckRateLimiter.When(address)
+
 		sshTaskID := address
 		// The task outlives the reconcile that spawned it, so it must not inherit its
 		// cancellation. The ssh layer applies its own connect and command timeouts.
@@ -365,10 +367,21 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 			return ctrl.Result{RequeueAfter: RequeueForCheckInProgress}, nil
 		}
 		if !*check {
-			err = errors.New("Failed to connect via ssh")
-			instanceScope.Logger.Error(err, "Failed to connect via ssh to StaticInstance address", "address", address)
-			return ctrl.Result{}, err
+			// A host that does not answer over ssh is a transient condition, not a reason to
+			// give the StaticInstance back to the pool: the release would write the Pending
+			// phase to etcd and the resulting watch event would re-enqueue this very
+			// StaticMachine immediately, which is the throttling loop itself. Keep the
+			// reservation and retry with the address backoff instead; the bootstrap timeout
+			// breaks the cycle if the host never comes back.
+			instanceScope.Logger.Error(errors.New("Failed to connect via ssh"),
+				"Failed to connect via ssh to StaticInstance address", "address", address, "requeueAfter", delay)
+
+			return ctrl.Result{RequeueAfter: delay}, nil
 		}
+
+		// Only a successful check resets the backoff. Forgetting unconditionally pins the
+		// delay to the base value forever, so the rate limiter never limits anything.
+		c.sshCheckRateLimiter.Forget(address)
 	}
 
 	providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
