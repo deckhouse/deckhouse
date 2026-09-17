@@ -14,6 +14,11 @@ spec:
                   properties:
                     name:
                       description: Имя узла.
+                nodeGroupRef:
+                  description: Ссылка на NodeGroup, заказавшую этот Instance. Известна до того, как узел вошёл в кластер.
+                  properties:
+                    name:
+                      description: Имя NodeGroup.
                 machineRef:
                   description: Ссылка на объект машины облачного провайдера.
                   properties:
