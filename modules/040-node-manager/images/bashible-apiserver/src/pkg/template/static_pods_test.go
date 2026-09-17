@@ -173,3 +173,120 @@ func TestStaticPodsFor(t *testing.T) {
 		require.Empty(t, newStaticPodsStorage().staticPodsFor("worker"))
 	})
 }
+
+func renderStaticPodsStepFor(t *testing.T, storage *StepsStorage, ng string) string {
+	t.Helper()
+
+	steps, err := storage.Render("all", "", map[string]interface{}{}, ng)
+	require.NoError(t, err)
+
+	step, exists := steps[staticPodsStepName]
+	require.True(t, exists, "step %s must be rendered", staticPodsStepName)
+
+	return step
+}
+
+func TestRenderStaticPodsStep(t *testing.T) {
+	storage := newStaticPodsStorage()
+	storage.AddStaticPodRequest(staticPodRequestObject("registry-agent", time.Unix(100, 0), nil, registryAgentManifest))
+	storage.AddStaticPodRequest(staticPodRequestObject("node-local-dns", time.Unix(200, 0), []string{"worker"}, nodeLocalDNSManifest))
+
+	worker := renderStaticPodsStepFor(t, storage, "worker")
+
+	// The manifest reaches the node byte for byte, inside a quoted heredoc.
+	require.Contains(t, worker, "<<\"EOF\"\n"+registryAgentManifest+"EOF\n)\"\n")
+	require.Contains(t, worker, "<<\"EOF\"\n"+nodeLocalDNSManifest+"EOF\n)\"\n")
+
+	// $MY_IP is substituted by bash on the node, never here.
+	require.Contains(t, worker, "--listen-address=$MY_IP:5001")
+	require.Contains(t, worker, `printf '%s\n' "${manifest//\$MY_IP/${node_ip}}" | bb-sync-file "${manifests_dir}/registry-agent.yaml" -`)
+	require.Contains(t, worker, `printf '%s\n' "${manifest//\$MY_IP/${node_ip}}" | bb-sync-file "${manifests_dir}/node-local-dns.yaml" -`)
+	require.Contains(t, worker, `node_ip="$(bb-d8-node-ip)"`)
+	require.Contains(t, worker, `mkdir -p "$manifests_dir"`)
+
+	require.Contains(t, worker, `new_names='["node-local-dns","registry-agent"]'`)
+	require.Contains(t, worker, `"node.deckhouse.io/static-pods=node-local-dns,registry-agent"`)
+
+	master := renderStaticPodsStepFor(t, storage, "master")
+
+	require.Contains(t, master, registryAgentManifest)
+	require.NotContains(t, master, nodeLocalDNSManifest)
+	require.Contains(t, master, `new_names='["registry-agent"]'`)
+}
+
+func TestRenderStaticPodsStepWithoutRequests(t *testing.T) {
+	storage := newStaticPodsStorage()
+
+	step := renderStaticPodsStepFor(t, storage, "worker")
+
+	// The step is rendered with nothing to write too: it is what removes the
+	// manifests of objects that are gone and takes the annotation off the Node.
+	require.Contains(t, step, `new_names='[]'`)
+	require.Contains(t, step, `rm -f "${manifests_dir}/${old_name}.yaml"`)
+	require.Contains(t, step, `"node.deckhouse.io/static-pods-"`)
+	require.NotContains(t, step, "bb-sync-file")
+}
+
+func TestRenderStaticPodsStepSkipsTheLoserOfACollision(t *testing.T) {
+	storage := newStaticPodsStorage()
+	storage.AddStaticPodRequest(staticPodRequestObject("registry-agent", time.Unix(100, 0), nil, registryAgentManifest))
+	storage.AddStaticPodRequest(staticPodRequestObject("rival-agent", time.Unix(200, 0), nil, rivalAgentManifest))
+
+	step := renderStaticPodsStepFor(t, storage, "worker")
+
+	require.Contains(t, step, registryAgentManifest)
+	require.NotContains(t, step, rivalAgentManifest)
+	require.Contains(t, step, `new_names='["registry-agent"]'`)
+	require.Contains(t, step, `"node.deckhouse.io/static-pods=registry-agent"`)
+}
+
+func TestRenderStaticPodsStepPicksAFreeHeredocDelimiter(t *testing.T) {
+	const manifestWithEOF = `apiVersion: v1
+kind: Pod
+metadata:
+  name: eof
+  namespace: kube-system
+spec:
+  containers:
+    - name: eof
+      args:
+        - EOF
+`
+
+	storage := newStaticPodsStorage()
+	storage.AddStaticPodRequest(staticPodRequestObject("eof", time.Unix(100, 0), nil, manifestWithEOF))
+
+	step := renderStaticPodsStepFor(t, storage, "eof-group")
+
+	require.Contains(t, step, "<<\"EOF_STATIC_POD_1\"\n"+manifestWithEOF+"EOF_STATIC_POD_1\n)\"\n")
+}
+
+func TestRenderStaticPodsStepIsLiteralAndStable(t *testing.T) {
+	const manifest = `apiVersion: v1
+kind: Pod
+metadata:
+  name: nasty
+  namespace: kube-system
+spec:
+  containers:
+    - name: nasty
+      args:
+        - --listen=$MY_IP:5001
+        - "backtick: ` + "`whoami`" + `"
+        - "subshell: $(rm -rf /)"
+        - 'single quoted'
+        - "dollar brace: ${HOME} $* $@ $?"
+        - "heredoc: EOF"
+`
+
+	storage := newStaticPodsStorage()
+	storage.AddStaticPodRequest(staticPodRequestObject("nasty", time.Unix(100, 0), nil, manifest))
+
+	step := renderStaticPodsStepFor(t, storage, "worker")
+
+	// Nothing is escaped or expanded on the way to the node.
+	require.Contains(t, step, manifest)
+	// The bundle checksum is computed over the rendered steps, so the same
+	// requests must render the same bytes.
+	require.Equal(t, step, renderStaticPodsStepFor(t, storage, "worker"))
+}
