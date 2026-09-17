@@ -64,6 +64,7 @@ const (
 	testContainerdDigest        = testenv.TestContainerdDigest
 	testContainerdRebuiltDigest = testenv.TestContainerdRebuiltDigest
 	testPauseDigest             = testenv.TestPauseDigest
+	testPausePackageDigest      = testenv.TestPausePackageDigest
 	testRegistryAddress         = testenv.TestRegistryAddress
 	testRegistryPath            = testenv.TestRegistryPath
 	testRegistryAuth            = testenv.TestRegistryAuth
@@ -1412,9 +1413,11 @@ var _ = Describe("NodeConfig controller", func() {
 			// carrying no IP — no exec, no logs, no metrics.
 			g.Expect(nc.Spec.Kubelet.ServerTLSBootstrap).To(BeNil())
 
-			// The pause image comes from the cluster's own registry; the
-			// upstream one is unreachable in a closed network.
-			g.Expect(nc.Spec.ContainerRuntime.SandboxImage).To(Equal(testRegistryAddress + testRegistryPath + "@" + testPauseDigest))
+			// The sandbox is the image the node imported, named the way containerd
+			// knows it after the import. It used to be <imagesRepo>@<digest>, which
+			// containerd pulls itself with no credentials from kubelet — a pull that
+			// goes to the agent's _default the moment registry.d belongs to an agent.
+			g.Expect(nc.Spec.ContainerRuntime.SandboxImage).To(Equal("deckhouse.local/images:pause"))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })
@@ -1522,10 +1525,11 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
-	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		digest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
+	layout := `{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"pause":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`
+	original := fmt.Sprintf(layout, testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest,
+		testPausePackageDigest, testOSImageDigest, testPauseDigest)
+	updated := fmt.Sprintf(layout, digest, testCNIDigest, testKubeletDigest, testNodeletDigest,
+		testPausePackageDigest, testOSImageDigest, testPauseDigest)
 
 	writeDigests := func(ctx context.Context, data string) {
 		cm := &corev1.ConfigMap{}
