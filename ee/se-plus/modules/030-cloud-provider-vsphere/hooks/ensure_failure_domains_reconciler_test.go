@@ -66,7 +66,7 @@ func namesSorted(desired map[string]desiredOverrideDZ) []string {
 
 func TestDesiredOverrideDZsEmpty(t *testing.T) {
 	snaps := newSnaps(t, nil)
-	got, err := desiredOverrideDZs(snaps, []string{"east", "west"})
+	got, err := desiredOverrideDZs(snaps, []string{"east", "west"}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestDesiredOverrideDZsNoOverride(t *testing.T) {
 			},
 		},
 	})
-	got, err := desiredOverrideDZs(snaps, []string{"east"})
+	got, err := desiredOverrideDZs(snaps, []string{"east"}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestDesiredOverrideDZsDatastoreOnly(t *testing.T) {
 			},
 		},
 	})
-	got, err := desiredOverrideDZs(snaps, nil)
+	got, err := desiredOverrideDZs(snaps, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestDesiredOverrideDZsBothFields(t *testing.T) {
 			},
 		},
 	})
-	got, err := desiredOverrideDZs(snaps, nil)
+	got, err := desiredOverrideDZs(snaps, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestDesiredOverrideDZsOnePerZone(t *testing.T) {
 			},
 		},
 	})
-	got, err := desiredOverrideDZs(snaps, []string{"east", "west", "north"})
+	got, err := desiredOverrideDZs(snaps, []string{"east", "west", "north"}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestDesiredOverrideDZsZonesDefaultToPCC(t *testing.T) {
 			},
 		},
 	})
-	got, err := desiredOverrideDZs(snaps, []string{"east", "west"})
+	got, err := desiredOverrideDZs(snaps, []string{"east", "west"}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestDesiredOverrideDZsSkipsOtherKinds(t *testing.T) {
 			},
 		},
 	})
-	got, err := desiredOverrideDZs(snaps, []string{"east"})
+	got, err := desiredOverrideDZs(snaps, []string{"east"}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestDesiredOverrideDZsIgnoresMissingIC(t *testing.T) {
 			},
 		},
 	})
-	got, err := desiredOverrideDZs(snaps, []string{"east"})
+	got, err := desiredOverrideDZs(snaps, []string{"east"}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -287,7 +287,7 @@ func TestDesiredOverrideDZsTwoNGsSameIC(t *testing.T) {
 			},
 		},
 	})
-	got, err := desiredOverrideDZs(snaps, []string{"east"})
+	got, err := desiredOverrideDZs(snaps, []string{"east"}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -313,7 +313,7 @@ func TestDesiredOverrideDZsSanitizesBothParts(t *testing.T) {
 			},
 		},
 	})
-	got, err := desiredOverrideDZs(snaps, nil)
+	got, err := desiredOverrideDZs(snaps, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

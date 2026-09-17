@@ -45,9 +45,9 @@ func TestAbsResourcePoolPath(t *testing.T) {
 		relativeRP  string
 		want        string
 	}{
-		{"joined", "/DC/host/cl", "kubernetes-dev", "/DC/host/cl/Resources/kubernetes-dev"},
-		{"trims leading slash on rp", "/DC/host/cl", "/kubernetes-dev", "/DC/host/cl/Resources/kubernetes-dev"},
-		{"empty rp falls back to Resources", "/DC/host/cl", "", "/DC/host/cl/Resources"},
+		{"relative rp is joined with cluster", "/DC/host/cl", "kubernetes-dev", "/DC/host/cl/Resources/kubernetes-dev"},
+		{"absolute rp is preserved as-is", "/DC/host/cl", "/AnotherDC/host/other/Resources/pinned", "/AnotherDC/host/other/Resources/pinned"},
+		{"empty rp falls back to cluster Resources", "/DC/host/cl", "", "/DC/host/cl/Resources"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
