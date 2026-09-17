@@ -257,6 +257,163 @@ var _ = Describe("NodeConfig controller", func() {
 				To(HaveKeyWithValue(testRequestedSysextName, testRequestedSysextRebuiltDigest))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
+	// User story: As a platform module, I want the static pod I publish to reach
+	// the nodes of the groups I name and to be told what those nodes made of it,
+	// so that a pod running before the API server answers is still something the
+	// cluster can see.
+	It("delivers a NodeStaticPodRequest to the nodes of a group and reports it back", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		// Every node preloads pause, whether or not it runs a static pod, and
+		// nodelet owns registry.d until a registry module says otherwise.
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.Images).To(HaveLen(1))
+			g.Expect(nc.Spec.Images[0].Name).To(Equal("pause"))
+			g.Expect(nc.Spec.Images[0].Digest).To(Equal(testenv.TestPausePackageDigest))
+			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("publishing a static pod for the group")
+		request := &v1alpha1.NodeStaticPodRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("agent")},
+			Spec: v1alpha1.NodeStaticPodRequestSpec{
+				NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
+			},
+		}
+		request.Spec.Manifest = "apiVersion: v1\nkind: Pod\nmetadata:\n  name: " + request.Name +
+			"\n  namespace: d8-system\nspec:\n  hostNetwork: true\n  containers:\n  - name: agent\n" +
+			"    image: deckhouse.local/images:registry-agent\n"
+		Expect(k8sClient.Create(ctx, request)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, request) })
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(HaveLen(1))
+			g.Expect(nc.Spec.StaticPods[0].Name).To(Equal(request.Name))
+			g.Expect(nc.Spec.StaticPods[0].Manifest).To(Equal(request.Spec.Manifest),
+				"the manifest reaches the node byte for byte")
+
+			// The same pass reports the outcome back on the object.
+			fresh := &v1alpha1.NodeStaticPodRequest{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: request.Name}, fresh)).To(Succeed())
+			g.Expect(fresh.Status.MatchedNodeGroups).To(ConsistOf(ngName))
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("handing containerd's registry.d to the registry module's agent")
+		// The one signal: the `agent` key of the configuration that module writes
+		// for bashible. Nothing on the object says it — who owns that directory
+		// follows from which modules are enabled, not from a static pod.
+		bashibleConfig := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "registry-bashible-config"},
+			Data: map[string][]byte{
+				"config": []byte("agent:\n  endpoint: 127.0.0.1:5001\nmode: Managed\n"),
+			},
+		}
+		Expect(k8sClient.Create(ctx, bashibleConfig)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, bashibleConfig) })
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent))
+			// The agent's own image joins the preload list: it is on the pull path
+			// of every other image, so nothing could fetch it.
+			g.Expect(nc.Spec.Images).To(HaveLen(2))
+			g.Expect(nc.Spec.Images[1].Name).To(Equal("registry-agent"))
+			g.Expect(nc.Spec.Images[1].Digest).To(Equal(testenv.TestRegistryAgentDigest))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("narrowing the static pod to another group")
+		patch := client.MergeFrom(request.DeepCopy())
+		request.Spec.NodeGroupSelector.MatchNames = []string{"somebody-else"}
+		Expect(k8sClient.Patch(ctx, request, patch)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
+			// The preload list stays: it never belonged to the object.
+			g.Expect(nc.Spec.Images).To(HaveLen(2))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a platform module, I want two objects that ask for the same
+	// pod to be settled for me, so that a second module publishing the same
+	// manifest costs one refused object instead of every static pod on the node.
+	//
+	// Both entries would carry one namespace/metadata.name into one NodeConfig,
+	// and the node's loader refuses such a document whole — so the node would
+	// lose the pod that was working as well as the one that arrived.
+	It("refuses the younger of two NodeStaticPodRequests asking for one pod", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		// One pod, asked for twice. The names are chosen so the winner is the same
+		// whichever way the contest is decided: envtest stamps creationTimestamp
+		// to the second, so two objects created back to back may well share one,
+		// and the tie is then broken by name — "aaa" is both the older and the
+		// lesser, so there is nothing for this spec to race on.
+		manifest := "apiVersion: v1\nkind: Pod\nmetadata:\n  name: shared-agent\n  namespace: d8-system\n" +
+			"spec:\n  hostNetwork: true\n  containers:\n  - name: agent\n    image: deckhouse.local/images:registry-agent\n"
+
+		publish := func(base string) *v1alpha1.NodeStaticPodRequest {
+			object := &v1alpha1.NodeStaticPodRequest{
+				ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName(base)},
+				Spec: v1alpha1.NodeStaticPodRequestSpec{
+					NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
+					Manifest:          manifest,
+				},
+			}
+			Expect(k8sClient.Create(ctx, object)).To(Succeed())
+			DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, object) })
+			return object
+		}
+
+		winner := publish("aaa-first")
+		loser := publish("bbb-second")
+
+		Eventually(func(g Gomega) {
+			// Exactly one entry reaches the node, and it is the older object's.
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(HaveLen(1))
+			g.Expect(nc.Spec.StaticPods[0].Name).To(Equal(winner.Name))
+
+			// The loser is told why, on the only channel it has.
+			fresh := &v1alpha1.NodeStaticPodRequest{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: loser.Name}, fresh)).To(Succeed())
+			g.Expect(fresh.Status.Phase).To(Equal(phaseDegraded))
+			condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+			g.Expect(condition).NotTo(BeNil())
+			g.Expect(condition.Reason).To(Equal(reasonConflict))
+			g.Expect(condition.Message).To(ContainSubstring("d8-system/shared-agent"))
+			g.Expect(condition.Message).To(ContainSubstring(winner.Name))
+
+			// And the winner is unbothered by the contest it won.
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: winner.Name}, fresh)).To(Succeed())
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("withdrawing the older object")
+		Expect(k8sClient.Delete(ctx, winner)).To(Succeed())
+
+		// The pod is free again, so the object that lost it takes it over. Nothing
+		// has to be re-published: losing a contest is not a terminal state.
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(HaveLen(1))
+			g.Expect(nc.Spec.StaticPods[0].Name).To(Equal(loser.Name))
+
+			fresh := &v1alpha1.NodeStaticPodRequest{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: loser.Name}, fresh)).To(Succeed())
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
 
 	// User story: As a cluster operator, I want to be told when a setting I wrote
 	// is not the setting my nodes get, so that a group running something I did
