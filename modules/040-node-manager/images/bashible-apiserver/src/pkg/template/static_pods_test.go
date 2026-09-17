@@ -143,6 +143,27 @@ func TestStaticPodsFor(t *testing.T) {
 		require.Equal(t, []string{"alpha"}, staticPodNames(storage.staticPodsFor("worker")))
 	})
 
+	// The object name becomes the manifest's file name, and node-controller puts
+	// it into spec.staticPods[].name of an Engine node's config, which takes a DNS
+	// label. A CR name is a DNS subdomain, so the API server admits this one.
+	t.Run("a name that is not a DNS label is skipped", func(t *testing.T) {
+		storage := newStaticPodsStorage()
+		storage.AddStaticPodRequest(staticPodRequestObject("registry-agent.v2", time.Unix(100, 0), nil, registryAgentManifest))
+
+		require.Empty(t, storage.staticPodsFor("worker"))
+		require.Empty(t, storage.staticPodsFor("master"))
+	})
+
+	// This step writes into the same directory as 051, 052 and the bootstrap
+	// steps, so an object of one of their names replaces the node's own manifest.
+	t.Run("a name a bashible step writes itself is skipped", func(t *testing.T) {
+		storage := newStaticPodsStorage()
+		storage.AddStaticPodRequest(staticPodRequestObject("kubernetes-api-proxy", time.Unix(100, 0), nil, registryAgentManifest))
+
+		require.Empty(t, storage.staticPodsFor("worker"))
+		require.Empty(t, storage.staticPodsFor("master"))
+	})
+
 	t.Run("a manifest with no readable identity is skipped", func(t *testing.T) {
 		storage := newStaticPodsStorage()
 		storage.AddStaticPodRequest(staticPodRequestObject("broken", time.Unix(100, 0), nil, "not a pod: ["))
@@ -187,6 +208,42 @@ func TestStaticPodsFor(t *testing.T) {
 		require.Empty(t, storage.staticPodsFor("nowhere"))
 		require.Empty(t, newStaticPodsStorage().staticPodsFor("worker"))
 	})
+}
+
+// The twin list is reservedStaticPodNames in node-controller
+// api/deckhouse.io/v1alpha1/nodestaticpodrequest_types.go, pinned by
+// TestIsReservedStaticPodName; separate modules, so each list is pinned here.
+func TestAcceptedStaticPodsSkipsAReservedName(t *testing.T) {
+	require.Equal(t, []string{
+		"etcd",
+		"kube-apiserver",
+		"kube-controller-manager",
+		"kube-scheduler",
+		"kubernetes-api-proxy",
+		"registry-proxy",
+		"registry-nodeservices",
+	}, reservedStaticPodNames)
+
+	for _, name := range reservedStaticPodNames {
+		storage := newStaticPodsStorage()
+		storage.AddStaticPodRequest(staticPodRequestObject(name, time.Unix(100, 0), nil, registryAgentManifest))
+
+		require.Empty(t, storage.staticPodsFor("worker"), "%s is written by the node itself", name)
+	}
+}
+
+// The step is the last writer to run, so an object of a reserved name would
+// overwrite the manifest an earlier step put there — on every node of the group.
+func TestRenderStaticPodsStepSkipsAReservedName(t *testing.T) {
+	storage := newStaticPodsStorage()
+	storage.AddStaticPodRequest(staticPodRequestObject("kubernetes-api-proxy", time.Unix(100, 0), nil, registryAgentManifest))
+	storage.AddStaticPodRequest(staticPodRequestObject("node-local-dns", time.Unix(200, 0), nil, nodeLocalDNSManifest))
+
+	step := renderStaticPodsStepFor(t, storage, "worker")
+
+	require.NotContains(t, step, "kubernetes-api-proxy.yaml")
+	require.Contains(t, step, `new_names='["node-local-dns"]'`)
+	require.Contains(t, step, `"node.deckhouse.io/static-pods=node-local-dns"`)
 }
 
 func renderStaticPodsStepFor(t *testing.T, storage *StepsStorage, ng string) string {

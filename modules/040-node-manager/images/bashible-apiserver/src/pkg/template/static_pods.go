@@ -27,6 +27,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
@@ -110,9 +111,23 @@ func (s *StepsStorage) staticPodsFor(ng string) []*staticPodRequest {
 	return requests
 }
 
+// reservedStaticPodNames are the manifests the bashible steps write into
+// /etc/kubernetes/manifests themselves: 051, 052, cluster-bootstrap 020/070 and
+// the control-plane four of 050/072. Mirrors the list of the same name in
+// node-controller api/deckhouse.io/v1alpha1/nodestaticpodrequest_types.go.
+var reservedStaticPodNames = []string{
+	"etcd",
+	"kube-apiserver",
+	"kube-controller-manager",
+	"kube-scheduler",
+	"kubernetes-api-proxy",
+	"registry-proxy",
+	"registry-nodeservices",
+}
+
 // acceptedStaticPods names the requests that claimed their pod: oldest first,
-// ties by object name, one manifest per namespace/name. Mirrors rejectedNSPRs
-// in node-controller (internal/controller/nodeconfig/staticpods.go).
+// ties by object name, a usable name, one manifest per namespace/name. Mirrors
+// rejectedNSPRs in node-controller (internal/controller/nodeconfig/staticpods.go).
 func acceptedStaticPods(stored map[string][]*staticPodRequest) map[string]bool {
 	ordered := make([]*staticPodRequest, 0, len(stored))
 	seen := make(map[string]bool, len(stored))
@@ -139,6 +154,19 @@ func acceptedStaticPods(stored map[string][]*staticPodRequest) map[string]bool {
 	claimed := make(map[string]string, len(ordered))
 
 	for _, request := range ordered {
+		// The name becomes a file name here and spec.staticPods[].name on an Engine
+		// node, which takes a DNS label. Mirrors ValidateStaticPodName in
+		// node-controller api/deckhouse.io/v1alpha1/nodestaticpodrequest_types.go.
+		if problems := validation.IsDNS1123Label(request.Name); len(problems) > 0 {
+			klog.Errorf("Skipping NodeStaticPodRequest %s: the name is not a DNS label: %s", request.Name, strings.Join(problems, ", "))
+			continue
+		}
+
+		if slices.Contains(reservedStaticPodNames, request.Name) {
+			klog.Errorf("Skipping NodeStaticPodRequest %s: the name belongs to a manifest the node writes itself", request.Name)
+			continue
+		}
+
 		identity, err := podIdentity(request.Manifest)
 		if err != nil {
 			klog.Errorf("Skipping NodeStaticPodRequest %s: %s", request.Name, err)
