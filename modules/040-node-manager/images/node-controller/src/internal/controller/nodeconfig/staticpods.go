@@ -89,7 +89,7 @@ func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) map[string
 		if deckhousev1alpha1.IsReservedStaticPodName(nspr.Name) {
 			rejected[nspr.Name] = nsprRefusal{
 				reason:  reasonReservedName,
-				message: "the name belongs to the control plane, whose manifests the node agent writes itself",
+				message: "the name belongs to a manifest the node agent or a bashible step writes itself",
 			}
 			continue
 		}

@@ -126,11 +126,24 @@ type NodeStaticPodRequestList struct {
 	Items           []NodeStaticPodRequest `json:"items"`
 }
 
-// IsReservedStaticPodName reports whether a static pod name belongs to the
-// control plane, whose manifests the node agent writes itself. Kept next to the
-// contract so the admission webhook and the controller backstop enforce one list.
+// reservedStaticPodNames already have a writer of /etc/kubernetes/manifests: the
+// control-plane four (nodelet; bashible cluster-bootstrap 050, 072) and what the
+// bashible steps 051, 052 and 020/070 write on every mutable node.
+var reservedStaticPodNames = []string{
+	"etcd",
+	"kube-apiserver",
+	"kube-controller-manager",
+	"kube-scheduler",
+	"kubernetes-api-proxy",
+	"registry-proxy",
+	"registry-nodeservices",
+}
+
+// IsReservedStaticPodName reports whether a static pod name already has a writer.
+// The twin list is reservedStaticPodNames in bashible-apiserver
+// pkg/template/static_pods.go — another module, so each is pinned by its own test.
 func IsReservedStaticPodName(name string) bool {
-	return slices.Contains([]string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}, name)
+	return slices.Contains(reservedStaticPodNames, name)
 }
 
 // ValidateStaticPodName refuses a name spec.staticPods[].name would not take: a
