@@ -115,7 +115,16 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			op:          admissionv1.Create,
 			nspr:        makeNSPR("kube-apiserver", nsprManifest("registry-agent")),
 			wantAllowed: false,
-			wantMessage: "belongs to a control-plane manifest",
+			wantMessage: "the node agent or a bashible step writes itself",
+		},
+		{
+			// The bashible steps write these into the same directory: 051 the API
+			// proxy, 052 the registry proxy, 020/070 the node services.
+			name:        "a name a bashible step writes itself is denied",
+			op:          admissionv1.Create,
+			nspr:        makeNSPR("kubernetes-api-proxy", nsprManifest("registry-agent")),
+			wantAllowed: false,
+			wantMessage: "the node agent or a bashible step writes itself",
 		},
 		{
 			name:        "a reserved name is refused on UPDATE too",

@@ -62,7 +62,7 @@ func (w *NodeStaticPodRequestValidator) Handle(_ context.Context, req admission.
 
 	if deckhousev1alpha1.IsReservedStaticPodName(nspr.Name) {
 		return admission.Denied(fmt.Sprintf(
-			"it is forbidden to name a NodeStaticPodRequest %q: the name belongs to a control-plane manifest the node agent writes itself", nspr.Name))
+			"it is forbidden to name a NodeStaticPodRequest %q: the name belongs to a manifest the node agent or a bashible step writes itself", nspr.Name))
 	}
 
 	if _, err := deckhousev1alpha1.ValidateStaticPodManifest(nspr.Spec.Manifest); err != nil {
