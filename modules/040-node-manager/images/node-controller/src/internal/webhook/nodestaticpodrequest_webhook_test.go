@@ -19,6 +19,7 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -74,6 +75,7 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 		op          admissionv1.Operation
 		nspr        *deckhousev1alpha1.NodeStaticPodRequest
 		wantAllowed bool
+		wantMessage string
 	}{
 		{
 			name:        "a Pod with a name and a namespace is allowed",
@@ -91,10 +93,12 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			wantAllowed: true,
 		},
 		{
+			// The object name is what is reserved, whatever pod the manifest names.
 			name:        "a reserved control-plane name is denied",
 			op:          admissionv1.Create,
-			nspr:        makeNSPR("kube-apiserver", nsprManifest("kube-apiserver")),
+			nspr:        makeNSPR("kube-apiserver", nsprManifest("registry-agent")),
 			wantAllowed: false,
+			wantMessage: "reserved",
 		},
 		{
 			name:        "a reserved name is refused on UPDATE too",
@@ -107,6 +111,7 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			op:          admissionv1.Create,
 			nspr:        makeNSPR("registry-agent", "apiVersion: apps/v1\nkind: Deployment\n"),
 			wantAllowed: false,
+			wantMessage: ".spec.manifest is refused: manifest is not a valid Pod: ",
 		},
 		{
 			// A core/v1 kind decodes cleanly and is still not a Pod.
@@ -146,6 +151,9 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			resp := w.Handle(context.Background(), makeNSPRRequest(t, tt.op, tt.nspr))
 			if resp.Allowed != tt.wantAllowed {
 				t.Fatalf("Allowed = %v, want %v (message: %q)", resp.Allowed, tt.wantAllowed, denyMessage(resp))
+			}
+			if tt.wantMessage != "" && !strings.Contains(denyMessage(resp), tt.wantMessage) {
+				t.Fatalf("message = %q, want it to contain %q", denyMessage(resp), tt.wantMessage)
 			}
 		})
 	}
