@@ -7,7 +7,8 @@
   ".header.header__product-menu ul.nav li" selector used by the inline scripts in the
   layouts are all preserved.
 {%- endcomment -%}
-{%- assign productCode = page.product_code | default: "kubernetes-platform" %}
+{%- assign productCode = page.product_code | default: "deckhouse-platform" %}
+{%- if productCode == "kubernetes-platform" %}{% assign productCode = "deckhouse-platform" %}{% endif %}
 {%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
 {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
 {%- assign productMenuDataFallback = l2MenuDataFallback | where: "url", _conditionProductURL | first %}
@@ -28,7 +29,7 @@
 {%- endcomment -%}
 {%- assign productLockup = "" %}
 {%- case productCode %}
-  {%- when "kubernetes-platform" %}{% assign productLockup = "platform" %}{% assign lockupW = "120" %}{% assign lockupH = "36" %}
+  {%- when "deckhouse-platform" %}{% assign productLockup = "platform" %}{% assign lockupW = "120" %}{% assign lockupH = "36" %}
   {%- when "stronghold" %}{% assign productLockup = "stronghold" %}{% assign lockupW = "104" %}{% assign lockupH = "23" %}
   {%- when "observability-platform" %}{% assign productLockup = "observability" %}{% assign lockupW = "120" %}{% assign lockupH = "23" %}
   {%- when "code" %}{% assign productLockup = "code" %}{% assign lockupW = "72" %}{% assign lockupH = "21" %}
