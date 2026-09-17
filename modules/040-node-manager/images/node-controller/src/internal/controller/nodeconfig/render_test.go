@@ -1043,3 +1043,11 @@ func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 	require.Equal(t, []any{"ManifestRejected", "WriteFailed", "RemoveFailed"},
 		crdField(t, podStatus, "reason")["enum"])
 }
+
+// The sandbox image is the pause the node preloads itself, under the ref the
+// registrypackage stamps into its OCI layout — never a registry the node would
+// have to reach before any pod can start.
+func TestTheSandboxImageIsThePreloadedPause(t *testing.T) {
+	ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{}}
+	require.Equal(t, "deckhouse.local/images:pause", renderContainerRuntime(ng, clusterInputs{}).SandboxImage)
+}
