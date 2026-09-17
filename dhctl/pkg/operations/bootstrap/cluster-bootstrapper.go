@@ -51,6 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -1655,6 +1656,15 @@ func bootstrapAdditionalNodesForCloudCluster(
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
+
+	// Nothing this node creates can boot before registry-packages-proxy answers: a machine
+	// fetches rpp-get from a master's bootstrap port as the first thing its cloud-init does,
+	// and that port is published by the module alone. The install phase before this one waits
+	// only for the Deckhouse pod, not for the module rollout behind it, so without this wait
+	// the machines race the rollout and lose - they give up after 150 seconds and stay empty.
+	if err := rpp.WaitForInClusterProxy(ctx, kubeCl.KubeClient); err != nil {
+		return err
+	}
 
 	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions, buildMasterPayload); err != nil {
 		return err
