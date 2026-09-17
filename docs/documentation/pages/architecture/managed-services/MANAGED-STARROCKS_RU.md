@@ -3,10 +3,10 @@ title: Модуль managed-starrocks
 permalink: ru/architecture/managed-services/managed-starrocks.html
 lang: ru
 search: managed-starrocks, starrocks
-description: Архитектура модуля managed-starrocks в Deckhouse Kubernetes Platform.
+description: Архитектура модуля managed-starrocks в Deckhouse Platform.
 ---
 
-Модуль [`managed-starrocks`](/modules/managed-starrocks/) управляет экземплярами [StarRocks](https://github.com/starrocks/starrocks) в Deckhouse Kubernetes Platform (DKP). StarRocks — высокопроизводительная аналитическая СУБД (OLAP) для аналитики в реальном времени, хранилищ данных и BI-нагрузок.
+Модуль [`managed-starrocks`](/modules/managed-starrocks/) управляет экземплярами [StarRocks](https://github.com/starrocks/starrocks) в Deckhouse Platform (DP). StarRocks — высокопроизводительная аналитическая СУБД (OLAP) для аналитики в реальном времени, хранилищ данных и BI-нагрузок.
 
 Модуль предоставляет:
 
@@ -26,7 +26,7 @@ description: Архитектура модуля managed-starrocks в Deckhouse 
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`managed-starrocks`](/modules/managed-starrocks/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`managed-starrocks`](/modules/managed-starrocks/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля managed-starrocks](../../images/architecture/managed-services/c4-l2-managed-starrocks.ru.svg)
 

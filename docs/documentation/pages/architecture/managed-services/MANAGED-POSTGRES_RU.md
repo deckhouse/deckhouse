@@ -26,7 +26,7 @@ description: Архитектура модуля managed-postgres в Deckhouse P
 
 Архитектура модуля [`managed-postgres`](/modules/managed-postgres/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображена на следующей диаграмме:
 
-![Архитектура модуля managed-postgres](../../images/architecture/managed-services/c4-l2-managed-postgres.ru.png)
+![Архитектура модуля managed-postgres](../../images/architecture/managed-services/c4-l2-managed-postgres.ru.svg)
 
 ## Компоненты модуля
 

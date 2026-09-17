@@ -3,10 +3,10 @@ title: Модуль managed-hive-metastore
 permalink: ru/architecture/managed-services/managed-hive-metastore.html
 lang: ru
 search: managed-hive-metastore, hive-metastore
-description: Архитектура модуля managed-hive-metastore в Deckhouse Kubernetes Platform.
+description: Архитектура модуля managed-hive-metastore в Deckhouse Platform.
 ---
 
-Модуль [`managed-hive-metastore`](/modules/managed-hive-metastore/) управляет экземплярами централизованного хранилища метаданных в экосистеме больших данных [Hive Metastore (HMS)](https://github.com/apache/hive) в Deckhouse Kubernetes Platform (DKP). Он предоставляет:
+Модуль [`managed-hive-metastore`](/modules/managed-hive-metastore/) управляет экземплярами централизованного хранилища метаданных в экосистеме больших данных [Hive Metastore (HMS)](https://github.com/apache/hive) в Deckhouse Platform (DP). Он предоставляет:
 
 * **Автоматическое развёртывание** — создаёт экземпляр HMS при помощи простой YAML-конфигурации;
 * **Standalone** — поддерживает установку одиночного экземпляра;
@@ -24,7 +24,7 @@ description: Архитектура модуля managed-hive-metastore в Deckh
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`managed-hive-metastore`](/modules/managed-hive-metastore/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`managed-hive-metastore`](/modules/managed-hive-metastore/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля managed-hive-metastore](../../images/architecture/managed-services/c4-l2-managed-hive-metastore.ru.svg)
 

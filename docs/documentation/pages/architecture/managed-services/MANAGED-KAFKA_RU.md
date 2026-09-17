@@ -3,10 +3,10 @@ title: Модуль managed-kafka
 permalink: ru/architecture/managed-services/managed-kafka.html
 lang: ru
 search: managed-kafka, kafka
-description: Архитектура модуля managed-kafka в Deckhouse Kubernetes Platform.
+description: Архитектура модуля managed-kafka в Deckhouse Platform.
 ---
 
-Модуль [`managed-kafka`](/modules/managed-kafka/) управляет экземплярами [Apache Kafka](https://github.com/apache/kafka) в Deckhouse Kubernetes Platform (DKP). Apache Kafka — это распределённая платформа потоковой передачи данных и брокер сообщений с открытым исходным кодом.
+Модуль [`managed-kafka`](/modules/managed-kafka/) управляет экземплярами [Apache Kafka](https://github.com/apache/kafka) в Deckhouse Platform (DP). Apache Kafka — это распределённая платформа потоковой передачи данных и брокер сообщений с открытым исходным кодом.
 Модуль предоставляет:
 
 * **Автоматическое развёртывание** — создаёт экземпляр Kafka при помощи простой YAML-конфигурации;
@@ -25,7 +25,7 @@ description: Архитектура модуля managed-kafka в Deckhouse Kube
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`managed-kafka`](/modules/managed-kafka/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`managed-kafka`](/modules/managed-kafka/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля managed-kafka](../../images/architecture/managed-services/c4-l2-managed-kafka.ru.svg)
 

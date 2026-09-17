@@ -2,10 +2,10 @@
 title: Managed-kafka module
 permalink: en/architecture/managed-services/managed-kafka.html
 search: managed-kafka, kafka
-description: Architecture of the managed-kafka module in Deckhouse Kubernetes Platform.
+description: Architecture of the managed-kafka module in Deckhouse Platform.
 ---
 
-The [`managed-kafka`](/modules/managed-kafka/) module manages [Apache Kafka](https://github.com/apache/kafka) instances in Deckhouse Kubernetes Platform (DKP). Apache Kafka is a distributed Open Source data streaming platform and message broker.
+The [`managed-kafka`](/modules/managed-kafka/) module manages [Apache Kafka](https://github.com/apache/kafka) instances in Deckhouse Platform (DP). Apache Kafka is a distributed Open Source data streaming platform and message broker.
 The module provides:
 
 * **Automatic Deployment**: Creates a Kafka instance using a simple YAML configuration.
@@ -25,7 +25,7 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica of each Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`managed-kafka`](/modules/managed-kafka/) module and its interactions with other components of DKP are shown in the following diagram:
+The level-2 C4 architecture of the [`managed-kafka`](/modules/managed-kafka/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Managed-kafka module architecture](../../images/architecture/managed-services/c4-l2-managed-kafka.svg)
 

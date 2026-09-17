@@ -3,10 +3,10 @@ title: Модуль managed-trino
 permalink: ru/architecture/managed-services/managed-trino.html
 lang: ru
 search: managed-trino, trino
-description: Архитектура модуля managed-trino в Deckhouse Kubernetes Platform.
+description: Архитектура модуля managed-trino в Deckhouse Platform.
 ---
 
-Модуль [`managed-trino`](/modules/managed-trino/) управляет экземплярами [Trino](https://github.com/trinodb/trino) в Deckhouse Kubernetes Platform (DKP). Trino — это быстрый распределённый SQL-движок с открытым исходным кодом, который создан для аналитики больших данных.
+Модуль [`managed-trino`](/modules/managed-trino/) управляет экземплярами [Trino](https://github.com/trinodb/trino) в Deckhouse Platform (DP). Trino — это быстрый распределённый SQL-движок с открытым исходным кодом, который создан для аналитики больших данных.
 Модуль предоставляет:
 
 * **Автоматическое развёртывание** — создаёт экземпляр Trino при помощи простой YAML-конфигурации;
@@ -26,7 +26,7 @@ description: Архитектура модуля managed-trino в Deckhouse Kube
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`managed-trino`](/modules/managed-trino/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`managed-trino`](/modules/managed-trino/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля managed-trino](../../images/architecture/managed-services/c4-l2-managed-trino.ru.svg)
 

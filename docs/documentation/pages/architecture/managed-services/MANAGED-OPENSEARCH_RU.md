@@ -3,10 +3,10 @@ title: Модуль managed-opensearch
 permalink: ru/architecture/managed-services/managed-opensearch.html
 lang: ru
 search: managed-opensearch, opensearch
-description: Архитектура модуля managed-opensearch в Deckhouse Kubernetes Platform.
+description: Архитектура модуля managed-opensearch в Deckhouse Platform.
 ---
 
-Модуль [`managed-opensearch`](/modules/managed-opensearch/) управляет экземплярами [OpenSearch](https://github.com/opensearch-project/opensearch) в Deckhouse Kubernetes Platform (DKP). OpenSearch — это поисковая система и аналитический движок с открытым исходным кодом, предназначенный для работы с большими объёмами данных в реальном времени.
+Модуль [`managed-opensearch`](/modules/managed-opensearch/) управляет экземплярами [OpenSearch](https://github.com/opensearch-project/opensearch) в Deckhouse Platform (DP). OpenSearch — это поисковая система и аналитический движок с открытым исходным кодом, предназначенный для работы с большими объёмами данных в реальном времени.
 Модуль предоставляет:
 
 * **Автоматическое развёртывание** — создаёт экземпляр OpenSearch при помощи простой YAML-конфигурации;
@@ -26,7 +26,7 @@ description: Архитектура модуля managed-opensearch в Deckhouse
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`managed-opensearch`](/modules/managed-opensearch/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`managed-opensearch`](/modules/managed-opensearch/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля managed-opensearch](../../images/architecture/managed-services/c4-l2-managed-opensearch.ru.svg)
 

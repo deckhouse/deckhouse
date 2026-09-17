@@ -2,10 +2,10 @@
 title: Managed-opensearch module
 permalink: en/architecture/managed-services/managed-opensearch.html
 search: managed-opensearch, opensearch
-description: Architecture of the managed-opensearch module in Deckhouse Kubernetes Platform.
+description: Architecture of the managed-opensearch module in Deckhouse Platform.
 ---
 
-The [`managed-opensearch`](/modules/managed-opensearch/) module manages instances of [OpenSearch](https://github.com/opensearch-project/opensearch) in Deckhouse Kubernetes Platform (DKP). OpenSearch is an Open Source search and analytics engine designed for working with large volumes of data in real time.
+The [`managed-opensearch`](/modules/managed-opensearch/) module manages instances of [OpenSearch](https://github.com/opensearch-project/opensearch) in Deckhouse Platform (DP). OpenSearch is an Open Source search and analytics engine designed for working with large volumes of data in real time.
 The module provides:
 
 * **Automatic Deployment**: Creates an OpenSearch instance using a simple YAML configuration.
@@ -26,7 +26,7 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica of each Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`managed-opensearch`](/modules/managed-opensearch/) module and its interactions with other components of DKP are shown in the following diagram:
+The level-2 C4 architecture of the [`managed-opensearch`](/modules/managed-opensearch/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Managed-opensearch module architecture](../../images/architecture/managed-services/c4-l2-managed-opensearch.svg)
 

@@ -2,10 +2,10 @@
 title: Managed-starrocks module
 permalink: en/architecture/managed-services/managed-starrocks.html
 search: managed-starrocks, starrocks
-description: Architecture of the managed-starrocks module in Deckhouse Kubernetes Platform.
+description: Architecture of the managed-starrocks module in Deckhouse Platform.
 ---
 
-The [`managed-starrocks`](/modules/managed-starrocks/) module manages [StarRocks](https://github.com/starrocks/starrocks) instances in Deckhouse Kubernetes Platform (DKP). StarRocks is a high-performance analytical DBMS (OLAP) for real-time analytics, data warehouses, and BI workloads.
+The [`managed-starrocks`](/modules/managed-starrocks/) module manages [StarRocks](https://github.com/starrocks/starrocks) instances in Deckhouse Platform (DP). StarRocks is a high-performance analytical DBMS (OLAP) for real-time analytics, data warehouses, and BI workloads.
 
 The module provides:
 
@@ -26,7 +26,7 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica of each Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`managed-starrocks`](/modules/managed-starrocks/) module and its interactions with other components of DKP are shown in the following diagram:
+The level-2 C4 architecture of the [`managed-starrocks`](/modules/managed-starrocks/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Managed-starrocks module architecture](../../images/architecture/managed-services/c4-l2-managed-starrocks.svg)
 

@@ -2,10 +2,10 @@
 title: Managed-clickhouse module
 permalink: en/architecture/managed-services/managed-clickhouse.html
 search: managed-clickhouse, clickhouse
-description: Architecture of the managed-clickhouse module in Deckhouse Kubernetes Platform.
+description: Architecture of the managed-clickhouse module in Deckhouse Platform.
 ---
 
-The [`managed-clickhouse`](/modules/managed-clickhouse/) module manages instances of [ClickHouse](https://github.com/clickhouse/clickhouse) in Deckhouse Kubernetes Platform (DKP). ClickHouse is a high-performance Open Source columnar DBMS designed for online analytical processing (OLAP) of large volumes of data in real time.
+The [`managed-clickhouse`](/modules/managed-clickhouse/) module manages instances of [ClickHouse](https://github.com/clickhouse/clickhouse) in Deckhouse Platform (DP). ClickHouse is a high-performance Open Source columnar DBMS designed for online analytical processing (OLAP) of large volumes of data in real time.
 The module provides:
 
 * **Automatic Deployment**: Creates a ClickHouse instance using a simple YAML configuration.
@@ -25,7 +25,7 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica of each Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`managed-clickhouse`](/modules/managed-clickhouse/) module and its interactions with other components of DKP are shown in the following diagram:
+The level-2 C4 architecture of the [`managed-clickhouse`](/modules/managed-clickhouse/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Managed-clickhouse module architecture](../../images/architecture/managed-services/c4-l2-managed-clickhouse.svg)
 

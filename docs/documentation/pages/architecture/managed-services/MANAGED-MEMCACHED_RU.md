@@ -6,7 +6,7 @@ search: managed-memcached, memcached
 description: Архитектура модуля managed-memcached в Deckhouse Platform.
 ---
 
-Модуль [`managed-memcached`](/modules/managed-memcached/) упрощает развёртывание и управление инстансами Memcached в Deckhouse Kubernetes Platform (DKP). Он предоставляет:
+Модуль [`managed-memcached`](/modules/managed-memcached/) упрощает развёртывание и управление инстансами Memcached в Deckhouse Platform (DP). Он предоставляет:
 
 * **Автоматическое развёртывание** — развёртывание Memcached-инстансов при помощи простой YAML-конфигурации;
 * **Высокая доступность** — поддержка как одиночных (Standalone), так и групповых (Group) развёртываний;
@@ -29,7 +29,7 @@ description: Архитектура модуля managed-memcached в Deckhouse 
 
 Архитектура модуля [`managed-memcached`](/modules/managed-memcached/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображена на следующей диаграмме:
 
-![Архитектура модуля managed-memcached](../../images/architecture/managed-services/c4-l2-managed-memcached.ru.png)
+![Архитектура модуля managed-memcached](../../images/architecture/managed-services/c4-l2-managed-memcached.ru.svg)
 
 ## Компоненты модуля
 

@@ -3,10 +3,10 @@ title: Модуль managed-clickhouse
 permalink: ru/architecture/managed-services/managed-clickhouse.html
 lang: ru
 search: managed-clickhouse, clickhouse
-description: Архитектура модуля managed-clickhouse в Deckhouse Kubernetes Platform.
+description: Архитектура модуля managed-clickhouse в Deckhouse Platform.
 ---
 
-Модуль [`managed-clickhouse`](/modules/managed-clickhouse/) управляет экземплярами [ClickHouse](https://github.com/clickhouse/clickhouse) в Deckhouse Kubernetes Platform (DKP). ClickHouse — высокопроизводительная колоночная система управления базами данных (СУБД) с открытым исходным кодом, предназначенная для онлайн-аналитической обработки (OLAP) больших объёмов данных в реальном времени.
+Модуль [`managed-clickhouse`](/modules/managed-clickhouse/) управляет экземплярами [ClickHouse](https://github.com/clickhouse/clickhouse) в Deckhouse Platform (DP). ClickHouse — высокопроизводительная колоночная система управления базами данных (СУБД) с открытым исходным кодом, предназначенная для онлайн-аналитической обработки (OLAP) больших объёмов данных в реальном времени.
 Модуль предоставляет:
 
 * **Автоматическое развёртывание** — создаёт экземпляр ClickHouse при помощи простой YAML-конфигурации;
@@ -25,7 +25,7 @@ description: Архитектура модуля managed-clickhouse в Deckhouse
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`managed-clickhouse`](/modules/managed-clickhouse/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`managed-clickhouse`](/modules/managed-clickhouse/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля managed-clickhouse](../../images/architecture/managed-services/c4-l2-managed-clickhouse.ru.svg)
 

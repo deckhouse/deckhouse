@@ -2,10 +2,10 @@
 title: Managed-hive-metastore module
 permalink: en/architecture/managed-services/managed-hive-metastore.html
 search: managed-hive-metastore, hive-metastore
-description: Architecture of the managed-hive-metastore module in Deckhouse Kubernetes Platform.
+description: Architecture of the managed-hive-metastore module in Deckhouse Platform.
 ---
 
-The [`managed-hive-metastore`](/modules/managed-hive-metastore/) module manages instances of [Hive Metastore (HMS)](https://github.com/apache/hive) in Deckhouse Kubernetes Platform (DKP). HMS is the centralized metadata store in the big data ecosystem.
+The [`managed-hive-metastore`](/modules/managed-hive-metastore/) module manages instances of [Hive Metastore (HMS)](https://github.com/apache/hive) in Deckhouse Platform (DP). HMS is the centralized metadata store in the big data ecosystem.
 The module provides:
 
 * **Automatic Deployment**: Creates an HMS instance using a simple YAML configuration.
@@ -25,7 +25,7 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica of each Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`managed-hive-metastore`](/modules/managed-hive-metastore/) module and its interactions with other components of DKP are shown in the following diagram:
+The level-2 C4 architecture of the [`managed-hive-metastore`](/modules/managed-hive-metastore/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Managed-hive-metastore module architecture](../../images/architecture/managed-services/c4-l2-managed-hive-metastore.svg)
 

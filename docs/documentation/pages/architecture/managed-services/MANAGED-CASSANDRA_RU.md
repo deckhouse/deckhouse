@@ -3,10 +3,10 @@ title: Модуль managed-cassandra
 permalink: ru/architecture/managed-services/managed-cassandra.html
 lang: ru
 search: managed-cassandra, cassandra
-description: Архитектура модуля managed-cassandra в Deckhouse Kubernetes Platform.
+description: Архитектура модуля managed-cassandra в Deckhouse Platform.
 ---
 
-Модуль [`managed-cassandra`](/modules/managed-cassandra/) управляет экземплярами распределённой системы управления базами данных класса NoSQL с открытым исходным кодом [Apache Cassandra](https://github.com/apache/cassandra) в Deckhouse Kubernetes Platform (DKP). Он предоставляет:
+Модуль [`managed-cassandra`](/modules/managed-cassandra/) управляет экземплярами распределённой системы управления базами данных класса NoSQL с открытым исходным кодом [Apache Cassandra](https://github.com/apache/cassandra) в Deckhouse Platform (DP). Он предоставляет:
 
 * **Автоматическое развёртывание** — создаёт экземпляр Cassandra при помощи простой YAML-конфигурации;
 * **Standalone** — поддерживает установку одиночного экземпляра;
@@ -24,7 +24,7 @@ description: Архитектура модуля managed-cassandra в Deckhouse 
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`managed-cassandra`](/modules/managed-cassandra/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`managed-cassandra`](/modules/managed-cassandra/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля managed-cassandra](../../images/architecture/managed-services/c4-l2-managed-cassandra.ru.svg)
 

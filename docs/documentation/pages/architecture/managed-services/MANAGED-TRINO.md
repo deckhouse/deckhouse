@@ -2,10 +2,10 @@
 title: Managed-trino module
 permalink: en/architecture/managed-services/managed-trino.html
 search: managed-trino, trino
-description: Architecture of the managed-trino module in Deckhouse Kubernetes Platform.
+description: Architecture of the managed-trino module in Deckhouse Platform.
 ---
 
-The [`managed-trino`](/modules/managed-trino/) module manages [Trino](https://github.com/trinodb/trino) instances in Deckhouse Kubernetes Platform (DKP). Trino is a fast Open Source distributed SQL engine built for big data analytics.
+The [`managed-trino`](/modules/managed-trino/) module manages [Trino](https://github.com/trinodb/trino) instances in Deckhouse Platform (DP). Trino is a fast Open Source distributed SQL engine built for big data analytics.
 The module provides:
 
 * **Automatic Deployment**: Creates a Trino instance using a simple YAML configuration.
@@ -26,7 +26,7 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica of each Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`managed-trino`](/modules/managed-trino/) module and its interactions with other components of DKP are shown in the following diagram:
+The level-2 C4 architecture of the [`managed-trino`](/modules/managed-trino/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Managed-trino module architecture](../../images/architecture/managed-services/c4-l2-managed-trino.svg)
 
