@@ -1824,6 +1824,10 @@ entries:
                 ru: Модуль ingress-nginx
               url: /architecture/network/ingress-nginx.html
             - title:
+                en: Istio module
+                ru: Модуль istio
+              url: /architecture/network/istio.html
+            - title:
                 en: Metallb module
                 ru: Модуль metallb
               url: /architecture/network/metallb.html
