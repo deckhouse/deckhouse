@@ -96,7 +96,7 @@ func (r *Reconciler) immutableNodeGroupNames(ctx context.Context) ([]string, err
 func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, immutableGroups []string, outcome nerOutcome) error {
 	desired := ner.Status.DeepCopy()
 	desired.ObservedGeneration = ner.Generation
-	desired.MatchedNodeGroups = matchedNodeGroups(ner, immutableGroups)
+	desired.MatchedNodeGroups = matchedNodeGroups(ner.Spec.NodeGroupSelector.MatchNames, immutableGroups)
 	desired.AppliedNodes = outcome.applied
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
@@ -139,13 +139,12 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 	return nil
 }
 
-// matchedNodeGroups returns the immutable NodeGroups the request selects: the
+// matchedNodeGroups returns the immutable NodeGroups a selector picks: the
 // listed names it intersects, or all of them when it names none.
-func matchedNodeGroups(ner *deckhousev1alpha1.NodeExtensionRequest, immutableGroups []string) []string {
-	names := ner.Spec.NodeGroupSelector.MatchNames
+func matchedNodeGroups(matchNames, immutableGroups []string) []string {
 	var matched []string
 	for _, name := range immutableGroups {
-		if len(names) == 0 || slices.Contains(names, name) {
+		if len(matchNames) == 0 || slices.Contains(matchNames, name) {
 			matched = append(matched, name)
 		}
 	}
