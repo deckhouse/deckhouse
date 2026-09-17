@@ -83,32 +83,6 @@ type providerFixture struct {
 func providerFixtures() []providerFixture {
 	return []providerFixture{
 		{
-			name:    "dvp",
-			crdPath: "../../../../../../030-cloud-provider-dvp/crds/instance_class.yaml",
-
-			registrationPath: "../../../../../../030-cloud-provider-dvp/templates/registration.yaml",
-			contractPath:     "../../../../../../030-cloud-provider-dvp/capi/template.yaml",
-			providerConfig:   map[string]any{},
-			instanceClass: map[string]any{
-				"virtualMachine": map[string]any{
-					"virtualMachineClassName": "generic-vm-class",
-					"bootloader":              "EFI",
-					"cpu":                     map[string]any{"cores": float64(4), "coreFraction": "50%"},
-					"memory":                  map[string]any{"size": "8Gi"},
-				},
-				"rootDisk": map[string]any{
-					"size":         "50Gi",
-					"storageClass": "linstor-thin-r1",
-					"image":        map[string]any{"kind": "ClusterVirtualImage", "name": "ubuntu-24-04"},
-				},
-				"additionalDisks": []any{
-					map[string]any{"size": "10Gi", "storageClass": "linstor-thin-r2"},
-				},
-				"etcdDisk": map[string]any{"size": "20Gi", "storageClass": "linstor-thin-r1"},
-			},
-			manualRolloutIDIgnoredByV1: true,
-		},
-		{
 			name:    "yandex",
 			crdPath: "../../../../../../030-cloud-provider-yandex/candi/openapi/instance_class.yaml",
 
@@ -402,7 +376,7 @@ func TestProviderConfigFixtureCoversTheAxis(t *testing.T) {
 // TestProviderRolloutFieldsResolveInTheConfig pins providerRolloutFields to the shape of the
 // provider subtree of d8-node-manager-cloud-provider — which is the contract, not the
 // ProviderClusterConfiguration or the ModuleConfig behind it. registration.yaml is free to move to
-// an mc-driven source (dvp already did) as long as it keeps publishing the same keys.
+// an mc-driven source as long as it keeps publishing the same keys.
 //
 // Renaming a key is what breaks: the declared path stops resolving, so the current value compares
 // as absent against a snapshot that still holds it, and every machine of the provider rolls. A

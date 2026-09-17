@@ -54,7 +54,6 @@ rules:
   - huaweicloudmachinetemplates
   - dynamixmachinetemplates
   - zvirtmachinetemplates
-  - deckhousemachinetemplates
   - yandexmachinetemplates
   - openstackmachinetemplates
 - apiGroups:
@@ -187,7 +186,6 @@ rules:
   - huaweicloudmachinetemplates
   - dynamixmachinetemplates
   - zvirtmachinetemplates
-  - deckhousemachinetemplates
   - yandexmachinetemplates
   - openstackmachinetemplates
 - apiGroups: ["cluster.x-k8s.io"]
@@ -226,6 +224,36 @@ subjects:
 - kind: ServiceAccount
   name: {{ $serviceAccountName }}
   namespace: d8-cloud-instance-manager
+  {{- if eq $name "cluster-autoscaler" }}
+---
+# Aggregates rules from provider modules (e.g. cloud-provider-dvp) that label their
+# ClusterRole fragments node-manager.deckhouse.io/aggregate-to-cluster-autoscaler: "true".
+# Only the CAPI-mode cluster-autoscaler SA needs this, not cluster-autoscaler-mcm.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:cluster-autoscaler:aggregated-role
+  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "cluster-autoscaler")) | nindent 2 }}
+rules: []
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        node-manager.deckhouse.io/aggregate-to-cluster-autoscaler: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:cluster-autoscaler:aggregated-role
+  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "cluster-autoscaler")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:cluster-autoscaler:aggregated-role
+subjects:
+- kind: ServiceAccount
+  name: {{ $serviceAccountName }}
+  namespace: d8-cloud-instance-manager
+  {{- end }}
 {{- end }}
 
 {{- if include "cluster_autoscaler_enabled" . }}
