@@ -16,11 +16,12 @@ package checks
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -127,39 +128,74 @@ func TestCheckResponse_WrongStatus(t *testing.T) {
 }
 
 func TestCheckRegistryCredentials(t *testing.T) {
-	type fields struct {
-		installConfig *config.DeckhouseInstaller
-		metaConfig    *config.MetaConfig
+	t.Setenv("DHCTL_TEST_VERSION_TAG", "v1.2.3")
+
+	registryCfg := registry_mocks.ConfigBuilder(
+		registry_mocks.WithImagesRepo("test.registry.io/test"),
+		registry_mocks.WithSchemeHTTPS(),
+	)
+
+	installer := &config.DeckhouseInstaller{
+		Registry:  registryCfg,
+		DevBranch: "dev-branch",
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		wantErr assert.ErrorAssertionFunc
-	}{
-		{
-			name: "check registry.deckhouse.io/deckhouse/ce",
-			fields: fields{
-				installConfig: &config.DeckhouseInstaller{
-					DevBranch: "pr0001",
-					Registry: registry_mocks.ConfigBuilder(
-						registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
-						registry_mocks.WithSchemeHTTPS(),
-					),
-				},
-				metaConfig: &config.MetaConfig{
-					Registry: registry_mocks.ConfigBuilder(
-						registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
-						registry_mocks.WithSchemeHTTPS(),
-					),
-				},
-			},
-			wantErr: assert.NoError,
-		},
+
+	metaCfg := &config.MetaConfig{
+		Registry: registryCfg,
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			check := RegistryCredentials(tt.fields.metaConfig, tt.fields.installConfig)
-			tt.wantErr(t, check.Run(t.Context()), fmt.Sprintf("CheckRegistryCredentials()"))
-		})
+
+	image, err := installer.GetRemoteImage(t.Context(), true)
+	require.NoError(t, err)
+
+	ref, err := name.ParseReference(image)
+	require.NoError(t, err)
+
+	provider := NewFakeImageDescriptorProvider(t).
+		ExpectReference(ref).
+		Return(&v1.ConfigFile{}, nil)
+
+	check := RegistryCredentialsCheck{
+		MetaConfig:    metaCfg,
+		InstallConfig: installer,
+		descriptor:    provider,
 	}
+
+	require.NoError(t, check.Run(t.Context()))
+}
+
+func TestCheckRegistryCredentialsResolveError(t *testing.T) {
+	t.Setenv("DHCTL_TEST_VERSION_TAG", "v1.2.3")
+
+	registryCfg := registry_mocks.ConfigBuilder(
+		registry_mocks.WithImagesRepo("test.registry.io/test"),
+		registry_mocks.WithSchemeHTTPS(),
+	)
+
+	installer := &config.DeckhouseInstaller{
+		Registry:  registryCfg,
+		DevBranch: "dev-branch",
+	}
+	metaCfg := &config.MetaConfig{
+		Registry: registryCfg,
+	}
+
+	image, err := installer.GetRemoteImage(t.Context(), true)
+	require.NoError(t, err)
+
+	ref, err := name.ParseReference(image)
+	require.NoError(t, err)
+
+	provider := NewFakeImageDescriptorProvider(t).
+		ExpectReference(ref).
+		Return(nil, errors.New("resolve failed"))
+
+	check := RegistryCredentialsCheck{
+		MetaConfig:    metaCfg,
+		InstallConfig: installer,
+		descriptor:    provider,
+	}
+
+	err = check.Run(t.Context())
+	require.Error(t, err)
+	require.ErrorContains(t, err, "cannot resolve deckhouse image config")
 }
