@@ -53,6 +53,8 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         cluster.x-k8s.io/aggregate-to-manager: "true"
+    - matchLabels:
+        node-manager.deckhouse.io/aggregate-to-capi-controller-manager: "true"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -293,9 +295,6 @@ rules:
     - openstackmachines
     - openstackmachinetemplates
     - openstackservers
-    - deckhouseclusters
-    - deckhousemachines
-    - deckhousemachinetemplates
     verbs:
     - create
     - delete
