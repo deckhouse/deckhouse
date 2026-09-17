@@ -43,32 +43,24 @@ func TestSelectMasterStates(t *testing.T) {
 	}
 
 	t.Run("only first", func(t *testing.T) {
-		got := selectMasterStates(first, others, func(name string) bool {
-			return name == "cluster-master-0"
-		})
+		got := selectMasterStates(first, nil)
 		require.Equal(t, map[string][]byte{"cluster-master-0": []byte("s0")}, got)
 	})
 
 	t.Run("all but first", func(t *testing.T) {
-		got := selectMasterStates(first, others, func(name string) bool {
-			return name != "cluster-master-0"
-		})
+		got := selectMasterStates(nil, others)
 		require.Len(t, got, 2)
 		require.NotContains(t, got, "cluster-master-0")
 	})
 
 	t.Run("excluding deleted", func(t *testing.T) {
-		deleted := map[string]struct{}{"cluster-master-1": {}}
-		got := selectMasterStates(first, others, func(name string) bool {
-			_, ok := deleted[name]
-			return !ok
-		})
+		got := selectMasterStatesExcept(first, others, map[string]struct{}{"cluster-master-1": {}})
 		require.Len(t, got, 2)
 		require.NotContains(t, got, "cluster-master-1")
 	})
 
 	t.Run("nil first is skipped", func(t *testing.T) {
-		got := selectMasterStates(nil, others, func(string) bool { return true })
+		got := selectMasterStates(nil, others)
 		require.Len(t, got, 2)
 	})
 }
@@ -142,7 +134,7 @@ func TestAnExpiredRecordReachesNoConsumer(t *testing.T) {
 
 	switcher := switcherWithConvergeUserState(t, operatorConnection(), expired)
 
-	creds, err := switcher.credentialsFor([]string{"cluster-master-0"})
+	creds, err := credentialsForNodes(switcher.ctx, []string{"cluster-master-0"})
 	require.NoError(t, err)
 	require.Equal(t, "ubuntu", creds.User, "a node whose converge user has expired is still reached as that user")
 
@@ -166,7 +158,7 @@ func TestCredentialsForGeneration(t *testing.T) {
 	t.Run("nodes created by this converge use the converge user", func(t *testing.T) {
 		switcher := switcherWithConvergeUserNodes(t, operatorConnection(), "cluster-master-0", "cluster-master-1")
 
-		creds, err := switcher.credentialsFor([]string{"cluster-master-1", "cluster-master-0"})
+		creds, err := credentialsForNodes(switcher.ctx, []string{"cluster-master-1", "cluster-master-0"})
 		require.NoError(t, err)
 		require.Equal(t, global.ConvergeUserName, creds.User)
 		// The converge user has NOPASSWD sudo and no password at all.
@@ -176,7 +168,7 @@ func TestCredentialsForGeneration(t *testing.T) {
 	t.Run("pre-existing nodes keep the user the operator passed", func(t *testing.T) {
 		switcher := switcherWithConvergeUserNodes(t, operatorConnection(), "cluster-master-2")
 
-		creds, err := switcher.credentialsFor([]string{"cluster-master-0", "cluster-master-1"})
+		creds, err := credentialsForNodes(switcher.ctx, []string{"cluster-master-0", "cluster-master-1"})
 		require.NoError(t, err)
 		require.Equal(t, "ubuntu", creds.User)
 		require.Equal(t, "become-pass", creds.BecomePass)
@@ -185,7 +177,7 @@ func TestCredentialsForGeneration(t *testing.T) {
 	t.Run("a cluster this converge added nothing to keeps the operator user", func(t *testing.T) {
 		switcher := switcherWithConvergeUserNodes(t, operatorConnection())
 
-		creds, err := switcher.credentialsFor([]string{"cluster-master-0"})
+		creds, err := credentialsForNodes(switcher.ctx, []string{"cluster-master-0"})
 		require.NoError(t, err)
 		require.Equal(t, "ubuntu", creds.User)
 	})
@@ -193,7 +185,7 @@ func TestCredentialsForGeneration(t *testing.T) {
 	t.Run("mixed set is rejected", func(t *testing.T) {
 		switcher := switcherWithConvergeUserNodes(t, operatorConnection(), "cluster-master-0")
 
-		_, err := switcher.credentialsFor([]string{"cluster-master-0", "cluster-master-1"})
+		_, err := credentialsForNodes(switcher.ctx, []string{"cluster-master-0", "cluster-master-1"})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cluster-master-0")
 		require.Contains(t, err.Error(), "cluster-master-1")
@@ -202,14 +194,14 @@ func TestCredentialsForGeneration(t *testing.T) {
 	t.Run("no nodes is rejected", func(t *testing.T) {
 		switcher := switcherWithConvergeUserNodes(t, operatorConnection(), "cluster-master-0")
 
-		_, err := switcher.credentialsFor(nil)
+		_, err := credentialsForNodes(switcher.ctx, nil)
 		require.Error(t, err)
 	})
 
 	t.Run("a connection without a user is rejected", func(t *testing.T) {
 		switcher := switcherWithConvergeUserNodes(t, &sshconfig.ConnectionConfig{Config: &sshconfig.Config{}})
 
-		_, err := switcher.credentialsFor([]string{"cluster-master-0"})
+		_, err := credentialsForNodes(switcher.ctx, []string{"cluster-master-0"})
 		require.Error(t, err)
 	})
 }
@@ -264,7 +256,7 @@ func TestSwitchClientFallsBackToOperatorUser(t *testing.T) {
 			refusal(recorder)
 
 			client, err := switcher.switchClientTo(t.Context(), recorder, settings,
-				sshCredentials{User: global.ConvergeUserName}, hosts)
+				sshCredentials{User: global.ConvergeUserName}, hosts, nil)
 			require.NoError(t, err)
 
 			require.Equal(t, []string{global.ConvergeUserName, "ubuntu"}, recorder.users,
@@ -286,7 +278,7 @@ func TestSwitchClientFallsBackToOperatorUser(t *testing.T) {
 		recorder.refuseSwitch = true
 
 		_, err := switcher.switchClientTo(t.Context(), recorder, settings,
-			sshCredentials{User: "ubuntu"}, hosts)
+			sshCredentials{User: "ubuntu"}, hosts, nil)
 		require.Error(t, err)
 		require.Equal(t, []string{"ubuntu"}, recorder.users)
 	})

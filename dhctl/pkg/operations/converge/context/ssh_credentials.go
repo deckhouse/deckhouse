@@ -28,15 +28,7 @@ import (
 // carries one user, so hosts reachable under different users never share a list.
 type sshCredentials struct {
 	User       string
-	Keys       []session.AgentPrivateKey
 	BecomePass string
-}
-
-// credentialsFor says who dhctl logs in as on the given nodes. The masters this converge
-// built answer to the converge user, the ones that predate it to the user dhctl started
-// with. Keys are the caller's: the same keys open both, only the account differs.
-func (s *KubeClientSwitcher) credentialsFor(nodes []string) (sshCredentials, error) {
-	return credentialsForNodes(s.ctx, nodes)
 }
 
 // SessionForNode points a copy of the connection settings at one master, under the user
@@ -79,6 +71,9 @@ func (s *KubeClientSwitcher) hostsOfOneGeneration(hosts []session.Host) ([]sessi
 	return thisConverge, nil
 }
 
+// credentialsForNodes says who dhctl logs in as on the given nodes. The masters this
+// converge built answer to the converge user, the ones that predate it to the user dhctl
+// started with. Keys stay the caller's: the same keys open both, only the account differs.
 func credentialsForNodes(c *Context, nodes []string) (sshCredentials, error) {
 	if len(nodes) == 0 {
 		return sshCredentials{}, fmt.Errorf("pick ssh credentials: no nodes given")
@@ -156,20 +151,24 @@ func hostNames(hosts []session.Host) []string {
 	return names
 }
 
-func selectMasterStates(first *NodeState, others []*NodeState, keep func(name string) bool) map[string][]byte {
+func selectMasterStates(first *NodeState, others []*NodeState) map[string][]byte {
+	return selectMasterStatesExcept(first, others, nil)
+}
+
+func selectMasterStatesExcept(first *NodeState, others []*NodeState, deleted map[string]struct{}) map[string][]byte {
 	states := make(map[string][]byte, len(others)+1)
 
 	for _, st := range append([]*NodeState{first}, others...) {
 		if st == nil {
 			continue
 		}
-		if !keep(st.Name) {
+
+		if _, deleting := deleted[st.Name]; deleting {
 			continue
 		}
+
 		states[st.Name] = st.State
 	}
 
 	return states
 }
-
-func keepAllMasters(string) bool { return true }

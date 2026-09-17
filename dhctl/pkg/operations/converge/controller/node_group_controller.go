@@ -91,15 +91,19 @@ func (c *NodeGroupController) loadCloudConfig(ctx *context.Context, nodeInternal
 		return err
 	}
 
-	skipped := c.convergeUserSkipped(ctx)
+	if c.convergeUserSkipped(ctx) {
+		c.cloudConfig = payload
 
-	cloudConfig, err := masterCloudConfig(ctx.Ctx(), metaConfig, operatorPrivateKeys(ctx), payload, skipped)
+		return nil
+	}
+
+	cloudConfig, err := masterCloudConfig(ctx.Ctx(), metaConfig, operatorPrivateKeys(ctx), payload)
 	if err != nil {
 		return err
 	}
 
 	c.cloudConfig = cloudConfig
-	c.cloudConfigHasConvergeUser = !skipped
+	c.cloudConfigHasConvergeUser = true
 
 	return nil
 }

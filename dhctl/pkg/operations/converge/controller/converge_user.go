@@ -53,13 +53,8 @@ const (
 )
 
 // masterCloudConfig puts the converge user into a master's cloud-init payload. Its input
-// is the payload as the manual-bootstrap-for-master secret holds it. With skip set the
-// payload comes back byte-identical.
-func masterCloudConfig(ctx gocontext.Context, metaConfig *config.MetaConfig, keys []sshconfig.AgentPrivateKey, cloudConfigB64 string, skip bool) (string, error) {
-	if skip {
-		return cloudConfigB64, nil
-	}
-
+// is the payload as the manual-bootstrap-for-master secret holds it.
+func masterCloudConfig(ctx gocontext.Context, metaConfig *config.MetaConfig, keys []sshconfig.AgentPrivateKey, cloudConfigB64 string) (string, error) {
 	authorized, err := convergeAuthorizedKeys(ctx, metaConfig, keys)
 	if err != nil {
 		return "", err

@@ -246,7 +246,7 @@ runcmd:
 	}
 
 	t.Run("mutable master gets the user", func(t *testing.T) {
-		got, err := masterCloudConfig(t.Context(), meta, nil, base, false)
+		got, err := masterCloudConfig(t.Context(), meta, nil, base)
 		require.NoError(t, err)
 
 		require.Equal(t, []any{pub}, convergeUser(t, got)["ssh_authorized_keys"])
@@ -258,7 +258,7 @@ runcmd:
 		keyPath := writeTestPrivateKey(t, "")
 
 		got, err := masterCloudConfig(t.Context(), meta,
-			[]sshconfig.AgentPrivateKey{{Key: keyPath, IsPath: true}}, base, false)
+			[]sshconfig.AgentPrivateKey{{Key: keyPath, IsPath: true}}, base)
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -272,7 +272,7 @@ runcmd:
 		expiry := func() string { return time.Now().UTC().Add(48 * time.Hour).Format(time.DateOnly) }
 
 		before := expiry()
-		got, err := masterCloudConfig(t.Context(), meta, nil, base, false)
+		got, err := masterCloudConfig(t.Context(), meta, nil, base)
 		require.NoError(t, err)
 
 		expiredate, ok := convergeUser(t, got)["expiredate"].(string)
@@ -286,13 +286,6 @@ runcmd:
 		require.Contains(t, []string{before, expiry()}, expiredate)
 	})
 
-	// An immutable master answers no sshd, and a commander converge has no SSH at
-	// all: their payload must come back byte-identical.
-	t.Run("skipped payload is untouched", func(t *testing.T) {
-		got, err := masterCloudConfig(t.Context(), meta, nil, base, true)
-		require.NoError(t, err)
-		require.Equal(t, base, got)
-	})
 }
 
 // The keys must be the operator's, exactly as dhctl was started with them. The live SSH

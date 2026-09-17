@@ -84,7 +84,7 @@ func (s *KubeClientSwitcher) CleanupConvergeUser(ctx context.Context) error {
 		return nil
 	}
 
-	s.debugStartOperation(action)
+	s.debug("Starting %s", strings.ToLower(action))
 
 	err := dhlog.RunProcess(ctx, s.slogger, action, func(ctx context.Context) error {
 		sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
@@ -133,7 +133,7 @@ func (s *KubeClientSwitcher) removeConvergeUser(ctx context.Context, sshProvider
 		return fmt.Errorf("get ssh client: %w", err)
 	}
 
-	creds, err := s.credentialsFor(convergeState.ConvergeUserNodes)
+	creds, err := credentialsForNodes(s.ctx, convergeState.ConvergeUserNodes)
 	if err != nil {
 		return err
 	}
@@ -271,7 +271,7 @@ func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
 		}
 
 		return s.replaceKubeClient(ctx, replaceKubeClientParams{
-			state: selectMasterStates(firstMasterState, nil, keepAllMasters),
+			state: selectMasterStates(firstMasterState, nil),
 		})
 	})
 }
@@ -291,7 +291,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 			return err
 		}
 
-		statesMap := selectMasterStates(nil, anotherMastersStates, keepAllMasters)
+		statesMap := selectMasterStates(nil, anotherMastersStates)
 
 		if len(statesMap) == 0 {
 			if firstMasterState == nil {
@@ -299,7 +299,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 			}
 
 			s.warn("States for other control-plane nodes not found. Trying to continue with the first one")
-			statesMap = selectMasterStates(firstMasterState, nil, keepAllMasters)
+			statesMap = selectMasterStates(firstMasterState, nil)
 		}
 
 		return s.replaceKubeClient(ctx, replaceKubeClientParams{
@@ -397,10 +397,7 @@ func (s *KubeClientSwitcher) switchAwayFromHosts(ctx context.Context, action str
 			return err
 		}
 
-		statesMap := selectMasterStates(firstMaster, anotherMasters, func(name string) bool {
-			_, deleting := deleted[name]
-			return !deleting
-		})
+		statesMap := selectMasterStatesExcept(firstMaster, anotherMasters, deleted)
 
 		return s.replaceKubeClient(ctx, replaceKubeClientParams{
 			state: statesMap,
@@ -410,8 +407,6 @@ func (s *KubeClientSwitcher) switchAwayFromHosts(ctx context.Context, action str
 
 type replaceKubeClientParams struct {
 	state map[string][]byte
-	// creds names the user every host in state answers to. Nil picks it by node generation.
-	creds *sshCredentials
 }
 
 func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params replaceKubeClientParams) error {
@@ -457,29 +452,22 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 		return fmt.Errorf("Cannot switch clients: no available hosts found in node states")
 	}
 
+	hosts, err := s.hostsOfOneGeneration(availableHosts)
+	if err != nil {
+		return err
+	}
+
+	if len(hosts) < len(availableHosts) {
+		s.debug("Switching to %d of %d hosts: one session carries one generation", len(hosts), len(availableHosts))
+	}
+
+	availableHosts = hosts
+
 	// Picked while the kube client still stands: the converge state it reads lives in
 	// the cluster, reachable only through the session this call is about to replace.
-	creds := params.creds
-
-	if creds == nil {
-		hosts, err := s.hostsOfOneGeneration(availableHosts)
-		if err != nil {
-			return err
-		}
-
-		if len(hosts) < len(availableHosts) {
-			s.debug("Switching to %d of %d hosts: one session carries one generation", len(hosts), len(availableHosts))
-		}
-
-		availableHosts = hosts
-
-		picked, err := s.credentialsFor(hostNames(availableHosts))
-		if err != nil {
-			return err
-		}
-
-		picked.Keys = sshCl.PrivateKeys()
-		creds = &picked
+	creds, err := credentialsForNodes(s.ctx, hostNames(availableHosts))
+	if err != nil {
+		return err
 	}
 
 	if s.lockRunner != nil {
@@ -495,7 +483,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 
 	s.debug("Creating new ssh client for replacing kube client")
 
-	newSSHClient, err := s.switchClientTo(ctx, sshProvider, settings, *creds, availableHosts)
+	newSSHClient, err := s.switchClientTo(ctx, sshProvider, settings, creds, availableHosts, sshCl.PrivateKeys())
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
@@ -509,7 +497,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	s.debug("Private keys refreshed for replacing kube client")
 
 	if s.lockRunner != nil {
-		s.debugStartOperation("reset lock after replacing kube client")
+		s.debug("Starting reset lock after replacing kube client")
 
 		err := s.lockRunner.ResetLock(s.ctx.Ctx())
 		if err != nil {
@@ -525,8 +513,8 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 // switchClientTo moves the ssh client to hosts under creds, retrying once as the user
 // dhctl started with when the converge user does not answer. Any failure counts: a master
 // built before that user existed and an unreachable one are still indistinguishable.
-func (s *KubeClientSwitcher) switchClientTo(ctx context.Context, sshProvider libcon.SSHProvider, settings *session.Session, creds sshCredentials, hosts []session.Host) (libcon.SSHClient, error) {
-	client, err := switchAndCheck(ctx, sshProvider, switchSession(settings, creds, hosts), creds.Keys)
+func (s *KubeClientSwitcher) switchClientTo(ctx context.Context, sshProvider libcon.SSHProvider, settings *session.Session, creds sshCredentials, hosts []session.Host, keys []session.AgentPrivateKey) (libcon.SSHClient, error) {
+	client, err := switchAndCheck(ctx, sshProvider, switchSession(settings, creds, hosts), keys)
 	if err == nil {
 		return client, nil
 	}
@@ -542,9 +530,7 @@ func (s *KubeClientSwitcher) switchClientTo(ctx context.Context, sshProvider lib
 		return nil, fmt.Errorf("connect as %s (%v), then read the user dhctl started with: %w", creds.User, err, credsErr)
 	}
 
-	operator.Keys = creds.Keys
-
-	client, retryErr := switchAndCheck(ctx, sshProvider, switchSession(settings, operator, hosts), operator.Keys)
+	client, retryErr := switchAndCheck(ctx, sshProvider, switchSession(settings, operator, hosts), keys)
 	if retryErr != nil {
 		return nil, fmt.Errorf("connect as %s (%v), then as %s: %w", creds.User, err, operator.User, retryErr)
 	}
@@ -641,15 +627,6 @@ func (s *KubeClientSwitcher) sshless(action string) bool {
 	return false
 }
 
-func (s *KubeClientSwitcher) switchDisbled(action string) bool {
-	if s.params.DisableSwitch {
-		s.warn("%s skipped. Switch disabled", action)
-		return true
-	}
-
-	return false
-}
-
 // isSkipOrLogStart tells a switch it must not run. Every switch left needs SSH and moves
 // the clients between control-plane nodes, so a disabled switch is an error rather than
 // something to skip.
@@ -662,11 +639,11 @@ func (s *KubeClientSwitcher) isSkipOrLogStart(action string) (bool, error) {
 		return true, nil
 	}
 
-	if s.switchDisbled(action) {
+	if s.params.DisableSwitch {
 		return true, fmt.Errorf("Internal error: switching clients was disabled with DHCTL_CLI_NO_SWITCH_TO_NODE_USER, but it is needed for %s", action)
 	}
 
-	s.debugStartOperation(action)
+	s.debug("Starting %s", strings.ToLower(action))
 
 	return false, nil
 }
@@ -691,10 +668,6 @@ func (s *KubeClientSwitcher) debug(f string, args ...any) {
 
 func (s *KubeClientSwitcher) warn(f string, args ...any) {
 	s.slogger.WarnContext(s.ctx.Ctx(), strings.TrimRight(fmt.Sprintf(f, args...), "\n"))
-}
-
-func (s *KubeClientSwitcher) debugStartOperation(action string) {
-	s.debug("Starting %s", strings.ToLower(action))
 }
 
 type sshIPExtractorParams struct {
