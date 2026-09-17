@@ -76,15 +76,42 @@ The `security.deckhouse.io/pod-policy` label and the
 are ignored there.
 The check reports violations in the audit and in Grafana, and never blocks a system component from starting.
 
-To enforce policies in a system namespace, set the label `security.deckhouse.io/enable-security-policy-check` to `true` on it.
-Only that value enables enforcement:
+To block violations instead of reporting them, set
+[`settings.podSecurityStandards.systemNamespaces.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction):
 
-```shell
-d8 k label ns d8-my-namespace security.deckhouse.io/enable-security-policy-check=true
+```yaml
+settings:
+  podSecurityStandards:
+    systemNamespaces:
+      enforcementAction: Deny
 ```
 
-The namespace then follows the configured enforcement mode instead of `warn`,
-and the `security.deckhouse.io/pod-policy-action` label applies to it as it does to any other namespace.
+This is the only lever you have over system namespaces, and it is deliberate.
+The labels that tune the constraints are written by the module that owns the namespace,
+so a cluster operator cannot edit them: Deckhouse restores them on the next converge.
+
+A system namespace may legitimately host application workloads that the platform's own standards
+would block. List such namespaces in
+[`excludeNamespaces`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces)
+to keep them at `warn`:
+
+```yaml
+settings:
+  podSecurityStandards:
+    systemNamespaces:
+      enforcementAction: Deny
+      excludeNamespaces:
+        - d8-monitoring
+        - d8-team-*
+```
+
+The list supports a prefix or suffix glob and outranks everything else,
+including a namespace a module labeled `security.deckhouse.io/enable-security-policy-check: "true"`.
+That label makes a module's own namespace enforce even at the default `warn`,
+and an exclusion is the only way to override it.
+
+For a single workload rather than a whole namespace, the `security.deckhouse.io/skip-pss-check` label
+on the Pod or its controller, and a SecurityPolicyException in that namespace, both still apply.
 
 The same rule governs OperationPolicy and SecurityPolicy resources.
 A policy with `enforcementAction: Deny` blocks workloads in ordinary namespaces,

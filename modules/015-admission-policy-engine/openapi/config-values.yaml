@@ -36,6 +36,52 @@ properties:
           - Warn
           - Deny
           - Dryrun
+      systemNamespaces:
+        type: object
+        default: {}
+        description: |
+          Pod Security Standards settings for system namespaces, those named `d8-*` and `kube-*`.
+
+          System namespaces are governed separately from the rest of the cluster: the
+          `defaultPolicy` and `enforcementAction` parameters above do not apply to them, and neither
+          does the `security.deckhouse.io/pod-policy` label. They are always checked against the
+          `restricted` standard, and only the action taken on a violation is configurable here.
+        properties:
+          enforcementAction:
+            type: string
+            default: "Warn"
+            description: |
+              Action taken on a policy violation in a system namespace.
+
+              A namespace labeled `security.deckhouse.io/enable-security-policy-check: "true"` is
+              always denied regardless of this parameter: the module that owns the namespace has
+              declared it compliant. Use `excludeNamespaces` to keep a specific namespace at `Warn`.
+              - `Warn` — report the violation and let the workload start.
+              - `Deny` — block the workload.
+              - `Dryrun` — record the violation without reporting it to the user.
+            enum:
+              - Warn
+              - Deny
+              - Dryrun
+          excludeNamespaces:
+            type: array
+            default: []
+            description: |
+              System namespaces that are only ever warned about, whatever `enforcementAction` says.
+
+              Use it for a system namespace that legitimately hosts application workloads, which the
+              platform's own standards would otherwise block. The exclusion also overrides the
+              `security.deckhouse.io/enable-security-policy-check` label, because that label belongs
+              to the module that owns the namespace and cannot be changed by the cluster operator.
+
+              Supports a prefix or suffix glob, as Gatekeeper does. Names outside `d8-*` and
+              `kube-*` have no effect.
+            items:
+              type: string
+              # A name, optionally with the single leading or trailing glob Gatekeeper supports.
+              pattern: '^(\*[-a-z0-9]+|[a-z0-9][-a-z0-9]*\*?)$'
+            x-examples:
+              - ["d8-monitoring", "d8-team-*"]
       policies:
         type: object
         description: |

@@ -338,7 +338,7 @@ The default policy can be overridden globally ([in the module settings](configur
 
 {% alert level="info" %}
 In namespaces named `d8-*` and `kube-*`, the `restricted` standard applies in `warn` mode regardless of the default policy.
-To enforce policies in such a namespace, set the label `security.deckhouse.io/enable-security-policy-check` to `true` on it.
+To block violations instead of reporting them, set [`settings.podSecurityStandards.systemNamespaces.enforcementAction`](configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction) to `Deny`, and list the system namespaces that host application workloads in [`excludeNamespaces`](configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces) to keep them at `warn`.
 {% endalert %}
 
 {% alert level="info" %}

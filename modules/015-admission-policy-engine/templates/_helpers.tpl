@@ -284,6 +284,10 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   {{- $policyAction := index . 3 }}
   {{- $parameters := index . 4 }}
   {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "privileged" | lower) }}
+  {{/* System namespaces are governed by their own settings, not by defaultPolicy/enforcementAction. */}}
+  {{- $systemNamespaces := ($context.Values.admissionPolicyEngine.podSecurityStandards.systemNamespaces | default dict) }}
+  {{- $systemAction := ($systemNamespaces.enforcementAction | default "warn" | lower) }}
+  {{- $systemExclude := ($systemNamespaces.excludeNamespaces | default list) }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
@@ -345,36 +349,45 @@ spec:
     {{ $parameters | toYaml | nindent 4 }}
   {{- end }}
 {{/*
-  Pod Security Standards in warn mode for system namespaces.
+  Pod Security Standards for system namespaces that no module has opted into enforcement.
 
   Every namespace named `d8-*` or `kube-*` is checked against this standard regardless of its
   `security.deckhouse.io/pod-policy` label and of the module's defaultPolicy, which applies to
   non-system namespaces only. The block runs for both standards, so the two together give system
-  namespaces the full `restricted` set of checks. The action is always `warn`: the check exists to
-  make violations visible in the audit and in Grafana, never to block a system component.
+  namespaces the full `restricted` set of checks.
 
-  Namespaces that opted into enforcement with `security.deckhouse.io/enable-security-policy-check`
-  are excluded, because the constraint below always covers them with the configured action.
+  The action comes from `podSecurityStandards.systemNamespaces.enforcementAction` and defaults to
+  `warn`, which reports violations in the audit and in Grafana without blocking a system component.
+  It is the only lever a cluster operator has here: the labels that tune the constraints below are
+  written by the module that owns the namespace and cannot be edited from outside it.
 
-  The block does not depend on the enforcement action, so it is rendered on the iteration of the
-  default action, which is always present in internal.podSecurityStandards.enforcementActions.
-  That keeps it at one object per standard instead of one per action.
+  Namespaces the operator excluded, and namespaces a module opted into enforcement, are left to the
+  two blocks below.
+
+  The block does not depend on the module's own enforcement action, so it is rendered on the
+  iteration of the default action, which is always present in
+  internal.podSecurityStandards.enforcementActions. That keeps it at one object per standard
+  instead of one per action.
 */}}
 {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: {{ $policyCRDName }}
 metadata:
-  name: d8-pod-security-{{$standard}}-warn-system
+  name: d8-pod-security-{{$standard}}-system
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
 spec:
-  enforcementAction: warn
+  enforcementAction: {{ $systemAction }}
   match:
     scope: Namespaced
     kinds:
 {{- include "workload_kinds" . }}
     namespaces:
       {{- include "system_namespaces" . | fromYamlArray | toYaml | nindent 6 }}
+  {{- if $systemExclude }}
+    excludedNamespaces:
+      {{- $systemExclude | toYaml | nindent 6 }}
+  {{- end }}
     labelSelector:
       matchExpressions:
         - key: security.deckhouse.io/skip-pss-check
@@ -386,6 +399,45 @@ spec:
     namespaceSelector:
       matchExpressions:
         - { key: security.deckhouse.io/enable-security-policy-check, operator: NotIn, values: [ "true" ] }
+  {{- if $parameters }}
+  parameters:
+    {{ $parameters | toYaml | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{/*
+  Pod Security Standards in warn mode for the system namespaces the operator excluded.
+
+  `podSecurityStandards.systemNamespaces.excludeNamespaces` names the system namespaces that host
+  application workloads the platform's own standards would otherwise block. They are warned about
+  and never blocked, whatever the two blocks around this one would do to them — including a
+  namespace a module opted into enforcement, because that label belongs to the module and the
+  operator has no way to change it.
+
+  Rendered once per standard, like the block above, and only when the operator named something.
+*/}}
+{{- if and $systemExclude (eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower)) }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: {{ $policyCRDName }}
+metadata:
+  name: d8-pod-security-{{$standard}}-system-excluded
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
+spec:
+  enforcementAction: warn
+  match:
+    scope: Namespaced
+    kinds:
+{{- include "workload_kinds" . }}
+    namespaces:
+      {{- $systemExclude | toYaml | nindent 6 }}
+    labelSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/skip-pss-check
+          operator: NotIn
+          values: ["true"]
+        - key: gatekeeper.sh/operation
+          operator: NotIn
+          values: ["webhook"]
   {{- if $parameters }}
   parameters:
     {{ $parameters | toYaml | nindent 4 }}
@@ -424,6 +476,11 @@ spec:
 {{- include "workload_kinds" . }}
     namespaces:
       {{- include "system_namespaces" . | fromYamlArray | toYaml | nindent 6 }}
+  {{- if $systemExclude }}
+    # What the operator excluded is warned about by the block above, never enforced here.
+    excludedNamespaces:
+      {{- $systemExclude | toYaml | nindent 6 }}
+  {{- end }}
     labelSelector:
       matchExpressions:
         - key: security.deckhouse.io/skip-pss-check

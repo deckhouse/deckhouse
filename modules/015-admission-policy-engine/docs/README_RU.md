@@ -343,7 +343,7 @@ status:
 
 {% alert level="info" %}
 В неймспейсах с именами `d8-*` и `kube-*` стандарт `restricted` применяется в режиме `warn` независимо от политики по умолчанию.
-Чтобы включить в таком неймспейсе полноценное применение политик, установите на него лейбл `security.deckhouse.io/enable-security-policy-check` со значением `true`.
+Чтобы нарушения запрещались, а не только фиксировались, задайте [`settings.podSecurityStandards.systemNamespaces.enforcementAction`](configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction) со значением `Deny`, а системные неймспейсы с прикладной нагрузкой перечислите в [`excludeNamespaces`](configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces), чтобы оставить их в режиме `warn`.
 {% endalert %}
 
 {% alert level="info" %}

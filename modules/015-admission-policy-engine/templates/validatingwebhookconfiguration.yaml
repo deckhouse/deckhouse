@@ -124,7 +124,7 @@ webhooks:
 
   The webhook above skips every namespace named `d8-*` or `kube-*`, so without this one Gatekeeper
   never sees their workloads. The constraints that match here run in warn mode only: Pod Security
-  Standards through `d8-pod-security-*-warn-system`, and user policies through their `-system-warn`
+  Standards through `d8-pod-security-*-system`, and user policies through their `-system-warn`
   variant. Namespaces whose `security.deckhouse.io/enable-security-policy-check` label is `true`
   are handled by `system-namespaces-enforce` below instead.
 

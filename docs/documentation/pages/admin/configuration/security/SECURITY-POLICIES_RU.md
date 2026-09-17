@@ -300,16 +300,42 @@ status:
 в них не учитываются.
 Проверка фиксирует нарушения в отчётах безопасности и в Grafana и никогда не блокирует запуск системного компонента.
 
-Чтобы включить в системном неймспейсе полноценное применение политик,
-установите на него лейбл `security.deckhouse.io/enable-security-policy-check` со значением `true`.
-Применение политик включает только это значение:
+Чтобы нарушения запрещались, а не только фиксировались, задайте
+[`settings.podSecurityStandards.systemNamespaces.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction):
 
-```shell
-d8 k label ns d8-my-namespace security.deckhouse.io/enable-security-policy-check=true
+```yaml
+settings:
+  podSecurityStandards:
+    systemNamespaces:
+      enforcementAction: Deny
 ```
 
-После этого неймспейс подчиняется заданному режиму применения политик вместо `warn`,
-а лейбл `security.deckhouse.io/pod-policy-action` действует на него так же, как на любой другой неймспейс.
+Это единственный доступный вам рычаг для системных неймспейсов, и так задумано.
+Лейблы, настраивающие ограничения, проставляет владеющий неймспейсом модуль,
+поэтому администратор кластера изменить их не может: Deckhouse вернёт их при ближайшей сходимости.
+
+В системном неймспейсе может законно жить прикладная нагрузка, которую стандарты платформы
+заблокировали бы. Перечислите такие неймспейсы в
+[`excludeNamespaces`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces),
+чтобы оставить их в режиме `warn`:
+
+```yaml
+settings:
+  podSecurityStandards:
+    systemNamespaces:
+      enforcementAction: Deny
+      excludeNamespaces:
+        - d8-monitoring
+        - d8-team-*
+```
+
+Список поддерживает маску в начале или в конце имени и важнее всех прочих условий,
+включая лейбл `security.deckhouse.io/enable-security-policy-check: "true"`, проставленный модулем.
+Этот лейбл применяет политики в неймспейсе модуля даже при значении `warn` по умолчанию,
+и перекрыть его можно только исключением.
+
+Если речь об отдельной нагрузке, а не о неймспейсе целиком, по-прежнему работают лейбл
+`security.deckhouse.io/skip-pss-check` на поде или его контроллере и ресурс SecurityPolicyException в этом неймспейсе.
 
 То же правило распространяется на ресурсы OperationPolicy и SecurityPolicy.
 Политика с `enforcementAction: Deny` запрещает запуск нагрузки в обычных неймспейсах,
