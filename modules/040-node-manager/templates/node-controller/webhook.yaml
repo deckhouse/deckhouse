@@ -155,3 +155,26 @@ webhooks:
     resources:
     - nodeextensionrequests
     scope: Cluster
+- name: nodestaticpodrequest.validation.node-controller.deckhouse.io
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.nodeManager.internal.nodeControllerWebhookCert.ca | b64enc }}
+    service:
+      name: node-controller-webhook
+      namespace: d8-cloud-instance-manager
+      path: /validate-deckhouse-io-v1alpha1-nodestaticpodrequest
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  rules:
+  - apiGroups:
+    - deckhouse.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - nodestaticpodrequests
+    scope: Cluster
