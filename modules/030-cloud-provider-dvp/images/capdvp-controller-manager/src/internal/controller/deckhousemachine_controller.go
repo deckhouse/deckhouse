@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -54,6 +55,7 @@ import (
 	dvpapi "dvp-common/api"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	"github.com/deckhouse/virtualization/api/core/v1alpha2/vmcondition"
 
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 )
@@ -465,6 +467,10 @@ func (r *DeckhouseMachineReconciler) handleVMNotReady(
 		return ctrl.Result{}, nil
 	}
 
+	if result, handled := r.handleGPUClassNotReady(logger, dvpMachine, vm); handled {
+		return result, nil
+	}
+
 	resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine)
 	message := fmt.Sprintf("VM is not ready, state is %s", vm.Status.Phase)
 	if resourceStatus != "" {
@@ -481,6 +487,67 @@ func (r *DeckhouseMachineReconciler) handleVMNotReady(
 		LastTransitionTime: metav1.Now(),
 	})
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+}
+
+// handleGPUClassNotReady surfaces the GPUClassReady condition that the DVP cluster sets on the VM.
+// Without it a machine whose GPUClass is missing or not ready just sits in "VM is not ready, state
+// is Pending" — the reason lives in the parent cluster, where the owner of the DeckhouseMachine
+// usually cannot look. Reported as a condition on the machine and a log line, not as a
+// FailureReason: both states are fixed in the parent cluster without recreating the machine.
+func (r *DeckhouseMachineReconciler) handleGPUClassNotReady(
+	logger logr.Logger,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+	vm *v1alpha2.VirtualMachine,
+) (ctrl.Result, bool) {
+	if len(dvpMachine.Spec.GPUs) == 0 {
+		return ctrl.Result{}, false
+	}
+
+	cond := meta.FindStatusCondition(vm.Status.Conditions, vmcondition.TypeGPUClassReady.String())
+	if cond == nil || cond.Status == metav1.ConditionTrue {
+		return ctrl.Result{}, false
+	}
+
+	reason := infrastructurev1a1.GPUClassNotReadyReason
+	if cond.Reason == vmcondition.ReasonGPUClassNotFound.String() {
+		reason = infrastructurev1a1.GPUClassNotFoundReason
+	}
+
+	message := strings.TrimSpace(cond.Message)
+	if message == "" {
+		message = fmt.Sprintf("VM condition %s is %s", cond.Type, cond.Status)
+		// An Unknown condition often carries no reason at all — do not render empty parens.
+		if cond.Reason != "" {
+			message += fmt.Sprintf(" (%s)", cond.Reason)
+		}
+	}
+	// The message is written by the parent cluster and may already be terminated,
+	// so add the period only when it is missing instead of producing "..".
+	if !strings.HasSuffix(message, ".") {
+		message += "."
+	}
+	message = fmt.Sprintf("%s Requested GPU classes: %s", message, strings.Join(gpuClassNames(dvpMachine), ", "))
+
+	logger.Info("Waiting for the GPU classes of the VM to become ready",
+		"reason", cond.Reason, "message", cond.Message, "gpuClasses", gpuClassNames(dvpMachine))
+
+	conditions.Set(dvpMachine, metav1.Condition{
+		Type:               string(infrastructurev1a1.VMReadyCondition),
+		Status:             metav1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: metav1.Now(),
+	})
+
+	return ctrl.Result{RequeueAfter: 30 * time.Second}, true
+}
+
+func gpuClassNames(dvpMachine *infrastructurev1a1.DeckhouseMachine) []string {
+	names := make([]string, 0, len(dvpMachine.Spec.GPUs))
+	for _, gpu := range dvpMachine.Spec.GPUs {
+		names = append(names, gpu.GPUClassName)
+	}
+	return names
 }
 
 func (r *DeckhouseMachineReconciler) collectOwnedResourcesStatus(
@@ -535,6 +602,10 @@ func (r *DeckhouseMachineReconciler) collectOwnedResourcesStatus(
 			}
 		}
 		parts = append(parts, status)
+	}
+
+	if len(dvpMachine.Spec.GPUs) > 0 {
+		parts = append(parts, fmt.Sprintf("gpu classes %s", strings.Join(gpuClassNames(dvpMachine), ",")))
 	}
 
 	return strings.Join(parts, "; ")
@@ -765,7 +836,8 @@ func (r *DeckhouseMachineReconciler) ensureVM(
 			OsType:                   v1alpha2.GenericOs,
 			Bootloader:               v1alpha2.BootloaderType(dvpMachine.Spec.Bootloader),
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,
-			EnableParavirtualization: true,
+			EnableParavirtualization: ptr.To(true),
+			GPUs:                     buildGPUs(dvpMachine),
 			Provisioning: &v1alpha2.Provisioning{
 				Type: v1alpha2.ProvisioningTypeUserDataRef,
 				UserDataRef: &v1alpha2.UserDataRef{
@@ -791,6 +863,23 @@ func (r *DeckhouseMachineReconciler) ensureVM(
 	}
 
 	return vm, nil
+}
+
+// buildGPUs maps the GPU devices requested by the machine to the DVP VM spec.
+// Each entry references a GPUClass by name; repeating a name attaches several
+// devices of that class. Returns nil when no GPU is requested, so that the field
+// stays absent in the manifest for machines without GPUs.
+func buildGPUs(dvpMachine *infrastructurev1a1.DeckhouseMachine) []v1alpha2.GPUDeviceSpec {
+	if len(dvpMachine.Spec.GPUs) == 0 {
+		return nil
+	}
+
+	gpus := make([]v1alpha2.GPUDeviceSpec, 0, len(dvpMachine.Spec.GPUs))
+	for _, gpu := range dvpMachine.Spec.GPUs {
+		gpus = append(gpus, v1alpha2.GPUDeviceSpec{GPUClassName: gpu.GPUClassName})
+	}
+
+	return gpus
 }
 
 func (r *DeckhouseMachineReconciler) buildBlockDeviceRefs(dvpMachine *infrastructurev1a1.DeckhouseMachine) []v1alpha2.BlockDeviceSpecRef {

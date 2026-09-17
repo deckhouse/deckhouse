@@ -85,6 +85,7 @@ locals {
     },
     var.live_migration_policy != null ? { "liveMigrationPolicy" = var.live_migration_policy } : null,
     var.run_policy != null ? { "runPolicy" = var.run_policy } : null,
+    length(var.gpus) != 0 ? { "gpus" = var.gpus } : null,
     var.ipv4_address != null && var.ipv4_address.name != "" ? { "virtualMachineIPAddressName" = var.ipv4_address.name } : null,
     var.priority_class_name != null ? { "priorityClassName" = var.priority_class_name } : null,
     var.tolerations != null ? { "tolerations" = var.tolerations } : null,

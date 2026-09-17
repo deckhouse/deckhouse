@@ -43,6 +43,13 @@ const (
 	DiskMigrationCompletedReason  = "DiskMigrationCompleted"
 
 	BootDiskProvisioningFailedReason = "BootDiskProvisioningFailed"
+
+	// A GPUClass named by the InstanceClass is missing or not ready in the DVP cluster. Both are
+	// recoverable without recreating the machine — the GPUClass can be created or become ready
+	// later — so they surface as a condition and keep the reconcile requeueing, without the
+	// FailureReason that would mark the machine unrecoverable for CAPI.
+	GPUClassNotFoundReason = "GPUClassNotFound"
+	GPUClassNotReadyReason = "GPUClassNotReady"
 )
 
 // CPU defines the VM CPU, made of variable number of cores, each getting the Fraction amount of processing time on a physical core.
@@ -82,6 +89,16 @@ type AdditionalDisks struct {
 	StorageClass string            `json:"storageClass"`
 }
 
+// GPUDevice references a GPUClass whose device is attached to the VM.
+type GPUDevice struct {
+	// GPUClassName is the name of the GPUClass that selects the GPU to attach,
+	// for example nvidia-h100. The GPUClass must already exist in the DVP cluster.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	GPUClassName string `json:"gpuClassName"`
+}
+
 // DeckhouseMachineSpec defines the desired state of DeckhouseMachine.
 type DeckhouseMachineSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -118,6 +135,13 @@ type DeckhouseMachineSpec struct {
 	// +kubebuilder:default=EFI
 	// +kubebuilder:validation:Enum:={"BIOS", "EFI", "EFIWithSecureBoot"}
 	Bootloader string `json:"bootloader,omitempty"`
+
+	// GPUs holds the GPU devices to attach to this VM. Each entry references a GPUClass
+	// by name; repeating a name attaches several devices of that class. Requires the GPU
+	// feature gate enabled in the DVP cluster. A VM with an attached GPU is not live migratable.
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	GPUs []GPUDevice `json:"gpus,omitempty"`
 
 	// RunPolicy specifies the run policy for the virtual machine.
 	// Defaults to AlwaysOnUnlessStoppedManually to allow manual VM stop for maintenance.
