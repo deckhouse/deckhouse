@@ -27,7 +27,7 @@ import (
 // input must not produce a diff.
 func TestComputeIsIndependentOfKeyOrder(t *testing.T) {
 	now := ts("2026-05-01T00:00:00Z")
-	metrics := map[string]MetricValue{"vCPU": {Instant: 80, Avg7d: 70, Extrapolated: 95}}
+	metrics := map[string]MetricValue{"vCPU": {Instant: 80, Avg7d: 70, Extrapolated: f64(95)}}
 
 	// Deliberately messy: a duplicate across two keys, a renewal, an expired
 	// record and an unlimited grant, so every ordering-sensitive stage is hit.
@@ -41,7 +41,7 @@ func TestComputeIsIndependentOfKeyOrder(t *testing.T) {
 		{Key: "c-license", Records: []RecordStatus{wl(recordB, "2026-02-01T00:00:00Z", "", map[string]*int64{"nodes": nil})}},
 	}
 
-	want := jsonOf(t, Compute(keys, metrics, now, DefaultThresholds()))
+	want := jsonOf(t, Compute(keys, metrics, nil, now, DefaultThresholds()))
 
 	rng := rand.New(rand.NewPCG(1, 2))
 	for i := range 50 {
@@ -49,7 +49,7 @@ func TestComputeIsIndependentOfKeyOrder(t *testing.T) {
 		copy(shuffled, keys)
 		rng.Shuffle(len(shuffled), func(a, b int) { shuffled[a], shuffled[b] = shuffled[b], shuffled[a] })
 
-		if got := jsonOf(t, Compute(shuffled, metrics, now, DefaultThresholds())); got != want {
+		if got := jsonOf(t, Compute(shuffled, metrics, nil, now, DefaultThresholds())); got != want {
 			t.Fatalf("shuffle %d produced a different result:\n%s\nwant\n%s", i, got, want)
 		}
 	}
@@ -76,8 +76,8 @@ func TestAmbiguousRenewalIsDeterministic(t *testing.T) {
 	predecessor := wl(recordC, "2026-01-01T00:00:00Z", "2026-12-01T00:00:00Z", map[string]*int64{"vCPU": i64(50)})
 
 	now := ts("2026-05-01T00:00:00Z")
-	forward := Compute(oneKey(predecessor, first, second), nil, now, DefaultThresholds())
-	reversed := Compute(oneKey(second, first, predecessor), nil, now, DefaultThresholds())
+	forward := Compute(oneKey(predecessor, first, second), nil, nil, now, DefaultThresholds())
+	reversed := Compute(oneKey(second, first, predecessor), nil, nil, now, DefaultThresholds())
 
 	for _, res := range []Result{forward, reversed} {
 		gone := statusOf(t, res, recordC)
@@ -102,7 +102,7 @@ func TestRenewalToSmallerVolumeReducesQuota(t *testing.T) {
 	smaller := wl(recordB, "2026-07-01T00:00:00Z", "2027-07-01T00:00:00Z", map[string]*int64{"vCPU": i64(30)})
 	smaller.Renews = []string{recordA}
 
-	res := Compute(oneKey(original, smaller), nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
+	res := Compute(oneKey(original, smaller), nil, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
 
 	// Before the successor starts, the original is untouched.
 	if got := limitOf(t, res, "vCPU"); got != 50 {

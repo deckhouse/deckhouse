@@ -190,7 +190,7 @@ func TestUnknownTypeDoesNotBlockWorkload(t *testing.T) {
 		t.Fatalf("workload: %+v", statuses[1])
 	}
 
-	res := Compute(oneKey(statuses...), nil, ts("2026-02-01T00:00:00Z"), DefaultThresholds())
+	res := Compute(oneKey(statuses...), nil, nil, ts("2026-02-01T00:00:00Z"), DefaultThresholds())
 	if got := limitOf(t, res, "vCPU"); got != 50 {
 		t.Fatalf("vCPU = %d, want 50", got)
 	}
@@ -243,7 +243,7 @@ func TestRevokedRecords(t *testing.T) {
 			if statuses[0].RevokedReason != tc.reason {
 				t.Fatalf("RevokedReason = %q, want %q", statuses[0].RevokedReason, tc.reason)
 			}
-			if got := Compute(oneKey(statuses...), nil, now, DefaultThresholds()).State; got != tc.wantState {
+			if got := Compute(oneKey(statuses...), nil, nil, now, DefaultThresholds()).State; got != tc.wantState {
 				t.Fatalf("state = %q, want %q", got, tc.wantState)
 			}
 		})
@@ -258,7 +258,7 @@ func TestRevokedRecords(t *testing.T) {
 	if err != nil {
 		t.Fatalf("package rejected: %v", err)
 	}
-	res := Compute(oneKey(append(statuses, healthy)...), nil, now, DefaultThresholds())
+	res := Compute(oneKey(append(statuses, healthy)...), nil, nil, now, DefaultThresholds())
 	if res.State != StateValid {
 		t.Fatalf("reissued state = %q, want %q", res.State, StateValid)
 	}
@@ -268,7 +268,7 @@ func TestRevokedRecords(t *testing.T) {
 
 	ctx.Revoked = map[string]Revocation{recordA: {RevokedAt: now, Reason: ReasonNonPayment}}
 	_, statuses, _ = ParsePackage(token, ctx)
-	res = Compute(oneKey(append(statuses, healthy)...), nil, now, DefaultThresholds())
+	res = Compute(oneKey(append(statuses, healthy)...), nil, nil, now, DefaultThresholds())
 	if res.State != StateViolation {
 		t.Fatalf("non payment state = %q, want %q", res.State, StateViolation)
 	}

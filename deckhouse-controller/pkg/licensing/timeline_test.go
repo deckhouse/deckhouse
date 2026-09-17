@@ -28,7 +28,7 @@ func TestTimelineStackingScenario(t *testing.T) {
 	res := Compute(oneKey(
 		wl(recordA, "2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z", map[string]*int64{"vCPU": i64(50), "nodes": i64(10)}),
 		wl(recordB, "2026-05-01T00:00:00Z", "2026-11-01T00:00:00Z", map[string]*int64{"vCPU": i64(40), "nodes": i64(5)}),
-	), nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
+	), nil, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
 
 	if res.State != StateValid {
 		t.Fatalf("state = %q", res.State)
@@ -100,7 +100,7 @@ func TestTimelineDeduplicatesBreakpoints(t *testing.T) {
 	res := Compute(oneKey(
 		wl(recordA, "2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z", map[string]*int64{"vCPU": i64(50)}),
 		wl(recordB, "2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z", map[string]*int64{"vCPU": i64(40)}),
-	), nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
+	), nil, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
 
 	assertTimeline(t, res.Timeline, []string{
 		"2026-01-01T00:00:00Z..2026-07-01T00:00:00Z Valid vCPU=90",
@@ -114,7 +114,7 @@ func TestNextReductionNilWhenQuotaGrows(t *testing.T) {
 	res := Compute(oneKey(
 		wl(recordA, "2026-01-01T00:00:00Z", "", map[string]*int64{"vCPU": i64(50)}),
 		wl(recordB, "2026-09-01T00:00:00Z", "", map[string]*int64{"vCPU": i64(40)}),
-	), nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
+	), nil, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
 
 	if res.NextReduction != nil {
 		t.Fatalf("nextReduction = %+v, want nil", res.NextReduction)

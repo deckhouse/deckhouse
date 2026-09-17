@@ -207,11 +207,17 @@ func (r *reconciler) publishMetrics(
 	}
 
 	for name, value := range values {
-		for kind, v := range map[string]float64{
-			"instant":      value.Instant,
-			"avg_7d":       value.Avg7d,
-			"extrapolated": value.Extrapolated,
-		} {
+		kinds := map[string]float64{
+			"instant": value.Instant,
+			"avg_7d":  value.Avg7d,
+		}
+		// A projection that could not be made exports no series at all. A series
+		// that is absent cannot fire the projection alert, while a zero would
+		// read as consumption heading for nothing.
+		if value.Extrapolated != nil {
+			kinds["extrapolated"] = *value.Extrapolated
+		}
+		for kind, v := range kinds {
 			group.GaugeSet(metrics.LicensingGroup, metrics.D8LicenseConsumption, v, map[string]string{
 				metrics.LabelResource: name,
 				metrics.LabelKind:     kind,

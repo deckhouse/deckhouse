@@ -26,12 +26,17 @@ import (
 
 // MetricValue carries the three views of a consumption metric required by the
 // registration schema: the current reading, the seven day moving average and
-// the linear extrapolation to the end of the term. All three are always
-// serialized, zero values included.
+// the projection to the end of the term. All three are always serialized, zero
+// values included.
+//
+// Extrapolated is nil while the observation window is not covered yet, that is,
+// while there is nothing to project from. The registration schema requires the
+// field, so BuildRegistrationRequest sends the instant reading in its place; the
+// EffectiveLicense status publishes null.
 type MetricValue struct {
-	Instant      float64 `json:"instant"`
-	Avg7d        float64 `json:"avg_7d"`
-	Extrapolated float64 `json:"extrapolated"`
+	Instant      float64  `json:"instant"`
+	Avg7d        float64  `json:"avg_7d"`
+	Extrapolated *float64 `json:"extrapolated"`
 }
 
 // RegistrationInput is everything the cluster knows about itself when it builds
@@ -88,9 +93,17 @@ func BuildRegistrationRequest(in RegistrationInput) (string, error) {
 	copy(records, in.Records)
 	sort.Strings(records)
 
-	metrics := in.Metrics
-	if metrics == nil {
-		metrics = map[string]MetricValue{}
+	// §5.3 requires extrapolated in every metric. Until the journal is long
+	// enough to project anything, the instant reading stands in for it: the
+	// license server must not have to special case a field that the schema
+	// promises is always there.
+	metrics := make(map[string]MetricValue, len(in.Metrics))
+	for name, value := range in.Metrics {
+		if value.Extrapolated == nil {
+			instant := value.Instant
+			value.Extrapolated = &instant
+		}
+		metrics[name] = value
 	}
 
 	header := map[string]any{"typ": TypRegistration}

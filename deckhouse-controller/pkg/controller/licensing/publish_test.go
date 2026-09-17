@@ -18,6 +18,8 @@ import (
 	"crypto/ed25519"
 	"testing"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/licensing"
 )
@@ -33,7 +35,7 @@ func TestPublishMetricsOmitsUnlimitedResources(t *testing.T) {
 	res.Unlimited = true
 
 	env.r.publishMetrics(res, map[string]licensing.MetricValue{
-		metricVCPU: {Instant: 4, Avg7d: 4, Extrapolated: 4},
+		metricVCPU: {Instant: 4, Avg7d: 4, Extrapolated: ptr.To[float64](4)},
 	}, nil, testNow)
 
 	limits := env.series(t, metrics.D8LicenseEffectiveLimit)

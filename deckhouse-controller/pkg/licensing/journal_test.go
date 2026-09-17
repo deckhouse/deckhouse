@@ -22,26 +22,56 @@ import (
 	"time"
 )
 
+const (
+	testWindow    = 7 * 24 * time.Hour
+	testRetention = 8 * 24 * time.Hour
+	noCeiling     = 1e9
+)
+
+// dailyJournal lays one sample per day down to now, the oldest one a day before
+// the window opens so that the window is covered.
+func dailyJournal(now time.Time, values ...float64) *Journal {
+	j := new(Journal)
+	last := len(values) - 1
+	for i, v := range values {
+		j.Add(Sample{
+			At:     now.Add(time.Duration(i-last) * 24 * time.Hour),
+			Values: map[string]float64{"vCPU": v},
+		}, testRetention)
+	}
+	return j
+}
+
+// hourlyJournal lays one sample per hour over the last span, which is how the
+// controller actually fills the window.
+func hourlyJournal(now time.Time, span time.Duration, value func(at time.Time) float64) *Journal {
+	j := new(Journal)
+	for at := now.Add(-span); !at.After(now); at = at.Add(time.Hour) {
+		j.Add(Sample{At: at, Values: map[string]float64{"vCPU": value(at)}}, testRetention)
+	}
+	return j
+}
+
 func TestJournalAddPrunesAndSorts(t *testing.T) {
 	base := ts("2026-05-01T00:00:00Z")
 	var j Journal
 
 	// One sample older than the retention window, and one arriving twice at the
 	// same instant.
-	j.Add(Sample{At: base.Add(-8 * 24 * time.Hour), Values: map[string]float64{"vCPU": 1}}, 7*24*time.Hour)
-	j.Add(Sample{At: base.Add(-3 * time.Hour), Values: map[string]float64{"vCPU": 2}}, 7*24*time.Hour)
-	j.Add(Sample{At: base.Add(-2 * time.Hour), Values: map[string]float64{"vCPU": 3}}, 7*24*time.Hour)
-	j.Add(Sample{At: base, Values: map[string]float64{"vCPU": 4}}, 7*24*time.Hour)
+	j.Add(Sample{At: base.Add(-9 * 24 * time.Hour), Values: map[string]float64{"vCPU": 1}}, testRetention)
+	j.Add(Sample{At: base.Add(-3 * time.Hour), Values: map[string]float64{"vCPU": 2}}, testRetention)
+	j.Add(Sample{At: base.Add(-2 * time.Hour), Values: map[string]float64{"vCPU": 3}}, testRetention)
+	j.Add(Sample{At: base, Values: map[string]float64{"vCPU": 4}}, testRetention)
 
 	if len(j.Samples) != 3 {
-		t.Fatalf("samples = %d, want the eight day old one pruned", len(j.Samples))
+		t.Fatalf("samples = %d, want the nine day old one pruned", len(j.Samples))
 	}
 	for i := 1; i < len(j.Samples); i++ {
 		if j.Samples[i].At.Before(j.Samples[i-1].At) {
 			t.Fatalf("samples are not sorted: %v", j.Samples)
 		}
 	}
-	if got := j.Stats("vCPU", base, base, 7*24*time.Hour).Instant; got != 4 {
+	if got := j.Stats("vCPU", base, base, testWindow, noCeiling).Instant; got != 4 {
 		t.Fatalf("instant = %v, want the latest sample", got)
 	}
 }
@@ -52,8 +82,8 @@ func TestJournalAddDropsFutureSamples(t *testing.T) {
 	base := ts("2026-05-01T00:00:00Z")
 	var j Journal
 
-	j.Add(Sample{At: base.Add(72 * time.Hour), Values: map[string]float64{"vCPU": 9}}, 7*24*time.Hour)
-	j.Add(Sample{At: base, Values: map[string]float64{"vCPU": 4}}, 7*24*time.Hour)
+	j.Add(Sample{At: base.Add(72 * time.Hour), Values: map[string]float64{"vCPU": 9}}, testRetention)
+	j.Add(Sample{At: base, Values: map[string]float64{"vCPU": 4}}, testRetention)
 
 	if len(j.Samples) != 1 {
 		t.Fatalf("samples = %+v, want the future one dropped", j.Samples)
@@ -61,80 +91,37 @@ func TestJournalAddDropsFutureSamples(t *testing.T) {
 	if got := j.Samples[0].Values["vCPU"]; got != 4 {
 		t.Fatalf("kept the sample with vCPU = %v, want the one just added", got)
 	}
-	if got := j.Stats("vCPU", base, base, 7*24*time.Hour).Instant; got != 4 {
-		t.Fatalf("instant = %v, want 4", got)
-	}
 }
 
-func TestJournalStats(t *testing.T) {
+// Instant and avg_7d are present from the first observation, rounded to a tenth.
+func TestJournalStatsInstantAndAverage(t *testing.T) {
 	base := ts("2026-05-01T00:00:00Z")
 
-	// A synthetic ramp: +1 vCPU per hour over 24 hours.
-	var ramp Journal
-	for i := range 24 {
-		ramp.Add(Sample{
-			At:     base.Add(time.Duration(i-23) * time.Hour),
-			Values: map[string]float64{"vCPU": float64(100 + i)},
-		}, 7*24*time.Hour)
+	var j Journal
+	for i, v := range []float64{3, 4, 4.44, 5.55} {
+		j.Add(Sample{At: base.Add(time.Duration(i-3) * time.Hour), Values: map[string]float64{"vCPU": v}}, testRetention)
 	}
 
-	stats := ramp.Stats("vCPU", base, base.Add(24*time.Hour), 7*24*time.Hour)
-	if stats.Instant != 123 {
-		t.Fatalf("instant = %v, want 123", stats.Instant)
+	got := j.Stats("vCPU", base, base.Add(24*time.Hour), testWindow, noCeiling)
+	if got.Instant != 5.6 {
+		t.Fatalf("instant = %v, want 5.6", got.Instant)
 	}
-	// Mean of 100..123.
-	if math.Abs(stats.Avg7d-111.5) > 1e-9 {
-		t.Fatalf("avg = %v, want 111.5", stats.Avg7d)
-	}
-	// A perfect ramp extrapolates exactly one more day ahead: 123 + 24.
-	if math.Abs(stats.Extrapolated-147) > 1e-6 {
-		t.Fatalf("extrapolated = %v, want 147", stats.Extrapolated)
-	}
-
-	// A falling ramp is clamped at zero rather than going negative.
-	var falling Journal
-	for i := range 10 {
-		falling.Add(Sample{
-			At:     base.Add(time.Duration(i-9) * time.Hour),
-			Values: map[string]float64{"vCPU": float64(10 - i)},
-		}, 7*24*time.Hour)
-	}
-	if got := falling.Stats("vCPU", base, base.Add(48*time.Hour), 7*24*time.Hour).Extrapolated; got != 0 {
-		t.Fatalf("extrapolated = %v, want the clamp at 0", got)
-	}
-
-	// Fewer than two samples: all three views fall back to the latest reading,
-	// the fields are present from day one.
-	var single Journal
-	single.Add(Sample{At: base, Values: map[string]float64{"vCPU": 7}}, 7*24*time.Hour)
-	if got := single.Stats("vCPU", base, base.Add(30*24*time.Hour), 7*24*time.Hour); got != (MetricValue{7, 7, 7}) {
-		t.Fatalf("single sample stats = %+v", got)
+	// Mean of 3, 4, 4.44 and 5.55 is 4.2475, one decimal away from 4.2.
+	if got.Avg7d != 4.2 {
+		t.Fatalf("avg = %v, want 4.2", got.Avg7d)
 	}
 
 	// An unknown metric is a zero value, not a panic.
-	if got := ramp.Stats("storage_tb", base, base.Add(time.Hour), 7*24*time.Hour); got != (MetricValue{}) {
-		t.Fatalf("unknown metric = %+v", got)
-	}
-
-	// A flat series extrapolates flat.
-	var flat Journal
-	for i := range 5 {
-		flat.Add(Sample{At: base.Add(time.Duration(i-4) * time.Hour), Values: map[string]float64{"vCPU": 42}}, 7*24*time.Hour)
-	}
-	got := flat.Stats("vCPU", base, base.Add(72*time.Hour), 7*24*time.Hour)
-	if math.Abs(got.Extrapolated-42) > 1e-6 || got.Avg7d != 42 || got.Instant != 42 {
-		t.Fatalf("flat series = %+v", got)
+	if other := j.Stats("storage_tb", base, base, testWindow, noCeiling); other.Instant != 0 || other.Extrapolated != nil {
+		t.Fatalf("unknown metric = %+v, want the zero value", other)
 	}
 }
 
-// L3: the window is what avg_7d and the regression are taken over, not the
-// whole retained journal. A journal holding 30 days of history must still
-// answer with a seven day average.
+// The window is what the views are taken over, not the whole retained journal.
 func TestJournalStatsHonoursWindow(t *testing.T) {
 	base := ts("2026-05-01T00:00:00Z")
 
-	// 30 daily samples: flat at 10 until the window opens, then a +1/day ramp
-	// from 100 over the eight samples the seven day window covers.
+	// Flat at 10 before the window opens, then 100..107 inside it.
 	var j Journal
 	for i := range 30 {
 		at := base.Add(time.Duration(i-29) * 24 * time.Hour)
@@ -144,31 +131,172 @@ func TestJournalStatsHonoursWindow(t *testing.T) {
 		}
 		j.Add(Sample{At: at, Values: map[string]float64{"vCPU": v}}, 40*24*time.Hour)
 	}
-	if len(j.Samples) != 30 {
-		t.Fatalf("samples = %d, want the full retention kept", len(j.Samples))
-	}
 
-	// Window of 7 days: samples at now-7d..now, i.e. 100..107.
-	week := j.Stats("vCPU", base, base.Add(24*time.Hour), 7*24*time.Hour)
+	week := j.Stats("vCPU", base, base.Add(24*time.Hour), testWindow, noCeiling)
 	if week.Instant != 107 {
 		t.Fatalf("instant = %v, want 107", week.Instant)
 	}
-	if math.Abs(week.Avg7d-103.5) > 1e-9 {
+	if week.Avg7d != 103.5 {
 		t.Fatalf("avg over the window = %v, want 103.5", week.Avg7d)
 	}
-	// A clean +1/day ramp, one more day ahead.
-	if math.Abs(week.Extrapolated-108) > 1e-6 {
-		t.Fatalf("extrapolated = %v, want 108", week.Extrapolated)
-	}
 
-	// The same journal over 30 days drags the flat prehistory in.
-	month := j.Stats("vCPU", base, base.Add(24*time.Hour), 30*24*time.Hour)
+	month := j.Stats("vCPU", base, base.Add(24*time.Hour), 30*24*time.Hour, noCeiling)
 	if month.Avg7d >= week.Avg7d {
 		t.Fatalf("30d avg = %v, 7d avg = %v: the window changed nothing", month.Avg7d, week.Avg7d)
 	}
+}
 
-	// A window shorter than the sampling interval leaves a single sample.
-	if got := j.Stats("vCPU", base, base.Add(24*time.Hour), time.Hour); got != (MetricValue{107, 107, 107}) {
-		t.Fatalf("one sample window = %+v", got)
+// A projection is only published once there is something to project from: the
+// window has to be covered and hold more than one day.
+func TestJournalStatsWithoutEnoughHistory(t *testing.T) {
+	base := ts("2026-05-01T00:00:00Z")
+	horizon := base.Add(180 * 24 * time.Hour)
+
+	// Two days of a cluster that briefly doubled. This is the shape that used to
+	// project a two node cluster at a hundred nodes.
+	var short Journal
+	for i := range 48 {
+		v := 2.0
+		if i == 30 {
+			v = 3
+		}
+		short.Add(Sample{At: base.Add(time.Duration(i-47) * time.Hour), Values: map[string]float64{"vCPU": v}}, testRetention)
+	}
+
+	got := short.Stats("vCPU", base, horizon, testWindow, 24)
+	if got.Extrapolated != nil {
+		t.Fatalf("extrapolated = %v, want null on a two day journal", *got.Extrapolated)
+	}
+	if got.Instant != 2 {
+		t.Fatalf("instant = %v, want 2", got.Instant)
+	}
+
+	// The window is covered, but everything inside it landed on one day.
+	var oneDay Journal
+	oneDay.Add(Sample{At: base.Add(-9 * 24 * time.Hour), Values: map[string]float64{"vCPU": 2}}, 30*24*time.Hour)
+	oneDay.Add(Sample{At: base, Values: map[string]float64{"vCPU": 2}}, 30*24*time.Hour)
+	if got := oneDay.Stats("vCPU", base, horizon, testWindow, 24); got.Extrapolated != nil {
+		t.Fatalf("extrapolated = %v, want null on a single daily bucket", *got.Extrapolated)
+	}
+}
+
+func TestJournalStatsExtrapolation(t *testing.T) {
+	base := ts("2026-05-01T00:00:00Z")
+	horizon := base.Add(30 * 24 * time.Hour)
+
+	cases := []struct {
+		name    string
+		values  []float64
+		ceiling float64
+		want    float64
+	}{
+		{
+			// Nothing moved, so nothing is projected to move.
+			name:    "a flat week projects the same value",
+			values:  []float64{8, 8, 8, 8, 8, 8, 8, 8, 8},
+			ceiling: 24,
+			want:    8,
+		},
+		{
+			// A real ramp is followed, and then capped: the projection is an
+			// early warning, not a number anyone should read literally.
+			name:    "a monotonic ramp is followed up to the cap",
+			values:  []float64{1, 2, 3, 4, 5, 6, 7, 8, 9},
+			ceiling: 30,
+			want:    30,
+		},
+		{
+			// The regression that started this: one day above, a week of
+			// nothing, and a straight line through them aimed at the moon.
+			name:    "one spike falls back to the plain average",
+			values:  []float64{2, 2, 20, 2, 2, 2, 2, 2, 2},
+			ceiling: 24,
+			want:    4.3,
+		},
+		{
+			// A cluster that shrank projects what it consumes, never a negative.
+			name:    "a falling week never projects below what is there",
+			values:  []float64{10, 9, 8, 7, 6, 5, 4, 3, 2},
+			ceiling: 30,
+			want:    5.5,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := dailyJournal(base, tc.values...).Stats("vCPU", base, horizon, testWindow, tc.ceiling)
+			if got.Extrapolated == nil {
+				t.Fatalf("extrapolated is null, want %v", tc.want)
+			}
+			if math.Abs(*got.Extrapolated-tc.want) > 1e-9 {
+				t.Fatalf("extrapolated = %v, want %v", *got.Extrapolated, tc.want)
+			}
+		})
+	}
+}
+
+// Every published view is cut to one decimal, so that the least squares noise of
+// an unchanged window does not rewrite the status on every reconcile.
+func TestJournalStatsRoundsToOneDecimal(t *testing.T) {
+	base := ts("2026-05-01T00:00:00Z")
+
+	j := dailyJournal(base, 1.01, 2.02, 3.03, 4.04, 5.05, 6.06, 7.07, 8.08, 9.09)
+	got := j.Stats("vCPU", base, base.Add(36*time.Hour), testWindow, 1000)
+
+	for _, v := range []float64{got.Instant, got.Avg7d, *got.Extrapolated} {
+		if math.Abs(v*10-math.Round(v*10)) > 1e-9 {
+			t.Fatalf("value %v carries more than one decimal", v)
+		}
+	}
+}
+
+func TestExceededThroughout(t *testing.T) {
+	base := ts("2026-05-01T00:00:00Z")
+
+	cases := []struct {
+		name   string
+		values []float64
+		limit  int64
+		want   bool
+	}{
+		{
+			name:   "every observation of the window is above the limit",
+			values: []float64{3, 3, 3, 3, 3, 3, 3, 3, 3},
+			limit:  2,
+			want:   true,
+		},
+		{
+			// One reading back within the quota and the exceedance was not
+			// continuous. This is the exit: removing the node ends it at once.
+			name:   "one observation came back under the limit",
+			values: []float64{3, 3, 3, 3, 3, 3, 3, 3, 2},
+			limit:  2,
+		},
+		{
+			name:   "exactly at the limit is not above it",
+			values: []float64{2, 2, 2, 2, 2, 2, 2, 2, 2},
+			limit:  2,
+		},
+		{
+			// Consumption is above the limit, but not for long enough to know
+			// whether it stays there.
+			name:   "the journal does not cover the window yet",
+			values: []float64{9, 9, 9},
+			limit:  2,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			j := dailyJournal(base, tc.values...)
+			if got := j.ExceededThroughout("vCPU", base, testWindow, tc.limit); got != tc.want {
+				t.Fatalf("exceededThroughout = %v, want %v", got, tc.want)
+			}
+		})
+	}
+
+	// A metric that was never observed was never exceeded.
+	if dailyJournal(base, 9, 9, 9, 9, 9, 9, 9, 9, 9).ExceededThroughout("nodes", base, testWindow, 0) {
+		t.Fatal("an unobserved metric reports a sustained exceedance")
 	}
 }

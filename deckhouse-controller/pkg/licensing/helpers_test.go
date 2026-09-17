@@ -146,3 +146,6 @@ func statusOf(t *testing.T, res Result, id string) RecordStatus {
 	t.Fatalf("record %q not found", id)
 	return RecordStatus{}
 }
+
+// f64 is a pointer to a float literal, the shape of an optional metric view.
+func f64(v float64) *float64 { return &v }

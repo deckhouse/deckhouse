@@ -59,8 +59,13 @@ const (
 	// successor. It is short of the nominal hour so that a resync landing a few
 	// minutes early still samples, instead of pushing every sample to 70 minutes.
 	minSampleAge = 55 * time.Minute
-	// retention is the length of the observation window behind avg_7d.
-	retention = 7 * 24 * time.Hour
+	// window is the observation window behind avg_7d and the extrapolation.
+	window = 7 * 24 * time.Hour
+	// retention is how much history the journal keeps. It is a day longer than
+	// the window on purpose: both the projection and the sustained exceedance
+	// rule ask whether the whole window is covered, and that can only ever be
+	// true while the journal reaches back past its start.
+	retention = window + 24*time.Hour
 	// defaultHorizon is how far ahead consumption is extrapolated when no active
 	// record expires.
 	defaultHorizon = 30 * 24 * time.Hour
@@ -193,11 +198,13 @@ func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, fmt.Errorf("load journal: %w", err)
 	}
 
-	// The extrapolation horizon is the nearest expiry, which is only known once
-	// the records have been resolved; the records do not depend on the metrics,
-	// so a first pass without metrics settles the horizon and the second pass
+	// The extrapolation horizon is the nearest expiry, and the limits the
+	// consumption is judged against are the effective ones; neither is known
+	// before the records have been resolved. The records do not depend on the
+	// metrics, so a first pass without them settles both, and the second pass
 	// produces the policy that is published.
-	horizon := horizonOf(licensing.Compute(keys, nil, now, r.thresholds), now)
+	policy := licensing.Compute(keys, nil, nil, now, r.thresholds)
+	horizon := horizonOf(policy, now)
 
 	due := sampleDue(journal, now)
 	if due {
@@ -210,11 +217,8 @@ func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		journal.Add(licensing.Sample{At: now, Values: values}, retention)
 	}
 
-	values := map[string]licensing.MetricValue{
-		metricVCPU:  stats(journal, metricVCPU, now, horizon),
-		metricNodes: stats(journal, metricNodes, now, horizon),
-	}
-	res := licensing.Compute(keys, values, now, r.thresholds)
+	values, sustained := r.consumption(journal, policy.Effective, now, horizon)
+	res := licensing.Compute(keys, values, sustained, now, r.thresholds)
 
 	effective, err := r.getEffectiveLicense(ctx)
 	if err != nil {

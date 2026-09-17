@@ -62,15 +62,21 @@ type Thresholds struct {
 	WarningRatio float64
 	// ExpiringSoon is how long before its expiry an active record warns.
 	ExpiringSoon time.Duration
+	// SustainedWindow is how long consumption has to stay above a limit before
+	// the exceedance becomes a violation. A shorter one is a warning: buying a
+	// node for an afternoon is not a breach of contract.
+	SustainedWindow time.Duration
 }
 
 // DefaultThresholds returns the controller defaults: 14 days of grace, the
-// approaching notice at 90% of the limit and 30 days of expiry notice.
+// approaching notice at 90% of the limit, 30 days of expiry notice and seven
+// days of continuous exceedance before a violation.
 func DefaultThresholds() Thresholds {
 	return Thresholds{
-		DefaultGrace: 14 * 24 * time.Hour,
-		WarningRatio: 0.9,
-		ExpiringSoon: 30 * 24 * time.Hour,
+		DefaultGrace:    14 * 24 * time.Hour,
+		WarningRatio:    0.9,
+		ExpiringSoon:    30 * 24 * time.Hour,
+		SustainedWindow: 7 * 24 * time.Hour,
 	}
 }
 
@@ -125,7 +131,13 @@ func Active(r RecordStatus, t time.Time) bool {
 }
 
 // Compute turns the verified records of every key into the effective policy.
-func Compute(keys []KeyRecords, metrics map[string]MetricValue, now time.Time, th Thresholds) Result {
+//
+// sustained carries, per metric, whether consumption has been above its current
+// limit for the whole Thresholds.SustainedWindow. It is a separate input rather
+// than a field of MetricValue because MetricValue is also the wire type of the
+// registration request, and this verdict is not part of that schema. The caller
+// derives it with Journal.ExceededThroughout.
+func Compute(keys []KeyRecords, metrics map[string]MetricValue, sustained map[string]bool, now time.Time, th Thresholds) Result {
 	// Dedup is first-wins, so the order of the keys decides which copy of a
 	// record contributes. Listing order is whatever the API server returned, so
 	// it is normalized here: the same key set must always produce the same
@@ -178,7 +190,7 @@ func Compute(keys []KeyRecords, metrics map[string]MetricValue, now time.Time, t
 		}
 	}
 	res.NextReduction = nextReduction(res.Timeline)
-	res.State, res.Reason = state(base, final, effective, metrics, now, th)
+	res.State, res.Reason = state(base, final, effective, metrics, sustained, now, th)
 	res.WithinLimits = withinLimits(effective, metrics)
 
 	for _, r := range final {
@@ -221,7 +233,14 @@ func stateAt(base []RecordStatus, t time.Time, th Thresholds) string {
 // ordered by severity, and every loop over the metrics walks their names in
 // sorted order so that two metrics failing different checks still produce the
 // same reason on every reconcile.
-func state(base, final []RecordStatus, effective map[string]*int64, metrics map[string]MetricValue, now time.Time, th Thresholds) (string, string) {
+func state(
+	base, final []RecordStatus,
+	effective map[string]*int64,
+	metrics map[string]MetricValue,
+	sustained map[string]bool,
+	now time.Time,
+	th Thresholds,
+) (string, string) {
 	// A commercial revocation is a violation immediately and without grace.
 	// A reissue only removes the contribution of the record.
 	for _, r := range final {
@@ -240,9 +259,14 @@ func state(base, final []RecordStatus, effective map[string]*int64, metrics map[
 	}
 	sort.Strings(names)
 
-	// Sustained overuse. Entry needs the seven day average, exit is immediate.
+	// Sustained overuse. Entry needs the instant reading to have stayed above a
+	// finite limit for the whole sustained window; exit is immediate, because
+	// the window stops being exceeded throughout the moment one observation
+	// comes back under. avg_7d is reported, it is not part of the verdict: one
+	// spike inside a week drags the mean over a limit the cluster is no longer
+	// exceeding, and the state would stick for another week.
 	for _, name := range names {
-		if over(metrics[name].Avg7d, effective[name]) {
+		if effective[name] != nil && sustained[name] {
 			return StateViolation, ReasonLimitsExceeded
 		}
 	}
@@ -263,8 +287,9 @@ func state(base, final []RecordStatus, effective map[string]*int64, metrics map[
 			return StateWarning, ReasonLimitsExceeded
 		}
 	}
+	// A projection that could not be made warns about nothing.
 	for _, name := range names {
-		if over(metrics[name].Extrapolated, effective[name]) {
+		if e := metrics[name].Extrapolated; e != nil && over(*e, effective[name]) {
 			return StateWarning, ReasonProjectedOverLimit
 		}
 	}

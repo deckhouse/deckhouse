@@ -15,13 +15,17 @@
 package licensing
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
 	equality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/licensing"
 )
@@ -51,7 +55,7 @@ func validResult() licensing.Result {
 // reconcile loop does not write on every tick.
 func TestEffectiveStatusIsStable(t *testing.T) {
 	res := validResult()
-	values := map[string]licensing.MetricValue{"vCPU": {Instant: 4, Avg7d: 4, Extrapolated: 4}}
+	values := map[string]licensing.MetricValue{"vCPU": {Instant: 4, Avg7d: 4, Extrapolated: ptr.To[float64](4)}}
 
 	first := effectiveStatus(v1alpha1.EffectiveLicenseStatus{}, res, values, "token", testNow)
 	second := effectiveStatus(first, res, values, "token", testNow.Add(9*time.Minute))
@@ -65,25 +69,30 @@ func TestEffectiveStatusIsStable(t *testing.T) {
 // still moves in the last bits of the mantissa from one reconcile to the next.
 // Published raw, that noise would rewrite the status forever.
 func TestEffectiveStatusSurvivesFloatNoise(t *testing.T) {
+	r := newTestEnv(t, nil).r
+
+	// Eight days of hourly observations of a cluster that never moved: the
+	// window is covered, so there is a projection to be noisy about.
 	journal := new(licensing.Journal)
-	journal.Add(licensing.Sample{At: testNow.Add(-70 * time.Minute), Values: map[string]float64{metricVCPU: 4}}, retention)
-	journal.Add(licensing.Sample{At: testNow.Add(-10 * time.Minute), Values: map[string]float64{metricVCPU: 4}}, retention)
+	for at := testNow.Add(-8 * 24 * time.Hour); !at.After(testNow); at = at.Add(time.Hour) {
+		journal.Add(licensing.Sample{At: at, Values: map[string]float64{metricVCPU: 4.001}}, retention)
+	}
 
 	// A fixed point in the future, the way a record expiry is fixed.
 	horizon := testNow.Add(240 * 24 * time.Hour)
 	later := testNow.Add(10 * time.Minute)
-
-	raw := journal.Stats(metricVCPU, testNow, horizon, retention)
-	if raw == journal.Stats(metricVCPU, later, horizon, retention) {
-		t.Log("the raw fit happened to be exact here; the rounding still has to hold")
-	}
+	limits := map[string]*int64{metricVCPU: ptr.To(int64(50))}
 
 	res := validResult()
-	first := effectiveStatus(v1alpha1.EffectiveLicenseStatus{}, res,
-		map[string]licensing.MetricValue{metricVCPU: stats(journal, metricVCPU, testNow, horizon)}, "token", testNow)
-	second := effectiveStatus(first, res,
-		map[string]licensing.MetricValue{metricVCPU: stats(journal, metricVCPU, later, horizon)}, "token", later)
+	firstValues, _ := r.consumption(journal, limits, testNow, horizon)
+	secondValues, _ := r.consumption(journal, limits, later, horizon)
 
+	first := effectiveStatus(v1alpha1.EffectiveLicenseStatus{}, res, firstValues, "token", testNow)
+	second := effectiveStatus(first, res, secondValues, "token", later)
+
+	if first.Metrics[metricVCPU].Extrapolated == nil {
+		t.Fatal("extrapolated is null although the window is covered")
+	}
 	if !equality.Semantic.DeepEqual(first, second) {
 		t.Fatalf("status changed on float noise alone:\nfirst  = %+v\nsecond = %+v", first.Metrics, second.Metrics)
 	}
@@ -92,7 +101,7 @@ func TestEffectiveStatusSurvivesFloatNoise(t *testing.T) {
 // The moment a state was entered survives recomputation, and is reset when the
 // state or its reason changes.
 func TestComplianceSince(t *testing.T) {
-	values := map[string]licensing.MetricValue{"vCPU": {Instant: 4, Avg7d: 4, Extrapolated: 4}}
+	values := map[string]licensing.MetricValue{"vCPU": {Instant: 4, Avg7d: 4, Extrapolated: ptr.To[float64](4)}}
 	first := effectiveStatus(v1alpha1.EffectiveLicenseStatus{}, validResult(), values, "token", testNow)
 
 	later := testNow.Add(3 * time.Hour)
@@ -180,5 +189,51 @@ func TestConditionTransitionTimeMarksTheFlip(t *testing.T) {
 	setConditions(&conditions, validResult(), recovered)
 	if got := meta.FindStatusCondition(conditions, conditionLimitsSatisfied).LastTransitionTime; !got.Equal(&metav1.Time{Time: recovered}) {
 		t.Fatalf("lastTransitionTime = %v, want %v", got, recovered)
+	}
+}
+
+// A metric the journal cannot project yet publishes an explicit null, and the
+// status still satisfies the CRD schema.
+func TestEffectiveStatusPublishesNullExtrapolation(t *testing.T) {
+	env := newTestEnv(t, nil)
+
+	journal := new(licensing.Journal)
+	journal.Add(licensing.Sample{At: testNow.Add(-time.Hour), Values: map[string]float64{metricVCPU: 4}}, retention)
+	journal.Add(licensing.Sample{At: testNow, Values: map[string]float64{metricVCPU: 4}}, retention)
+
+	values, sustained := env.r.consumption(journal, map[string]*int64{metricVCPU: ptr.To(int64(50))},
+		testNow, testNow.Add(30*24*time.Hour))
+
+	if got := values[metricVCPU].Extrapolated; got != nil {
+		t.Fatalf("extrapolated = %v, want null on a one hour journal", *got)
+	}
+	if sustained[metricVCPU] {
+		t.Fatal("a journal shorter than the window reports a sustained exceedance")
+	}
+
+	status := effectiveStatus(v1alpha1.EffectiveLicenseStatus{}, validResult(), values, "token", testNow)
+	if got := status.Metrics[metricVCPU].Extrapolated; got != nil {
+		t.Fatalf("status extrapolated = %v, want null", *got)
+	}
+
+	raw, err := json.Marshal(status.Metrics[metricVCPU])
+	if err != nil {
+		t.Fatalf("marshal metric: %v", err)
+	}
+	if !strings.Contains(string(raw), `"extrapolated":null`) {
+		t.Fatalf("serialized metric = %s, want an explicit null", raw)
+	}
+
+	assertMatchesCRD(t, env.cl, &v1alpha1.EffectiveLicense{
+		ObjectMeta: metav1.ObjectMeta{Name: v1alpha1.EffectiveLicenseName},
+		Status:     status,
+	}, v1alpha1.EffectiveLicenseKind)
+
+	// No projection, no series: the projection alert must not be able to fire.
+	env.r.publishMetrics(validResult(), values, nil, testNow)
+	for _, sample := range env.series(t, metrics.D8LicenseConsumption) {
+		if labelOf(sample, metrics.LabelKind) == "extrapolated" {
+			t.Fatal("an extrapolated gauge was published for a metric without a projection")
+		}
 	}
 }

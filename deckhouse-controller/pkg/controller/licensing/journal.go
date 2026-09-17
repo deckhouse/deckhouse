@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"sort"
 	"time"
 
@@ -51,24 +50,54 @@ func sampleDue(journal *licensing.Journal, now time.Time) bool {
 	return last.After(now) || now.Sub(last) >= minSampleAge
 }
 
-// stats reads one metric out of the window and rounds it for publication.
+// metricNames are the consumption metrics this build observes.
+var metricNames = []string{metricVCPU, metricNodes}
+
+// consumption reads the observation window: the published views of every metric
+// and, next to them, whether the metric has been over its limit long enough for
+// the exceedance to be a violation rather than a warning.
 //
-// The extrapolation is a least squares fit, so a window that did not change at
-// all still moves in the last bits of the mantissa from one reconcile to the
-// next. Published raw, that noise rewrites the EffectiveLicense status on every
-// tick forever.
-func stats(journal *licensing.Journal, name string, now, horizon time.Time) licensing.MetricValue {
-	v := journal.Stats(name, now, horizon, retention)
-	return licensing.MetricValue{
-		Instant:      round3(v.Instant),
-		Avg7d:        round3(v.Avg7d),
-		Extrapolated: round3(v.Extrapolated),
+// The limits come from the policy computed without metrics, which is the same
+// policy this verdict is about.
+func (r *reconciler) consumption(journal *licensing.Journal, effective map[string]*int64, now, horizon time.Time) (
+	map[string]licensing.MetricValue, map[string]bool,
+) {
+	values := make(map[string]licensing.MetricValue, len(metricNames))
+	sustained := make(map[string]bool, len(metricNames))
+
+	for _, name := range metricNames {
+		limit := effective[name]
+		values[name] = journal.Stats(name, now, horizon, window, ceiling(latest(journal, name), limit))
+		if limit != nil {
+			sustained[name] = journal.ExceededThroughout(name, now, r.thresholds.SustainedWindow, *limit)
+		}
 	}
+	return values, sustained
 }
 
-// round3 is the precision every published consumption value is cut to. Three
-// decimals is far finer than a whole core, and coarse enough to be stable.
-func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
+// ceiling bounds the projection at three times the larger of what the cluster
+// consumes now and what it is allowed to consume. A linear fit over a window
+// with one spike in it otherwise projects a two node cluster at a hundred nodes,
+// and that number is published, alerted on and sent to the license server.
+func ceiling(instant float64, limit *int64) float64 {
+	base := instant
+	if limit != nil && float64(*limit) > base {
+		base = float64(*limit)
+	}
+	return 3 * base
+}
+
+// latest is the last observation of a metric, whatever its age. It anchors the
+// ceiling, which is why it is read straight off the journal instead of out of
+// the window the projection uses.
+func latest(journal *licensing.Journal, name string) float64 {
+	for i := len(journal.Samples) - 1; i >= 0; i-- {
+		if v, ok := journal.Samples[i].Values[name]; ok {
+			return v
+		}
+	}
+	return 0
+}
 
 func (r *reconciler) journalKey() types.NamespacedName {
 	return types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: journalConfigMapName}
