@@ -97,10 +97,14 @@ func (s *StepsStorage) staticPodsFor(ng string) []*staticPodRequest {
 	accepted := acceptedStaticPods(s.staticPodRequests)
 
 	requests := make([]*staticPodRequest, 0, len(s.staticPodRequests[keyNg])+len(s.staticPodRequests[wildcard]))
+	// A selector naming one group twice stores the object twice under that key,
+	// and the step would then write the manifest twice and count the node twice.
+	seen := make(map[string]bool, cap(requests))
 	for _, request := range slices.Concat(s.staticPodRequests[keyNg], s.staticPodRequests[wildcard]) {
-		if !accepted[request.Name] {
+		if !accepted[request.Name] || seen[request.Name] {
 			continue
 		}
+		seen[request.Name] = true
 		requests = append(requests, request)
 	}
 
