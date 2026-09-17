@@ -3,13 +3,13 @@ title: How do I configure an external module to update to patch versions only?
 lang: en
 ---
 
-By default, if a module has no dedicated update policy, the update mode and windows are inherited from the DKP settings.
+By default, if a module has no dedicated update policy, the update mode and windows are inherited from the DP settings.
 
-If DKP is set to the `AutoPatch` mode, the external module will also automatically receive only patch versions within the current minor version. Moving to a new minor version will require manual approval. In this case, no additional configuration is needed.
+If DP is set to the `AutoPatch` mode, the external module will also automatically receive only patch versions within the current minor version. Moving to a new minor version will require manual approval. In this case, no additional configuration is needed.
 
-For more information about DKP update modes, see [Configuring updates](admin/configuration/update/configuration.html#update-modes).
+For more information about DP update modes, see [Configuring updates](admin/configuration/update/configuration.html#update-modes).
 
-If you need to manage the module update mode independently of DKP, create a [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy) with `update.mode: AutoPatch` and link it to the module via the `updatePolicy` parameter in ModuleConfig:
+If you need to manage the module update mode independently of DP, create a [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy) with `update.mode: AutoPatch` and link it to the module via the `updatePolicy` parameter in ModuleConfig:
 
 1. Create an update policy.
 

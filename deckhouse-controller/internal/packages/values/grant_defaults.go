@@ -15,7 +15,7 @@
 package values
 
 import (
-	addonvalues "github.com/flant/addon-operator/pkg/utils"
+	addonvalues "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 // GrantDefault carries a runtime-resolved default value for a settings property

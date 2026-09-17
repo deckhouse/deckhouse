@@ -21,11 +21,11 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Determines the state and parameters for applying a specific release (version) of the Deckhouse Kubernetes Platform (DKP) in the cluster.
+            Determines the state and parameters for applying a specific release (version) of the Deckhouse Platform (DP) in the cluster.
 
-            DeckhouseRelease objects are automatically created by DKP upon the discovery of new DKP versions on the selected [release channel](/products/kubernetes-platform/documentation/latest/reference/release-channels.html). Modifying DeckhouseRelease enables the management of the process for applying the corresponding DKP version. More details about configuring DKP updates can be found in the [documentation](../../admin/configuration/update/configuration.html).
+            DeckhouseRelease objects are automatically created by DP upon the discovery of new DP versions on the selected [release channel](/products/kubernetes-platform/documentation/latest/reference/release-channels.html). Modifying DeckhouseRelease enables the management of the process for applying the corresponding DP version. More details about configuring DP updates can be found in the [documentation](../../admin/configuration/update/configuration.html).
 
-            The current versions of DKP and modules by release channels can be found at [releases.deckhouse.ru](https://releases.deckhouse.ru).
+            The current versions of DP and modules by release channels can be found at [releases.deckhouse.ru](https://releases.deckhouse.ru).
           required:
             - spec
           properties:
@@ -45,7 +45,7 @@ spec:
               properties:
                 version:
                   type: string
-                  description: DKP version.
+                  description: DP version.
                   x-doc-examples: ['v1.73.2']
                 applyAfter:
                   type: string
@@ -56,7 +56,7 @@ spec:
                   additionalProperties:
                     type: string
                   description: |
-                    A structure containing a list of requirements for installing the release. It is used by the DKP core. If the requirements are not met, the release may be skipped or blocked from installation.
+                    A structure containing a list of requirements for installing the release. It is used by the DP core. If the requirements are not met, the release may be skipped or blocked from installation.
 
                     Reports on unmet requirements can be found in the field [`.status.message`](../../admin/configuration/update/notifications.html#notification-format) of the DeckhouseRelease object.
                 disruptions:
@@ -68,9 +68,9 @@ spec:
                 changelog:
                   type: object
                   description: |
-                    A structure containing a list of DKP changes (and modules included in the DKP) of the release.
+                    A structure containing a list of DP changes (and modules included in the DP) of the release.
 
-                    For more information about DKP release changelogs, refer to [Updating](../../architecture/updating.html#retrieving-the-changelog).
+                    For more information about DP release changelogs, refer to [Updating](../../architecture/updating.html#retrieving-the-changelog).
                   x-kubernetes-preserve-unknown-fields: true
                 changelogLink:
                   type: string
@@ -110,12 +110,12 @@ spec:
             Typical values:
 
             - `Pending`: The release has been created but not applied yet (waiting for manual approval, update windows, canary release, or the minimal notification time).
-            - `Deployed`: DKP has switched to the release version (module and component updates may continue asynchronously).
+            - `Deployed`: DP has switched to the release version (module and component updates may continue asynchronously).
             - `Superseded`: The release is outdated and no longer used.
             - `Suspended`: The release has been canceled (typically before it was applied).
             - `Skipped`: The release was skipped because the requirements were not satisfied.
 
-            For more information about DKP and modules release statuses, refer to the [`deckhouse` module documentation](/modules/deckhouse/#deckhouse-releases-update).
+            For more information about DP and modules release statuses, refer to the [`deckhouse` module documentation](/modules/deckhouse/#deckhouse-releases-update).
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date

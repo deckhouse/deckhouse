@@ -1,0 +1,41 @@
+{{- if env "FUZZ_S3_ENDPOINT" "" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-fuzz-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /
+    to: /src
+    includePaths:
+      - go.mod
+      - go.sum
+      - go_lib
+      - pkg
+      - dhctl
+      - deckhouse-controller/pkg/apis
+      - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
+      - modules/038-registry/hooks
+    stageDependencies:
+      install:
+        - '**/*'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-fuzz-artifact
+from: {{ index $.Images "builder/golang" }}
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-fuzz-src-artifact
+    add: /src
+    to: /src
+    before: install
+---
+{{- $_ := set . "FuzzEngine" "go" }}
+{{- $_ := set . "FuzzSrcImage" (printf "%s/%s-fuzz-artifact" .ModuleName .ImageName) }}
+{{- $_ := set . "FuzzPackages" "./modules/038-registry/hooks/orchestrator ./modules/038-registry/hooks/orchestrator/bashible" }}
+{{- include "fuzz image" . }}
+---
+{{- $library := deepCopy . }}
+{{- $_ := set $library "FuzzImageName" "library" }}
+{{- $_ := set $library "FuzzSrcAdd" "/src/go_lib/registry" }}
+{{- $_ := set $library "FuzzPackages" "./const ./helpers ./models/bashible ./models/moduleconfig ./models/node-services ./pki" }}
+{{- include "fuzz image" $library }}
+{{- end }}

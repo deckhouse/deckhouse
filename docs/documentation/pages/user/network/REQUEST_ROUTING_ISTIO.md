@@ -1,10 +1,10 @@
 ---
 title: "Configuring request routing with Istio"
-description: "Configuring HTTP and TCP request routing in Deckhouse Kubernetes Platform using Istio. Working with VirtualService to manage traffic based on host, uri, weight."
+description: "Configuring HTTP and TCP request routing in Deckhouse Platform using Istio. Working with VirtualService to manage traffic based on host, uri, weight."
 permalink: en/user/network/request_routing_istio.html
 ---
 
-You can use the [istio](/modules/istio/) module in Deckhouse Kubernetes Platform to route HTTP and TCP requests.
+You can use the [istio](/modules/istio/) module in Deckhouse Platform to route HTTP and TCP requests.
 
 The main resource for managing routing is [VirtualService](#virtualservice-resource) from Istio, which allows you to configure routing for HTTP or TCP requests.
 

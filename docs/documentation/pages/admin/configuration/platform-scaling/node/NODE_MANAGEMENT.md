@@ -1,10 +1,10 @@
 ---
 title: "Node management basics in Deckhouse"
 permalink: en/admin/configuration/platform-scaling/node/node-management.html
-description: "Manage Kubernetes nodes in Deckhouse Kubernetes Platform with automatic scaling, updates, and maintenance. NodeGroup CRD configuration and node lifecycle management."
+description: "Manage Kubernetes nodes in Deckhouse Platform with automatic scaling, updates, and maintenance. NodeGroup CRD configuration and node lifecycle management."
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports the full lifecycle of node management:
+Deckhouse Platform (DP) supports the full lifecycle of node management:
 
 - Automatic node scaling based on workload.
 - Node updates and maintenance to keep them up to date.
@@ -12,10 +12,10 @@ Deckhouse Kubernetes Platform (DKP) supports the full lifecycle of node manageme
 - Support for various types of nodes: permanent, ephemeral, cloud-based, or bare-metal.
 
 {% alert level="info" %}
-DKP can operate on both bare-metal and cloud-based clusters, providing flexibility and scalability.
+DP can operate on both bare-metal and cloud-based clusters, providing flexibility and scalability.
 {% endalert %}
 
-Node groups allow logical segmentation of the cluster infrastructure. In DKP, the following [NodeGroup](/modules/node-manager/cr.html#nodegroup) roles are commonly used:
+Node groups allow logical segmentation of the cluster infrastructure. In DP, the following [NodeGroup](/modules/node-manager/cr.html#nodegroup) roles are commonly used:
 
 - `master`: Control plane nodes.
 - `front`: Nodes for routing HTTP(S) traffic.
@@ -26,12 +26,12 @@ Node groups allow logical segmentation of the cluster infrastructure. In DKP, th
 Each group can have centralized configuration settings, including the Kubernetes version, resources, taints, labels, kubelet parameters, and more.
 
 {% alert level="info" %}
-Node management is only available for clusters fully managed by DKP. This feature is not supported for Managed Kubernetes clusters.
+Node management is only available for clusters fully managed by DP. This feature is not supported for Managed Kubernetes clusters.
 {% endalert %}
 
 ## Automatic deployment and updates
 
-Deckhouse Kubernetes Platform (DKP) provides an automated mechanism for managing the lifecycle of nodes based on [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources. DKP supports both initial node provisioning and updates when configuration changes, for both cloud and bare-metal clusters (if the `node-manager` module is enabled).
+Deckhouse Platform (DP) provides an automated mechanism for managing the lifecycle of nodes based on [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources. DP supports both initial node provisioning and updates when configuration changes, for both cloud and bare-metal clusters (if the `node-manager` module is enabled).
 
 How it works:
 
@@ -42,7 +42,7 @@ How it works:
 Let's take a look at automatic updates using the example of a kubelet version upgrade.
 
 1. The user updates the `kubelet` section in the NodeGroup specification.
-1. DKP detects that current nodes do not match the new configuration.
+1. DP detects that current nodes do not match the new configuration.
 1. New nodes with the updated settings are created sequentially.
 1. Old nodes are gradually removed from the cluster.
 
@@ -61,7 +61,7 @@ Let's take a look at automatic updates using the example of a kubelet version up
 
 ## Basic node and OS configuration
 
-When nodes are created and joined to the cluster, DKP automatically performs a series of actions required for proper cluster operation:
+When nodes are created and joined to the cluster, DP automatically performs a series of actions required for proper cluster operation:
 
 - Installing and configuring a supported operating system.
 - Disabling automatic package updates.
@@ -168,11 +168,11 @@ metadata:
 
 ## Settings for Static and CloudStatic NodeGroups
 
-Node groups with types Static and CloudStatic are intended for managing manually created nodes — either physical (bare-metal) or virtual (in the cloud, but outside DKP automation). These nodes are connected manually or via [StaticInstance](/modules/node-manager/cr.html#staticinstance) and do not support automatic updates or scaling.
+Node groups with types Static and CloudStatic are intended for managing manually created nodes — either physical (bare-metal) or virtual (in the cloud, but outside DP automation). These nodes are connected manually or via [StaticInstance](/modules/node-manager/cr.html#staticinstance) and do not support automatic updates or scaling.
 
 Configuration specifics:
 
-- All update operations (e.g., kubelet updates, node restarts, replacements) must be performed manually or through external automation tools outside of DKP.
+- All update operations (e.g., kubelet updates, node restarts, replacements) must be performed manually or through external automation tools outside of DP.
 
 - It is recommended to explicitly set the desired kubelet version to ensure consistency across nodes, especially if they are added with different versions manually:
 
@@ -184,19 +184,19 @@ Configuration specifics:
 
 - Node registration to the cluster can be performed either manually or automatically, depending on the configuration:
   - **Manual**: The user downloads the bootstrap script, configures the server, and runs the script manually.
-  - **Automatic (CAPS)**: When using [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials), DKP automatically connects and configures the nodes.
+  - **Automatic (CAPS)**: When using [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials), DP automatically connects and configures the nodes.
   - **Hybrid approach**: A manually added node can be handed over to CAPS by using the annotation `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
-If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can use the `staticInstances` section. This allows DKP to automatically connect, configure, and, if necessary, clean up static nodes based on StaticInstance and SSHCredentials resources.
+If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can use the `staticInstances` section. This allows DP to automatically connect, configure, and, if necessary, clean up static nodes based on StaticInstance and SSHCredentials resources.
 
-> In a [NodeGroup](/modules/node-manager/cr.html#nodegroup) of type Static or CloudStatic, you can explicitly specify the number of nodes using the `spec.staticInstances.count` parameter. This allows you to define the expected number of nodes — DKP uses this value for state monitoring and automation.
+> In a [NodeGroup](/modules/node-manager/cr.html#nodegroup) of type Static or CloudStatic, you can explicitly specify the number of nodes using the `spec.staticInstances.count` parameter. This allows you to define the expected number of nodes — DP uses this value for state monitoring and automation.
 
-## Running DKP on an arbitrary node
+## Running DP on an arbitrary node
 
-To run DKP on an arbitrary node, configure the `deckhouse` module with the appropriate [`nodeSelector`](/modules/deckhouse/configuration.html) parameter and **do not** specify `tolerations`. The required `tolerations` will be set automatically in this case.
+To run DP on an arbitrary node, configure the `deckhouse` module with the appropriate [`nodeSelector`](/modules/deckhouse/configuration.html) parameter and **do not** specify `tolerations`. The required `tolerations` will be set automatically in this case.
 
 {% alert level="warning" %}
-Only use nodes of type **CloudStatic** or **Static** to run DKP. Avoid using a `NodeGroup` that contains only a single node for running DKP.
+Only use nodes of type **CloudStatic** or **Static** to run DP. Avoid using a `NodeGroup` that contains only a single node for running DP.
 {% endalert %}
 
 Example module configuration:

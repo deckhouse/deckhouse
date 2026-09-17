@@ -10,8 +10,9 @@ import (
 	mm_time "time"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
-	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/gojuno/minimock/v3"
+
+	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 // KubeConfigManagerMock implements mm_module_manager.KubeConfigManager

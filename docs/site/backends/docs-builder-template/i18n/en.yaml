@@ -4,8 +4,8 @@ allowed_values: allowed values
 additional_property_name: item (key) name
 pattern_property_name: regular expression for parameter name
 search_placeholder_text: Search documentation
-search_context_dkpdocs_and_modules: The search is performed throughout DKP documentation and modules.
-search_context_modules: The search is performed throughout modules, excluding the DKP documentation.
+search_context_dkpdocs_and_modules: The search is performed throughout Deckhouse Platform documentation and modules.
+search_context_modules: The search is performed throughout modules, excluding the Deckhouse Platform documentation.
 search_context_only_product_docs: The search is performed throughout the product documentation, excluding modules.
 modules: modules
 modules2: modules
@@ -93,8 +93,8 @@ module_release_channel_details_content: |
   To change the module release channel, follow the [instruction](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-change-the-release-channel-for-a-module).
 module_versions: Module versions
 module_version: Module version
-embedded_in_dkp: Embedded in DKP
-module_crd_warning_1: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
+embedded_in_dkp: Embedded in DP
+module_crd_warning_1: The Deckhouse Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
 ossPageBlock1: |
   <h2>Third-party components</h2>
   <p>List of third-party software used in the <MODULE> module:</p>
@@ -102,7 +102,6 @@ channel_or_version: "Channel/version"
 channel_or_version_of_module: "Module channel/version"
 deckhouse: deckhouse
 documentation: documentation
-Documentation: Documentation
 modules_documentation: Modules documentation
 modules_list: Modules list
 filters: Filters
@@ -110,6 +109,8 @@ search_filter: Search by module name
 search_placeholder_text_filter: Search
 editions_filter: Edition
 editions_filter_all_selected: All editions
+extensions_filter: Extension
+extensions_filter_all_selected: All extensions
 certification_filter: Certification status
 certification_filter_all_selected: All statuses
 stage_filter: Lifecycle stage
@@ -166,6 +167,9 @@ module_is_available_in_ee_only: The module is available only in Deckhouse Enterp
 module_available_editions_prefix: Available in
 module_available_with_limitations_prefix: Available with limitations in
 module_available_without_limitations_prefix: Available without limitations in
+module_available_extensions_prefix: Included in extensions
+module_available_extensions_with_limitations_prefix: Included with limitations in extensions
+module_available_extensions_without_limitations_prefix: Included without limitations in extensions
 module_has_restions_short: with limitations
 module_alert_experimental: Experimental
 module_alert_preview: Preview

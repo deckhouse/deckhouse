@@ -102,8 +102,8 @@ class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
             "groups.deckhouse.io", ".spec.name", group_name, factories.CLUSTER_RULE_DESCRIPTION))
 
     # Group.spec.name is not normalised anywhere between the Group object and the "groups" claim
-    # (modules/150-user-authn/hooks/get_dex_user_crds.go, makeUserGroupsMap builds the claim from
-    # group.Spec.Name verbatim), so a case-only difference is a genuinely different group and
+    # (user-authn-controller internal/controller/user/groups.go builds the claim from
+    # Group.spec.name verbatim), so a case-only difference is a genuinely different group and
     # reporting it either way round would be a false positive.
     def test_group_allowed_when_name_differs_from_the_subject_only_by_case(self):
         out = self.run_hook(factories.prepare_group_binding_context(
@@ -163,7 +163,7 @@ class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
             "users.deckhouse.io", ".spec.email", email, factories.CLUSTER_RULE_DESCRIPTION))
 
     # Email case. Deckhouse lowercases spec.email before it reaches the Password object
-    # (modules/150-user-authn/hooks/get_dex_user_crds.go:276), and the username claim the API
+    # (user-authn-controller internal/controller/user/controller.go), and the username claim the API
     # server consumes is that email (modules/040-control-plane-manager/templates/
     # _authentication_configuration.tpl:18-20). The two directions are therefore not symmetric.
 
@@ -237,7 +237,6 @@ class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
         self.assert_allowed_without_warnings(out)
 
 
-@unittest.skipUnless(shutil.which("jq"), "jq is required to execute the hook's jqFilter programs")
 class TestPlatformIdentitiesAreExempt(unittest.TestCase):
     """
     The installer applies the initial rule and the User it names from one manifest, and on a
@@ -319,6 +318,7 @@ class TestPlatformIdentitiesAreExempt(unittest.TestCase):
                              len(identity_collision.EXEMPT_USERS) + len(identity_collision.EXEMPT_GROUPS))
 
 
+@unittest.skipUnless(shutil.which("jq"), "jq is required to execute the hook's jqFilter programs")
 class TestSnapshotJQFilters(unittest.TestCase):
     """
     Run the jqFilter programs from CONFIG the way shell-operator would.

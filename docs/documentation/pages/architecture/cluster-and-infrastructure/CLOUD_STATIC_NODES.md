@@ -16,7 +16,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) module and its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown in the following diagram:
+The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) module and its interactions with other Deckhouse Platform (DP) components are shown in the following diagram:
 
 ![Node-manager architecture for CloudStatic nodes](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-static-nodes.png)
 
@@ -63,7 +63,7 @@ The module managing CloudStatic nodes consists of the following components:
 
 1. **Caps-controller-manager** (Deployment): CAPI Provider Static (CAPS), an implementation of a provider for declarative management of static nodes (bare-metal servers or virtual machines) in the [Kubernetes Cluster API](https://github.com/kubernetes-sigs/cluster-api) project. It operates as an extension to capi-controller-manager.
 
-   CAPS provides an additional abstraction layer over the existing DKP mechanism for automatic configuration and cleanup of static nodes using scripts generated for each node group. The component is not tied to a specific cloud provider. For more details, refer to the [`node-manager` documentation](/modules/node-manager/#working-with-static-nodes).
+   CAPS provides an additional abstraction layer over the existing DP mechanism for automatic configuration and cleanup of static nodes using scripts generated for each node group. The component is not tied to a specific cloud provider. For more details, refer to the [`node-manager` documentation](/modules/node-manager/#working-with-static-nodes).
 
 1. **Fencing-agent** (DaemonSet) and **fencing-controller**: Components that implement the fencing mechanism. The operation principles of both components are described in detail in the [`spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) parameter description of the NodeGroup resource. For details on how the fencing mechanism handles different node types, refer to [FAQ](/modules/node-manager/faq.html#how-the-fencing-mechanism-handles-different-node-types) in the `node-manager` module documentation.
 
@@ -101,7 +101,7 @@ The following external components interact with the module:
 
 1. Users create and configure nodes in the following ways:
 
-   * Manually, using bashible scripts preconfigured in DKP.
+   * Manually, using bashible scripts preconfigured in DP.
    * Manually, with the following node handover to CAPS for automated management.
    * Automatically, using CAPS.
 

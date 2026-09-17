@@ -1,11 +1,11 @@
 ---
 title: "Перезапуск подов при изменении конфигурации"
 permalink: ru/admin/configuration/app-scaling/pod-restart.html
-description: "Настройка автоматического перезапуска подов при изменении конфигурации в Deckhouse Kubernetes Platform. Интеграция Pod reloader для обновлений ConfigMap и Secret с автоматизацией перезапуска подов."
+description: "Настройка автоматического перезапуска подов при изменении конфигурации в Deckhouse Platform. Интеграция Pod reloader для обновлений ConfigMap и Secret с автоматизацией перезапуска подов."
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform может автоматически перезапускать поды при изменении определенных ресурсов ConfigMap и Secret. Эта возможность реализована на базе проекта [Reloader](https://github.com/stakater/Reloader) и управляется через аннотации, добавляемые к контроллерам подов (Deployment, DaemonSet, StatefulSet).
+Deckhouse Platform может автоматически перезапускать поды при изменении определенных ресурсов ConfigMap и Secret. Эта возможность реализована на базе проекта [Reloader](https://github.com/stakater/Reloader) и управляется через аннотации, добавляемые к контроллерам подов (Deployment, DaemonSet, StatefulSet).
 
 {% alert %}
 Reloader не предназначен для работы в отказоустойчивом режиме.

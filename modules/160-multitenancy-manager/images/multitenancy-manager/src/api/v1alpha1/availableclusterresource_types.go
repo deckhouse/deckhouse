@@ -28,7 +28,8 @@ type AvailableObject struct {
 	// +required
 	Name string `json:"name"`
 
-	// Default is true for the per-project default name.
+	// Default is true for the per-project default name. No entry carries it when the project has no
+	// usable default, which is a normal state -- see the Default field of the status.
 	// +optional
 	Default bool `json:"default,omitempty"`
 }
@@ -47,7 +48,13 @@ type AvailableClusterResourceStatus struct {
 	Available []AvailableObject `json:"available,omitempty"`
 
 	// Default is the per-project default name used when the referencing field is left empty (or
-	// carries a value not available to the project). Empty when the project has no usable default.
+	// carries a value not available to the project).
+	//
+	// Empty when the project has no usable default. That is a normal state, not a failure: the grant
+	// policy sets no default and the registration has no defaultFrom; or the resource is value-backed,
+	// which defaultFrom does not apply to; or defaultFrom is set but the objects carrying its
+	// annotation are not exactly one; or a default is set that this project may not use, and it is
+	// dropped so defaulting never fills in a value validation would reject.
 	// +optional
 	Default string `json:"default,omitempty"`
 

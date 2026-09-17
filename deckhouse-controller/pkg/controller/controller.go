@@ -30,7 +30,6 @@ import (
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -55,6 +54,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -221,10 +221,14 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
 	}
 
-	// Module package controllers (feature flag)
-	if app.ModulePackagesEnabled() {
+	// Module package sync (feature flag)
+	if app.ModulePackageSyncEnabled() {
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
+	}
+
+	// Module v2 controller (feature flag)
+	if app.ModulePackagesEnabled() {
 		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
 	}
 
@@ -414,14 +418,19 @@ func NewDeckhouseController(
 		}
 	}
 
-	// Module package controllers (feature flag)
-	if app.ModulePackagesEnabled() {
-		logger.Info("Module package controllers are enabled")
+	// Module package sync (feature flag)
+	if app.ModulePackageSyncEnabled() {
+		logger.Info("Module package sync is enabled")
 
 		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register module package version controller: %w", err)
 		}
+	}
+
+	// Module v2 controller (feature flag)
+	if app.ModulePackagesEnabled() {
+		logger.Info("Module v2 controller is enabled")
 
 		err = module.RegisterController(preflightCountDown, runtimeManager, pkgRuntime, logger)
 		if err != nil {
@@ -474,8 +483,20 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	// give the old module stack its package system objects before any
 	// controller runs; the sync reads through the API reader, so it does not
 	// need the manager cache
-	if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.GlobalHooksDir, c.log.Named("pkgsync")); err != nil {
-		return fmt.Errorf("sync package objects: %w", err)
+	if app.ModulePackageSyncEnabled() {
+		if err := pkgsync.Sync(
+			ctx,
+			c.runtimeManager.GetAPIReader(),
+			c.runtimeManager.GetClient(),
+			c.dc,
+			app.Version,
+			c.defaultReleaseChannel,
+			app.EmbeddedModulesDir,
+			app.GlobalHooksDir,
+			c.log.Named("pkgsync"),
+		); err != nil {
+			return fmt.Errorf("sync package objects: %w", err)
+		}
 	}
 
 	// run preflight check

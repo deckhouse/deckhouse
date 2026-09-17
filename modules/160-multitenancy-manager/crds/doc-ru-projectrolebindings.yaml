@@ -1,0 +1,20 @@
+spec:
+  versions:
+    - name: v1alpha3
+      schema:
+        openAPIV3Schema:
+          description: |
+            ProjectRoleBinding выдаёт роль субъектам во всех неймспейсах одного проекта.
+
+            Целевой проект определяется неймспейсом объекта (главный неймспейс проекта).
+          properties:
+            spec:
+              properties:
+                subjects:
+                  description: |
+                    Субъекты (пользователи, группы или сервисные аккаунты), которым выдаётся роль.
+                roleRef:
+                  description: |
+                    Ссылка на выдаваемую ClusterRole.
+                    
+                    Допустимые префиксы: `d8:project:*`, `d8:namespace:*`, `d8:project-capability:*`, `d8:namespace-capability:*`, `d8:custom:*`.

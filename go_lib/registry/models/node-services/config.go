@@ -22,6 +22,7 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
@@ -58,7 +59,11 @@ func (config Config) Validate() error {
 		validation.Field(&config.DistributionCert, validation.Required),
 		validation.Field(&config.DistributionKey, validation.Required),
 
-		validation.Field(&config.HTTPSecret, validation.Required),
+		// Substituted into the distribution configuration through `quote`, which
+		// fails on invalid UTF-8 rather than rewriting it. Left unchecked, that
+		// failure only appears while rendering the static pod and takes the
+		// whole reconcile with it.
+		validation.Field(&config.HTTPSecret, validation.Required, validation.By(helpers.EncodableString)),
 		validation.Field(&config.UserRO, validation.Required),
 
 		validation.Field(&config.ProxyConfig),

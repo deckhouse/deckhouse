@@ -11,6 +11,17 @@
         "en": "Enforces the security policies in the cluster according to the Kubernetes Pod Security Standards using the Gatekeeper solution.",
         "ru": "Позволяет использовать в кластере политики безопасности согласно Pod Security Standards Kubernetes с использованием решения Gatekeeper."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": [
         {
           "name": "Gatekeeper",
@@ -31,6 +42,13 @@
         "en": "Installs a service for basic authorization. Does not have any mandatory settings.",
         "ru": "Устанавливает сервис для базовой авторизации. Не предназначен для высоких нагрузок."
       },
+      "accessibility": {
+        "editions": {
+          "fe": {
+            "available": true
+          }
+        }
+      },
       "oss": []
     },
     "cert-manager": {
@@ -44,6 +62,17 @@
         "en": "Manages TLS certificates in the cluster. Supports automatic certificate provisioning from various CAs, certificate renewal, and monitoring of certificate validity.",
         "ru": "Управляет TLS-сертификатами в кластере. Поддерживает автоматическое получение сертификатов из различных CA, обновление сертификатов и мониторинг их действительности."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": [
         {
           "name": "cert-manager",
@@ -52,7 +81,7 @@
           "logo": "https://github.com/jetstack/cert-manager/raw/master/logo/logo.png",
           "license": "Apache License 2.0",
           "id": "cert-manager",
-          "version": "1.20.0"
+          "version": "1.20.3"
         }
       ]
     },
@@ -68,6 +97,23 @@
       "descriptions": {
         "en": "Provides time synchronization on all cluster nodes using chrony. Ensures consistent time across all nodes for proper cluster operation.",
         "ru": "Обеспечивает синхронизацию времени на всех узлах кластера с помощью chrony. Гарантирует единое время на всех узлах для корректной работы кластера."
+      },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "cse": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
       },
       "oss": [
         {
@@ -95,6 +141,13 @@
           "cni-cilium": ">= 0.0.0"
         }
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          }
+        }
+      },
       "oss": [
         {
           "name": "Hubble UI",
@@ -103,7 +156,7 @@
           "logo": "/images/logos/cilium-hubble.png",
           "license": "Apache License 2.0",
           "id": "cilium-hubble-ui",
-          "version": "0.13.2"
+          "version": "0.13.5"
         }
       ]
     },
@@ -120,6 +173,16 @@
         "en": "Manages interaction with AWS cloud resources. Allows to use AWS resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с облачными ресурсами AWS. Позволяет использовать ресурсы AWS при создании узлов."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          },
+          "cse": {
+            "available": false
+          }
+        }
+      },
       "oss": [
         {
           "name": "Amazon Web Services Cloud provider",
@@ -133,25 +196,25 @@
               "condition": {
                 "k8s": "1.32"
               },
-              "version": "v1.32.3"
+              "version": "v1.32.8"
             },
             {
               "condition": {
                 "k8s": "1.33"
               },
-              "version": "v1.33.2"
+              "version": "v1.33.4"
             },
             {
               "condition": {
                 "k8s": "1.34"
               },
-              "version": "v1.34.1"
+              "version": "v1.34.3"
             },
             {
               "condition": {
                 "k8s": "1.35"
               },
-              "version": "v1.35.0"
+              "version": "v1.35.2"
             },
             {
               "condition": {
@@ -217,7 +280,7 @@
           "logo": "/images/logos/aws.svg",
           "license": "Apache License 2.0",
           "id": "node-termination-handler-aws",
-          "version": "v1.25.3"
+          "version": "v1.25.6"
         }
       ]
     },
@@ -233,6 +296,16 @@
       "descriptions": {
         "en": "Manages interaction with Azure cloud resources. Allows to use Azure resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с облачными ресурсами Azure. Позволяет использовать ресурсы Azure при создании узлов."
+      },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          },
+          "cse": {
+            "available": false
+          }
+        }
       },
       "oss": [
         {
@@ -339,6 +412,13 @@
         "en": "Manages interaction with Deckhouse Virtualization Platform resources. Allows to use DVP resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с ресурсами Deckhouse Virtualization Platform. Позволяет использовать ресурсы DVP при создании узлов."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          }
+        }
+      },
       "oss": [
         {
           "name": "Deckhouse Virtualization Platform Terraform provider",
@@ -363,6 +443,16 @@
       "descriptions": {
         "en": "Manages interaction with Dynamix resources. Allows to use Dynamix resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с облачными ресурсами Базис.DynamiX. Позволяет использовать ресурсы Базис.DynamiX при создании узлов."
+      },
+      "accessibility": {
+        "editions": {
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
       },
       "oss": [
         {
@@ -389,6 +479,16 @@
         "en": "Manages interaction with Google cloud resources. Allows to use GCP resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с облачными ресурсами Google Cloud. Позволяет использовать ресурсы GCP при создании узлов."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          },
+          "cse": {
+            "available": false
+          }
+        }
+      },
       "oss": [
         {
           "name": "Google Cloud Platform Cloud provider",
@@ -414,19 +514,19 @@
               "condition": {
                 "k8s": "1.34"
               },
-              "version": "ccm/v34.0.0"
+              "version": "ccm/v34.2.0"
             },
             {
               "condition": {
                 "k8s": "1.35"
               },
-              "version": "ccm/v35.0.1"
+              "version": "ccm/v35.0.5"
             },
             {
               "condition": {
                 "k8s": "1.36"
               },
-              "version": "ccm/v35.0.1"
+              "version": "ccm/v35.0.5"
             }
           ]
         },
@@ -494,6 +594,16 @@
         "en": "Manages interaction with Huawei Cloud resources. Allows to use Huawei Cloud resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с облачными ресурсами Huawei Cloud. Позволяет использовать ресурсы Huawei Cloud при создании узлов."
       },
+      "accessibility": {
+        "editions": {
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
+      },
       "oss": [
         {
           "name": "Huawei Cloud provider",
@@ -536,6 +646,16 @@
       "descriptions": {
         "en": "Manages interaction with OpenStack-based cloud resources. Allows to use OpenStack resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с облачными ресурсами OpenStack. Позволяет использовать ресурсы OpenStack при создании узлов."
+      },
+      "accessibility": {
+        "editions": {
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
       },
       "oss": [
         {
@@ -608,7 +728,7 @@
               "condition": {
                 "k8s": "1.35"
               },
-              "version": "v1.34.1"
+              "version": "v1.35.0"
             },
             {
               "condition": {
@@ -626,6 +746,15 @@
           "license": "Mozilla Public License 2.0",
           "id": "terraform-provider-openstack",
           "version": "1.54.1"
+        },
+        {
+          "name": "OpenStack Cluster API provider",
+          "link": "https://github.com/kubernetes-sigs/cluster-api-provider-openstack",
+          "description": "Infrastructure provider for Kubernetes Cluster API in OpenStack.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0",
+          "id": "capo-openstack",
+          "version": "v0.14.8"
         }
       ]
     },
@@ -641,6 +770,16 @@
       "descriptions": {
         "en": "Manages interaction with VMware Cloud Director resources. Allows to use VMware Cloud Director resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с облачными ресурсами VMware Cloud Director. Позволяет использовать ресурсы VMware Cloud Director при создании узлов."
+      },
+      "accessibility": {
+        "editions": {
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
       },
       "oss": [
         {
@@ -746,6 +885,19 @@
       ],
       "namespace": "d8-cloud-provider-vsphere",
       "stage": "General Availability",
+      "accessibility": {
+        "editions": {
+          "se-plus": {
+            "available": true
+          },
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
+      },
       "oss": [
         {
           "name": "VMware vSphere Cloud provider",
@@ -851,6 +1003,16 @@
         "en": "Manages interaction with Yandex Cloud resources. Allows to use Yandex Cloud resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с облачными ресурсами Yandex Cloud. Позволяет использовать ресурсы Yandex Cloud при создании узлов."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          },
+          "cse": {
+            "available": false
+          }
+        }
+      },
       "oss": [
         {
           "name": "Yandex Cloud Terraform provider",
@@ -868,7 +1030,7 @@
           "logo": "/images/logos/kubernetes.svg",
           "license": "Apache License 2.0",
           "id": "ccm-yandex",
-          "version": "v0.33.2"
+          "version": "v0.33.7"
         },
         {
           "name": "Yandex Cloud CSI driver",
@@ -877,7 +1039,7 @@
           "logo": "/images/logos/kubernetes.svg",
           "license": "Apache License 2.0",
           "id": "csi-yandex",
-          "version": "v0.15.1"
+          "version": "v0.16.1"
         },
         {
           "name": "Yandex Cloud Cluster API provider",
@@ -902,6 +1064,19 @@
       "descriptions": {
         "en": "Manages interaction with zVirt resources. Allows to use zVirt resources for provisioning nodes.",
         "ru": "Управляет взаимодействием с облачными ресурсами zVirt. Позволяет использовать ресурсы zVirt при создании узлов."
+      },
+      "accessibility": {
+        "editions": {
+          "se-plus": {
+            "available": true
+          },
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
       },
       "oss": [
         {
@@ -938,6 +1113,13 @@
         "ru": "Обеспечивает работу сети в кластере Kubernetes с помощью CNI Cilium на базе eBPF."
       },
       "exclusiveGroup": "cni",
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          }
+        }
+      },
       "oss": [
         {
           "name": "Cilium",
@@ -946,7 +1128,7 @@
           "logo": "/images/logos/cilium.png",
           "license": "Apache License 2.0",
           "id": "cilium",
-          "version": "1.17.4"
+          "version": "1.17.17"
         },
         {
           "name": "CNI plugins",
@@ -954,7 +1136,7 @@
           "description": "Some reference and example networking plugins, maintained by the CNI team.",
           "license": "Apache License 2.0",
           "id": "cni-plugins",
-          "version": "1.7.1"
+          "version": "1.9.1"
         },
         {
           "name": "Gops",
@@ -980,6 +1162,16 @@
         "ru": "Обеспечивает работу сети в кластере с помощью модуля flannel."
       },
       "exclusiveGroup": "cni",
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          },
+          "cse": {
+            "available": false
+          }
+        }
+      },
       "oss": [
         {
           "name": "Flannel",
@@ -1006,6 +1198,16 @@
         "ru": "Обеспечивает работу сети с ограниченной функциональностью в кластерах Kubernetes."
       },
       "exclusiveGroup": "cni",
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          },
+          "cse": {
+            "available": false
+          }
+        }
+      },
       "oss": []
     },
     "control-plane-manager": {
@@ -1021,13 +1223,32 @@
         "en": "Manages the cluster's control plane components including certificates, configurations, and versions.",
         "ru": "Управляет компонентами control plane кластера, включая сертификаты, конфигурации и версии."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "cse": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": [
         {
           "name": "Kubernetes",
           "link": "https://github.com/kubernetes/kubernetes",
           "description": "An open source system for managing containerized applications across multiple hosts.",
           "logo": "/images/logos/kubernetes.svg",
-          "license": "Apache License 2.0"
+          "license": "Apache License 2.0",
+          "id": "kubernetes",
+          "version": "1.32+"
         },
         {
           "name": "Etcd",
@@ -1036,7 +1257,7 @@
           "logo": "/images/logos/etcd-icon-color.svg",
           "license": "Apache License 2.0",
           "id": "etcd",
-          "version": "3.6.10"
+          "version": "3.6.13"
         }
       ]
     },
@@ -1052,6 +1273,19 @@
         "en": "Provides CSI for VMware vSphere environments.",
         "ru": "Предоставляет CSI для сред VMware vSphere."
       },
+      "accessibility": {
+        "editions": {
+          "se-plus": {
+            "available": true
+          },
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
+      },
       "oss": []
     },
     "deckhouse": {
@@ -1065,11 +1299,23 @@
       "namespace": "d8-system",
       "disable": {
         "confirmation": true,
-        "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+        "message": "Disabling this module will completely stop normal operation of the Deckhouse Platform."
       },
       "descriptions": {
         "en": "Configures main Deckhouse parameters: logging level, set of modules enabled by default, and release channel.",
         "ru": "Настраивает основные параметры Deckhouse: уровень логирования, набор модулей, включенных по умолчанию, и канал обновлений."
+      },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed",
+              "Minimal"
+            ]
+          }
+        }
       },
       "oss": [
         {
@@ -1100,6 +1346,17 @@
         "en": "Creates a web UI with links to download Deckhouse CLI tool for various operating systems.",
         "ru": "Создает веб-интерфейс для скачивания из кластера утилиты Deckhouse CLI под различные операционные системы."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": []
     },
     "descheduler": {
@@ -1113,6 +1370,20 @@
         "ru": "Анализирует состояние кластера каждые 15 минут и выполняет вытеснение подов согласно условиям, описанным в активных стратегиях. Позволяет перераспределить рабочие нагрузки в соответствии с выбранной стратегией."
       },
       "stage": "General Availability",
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          },
+          "cse": {
+            "available": true
+          }
+        }
+      },
       "oss": [
         {
           "name": "Descheduler",
@@ -1121,7 +1392,7 @@
           "logo": "/images/logos/descheduler-stacked-color.png",
           "license": "Apache License 2.0",
           "id": "descheduler",
-          "version": "0.35.1"
+          "version": "0.36.0"
         }
       ]
     },
@@ -1129,10 +1400,21 @@
       "name": "documentation",
       "stage": "General Availability",
       "descriptions": {
-        "en": "Creates a documentation web UI for the Deckhouse version currently used in a cluster.",
-        "ru": "Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Kubernetes Platform."
+        "en": "Creates a documentation web UI for the Deckhouse Platform version currently used in a cluster.",
+        "ru": "Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Platform."
       },
       "namespace": "d8-system",
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": []
     },
     "istio": {
@@ -1142,20 +1424,21 @@
         "networking"
       ],
       "namespace": "d8-istio",
+      "requirements": {
+        "deckhouse": ">= 1.72.0"
+      },
       "descriptions": {
         "en": "Implements Service Mesh for centralized management of network traffic in the cluster. Provides mutual TLS, authorization, traffic routing, load balancing, and observability.",
         "ru": "Реализует Service Mesh для централизованного управления сетевым трафиком в кластере. Обеспечивает Mutual TLS, авторизацию, маршрутизацию трафика, балансировку нагрузки и наблюдаемость."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          }
+        }
+      },
       "oss": [
-        {
-          "name": "Istio",
-          "link": "https://github.com/istio/istio",
-          "description": "An open platform to connect, manage, and secure microservices.",
-          "logo": "/images/logos/istio.svg",
-          "license": "Apache License 2.0",
-          "id": "istio-1-21",
-          "version": "1.21.6"
-        },
         {
           "name": "Istio",
           "link": "https://github.com/istio/istio",
@@ -1175,13 +1458,13 @@
           "version": "1.27.9"
         },
         {
-          "name": "Kiali",
-          "link": "https://github.com/kiali/kiali",
-          "description": "Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.",
-          "logo": "/images/logos/kiali.png",
+          "name": "Istio",
+          "link": "https://github.com/istio/istio",
+          "description": "An open platform to connect, manage, and secure microservices.",
+          "logo": "/images/logos/istio.svg",
           "license": "Apache License 2.0",
-          "id": "kiali-for-istio-1-21",
-          "version": "1.81.0"
+          "id": "istio-1-29",
+          "version": "1.29.6"
         },
         {
           "name": "Kiali",
@@ -1200,6 +1483,15 @@
           "license": "Apache License 2.0",
           "id": "kiali-for-istio-1-27",
           "version": "2.12.0"
+        },
+        {
+          "name": "Kiali",
+          "link": "https://github.com/kiali/kiali",
+          "description": "Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.",
+          "logo": "/images/logos/kiali.png",
+          "license": "Apache License 2.0",
+          "id": "kiali-for-istio-1-29",
+          "version": "2.21.0"
         }
       ]
     },
@@ -1213,6 +1505,16 @@
       "descriptions": {
         "en": "Configures keepalived clusters on nodes via custom resources. Does not work with the cilium module.",
         "ru": "Настраивает keepalived-кластеры на узлах через custom resources. Не работает с модулем cilium."
+      },
+      "accessibility": {
+        "editions": {
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
       },
       "oss": [
         {
@@ -1239,6 +1541,23 @@
         "en": "Installs CoreDNS components for managing DNS in the Kubernetes cluster. Deletes all previously installed kubeadm Deployments, ConfigMaps and RBAC for CoreDNS.",
         "ru": "Устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes. Удаляет ранее установленные kubeadm'ом Deployment, ConfigMap и RBAC для CoreDNS."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "cse": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": [
         {
           "name": "CoreDNS",
@@ -1262,6 +1581,19 @@
         "en": "Manages kube-proxy components for service networking and load balancing in the cluster. Replaces kubeadm's kube-proxy with a custom implementation.",
         "ru": "Управляет компонентами kube-proxy для сетевого взаимодействия сервисов и балансировки нагрузки в кластере. Заменяет kube-proxy от kubeadm на собственную реализацию."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "cse": {
+            "available": false
+          }
+        }
+      },
       "oss": []
     },
     "local-path-provisioner": {
@@ -1276,6 +1608,17 @@
       "descriptions": {
         "en": "Provides local storage on Kubernetes nodes using HostPath volumes. Creates StorageClass resources for managing local storage provisioning.",
         "ru": "Предоставляет локальное хранилище на узлах Kubernetes с использованием томов HostPath. Создает ресурсы StorageClass для управления выделением локального хранилища."
+      },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
       },
       "oss": [
         {
@@ -1298,6 +1641,25 @@
         "en": "Implements LoadBalancer mechanism for services in bare metal clusters. Supports Layer 2 mode with improved load balancing and BGP mode based on MetalLB solution.",
         "ru": "Реализует механизм LoadBalancer для сервисов в кластерах bare metal. Поддерживает режим Layer 2 с улучшенной балансировкой нагрузки и режим BGP на базе решения MetalLB."
       },
+      "accessibility": {
+        "editions": {
+          "se": {
+            "available": true
+          },
+          "se-plus": {
+            "available": true
+          },
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          },
+          "cse": {
+            "available": true
+          }
+        }
+      },
       "oss": [
         {
           "name": "MetalLB",
@@ -1310,41 +1672,6 @@
         }
       ]
     },
-    "monitoring-deckhouse": {
-      "name": "monitoring-deckhouse",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-monitoring",
-      "descriptions": {
-        "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
-        "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
-      },
-      "requirements": {
-        "modules": {
-          "prometheus": ">= 0.0.0"
-        }
-      },
-      "oss": []
-    },
-    "monitoring-security": {
-      "name": "monitoring-security",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-monitoring",
-      "descriptions": {
-        "en": "Security monitoring for the Deckhouse Kubernetes Platform..",
-        "ru": "Мониторинг безопасности Deckhouse Kubernetes Platform."
-      },
-      "requirements": {
-        "modules": {
-          "prometheus": ">= 0.0.0"
-        }
-      }
-    },
     "multitenancy-manager": {
       "name": "multitenancy-manager",
       "stage": "Preview",
@@ -1356,6 +1683,17 @@
         "en": "Enables creation of isolated projects in a cluster. Projects provide resource quotas, network isolation, and security features beyond standard namespaces.",
         "ru": "Позволяет создавать изолированные проекты в кластере. Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных пространств имён."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": []
     },
     "namespace-configurator": {
@@ -1365,6 +1703,17 @@
       "descriptions": {
         "en": "Automatically assigns annotations and labels to namespaces based on configuration patterns. Monitors namespaces and applies labels and annotations from configuration to matching namespaces.",
         "ru": "Автоматически назначает аннотации и лейблы пространствам имён на основе шаблонов конфигурации. Отслеживает пространства имён и применяет лейблы и аннотации из конфигурации к соответствующим пространствам имён."
+      },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
       },
       "oss": []
     },
@@ -1381,6 +1730,16 @@
         "en": "Creates a network gateway using Kubernetes nodes. It contains a DHCP server and a SNAT manager.",
         "ru": "Создает сетевой шлюз из Kubernetes-узлов. Содержит в себе DHCP-сервер и настройщик SNAT."
       },
+      "accessibility": {
+        "editions": {
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          }
+        }
+      },
       "oss": []
     },
     "network-policy-engine": {
@@ -1393,6 +1752,16 @@
       "descriptions": {
         "en": "Manages network policies in the cluster. Do not use if the cilium module is enabled because it already has network policy management.",
         "ru": "Управляет сетевыми политиками в кластере. Не используйте модуль, если включен модуль cilium, так как в нем уже есть функционал управления сетевыми политиками."
+      },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          },
+          "cse": {
+            "available": false
+          }
+        }
       },
       "oss": [
         {
@@ -1422,6 +1791,47 @@
         "en": "Deploys a caching DNS server on each cluster node and exports data to the monitoring system for analysis.",
         "ru": "Разворачивает кеширующий DNS-сервер на каждом узле кластера, экспортирует данные в систему мониторинга для анализа."
       },
+      "accessibility": {
+        "editions": {
+          "be": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "se": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "se-plus": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "ee": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "fe": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "cse": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": []
     },
     "node-manager": {
@@ -1437,6 +1847,23 @@
         "ru": "Управляет узлами кластера Kubernetes как связанной группой. Настраивает и обновляет узлы кластера, управляет масштабированием кластера в облаке и управляет локальными пользователями на узлах."
       },
       "stage": "General Availability",
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "cse": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": [
         {
           "name": "Gardener Machine Controller Manager",
@@ -1454,7 +1881,7 @@
           "logo": "/images/logos/kubernetes.svg",
           "license": "Apache License 2.0",
           "id": "cluster-api",
-          "version": "1.11.3"
+          "version": "1.12.11"
         },
         {
           "name": "Cluster Autoscaler",
@@ -1476,6 +1903,16 @@
         "en": "Installs the Okmeter agent in the cluster.",
         "ru": "Устанавливает агент Okmeter в кластере."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          },
+          "cse": {
+            "available": false
+          }
+        }
+      },
       "oss": []
     },
     "openvpn": {
@@ -1488,6 +1925,16 @@
       "descriptions": {
         "en": "Provides access to cluster resources via OpenVPN with certificate-based authentication. Includes a web interface for managing certificates and generating configuration files.",
         "ru": "Предоставляет доступ к ресурсам кластера через OpenVPN с аутентификацией по сертификатам. Включает веб-интерфейс для управления сертификатами и генерации конфигурационных файлов."
+      },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true
+          },
+          "cse": {
+            "available": false
+          }
+        }
       },
       "oss": [
         {
@@ -1518,88 +1965,6 @@
         }
       ]
     },
-    "operator-prometheus": {
-      "name": "operator-prometheus",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-operator-prometheus",
-      "descriptions": {
-        "en": "Manages the lifecycle of the monitoring system in the cluster.",
-        "ru": "Управляет жизненным циклом системы мониторинга в кластере."
-      },
-      "oss": [
-        {
-          "name": "Prometheus Operator",
-          "link": "https://github.com/prometheus-operator/prometheus-operator",
-          "description": "Kubernetes native deployment and management of Prometheus and related monitoring components.",
-          "logo": "https://avatars.githubusercontent.com/u/66682517?s=200&v=4",
-          "license": "Apache License 2.0"
-        }
-      ]
-    },
-    "prometheus": {
-      "name": "prometheus",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-monitoring",
-      "descriptions": {
-        "en": "Provides ready-made alerts, dashboards, and the ability to customize monitoring system components, including data storage and visualization.",
-        "ru": "Предоставляет готовые алерты и дашборды, а также возможность настройки компонентов системы мониторинга, включая хранение и визуализацию данных."
-      },
-      "requirements": {
-        "modules": {
-          "operator-prometheus": ">= 0.0.0"
-        }
-      },
-      "oss": [
-        {
-          "name": "Prometheus",
-          "link": "https://github.com/prometheus/prometheus",
-          "description": "A systems and service monitoring system.",
-          "logo": "/images/logos/prometheus-icon-color.svg",
-          "license": "Apache License 2.0"
-        },
-        {
-          "name": "Grafana",
-          "link": "https://github.com/grafana/grafana",
-          "description": "An open-source platform for monitoring and observability.",
-          "logo": "https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg",
-          "license": "GNU Affero General Public License v3.0"
-        },
-        {
-          "name": "Trickster",
-          "link": "https://github.com/trickstercache/trickster",
-          "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-          "logo": "https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg",
-          "license": "Apache License 2.0"
-        },
-        {
-          "name": "Mimir",
-          "link": "https://github.com/grafana/mimir",
-          "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-          "logo": "https://grafana.com/static/img/logos/logo-mimir.svg",
-          "license": "AGPL-3.0 license"
-        },
-        {
-          "name": "Promxy",
-          "link": "https://github.com/jacksontj/promxy",
-          "logo": "/images/logos/prometheus-icon-color.svg",
-          "description": "Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).",
-          "license": "MIT License"
-        },
-        {
-          "name": "Memcached",
-          "link": "https://github.com/memcached/memcached",
-          "logo": "/images/logos/memcached-icon.svg",
-          "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
-          "license": "BSD-3-Clause license"
-        }
-      ]
-    },
     "registry": {
       "name": "registry",
       "critical": true,
@@ -1611,11 +1976,28 @@
       "namespace": "d8-system",
       "disable": {
         "confirmation": true,
-        "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+        "message": "Disabling this module will completely stop normal operation of the Deckhouse Platform."
       },
       "descriptions": {
         "en": "Manages the configuration of the registry of Deckhouse components and provides an internal container registry.",
         "ru": "Отвечает за управление конфигурацией registry компонентов Deckhouse и предоставляет внутреннее хранилище образов контейнеров."
+      },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "cse": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
       }
     },
     "registry-packages-proxy": {
@@ -1631,6 +2013,23 @@
         "ru": "Предоставляет сервис HTTP-прокси внутри кластера для доступа к пакетам из хранилищ образов контейнеров."
       },
       "stage": "General Availability",
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "cse": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": []
     },
     "secret-copier": {
@@ -1644,6 +2043,20 @@
         "en": "Automatically copies Secrets to all namespaces in the cluster. Simplifies distribution of shared secrets.",
         "ru": "Автоматически копирует секреты во все пространства имён кластера. Упрощает распространение общих секретов."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          },
+          "cse": {
+            "available": true
+          }
+        }
+      },
       "oss": []
     },
     "service-with-healthchecks": {
@@ -1653,6 +2066,19 @@
       "descriptions": {
         "en": "Provides an internal LoadBalancer with per-port healthchecks. Allows independent health checks for different ports, unlike the standard Kubernetes Service load balancer.",
         "ru": "Предоставляет внутренний LoadBalancer с проверками работоспособности для каждого порта. Позволяет выполнять независимые проверки работоспособности для разных портов, в отличие от стандартного балансировщика Service Kubernetes."
+      },
+      "accessibility": {
+        "editions": {
+          "ee": {
+            "available": true
+          },
+          "fe": {
+            "available": true
+          },
+          "cse": {
+            "available": true
+          }
+        }
       },
       "oss": []
     },
@@ -1669,6 +2095,16 @@
         "en": "Provides tools for working with Terraform state in the Kubernetes cluster. Consists of two parts that check Terraform state and apply non-destructive changes or export cluster metrics.",
         "ru": "Предоставляет инструменты для работы с состоянием Terraform в кластере Kubernetes. Состоит из двух частей, которые проверяют состояние Terraform и применяют недеструктивные изменения или экспортируют метрики кластера."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          }
+        }
+      },
       "oss": [
         {
           "name": "Terraform",
@@ -1681,7 +2117,7 @@
     },
     "user-authn": {
       "name": "user-authn",
-      "critical": true,
+      "critical": false,
       "stage": "General Availability",
       "subsystems": [
         "security"
@@ -1691,6 +2127,23 @@
       "descriptions": {
         "en": "Provides unified authentication system integrated with Kubernetes and web interfaces. Supports static users and external identity providers.",
         "ru": "Предоставляет единую систему аутентификации, интегрированную с Kubernetes и веб-интерфейсами. Поддерживает статических пользователей и внешние провайдеры идентификации."
+      },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default"
+            ]
+          },
+          "cse": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
       },
       "oss": [
         {
@@ -1724,6 +2177,17 @@
         "en": "Implements role-based access control. Creates cluster roles for managing user and group access to cluster resources.",
         "ru": "Реализует ролевую модель доступа. Создает кластерные роли для управления доступом пользователей и групп к ресурсам кластера."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": []
     },
     "vertical-pod-autoscaler": {
@@ -1743,6 +2207,17 @@
         "en": "Automatically calculates and sets resource request parameters for pods based on actual consumption. Can recommend resource values or automatically adjust CPU and memory reservations.",
         "ru": "Автоматически рассчитывает и устанавливает параметры resource requests для подов на основе фактического потребления. Может рекомендовать значения ресурсов или автоматически корректировать резервирование CPU и памяти."
       },
+      "accessibility": {
+        "editions": {
+          "_default": {
+            "available": true,
+            "enabledInBundles": [
+              "Default",
+              "Managed"
+            ]
+          }
+        }
+      },
       "oss": [
         {
           "name": "Kubernetes Autoscaler",
@@ -1751,7 +2226,7 @@
           "logo": "/images/logos/kubernetes.svg",
           "license": "Apache License 2.0",
           "id": "autoscaler",
-          "version": "1.6.0"
+          "version": "1.7.0"
         }
       ]
     }
@@ -1783,7 +2258,7 @@
       "logo": "/images/logos/aws.svg",
       "license": "Apache License 2.0",
       "versions": [
-        "v1.25.3"
+        "v1.25.6"
       ],
       "modules": [
         "cloud-provider-aws"
@@ -1807,7 +2282,7 @@
       "logo": "https://github.com/jetstack/cert-manager/raw/master/logo/logo.png",
       "license": "Apache License 2.0",
       "versions": [
-        "1.20.0"
+        "1.20.3"
       ],
       "modules": [
         "cert-manager"
@@ -1829,7 +2304,7 @@
       "logo": "/images/logos/cilium.png",
       "license": "Apache License 2.0",
       "versions": [
-        "1.17.4"
+        "1.17.17"
       ],
       "modules": [
         "cni-cilium"
@@ -1841,7 +2316,7 @@
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
       "versions": [
-        "1.11.3"
+        "1.12.11"
       ],
       "modules": [
         "node-manager"
@@ -1863,7 +2338,7 @@
       "logo": null,
       "license": "Apache License 2.0",
       "versions": [
-        "1.7.1"
+        "1.9.1"
       ],
       "modules": [
         "cni-cilium"
@@ -1897,7 +2372,7 @@
       "logo": "/images/logos/descheduler-stacked-color.png",
       "license": "Apache License 2.0",
       "versions": [
-        "0.35.1"
+        "0.36.0"
       ],
       "modules": [
         "descheduler"
@@ -1933,7 +2408,7 @@
       "logo": "/images/logos/etcd-icon-color.svg",
       "license": "Apache License 2.0",
       "versions": [
-        "3.6.10"
+        "3.6.13"
       ],
       "modules": [
         "control-plane-manager"
@@ -2019,16 +2494,6 @@
         "cni-cilium"
       ]
     },
-    "Grafana": {
-      "link": "https://github.com/grafana/grafana",
-      "description": "An open-source platform for monitoring and observability.",
-      "logo": "https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg",
-      "license": "GNU Affero General Public License v3.0",
-      "versions": [],
-      "modules": [
-        "prometheus"
-      ]
-    },
     "Huawei Cloud provider": {
       "link": "https://github.com/kubernetes-sigs/cloud-provider-huaweicloud",
       "description": "Cloud Controller Manager for Huawei Cloud.",
@@ -2071,7 +2536,7 @@
       "logo": "/images/logos/cilium-hubble.png",
       "license": "Apache License 2.0",
       "versions": [
-        "0.13.2"
+        "0.13.5"
       ],
       "modules": [
         "cilium-hubble"
@@ -2083,9 +2548,9 @@
       "logo": "/images/logos/istio.svg",
       "license": "Apache License 2.0",
       "versions": [
-        "1.21.6",
         "1.25.2",
-        "1.27.9"
+        "1.27.9",
+        "1.29.6"
       ],
       "modules": [
         "istio"
@@ -2121,8 +2586,8 @@
       "logo": "/images/logos/kiali.png",
       "license": "Apache License 2.0",
       "versions": [
-        "1.81.0",
         "2.12.0",
+        "2.21.0",
         "2.7.1"
       ],
       "modules": [
@@ -2146,7 +2611,9 @@
       "description": "An open source system for managing containerized applications across multiple hosts.",
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
-      "versions": [],
+      "versions": [
+        "1.32+"
+      ],
       "modules": [
         "control-plane-manager"
       ]
@@ -2157,7 +2624,7 @@
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
       "versions": [
-        "1.6.0"
+        "1.7.0"
       ],
       "modules": [
         "vertical-pod-autoscaler"
@@ -2183,16 +2650,6 @@
       "versions": [],
       "modules": [
         "local-path-provisioner"
-      ]
-    },
-    "Memcached": {
-      "link": "https://github.com/memcached/memcached",
-      "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
-      "logo": "/images/logos/memcached-icon.svg",
-      "license": "BSD-3-Clause license",
-      "versions": [],
-      "modules": [
-        "prometheus"
       ]
     },
     "MetalLB": {
@@ -2239,16 +2696,6 @@
         "cloud-provider-azure"
       ]
     },
-    "Mimir": {
-      "link": "https://github.com/grafana/mimir",
-      "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-      "logo": "https://grafana.com/static/img/logos/logo-mimir.svg",
-      "license": "AGPL-3.0 license",
-      "versions": [],
-      "modules": [
-        "prometheus"
-      ]
-    },
     "OAuth2 Proxy": {
       "link": "https://github.com/oauth2-proxy/oauth2-proxy",
       "description": "A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group.",
@@ -2279,6 +2726,18 @@
       "logo": "/images/logos/openstack.svg",
       "license": "Apache License 2.0",
       "versions": [],
+      "modules": [
+        "cloud-provider-openstack"
+      ]
+    },
+    "OpenStack Cluster API provider": {
+      "link": "https://github.com/kubernetes-sigs/cluster-api-provider-openstack",
+      "description": "Infrastructure provider for Kubernetes Cluster API in OpenStack.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "versions": [
+        "v0.14.8"
+      ],
       "modules": [
         "cloud-provider-openstack"
       ]
@@ -2317,36 +2776,6 @@
         "openvpn"
       ]
     },
-    "Prometheus": {
-      "link": "https://github.com/prometheus/prometheus",
-      "description": "A systems and service monitoring system.",
-      "logo": "/images/logos/prometheus-icon-color.svg",
-      "license": "Apache License 2.0",
-      "versions": [],
-      "modules": [
-        "prometheus"
-      ]
-    },
-    "Prometheus Operator": {
-      "link": "https://github.com/prometheus-operator/prometheus-operator",
-      "description": "Kubernetes native deployment and management of Prometheus and related monitoring components.",
-      "logo": "https://avatars.githubusercontent.com/u/66682517?s=200&v=4",
-      "license": "Apache License 2.0",
-      "versions": [],
-      "modules": [
-        "operator-prometheus"
-      ]
-    },
-    "Promxy": {
-      "link": "https://github.com/jacksontj/promxy",
-      "description": "Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).",
-      "logo": "/images/logos/prometheus-icon-color.svg",
-      "license": "MIT License",
-      "versions": [],
-      "modules": [
-        "prometheus"
-      ]
-    },
     "Shell operator": {
       "link": "https://github.com/flant/shell-operator",
       "description": "A tool for running event-driven scripts in a Kubernetes cluster",
@@ -2367,16 +2796,6 @@
       "versions": [],
       "modules": [
         "terraform-manager"
-      ]
-    },
-    "Trickster": {
-      "link": "https://github.com/trickstercache/trickster",
-      "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
-      "logo": "https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg",
-      "license": "Apache License 2.0",
-      "versions": [],
-      "modules": [
-        "prometheus"
       ]
     },
     "VMware Cloud Director Cloud provider": {
@@ -2469,7 +2888,7 @@
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
       "versions": [
-        "v0.15.1"
+        "v0.16.1"
       ],
       "modules": [
         "cloud-provider-yandex"
@@ -2481,7 +2900,7 @@
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
       "versions": [
-        "v0.33.2"
+        "v0.33.7"
       ],
       "modules": [
         "cloud-provider-yandex"

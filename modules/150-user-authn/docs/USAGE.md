@@ -4,7 +4,7 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
-The example shows the configuration of the `user-authn` module in the Deckhouse Kubernetes Platform.
+The example shows the configuration of the `user-authn` module in the Deckhouse Platform.
 
 {% raw %}
 
@@ -205,7 +205,7 @@ If email verification is not enabled in Keycloak, to properly use it as an ident
     * "Claim value": `true`
     * "Claim JSON Type": `boolean`
 
-  After that, in the client registered for the DKP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
+  After that, in the client registered for the DP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
 
   In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
   
@@ -532,9 +532,9 @@ spec:
 The annotation registers the client as a trusted peer of the privileged `kubernetes` OAuth2 client, allowing it to request ID tokens intended for the API server. In such a token, the username is determined by the `email` claim and groups by the `groups` claim. As a result, the application accesses the API server on behalf of the authenticated user and with the permissions granted to that user.
 
 {% alert level="warning" %}
-Access granted this way applies at the cluster level, even though DexClient and DexAuthenticator are namespaced resources. Therefore, only a subject with permissions to modify the `user-authn` module configuration can add the annotation or change its value to `"true"`. For example, this permission is granted by the `d8:manage:permission:module:user-authn:edit` role. Permissions to create DexClient or DexAuthenticator resources in an individual namespace are not sufficient.
+Access granted this way applies at the cluster level, even though DexClient and DexAuthenticator are namespaced resources. Therefore, only a subject with permissions to modify the `user-authn` module configuration can add the annotation or change its value to `"true"`. For example, this permission is granted by the `d8:system-capability:user-authn:edit` role. Permissions to create DexClient or DexAuthenticator resources in an individual namespace are not sufficient.
 
-Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with DKP versions earlier than 1.78, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
+Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with DP versions earlier than 1.78, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
 
 The restriction does not apply to resources that already have the annotation. A user with permissions to modify such a resource can continue to modify it, including removing the annotation or changing its value to disable access.
 {% endalert %}
@@ -630,7 +630,7 @@ spec:
 
 [Authorization rules](/modules/user-authz/cr.html#authorizationrule) grant permissions to users based on the email address from the issued token. Therefore, a User resource cannot be created if its `spec.email` value matches a `User` subject in an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource. This prevents permissions from being unintentionally granted to a new user.
 
-If the match is intentional, for example, if the authorization rule was created in advance, use a different email address or add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the User resource.
+If the match is intentional, for example, if the authorization rule was created in advance, use a different email address or add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the User resource. The annotation acknowledges the name collision only. Assigning the grant still requires covering permissions or a can-assign range that includes the target roles.
 
 Email addresses are converted to lowercase when matched, as this is how they are stored in the token. For example, `Admin@Example.com` matches the `admin@example.com` subject.
 
@@ -667,6 +667,8 @@ Password reset, 2FA reset, and lock/unlock operations are performed via the [Use
 #### Administrative operations
 
 Use the `d8 iam user` commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
+
+You can delete or recreate a local user whose email already carries a grant only if you can assign those roles (covering permissions or an explicit can-assign range).
 
 The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
 
@@ -716,7 +718,7 @@ By default, commands wait for the operation to complete. To only create a UserOp
 
 #### Self-service password reset
 
-A local user can reset their own password in the DKP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+A local user can reset their own password in the DP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
 
 Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
 
@@ -913,7 +915,7 @@ spec:
 
 {% endraw %}
 
-Where `members` is a list of users belonging to the group.
+Where `members` is a list of members: `kind: User` with `name` = `User.metadata.name`, or a nested `kind: Group` with `name` = `Group.spec.name` (the name in the token, not `metadata.name`).
 
 The group name is stored in the issued token without modification. It is indistinguishable from a group name received from an external authentication provider. Therefore, a Group resource cannot be created if its `spec.name` value matches a `Group` subject in an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource. This prevents permissions from being unintentionally granted to members of a new group.
 

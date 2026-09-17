@@ -5,7 +5,7 @@ subsystems:
 lang: en
 ---
 
-You can get information about upcoming minor DKP version updates on the release channel in one of the following ways:
+You can get information about upcoming minor DP version updates on the release channel in one of the following ways:
 
 - Enable [manual update mode](../admin/configuration/update/configuration.html#manual-update-approval).
   A new [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource and the [`DeckhouseReleaseIsWaitingManualApproval`](../reference/alerts.html#deckhouse-deckhousereleaseiswaitingmanualapproval) alert will appear when a new version is available.

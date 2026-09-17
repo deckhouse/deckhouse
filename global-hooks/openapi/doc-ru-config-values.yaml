@@ -4,7 +4,7 @@ properties:
     description: |
       > **Устарел**. Используйте параметр [settings.modules.storageClass](#parameters-modules-storageclass).
 
-      Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
+      Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Platform (Prometheus, Grafana, OpenVPN и т. д.).
 
         * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
@@ -13,9 +13,9 @@ properties:
     type: string
     default: null
     description: |-
-      Имя StorageClass, который DKP определит как StorageClass используемый в кластере по умолчанию.
+      Имя StorageClass, который DP определит как StorageClass используемый в кластере по умолчанию.
 
-      DKP запрещает вручную добавлять или изменять default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`) у StorageClass. Используйте параметр, чтобы определять или изменять StorageClass используемый в кластере по умолчанию.
+      DP запрещает вручную добавлять или изменять default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`) у StorageClass. Используйте параметр, чтобы определять или изменять StorageClass используемый в кластере по умолчанию.
 
       Если значение не указано, фактический StorageClass используемый в кластере по умолчанию будет определяться в следующем порядке:
 
@@ -52,9 +52,34 @@ properties:
     description: |
       Общие параметры модулей Deckhouse.
     properties:
+      gatewayAPI:
+        description: |
+          Общие параметры использования Gateway API модулями DP.
+        properties:
+          enabled:
+            description: |
+              Включает использование ресурсов Gateway API (Gateway, HTTPRoute и т. д.) модулями DP, которые его поддерживают.
+
+              В отличие от [ingressClass](#parameters-modules-ingress-ingressclass), встроенного Gateway по умолчанию не существует, поэтому Gateway API фактически используется модулем только если этот флаг включён **и** для него удалось определить Gateway — либо из параметра [gateway](#parameters-modules-gatewayAPI-gateway), либо из переопределения на уровне модуля, либо из Gateway, автоматически обнаруженного в кластере.
+
+              Модули, поддерживающие Gateway API, могут переопределить этот параметр собственным параметром `gatewayAPI.enabled`.
+          gateway:
+            description: |
+              Ссылка на объект Gateway (из Gateway API), используемый модулями DP при создании ресурсов Gateway API.
+
+              Если параметр не указан, модули используют Gateway, автоматически обнаруженный в кластере (если он есть).
+            properties:
+              name:
+                description: |
+                  Имя объекта Gateway.
+              namespace:
+                description: |
+                  Неймспейс объекта Gateway.
       gatewayAPIGateway:
         description: |
-          Ссылка на объект Gateway (из Gateway API), используемый модулями экосистемы Deckhouse при создании ресурсов Gateway API.
+          > **Устарел**. Используйте параметр [settings.modules.gatewayAPI.gateway](#parameters-modules-gatewayAPI-gateway).
+          
+          Ссылка на объект Gateway (из Gateway API), используемый модулями DP при создании ресурсов Gateway API.
 
           Если параметр не указан, модули используют Gateway, автоматически обнаруженный в кластере (если он есть).
         properties:
@@ -64,9 +89,25 @@ properties:
           namespace:
             description: |
               Неймспейс объекта Gateway.
+      ingress:
+        description: |
+          Общие параметры использования Ingress модулями DP.
+        properties:
+          ingressClass:
+            description: |
+              Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями DP по умолчанию при создании Ingress-ресурсов.
+
+              Некоторые модули поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
+          enabled:
+            description: |
+              Включает создание Ingress-ресурсов модулями DP, которые это поддерживают.
+
+              Модули, поддерживающие Ingress, могут переопределить этот параметр собственным параметром `ingress.enabled`.
       ingressClass:
         description: |
-          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями экосистемы Deckhouse по умолчанию при создании Ingress-ресурсов.
+          > **Устарел**. Используйте параметр [settings.modules.ingress.ingressClass](#parameters-modules-ingress-ingressClass).
+          
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями DP по умолчанию при создании Ingress-ресурсов.
 
           Некоторые модули поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
       publicDomainTemplate:
@@ -153,11 +194,16 @@ properties:
                   Объем памяти, выделяемой для компонентов control plane, работающих на каждом master-узле кластера.
       storageClass:
         description: |
-          Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
+          Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Platform (Prometheus, Grafana, OpenVPN и т. д.), если он не переопределен в конфигурации модуля.
 
-            * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+          Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+
+          **Важные замечания:**
+
+            * Этот параметр применяется только при включения модуля, при создании новых PVC.
+            * Если для модуля уже существует PersistentVolumeClaim (PVC), то изменение этого параметра не влияет на существующий PVC и не приводит к пересозданию дисков. Модуль использует существующий PVC и его StorageClass.
+            * Если в конфигурации модуля определен свой собственный параметр `storageClass`, то используется значение из конфигурации модуля, а этот параметр не применяется.
             * Этот параметр имеет смысл использовать только в исключительных ситуациях.
-            * Этот параметр применяется в процессе включения модуля.
   applications:
     description: |
       Общие параметры приложений экосистемы Deckhouse.

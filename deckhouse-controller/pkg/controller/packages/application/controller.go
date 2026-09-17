@@ -393,7 +393,7 @@ func (r *reconciler) attachVersion(ctx context.Context, app *v1alpha1.Applicatio
 func (r *reconciler) attachPackage(ctx context.Context, app *v1alpha1.Application, pkg *v1alpha1.ApplicationPackage) error {
 	patch := client.MergeFrom(pkg.DeepCopy())
 
-	if !pkg.AddInstalledApp(app.Namespace, app.Name, app.Spec.PackageVersion) {
+	if !pkg.AddInstalledApp(app.Namespace, app.Name, app.Spec.PackageVersion, app.Spec.PackageRepositoryName) {
 		return nil
 	}
 

@@ -38,7 +38,7 @@ To start the documentation site follow these steps:
 
    If you want to work with uncommitted files, use `make dev` instead of `make up`.
 
-1. Open the DKP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
+1. Open the DP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
 
 #### Stopping the documentation site
 
@@ -74,7 +74,7 @@ Use this mode when you want to preview documentation from an external module rep
      MODULE_VERSION=v1.2.3
    ```
 
-1. Open the DKP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
+1. Open the DP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
 
 The external module pages are available under `/modules/<module-name>/<channel>/`.
 
@@ -248,9 +248,9 @@ The Deckhouse website consists of the following parts:
   - `/products/kubernetes-platform/documentation/`
 
   The content is generated using Jekyll from the `docs/documentation` directory.
-  Contains documentation for Deckhouse Kubernetes Platform (DKP) and built-in modules.
+  Contains documentation for Deckhouse Platform (DP) and built-in modules.
 
-- **Documentation for DKP modules**. Includes the following sections:
+- **Documentation for DP modules**. Includes the following sections:
 
   - `/products/kubernetes-platform/modules/`
 
@@ -394,6 +394,11 @@ Below are some data structures used in the Jekyll projects.
   - `editionFullyAvailable`: A list of editions where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file. It's recommended that you don't use it in logic (but you can use it for adding editions to the module).
   - `editionsWithRestrictions`: A list of editions where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionsWithRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
   - `editions`: A list of editions where the module is available **with or without** restrictions.
+  - `extensions`: A list of extensions (see `extensions` in `docs/site/backends/docs-builder-template/data/helpers.yaml`) the module is included in **with or without** restrictions. Used by the `Extension` filter on the modules list page and by the extensions alert on the module page.
+  - `extensionsWithRestrictions`: A list of extensions where the module is included with restrictions (a subset of `extensions`). Doesn't affect filtering.
+  - `extensionsWithRestrictionsComments`: Comments for the restrictions, `all` or `<extension-id>` → `{en, ru}`. Shown as a tooltip in the extensions alert on the module page.
+
+  The `extensions*` fields for **embedded** modules are set in the `docs/documentation/_data/modules/embedded_modules_extensions.json` file (the same structure, `<module-kebab-name>` → `{extensions, extensionsWithRestrictions, extensionsWithRestrictionsComments}`). The file is merged into `embedded_modules.json` by the `d8-docs-artifacts` stage (see `docs/site/werf-docs-builder.inc.yaml`), similar to `embedded_modules_tags.json`, and is read directly by the Jekyll documentation build (`module-extensions.liquid`).
   
   ```text
   {
@@ -418,6 +423,19 @@ Below are some data structures used in the Jekyll projects.
       "se",
       "se-plus"
     ],  
+    "extensions": [ <-- extensions the module is included in (with or without restrictions), ids from data/helpers.yaml
+      "storage",
+      "advanced_storage"
+    ],
+    "extensionsWithRestrictions": [ <-- extensions where the module is included with restrictions
+      "advanced_storage"
+    ],
+    "extensionsWithRestrictionsComments": { <-- comments for restrictions. `all` - for all extensions
+      "advanced_storage": {
+        "en": "Local volumes only",
+        "ru": "Только локальные тома"
+      }
+    },
     "parameters-ee": {  <-- deprecated. A list of parameters for EE
       "some uniq key name": {
         "linkAnchor": "securitypolicy-v1alpha1-spec-policies-verifyimagesignatures",  <-- anchor to the CRD field
@@ -780,7 +798,7 @@ A list of `x-doc-` parameters:
 - `x-doc-deprecated:` (boolean). It is used to indicate that the parameter is deprecated.
 - `x-doc-required:` (boolean). It is used to indicate explicitly on the site if a particular parameter is mandatory or optional.
 - `x-doc-default:` (arbitrary type). The default value to show on the site. It is helpful if you cannot specify the `default` parameter for some reason. The x-doc specification value must be of the same type as the target parameter, and it **cannot contain** markdown elements or arbitrary text (well, it can, but the rendering will be ugly). **Only** the value from the English version of the resource is used.
-- `x-doc-d8Editions` (array of strings). Array of Deckhouse Kubernetes Platform editions the target parameter can be used with. E.g. `["se", "ee"]`. Legacy, and will be deprecated.
+- `x-doc-d8Editions` (array of strings). Array of Deckhouse Platform editions the target parameter can be used with. E.g. `["se", "ee"]`. Legacy, and will be deprecated.
 - `x-doc-example` (arbitrary type). Provides an example of the target parameter's value. If specified, it takes precedence over the `example` and `x-examples` parameters. The x-doc-example specification value can contain markdown elements or arbitrary text. **Only** the value from the English version of the resource is used. Use `x-doc-examples` for specifying an array of YAMLs.
 - `x-doc-examples` (arbitrary type). Provides an ARRAY of examples of the target parameter's value. If specified, it takes precedence over the `example` and `x-examples` parameters.
 - `x-doc-search` (string). Comma-separated search keywords. Are used in the search index on the site to search parameters better.
@@ -808,7 +826,7 @@ Each `.md` is made to stand on its own, so it can be read — or split into chun
 
 | Content | Generator | Files |
 | --- | --- | --- |
-| DKP documentation and built-in modules | Jekyll, `docs/documentation` | `/products/kubernetes-platform/documentation/v1/{llms.txt,corpus.json}` |
+| DP documentation and built-in modules | Jekyll, `docs/documentation` | `/products/kubernetes-platform/documentation/v1/{llms.txt,corpus.json}` |
 | Embedded modules library | Jekyll, the `modules-embedded` build of the same sources | `/modules/{embedded-llms.txt,embedded-corpus.json}` |
 | External modules library | Hugo + docs-builder | `/modules/{external-llms.txt,external-corpus.json}` |
 

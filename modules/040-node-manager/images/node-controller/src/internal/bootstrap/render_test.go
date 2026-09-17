@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,7 +30,10 @@ import (
 // verbatim in testdata/helm-values.yaml. Taking them from our own render would be
 // pointless: such a golden guards nothing but its own drift — and the templates are gone,
 // so there is no oracle to regenerate from either. Every Input below mirrors the values
-// its golden was rendered from.
+// its golden was rendered from. The two bootstrap.sh goldens are the one exception: their
+// preamble was rewritten on purpose after the port, so a bootstrap CAPS interrupted resumes
+// instead of failing with exit 1 until the machine-health-check wipes /var/lib/bashible
+// twenty minutes later, and it no longer matches what helm emitted.
 func TestRenderMatchesHelmGoldens(t *testing.T) {
 	files := frozenFiles(t)
 
@@ -86,6 +90,63 @@ func TestRenderMatchesHelmGoldens(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, string(want), string(got))
+		})
+	}
+}
+
+// The golden freezes these bytes but says nothing about which of them carry weight.
+// caps-controller-manager reads only the exit code, and reads it inverted: exit 2 is the
+// answer it accepts as success (internal/client/bootstrap.go), any other code is a failed
+// bootstrap it retries until the machine-health-check wipes the node. So the timer has to
+// be tested before the token — a node that is already under bashible must answer 2, not 1 —
+// and a node whose bootstrap merely broke off must fall through to the install.
+func TestStaticScriptPreambleGuards(t *testing.T) {
+	script, err := RenderStaticScript(staticInput(frozenFiles(t)))
+	require.NoError(t, err)
+
+	preamble, _, ok := strings.Cut(string(script), `cat > /var/lib/bashible/bootstrap.sh`)
+	require.True(t, ok, "the preamble no longer ends at the bootstrap.sh heredoc")
+
+	timerGuard, tokenGuard, ok := strings.Cut(preamble, `if [[ -f /var/lib/bashible/bootstrap-token ]]; then`)
+	require.True(t, ok, "the bootstrap-token guard is gone")
+
+	joinedGate, resumePath, ok := strings.Cut(tokenGuard, "\n  fi\n")
+	require.True(t, ok, "the gate nested in the bootstrap-token guard is gone")
+
+	cases := []struct {
+		name        string
+		segment     string
+		contains    []string
+		notContains []string
+	}{
+		{
+			name:        "a node under bashible is answered before the token is looked at",
+			segment:     timerGuard,
+			contains:    []string{`systemctl is-active bashible.timer`, "exit 2"},
+			notContains: []string{"exit 1"},
+		},
+		{
+			name:     "a node that has joined the cluster is refused",
+			segment:  joinedGate,
+			contains: []string{`if [[ -f /etc/kubernetes/kubelet.conf ]]; then`, "exit 1"},
+		},
+		{
+			name:        "an interrupted bootstrap resumes instead of exiting",
+			segment:     resumePath,
+			contains:    []string{`mkdir -p /var/lib/bashible`},
+			notContains: []string{"exit"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, want := range tc.contains {
+				assert.Contains(t, tc.segment, want)
+			}
+
+			for _, unwanted := range tc.notContains {
+				assert.NotContains(t, tc.segment, unwanted)
+			}
 		})
 	}
 }

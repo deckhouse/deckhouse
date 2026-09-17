@@ -48,6 +48,33 @@ spec:
           name: testns
           labels:
             custom.io/gpu-allowed: "yes"
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+                - image: nginx
+                  name: nginx
+    admissionCronJob:
+      document:
+        apiVersion: batch/v1
+        kind: CronJob
+        metadata:
+          namespace: testns
+        spec:
+          schedule: "* * * * *"
+          jobTemplate:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - image: nginx
+                      name: nginx
   namedExceptions: {}
   blocks:
     - name: operation-policy
@@ -610,3 +637,256 @@ spec:
                     resources:
                       limits:
                         not-nvidia.com/gpu: 1
+    # Controller-level checks: the same rule evaluated against a pod template
+    # instead of a Pod. The pod spec is resolved by lib.common, so a Deployment
+    # (spec.template.spec) and a CronJob (spec.jobTemplate.spec.template.spec)
+    # must behave exactly like the equivalent Pod.
+    - name: operation-policy-controller
+      gatorBlock: operation-policy-controller
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        # Denied: a Deployment whose pod template requests a GPU in a namespace without the label
+        - name: controller-disallowed-deployment-gpu-without-label
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled> set to <true>'
+          fields:
+            - path: spec.template.spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-gpu-without-label
+                namespace: testns
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: gpu-app
+                        image: my.repo/app:latest
+                        resources:
+                          limits:
+                            nvidia.com/gpu: 1
+        # Allowed: the same Deployment in a namespace that permits GPU usage
+        - name: controller-allowed-deployment-gpu-with-label
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.containers[].resources
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithGpuLabel
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-allowed-gpu-with-label
+                namespace: testns
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: gpu-app
+                        image: my.repo/app:latest
+                        resources:
+                          limits:
+                            nvidia.com/gpu: 1
+        # Allowed: a pod template that requests no GPU resources at all
+        - name: controller-allowed-deployment-without-gpu
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.containers[].resources
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-allowed-without-gpu
+                namespace: testns
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: app
+                        image: my.repo/app:latest
+                        resources:
+                          limits:
+                            cpu: 1
+                            memory: 128Mi
+        # Denied: only the initContainer of the pod template requests a GPU
+        - name: controller-disallowed-deployment-init-container-gpu
+          violations: "yes"
+          assertionMessage: 'container <gpu-init> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled> set to <true>'
+          fields:
+            - path: spec.template.spec.initContainers[].resources
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-init-container-gpu
+                namespace: testns
+              spec:
+                template:
+                  spec:
+                    initContainers:
+                      - name: gpu-init
+                        image: my.repo/init:latest
+                        resources:
+                          limits:
+                            nvidia.com/gpu: 1
+                    containers:
+                      - name: app
+                        image: my.repo/app:latest
+        # Denied: only the second container of a multi-container pod template requests a GPU
+        - name: controller-disallowed-deployment-multi-container-gpu
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled> set to <true>'
+          fields:
+            - path: spec.template.spec.containers[].resources
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-multi-container-gpu
+                namespace: testns
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: sidecar
+                        image: my.repo/sidecar:latest
+                      - name: gpu-app
+                        image: my.repo/app:latest
+                        resources:
+                          requests:
+                            nvidia.com/gpu: 2
+        # Allowed: a zero quantity means no device is requested, so it is not a GPU request
+        - name: controller-allowed-deployment-zero-quantity
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.containers[].resources
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-allowed-zero-quantity
+                namespace: testns
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: app
+                        image: my.repo/app:latest
+                        resources:
+                          limits:
+                            nvidia.com/gpu: 0
+        # Denied: a CronJob pod template sits one level deeper than a Deployment one
+        - name: controller-disallowed-cronjob-gpu-without-label
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled> set to <true>'
+          fields:
+            - path: spec.jobTemplate.spec.template.spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionCronJob
+            merge:
+              metadata:
+                name: controller-disallowed-cronjob-gpu
+                namespace: testns
+              spec:
+                jobTemplate:
+                  spec:
+                    template:
+                      spec:
+                        containers:
+                          - name: gpu-app
+                            image: my.repo/app:latest
+                            resources:
+                              limits:
+                                nvidia.com/gpu: 1
+        # Allowed: the same CronJob in a namespace that permits GPU usage
+        - name: controller-allowed-cronjob-gpu-with-label
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.jobTemplate.spec.template.spec.containers[].resources
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithGpuLabel
+          object:
+            base: admissionCronJob
+            merge:
+              metadata:
+                name: controller-allowed-cronjob-gpu
+                namespace: testns
+              spec:
+                jobTemplate:
+                  spec:
+                    template:
+                      spec:
+                        containers:
+                          - name: gpu-app
+                            image: my.repo/app:latest
+                            resources:
+                              limits:
+                                nvidia.com/gpu: 1
+        # Denied: the namespace is absent from the Gatekeeper cache, so the check fails closed
+        - name: controller-disallowed-deployment-namespace-not-cached
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> is not present in the Gatekeeper cache, so the label <gpu.deckhouse.io/enabled> cannot be checked'
+          fields:
+            - path: spec.template.spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-namespace-not-cached
+                namespace: testns
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: gpu-app
+                        image: my.repo/app:latest
+                        resources:
+                          limits:
+                            nvidia.com/gpu: 1

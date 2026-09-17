@@ -3,7 +3,7 @@ title: Модуль admission-policy-engine
 permalink: ru/architecture/security/admission-policy-engine.html
 lang: ru
 search: admission-policy-engine, pod security, gatekeeper
-description: Архитектура модуля admission-policy-engine в Deckhouse Kubernetes Platform.
+description: Архитектура модуля admission-policy-engine в Deckhouse Platform.
 ---
 
 Модуль [`admission-policy-engine`](/modules/admission-policy-engine/) обеспечивает применение политик безопасности и операционных политик в кластере Kubernetes. Политики применяются на основе проверок по [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и правил из следующих кастомных ресурсов:
@@ -29,7 +29,7 @@ description: Архитектура модуля admission-policy-engine в Deck
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`admission-policy-engine`](/modules/admission-policy-engine/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`admission-policy-engine`](/modules/admission-policy-engine/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля admission-policy-engine](../../images/architecture/security/c4-l2-admission-policy-engine.ru.png)
 
@@ -60,10 +60,10 @@ description: Архитектура модуля admission-policy-engine в Deck
    * **constraint-exporter** — сайдкар-контейнер, предоставляющий дополнительные метрики по кастомным ресурсам `constraints.gatekeeper.sh/*` и `mutations.gatekeeper.sh/*`;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам `manager` и `constraint-exporter`.
 
-1. **Ratify** — опциональный компонент, состоящий из одного контейнера [**ratify**](https://ratify.dev/docs/what-is-ratify). Он представляет собой реализацию [провайдера Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) для проверки метаданных используемых артефактов. В DKP этот провайдер применяется для проверки подписи образов контейнеров и доступен в редакциях DKP SE+, EE, CSE Lite и CSE Pro.
+1. **Ratify** — опциональный компонент, состоящий из одного контейнера [**ratify**](https://ratify.dev/docs/what-is-ratify). Он представляет собой реализацию [провайдера Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) для проверки метаданных используемых артефактов. В DP этот провайдер применяется для проверки подписи образов контейнеров и доступен в редакциях DP SE+, EE, CSE Lite и CSE Pro.
 
 {% alert level="info" %}
-   Gatekeeper использует кастомный ресурс Provider для расширения функционала по валидации ресурсов Kubernetes. Ресурс Provider описывает эндпоинт сервиса, на который Gatekeeper передает запрос при выполнении ValidationWebhook. Некоторые модули DKP, такие как [`operator-trivy`](/modules/operator-trivy), могут создавать кастомные ресурсы Provider и тем самым расширять функционал проверок.
+   Gatekeeper использует кастомный ресурс Provider для расширения функционала по валидации ресурсов Kubernetes. Ресурс Provider описывает эндпоинт сервиса, на который Gatekeeper передает запрос при выполнении ValidationWebhook. Некоторые модули DP, такие как [`operator-trivy`](/modules/operator-trivy), могут создавать кастомные ресурсы Provider и тем самым расширять функционал проверок.
 {% endalert %}
 
 ## Взаимодействия модуля

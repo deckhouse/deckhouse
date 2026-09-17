@@ -2,7 +2,7 @@
 title: Cilium-hubble module
 permalink: en/architecture/network/cilium-hubble.html
 search: cilium-hubble, cilium, hubble
-description: Architecture of the cilium-hubble module in Deckhouse Kubernetes Platform.
+description: Architecture of the cilium-hubble module in Deckhouse Platform.
 ---
 
 The [`cilium-hubble`](/modules/cilium-hubble/) module provides visualization of the cluster network stack if the Cilium CNI is enabled.
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`cilium-hubble`](/modules/cilium-hubble/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`cilium-hubble`](/modules/cilium-hubble/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Cilium-hubble module architecture](../../images/architecture/network/c4-l2-cilium-hubble.png)
 

@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -119,28 +120,56 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 		return fmt.Errorf("list module releases to update registry settings: %w", err)
 	}
 
+	// The release controller drops the annotation as soon as it has applied the new settings, so it
+	// writes the very releases annotated here. Patch them rather than update them: a merge patch carries
+	// no resourceVersion, so the two controllers cannot collide over the object. An update did, and
+	// losing that race cost the whole fan-out below - and a moduleRun task per release once it replayed.
+	patch := client.RawPatch(types.MergePatchType, buildRegistrySpecChangedAnnotation(r.dc.GetClock().Now()))
+
+	errs := make([]error, 0, len(moduleReleases.Items))
+
 	for _, release := range moduleReleases.Items {
-		if release.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
-			for _, ref := range release.GetOwnerReferences() {
-				if ref.UID == source.UID && ref.Name == source.Name && ref.Kind == v1alpha1.ModuleSourceGVK.Kind {
-					if len(release.ObjectMeta.Annotations) == 0 {
-						release.ObjectMeta.Annotations = make(map[string]string)
-					}
-
-					release.ObjectMeta.Annotations[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged] = r.dc.GetClock().Now().UTC().Format(time.RFC3339)
-					if err = r.client.Update(ctx, &release); err != nil {
-						return fmt.Errorf("set RegistrySpecChanged annotation to the '%s' module release: %w", release.Name, err)
-					}
-
-					break
-				}
-			}
+		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed {
+			continue
 		}
+
+		if !slices.ContainsFunc(release.GetOwnerReferences(), func(ref metav1.OwnerReference) bool {
+			return ref.UID == source.UID && ref.Name == source.Name && ref.Kind == v1alpha1.ModuleSourceGVK.Kind
+		}) {
+			continue
+		}
+
+		// a release deleted meanwhile has nothing left to pick the settings up for
+		if err = r.client.Patch(ctx, &release, patch); err != nil && !apierrors.IsNotFound(err) {
+			errs = append(errs, fmt.Errorf("set RegistrySpecChanged annotation to the '%s' module release: %w", release.Name, err))
+		}
+	}
+
+	// Report every release that could not be annotated instead of stopping at the first one: the caller
+	// keeps the checksum above unset on error, so giving up early would both leave the remaining releases
+	// untouched and make the next resync replay the fan-out over the ones already annotated.
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	source.ObjectMeta.Annotations[v1alpha1.ModuleSourceAnnotationRegistryChecksum] = currentChecksum
 
 	return nil
+}
+
+// buildRegistrySpecChangedAnnotation builds a merge patch that stamps the RegistrySpecChanged
+// annotation, telling the release controller to re-apply the source registry settings to the module.
+func buildRegistrySpecChangedAnnotation(now time.Time) []byte {
+	// marshaling a fixed shape of plain strings cannot fail
+	data, _ := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"annotations": map[string]any{
+				v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged: now.UTC().Format(time.RFC3339),
+			},
+		},
+	})
+
+	return data
 }
 
 func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, checksum string) (bool, error) {

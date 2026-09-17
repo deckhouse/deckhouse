@@ -1,11 +1,9 @@
 ---
-title: Deckhouse Kubernetes Platform editions comparison
+title: Deckhouse Platform editions comparison
 permalink: en/reference/revision-comparison.html
 toc: false
 ---
 
-The Deckhouse Kubernetes Platform is available in several editions. They are with different functions and support options. You can find a brief comparison of editions listing its main features and functions on the [Deckhouse Kubernetes Platform website]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/#revisions).
+The Deckhouse Kubernetes Platform is available in several editions. They are with different functions and support options.
 
-The table below provides listing of the Deckhouse Kubernetes Platform modules available in each edition:
-
-{% include revision_comparison_detail_table.liquid %}
+Starting with version 1.76, the list of supported editions has been updated. Information about the supported editions and their features is being updated and will be available later.

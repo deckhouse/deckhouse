@@ -2,7 +2,7 @@
 title: Admission-policy-engine module
 permalink: en/architecture/security/admission-policy-engine.html
 search: admission-policy-engine, pod security, gatekeeper
-description: Architecture of the admission-policy-engine module in Deckhouse Kubernetes Platform.
+description: Architecture of the admission-policy-engine module in Deckhouse Platform.
 ---
 
 The [`admission-policy-engine`](/modules/admission-policy-engine/) module enforces security policies and operational restrictions in a Kubernetes cluster. Policies are applied based on [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) checks and rules from the following custom resources:
@@ -28,7 +28,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`admission-policy-engine`](/modules/admission-policy-engine/) module and its interaction with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`admission-policy-engine`](/modules/admission-policy-engine/) module and its interaction with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Admission-policy-engine architecture](../../images/architecture/security/c4-l2-admission-policy-engine.png)
 
@@ -57,10 +57,10 @@ The module consists of the following components:
    * **constraint-exporter**: Sidecar container that exposes additional metrics for the `constraints.gatekeeper.sh/*` and `mutations.gatekeeper.sh/*` custom resources.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to metrics from `manager` and `constraint-exporter`.
 
-1. **Ratify**: An optional component consisting of a single [**ratify**](https://ratify.dev/docs/what-is-ratify) container. It provides a [Gatekeeper provider](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) implementation for validating metadata of used artifacts. In DKP, this provider is used to verify container image signatures and is available in the SE+, EE, CSE Lite, and CSE Pro editions.
+1. **Ratify**: An optional component consisting of a single [**ratify**](https://ratify.dev/docs/what-is-ratify) container. It provides a [Gatekeeper provider](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) implementation for validating metadata of used artifacts. In DP, this provider is used to verify container image signatures and is available in the SE+, EE, CSE Lite, and CSE Pro editions.
 
 {% alert level="info" %}
-   Gatekeeper uses the Provider custom resource to extend resource validation capabilities in Kubernetes. The Provider resource describes the service endpoint to which Gatekeeper sends requests during ValidationWebhook execution. Some DKP modules, such as [`operator-trivy`](/modules/operator-trivy), can create Provider custom resources and thereby extend the verification capabilities.
+   Gatekeeper uses the Provider custom resource to extend resource validation capabilities in Kubernetes. The Provider resource describes the service endpoint to which Gatekeeper sends requests during ValidationWebhook execution. Some DP modules, such as [`operator-trivy`](/modules/operator-trivy), can create Provider custom resources and thereby extend the verification capabilities.
 {% endalert %}
 
 ## Module interactions

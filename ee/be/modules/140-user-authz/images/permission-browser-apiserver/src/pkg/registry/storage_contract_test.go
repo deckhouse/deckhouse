@@ -25,6 +25,7 @@ import (
 	"permission-browser-apiserver/pkg/apis/authorization/v1alpha1"
 	"permission-browser-apiserver/pkg/authorizer/composite"
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 	"permission-browser-apiserver/pkg/authorizer/rbacadapter"
 	"permission-browser-apiserver/pkg/authorizer/scopefilter"
 )
@@ -227,7 +228,7 @@ func newContractStackWithRegistry(t *testing.T, mtConfig string, objs []runtime.
 		require.True(t, ok, "informer %v failed to sync", typ)
 	}
 
-	engine, err := multitenancy.NewEngine(writeMTConfig(t, mtConfig), nsLister, func() bool { return true }, scope)
+	engine, err := multitenancy.NewEngine(mttest.LegacyJSON(t, mtConfig), mttest.NoBindings(), nsLister, func() bool { return true }, scope)
 	require.NoError(t, err)
 	engine.SetIndependentRBACChecker(rbac)
 
@@ -395,7 +396,11 @@ func TestBulkSARStorage_Create_WildcardEditorClusterReality(t *testing.T) {
 		got := outcomeFromResult(r)
 		switch {
 		case i == unknownGVR:
-			assertOutcome(t, got, false, true, "making cluster-scoped requests for namespaced resources is not allowed")
+			// The resource does not exist, so multi-tenancy has no opinion and this editor's
+			// wildcard RBAC answers. The report matches the authorizers; the request itself would
+			// then 404 at the storage layer, which is not an authorization outcome.
+			assert.True(t, got.Allowed, "unknown GVR: %+v", got)
+			assert.False(t, got.Denied, "unknown GVR: %+v", got)
 		case i == projectsList:
 			assert.True(t, got.Allowed, "list projects: %+v", got)
 			assert.False(t, got.Denied)
@@ -456,7 +461,10 @@ func TestBulkSARStorage_Create_RestrictedEditorIdentityReadAndNodes(t *testing.T
 	assert.True(t, got[0].Denied)
 	assert.True(t, got[14].Allowed, "get pods ns-in: %+v", got[14])
 	assert.True(t, got[19].Denied, "get pods ns-out: %+v", got[19])
-	assert.True(t, got[24].Denied, "unknown GVR: %+v", got[24])
+	// The GVR is absent from a snapshot that read its group, so neither allowed nor denied: RBAC
+	// answers, and the API server turns that into a 404.
+	assert.False(t, got[24].Denied, "unknown GVR: %+v", got[24])
+	assert.False(t, got[24].Allowed, "unknown GVR: %+v", got[24])
 }
 
 func TestBulkSARStorage_Create_IndependentRBACRescuesWithoutCARCRB(t *testing.T) {
