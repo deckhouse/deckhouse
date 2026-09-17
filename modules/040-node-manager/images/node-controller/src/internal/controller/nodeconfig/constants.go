@@ -171,6 +171,12 @@ const (
 	extensionStateReady  = "Ready"
 	extensionStateFailed = "Failed"
 
+	// staticPodStateWritten and staticPodStateFailed are the whole enum of
+	// StaticPodStatus.State in api/internal.deckhouse.io/v1alpha1/nodeconfig_types.go
+	// (Enum=Written;Failed): the node holds the file the spec asked for, or it does not.
+	staticPodStateWritten = "Written"
+	staticPodStateFailed  = "Failed"
+
 	// cgroupLabel tells the cluster which cgroup layout the node runs;
 	// cgroupV2Value is the only answer a Deckhouse Engine node has. Read by
 	// hooks/cntrd_v2_support.go; the installer writes the same pair.
