@@ -21,10 +21,6 @@ lang: ru
 {% include pdf_download_modal.html %}
 {%- endunless %}
 
-{% alert level="info" %}
-Начиная с версии 1.76 в документации название продукта Deckhouse Kubernetes Platform заменено на Deckhouse Platform.
-{% endalert %}
-
 Приветствуем вас на главной странице документации Deckhouse Platform — платформы для управления Kubernetes-кластерами.
 {% if site.mode != 'module' %}Если вы еще не использовали платформу, рекомендуем начать с раздела [Быстрый старт](/products/kubernetes-platform/gs/), где вы найдете пошаговые инструкции по развёртыванию платформы на любой инфраструктуре.{% endif %}
 
