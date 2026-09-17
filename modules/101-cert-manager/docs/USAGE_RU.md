@@ -210,7 +210,6 @@ spec:
 > Встроенный вебхук регистрирует то же имя APIService; оставленная ручная установка
 > может сломать весь релиз `cert-manager` или тихо остановить продление сертификатов
 > у существующего пользовательского ClusterIssuer.
-
 > Встроенный ClusterIssuer `yandex` использует **production**-каталог Let's Encrypt
 > (как issuers Cloudflare, Route53 и CloudDNS в этом модуле).
 > Перед созданием Certificate убедитесь, что верны folder ID, роль сервисного аккаунта (`dns.editor`)
