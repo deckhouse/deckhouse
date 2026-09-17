@@ -18,12 +18,16 @@ package capi
 
 import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+// Helm's ownership metadata is left on the objects taken over from the chart: addon-operator
+// upgrades with TakeOwnership, so Helm adopts a live object by kind and name and never reads that
+// metadata, and stripping it would cost a read plus a patch on every apply.
+//
+// TODO(1.81): drop the keep annotation together with hooks/set_keep_policy_on_capi_resources.go.
+// Prune only considers the previous release manifest, so past the migration release it protects
+// nothing — but it still blocks deletion on uninstall, capi-user-credentials included.
 const (
-	helmManagedByLabel             = "app.kubernetes.io/managed-by"
-	helmReleaseNameAnnotation      = "meta.helm.sh/release-name"
-	helmReleaseNamespaceAnnotation = "meta.helm.sh/release-namespace"
-	werfFailModeAnnotation         = "werf.io/fail-mode"
-	werfTrackTerminationAnnotation = "werf.io/track-termination-mode"
+	helmManagedByLabel        = "app.kubernetes.io/managed-by"
+	helmReleaseNameAnnotation = "meta.helm.sh/release-name"
 )
 
 func prepareClusterTemplateObject(object *unstructured.Unstructured) {
@@ -41,32 +45,4 @@ func prepareClusterTemplateObject(object *unstructured.Unstructured) {
 	}
 	annotations["helm.sh/resource-policy"] = "keep"
 	object.SetAnnotations(annotations)
-}
-
-func removeLegacyHelmMetadata(object *unstructured.Unstructured) bool {
-	changed := false
-
-	labels := object.GetLabels()
-	if _, ok := labels[helmManagedByLabel]; ok {
-		delete(labels, helmManagedByLabel)
-		object.SetLabels(labels)
-		changed = true
-	}
-
-	annotations := object.GetAnnotations()
-	for _, key := range []string{
-		helmReleaseNameAnnotation,
-		helmReleaseNamespaceAnnotation,
-		werfFailModeAnnotation,
-		werfTrackTerminationAnnotation,
-	} {
-		if _, ok := annotations[key]; ok {
-			delete(annotations, key)
-			changed = true
-		}
-	}
-	if changed {
-		object.SetAnnotations(annotations)
-	}
-	return changed
 }

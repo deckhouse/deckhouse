@@ -24,7 +24,7 @@ import (
 )
 
 func TestDecodeRegistrationAcceptsProviderEncodings(t *testing.T) {
-	registration := DecodeRegistration(map[string][]byte{
+	registration, err := DecodeRegistration(map[string][]byte{
 		"type":                           []byte("openstack"),
 		"region":                         []byte(`"RegionOne"`),
 		"zones":                          []byte(`["zone-a","zone-b"]`),
@@ -40,6 +40,7 @@ func TestDecodeRegistrationAcceptsProviderEncodings(t *testing.T) {
 		"capiMachineDeploymentSpecPatch": []byte("spec: {}"),
 		"openstack":                      []byte(`{"connection":{"region":"RegionOne"}}`),
 	})
+	require.NoError(t, err)
 
 	assert.Equal(t, "openstack", registration.Type)
 	assert.Equal(t, "RegionOne", registration.Region)
@@ -61,6 +62,46 @@ func TestDecodeRegistrationAcceptsProviderEncodings(t *testing.T) {
 }
 
 func TestDecodeRegistrationWithoutProviderSubtreeUsesEmptyMap(t *testing.T) {
-	registration := DecodeRegistration(map[string][]byte{"type": []byte("dvp")})
-	assert.Equal(t, map[string]any{}, registration.CloudVariables)
+	registration, err := DecodeRegistration(map[string][]byte{"type": []byte("dvp")})
+	require.NoError(t, err)
+	assert.Nil(t, registration.CloudVariables)
+}
+
+func TestDecodeRegistrationRejectsMalformedJSON(t *testing.T) {
+	_, err := DecodeRegistration(map[string][]byte{"zones": []byte("not-json")})
+	require.ErrorContains(t, err, "zones")
+
+	_, err = DecodeRegistration(map[string][]byte{
+		"type": []byte("dvp"),
+		"dvp":  []byte("not-json"),
+	})
+	require.ErrorContains(t, err, "dvp subtree")
+}
+
+func TestRegistrationValidation(t *testing.T) {
+	registration := Registration{
+		Type: "dvp", Region: "default", Zones: []string{"default"},
+		InstanceClassKind: "DVPInstanceClass", InstanceClassAPIVersion: "v1alpha1",
+		CAPIClusterName: "dvp", CAPIClusterKind: "DeckhouseCluster",
+		CAPIClusterAPIVersion:         "infrastructure.cluster.x-k8s.io/v1alpha1",
+		CAPIMachineTemplateKind:       "DeckhouseMachineTemplate",
+		CAPIMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1",
+		CloudVariables:                map[string]any{"project": "test"},
+	}
+	require.NoError(t, registration.ValidateCore())
+	require.NoError(t, registration.ValidateCAPI())
+
+	registration.Region = ""
+	require.ErrorContains(t, registration.ValidateCore(), "region")
+	registration.Region = "default"
+	registration.CAPIMachineTemplateKind = ""
+	require.ErrorContains(t, registration.ValidateCAPI(), "capiMachineTemplateKind")
+	registration.CAPIMachineTemplateKind = "DeckhouseMachineTemplate"
+	registration.Zones = []string{""}
+	require.ErrorContains(t, registration.ValidateCore(), "zones")
+	registration.Zones = []string{"default"}
+	registration.CloudVariables = map[string]any{}
+	require.NoError(t, registration.ValidateCore(), "an empty provider object is valid for providers without settings")
+	registration.Type = "DVP"
+	require.ErrorContains(t, registration.ValidateCore(), "must be lowercase")
 }

@@ -117,8 +117,8 @@ engine emulated a values tree only so that migrated templates would not need rew
 
 | Key | Type | Since | What it is |
 |---|---|---|---|
-| `.cluster.name` | string | v2 | CAPI Cluster name. |
-| `.cluster.namespace` | string | v2 | Namespace of CAPI resources. |
+| `.cluster.name` | string | v2, added in 1.78 | CAPI Cluster name. |
+| `.cluster.namespace` | string | v2, added in 1.78 | Namespace of CAPI resources. |
 | `.cluster.uuid` | string | v2 | Deckhouse cluster UUID. |
 | `.cluster.podSubnet` | string | v2 | Pod network CIDR. |
 

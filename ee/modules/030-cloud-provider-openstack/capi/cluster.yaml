@@ -16,11 +16,15 @@ template: |
     apiServerLoadBalancer:
       enabled: false
   {{- if not $apiServerFloatingIP }}
-    {{- $endpoint := first .controlPlane.endpoints }}
     disableAPIServerFloatingIP: true
+    {{- if hasKey . "controlPlane" }}
+      {{- if gt (len .controlPlane.endpoints) 0 }}
+        {{- $endpoint := first .controlPlane.endpoints }}
     controlPlaneEndpoint:
       host: {{ $endpoint.host | quote }}
       port: {{ $endpoint.port }}
+      {{- end }}
+    {{- end }}
   {{- end }}
     network:
       filter:

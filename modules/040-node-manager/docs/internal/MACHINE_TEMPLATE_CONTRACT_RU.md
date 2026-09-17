@@ -117,8 +117,8 @@ Deckhouse задолго до того, как node-controller что-либо �
 
 | Поле | Тип | Доступно с | Что это |
 |---|---|---|---|
-| `.cluster.name` | string | v2 | Имя CAPI Cluster. |
-| `.cluster.namespace` | string | v2 | Namespace для ресурсов CAPI. |
+| `.cluster.name` | string | v2, добавлен в 1.78 | Имя CAPI Cluster. |
+| `.cluster.namespace` | string | v2, добавлен в 1.78 | Namespace для ресурсов CAPI. |
 | `.cluster.uuid` | string | v2 | UUID кластера Deckhouse. |
 | `.cluster.podSubnet` | string | v2 | CIDR pod-сети. |
 

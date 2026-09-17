@@ -118,7 +118,7 @@ template: |
   apiVersion: v1
   kind: Secret
   metadata:
-    name: credentials
+    name: capi-user-credentials
   stringData:
     region: {{ .provider.region }}
     cluster: {{ .cluster.name }}
@@ -133,7 +133,7 @@ template: |
 template: |
   apiVersion: v1
   kind: Secret
-  metadata: {name: credentials}
+  metadata: {name: capi-user-credentials}
   stringData:
     prefix: {{ .prefix }}
 `))
@@ -149,8 +149,9 @@ func TestCredentialsTemplateValidatesOutput(t *testing.T) {
 		error    string
 	}{
 		{name: "wrong kind", manifest: "apiVersion: v1\nkind: ConfigMap\nmetadata: {name: credentials}\n", error: "want v1/Secret"},
-		{name: "wrong namespace", manifest: "apiVersion: v1\nkind: Secret\nmetadata: {name: credentials, namespace: other}\n", error: "must be in namespace"},
-		{name: "multiple objects", manifest: "apiVersion: v1\nkind: Secret\nmetadata: {name: credentials}\n---\napiVersion: v1\nkind: Secret\nmetadata: {name: other}\n", error: "more than one object"},
+		{name: "wrong name", manifest: "apiVersion: v1\nkind: Secret\nmetadata: {name: credentials}\n", error: "contract requires"},
+		{name: "wrong namespace", manifest: "apiVersion: v1\nkind: Secret\nmetadata: {name: capi-user-credentials, namespace: other}\n", error: "must be in namespace"},
+		{name: "multiple objects", manifest: "apiVersion: v1\nkind: Secret\nmetadata: {name: capi-user-credentials}\n---\napiVersion: v1\nkind: Secret\nmetadata: {name: other}\n", error: "more than one object"},
 	}
 
 	for _, testCase := range tests {

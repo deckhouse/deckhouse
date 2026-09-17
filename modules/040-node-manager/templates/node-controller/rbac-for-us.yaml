@@ -167,7 +167,6 @@ rules:
   - dynamixclusters
   - huaweicloudclusters
   - openstackclusters
-  - staticclusters
   - vcdclusters
   - yandexclusters
   - zvirtclusters

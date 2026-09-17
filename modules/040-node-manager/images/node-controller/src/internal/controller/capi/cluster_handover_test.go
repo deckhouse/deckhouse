@@ -111,24 +111,6 @@ func TestPrepareClusterTemplateObject(t *testing.T) {
 	}, object.GetAnnotations())
 }
 
-func TestRemoveLegacyHelmMetadata(t *testing.T) {
-	object := clusterHandoverTestObject("v1", "Secret", capiNamespace, "credentials")
-	object.SetLabels(map[string]string{"app": "provider-controller", helmManagedByLabel: "Helm"})
-	object.SetAnnotations(map[string]string{
-		helmReleaseNameAnnotation:      "node-manager",
-		helmReleaseNamespaceAnnotation: "d8-system",
-		werfFailModeAnnotation:         "IgnoreAndContinueDeployProcess",
-		werfTrackTerminationAnnotation: "NonBlocking",
-		"helm.sh/resource-policy":      "keep",
-	})
-
-	require.True(t, removeLegacyHelmMetadata(object))
-	assert.NotContains(t, object.GetLabels(), helmManagedByLabel)
-	assert.NotContains(t, object.GetAnnotations(), helmReleaseNameAnnotation)
-	assert.Equal(t, "keep", object.GetAnnotations()["helm.sh/resource-policy"])
-	require.False(t, removeLegacyHelmMetadata(object))
-}
-
 func TestApplyClusterObjectAdoptsHelmManagedObject(t *testing.T) {
 	existing := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -155,11 +137,17 @@ func TestApplyClusterObjectAdoptsHelmManagedObject(t *testing.T) {
 	}, adopted))
 	assert.Equal(t, []byte("new"), adopted.Data["token"])
 	assert.Equal(t, "node-manager", adopted.Labels["module"])
-	assert.NotContains(t, adopted.Labels, helmManagedByLabel)
-	assert.NotContains(t, adopted.Annotations, helmReleaseNameAnnotation)
+	assert.Equal(t, "keep", adopted.Annotations["helm.sh/resource-policy"])
+	// Helm's ownership metadata stays: nothing needs it removed, and the keep annotation above
+	// is what stops the prune.
+	assert.Equal(t, "Helm", adopted.Labels[helmManagedByLabel])
+	assert.Equal(t, "node-manager", adopted.Annotations[helmReleaseNameAnnotation])
 }
 
-func TestApplyClusterObjectPreservesControlPlaneEndpoint(t *testing.T) {
+// The provider that renders the endpoint renders it from the apiserver addresses this controller
+// discovers, so its value is the fresher one. Keeping the live value here would pin the cluster to
+// the address of a master that may already be gone.
+func TestApplyClusterObjectPrefersTheRenderedControlPlaneEndpoint(t *testing.T) {
 	existing := clusterHandoverTestObject(
 		"infrastructure.cluster.x-k8s.io/v1beta1", "OpenStackCluster", capiNamespace, "openstack",
 	)
@@ -188,10 +176,66 @@ func TestApplyClusterObjectPreservesControlPlaneEndpoint(t *testing.T) {
 	}, actual))
 	host, _, err := unstructured.NestedString(actual.Object, "spec", "controlPlaneEndpoint", "host")
 	require.NoError(t, err)
-	assert.Equal(t, "192.0.2.10", host)
+	assert.Equal(t, "192.0.2.20", host)
 	subnets, _, err := unstructured.NestedStringSlice(actual.Object, "spec", "managedSubnets")
 	require.NoError(t, err)
 	assert.Equal(t, []string{"new"}, subnets)
+}
+
+// The mirror case, and the one every provider except OpenStack is in: the template renders no
+// endpoint because only the provider controller knows it. Applying the object must not wipe it.
+func TestApplyClusterObjectPreservesAnEndpointTheTemplateDoesNotRender(t *testing.T) {
+	existing := clusterHandoverTestObject(
+		"infrastructure.cluster.x-k8s.io/v1beta1", "OpenStackCluster", capiNamespace, "openstack",
+	)
+	existing.Object["spec"] = map[string]any{
+		"controlPlaneEndpoint": map[string]any{"host": "192.0.2.10", "port": int64(6443)},
+	}
+	base := fakeReconciler(t, existing)
+	reconciler := &ClusterReconciler{BaseWithReader: base.BaseWithReader}
+	reconciler.APIReader = reconciler.Client
+
+	desired := clusterHandoverTestObject(
+		"infrastructure.cluster.x-k8s.io/v1beta1", "OpenStackCluster", capiNamespace, "openstack",
+	)
+	desired.Object["spec"] = map[string]any{"managedSubnets": []any{"new"}}
+	require.NoError(t, reconciler.applyClusterObject(t.Context(), desired))
+
+	actual := clusterHandoverTestObject(
+		"infrastructure.cluster.x-k8s.io/v1beta1", "OpenStackCluster", capiNamespace, "openstack",
+	)
+	require.NoError(t, reconciler.Client.Get(t.Context(), types.NamespacedName{
+		Name: "openstack", Namespace: capiNamespace,
+	}, actual))
+	host, _, err := unstructured.NestedString(actual.Object, "spec", "controlPlaneEndpoint", "host")
+	require.NoError(t, err)
+	assert.Equal(t, "192.0.2.10", host)
+}
+
+func TestApplyClusterObjectInitializesNullSpecBeforePreservingEndpoint(t *testing.T) {
+	existing := clusterHandoverTestObject(
+		"infrastructure.cluster.x-k8s.io/v1alpha1", "HuaweiCloudCluster", capiNamespace, "huaweicloud",
+	)
+	existing.Object["spec"] = map[string]any{
+		"controlPlaneEndpoint": map[string]any{"host": "192.0.2.10", "port": int64(6443)},
+	}
+	base := fakeReconciler(t, existing)
+	reconciler := &ClusterReconciler{BaseWithReader: base.BaseWithReader}
+	reconciler.APIReader = reconciler.Client
+
+	desired := clusterHandoverTestObject(
+		"infrastructure.cluster.x-k8s.io/v1alpha1", "HuaweiCloudCluster", capiNamespace, "huaweicloud",
+	)
+	desired.Object["spec"] = nil
+	require.NoError(t, reconciler.applyClusterObject(t.Context(), desired))
+
+	actual := clusterHandoverTestObject(
+		"infrastructure.cluster.x-k8s.io/v1alpha1", "HuaweiCloudCluster", capiNamespace, "huaweicloud",
+	)
+	require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(actual), actual))
+	host, _, err := unstructured.NestedString(actual.Object, "spec", "controlPlaneEndpoint", "host")
+	require.NoError(t, err)
+	assert.Equal(t, "192.0.2.10", host)
 }
 
 func TestRemoveStaleProviderCredentials(t *testing.T) {
@@ -214,18 +258,27 @@ func TestRemoveStaleProviderCredentials(t *testing.T) {
 	err := reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(stale), &corev1.Secret{})
 	require.True(t, apierrors.IsNotFound(err))
 
+	// An empty desired name means the provider stopped shipping credentials.yaml, so the Secret
+	// rendered from it is stale too: nothing recreates it, and leaving it behind keeps a live
+	// cloud account in the cluster. Secrets without the label stay, they are not this sweep's.
 	require.NoError(t, reconciler.removeStaleProviderCredentials(t.Context(), ""))
-	err = reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(current), &corev1.Secret{})
-	require.True(t, apierrors.IsNotFound(err))
+	require.True(t, apierrors.IsNotFound(
+		reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(current), &corev1.Secret{})))
+	require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(unrelated), &corev1.Secret{}))
 }
 
-func TestEnsureCloudClusterUsesSharedProviderContract(t *testing.T) {
+// exampleProviderFixture is a minimal but complete provider registration: the cluster and
+// credentials templates, the cluster configuration and the UUID every render reads.
+func exampleProviderFixture() (*corev1.Secret, *corev1.Secret, *corev1.ConfigMap, *corev1.Secret) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.CloudProviderSecretName, Namespace: common.CloudProviderSecretNamespace,
 		},
 		Data: map[string][]byte{
 			"type":                            []byte("example"),
+			"region":                          []byte("test-region"),
+			"zones":                           []byte(`["test-zone"]`),
+			common.InstanceClassKindKey:       []byte("ExampleInstanceClass"),
 			"capiClusterName":                 []byte("example"),
 			"capiClusterKind":                 []byte("ExampleCluster"),
 			"capiClusterAPIVersion":           []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
@@ -271,12 +324,18 @@ template: |
   apiVersion: v1
   kind: Secret
   metadata:
-    name: example-credentials
+    name: capi-user-credentials
   data:
     region: {{ .provider.region | b64enc }}
 `),
 		},
 	}
+
+	return registration, clusterConfiguration, clusterUUID, providerTemplates
+}
+
+func TestEnsureCloudClusterUsesSharedProviderContract(t *testing.T) {
+	registration, clusterConfiguration, clusterUUID, providerTemplates := exampleProviderFixture()
 
 	base := fakeReconciler(t, registration, clusterConfiguration, clusterUUID, providerTemplates)
 	reconciler := &ClusterReconciler{BaseWithReader: base.BaseWithReader}
@@ -288,7 +347,7 @@ template: |
 
 	credentials := &corev1.Secret{}
 	require.NoError(t, reconciler.Client.Get(t.Context(), types.NamespacedName{
-		Name: "example-credentials", Namespace: capiNamespace,
+		Name: cloudprovider.CAPIClusterCredentialsSecretName, Namespace: capiNamespace,
 	}, credentials))
 	assert.Equal(t, []byte("test"), credentials.Data["region"])
 
@@ -308,7 +367,7 @@ template: |
 	require.NoError(t, reconciler.Client.Delete(t.Context(), credentials))
 	require.NoError(t, reconciler.ensureCloudCluster(t.Context(), configuration))
 	require.NoError(t, reconciler.Client.Get(t.Context(), types.NamespacedName{
-		Name: "example-credentials", Namespace: capiNamespace,
+		Name: cloudprovider.CAPIClusterCredentialsSecretName, Namespace: capiNamespace,
 	}, credentials))
 	for _, object := range managedObjects {
 		require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(object), object))
@@ -321,7 +380,7 @@ template: |
   apiVersion: v1
   kind: Secret
   metadata:
-    name: example-credentials
+    name: capi-user-credentials
   data:
     region: {{ "changed" | b64enc }}
 `)
@@ -333,11 +392,50 @@ template: |
     name: wrong-name
 `)
 	require.NoError(t, reconciler.Client.Update(t.Context(), currentTemplates))
+	for _, object := range managedObjects[1:] {
+		require.NoError(t, reconciler.Client.Delete(t.Context(), object))
+	}
 	require.ErrorContains(t, reconciler.ensureCloudCluster(t.Context(), configuration), "registration declares")
+	for _, object := range managedObjects[1:] {
+		require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(object), object),
+			"a broken provider template must not block common CAPI resources")
+	}
 	require.NoError(t, reconciler.Client.Get(t.Context(), types.NamespacedName{
-		Name: "example-credentials", Namespace: capiNamespace,
+		Name: cloudprovider.CAPIClusterCredentialsSecretName, Namespace: capiNamespace,
 	}, credentials))
 	assert.Equal(t, []byte("test"), credentials.Data["region"], "invalid infrastructure must not partially update credentials")
+}
+
+// A provider that stops shipping capi/credentials.yaml leaves its Secret behind with a live cloud
+// account in it, and nothing else in the cluster owns that Secret.
+func TestEnsureCloudClusterRemovesCredentialsTheProviderStoppedShipping(t *testing.T) {
+	registration, clusterConfiguration, clusterUUID, providerTemplates := exampleProviderFixture()
+
+	base := fakeReconciler(t, registration, clusterConfiguration, clusterUUID, providerTemplates)
+	reconciler := &ClusterReconciler{BaseWithReader: base.BaseWithReader}
+	reconciler.APIReader = reconciler.Client
+
+	configuration, err := common.ReadClusterConfiguration(t.Context(), reconciler.Client)
+	require.NoError(t, err)
+	require.NoError(t, reconciler.ensureCloudCluster(t.Context(), configuration))
+
+	credentialsKey := types.NamespacedName{
+		Name: cloudprovider.CAPIClusterCredentialsSecretName, Namespace: capiNamespace,
+	}
+	require.NoError(t, reconciler.Client.Get(t.Context(), credentialsKey, &corev1.Secret{}))
+
+	currentTemplates := &corev1.Secret{}
+	require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(providerTemplates), currentTemplates))
+	delete(currentTemplates.Data, cloudprovider.CAPICredentialsTemplateKey)
+	require.NoError(t, reconciler.Client.Update(t.Context(), currentTemplates))
+
+	require.NoError(t, reconciler.ensureCloudCluster(t.Context(), configuration))
+	require.True(t, apierrors.IsNotFound(reconciler.Client.Get(t.Context(), credentialsKey, &corev1.Secret{})),
+		"the Secret rendered from a credentials.yaml that is gone must go with it")
+
+	cluster := clusterHandoverTestObject("infrastructure.cluster.x-k8s.io/v1alpha1", "ExampleCluster", capiNamespace, "example")
+	require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(cluster), cluster),
+		"the infrastructure cluster does not depend on credentials.yaml")
 }
 
 func TestDeckhouseControlPlaneObject(t *testing.T) {

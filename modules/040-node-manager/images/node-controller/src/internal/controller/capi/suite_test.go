@@ -135,6 +135,11 @@ var _ = BeforeSuite(func() {
 	cloudProvider.Labels = map[string]string{common.CloudProviderRegistrationLabel: ""}
 	cloudProvider.Data = map[string][]byte{
 		"type": []byte(`"dvp"`),
+		// The provider subtree and region are part of the core contract every provider
+		// publishes, and the rendering paths validate it. Without them the suite would
+		// exercise a registration production never produces.
+		"region": []byte(`"default"`),
+		"dvp":    []byte(`{}`),
 		// Raw, unquoted, exactly as the registration template's b64enc writes it.
 		"instanceClassKind":             []byte("DVPInstanceClass"),
 		"instanceClassAPIVersion":       []byte("v1alpha1"),

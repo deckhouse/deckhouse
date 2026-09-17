@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -50,8 +52,6 @@ var zoneHashedSecretName = regexp.MustCompile(`-[0-9a-f]{8}$`)
 type keepResource struct {
 	Group    string
 	Resource string
-	// version is used when the provider registration declares the exact served version.
-	version string
 	// versionPreference is tried in order; empty falls back to storedVersionPreference.
 	versionPreference []string
 	// keepName picks the objects of a resource whose namespace is shared with other
@@ -68,7 +68,9 @@ var capiResources = []keepResource{
 	// The bootstrap Secrets are node-controller's from 1.79 on. This hook runs before
 	// helm, so on the upgrade that stops rendering them the annotation is already there
 	// and the release leaves them alone. Remove together with this hook.
-	{Group: "", Resource: "secrets", keepName: IsBootstrapSecretName},
+	{Group: "", Resource: "secrets", keepName: func(name string) bool {
+		return IsBootstrapSecretName(name) || name == capiCredentialsSecretName
+	}},
 }
 
 var crdGVR = schema.GroupVersionResource{
@@ -78,6 +80,13 @@ var crdGVR = schema.GroupVersionResource{
 }
 
 var storedVersionPreference = []string{"v1beta1", "v1beta2"}
+
+// A conversion webhook is unavailable while its Deployment restarts, which is seconds, and this
+// upgrade is what restarts it. Retrying costs a short wait; giving up costs the annotation.
+var (
+	conversionRetryAttempts = 5
+	conversionRetryDelay    = 2 * time.Second
+)
 
 var mcmStoredVersions = []string{"v1alpha1"}
 
@@ -117,11 +126,6 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 					versionPreference: []string{"v1alpha1"},
 					keepName:          keepExactName(clusterName + "-control-plane"),
 				},
-				keepResource{
-					Group:    "",
-					Resource: "secrets",
-					keepName: keepExactName(capiCredentialsSecretName),
-				},
 			)
 
 			apiVersion := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterAPIVersion").String()
@@ -145,23 +149,24 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 	}
 
 	for _, res := range resources {
-		version, ok, err := keepResourceVersion(ctx, dynClient, res)
+		versions, err := keepResourceVersions(ctx, dynClient, res)
 		if err != nil {
 			return fmt.Errorf("resolve stored version for %s: %w", res.Resource, err)
 		}
-		if !ok {
+		// The CRD is not installed, so the cluster holds no object of this resource and
+		// there is nothing for Helm to prune. This is the only skip taken on faith; every
+		// other one below is proven against the objects themselves.
+		if len(versions) == 0 {
 			continue
 		}
-		gvr := schema.GroupVersionResource{Group: res.Group, Version: version, Resource: res.Resource}
 
-		list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(ctx, metav1.ListOptions{LabelSelector: helmManagedSelector})
+		version, list, err := listHelmManaged(ctx, dynClient, input.Logger, res, versions)
 		if err != nil {
-			if isConversionUnavailable(err) {
-				input.Logger.Info("skipping resource, conversion webhook unavailable", slog.String("resource", res.Resource), slog.String("version", version))
-				continue
-			}
-			return fmt.Errorf("list %s/%s: %w", res.Resource, version, err)
+			// Fail closed: Helm prunes whatever this hook failed to annotate on the very next
+			// upgrade, so a read error must stop the release instead of being swallowed.
+			return fmt.Errorf("list %s: %w", res.Resource, err)
 		}
+		gvr := schema.GroupVersionResource{Group: res.Group, Version: version, Resource: res.Resource}
 
 		for _, item := range list.Items {
 			if res.keepName != nil && !res.keepName(item.GetName()) {
@@ -177,6 +182,12 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 				patch,
 				metav1.PatchOptions{},
 			); err != nil {
+				// An object listed a moment ago can be gone by now: these are exactly the
+				// objects node-controller garbage-collects when a NodeGroup is deleted. What
+				// no longer exists cannot be pruned, so it is not this hook's problem.
+				if apierrors.IsNotFound(err) {
+					continue
+				}
 				return fmt.Errorf("patch %s/%s: %w", res.Resource, item.GetName(), err)
 			}
 			input.Logger.Info("stamped keep policy", slog.String("resource", res.Resource), slog.String("name", item.GetName()))
@@ -251,61 +262,177 @@ func resolveKeepResourceForGVK(
 		if !found || plural == "" {
 			return keepResource{}, false, fmt.Errorf("CRD %s has no spec.names.plural", crd.GetName())
 		}
+		// storedVersions is empty on a CRD the provider module has just applied, before anything
+		// was written through it. keepResourceVersions falls back to the served versions, so this
+		// must not fail the release.
+		storedVersions, _, err := unstructured.NestedStringSlice(crd.Object, "status", "storedVersions")
+		if err != nil {
+			return keepResource{}, false, fmt.Errorf("read stored versions from CRD %s: %w", crd.GetName(), err)
+		}
+		preference := []string{gv.Version}
+		for _, version := range storedVersions {
+			if version != gv.Version {
+				preference = append(preference, version)
+			}
+		}
 
 		return keepResource{
-			Group:    gv.Group,
-			Resource: plural,
-			version:  gv.Version,
-			keepName: keepExactName(name),
+			Group:             gv.Group,
+			Resource:          plural,
+			versionPreference: preference,
+			keepName:          keepExactName(name),
 		}, true, nil
 	}
 
 	return keepResource{}, false, nil
 }
 
-// keepResourceVersion resolves the version to patch a resource through. A core
-// resource has no CRD to read a stored version from, and v1 is the only version
-// the group has ever served.
-func keepResourceVersion(ctx context.Context, dynClient dynamic.Interface, res keepResource) (string, bool, error) {
-	if res.version != "" {
-		return res.version, true, nil
+// listHelmManaged lists the Helm-owned objects of a resource through the first version that
+// answers, and reports which one that was. Reading a custom resource at any version but the
+// stored one goes through the provider's conversion webhook, which this very upgrade restarts, so
+// the remaining versions and then further attempts are tried. When none of them answers this
+// returns an error rather than an empty list: a resource nobody could read is one nobody protected.
+func listHelmManaged(
+	ctx context.Context,
+	dynClient dynamic.Interface,
+	logger go_hook.Logger,
+	res keepResource,
+	versions []string,
+) (string, *unstructured.UnstructuredList, error) {
+	var lastErr error
+	for attempt := 1; attempt <= conversionRetryAttempts; attempt++ {
+		for _, version := range versions {
+			gvr := schema.GroupVersionResource{Group: res.Group, Version: version, Resource: res.Resource}
+			list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(ctx, metav1.ListOptions{LabelSelector: helmManagedSelector})
+			if err == nil {
+				return version, list, nil
+			}
+			if !isConversionUnavailable(res, err) {
+				return "", nil, fmt.Errorf("%s: %w", version, err)
+			}
+			lastErr = err
+		}
+		if attempt == conversionRetryAttempts {
+			break
+		}
+		logger.Warn("conversion webhook unavailable, retrying",
+			slog.String("resource", res.Resource), slog.Any("versions", versions), slog.Int("attempt", attempt))
+		select {
+		case <-ctx.Done():
+			return "", nil, ctx.Err()
+		case <-time.After(conversionRetryDelay):
+		}
 	}
+	return "", nil, fmt.Errorf("conversion webhook unavailable on every version %v: %w", versions, lastErr)
+}
+
+// isConversionUnavailable reports the one failure that says nothing about the objects: the
+// provider's conversion webhook is restarting. It is only possible for a custom resource, so a
+// core resource never qualifies, and every other read failure is a real one.
+func isConversionUnavailable(res keepResource, err error) bool {
 	if res.Group == "" {
-		return "v1", true, nil
+		return false
+	}
+	if apierrors.IsServiceUnavailable(err) {
+		return true
+	}
+	message := err.Error()
+	return strings.Contains(message, "conversion webhook") || strings.Contains(message, "(re)initializing")
+}
+
+func keepResourceVersion(ctx context.Context, dynClient dynamic.Interface, res keepResource) (string, bool, error) {
+	versions, err := keepResourceVersions(ctx, dynClient, res)
+	if err != nil || len(versions) == 0 {
+		return "", false, err
+	}
+	return versions[0], true, nil
+}
+
+// keepResourceVersions returns the versions the resource's objects can be read through, best
+// first. An empty result means the CRD is not installed, the only case where skipping a resource
+// proves by itself that nothing is left unprotected.
+func keepResourceVersions(ctx context.Context, dynClient dynamic.Interface, res keepResource) ([]string, error) {
+	// A core resource has no CRD to read a stored version from, and v1 is the only version
+	// the group has ever served.
+	if res.Group == "" {
+		return []string{"v1"}, nil
 	}
 	preference := res.versionPreference
 	if len(preference) == 0 {
 		preference = storedVersionPreference
 	}
-	return pickStoredVersion(ctx, dynClient, res.Group, res.Resource, preference)
+	crd, err := dynClient.Resource(crdGVR).Get(ctx, res.Resource+"."+res.Group, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return orderedVersions(crd, preference)
+}
+
+func orderedVersions(crd *unstructured.Unstructured, preference []string) ([]string, error) {
+	stored, _, err := unstructured.NestedStringSlice(crd.Object, "status", "storedVersions")
+	if err != nil {
+		return nil, err
+	}
+	served, storage, err := servedVersions(crd)
+	if err != nil {
+		return nil, err
+	}
+	available := append(append([]string(nil), stored...), served...)
+
+	ordered := make([]string, 0, len(available))
+	add := func(version string) {
+		if version == "" || slices.Contains(ordered, version) {
+			return
+		}
+		ordered = append(ordered, version)
+	}
+	// Storage version first, ahead of the caller's preference: reading any other version routes
+	// through the provider's conversion webhook, which this very upgrade restarts. The preference
+	// decides everything the storage version cannot answer.
+	if slices.Contains(available, storage) {
+		add(storage)
+	}
+	for _, want := range preference {
+		if slices.Contains(available, want) {
+			add(want)
+		}
+	}
+	for _, version := range available {
+		add(version)
+	}
+	return ordered, nil
+}
+
+// servedVersions returns the versions the CRD serves, and the one it stores objects in.
+func servedVersions(crd *unstructured.Unstructured) ([]string, string, error) {
+	entries, _, err := unstructured.NestedSlice(crd.Object, "spec", "versions")
+	if err != nil {
+		return nil, "", err
+	}
+	names := make([]string, 0, len(entries))
+	storage := ""
+	for _, entry := range entries {
+		version, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _, _ := unstructured.NestedString(version, "name")
+		if name == "" {
+			continue
+		}
+		if isStorage, _, _ := unstructured.NestedBool(version, "storage"); isStorage {
+			storage = name
+		}
+		if served, _, _ := unstructured.NestedBool(version, "served"); served {
+			names = append(names, name)
+		}
+	}
+	return names, storage, nil
 }
 
 func pickStoredVersion(ctx context.Context, dynClient dynamic.Interface, group, resource string, preference []string) (string, bool, error) {
-	crd, err := dynClient.Resource(crdGVR).Get(ctx, resource+"."+group, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return "", false, nil
-		}
-		return "", false, err
-	}
-	stored, _, err := unstructured.NestedStringSlice(crd.Object, "status", "storedVersions")
-	if err != nil {
-		return "", false, err
-	}
-	for _, want := range preference {
-		for _, have := range stored {
-			if have == want {
-				return want, true, nil
-			}
-		}
-	}
-	return "", false, nil
-}
-
-func isConversionUnavailable(err error) bool {
-	if apierrors.IsServiceUnavailable(err) {
-		return true
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "conversion webhook") || strings.Contains(msg, "(re)initializing")
+	return keepResourceVersion(ctx, dynClient, keepResource{Group: group, Resource: resource, versionPreference: preference})
 }

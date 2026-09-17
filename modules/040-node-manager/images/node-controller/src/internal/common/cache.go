@@ -62,10 +62,7 @@ func CacheOptions() (cache.Options, client.Options) {
 	dnsServiceReq, _ := labels.NewRequirement("k8s-app", selection.In, []string{"kube-dns", "coredns"})
 	dnsServiceSelector := labels.NewSelector().Add(*dnsServiceReq)
 
-	apiserverPodSelector := labels.SelectorFromSet(labels.Set{
-		"component": "kube-apiserver",
-		"tier":      "control-plane",
-	})
+	apiserverPodSelector := labels.SelectorFromSet(APIServerPodLabels)
 
 	cacheOpts := cache.Options{
 		DefaultTransform: func(obj interface{}) (interface{}, error) {

@@ -18,9 +18,12 @@ The provider module puts the files into the `d8-cloud-provider-<type>-capi` Secr
 object. It also creates the generic CAPI `Cluster`, `DeckhouseControlPlane`, and
 `MachineHealthCheck` resources.
 
-The controller applies mutable provider resources with server-side apply. An existing
-`spec.controlPlaneEndpoint` is preserved: some infrastructure providers treat that field as
-set-once, while the discovered control-plane addresses can change later.
+The controller applies mutable provider resources with server-side apply. A live
+`spec.controlPlaneEndpoint` is preserved when the template renders none: most infrastructure
+providers fill that field in themselves, and applying an object without it would wipe what the
+provider discovered. A template that does render the endpoint owns it, and the rendered value
+wins on every apply: it comes from the apiserver addresses node-controller watches, so replacing
+a master updates it.
 
 ## File shape
 
@@ -44,10 +47,11 @@ the reconcile fail.
 `metadata.name` must match `capiClusterAPIVersion`, `capiClusterKind`, and `capiClusterName` from
 the provider registration Secret.
 
-`credentials.yaml` is optional and must render exactly one `v1/Secret`. Both objects must be in
+`credentials.yaml` is optional and must render exactly one `v1/Secret` named
+`capi-user-credentials`. The fixed name is part of the migration contract: the before-Helm hook
+must identify and protect the existing Secret before the old manifest is removed. Both objects must be in
 `d8-cloud-instance-manager`; node-controller fills that namespace when it is omitted. A Secret
-previously created from `credentials.yaml` is removed when the file disappears or starts rendering
-a Secret with another name.
+previously created from `credentials.yaml` is removed when the file disappears.
 
 ## Render context
 
@@ -94,5 +98,17 @@ common cluster facts.
 
 During upgrade, the before-Helm migration hook adds `helm.sh/resource-policy: keep` to existing
 resources before the old Helm templates disappear. ClusterReconciler applies the object under the
-`node-controller` field manager, removes Helm release ownership metadata, and keeps the same
-object UID. Provider-specific metadata and the keep annotation remain.
+`node-controller` field manager and keeps the same object UID. Provider-specific metadata, the
+keep annotation and Helm's own ownership metadata all remain.
+
+Keeping Helm's metadata is not what makes a rollback work: addon-operator upgrades releases with
+`TakeOwnership`, so Helm adopts a live object by kind and name and never reads that metadata.
+It is kept because nothing needs it removed, and because it truthfully describes an object Helm
+may own again.
+
+The keep annotation is stamped on every apply and never removed. Helm skips an annotated object
+both on prune and on uninstall, and node-controller does not delete these objects either, so
+disabling the module leaves them in the cluster — `capi-user-credentials` among them, with live
+cloud credentials in it. Prune compares against the previous release manifest, so the annotation
+only matters for the single upgrade that moves an object out of the chart: drop it together with
+`hooks/set_keep_policy_on_capi_resources.go`, which carries the same removal note.

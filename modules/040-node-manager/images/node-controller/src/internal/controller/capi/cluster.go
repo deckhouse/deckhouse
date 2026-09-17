@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -28,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -130,25 +130,14 @@ func apiServerPodEndpointChanged() predicate.Predicate {
 			if !newRelevant {
 				return false
 			}
-			return oldPod.Status.PodIP != newPod.Status.PodIP || podReady(oldPod) != podReady(newPod)
+			return oldPod.Status.PodIP != newPod.Status.PodIP || common.PodReady(oldPod) != common.PodReady(newPod)
 		},
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
 }
 
 func isAPIServerPod(object client.Object) bool {
-	return object.GetNamespace() == common.KubeSystemNamespace &&
-		object.GetLabels()["component"] == "kube-apiserver" &&
-		object.GetLabels()["tier"] == "control-plane"
-}
-
-func podReady(pod *corev1.Pod) bool {
-	for _, condition := range pod.Status.Conditions {
-		if condition.Type == corev1.PodReady {
-			return condition.Status == corev1.ConditionTrue
-		}
-	}
-	return false
+	return object.GetNamespace() == common.KubeSystemNamespace && common.IsAPIServerPod(object)
 }
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
@@ -159,24 +148,49 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl
 
 	staticErr := r.ensureStaticCluster(ctx, clusterConfig)
 	cloudErr := r.ensureCloudCluster(ctx, clusterConfig)
-	return ctrl.Result{RequeueAfter: clusterRepairInterval}, errors.Join(staticErr, cloudErr)
+	if err := errors.Join(staticErr, cloudErr); err != nil {
+		// A returned error is already requeued with backoff, and controller-runtime drops
+		// RequeueAfter when one is present. Returning both would read as a repair interval
+		// that does not exist.
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{RequeueAfter: clusterRepairInterval}, nil
 }
 
 func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfig common.ClusterConfiguration) error {
-	logger := log.FromContext(ctx)
-
 	source := cloudprovider.Source{Reader: r.Client}
-	provider, err := source.Load(ctx)
+	registration, err := source.LoadValidatedRegistration(ctx)
 	if errors.Is(err, cloudprovider.ErrNoCloudProvider) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	if !provider.Registration.HasCAPI() {
+	if !registration.HasCAPI() {
 		return nil
 	}
+	if err := registration.ValidateCAPI(); err != nil {
+		return err
+	}
 
+	// The common scaffolding is rendered from the registration and the cluster configuration
+	// alone, so it goes out first: a cluster whose UUID ConfigMap or prefix cannot be read yet
+	// still gets its Cluster, MachineHealthCheck and control plane.
+	commonErr := r.ensureCommonCloudClusterResources(ctx, registration, clusterConfig)
+
+	provider, err := source.LoadWithClusterConfiguration(ctx, clusterConfig)
+	if err != nil {
+		return errors.Join(commonErr, err)
+	}
+	providerErr := r.ensureProviderClusterResources(ctx, source, provider)
+	return errors.Join(commonErr, providerErr)
+}
+
+func (r *ClusterReconciler) ensureProviderClusterResources(
+	ctx context.Context,
+	source cloudprovider.Source,
+	provider cloudprovider.Provider,
+) error {
 	inputs, err := source.LoadCAPIClusterInputs(ctx, provider)
 	if err != nil {
 		return err
@@ -195,28 +209,42 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 	desiredCredentialsName := ""
 	if credentials != nil {
 		desiredCredentialsName = credentials.GetName()
+	}
+
+	// Cleanup runs before the applies, not after: a failed apply must not leave a Secret with the
+	// old provider's live cloud credentials.
+	var ensureErrors []error
+	if err := r.removeStaleProviderCredentials(ctx, desiredCredentialsName); err != nil {
+		ensureErrors = append(ensureErrors, err)
+	}
+	if credentials != nil {
 		if err := r.applyClusterObject(ctx, credentials); err != nil {
-			return fmt.Errorf("apply credentials Secret %s: %w", credentials.GetName(), err)
+			ensureErrors = append(ensureErrors, fmt.Errorf("apply credentials Secret %s: %w", credentials.GetName(), err))
 		}
 	}
 	if err := r.applyClusterObject(ctx, infrastructure); err != nil {
-		return fmt.Errorf("apply provider infrastructure %s %s: %w", infrastructure.GetKind(), infrastructure.GetName(), err)
+		ensureErrors = append(ensureErrors, fmt.Errorf("apply provider infrastructure %s %s: %w", infrastructure.GetKind(), infrastructure.GetName(), err))
 	}
-	if err := r.removeStaleProviderCredentials(ctx, desiredCredentialsName); err != nil {
-		return err
+	return errors.Join(ensureErrors...)
+}
+
+func (r *ClusterReconciler) ensureCommonCloudClusterResources(
+	ctx context.Context,
+	registration cloudprovider.Registration,
+	clusterConfig common.ClusterConfiguration,
+) error {
+	logger := log.FromContext(ctx)
+	clusterName := registration.CAPIClusterName
+	clusterKind := registration.CAPIClusterKind
+	infraGV, err := schema.ParseGroupVersion(registration.CAPIClusterAPIVersion)
+	if err != nil {
+		return fmt.Errorf("parse capiClusterAPIVersion %q: %w", registration.CAPIClusterAPIVersion, err)
 	}
 
-	clusterName := provider.Registration.CAPIClusterName
-	clusterKind := provider.Registration.CAPIClusterKind
-	infraAPIVersion := provider.Registration.CAPIClusterAPIVersion
+	var ensureErrors []error
 	controlPlane := deckhouseControlPlane(clusterName)
 	if err := r.applyClusterObject(ctx, controlPlane); err != nil {
-		return fmt.Errorf("apply DeckhouseControlPlane %s: %w", controlPlane.GetName(), err)
-	}
-
-	infraAPIGroup := infraAPIVersion
-	if idx := strings.LastIndex(infraAPIGroup, "/"); idx >= 0 {
-		infraAPIGroup = infraAPIGroup[:idx]
+		ensureErrors = append(ensureErrors, fmt.Errorf("apply DeckhouseControlPlane %s: %w", controlPlane.GetName(), err))
 	}
 
 	commonLabels := map[string]interface{}{
@@ -240,7 +268,7 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 				"serviceDomain": clusterConfig.ClusterDomain,
 			},
 			"infrastructureRef": map[string]interface{}{
-				"apiGroup": infraAPIGroup,
+				"apiGroup": infraGV.Group,
 				"kind":     clusterKind,
 				"name":     clusterName,
 			},
@@ -253,7 +281,7 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 	}}
 
 	if err := r.createIfNotExists(ctx, cluster); err != nil {
-		return fmt.Errorf("create Cluster: %w", err)
+		ensureErrors = append(ensureErrors, fmt.Errorf("create Cluster: %w", err))
 	}
 
 	mhc := &unstructured.Unstructured{Object: map[string]interface{}{
@@ -282,11 +310,14 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 	}}
 
 	if err := r.createIfNotExists(ctx, mhc); err != nil {
-		return fmt.Errorf("create MachineHealthCheck: %w", err)
+		ensureErrors = append(ensureErrors, fmt.Errorf("create MachineHealthCheck: %w", err))
 	}
 
-	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
-	return nil
+	result := errors.Join(ensureErrors...)
+	if result == nil {
+		logger.V(1).Info("ensured common cloud CAPI cluster resources", "cluster", clusterName)
+	}
+	return result
 }
 
 func renderProviderCredentials(
@@ -330,6 +361,12 @@ func renderProviderInfrastructure(
 	return object, nil
 }
 
+// removeStaleProviderCredentials deletes the managed credentials Secrets other than the one the
+// provider template renders. An empty desired name means the provider ships no credentials.yaml at
+// all, and then every managed Secret is stale: the label is set only by renderProviderCredentials,
+// and the provider template Secret is one Helm-rendered object, so a missing credentials.yaml is a
+// deliberate removal rather than a half-written Secret. Callers reach this only after both
+// templates rendered, so a render failure never looks like an empty name.
 func (r *ClusterReconciler) removeStaleProviderCredentials(ctx context.Context, desiredName string) error {
 	secrets := &corev1.SecretList{}
 	if err := r.APIReader.List(
@@ -365,8 +402,21 @@ func (r *ClusterReconciler) applyClusterObject(ctx context.Context, object *unst
 	} else if endpoint, found, err := unstructured.NestedMap(current.Object, "spec", "controlPlaneEndpoint"); err != nil {
 		return fmt.Errorf("read live controlPlaneEndpoint: %w", err)
 	} else if found {
-		if err := unstructured.SetNestedMap(object.Object, endpoint, "spec", "controlPlaneEndpoint"); err != nil {
-			return fmt.Errorf("preserve live controlPlaneEndpoint: %w", err)
+		// The live endpoint is kept only when the template rendered none: most providers fill it in
+		// via their own controller. OpenStack renders it from the apiserver addresses this
+		// controller watches, and there the rendered value must win — a stale one would pin the
+		// cluster to a master that is gone.
+		_, rendered, err := unstructured.NestedMap(object.Object, "spec", "controlPlaneEndpoint")
+		if err != nil {
+			return fmt.Errorf("read rendered controlPlaneEndpoint: %w", err)
+		}
+		if !rendered {
+			if err := ensureObjectSpecMap(object); err != nil {
+				return err
+			}
+			if err := unstructured.SetNestedMap(object.Object, endpoint, "spec", "controlPlaneEndpoint"); err != nil {
+				return fmt.Errorf("preserve live controlPlaneEndpoint: %w", err)
+			}
 		}
 	}
 
@@ -380,19 +430,22 @@ func (r *ClusterReconciler) applyClusterObject(ctx context.Context, object *unst
 		return err
 	}
 
-	current = &unstructured.Unstructured{}
-	current.SetGroupVersionKind(object.GroupVersionKind())
-	// Provider kinds are discovered at runtime, and credential Secrets do not match
-	// node-controller's cache label selector. Read the just-applied object directly.
-	if err := r.APIReader.Get(ctx, client.ObjectKeyFromObject(object), current); err != nil {
-		return fmt.Errorf("read applied object for Helm handover: %w", err)
+	return nil
+}
+
+func ensureObjectSpecMap(object *unstructured.Unstructured) error {
+	value, found, err := unstructured.NestedFieldNoCopy(object.Object, "spec")
+	if err != nil {
+		return fmt.Errorf("read rendered spec: %w", err)
 	}
-	original := current.DeepCopy()
-	if !removeLegacyHelmMetadata(current) {
+	if !found || value == nil {
+		if err := unstructured.SetNestedMap(object.Object, map[string]any{}, "spec"); err != nil {
+			return fmt.Errorf("initialize rendered spec: %w", err)
+		}
 		return nil
 	}
-	if err := r.Client.Patch(ctx, current, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("remove Helm ownership metadata: %w", err)
+	if _, ok := value.(map[string]any); !ok {
+		return fmt.Errorf("rendered spec is %T, want an object", value)
 	}
 	return nil
 }

@@ -18,7 +18,6 @@ package capi
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -186,17 +185,13 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 // Deleting them right away (rather than waiting for the Machines, as MCM MachineClasses must)
 // matches what helm did: an infrastructure template is read when a Machine is created, never
 // during its deletion.
-func (r *MachineDeploymentReconciler) deleteInfraMachineTemplates(ctx context.Context, ngName string) error {
+func (r *MachineDeploymentReconciler) deleteInfraMachineTemplates(
+	ctx context.Context,
+	ngName string,
+	registration cloudprovider.Registration,
+) error {
 	logger := log.FromContext(ctx)
 
-	provider, err := (cloudprovider.Source{Reader: r.Client}).Load(ctx)
-	if errors.Is(err, cloudprovider.ErrNoCloudProvider) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	registration := provider.Registration
 	if registration.CAPIMachineTemplateKind == "" || registration.CAPIMachineTemplateAPIVersion == "" {
 		return nil
 	}
