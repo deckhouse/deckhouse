@@ -179,11 +179,9 @@ func TestNSPRStatusIsNotPublishedFromAFleetThatCouldNotBeRead(t *testing.T) {
 	require.Equal(t, "read-only file system", fresh.Status.FailureMessage)
 }
 
-// Nobody has reported yet, which is Ready with no applied nodes and not
-// Degraded: a rollout that painted every object red for a minute would teach an
-// operator to ignore the colour. And the pass runs once a minute over every
-// object in the cluster, so a status recomputed identically must not be written:
-// each write is a resourceVersion bump that wakes every watcher of the kind.
+// Nobody has reported yet is Ready with no applied nodes, not Degraded: painting
+// every object red for a minute teaches an operator to ignore the colour. And an
+// identical status is not rewritten: each write wakes every watcher of the kind.
 func TestNSPRStatusSettlesAndIsNotRewritten(t *testing.T) {
 	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
 	cl := fake.NewClientBuilder().
