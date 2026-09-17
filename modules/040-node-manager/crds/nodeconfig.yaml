@@ -942,6 +942,8 @@ spec:
                 - Degraded
                 type: string
               staticPods:
+                description: StaticPods is one entry per spec.staticPods item the
+                  node wrote or failed to.
                 items:
                   description: StaticPodStatus is the outcome of one static pod on
                     the node.
