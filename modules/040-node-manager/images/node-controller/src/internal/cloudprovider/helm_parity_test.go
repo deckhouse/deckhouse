@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/machinetemplate"
 )
@@ -87,14 +88,23 @@ func TestClusterTemplatesMatchHelm(t *testing.T) {
 			require.NoError(t, err)
 			addLegacyModuleLabels(actual.GetLabels(), actual.SetLabels)
 
+			requireRecordedInputs(t, fixture, registration, data)
+
 			expected := readGoldenObject(t, fixture.name, "cluster.yaml")
+			if fixture.name == "huaweicloud" {
+				// The frozen Helm output had `spec: null`. The contract deliberately renders an
+				// empty object so node-controller can preserve the live controlPlaneEndpoint.
+				// See the README next to the goldens for why the golden is never edited to match.
+				expected.Object["spec"] = map[string]any{}
+			}
 			require.Equal(t, expected.Object, actual.Object)
 
 			credentialsPath := filepath.Join(repositoryRoot, fixture.path, "capi/credentials.yaml")
-			if _, err := os.Stat(credentialsPath); os.IsNotExist(err) {
+			_, statErr := os.Stat(credentialsPath)
+			if os.IsNotExist(statErr) {
 				return
 			}
-			require.NoError(t, err)
+			require.NoError(t, statErr)
 			credentials, err := newCredentialsTemplate(readFixtureFile(t, fixture.path, "capi/credentials.yaml"))
 			require.NoError(t, err)
 			actualSecret, err := credentials.Render(data)
@@ -120,7 +130,7 @@ func TestClusterTemplatesMatchHelm(t *testing.T) {
 	}
 }
 
-func TestOpenStackClusterTemplateNeedsEndpointWhenFloatingIPIsDisabled(t *testing.T) {
+func TestOpenStackClusterTemplateToleratesMissingEndpoint(t *testing.T) {
 	registration := Registration{
 		CAPIClusterName:       "openstack",
 		CAPIClusterKind:       "OpenStackCluster",
@@ -140,15 +150,61 @@ func TestOpenStackClusterTemplateNeedsEndpointWhenFloatingIPIsDisabled(t *testin
 		Cluster: machinetemplate.ClusterFacts{Name: "openstack", Namespace: capiNamespace},
 	}
 
-	_, err = template.Render(data)
-	require.ErrorContains(t, err, "controlPlane")
-
-	data.Provider["apiServerFloatingIP"] = true
 	object, err := template.Render(data)
 	require.NoError(t, err)
 	_, found, err := unstructured.NestedMap(object.Object, "spec", "controlPlaneEndpoint")
 	require.NoError(t, err)
 	require.False(t, found)
+	disabled, found, err := unstructured.NestedBool(object.Object, "spec", "disableAPIServerFloatingIP")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.True(t, disabled)
+
+	data.Provider["apiServerFloatingIP"] = true
+	object, err = template.Render(data)
+	require.NoError(t, err)
+	_, found, err = unstructured.NestedMap(object.Object, "spec", "controlPlaneEndpoint")
+	require.NoError(t, err)
+	require.False(t, found)
+	// The Standard-like layout keeps the floating IP, and the field must be absent rather than
+	// false: CAPO rejects disableAPIServerFloatingIP=false together with disableExternalNetwork.
+	_, found, err = unstructured.NestedBool(object.Object, "spec", "disableAPIServerFloatingIP")
+	require.NoError(t, err)
+	require.False(t, found)
+}
+
+// requireRecordedInputs pins every golden to the inputs it was rendered from. The files under
+// testdata/helm are frozen output of a deleted chart and cannot be re-rendered, so this is what
+// catches a changed fixture whose inputs.yaml was not updated to match. Regenerate with
+// UPDATE_PARITY_INPUTS=1 go test ./internal/cloudprovider/.
+func requireRecordedInputs(t *testing.T, fixture helmClusterFixture, registration Registration, data RenderData) {
+	t.Helper()
+
+	recorded, err := yaml.Marshal(map[string]any{
+		"module": fixture.path,
+		"registration": map[string]any{
+			"capiClusterName":       registration.CAPIClusterName,
+			"capiClusterKind":       registration.CAPIClusterKind,
+			"capiClusterAPIVersion": registration.CAPIClusterAPIVersion,
+		},
+		"renderData": map[string]any{
+			"provider":     fixture.provider,
+			"cluster":      map[string]any{"name": data.Cluster.Name, "namespace": data.Cluster.Namespace},
+			"prefix":       data.Prefix,
+			"controlPlane": []map[string]any{{"host": data.ControlPlane[0].Host, "port": data.ControlPlane[0].Port}},
+		},
+	})
+	require.NoError(t, err)
+
+	path := filepath.Join("testdata", "helm", fixture.name, "inputs.yaml")
+	if os.Getenv("UPDATE_PARITY_INPUTS") != "" {
+		require.NoError(t, os.WriteFile(path, recorded, 0o644))
+		return
+	}
+	expected, err := os.ReadFile(path)
+	require.NoError(t, err, "every golden records the inputs it was rendered from")
+	require.Equal(t, string(expected), string(recorded),
+		"the fixture no longer matches %s; rerun with UPDATE_PARITY_INPUTS=1 and check the golden still holds", path)
 }
 
 func readFixtureFile(t *testing.T, providerPath, name string) []byte {

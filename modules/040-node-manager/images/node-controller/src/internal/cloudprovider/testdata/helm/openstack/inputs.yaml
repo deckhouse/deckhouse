@@ -1,0 +1,27 @@
+module: ee/modules/030-cloud-provider-openstack
+registration:
+  capiClusterAPIVersion: infrastructure.cluster.x-k8s.io/v1beta1
+  capiClusterKind: OpenStackCluster
+  capiClusterName: openstack
+renderData:
+  cluster:
+    name: openstack
+    namespace: d8-cloud-instance-manager
+  controlPlane:
+  - host: 192.0.2.10
+    port: 6443
+  prefix: ""
+  provider:
+    apiServerFloatingIP: false
+    connection:
+      authURL: https://keystone.example/v3
+      caCert: test-ca
+      domainName: Default
+      password: cloud-password
+      region: RegionOne
+      tenantName: project-name
+      username: cloud-user
+    externalNetworkNames:
+    - public
+    internalNetworkNames:
+    - internal

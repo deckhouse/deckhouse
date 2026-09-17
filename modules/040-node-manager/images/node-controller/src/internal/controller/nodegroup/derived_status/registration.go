@@ -22,4 +22,7 @@ import "github.com/deckhouse/node-controller/internal/cloudprovider"
 // cloud-provider input contract.
 type CloudProviderRegistration = cloudprovider.Registration
 
-var DecodeRegistration = cloudprovider.DecodeRegistration
+func DecodeRegistration(data map[string][]byte) CloudProviderRegistration {
+	registration, _ := cloudprovider.DecodeRegistration(data)
+	return registration
+}

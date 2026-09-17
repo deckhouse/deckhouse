@@ -272,12 +272,15 @@ rolloutFields:
 			Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
 		}
 
+		// The suite publishes an empty provider subtree, and the registration contract requires
+		// the key to be there. Deleting it instead of restoring it left every spec that follows
+		// reconciling against an invalid registration, with no MachineDeployment rendered at all.
 		clearProviderConfig := func() {
 			secret := &corev1.Secret{}
 			Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
 				Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
 			}, secret)).To(Succeed())
-			delete(secret.Data, "dvp")
+			secret.Data["dvp"] = []byte("{}")
 			Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
 		}
 

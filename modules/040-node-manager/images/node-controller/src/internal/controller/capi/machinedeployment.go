@@ -214,14 +214,6 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		// Both engines render from the InstanceClass, and the version it is read through decides
-		// the checksum that names the template. Guessing one would rename an immutable template
-		// and roll every machine in the NodeGroup, so wait instead: the provider secret is
-		// watched, and publishing the version re-enqueues this NodeGroup.
-		if provider.Registration.InstanceClassAPIVersion == "" {
-			logger.V(1).Info("skipping: instanceClassAPIVersion is not published yet")
-			return ctrl.Result{RequeueAfter: resyncInterval}, nil
-		}
 		// Resolved once here and handed down: the engine branch and the rendered element must
 		// agree within one pass, and the snapshot behind ResolveNodeGroup already carries it.
 		ds := &derived_status.Service{Client: r.Client}
@@ -307,19 +299,19 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 		logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
 	}
 
-	if err := r.deleteInfraMachineTemplates(ctx, ngName); err != nil {
-		return false, err
-	}
-
-	provider, err := (cloudprovider.Source{Reader: r.Client}).Load(ctx)
+	registration, err := (cloudprovider.Source{Reader: r.Client}).LoadRegistration(ctx)
 	if errors.Is(err, cloudprovider.ErrNoCloudProvider) {
-		provider = cloudprovider.Provider{}
+		registration = cloudprovider.Registration{}
 		err = nil
 	}
 	if err != nil {
 		return false, err
 	}
-	machineClassKind := provider.Registration.MachineClassKind
+	if err := r.deleteInfraMachineTemplates(ctx, ngName, registration); err != nil {
+		return false, err
+	}
+
+	machineClassKind := registration.MachineClassKind
 	staleMCMs, err := r.pruneStaleMCMs(ctx, r.APIReader, ngName, machineClassKind, nil, nil)
 	if err != nil {
 		return false, err

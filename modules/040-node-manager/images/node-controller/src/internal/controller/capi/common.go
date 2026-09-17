@@ -38,8 +38,8 @@ const (
 	machineTemplateContractKey      = cloudprovider.CAPIMachineTemplateKey
 	clusterConfigSecretName         = common.ClusterConfigSecretName
 	clusterConfigSecretNamespace    = common.ClusterConfigSecretNamespace
-	clusterUUIDConfigMapName        = "d8-cluster-uuid"
-	clusterUUIDConfigMapNS          = "kube-system"
+	clusterUUIDConfigMapName        = common.ClusterUUIDConfigMapName
+	clusterUUIDConfigMapNS          = common.KubeSystemNamespace
 )
 
 type BaseWithReader struct {

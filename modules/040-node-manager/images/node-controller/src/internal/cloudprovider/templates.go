@@ -187,6 +187,12 @@ func (t *CredentialsTemplate) Render(data RenderData) (*corev1.Secret, error) {
 	if object.GetAPIVersion() != "v1" || object.GetKind() != "Secret" {
 		return nil, fmt.Errorf("credentials.yaml renders %s/%s, want v1/Secret", object.GetAPIVersion(), object.GetKind())
 	}
+	if object.GetName() != CAPIClusterCredentialsSecretName {
+		return nil, fmt.Errorf(
+			"credentials.yaml renders Secret %q, contract requires %q",
+			object.GetName(), CAPIClusterCredentialsSecretName,
+		)
+	}
 
 	secret := &corev1.Secret{}
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(object.Object, secret); err != nil {

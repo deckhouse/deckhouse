@@ -1,0 +1,14 @@
+module: ee/modules/030-cloud-provider-huaweicloud
+registration:
+  capiClusterAPIVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  capiClusterKind: HuaweiCloudCluster
+  capiClusterName: huaweicloud
+renderData:
+  cluster:
+    name: huaweicloud
+    namespace: d8-cloud-instance-manager
+  controlPlane:
+  - host: 192.0.2.10
+    port: 6443
+  prefix: ""
+  provider: {}

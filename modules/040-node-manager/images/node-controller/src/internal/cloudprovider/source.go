@@ -32,10 +32,11 @@ import (
 )
 
 const (
-	ProviderTemplateSecretNamespace = common.KubeSystemNamespace
-	CAPIMachineTemplateKey          = "template.yaml"
-	CAPIClusterTemplateKey          = "cluster.yaml"
-	CAPICredentialsTemplateKey      = "credentials.yaml"
+	ProviderTemplateSecretNamespace  = common.KubeSystemNamespace
+	CAPIMachineTemplateKey           = "template.yaml"
+	CAPIClusterTemplateKey           = "cluster.yaml"
+	CAPICredentialsTemplateKey       = "credentials.yaml"
+	CAPIClusterCredentialsSecretName = "capi-user-credentials"
 
 	engineCAPI = "capi"
 	engineMCM  = "mcm"
@@ -46,8 +47,8 @@ const (
 	machineClassChecksumKey  = "machine-class.checksum"
 	machineClassConfigKey    = "config-for-machine-controller-manager.yaml"
 
-	clusterUUIDConfigMapName = "d8-cluster-uuid"
-	clusterUUIDConfigMapKey  = "cluster-uuid"
+	clusterUUIDConfigMapName = common.ClusterUUIDConfigMapName
+	clusterUUIDConfigMapKey  = common.ClusterUUIDConfigMapKey
 )
 
 var ErrNoCloudProvider = errors.New("no cloud provider registered")
@@ -95,25 +96,37 @@ type MCMInputs struct {
 // Load reads inputs shared by both controllers. It deliberately does not parse a particular
 // template: callers load the machine or cluster section separately.
 func (s Source) Load(ctx context.Context) (Provider, error) {
-	secret := &corev1.Secret{}
-	if err := s.Reader.Get(ctx, types.NamespacedName{
-		Name: common.CloudProviderSecretName, Namespace: common.CloudProviderSecretNamespace,
-	}, secret); err != nil {
-		if apierrors.IsNotFound(err) {
-			return Provider{}, ErrNoCloudProvider
-		}
-		return Provider{}, fmt.Errorf("get cloud-provider registration secret: %w", err)
-	}
-
-	registration := DecodeRegistration(secret.Data)
-	if registration.Type == "" {
-		return Provider{}, errors.New("cloud-provider registration: type is empty")
+	registration, legacyValues, err := s.loadRegistration(ctx)
+	if err != nil {
+		return Provider{}, err
 	}
 
 	configuration, err := common.ReadClusterConfiguration(ctx, s.Reader)
 	if err != nil {
 		return Provider{}, err
 	}
+	return s.loadWithClusterConfiguration(ctx, registration, legacyValues, configuration)
+}
+
+// LoadWithClusterConfiguration is Load for a caller that already read the cluster configuration
+// for its own resources. It avoids a second read while keeping registration validation here.
+func (s Source) LoadWithClusterConfiguration(
+	ctx context.Context,
+	configuration common.ClusterConfiguration,
+) (Provider, error) {
+	registration, legacyValues, err := s.loadRegistration(ctx)
+	if err != nil {
+		return Provider{}, err
+	}
+	return s.loadWithClusterConfiguration(ctx, registration, legacyValues, configuration)
+}
+
+func (s Source) loadWithClusterConfiguration(
+	ctx context.Context,
+	registration Registration,
+	legacyValues map[string]any,
+	configuration common.ClusterConfiguration,
+) (Provider, error) {
 	if configuration.PodSubnetCIDR == "" {
 		return Provider{}, errors.New("cluster configuration has no podSubnetCIDR")
 	}
@@ -136,14 +149,61 @@ func (s Source) Load(ctx context.Context) (Provider, error) {
 			PodSubnet: configuration.PodSubnetCIDR,
 		},
 		Prefix:       prefix,
-		LegacyValues: decodeSecretData(secret.Data),
+		LegacyValues: legacyValues,
 	}, nil
+}
+
+// LoadRegistration reads the registration without cluster facts and without validating it, so a
+// missing cluster UUID or an incomplete registration cannot leave a deleted NodeGroup stuck behind
+// its finalizer: removing resources needs machineClassKind and the machine template GVK, nothing else.
+func (s Source) LoadRegistration(ctx context.Context) (Registration, error) {
+	registration, _, err := s.readRegistration(ctx)
+	return registration, err
+}
+
+// LoadValidatedRegistration is the validated registration alone, for callers rendering the common
+// CAPI scaffolding (Cluster, MachineHealthCheck), which read no cluster facts: an unstamped cluster
+// UUID or an unresolvable prefix stops the provider resources, not these.
+func (s Source) LoadValidatedRegistration(ctx context.Context) (Registration, error) {
+	registration, _, err := s.loadRegistration(ctx)
+	return registration, err
+}
+
+// loadRegistration is readRegistration for the rendering paths, where an incomplete registration
+// must stop the reconcile instead of producing half-rendered provider resources.
+func (s Source) loadRegistration(ctx context.Context) (Registration, map[string]any, error) {
+	registration, legacyValues, err := s.readRegistration(ctx)
+	if err != nil {
+		return Registration{}, nil, err
+	}
+	if err := registration.ValidateCore(); err != nil {
+		return Registration{}, nil, err
+	}
+	return registration, legacyValues, nil
+}
+
+func (s Source) readRegistration(ctx context.Context) (Registration, map[string]any, error) {
+	secret := &corev1.Secret{}
+	if err := s.Reader.Get(ctx, types.NamespacedName{
+		Name: common.CloudProviderSecretName, Namespace: common.CloudProviderSecretNamespace,
+	}, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return Registration{}, nil, ErrNoCloudProvider
+		}
+		return Registration{}, nil, fmt.Errorf("get cloud-provider registration secret: %w", err)
+	}
+
+	registration, err := DecodeRegistration(secret.Data)
+	if err != nil {
+		return Registration{}, nil, err
+	}
+	return registration, decodeSecretData(secret.Data), nil
 }
 
 func (s Source) LoadCAPIMachineInputs(ctx context.Context, provider Provider) (CAPIMachineInputs, error) {
 	registration := provider.Registration
-	if registration.CAPIMachineTemplateKind == "" || registration.CAPIMachineTemplateAPIVersion == "" {
-		return CAPIMachineInputs{}, errors.New("cloud-provider registration has no CAPI MachineTemplate kind or apiVersion")
+	if err := registration.ValidateCAPI(); err != nil {
+		return CAPIMachineInputs{}, err
 	}
 	data, err := s.readTemplateSecret(ctx, registration.Type, engineCAPI)
 	if err != nil {
@@ -170,8 +230,8 @@ func (s Source) LoadCAPIMachineInputs(ctx context.Context, provider Provider) (C
 
 func (s Source) LoadCAPIClusterInputs(ctx context.Context, provider Provider) (CAPIClusterInputs, error) {
 	registration := provider.Registration
-	if registration.CAPIClusterName == "" || registration.CAPIClusterKind == "" || registration.CAPIClusterAPIVersion == "" {
-		return CAPIClusterInputs{}, errors.New("cloud-provider registration has no CAPI cluster name, kind or apiVersion")
+	if err := registration.ValidateCAPI(); err != nil {
+		return CAPIClusterInputs{}, err
 	}
 	data, err := s.readTemplateSecret(ctx, registration.Type, engineCAPI)
 	if err != nil {
@@ -197,8 +257,8 @@ func (s Source) LoadCAPIClusterInputs(ctx context.Context, provider Provider) (C
 }
 
 func (s Source) LoadMCMInputs(ctx context.Context, provider Provider) (MCMInputs, error) {
-	if provider.Registration.MachineClassKind == "" {
-		return MCMInputs{}, errors.New("cloud-provider registration has no MachineClass kind")
+	if err := provider.Registration.ValidateMCM(); err != nil {
+		return MCMInputs{}, err
 	}
 	data, err := s.readTemplateSecret(ctx, provider.Registration.Type, engineMCM)
 	if err != nil {

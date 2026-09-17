@@ -251,9 +251,17 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 	}
 
 	registration := provider.Registration
-	if registration.CAPIClusterName == "" {
-		logger.V(1).Info("skipping CAPI: capiClusterName is empty")
+	// The mirror of the MCM branch: a group pinned to CAPI on a provider that registers no
+	// CAPI cluster has nothing to render, and retrying cannot change that.
+	if !registration.HasCAPI() {
+		logger.Info("skipping CAPI: provider registers no CAPI contract", "nodeGroup", ng.Name)
 		return nil
+	}
+	// The selected engine must have a complete provider contract even when this particular
+	// NodeGroup is invalid or currently has no zones.
+	inputs, err := (cloudprovider.Source{Reader: r.Client}).LoadCAPIMachineInputs(ctx, provider)
+	if err != nil {
+		return err
 	}
 	if validationErr != "" {
 		logger.Info("skipping CAPI: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
@@ -268,10 +276,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 	// A provider that ships capi/template.yaml is on the v2 contract; one that does not still
 	// ships the v1 trio and is served by the legacy engine below. Both live here until the last
 	// provider has migrated.
-	inputs, err := (cloudprovider.Source{Reader: r.Client}).LoadCAPIMachineInputs(ctx, provider)
-	if err != nil {
-		return err
-	}
 	template := inputs.Template
 
 	var (
@@ -288,7 +292,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 			logger.Info("skipping CAPI: InstanceClass is not resolved yet", "nodeGroup", ng.Name)
 			return nil
 		}
-		// A provider that needs no configuration of its own (dvp) publishes no subtree at all, so
+		// A provider that needs no configuration of its own (dvp) can publish an empty subtree, so
 		// an empty map is a legitimate context: a template reaching into it fails on the specific
 		// key it wanted, which is the same error it would get for a typo.
 	} else {

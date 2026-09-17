@@ -58,9 +58,18 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 
 	registration := provider.Registration
 	machineClassKind := registration.MachineClassKind
-	if machineClassKind == "" {
-		logger.Info("skipping MCM: machineClassKind not set (not an MCM cloud)", "nodeGroup", ng.Name)
+	// status.engine can stay pinned to MCM long after the provider stopped registering an MCM
+	// contract: the pin records where the group's machines are, not what the provider still serves.
+	// Failing here would requeue forever, so skip once instead.
+	if err := registration.ValidateMCM(); err != nil {
+		logger.Info("skipping MCM: provider registers no MCM contract", "nodeGroup", ng.Name, "error", err.Error())
 		return nil
+	}
+	// The selected engine must have a complete provider contract even when this particular
+	// NodeGroup is invalid or currently has no zones.
+	inputs, err := (cloudprovider.Source{Reader: r.Client}).LoadMCMInputs(ctx, provider)
+	if err != nil {
+		return err
 	}
 	cloudType := registration.Type
 	region := registration.Region
@@ -77,10 +86,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 		return nil
 	}
 
-	inputs, err := (cloudprovider.Source{Reader: r.Client}).LoadMCMInputs(ctx, provider)
-	if err != nil {
-		return err
-	}
 	clusterUUID := provider.Cluster.UUID
 	instancePrefix := provider.Prefix
 	podSubnet := provider.Cluster.PodSubnet
