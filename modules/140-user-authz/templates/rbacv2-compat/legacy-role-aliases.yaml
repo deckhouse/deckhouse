@@ -18,6 +18,10 @@
   to superadmin. The d8:use:role:admin -> d8:namespace:admin alias therefore no longer grants those two
   disaster-grade primitives. This is called out in the migration alert/docs.
 
+  An alias carries no `rules` key, not even an empty one: rules belong to the aggregation
+  controller, and shipping `rules: []` makes server-side apply fight it, emptying the role for a
+  moment on every reconcile.
+
   They live under templates/rbacv2-compat/ (NOT templates/rbacv2/) so the RBACv2 template-contract CI
   invariant — which requires the new naming — does not scan them. Remove this whole directory (and the
   deprecation hook/alert) in the next release.
@@ -99,5 +103,4 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/{{ $alias.selector }}: {{ $alias.level | quote }}
-rules: []
 {{- end }}
