@@ -21,12 +21,17 @@ import reserved_policy_names as reserved
 
 class TestCheckReservedName(unittest.TestCase):
     def test_ordinary_names_are_allowed(self):
-        for name in ["foo", "d8-foo", "system-warn-foo", "foo-system-warn", "foo-system"]:
+        for name in ["foo", "d8-foo", "d8-system-warn-foo", "system-default-foo", "foo-system", "d8-system"]:
             with self.subTest(name=name):
                 self.assertIsNone(reserved.check_reserved_name(name))
 
     def test_reserved_prefixes_are_denied(self):
-        for name in ["d8-system-warn-foo", "d8-system-enforce-foo", "d8-pod-security-baseline-deny-default"]:
+        for name in [
+            "d8-system-default-foo",
+            "d8-system-enforce-foo",
+            "d8-system-excluded-foo",
+            "d8-pod-security-baseline-deny-default",
+        ]:
             with self.subTest(name=name):
                 error = reserved.check_reserved_name(name)
                 self.assertIsNotNone(error)

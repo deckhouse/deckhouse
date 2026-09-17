@@ -113,12 +113,18 @@ and an exclusion is the only way to override it.
 For a single workload rather than a whole namespace, the `security.deckhouse.io/skip-pss-check` label
 on the Pod or its controller, and a SecurityPolicyException in that namespace, both still apply.
 
-The same rule governs OperationPolicy and SecurityPolicy resources.
-A policy with `enforcementAction: Deny` blocks workloads in ordinary namespaces,
-only warns in system ones, and blocks in system namespaces that carry the label.
+The same rule governs OperationPolicy and SecurityPolicy resources, which matters most for a policy
+whose selector covers every namespace. Such a policy with `enforcementAction: Deny` blocks workloads
+in ordinary namespaces, and in system ones it follows `systemNamespaces.enforcementAction` — so by
+default it only warns and cannot take a platform component down by accident. Where a module opted
+its namespace into enforcement, the policy keeps its own action; where the operator excluded a
+namespace, it only warns.
 
-Splitting a policy this way produces extra constraints named `d8-system-warn-<policy>` and
-`d8-system-enforce-<policy>`, which appear in the audit and in Deckhouse Console next to the original one.
+Splitting a policy this way produces extra constraints next to the original one, visible in the audit
+and in Deckhouse Console: `d8-system-default-<policy>` for the system namespaces no module opted in,
+`d8-system-enforce-<policy>` for those a module did, and `d8-system-excluded-<policy>` for the
+namespaces named in `excludeNamespaces`. The first two collapse into one when
+`systemNamespaces.enforcementAction` already equals the policy's own action.
 Both prefixes are reserved: a policy whose own name starts with one of them is rejected on creation.
 A policy stays a single constraint whenever the split would change nothing: when it warns or runs
 in dryrun, when the namespaces it names hold no system namespace, when it already excludes every

@@ -173,7 +173,7 @@ webhooks:
 
   A namespace whose `security.deckhouse.io/enable-security-policy-check` label is `true` is served
   by the enforcing constraints instead of the warn-only ones: Pod Security Standards through
-  `d8-pod-security-*-d8-default`, and user policies through their `d8-system-enforce-*` variant.
+  `d8-pod-security-*-d8-default`, and user policies through their `d8-system-enforce-*` variant when a module opted the namespace in.
   The label is matched by value, exactly as those constraints match it, so a namespace labeled with
   anything else keeps the warn-only treatment of the webhook above rather than falling between them.
 

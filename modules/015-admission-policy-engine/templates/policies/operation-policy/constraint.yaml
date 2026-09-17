@@ -3,7 +3,7 @@
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 
 {{- range $policy := .Values.admissionPolicyEngine.internal.operationPolicies }}
-{{- range $cr := include "scoped_policy_variants" (list $policy) | fromYamlArray }}
+{{- range $cr := include "scoped_policy_variants" (list $context $policy) | fromYamlArray }}
   {{- if hasKey $cr.spec.policies "allowedRepos" }}
     {{- include "allowed_repos_policy" (list $context $cr) }}
   {{- end }}

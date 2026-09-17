@@ -3,7 +3,7 @@
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 
 {{- range $policy := .Values.admissionPolicyEngine.internal.securityPolicies }}
-{{- range $cr := include "scoped_policy_variants" (list $policy) | fromYamlArray }}
+{{- range $cr := include "scoped_policy_variants" (list $context $policy) | fromYamlArray }}
   {{- if not $cr.spec.policies.allowPrivileged }}
     {{- include "allow_privileged" (list $context $cr) }}
   {{- end }}
