@@ -133,7 +133,7 @@ func TestValidateStaticPodManifest(t *testing.T) {
 			// second pod hidden behind a --- is keyed by the first one's name.
 			name:     "two documents in one manifest",
 			manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: first\n  namespace: ns-a\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: second\n  namespace: ns-b\n",
-			wantPod:  "ns-a/first",
+			wantErr:  "manifest is not a valid Pod: contains more than one document",
 		},
 	}
 
