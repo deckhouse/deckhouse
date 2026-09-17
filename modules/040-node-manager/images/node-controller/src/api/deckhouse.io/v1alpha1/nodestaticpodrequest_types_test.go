@@ -156,9 +156,9 @@ func TestValidateStaticPodManifest(t *testing.T) {
 			wantErr: "manifest is not a valid Pod",
 		},
 		{
-			// Pinning what the decoder does rather than asking for it: it reads
-			// one document and the rest of the stream is not looked at, so a
-			// second pod hidden behind a --- is keyed by the first one's name.
+			// The decoder reads one document and never looks at the rest, so a
+			// second pod hidden behind a --- would be keyed by the first one's
+			// name; the stream is counted first and the whole manifest refused.
 			name:     "two documents in one manifest",
 			manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: first\n  namespace: ns-a\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: second\n  namespace: ns-b\n",
 			wantErr:  "manifest is not a valid Pod: contains more than one document",
