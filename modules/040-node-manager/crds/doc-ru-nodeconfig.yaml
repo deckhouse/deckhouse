@@ -163,6 +163,44 @@ spec:
                       requestedBy:
                         description: |
                           Кто запросил расширение (например, `node-manager`).
+                images:
+                  description: |
+                    Образы, которые узел загружает в containerd до старта kubelet.
+
+                    Каждая запись — артефакт registrypackages с OCI-архивом образа внутри. Узел скачивает его по дайджесту через registry-packages-proxy и импортирует в containerd, после чего containerd знает образ под именем `deckhouse.local/images:<name>`. Это нужно поду, который сам стоит на пути скачивания любого другого образа: скачать себя он не может.
+
+                    Список заполняет node-controller исходя из того, какие модули включены в кластере; модуль его не объявляет.
+                  items:
+                    description: |
+                      Один предзагружаемый образ.
+                    properties:
+                      name:
+                        description: |
+                          Имя образа: под этим именем containerd знает его после импорта (`deckhouse.local/images:<name>`). Имя записано в самом артефакте.
+                      digest:
+                        description: |
+                          Дайджест артефакта.
+                      repository:
+                        description: |
+                          Хост registry, который передаётся прокси как параметр `repository`. Если поле пустое, прокси использует реестр по умолчанию.
+                      additionalPath:
+                        description: |
+                          Путь внутри репозитория (параметр `path` прокси).
+                staticPods:
+                  description: |
+                    Манифесты подов, которые kubelet запускает мимо планировщика.
+
+                    Узел пишет их в `/etc/kubernetes/manifests` и больше ничего для пода не готовит: сертификаты под генерит сам, kubeconfig берёт узловой, каталоги состояния монтирует как `hostPath` с `DirectoryOrCreate`. Манифесты control plane, которые агент пишет сам, сюда не попадают и никогда не затрагиваются.
+                  items:
+                    description: |
+                      Один static pod.
+                    properties:
+                      name:
+                        description: |
+                          Имя файла манифеста без расширения и ключ списка. С `metadata.name` пода внутри манифеста никак не связано: имя зеркальному поду kubelet берёт из документа, а не из файла.
+                      manifest:
+                        description: |
+                          Полный документ Pod. Подстрока `$MY_IP` заменяется на адрес узла при записи на диск — так же, как в манифестах control plane.
                 kernel:
                   description: |
                     Параметры sysctl и модули ядра, которые нужно загрузить.
@@ -277,6 +315,13 @@ spec:
                     sandboxImage:
                       description: |
                         Образ pause, используемый для песочниц подов.
+                    registryOwner:
+                      description: |
+                        Кто пишет каталог `registry.d` containerd.
+
+                        `nodelet` — агент узла рендерит туда `spec.registry` и удаляет всё лишнее. `agent` — каталогом владеет static pod (registry-агент), и агент узла туда ничего не пишет и ничего не удаляет, включая `spec.registry`: явный каталог хоста перекрыл бы `_default` агента и увёл бы платформенный реестр мимо него.
+
+                        Значение выставляет node-controller по режиму registry-модуля.
                 updatePolicy:
                   description: |
                     Определяет, как и когда обновляется узел.
@@ -421,6 +466,47 @@ spec:
                       message:
                         description: |
                           Причина, когда `state` равно `Failed`.
+                images:
+                  description: |
+                    Результат по каждому предзагружаемому образу — по одной записи на образ.
+
+                    Публикуется заново на каждом проходе и остаётся пустым, если проход ничего не проверял.
+                  items:
+                    description: |
+                      Результат предзагрузки одного образа.
+                    properties:
+                      name:
+                        description: |
+                          Имя образа, совпадает с `spec.images[].name`.
+                      state:
+                        description: |
+                          `Ready` — образ импортирован в containerd. `Pending` — скачивание или импорт ещё идут. `Failed` — отказ, причина в `message`.
+                      message:
+                        description: |
+                          Причина, когда `state` равно `Failed`.
+                staticPods:
+                  description: |
+                    Результат по каждому static pod'у — по одной записи на под.
+
+                    Публикуется заново на каждом проходе и остаётся пустым, если проход ничего не проверял.
+                  items:
+                    description: |
+                      Результат по одному static pod'у.
+                    properties:
+                      name:
+                        description: |
+                          Имя пода, совпадает с `spec.staticPods[].name`.
+                      state:
+                        description: |
+                          `Written` — файл на диске совпадает с манифестом из spec. `Failed` — не совпадает, причина в `reason`.
+                      reason:
+                        description: |
+                          Почему `state` равно `Failed`. Три причины требуют трёх разных действий.
+
+                          `ManifestRejected` — узел отверг манифест: править объект. `WriteFailed` — не удалось записать файл: смотреть на узел. `RemoveFailed` — имя ушло из spec, но файл не удалён, то есть под всё ещё запущен.
+                      message:
+                        description: |
+                          Подробности, когда `state` равно `Failed`.
                 network:
                   description: |
                     Адрес, с которым узел вошёл в кластер, и интерфейс, с которого этот адрес взят.

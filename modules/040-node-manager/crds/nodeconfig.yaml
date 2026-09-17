@@ -50,6 +50,17 @@ spec:
                       The default is bashible's (candi/bashible/common-steps/all/032_configure_containerd.sh.tpl).
                     minimum: 0
                     type: integer
+                  registryOwner:
+                    default: nodelet
+                    description: |-
+                      RegistryOwner says who writes containerd's registry.d. "nodelet" (the
+                      default) renders spec.registry and sweeps the rest; "agent" means a
+                      static pod owns the directory and nodelet neither writes nor removes
+                      anything there. Set by node-controller from the registry module's mode.
+                    enum:
+                    - nodelet
+                    - agent
+                    type: string
                   sandboxImage:
                     default: registry.k8s.io/pause:3.10
                     description: SandboxImage is the pause image used for pod sandboxes.
@@ -92,6 +103,46 @@ spec:
                   - digest
                   - name
                   type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              images:
+                description: |-
+                  Images are put into containerd before kubelet starts, so a static pod
+                  whose image is on the pull path of every other image can still start.
+                  Rendered by node-controller from what the platform needs, never by a
+                  module.
+                items:
+                  description: |-
+                    Image is one registrypackages artifact holding an OCI layout tar. After the
+                    import containerd knows it as deckhouse.local/images:<name> — the name is
+                    carried by the artifact itself (org.opencontainers.image.ref.name in its
+                    index.json), nodelet only checks it arrived.
+                  properties:
+                    additionalPath:
+                      type: string
+                    digest:
+                      description: Digest is the artifact's digest.
+                      pattern: ^sha256:[a-f0-9]{64}$
+                      type: string
+                    name:
+                      description: Name is what containerd knows the image by after
+                        the import.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    repository:
+                      description: |-
+                        Repository and AdditionalPath address the proxy exactly as for an
+                        extension. Empty means the proxy's default registry.
+                      type: string
+                  required:
+                  - digest
+                  - name
+                  type: object
+                maxItems: 32
                 type: array
                 x-kubernetes-list-map-keys:
                 - name
@@ -436,6 +487,43 @@ spec:
                   sensitive: nodelet must read it, and the token is identical on every node.
                 pattern: ^(([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)?$
                 type: string
+              staticPods:
+                description: |-
+                  StaticPods are the manifests kubelet runs outside the scheduler. Bounded
+                  with Manifest so the worst case (16 x 32 KiB = 512 KiB) stays well under
+                  etcd's 1.5 MiB object limit with the rest of the spec beside it.
+                items:
+                  description: |-
+                    StaticPod is one manifest for /etc/kubernetes/manifests. The node prepares two
+                    things for such a pod and nothing else: the image in containerd and this file
+                    on disk. Whatever the pod needs beyond that, it brings itself.
+                  properties:
+                    manifest:
+                      description: |-
+                        Manifest is the whole Pod document. $MY_IP is replaced with the node
+                        address on the way to disk, as in the control-plane manifests. 32 KiB is
+                        nine times the registry agent's manifest.
+                      maxLength: 32768
+                      minLength: 1
+                      type: string
+                    name:
+                      description: |-
+                        Name is the manifest file name without extension and the list key. It
+                        is unrelated to the pod's metadata.name: kubelet names the mirror pod
+                        by the manifest, never by the file.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                  required:
+                  - manifest
+                  - name
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               statusToken:
                 description: |-
                   StatusToken is the bearer presented to the node's :50000 status port.
@@ -755,6 +843,37 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              images:
+                description: |-
+                  Images and StaticPods are republished every pass, one entry each, and
+                  empty when the pass checked nothing — like Extensions and Units. Declared
+                  without omitempty on purpose: an empty pass has to say so explicitly, and
+                  the node turns the nil slice into [] before it applies the status.
+                items:
+                  description: ImageStatus is the outcome of preloading one image
+                    into containerd.
+                  properties:
+                    message:
+                      type: string
+                    name:
+                      type: string
+                    state:
+                      description: |-
+                        State is Ready when containerd holds the image, Pending while the node is
+                        still fetching or importing it, Failed with the cause in Message.
+                      enum:
+                      - Ready
+                      - Pending
+                      - Failed
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               lastReconcileTime:
                 description: |-
                   LastReconcileTime is when the node last finished a reconcile pass — the
@@ -837,6 +956,40 @@ spec:
                 - Pending
                 - Degraded
                 type: string
+              staticPods:
+                items:
+                  description: StaticPodStatus is the outcome of one static pod on
+                    the node.
+                  properties:
+                    message:
+                      type: string
+                    name:
+                      type: string
+                    reason:
+                      description: |-
+                        ManifestRejected: fix the object. WriteFailed: look at the node.
+                        RemoveFailed: the name left the spec but the pod is still running.
+                      enum:
+                      - ManifestRejected
+                      - WriteFailed
+                      - RemoveFailed
+                      type: string
+                    state:
+                      description: |-
+                        Written: the file equals the manifest in the spec. Failed: it does not,
+                        and Reason says why — the three causes call for three different actions.
+                      enum:
+                      - Written
+                      - Failed
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               units:
                 description: |-
                   Units is the outcome of each managed systemd unit (containerd, kubelet and
