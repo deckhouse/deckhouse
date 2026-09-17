@@ -76,17 +76,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/030-cloud-provider-dvp
-  to: /deckhouse/modules/030-cloud-provider-dvp
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/030-cloud-provider-gcp
   to: /deckhouse/modules/030-cloud-provider-gcp
   excludePaths:

@@ -83,40 +83,6 @@ type providerFixture struct {
 func providerFixtures() []providerFixture {
 	return []providerFixture{
 		{
-			name:    "dvp",
-			crdPath: "../../../../../../030-cloud-provider-dvp/crds/instance_class.yaml",
-
-			registrationPath: "../../../../../../030-cloud-provider-dvp/templates/registration.yaml",
-			contractPath:     "../../../../../../030-cloud-provider-dvp/capi/template.yaml",
-			providerConfig: map[string]any{
-				"additionalVMLabels": map[string]any{
-					"network-access": "bastion",
-				},
-			},
-			instanceClass: map[string]any{
-				"virtualMachine": map[string]any{
-					"virtualMachineClassName": "generic-vm-class",
-					"bootloader":              "EFI",
-					"cpu":                     map[string]any{"cores": float64(4), "coreFraction": "50%"},
-					"memory":                  map[string]any{"size": "8Gi"},
-				},
-				"rootDisk": map[string]any{
-					"size":         "50Gi",
-					"storageClass": "linstor-thin-r1",
-					"image":        map[string]any{"kind": "ClusterVirtualImage", "name": "ubuntu-24-04"},
-				},
-				"additionalDisks": []any{
-					map[string]any{"size": "10Gi", "storageClass": "linstor-thin-r2"},
-				},
-				"etcdDisk": map[string]any{"size": "20Gi", "storageClass": "linstor-thin-r1"},
-			},
-			rolloutExceptions: map[string]string{
-				"additionalVMLabels":                "additionalVMLabels is a new provider-config field introduced with the v2 contract; v1 did not hash it, but changing VM labels must create a new template generation.",
-				"additionalVMLabels.network-access": "additionalVMLabels is a new provider-config field introduced with the v2 contract; v1 did not hash it, but changing VM labels must create a new template generation.",
-			},
-			manualRolloutIDIgnoredByV1: true,
-		},
-		{
 			name:    "yandex",
 			crdPath: "../../../../../../030-cloud-provider-yandex/candi/openapi/instance_class.yaml",
 
