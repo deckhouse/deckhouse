@@ -56,6 +56,14 @@ shell:
         else
           $mod
         end
+      )' | jq --slurpfile ext /rawdata/docs/modules/embedded_modules_extensions.json '
+      .entries |= map(
+      . as $mod
+      | if $ext[0][$mod.module] != null then
+          $mod + $ext[0][$mod.module]
+        else
+          $mod
+        end
       )' | jq --slurpfile excluded /rawdata/docs/modules/excluded_modules.json '
       .entries |= map(select(.module as $m | ($excluded[0] | index($m) | not)))
       ' > /export/embedded_modules_tmp.json
@@ -126,6 +134,7 @@ git:
     setup: ['**/*']
   includePaths:
   - embedded_modules_tags.json
+  - embedded_modules_extensions.json
   - excluded_modules.json
   - editions-addition.json
 ---

@@ -19,20 +19,33 @@
             <div class="filter__checkboxes filter__checkboxes--editions">
                 <input type="checkbox" id="editionsSelectAll" data-select-all="true">
                 <label class="filter__checkboxes--all" for="editionsSelectAll">{{ T "editions_filter_all_selected" | humanize }}</label>
+                <input type="checkbox" id="editionCORE" value="core">
+                <label for="editionCORE">Core</label>
+                <input type="checkbox" id="editionEE" value="ee">
+                <label for="editionEE">Ultimate/Enterprise Edition</label>
+                <input type="checkbox" id="editionCSELite" value="cse-lite">
+                <label for="editionCSELite">Certified Core/CSE Lite</label>
+                <input type="checkbox" id="editionCSEPro" value="cse-pro">
+                <label for="editionCSEPro">Certified Pro/CSE Pro</label>
                 <input type="checkbox" id="editionCE" value="ce">
-                <label for="editionCE">Community Edition</label>
+                <label for="editionCE">Open/Community Edition</label>
                 <input type="checkbox" id="editionBE" value="be">
                 <label for="editionBE">Basic Edition</label>
                 <input type="checkbox" id="editionSE" value="se">
                 <label for="editionSE">Standard Edition</label>
                 <input type="checkbox" id="editionSEPlus" value="se-plus">
                 <label for="editionSEPlus">Standard Edition+</label>
-                <input type="checkbox" id="editionEE" value="ee">
-                <label for="editionEE">Enterprise Edition</label>
-                <input type="checkbox" id="editionCSELite" value="cse-lite">
-                <label for="editionCSELite">CSE Lite</label>
-                <input type="checkbox" id="editionCSEPro" value="cse-pro">
-                <label for="editionCSEPro">CSE Pro</label>
+            </div>
+        </div>
+        <div class="filter__container filter__container--extensions">
+            <h3 class="filter__container--title closing-title">{{ T "extensions_filter" | humanize }}</h3>
+            <div class="filter__checkboxes filter__checkboxes--extensions">
+                <input type="checkbox" id="extensionsSelectAll" data-select-all="true">
+                <label class="filter__checkboxes--all" for="extensionsSelectAll">{{ T "extensions_filter_all_selected" | humanize }}</label>
+                {{- range $id, $ext := hugo.Data.helpers.extensions }}
+                <input type="checkbox" id="extension-{{ $id }}" value="{{ $id }}">
+                <label for="extension-{{ $id }}">{{ index $ext.title site.Language.Lang | default $ext.title.en }}</label>
+                {{- end }}
             </div>
         </div>
         <div class="filter__container filter__container--stages">

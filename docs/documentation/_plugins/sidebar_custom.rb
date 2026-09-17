@@ -114,7 +114,14 @@ module Jekyll
            </ul>
          </li>))
       elsif entry.has_key?('external_url')
-        result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['external_url'] }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
+        # `target: _self` (or any value other than `_blank`) renders the link as a regular in-site link:
+        # same tab, no external-link arrow. Used for root-absolute links to other sections of the site.
+        target = entry.fetch('target', '_blank')
+        if target != '_blank'
+          result.push("<li class='#{ parameters['item_entry_class']}'><a data-proofer-ignore href='#{ entry['external_url'] }' target='#{ target }'>#{entry.dig('title', lang)}</a></li>")
+        else
+          result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['external_url'] }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
+        end
       elsif !external_url.nil? && external_url.size > 0
         result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
       elsif page_url == entry['url'] or page_url == entry_with_lang or sidebar_group_page == entry['url']

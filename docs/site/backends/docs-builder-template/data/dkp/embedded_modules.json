@@ -8,7 +8,8 @@
       "tags": [
         "embedded",
         "policy",
-        "security"
+        "security",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "admission-policy-engine/",
@@ -16,6 +17,9 @@
         "title": "Модуль admission-policy-engine",
         "description": "Модуль admission-policy-engine Deckhouse позволяет использовать в кластере Kubernetes политики безопасности согласно Kubernetes Pod Security Standards."
       },
+      "extensions": [
+        "advanced_security"
+      ],
       "metadata": {
         "name": "admission-policy-engine",
         "stage": "General Availability",
@@ -47,7 +51,8 @@
       "embedded": "true",
       "tags": [
         "core",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cert-manager/",
@@ -55,6 +60,9 @@
         "title": "Модуль cert-manager",
         "description": "Управление сертификатами в кластере Deckhouse Platform."
       },
+      "extensions": [
+        "cluster_union"
+      ],
       "metadata": {
         "name": "cert-manager",
         "stage": "General Availability",
@@ -86,7 +94,8 @@
       "embedded": "true",
       "tags": [
         "core",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "chrony/",
@@ -132,6 +141,7 @@
         "embedded",
         "network",
         "observability",
+        "ssdlc",
         "web ui"
       ],
       "editionMinimumAvailable": "ce",
@@ -181,7 +191,8 @@
       "embedded": "true",
       "tags": [
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cloud-provider-aws/",
@@ -212,7 +223,8 @@
       "embedded": "true",
       "tags": [
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cloud-provider-azure/",
@@ -238,20 +250,24 @@
     },
     {
       "title": "Cloud provider — DVP",
-      "description": "Deckhouse Platform integration with the Deckhouse Virtualization Platform. Deployment of DP clusters on top of the DVP.",
+      "description": "Integration of Deckhouse Platform with the Deckhouse Virtualization Platform.",
       "module": "cloud-provider-dvp",
       "embedded": "true",
       "tags": [
         "cloud",
         "embedded",
+        "ssdlc",
         "virtualization"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cloud-provider-dvp/",
       "ru": {
         "title": "Cloud provider — DVP",
-        "description": "Интеграция Deckhouse Platform с платформой виртуализации Deckhouse Virtualization Platform. Развертывание кластеров DP поверх DVP."
+        "description": "Интеграция Deckhouse Platform с платформой виртуализации Deckhouse Virtualization Platform."
       },
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "metadata": {
         "name": "cloud-provider-dvp",
         "critical": true,
@@ -269,21 +285,25 @@
       }
     },
     {
-      "title": "Cloud provider — Dynamix",
-      "description": "Management of virtual servers and containers in the Deckhouse Platform using Dynamix.",
+      "title": "Cloud provider — Basis Dynamix",
+      "description": "Cloud resource management in Deckhouse Platform using Basis Dynamix.",
       "module": "cloud-provider-dynamix",
       "embedded": "true",
       "tags": [
         "bare metal",
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ee",
       "url": "cloud-provider-dynamix/",
       "ru": {
         "title": "Cloud provider — Basis Dynamix",
-        "description": "Управление виртуальными серверами и контейнерами в Deckhouse Platform с помощью Basis Dynamix."
+        "description": "Управление облачными ресурсами в Deckhouse Platform с помощью Basis Dynamix."
       },
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "metadata": {
         "name": "cloud-provider-dynamix",
         "critical": true,
@@ -307,7 +327,8 @@
       "embedded": "true",
       "tags": [
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cloud-provider-gcp/",
@@ -338,7 +359,8 @@
       "embedded": "true",
       "tags": [
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ee",
       "url": "cloud-provider-huaweicloud/",
@@ -346,6 +368,9 @@
         "title": "Cloud provider — Huawei Cloud",
         "description": "Управление облачными ресурсами в Deckhouse Platform с помощью Huawei Cloud."
       },
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "metadata": {
         "name": "cloud-provider-huaweicloud",
         "critical": true,
@@ -369,7 +394,8 @@
       "embedded": "true",
       "tags": [
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ee",
       "url": "cloud-provider-openstack/",
@@ -377,6 +403,9 @@
         "title": "Cloud provider — OpenStack",
         "description": "Управление облачными ресурсами в Deckhouse Platform с помощью OpenStack."
       },
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "metadata": {
         "name": "cloud-provider-openstack",
         "critical": true,
@@ -400,7 +429,8 @@
       "embedded": "true",
       "tags": [
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ee",
       "url": "cloud-provider-vcd/",
@@ -408,6 +438,9 @@
         "title": "Cloud provider — VMware Cloud Director",
         "description": "Управление облачными ресурсами в Deckhouse Platform с помощью VMware Cloud Director."
       },
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "metadata": {
         "name": "cloud-provider-vcd",
         "critical": true,
@@ -426,13 +459,14 @@
     },
     {
       "title": "Cloud provider — VMware vSphere",
-      "description": "Managing cloud resources in Deckhouse Platform based on VMware vSphere.",
+      "description": "Cloud resource management in Deckhouse Platform using VMware vSphere.",
       "module": "cloud-provider-vsphere",
       "embedded": "true",
       "tags": [
         "bare metal",
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "se-plus",
       "url": "cloud-provider-vsphere/",
@@ -440,6 +474,9 @@
         "title": "Cloud provider — VMware vSphere",
         "description": "Управление облачными ресурсами в Deckhouse Platform на базе VMware vSphere."
       },
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "metadata": {
         "name": "cloud-provider-vsphere",
         "descriptions": {
@@ -463,7 +500,8 @@
       "embedded": "true",
       "tags": [
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cloud-provider-yandex/",
@@ -489,20 +527,24 @@
     },
     {
       "title": "Cloud provider — zVirt",
-      "description": "Managing cloud resources in Deckhouse Platform based on zVirt.",
+      "description": "Cloud resource management in Deckhouse Platform using zVirt.",
       "module": "cloud-provider-zvirt",
       "embedded": "true",
       "tags": [
         "bare metal",
         "cloud",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "se-plus",
       "url": "cloud-provider-zvirt/",
       "ru": {
         "title": "Cloud provider — zVirt",
-        "description": "Управление облачными ресурсами в Deckhouse Platform на базе zVirt."
+        "description": "Управление облачными ресурсами в Deckhouse Platform с помощью zVirt."
       },
+      "extensions": [
+        "on_prem_iaas"
+      ],
       "metadata": {
         "name": "cloud-provider-zvirt",
         "critical": true,
@@ -527,13 +569,27 @@
       "tags": [
         "embedded",
         "network",
-        "security"
+        "security",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cni-cilium/",
       "ru": {
         "title": "Модуль cni-cilium",
         "description": "Модуль cni-cilium Deckhouse обеспечивает работу сети в кластере Kubernetes с помощью Cilium."
+      },
+      "extensions": [
+        "advanced_networking",
+        "cluster_union"
+      ],
+      "extensionsWithRestrictions": [
+        "advanced_networking"
+      ],
+      "extensionsWithRestrictionsComments": {
+        "advanced_networking": {
+          "en": "Egress gateway feature only",
+          "ru": "Только возможность определения выходных узлов (egress gateway)"
+        }
       },
       "metadata": {
         "name": "cni-cilium",
@@ -585,7 +641,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "network"
+        "network",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cni-flannel/",
@@ -627,7 +684,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "network"
+        "network",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cni-simple-bridge/",
@@ -659,7 +717,8 @@
       "embedded": "true",
       "tags": [
         "core",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "control-plane-manager/",
@@ -707,6 +766,7 @@
       "embedded": "true",
       "tags": [
         "embedded",
+        "ssdlc",
         "storage"
       ],
       "editionMinimumAvailable": "se-plus",
@@ -715,6 +775,9 @@
         "title": "Модуль csi-vsphere",
         "description": "CSI-драйвер vSphere для организации заказа дисков в статических кластерах на базе VMware vSphere."
       },
+      "extensions": [
+        "storage_integration"
+      ],
       "metadata": {
         "name": "csi-vsphere",
         "weight": 30,
@@ -724,7 +787,7 @@
         "namespace": "d8-csi-vsphere",
         "stage": "Deprecated",
         "descriptions": {
-          "en": "Provides CSI for for VMware vSphere environments.",
+          "en": "Provides CSI for VMware vSphere environments.",
           "ru": "Предоставляет CSI для сред VMware vSphere."
         },
         "oss": []
@@ -737,7 +800,8 @@
       "embedded": "true",
       "tags": [
         "core",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "deckhouse/",
@@ -745,6 +809,10 @@
         "title": "Модуль deckhouse",
         "search": "releaseChannel, стабилизация релизного канала, автосмена канала обновлений"
       },
+      "extensions": [
+        "billing",
+        "cluster_union"
+      ],
       "metadata": {
         "name": "deckhouse",
         "critical": true,
@@ -796,6 +864,7 @@
       "embedded": "true",
       "tags": [
         "embedded",
+        "ssdlc",
         "tools",
         "web ui"
       ],
@@ -828,7 +897,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "scheduling"
+        "scheduling",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "descheduler/",
@@ -872,6 +942,7 @@
       "embedded": "true",
       "tags": [
         "embedded",
+        "ssdlc",
         "web ui"
       ],
       "editionMinimumAvailable": "ce",
@@ -889,7 +960,7 @@
         "name": "documentation",
         "stage": "General Availability",
         "descriptions": {
-          "en": "Creates a documentation web UI for the Deckhouse version currently used in a cluster.",
+          "en": "Creates a documentation web UI for the Deckhouse Platform version currently used in a cluster.",
           "ru": "Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Platform."
         },
         "namespace": "d8-system",
@@ -903,7 +974,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "extended-monitoring/",
@@ -938,7 +1010,8 @@
       "tags": [
         "balancing",
         "embedded",
-        "network"
+        "network",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "ingress-nginx/",
@@ -1036,7 +1109,8 @@
         "balancing",
         "embedded",
         "network",
-        "security"
+        "security",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "istio/",
@@ -1048,6 +1122,42 @@
             "name": "istio"
           }
         ]
+      },
+      "extensions": [
+        "advanced_networking",
+        "advanced_security",
+        "cluster_union",
+        "multitenancy",
+        "network_security"
+      ],
+      "extensionsWithRestrictions": [
+        "advanced_networking",
+        "advanced_security",
+        "cluster_union",
+        "multitenancy",
+        "network_security"
+      ],
+      "extensionsWithRestrictionsComments": {
+        "advanced_networking": {
+          "en": "Multi-cluster and federation mode only",
+          "ru": "Только объединение кластеров в режиме мультикластера или федерации"
+        },
+        "advanced_security": {
+          "en": "Service-to-service authorization (AuthorizationPolicy) only",
+          "ru": "Только управление авторизацией доступа между сервисами (AuthorizationPolicy)"
+        },
+        "cluster_union": {
+          "en": "Multi-cluster and federation mode only",
+          "ru": "Только объединение кластеров в режиме мультикластера или федерации"
+        },
+        "multitenancy": {
+          "en": "Multi-cluster and federation mode only",
+          "ru": "Только объединение кластеров в режиме мультикластера или федерации"
+        },
+        "network_security": {
+          "en": "Service-to-service authorization (AuthorizationPolicy) only",
+          "ru": "Только управление авторизацией доступа между сервисами (AuthorizationPolicy)"
+        }
       },
       "metadata": {
         "name": "istio",
@@ -1110,7 +1220,8 @@
         "balancing",
         "bare metal",
         "embedded",
-        "network"
+        "network",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ee",
       "url": "keepalived/",
@@ -1149,7 +1260,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "network"
+        "network",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "kube-dns/",
@@ -1189,7 +1301,8 @@
       "embedded": "true",
       "tags": [
         "core",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "kube-proxy/",
@@ -1221,6 +1334,7 @@
       "embedded": "true",
       "tags": [
         "embedded",
+        "ssdlc",
         "storage"
       ],
       "editionMinimumAvailable": "ce",
@@ -1261,7 +1375,8 @@
       "tags": [
         "embedded",
         "logging",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "log-shipper/",
@@ -1299,7 +1414,8 @@
       "tags": [
         "embedded",
         "logging",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "loki/",
@@ -1338,13 +1454,26 @@
         "balancing",
         "bare metal",
         "embedded",
-        "network"
+        "network",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "se",
       "url": "metallb/",
       "ru": {
         "title": "Модуль metallb",
         "description": "Балансировка трафика для сервисов в кластерах bare metal."
+      },
+      "extensions": [
+        "advanced_networking"
+      ],
+      "extensionsWithRestrictions": [
+        "advanced_networking"
+      ],
+      "extensionsWithRestrictionsComments": {
+        "advanced_networking": {
+          "en": "BGP mode only",
+          "ru": "Только режим BGP"
+        }
       },
       "metadata": {
         "name": "metallb",
@@ -1381,7 +1510,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "monitoring-custom/",
@@ -1414,18 +1544,19 @@
     },
     {
       "title": "The monitoring-deckhouse module",
-      "description": "Monitoring of Deckhouse Platform components and services.",
+      "description": "Monitoring of Deckhouse Kubernetes Platform components and services.",
       "module": "monitoring-deckhouse",
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "monitoring-deckhouse/",
       "ru": {
         "title": "Модуль monitoring-deckhouse",
-        "description": "Мониторинг компонентов и сервисов Deckhouse Platform."
+        "description": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
       },
       "metadata": {
         "name": "monitoring-deckhouse",
@@ -1435,8 +1566,8 @@
         ],
         "namespace": "d8-monitoring",
         "descriptions": {
-          "en": "Monitoring of Deckhouse Platform components and services.",
-          "ru": "Мониторинг компонентов и сервисов Deckhouse Platform."
+          "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
+          "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
         },
         "requirements": {
           "modules": {
@@ -1453,7 +1584,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "monitoring-kubernetes/",
@@ -1502,7 +1634,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "monitoring-kubernetes-control-plane/",
@@ -1540,7 +1673,8 @@
       "tags": [
         "embedded",
         "network",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "monitoring-ping/",
@@ -1576,7 +1710,8 @@
       "tags": [
         "embedded",
         "multitenancy",
-        "security"
+        "security",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "multitenancy-manager/",
@@ -1585,6 +1720,9 @@
         "search": "multitenancy",
         "description": "Мультитенантность и проекты в Kubernetes. Модуль multitenancy-manager Deckhouse позволяет создавать проекты для различных команд разработки с возможностью последующего развертывания в них приложений."
       },
+      "extensions": [
+        "multitenancy"
+      ],
       "metadata": {
         "name": "multitenancy-manager",
         "stage": "Preview",
@@ -1606,13 +1744,14 @@
       "embedded": "true",
       "tags": [
         "core",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "namespace-configurator/",
       "ru": {
         "title": "Модуль namespace-configurator",
-        "description": "Автоматическое управление аннотациями и лейблами на пространствах имён в Deckhouse Platform."
+        "description": "Автоматическое управление аннотациями и лейблами на неймспейсах в Deckhouse Platform."
       },
       "metadata": {
         "name": "namespace-configurator",
@@ -1632,7 +1771,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "network"
+        "network",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ee",
       "url": "network-gateway/",
@@ -1664,7 +1804,8 @@
       "tags": [
         "embedded",
         "network",
-        "security"
+        "security",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "network-policy-engine/",
@@ -1703,7 +1844,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "network"
+        "network",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "be",
       "url": "node-local-dns/",
@@ -1738,7 +1880,8 @@
       "tags": [
         "core",
         "embedded",
-        "scaling"
+        "scaling",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "node-manager/",
@@ -1796,7 +1939,8 @@
       "tags": [
         "embedded",
         "observability",
-        "proprietary"
+        "proprietary",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "okmeter/",
@@ -1831,7 +1975,8 @@
       "tags": [
         "embedded",
         "network",
-        "security"
+        "security",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "openvpn/",
@@ -1887,18 +2032,19 @@
     },
     {
       "title": "The operator-prometheus module",
-      "description": "Installation and management of the monitoring system in the Deckhouse Platform cluster.",
+      "description": "Installation and management of the monitoring system in the Deckhouse Kubernetes Platform cluster.",
       "module": "operator-prometheus",
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "operator-prometheus/",
       "ru": {
         "title": "Модуль operator-prometheus",
-        "description": "Установка и управление системой мониторинга в кластере Deckhouse Platform."
+        "description": "Установка и управление системой мониторинга в кластере Deckhouse Kubernetes Platform."
       },
       "metadata": {
         "name": "operator-prometheus",
@@ -1928,7 +2074,7 @@
         "instruction"
       ],
       "search": "prometheus",
-      "description": "Monitoring of the Deckhouse Platform cluster using Prometheus and Grafana.",
+      "description": "Monitoring of the Deckhouse Kubernetes Platform cluster using Prometheus and Grafana.",
       "webIfaces": [
         {
           "name": "grafana"
@@ -1938,7 +2084,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "prometheus/",
@@ -1948,7 +2095,7 @@
           "instruction"
         ],
         "search": "prometheus",
-        "description": "Мониторинг кластера Deckhouse Platform на базе Prometheus и Grafana.",
+        "description": "Мониторинг кластера Deckhouse Kubernetes Platform на базе Prometheus и Grafana.",
         "webIfaces": [
           {
             "name": "grafana"
@@ -2025,7 +2172,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "prometheus-metrics-adapter/",
@@ -2068,7 +2216,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "prometheus-pushgateway/",
@@ -2111,7 +2260,8 @@
       "tags": [
         "core",
         "embedded",
-        "registry"
+        "registry",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "registry/",
@@ -2119,6 +2269,10 @@
         "title": "Модуль registry",
         "description": "Управление конфигурацией registry компонентов DP."
       },
+      "extensions": [
+        "advanced_security",
+        "billing"
+      ],
       "metadata": {
         "name": "registry",
         "critical": true,
@@ -2142,12 +2296,13 @@
     },
     {
       "title": "The registry-packages-proxy module",
-      "description": "Internal registry packages proxy for optimizing access to registry packages.",
+      "description": "Internal proxy for optimizing access to packages from container registries.",
       "module": "registry-packages-proxy",
       "embedded": "true",
       "tags": [
         "core",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "registry-packages-proxy/",
@@ -2155,6 +2310,9 @@
         "title": "Модуль registry-packages-proxy",
         "description": "Внутренний прокси-сервер пакетов registry."
       },
+      "extensions": [
+        "advanced_security"
+      ],
       "metadata": {
         "name": "registry-packages-proxy",
         "critical": true,
@@ -2178,13 +2336,14 @@
       "embedded": "true",
       "tags": [
         "core",
-        "embedded"
+        "embedded",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "secret-copier/",
       "ru": {
         "title": "Модуль secret-copier",
-        "description": "Автоматическое копирование секретов по пространствам имён в кластере Deckhouse Platform."
+        "description": "Автоматическое копирование секретов по неймспейсам в кластере Deckhouse Platform."
       },
       "metadata": {
         "name": "secret-copier",
@@ -2208,7 +2367,8 @@
       "tags": [
         "balancing",
         "embedded",
-        "network"
+        "network",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ee",
       "url": "service-with-healthchecks/",
@@ -2216,6 +2376,9 @@
         "title": "Модуль service-with-healthchecks",
         "description": "Readiness-пробы с модулем service-with-healthchecks в Deckhouse Platform"
       },
+      "extensions": [
+        "advanced_networking"
+      ],
       "metadata": {
         "name": "service-with-healthchecks",
         "stage": "General Availability",
@@ -2236,7 +2399,8 @@
         "cloud",
         "core",
         "embedded",
-        "scaling"
+        "scaling",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "terraform-manager/",
@@ -2283,7 +2447,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "observability"
+        "observability",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "upmeter/",
@@ -2327,7 +2492,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "security"
+        "security",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "user-authn/",
@@ -2342,6 +2508,9 @@
           }
         ]
       },
+      "extensions": [
+        "billing"
+      ],
       "metadata": {
         "name": "user-authn",
         "critical": true,
@@ -2384,7 +2553,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "security"
+        "security",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "user-authz/",
@@ -2414,7 +2584,8 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "scaling"
+        "scaling",
+        "ssdlc"
       ],
       "editionMinimumAvailable": "ce",
       "url": "vertical-pod-autoscaler/",
