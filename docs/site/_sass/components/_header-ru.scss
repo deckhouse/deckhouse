@@ -48,8 +48,8 @@ $logo-height: 36px;
 // The Deckhouse wordmark box is smaller than the lockup one: 113x30, also measured on
 // test.deckhouse.ru. Figma draws it as 104.789x24.001 inside a 120x36 box, which comes
 // out visibly smaller than the shipped header.
-$wordmark-width: 113px;
-$wordmark-height: 30px;
+$wordmark-width: 105px;
+$wordmark-height: 24px;
 // Everything below is measured off test.deckhouse.ru, not off the Figma frame: the
 // shipped header is tighter than the 1440 mock in almost every dimension.
 $item-gap: 24px; // .header__nav.nav gap at >=1440 (8px below that)
@@ -209,20 +209,19 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
     width: $wordmark-width;
     height: $wordmark-height;
 
-    // Scaled to the full width of the box; the height follows from the 104.789x24.001
-    // viewBox, and the mark is centred in whatever is left.
-    // The reference ships the same wordmark on a 105x28 canvas and renders it at
-    // height: 30px, so the glyphs end up 112.27x25.72 sitting at the TOP of the box with
-    // the spare 4.3px below. Our inline copy is cropped to 104.789x24.001, so centring it
-    // would drop the glyphs ~2px lower than the reference. Scale by height and pin to the
-    // top instead, and the two land on the same pixels.
+    // The live site serves this wordmark as a 105x24 image and draws it at exactly that
+    // size, so the box is 105x24 and the mark fills it. Our inline copy is cropped to
+    // 104.789x24.001, near enough that filling the box costs no visible distortion.
+    // Do not scale it up: an earlier revision stretched it to 112.27x25.72 to match a
+    // 105x28 canvas the test site used, which also made the bar 54px below 1200 where
+    // the live site is 48px - this box is what sets that height.
     svg {
       position: absolute;
       top: 0;
       left: 0;
       display: block;
-      width: 112.27px; // 104.789 * 30 / 28
-      height: 25.72px; // 24.001 * 30 / 28
+      width: 100%;
+      height: 100%;
       transform: none;
     }
   }
