@@ -464,8 +464,6 @@ func (r *Runner) Apply(ctx context.Context) error {
 			return nil
 		}
 
-		r.vmDestructionApplied = r.hasVMDestruction
-
 		if !govalue.IsNil(r.stateChecker) {
 			err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure state check before apply...", func(ctx context.Context) error {
 				if r.statePath == "" {
@@ -503,6 +501,12 @@ func (r *Runner) Apply(ctx context.Context) error {
 			})
 			return 0, err
 		})
+
+		// Only a machine the apply actually rebuilt carries the new cloud-config; an apply
+		// that died before or during it left the old one in place.
+		if err == nil {
+			r.vmDestructionApplied = r.hasVMDestruction
+		}
 
 		var errRes *multierror.Error
 		errRes = multierror.Append(errRes, err)
@@ -758,6 +762,12 @@ func (r *Runner) Destroy(ctx context.Context) error {
 
 			return 0, err
 		})
+
+		// Only a machine the apply actually rebuilt carries the new cloud-config; an apply
+		// that died before or during it left the old one in place.
+		if err == nil {
+			r.vmDestructionApplied = r.hasVMDestruction
+		}
 
 		var errRes *multierror.Error
 		errRes = multierror.Append(errRes, err)

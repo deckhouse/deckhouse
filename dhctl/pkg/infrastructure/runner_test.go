@@ -479,4 +479,22 @@ func TestRunnerVMDestructionAppliedOnlyWhenApplyRan(t *testing.T) {
 		require.NoError(t, runner.Apply(t.Context()))
 		require.True(t, runner.VMDestructionApplied())
 	})
+
+	// An apply that died left the machine as it was, so the payload of this converge never
+	// reached it. Claiming otherwise records a converge user on a node that has none.
+	t.Run("an apply that failed rebuilt nothing", func(t *testing.T) {
+		runner := newTestRunner(&fakeExecutor{
+			showResp:   fakeResponse{resp: mustReadFile(t, "./mocks/checkplan/destructively_changed.json")},
+			planResp:   fakeResponse{code: infraexec.HasChangesExitCode},
+			applyResp:  fakeResponse{err: errors.New("infrastructure apply exited with an error")},
+			VMResource: "yandex_compute_instance",
+		}).WithAutoApprove(true)
+
+		require.NoError(t, runner.Plan(t.Context(), false, false))
+		require.True(t, runner.HasVMDestruction(), "the plan destroys a VM")
+
+		require.Error(t, runner.Apply(t.Context()))
+		require.False(t, runner.VMDestructionApplied(),
+			"the apply failed, so no machine booted with a payload of this converge")
+	})
 }

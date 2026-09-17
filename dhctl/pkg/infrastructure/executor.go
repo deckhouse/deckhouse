@@ -107,6 +107,7 @@ type fakeExecutor struct {
 	outputResp  fakeResponse
 	showResp    fakeResponse
 	planResp    fakeResponse
+	applyResp   fakeResponse
 	destroyResp fakeResponse
 	VMResource  string
 }
@@ -132,7 +133,7 @@ func (e *fakeExecutor) Init(ctx context.Context) error {
 }
 
 func (e *fakeExecutor) Apply(ctx context.Context, opts ApplyOpts) error {
-	return nil
+	return e.applyResp.err
 }
 
 func (e *fakeExecutor) Plan(ctx context.Context, opts PlanOpts) (int, error) {
