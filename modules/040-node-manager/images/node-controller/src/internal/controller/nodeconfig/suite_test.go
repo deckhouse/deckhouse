@@ -75,6 +75,7 @@ var _ = BeforeSuite(func() {
 			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
 			testenv.WithNodeManager(testenv.NodeOperationCRDFile),
 			testenv.WithNodeManager(testenv.NodeExtensionRequestCRDFile),
+			testenv.WithNodeManager(testenv.NodeStaticPodRequestCRDFile),
 		)...,
 	)
 	DeferCleanup(stop)
