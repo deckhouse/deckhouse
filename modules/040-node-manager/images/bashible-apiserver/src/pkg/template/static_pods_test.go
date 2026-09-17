@@ -18,6 +18,8 @@ package template
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -32,6 +34,7 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/yaml"
 )
 
 const registryAgentManifest = `apiVersion: v1
@@ -516,4 +519,32 @@ func TestRenderOmitsTheStaticPodsStepUntilTheInformerSynced(t *testing.T) {
 	synced = true
 
 	require.Contains(t, renderStaticPodsStepFor(t, storage, "worker"), `new_names='[]'`)
+}
+
+func TestStaticPodsStepChangesBashibleChecksum(t *testing.T) {
+	// generateBashibleChecksum hashes yaml.Marshal of the node group's steps
+	// (context_builder.go:301-315), so a changed step changes
+	// CONFIGURATION_CHECKSUM and the node reruns bashible.
+	checksum := func(t *testing.T, storage *StepsStorage) string {
+		t.Helper()
+
+		steps, err := storage.Render("all", "", map[string]interface{}{}, "worker")
+		require.NoError(t, err)
+
+		data, err := yaml.Marshal(steps)
+		require.NoError(t, err)
+
+		return fmt.Sprintf("%x", sha256.Sum256(data))
+	}
+
+	storage := newStaticPodsStorage()
+	before := checksum(t, storage)
+
+	request := staticPodRequestObject("registry-agent", time.Unix(100, 0), nil, registryAgentManifest)
+
+	storage.AddStaticPodRequest(request)
+	require.NotEqual(t, before, checksum(t, storage))
+
+	storage.RemoveStaticPodRequest(request)
+	require.Equal(t, before, checksum(t, storage))
 }
