@@ -35,7 +35,6 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 func nsprStatusScheme(t *testing.T) *runtime.Scheme {
@@ -180,38 +179,11 @@ func TestNSPRStatusIsNotPublishedFromAFleetThatCouldNotBeRead(t *testing.T) {
 	require.Equal(t, "read-only file system", fresh.Status.FailureMessage)
 }
 
-// A bashible node reports through its annotation and has no NodeConfig at all,
-// so the merge of the second source is what keeps it counted; without it such a
-// node reads as one that never wrote the pod.
-func TestNSPRStatusCountsTheBashibleNodes(t *testing.T) {
-	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
-	cl := fake.NewClientBuilder().
-		WithScheme(nsprStatusScheme(t)).
-		WithObjects(
-			&object,
-			immutableGroup("worker"),
-			&corev1.Node{ObjectMeta: metav1.ObjectMeta{
-				Name:        "bashible-0",
-				Labels:      map[string]string{nodecommon.NodeGroupLabel: "mutable"},
-				Annotations: map[string]string{staticPodsAnnotation: "registry-agent"},
-			}},
-		).
-		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
-		Build()
-
-	r := &Reconciler{}
-	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
-
-	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
-	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
-	require.Equal(t, int32(1), fresh.Status.AppliedNodes)
-	require.Equal(t, phaseReady, fresh.Status.Phase)
-}
-
-// The pass runs once a minute over every object in the cluster, so a status
-// recomputed identically must not be written: each write is a resourceVersion
-// bump that wakes every watcher of the kind.
+// Nobody has reported yet, which is Ready with no applied nodes and not
+// Degraded: a rollout that painted every object red for a minute would teach an
+// operator to ignore the colour. And the pass runs once a minute over every
+// object in the cluster, so a status recomputed identically must not be written:
+// each write is a resourceVersion bump that wakes every watcher of the kind.
 func TestNSPRStatusSettlesAndIsNotRewritten(t *testing.T) {
 	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
 	cl := fake.NewClientBuilder().
@@ -227,6 +199,9 @@ func TestNSPRStatusSettlesAndIsNotRewritten(t *testing.T) {
 	written := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, written))
 	require.Equal(t, written.Generation, written.Status.ObservedGeneration)
+	require.Equal(t, phaseReady, written.Status.Phase)
+	require.Equal(t, int32(0), written.Status.AppliedNodes)
+	require.Equal(t, reasonResolved, meta.FindStatusCondition(written.Status.Conditions, readyConditionType).Reason)
 
 	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
 	again := &deckhousev1alpha1.NodeStaticPodRequest{}

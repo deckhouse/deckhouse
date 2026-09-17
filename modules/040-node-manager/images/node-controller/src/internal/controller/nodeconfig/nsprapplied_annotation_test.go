@@ -20,12 +20,16 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
@@ -108,4 +112,60 @@ func TestAnnotationOutcomesTolerateSpaces(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int32(1), outcomes["registry-agent"].applied)
 	require.Equal(t, int32(1), outcomes["something-else"].applied)
+}
+
+// A bashible node reports through its annotation and has no NodeConfig at all,
+// so the merge of the second source is what keeps it counted; without it such a
+// node reads as one that never wrote the pod.
+func TestNSPRStatusCountsTheBashibleNodes(t *testing.T) {
+	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(
+			&object,
+			immutableGroup(immutableGroupName),
+			bashibleNode("mutable-0", "workers", "registry-agent"),
+		).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
+	require.Equal(t, int32(1), fresh.Status.AppliedNodes)
+	require.Equal(t, phaseReady, fresh.Status.Phase)
+}
+
+// Static pods reach bashible groups too — their step writes them — so a group
+// missing from matchedNodeGroups while its nodes are counted in appliedNodes is
+// a status that contradicts itself.
+func TestNSPRStatusMatchesABashibleOnlyGroup(t *testing.T) {
+	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{
+		NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: []string{"workers"}},
+	})
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(
+			&object,
+			immutableGroup(immutableGroupName),
+			&v1.NodeGroup{
+				ObjectMeta: metav1.ObjectMeta{Name: "workers"},
+				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, SystemType: v1.SystemTypeMutable},
+			},
+			bashibleNode("mutable-0", "workers", "registry-agent"),
+		).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
+	require.Equal(t, []string{"workers"}, fresh.Status.MatchedNodeGroups)
+	require.Equal(t, int32(1), fresh.Status.AppliedNodes)
 }
