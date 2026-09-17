@@ -18,8 +18,10 @@ package hooks
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 
+	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -97,6 +99,26 @@ func TestCapiResourcesIncludeStaticMachineTemplates(t *testing.T) {
 		}
 	}
 	t.Fatal("StaticMachineTemplate must be kept from Helm prune during migration")
+}
+
+// Prune can only happen on the first helm run of a new deckhouse binary, so one run per
+// start is enough; OnBeforeHelm cost 15-20 apiserver requests on every ModuleRun.
+func TestKeepPolicyRunsOnStartupOnly(t *testing.T) {
+	const hookFile = "set_keep_policy_on_capi_resources.go"
+	for _, hook := range sdk.Registry().Hooks() {
+		if filepath.Base(hook.GetPath()) != hookFile {
+			continue
+		}
+		config := hook.GetConfig()
+		if config.OnStartup == nil {
+			t.Errorf("%s has no OnStartup binding, it must run once per deckhouse start", hookFile)
+		}
+		if config.OnBeforeHelm != nil {
+			t.Errorf("%s still binds OnBeforeHelm, it would run on every ModuleRun", hookFile)
+		}
+		return
+	}
+	t.Errorf("%s is not registered", hookFile)
 }
 
 func TestIsConversionUnavailable(t *testing.T) {
@@ -221,7 +243,7 @@ var _ = Describe("node-manager :: hooks :: set_keep_policy_on_capi_resources ::"
 	Context("with the bootstrap secrets helm used to render", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(helmBootstrapSecretsState)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			f.RunHook()
 		})
 

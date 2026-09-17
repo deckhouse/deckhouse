@@ -78,9 +78,12 @@ var storedVersionPreference = []string{"v1beta1", "v1beta2"}
 
 var mcmStoredVersions = []string{"v1alpha1"}
 
+// OnStartup runs once per deckhouse start, before the first helm run of the new binary.
+// That is the only moment prune can happen: nothing gains the managed-by=Helm label after
+// the release stopped rendering it.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/node-manager/set-keep-policy-on-capi-resources",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	Queue:     "/modules/node-manager/set-keep-policy-on-capi-resources",
+	OnStartup: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(setKeepPolicyOnCapiResources))
 
 // Remove in 1.81: the hook only protects objects adopted during the #21372 migration, and an

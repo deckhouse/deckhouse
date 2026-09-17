@@ -18,17 +18,25 @@ package hooks
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"time"
 
+	"github.com/cloudflare/cfssl/helpers"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -40,7 +48,22 @@ const (
 	clusterAPINamespace          = "d8-cloud-instance-manager"
 	clusterAPIStaticClusterName  = "static"
 	clusterAPIServiceAccountName = "capi-controller-manager"
+
+	capiKubeconfigSnapshot         = "capi_kubeconfig_secrets"
+	capiKubeconfigClusterNameLabel = "cluster.x-k8s.io/cluster-name"
+
+	capiKubeconfigExpiresAtAnnotation    = "node-manager.deckhouse.io/certificate-expires-at"
+	capiKubeconfigEndpointHashAnnotation = "node-manager.deckhouse.io/endpoint-hash"
+
+	// Same margin as certificateHandlerWithRequests in go_lib/hooks/tls_certificate/order_certificate.go.
+	capiKubeconfigRenewMargin = 15 * 24 * time.Hour
 )
+
+type capiKubeconfigSecret struct {
+	Name         string `json:"name"`
+	ExpiresAt    string `json:"expiresAt"`
+	EndpointHash string `json:"endpointHash"`
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 100},
@@ -51,7 +74,45 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "0 1 * * *",
 		},
 	},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       capiKubeconfigSnapshot,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{clusterAPINamespace},
+				},
+			},
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      capiKubeconfigClusterNameLabel,
+						Operator: metav1.LabelSelectorOpExists,
+					},
+				},
+			},
+			ExecuteHookOnEvents:          go_hook.Bool(false),
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			FilterFunc:                   filterCAPIKubeconfigSecret,
+		},
+	},
 }, dependency.WithExternalDependencies(handleCreateCAPIStaticKubeconfig))
+
+func filterCAPIKubeconfigSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	annotations := obj.GetAnnotations()
+
+	expiresAt := annotations[capiKubeconfigExpiresAtAnnotation]
+	if expiresAt == "" {
+		return nil, nil
+	}
+
+	return capiKubeconfigSecret{
+		Name:         obj.GetName(),
+		ExpiresAt:    expiresAt,
+		EndpointHash: annotations[capiKubeconfigEndpointHashAnnotation],
+	}, nil
+}
 
 func handleCreateCAPIStaticKubeconfig(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	capiEnabledRaw := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
@@ -100,6 +161,17 @@ func generateKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container,
 		return errors.Wrap(err, "failed to create Cluster API service account")
 	}
 
+	endpointHash := apiserverEndpointHash(restConfig.Host, restConfig.CAData)
+
+	reusable, err := kubeconfigSecretIsReusable(input, params.cluster, endpointHash)
+	if err != nil {
+		return err
+	}
+
+	if reusable {
+		return nil
+	}
+
 	certExirationSeconds := int32((180 * 24 * time.Hour).Seconds())
 
 	cert, err := tls_certificate.IssueCertificate(input, dc, tls_certificate.OrderCertificateRequest{
@@ -116,6 +188,11 @@ func generateKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container,
 		return errors.Wrap(err, "failed to issue certificate")
 	}
 
+	issuedCert, err := helpers.ParseCertificatePEM([]byte(cert.Certificate))
+	if err != nil {
+		return fmt.Errorf("parse issued certificate: %w", err)
+	}
+
 	config, err := kubeconfig.New(params.cluster, restConfig.Host, restConfig.CAData, []byte(cert.Key), []byte(cert.Certificate))
 	if err != nil {
 		return errors.Wrap(err, "failed to generate a kubeconfig")
@@ -127,6 +204,10 @@ func generateKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container,
 	}
 
 	secret := kubeconfig.GenerateSecret(params.cluster, clusterAPINamespace, configYAML)
+	secret.Annotations = map[string]string{
+		capiKubeconfigExpiresAtAnnotation:    issuedCert.NotAfter.UTC().Format(time.RFC3339),
+		capiKubeconfigEndpointHashAnnotation: endpointHash,
+	}
 
 	secretUnstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(secret)
 	if err != nil {
@@ -136,6 +217,41 @@ func generateKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container,
 	input.PatchCollector.CreateOrUpdate(secretUnstructured)
 
 	return nil
+}
+
+// kubeconfigSecretIsReusable reports whether the kubeconfig secret of the cluster still holds
+// a long enough living certificate issued for the current apiserver endpoint.
+func kubeconfigSecretIsReusable(input *go_hook.HookInput, cluster, endpointHash string) (bool, error) {
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[capiKubeconfigSecret](input.Snapshots, capiKubeconfigSnapshot)
+	if err != nil {
+		return false, fmt.Errorf("unmarshal %q snapshot: %w", capiKubeconfigSnapshot, err)
+	}
+
+	secretName := kubeconfig.SecretName(cluster)
+
+	for _, secret := range secrets {
+		if secret.Name != secretName {
+			continue
+		}
+
+		if secret.EndpointHash != endpointHash {
+			return false, nil
+		}
+
+		expiresAt, err := time.Parse(time.RFC3339, secret.ExpiresAt)
+		if err != nil {
+			return false, nil
+		}
+
+		return time.Until(expiresAt) > capiKubeconfigRenewMargin, nil
+	}
+
+	return false, nil
+}
+
+func apiserverEndpointHash(host string, caData []byte) string {
+	sum := sha256.Sum256(append([]byte(host+"\n"), caData...))
+	return hex.EncodeToString(sum[:])
 }
 
 func createCAPIServiceAccount(k8sClient k8s.Client, saName string) error {
