@@ -283,6 +283,11 @@ done
 `
 }
 
+// staticPodRequestsSyncTimeout bounds the startup wait: with no CRD and no RBAC
+// the cache never syncs, and an agent parked on one watch serves none of the
+// bundles every node reads.
+const staticPodRequestsSyncTimeout = 30 * time.Second
+
 // subscribeOnStaticPodRequests mirrors the NodeGroupConfiguration informer,
 // (*StepsStorage).subscribeOnCRD in steps_storage.go, on a second resource; the
 // buffered emitter it starts serves this queue too.
@@ -339,10 +344,13 @@ func (s *StepsStorage) subscribeOnStaticPodRequests(ctx context.Context, factory
 
 	go informer.Run(ctx.Done())
 
-	// Errorf, not Fatalf: the CRD is shipped by the same module, but an agent
-	// that kills itself over a watch cannot serve the bundles every node reads.
-	if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
-		klog.Errorf("unable to sync NodeStaticPodRequest informer: %v", ctx.Err())
+	syncCtx, cancelSync := context.WithTimeout(ctx, staticPodRequestsSyncTimeout)
+	defer cancelSync()
+
+	// Errorf and bounded, not Fatalf and for ever: the CRD is shipped by the same
+	// module, but neither dying nor waiting out the process serves a node.
+	if !cache.WaitForCacheSync(syncCtx.Done(), informer.HasSynced) {
+		klog.Errorf("unable to sync NodeStaticPodRequest informer: %v", syncCtx.Err())
 	}
 }
 
