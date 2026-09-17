@@ -17,12 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tidwall/gjson"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -694,3 +696,101 @@ spec:
     seccompProfiles:
       allowedProfiles: []
 `
+
+// pssSecurityPolicies holds one policy of each kind: the object the module renders for a standard,
+// and a policy a cluster operator wrote. Only the second one belongs in the values that drive the
+// SecurityPolicy rendering.
+var pssSecurityPolicies = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: d8-pod-security-baseline
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io/pod-standard: baseline
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchExpressions:
+          - key: security.deckhouse.io/pod-policy
+            operator: NotIn
+            values: ["privileged"]
+  policies:
+    allowPrivileged: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: written-by-the-operator
+spec:
+  enforcementAction: Warn
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          security-policy.deckhouse.io/enabled: "true"
+  policies:
+    allowPrivileged: false
+`
+
+var _ = Describe("Modules :: admission-policy-engine :: hooks :: pod security standards as SecurityPolicy", func() {
+	f := HookExecutionConfigInit(
+		`{"admissionPolicyEngine": {"internal": {"ratify": {}, "bootstrapped": true} } }`,
+		`{"admissionPolicyEngine":{}}`,
+	)
+	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "SecurityPolicy", false)
+
+	Context("A SecurityPolicy of a standard next to a policy of the cluster operator", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(pssSecurityPolicies))
+			f.RunHook()
+		})
+
+		It("leaves the object of the standard out of the rendering", func() {
+			// The constraints of a standard come from the pod-security-standards templates. Letting
+			// the object through here would render every one of them a second time.
+			Expect(f).To(ExecuteSuccessfully())
+
+			policies := f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()
+			Expect(policies).To(HaveLen(1))
+			Expect(policies[0].Get("metadata.name").String()).To(Equal("written-by-the-operator"))
+		})
+	})
+})
+
+var _ = Describe("Modules :: admission-policy-engine :: hooks :: security policy snapshot", func() {
+	It("leaves the status out of the snapshot", func() {
+		// The exporter writes the violations of a policy into its status. shell-operator compares the
+		// result of the filter, so a filter that carried the status would rerun this hook on every
+		// audit cycle, rerender the constraints and write the status again. Keeping the status out of
+		// securityPolicy is what breaks that loop.
+		policy := &unstructured.Unstructured{Object: map[string]interface{}{
+			"apiVersion": "deckhouse.io/v1alpha1",
+			"kind":       "SecurityPolicy",
+			"metadata":   map[string]interface{}{"name": "reported"},
+			"spec": map[string]interface{}{
+				"enforcementAction": "Deny",
+				"match":             map[string]interface{}{},
+				"policies":          map[string]interface{}{"allowPrivileged": false},
+			},
+			"status": map[string]interface{}{
+				"violations": map[string]interface{}{"total": int64(7)},
+			},
+		}}
+
+		filtered, err := filterSP(policy)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		encoded, err := json.Marshal(filtered)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		var snapshot map[string]interface{}
+		Expect(json.Unmarshal(encoded, &snapshot)).To(Succeed())
+		Expect(snapshot).ShouldNot(HaveKey("status"))
+	})
+})

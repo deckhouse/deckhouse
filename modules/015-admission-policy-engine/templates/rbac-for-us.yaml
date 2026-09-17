@@ -215,6 +215,17 @@ rules:
       - patch
       - update
       - watch
+{{/*  For constraint exporter: it records the violations of a policy in the status of that policy.
+      Only the status subresource is granted, so the exporter cannot change what a policy enforces. */}}
+  - apiGroups:
+      - deckhouse.io
+    resources:
+      - securitypolicies/status
+      - operationpolicies/status
+    verbs:
+      - get
+      - patch
+      - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

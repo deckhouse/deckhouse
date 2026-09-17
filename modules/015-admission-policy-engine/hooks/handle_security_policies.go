@@ -24,6 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
@@ -34,6 +35,13 @@ import (
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 )
 
+// pssStandardLabel marks the SecurityPolicy objects the module renders for the Pod Security
+// Standards. Those objects are there to make a standard visible and to carry its violations in
+// the status; the constraints of a standard come from the pod-security-standards templates. The
+// hook skips them, because rendering them here as well would produce a second copy of every
+// constraint the standard already has.
+const pssStandardLabel = "security.deckhouse.io/pod-standard"
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/admission-policy-engine/security_policies",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -41,6 +49,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "security-policies",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "SecurityPolicy",
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      pssStandardLabel,
+						Operator: metav1.LabelSelectorOpDoesNotExist,
+					},
+				},
+			},
 			FilterFunc: filterSP,
 		},
 	},

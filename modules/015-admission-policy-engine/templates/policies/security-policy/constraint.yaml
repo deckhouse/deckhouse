@@ -87,7 +87,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8PrivilegedContainer
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -105,7 +105,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowPrivilegeEscalation
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -123,7 +123,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8HostProcesses
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -144,7 +144,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8HostNetwork
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -168,7 +168,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8ReadOnlyRootFilesystem
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -186,7 +186,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AutomountServiceAccountTokenPod
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -204,7 +204,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedClusterRoles
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -226,7 +226,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedFlexVolumes
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -247,7 +247,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedVolumeTypes
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -268,7 +268,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedHostPaths
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -289,7 +289,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedCapabilities
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -316,7 +316,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AppArmor
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -339,7 +339,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedProcMount
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -362,7 +362,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedUsers
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -397,7 +397,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8SeLinux
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -418,7 +418,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedSysctls
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -445,7 +445,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedSeccompProfiles
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -472,7 +472,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8VerifyImageSignatures
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -495,7 +495,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedServiceTypes
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -519,7 +519,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedIngresses
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -542,7 +542,7 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowRbacWildcards
 metadata:
   name: {{$cr.metadata.name}}
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" $cr.metadata.name)) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
@@ -561,6 +561,8 @@ apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8DenyExecHeritage
 metadata:
   name: deny-exec-heritage-pods
+  {{/* The constraint belongs to the module, not to a SecurityPolicy, so it names no owner.
+       The exporter skips a constraint whose owner label is empty. */}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: deny

@@ -27,6 +27,46 @@ Depending on how pods are created, there are differences in how the API generate
 - If pods are created via a Deployment and the pods potentially violate a policy, the creation of such Deployment will be rejected.
 - If pods are created via a Deployment that already existed before the policy was enabled, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
 
+## Viewing policy violations
+
+Every policy keeps a summary of its violations in its own status, so that the state of a policy can be read without leaving the cluster. The module fills in the `status.violations` section of `SecurityPolicy` and `OperationPolicy` once per audit cycle.
+
+The section holds aggregated counters and a short sample rather than the full list of violations. A status shares an object with the spec of its policy, and every write stores a whole new revision of that object, so a full list would be an expensive thing to rewrite on every audit cycle. The full list stays in the `d8_gatekeeper_exporter_constraint_violations` metric.
+
+To see how many violations each policy has, list the policies:
+
+```bash
+d8 k get securitypolicy
+```
+
+The `Violations` column shows the number of violations recorded by the last audit cycle:
+
+```console
+NAME                         SYNCED   VIOLATIONS
+d8-pod-security-baseline              12
+d8-pod-security-restricted            4
+my-policy                    True     0
+```
+
+To see where the violations are, read the status of a policy:
+
+```bash
+d8 k get securitypolicy my-policy -o jsonpath='{.status.violations}'
+```
+
+The summary holds the following fields:
+
+- `total` — total number of the violations. The counter stays exact even when the lists below are shortened.
+- `truncated` — number of the violations the audit did not record, because their number exceeded its limit.
+- `byEnforcement` — number of the violations grouped by the action taken on them.
+- `topNamespaces` — up to 10 namespaces with the highest number of the violations.
+- `sample` — up to 10 violations, for a preview.
+- `lastUpdateTime` — time when the module last changed the summary.
+
+{% alert level="info" %}
+The module rewrites the section only when its contents change. While the set of violations stays the same, `lastUpdateTime` stays put and the policy is not rewritten.
+{% endalert %}
+
 ## Controller-level validation
 
 Policies validate pod-creating controllers at `CREATE` and `UPDATE` time. This provides early feedback when a workload is created or updated, before any Pod is launched, and also surfaces creation denials when deploying via CI (CI rarely creates Pods directly, and Pod creation errors from controllers are often not displayed).
@@ -365,6 +405,17 @@ Example of setting the `warn` mode for PSS policies for all pods in the `my-name
 ```bash
 d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
 ```
+
+### Standards as SecurityPolicy objects
+
+Each standard is represented in the cluster by a `SecurityPolicy` object of its own, `d8-pod-security-baseline` and `d8-pod-security-restricted`. The objects put the rules of a standard next to the policies written by a cluster operator, and they carry the violations of the standard in their status.
+
+The module owns these objects and restores them on the next converge, so editing them changes nothing. What a standard checks is set by the module, and which namespaces it reaches is chosen by the labels described above.
+
+Two things the objects do not describe:
+
+- Namespaces owned by Deckhouse modules, which are checked separately, and only when the module that owns a namespace declares it ready for the check.
+- A namespace labeled `security.deckhouse.io/pod-policy-action`, which is checked with an action of its own rather than with the `spec.enforcementAction` of the object. The `byEnforcement` counters of the status show how many violations each action ended up with.
 
 ## Operational policies
 

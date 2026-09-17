@@ -33,6 +33,12 @@ type ConstraintMeta struct {
 	Name string
 	// D8 source type for constaint. for example: PSS (pod security standard), OperationPolicy
 	SourceType string
+	// PolicyKind and PolicyName point at the policy resource whose status collects the violations
+	// of this constraint. They come from the labels the module puts on every constraint it renders.
+	// PolicyName is empty for a constraint that belongs to the module itself rather than to a
+	// policy, and such a constraint contributes to no status.
+	PolicyKind string
+	PolicyName string
 }
 
 // Violation represents each constraintViolation under status
@@ -78,7 +84,24 @@ const (
 	constraintsGroup        = "constraints.gatekeeper.sh"
 	constraintsGroupVersion = "v1beta1"
 	constraintsGV           = constraintsGroup + "/" + constraintsGroupVersion
+
+	podStandardLabel     = "security.deckhouse.io/pod-standard"
+	operationPolicyLabel = "security.deckhouse.io/operation-policy"
+	securityPolicyLabel  = "security.deckhouse.io/security-policy"
+
+	// SecurityPolicyKind and OperationPolicyKind name the Deckhouse resources that own constraints.
+	SecurityPolicyKind  = "SecurityPolicy"
+	OperationPolicyKind = "OperationPolicy"
 )
+
+// pssPolicyName returns the name of the SecurityPolicy the module renders for a standard.
+// It has to match the name in templates/policies/pod-security-standards/security-policy.yaml.
+func pssPolicyName(standard string) string {
+	if standard == "" {
+		return ""
+	}
+	return "d8-pod-security-" + standard
+}
 
 // GetConstraints returns a list of all OPA constraints
 func GetConstraints(cClient controllerClient.Client, client *kubernetes.Clientset) ([]Constraint, error) {
@@ -129,14 +152,21 @@ func GetConstraints(cClient controllerClient.Client, client *kubernetes.Clientse
 				f := func(key string) bool { _, ok := labels[key]; return ok }
 
 				switch {
-				case f("security.deckhouse.io/pod-standard"):
+				case f(podStandardLabel):
 					constraint.Meta.SourceType = "PSS"
+					constraint.Meta.PolicyKind = SecurityPolicyKind
+					// The module renders one SecurityPolicy per standard to hold its violations.
+					constraint.Meta.PolicyName = pssPolicyName(labels[podStandardLabel])
 
-				case f("security.deckhouse.io/operation-policy"):
+				case f(operationPolicyLabel):
 					constraint.Meta.SourceType = "OperationPolicy"
+					constraint.Meta.PolicyKind = OperationPolicyKind
+					constraint.Meta.PolicyName = labels[operationPolicyLabel]
 
-				case f("security.deckhouse.io/security-policy"):
+				case f(securityPolicyLabel):
 					constraint.Meta.SourceType = "SecurityPolicy"
+					constraint.Meta.PolicyKind = SecurityPolicyKind
+					constraint.Meta.PolicyName = labels[securityPolicyLabel]
 				}
 
 				constraints = append(constraints, constraint)
