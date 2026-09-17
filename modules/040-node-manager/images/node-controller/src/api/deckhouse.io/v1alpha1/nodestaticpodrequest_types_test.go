@@ -17,9 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	sigsyaml "sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
 // The control plane's own manifests are written by the node agent. A static pod
@@ -118,6 +123,18 @@ func TestValidateStaticPodManifest(t *testing.T) {
 			manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: registry-agent\n",
 			wantErr:  "metadata.namespace is empty",
 		},
+		{
+			name:    "nothing at all",
+			wantErr: "manifest is not a valid Pod",
+		},
+		{
+			// Pinning what the decoder does rather than asking for it: it reads
+			// one document and the rest of the stream is not looked at, so a
+			// second pod hidden behind a --- is keyed by the first one's name.
+			name:     "two documents in one manifest",
+			manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: first\n  namespace: ns-a\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: second\n  namespace: ns-b\n",
+			wantPod:  "ns-a/first",
+		},
 	}
 
 	for _, tt := range tests {
@@ -131,4 +148,88 @@ func TestValidateStaticPodManifest(t *testing.T) {
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
+}
+
+// The kubebuilder markers on the type and the shipped CRD are two copies of one
+// declaration, and only the CRD is what the API server enforces and kubectl
+// prints. Nothing regenerates one from the other — this API group ships its CRD
+// by hand — so this is what keeps them equal.
+func TestShippedCRDMatchesTheGoTypes(t *testing.T) {
+	paths := testenv.NodeManagerCRDPaths(testenv.NodeStaticPodRequestCRDFile)
+	require.Len(t, paths, 1)
+	raw, err := os.ReadFile(paths[0])
+	require.NoError(t, err, "the shipped NodeStaticPodRequest CRD must be readable at %s", paths[0])
+
+	var crd struct {
+		Spec struct {
+			Scope string `json:"scope"`
+			Names struct {
+				ShortNames []string `json:"shortNames"`
+			} `json:"names"`
+			Versions []struct {
+				Subresources map[string]any `json:"subresources"`
+				Columns      []struct {
+					Name     string `json:"name"`
+					JSONPath string `json:"jsonPath"`
+				} `json:"additionalPrinterColumns"`
+				Schema struct {
+					OpenAPIV3Schema map[string]any `json:"openAPIV3Schema"`
+				} `json:"schema"`
+			} `json:"versions"`
+		} `json:"spec"`
+	}
+	require.NoError(t, sigsyaml.Unmarshal(raw, &crd))
+	require.Len(t, crd.Spec.Versions, 1)
+	version := crd.Spec.Versions[0]
+
+	require.Equal(t, "Cluster", crd.Spec.Scope)
+	require.Equal(t, []string{"nspr"}, crd.Spec.Names.ShortNames)
+	require.Contains(t, version.Subresources, "status")
+
+	shipped := make([][2]string, 0, len(version.Columns))
+	for _, column := range version.Columns {
+		shipped = append(shipped, [2]string{column.Name, column.JSONPath})
+	}
+	require.Equal(t, printerColumnMarkers(t), shipped)
+
+	schema := version.Schema.OpenAPIV3Schema
+	require.Equal(t, []any{"manifest"}, crdField(t, schema, "spec")["required"])
+
+	manifest := crdField(t, schema, "spec", "manifest")
+	require.Equal(t, float64(1), manifest["minLength"])
+	// Counted in runes by the API server, and nodelet's loader counts runes too.
+	require.Equal(t, float64(32768), manifest["maxLength"])
+
+	require.Equal(t, []any{"Ready", "Degraded"}, crdField(t, schema, "status", "phase")["enum"])
+}
+
+var printerColumnMarker = regexp.MustCompile(`\+kubebuilder:printcolumn:name=([^,]+),jsonPath=([^,]+),`)
+
+// printerColumnMarkers returns the name and jsonPath of every printcolumn marker
+// on the type, in the order they are declared.
+func printerColumnMarkers(t *testing.T) [][2]string {
+	t.Helper()
+
+	raw, err := os.ReadFile("nodestaticpodrequest_types.go")
+	require.NoError(t, err)
+
+	var columns [][2]string
+	for _, match := range printerColumnMarker.FindAllStringSubmatch(string(raw), -1) {
+		columns = append(columns, [2]string{match[1], match[2]})
+	}
+	return columns
+}
+
+// crdField walks the schema down a property path to one field.
+func crdField(t *testing.T, schema map[string]any, path ...string) map[string]any {
+	t.Helper()
+
+	node := schema
+	for _, name := range path {
+		properties, ok := node["properties"].(map[string]any)
+		require.True(t, ok, "nothing above %s has properties", name)
+		node, ok = properties[name].(map[string]any)
+		require.True(t, ok, "the CRD has no %s", name)
+	}
+	return node
 }
