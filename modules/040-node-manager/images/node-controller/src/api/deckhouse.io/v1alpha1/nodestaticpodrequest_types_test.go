@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -36,6 +37,26 @@ func TestIsReservedStaticPodName(t *testing.T) {
 	}
 	require.False(t, IsReservedStaticPodName("registry-agent"))
 	require.False(t, IsReservedStaticPodName("etcd-backup"))
+}
+
+// An object name is a DNS subdomain — dots, 253 characters — while the field it
+// becomes takes a DNS label. Every name the API server admits and this refuses
+// would otherwise be rendered and refused again on every node it reached.
+func TestValidateStaticPodName(t *testing.T) {
+	require.NoError(t, ValidateStaticPodName("registry-agent"))
+	require.NoError(t, ValidateStaticPodName("a"))
+	require.NoError(t, ValidateStaticPodName(strings.Repeat("a", 63)))
+
+	for _, name := range []string{
+		"registry-agent.v2",
+		strings.Repeat("a", 64),
+		"Registry-Agent",
+		"-registry-agent",
+		"registry_agent",
+		"",
+	} {
+		require.ErrorContains(t, ValidateStaticPodName(name), name, "%q is not a DNS label", name)
+	}
 }
 
 // The manifest is checked where it is written, not on every node that reads it:

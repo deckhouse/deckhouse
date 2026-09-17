@@ -424,6 +424,47 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As a cluster operator, I want an object whose name my nodes
+	// cannot take to be refused on the object, so that one typo costs one static
+	// pod rather than every node's whole configuration.
+	//
+	// A CR name is a DNS subdomain, spec.staticPods[].name is a DNS label: the API
+	// server admits "foo.bar" and every node it reached would refuse the NodeConfig
+	// whole — and reconcileAllNodes stops at the first such node, so no NER or NSPR
+	// status in the cluster would move again.
+	It("refuses a NodeStaticPodRequest whose name the node config would not take", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		By("publishing an object named like a DNS subdomain")
+		request := &v1alpha1.NodeStaticPodRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("foo") + ".bar"},
+			Spec: v1alpha1.NodeStaticPodRequestSpec{
+				NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
+				Manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: subdomain-agent\n  namespace: d8-system\n" +
+					"spec:\n  hostNetwork: true\n  containers:\n  - name: agent\n    image: deckhouse.local/images:registry-agent\n",
+			},
+		}
+		Expect(k8sClient.Create(ctx, request)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, request) })
+
+		Eventually(func(g Gomega) {
+			// The node still gets a config, and it carries no static pod.
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
+
+			fresh := &v1alpha1.NodeStaticPodRequest{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: request.Name}, fresh)).To(Succeed())
+			g.Expect(fresh.Status.Phase).To(Equal(phaseDegraded))
+			condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+			g.Expect(condition).NotTo(BeNil())
+			g.Expect(condition.Reason).To(Equal(reasonInvalidName))
+			g.Expect(condition.Message).To(ContainSubstring(request.Name))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As a cluster operator, I want to be told when a setting I wrote
 	// is not the setting my nodes get, so that a group running something I did
 	// not configure is visible instead of silent.
