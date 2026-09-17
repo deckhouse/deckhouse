@@ -31,9 +31,6 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	BeforeEach(func() {
-		Skip("legacy helm-render specs are isolated after constraint test runner migration")
-	})
 
 	f := SetupHelmConfig(`
 global:
@@ -106,6 +103,13 @@ admissionPolicyEngine:
                 operator: Exists
               - key: node-role.kubernetes.io/control-plane
                 operator: Exists
+            gpuResourceRestriction:
+              namespaceLabel:
+                key: gpu.deckhouse.io/enabled
+                value: "true"
+              gpuResourcePatterns:
+                - ^nvidia\.com/.*$
+                - ^amd\.com/gpu$
           match:
             namespaceSelector:
               matchNames:
@@ -171,6 +175,19 @@ admissionPolicyEngine:
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8DisallowedTolerations", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8GpuResourceRestriction", testPolicyName).Exists()).To(BeTrue())
+		})
+
+		It("Gatekeeper Config must sync the kinds the constraint templates read from data.inventory", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			config := f.KubernetesResource("Config", "d8-admission-policy-engine", "config")
+			Expect(config.Exists()).To(BeTrue())
+			Expect(config.Field("spec.sync.syncOnly").Array()).To(HaveLen(3))
+			// Namespace is required by D8GpuResourceRestriction.
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="Namespace").version`).String()).To(Equal("v1"))
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="Pod").version`).String()).To(Equal("v1"))
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="SecurityPolicyException").group`).String()).To(Equal("deckhouse.io"))
 		})
 
 		It("All operation policy constraints must have valid YAML", func() {
@@ -206,19 +223,20 @@ admissionPolicyEngine:
 			expectedAction := "warn"
 
 			expectedParameters := map[string]interface{}{
-				"D8AllowedRepos":          mustParseYaml("repos:\n  - foo"),
-				"D8RequiredResources":     mustParseYaml("limits:\n  - memory\nrequests:\n  - cpu\n  - memory"),
-				"D8DisallowedTags":        mustParseYaml("tags:\n  - latest"),
-				"D8RequiredLabels":        mustParseYaml("labels:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.agilebank.demo$\""),
-				"D8RequiredAnnotations":   mustParseYaml("annotations:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.myapp.demo$\""),
-				"D8RequiredProbes":        mustParseYaml("probes:\n  - livenessProbe\n  - readinessProbe"),
-				"D8RevisionHistoryLimit":  mustParseYaml("limit: 3"),
-				"D8ImagePullPolicy":       mustParseYaml("policy: \"Always\""),
-				"D8PriorityClass":         mustParseYaml("priorityClassNames:\n  - foo\n  - bar"),
-				"D8IngressClass":          mustParseYaml("ingressClassNames:\n  - ing1\n  - ing2"),
-				"D8StorageClass":          mustParseYaml("storageClassNames:\n  - st1\n  - st2"),
-				"D8ReplicaLimits":         mustParseYaml("ranges:\n  - minReplicas: 1\n    maxReplicas: 10"),
-				"D8DisallowedTolerations": mustParseYaml("tolerations:\n  - key: node-role.kubernetes.io/master\n    operator: Exists\n  - key: node-role.kubernetes.io/control-plane\n    operator: Exists"),
+				"D8AllowedRepos":           mustParseYaml("repos:\n  - foo"),
+				"D8RequiredResources":      mustParseYaml("limits:\n  - memory\nrequests:\n  - cpu\n  - memory"),
+				"D8DisallowedTags":         mustParseYaml("tags:\n  - latest"),
+				"D8RequiredLabels":         mustParseYaml("labels:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.agilebank.demo$\""),
+				"D8RequiredAnnotations":    mustParseYaml("annotations:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.myapp.demo$\""),
+				"D8RequiredProbes":         mustParseYaml("probes:\n  - livenessProbe\n  - readinessProbe"),
+				"D8RevisionHistoryLimit":   mustParseYaml("limit: 3"),
+				"D8ImagePullPolicy":        mustParseYaml("policy: \"Always\""),
+				"D8PriorityClass":          mustParseYaml("priorityClassNames:\n  - foo\n  - bar"),
+				"D8IngressClass":           mustParseYaml("ingressClassNames:\n  - ing1\n  - ing2"),
+				"D8StorageClass":           mustParseYaml("storageClassNames:\n  - st1\n  - st2"),
+				"D8ReplicaLimits":          mustParseYaml("ranges:\n  - minReplicas: 1\n    maxReplicas: 10"),
+				"D8DisallowedTolerations":  mustParseYaml("tolerations:\n  - key: node-role.kubernetes.io/master\n    operator: Exists\n  - key: node-role.kubernetes.io/control-plane\n    operator: Exists"),
+				"D8GpuResourceRestriction": mustParseYaml("namespaceLabel:\n  key: \"gpu.deckhouse.io/enabled\"\n  value: \"true\"\ngpuResourcePatterns:\n  - ^nvidia\\.com/.*$\n  - ^amd\\.com/gpu$"),
 			}
 
 			constraintsWithoutParameters := []string{
@@ -242,6 +260,42 @@ admissionPolicyEngine:
 				expectConstraintAction(spec, expectedAction)
 				expectConstraintSelector(spec, expectedSelector)
 				expectConstraintParameters(spec, nil)
+			}
+		})
+
+		It("Pod-scoped operation policy constraints must also match pod-creating controllers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Constraints that read a pod spec go through the `workload_kinds` helper,
+			// so they must match Pods and the controllers that create them. Constraints
+			// scoped to other resources (D8IngressClass, D8StorageClass, D8ReplicaLimits,
+			// D8RevisionHistoryLimit, D8RequiredLabels, D8RequiredAnnotations) keep their
+			// own kind lists and are intentionally absent from this list.
+			podScopedConstraints := []string{
+				"D8AllowedRepos",
+				"D8RequiredResources",
+				"D8DisallowedTags",
+				"D8RequiredProbes",
+				"D8ImagePullPolicy",
+				"D8PriorityClass",
+				"D8DNSPolicy",
+				"D8ContainerDuplicates",
+				"D8DisallowedTolerations",
+				"D8GpuResourceRestriction",
+			}
+
+			for _, constraintKind := range podScopedConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				Expect(constraint.Exists()).To(BeTrue(), "%s constraint should exist", constraintKind)
+
+				spec := getConstraintSpecMap(constraint)
+				match, ok := spec["match"].(map[string]interface{})
+				Expect(ok).To(BeTrue(), "%s spec.match should exist", constraintKind)
+
+				kinds, ok := match["kinds"].([]interface{})
+				Expect(ok).To(BeTrue(), "%s spec.match.kinds should be a list", constraintKind)
+
+				validateKinds(kinds, true, constraintKind)
 			}
 		})
 	})

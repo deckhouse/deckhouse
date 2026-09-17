@@ -45,6 +45,8 @@ func enableExtendedMonitoring(_ context.Context, input *go_hook.HookInput) error
 				"heritage": "deckhouse",
 				"extended-monitoring.deckhouse.io/enabled":           "",
 				"prometheus.deckhouse.io/rules-watcher-enabled":      "true",
+				"pod-security.kubernetes.io/enforce":                 "privileged",
+				"pod-security.kubernetes.io/enforce-version":         "latest",
 				"security.deckhouse.io/pod-policy":                   "restricted",
 				"security.deckhouse.io/pod-policy-action":            "warn",
 				"security.deckhouse.io/enable-security-policy-check": "true",

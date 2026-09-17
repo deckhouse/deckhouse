@@ -365,6 +365,53 @@ var _ = Describe("NodeGroup status controller", func() {
 				g.Expect(ng.Status.ConditionSummary.Ready).To(Equal("False"))
 			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 		})
+
+		// createBothCapableProviderSecret publishes a provider that ships both engines, which is
+		// what makes status.engine ambiguous. The Secret has a fixed cluster-wide name, so every
+		// spec using it must be Serial.
+		createBothCapableProviderSecret := func() {
+			providerSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodecommon.CloudProviderSecretName,
+					Namespace: nodecommon.CloudProviderSecretNamespace,
+				},
+				Data: map[string][]byte{
+					"type":             []byte("yandex"),
+					"machineClassKind": []byte("YandexMachineClass"),
+					"capiClusterKind":  []byte("YandexCluster"),
+				},
+			}
+			Expect(k8sClient.Create(suiteCtx, providerSecret)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, providerSecret))).To(Succeed())
+			})
+		}
+
+		It("pins a legacy NodeGroup to MCM instead of the both-capable default", Serial, func() {
+			createBothCapableProviderSecret()
+
+			name := uniqueNG("legacy-pin")
+			createMCMMachineDeployment(name+"-nova", name, 1, "")
+			createNodeGroup(cloudEphemeralNodeGroup(name, []string{"a"}, 1, 2))
+
+			Eventually(func() string {
+				return getNG(name).Status.Engine
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Equal("MCM"))
+		})
+
+		// The pin is irreversible, and writing CAPI for a group that really runs MCM recreates
+		// every machine of the group. This is the direction every NodeGroup of a fresh
+		// both-capable cluster takes, so the live read must not turn it into an MCM pin.
+		It("pins a NodeGroup with no MCM MachineDeployment to CAPI", Serial, func() {
+			createBothCapableProviderSecret()
+
+			name := uniqueNG("fresh-pin")
+			createNodeGroup(cloudEphemeralNodeGroup(name, []string{"a"}, 1, 2))
+
+			Eventually(func() string {
+				return getNG(name).Status.Engine
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Equal("CAPI"))
+		})
 	})
 
 	Context("effective Kubernetes version", func() {

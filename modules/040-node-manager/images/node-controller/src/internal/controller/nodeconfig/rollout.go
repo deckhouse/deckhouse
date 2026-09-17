@@ -179,10 +179,10 @@ func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
 		if applied(nc) {
 			continue
 		}
-		// The carry-over apply() performs, with no reported address: a node
-		// keeping what it booted with is not drift, and reading it as drift
-		// would free a slot the node is genuinely holding.
-		keepBootstrapOnlyFields(&want, &nc.Spec, nil)
+		// The same carry-over apply() performs: a node keeping what it booted
+		// with is not drift, and reading it as drift would free a slot the node
+		// is genuinely holding.
+		keepBootstrapOnlyFields(&want, &nc.Spec)
 		if !apiequality.Semantic.DeepEqual(nc.Spec, want) {
 			continue
 		}

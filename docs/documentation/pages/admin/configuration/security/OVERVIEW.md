@@ -1,10 +1,10 @@
 ---
 title: Security
 permalink: en/admin/configuration/security/
-description: "Configure security features in Deckhouse Kubernetes Platform including certificates, audit logging, runtime security, scanning, and security policies. Complete security hardening guide."
+description: "Configure security features in Deckhouse Platform including certificates, audit logging, runtime security, scanning, and security policies. Complete security hardening guide."
 ---
 
-The "Security" section provides information about the protection mechanisms implemented in Deckhouse Kubernetes Platform.
+The "Security" section provides information about the protection mechanisms implemented in Deckhouse Platform.
 
 It contains recommendations, instructions, and configuration examples for built-in protection mechanisms,
 as well as integration with external systems.
@@ -16,6 +16,10 @@ In this section, you will find information on:
   - How to collect security events at the kernel and Kubernetes API levels
     using the platform's built-in capabilities (Falco).
   - How to configure audit rules and receive alerts on suspicious activity.
+
+- Virtualization event audit:
+  - How to enable the log of actions on virtual machines.
+  - Which events it records and how to view them.
 
 - Security policies:
   - Support for Pod Security Standards.

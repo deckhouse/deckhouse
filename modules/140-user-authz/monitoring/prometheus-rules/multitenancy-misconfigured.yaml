@@ -1,0 +1,55 @@
+- name: d8.user-authz.multitenancy-misconfigured
+  rules:
+  - alert: D8UserAuthzRuleNeedsMultiTenancy
+    expr: |
+      max by (name, options) (d8_user_authz_rule_needs_multitenancy) > 0
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: A ClusterAuthorizationRule asks for namespace limits that nothing enforces.
+      description: |-
+        The `ClusterAuthorizationRule` `{{ $labels.name }}` sets `{{ $labels.options }}`, but `userAuthz.enableMultiTenancy` is off, so the authorization webhook that enforces those options is not deployed.
+
+        The rule is not partially applied. It is applied without its limits: the subjects named in it hold its access level in **every** namespace of the cluster, the system ones included.
+
+        Either enable multi-tenancy, or remove the options from the rule:
+
+        ```bash
+        d8 k get clusterauthorizationrule {{ $labels.name }} -o yaml
+        d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
+        ```
+
+  - alert: D8UserAuthzRulesNeedMultiTenancy
+    expr: |
+      max(d8_user_authz_rules_needing_multitenancy) > 50
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: More ClusterAuthorizationRules ask for namespace limits than the per-rule alert names.
+      description: |-
+        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while `userAuthz.enableMultiTenancy` is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first 50 of them; this alert accounts for the rest.
+
+        None of those rules is partially applied: the subjects named in each of them hold its access level in **every** namespace of the cluster, the system ones included.
+
+        Check whether multi-tenancy was meant to be enabled, and list the affected rules:
+
+        ```bash
+        d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
+        d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limitNamespaces // [] | length > 0) or (.spec.namespaceSelector != null) or (.spec.allowAccessToSystemNamespaces == true)) | .metadata.name'
+        ```

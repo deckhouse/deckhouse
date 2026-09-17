@@ -24,6 +24,8 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -43,6 +46,11 @@ func init() {
 const (
 	bashibleSource = "bashible"
 	userSource     = "user"
+
+	// spotTerminationLabel is set by the cloud provider when the cloud announces that the spot
+	// instance behind this node is about to be reclaimed
+	// (modules/030-cloud-provider-aws/hooks/add_termination_metadata.go:37).
+	spotTerminationLabel = "node.deckhouse.io/termination-in-progress"
 )
 
 // Reconciler empties a node when somebody annotates it, and answers with a
@@ -135,6 +143,12 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 			logger.Info("removing a stale drained=user annotation")
 			delete(node.Annotations, nodecommon.DrainedAnnotation)
 		}
+		// A spot node whose drain is over has no reason to live: deleting its Instance releases
+		// the VM. A drain still in flight wins (it is not over on this branch), so a stale drained
+		// annotation cannot release the VM before this termination's eviction.
+		if state.recordedFor != "" && state.spotTerminating {
+			return ctrl.Result{}, r.deleteInstance(ctx, node.Name)
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -153,6 +167,35 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 	}
 
 	return ctrl.Result{}, r.startDrain(ctx, logger, node, state.requestedBy)
+}
+
+// deleteInstance removes the Instance of a reclaimed spot node. The Instance is read first so the
+// steady state of an already-terminating node costs a cached read instead of a delete call on every
+// kubelet heartbeat.
+func (r *Reconciler) deleteInstance(ctx context.Context, name string) error {
+	logger := log.FromContext(ctx)
+
+	instance := &deckhousev1alpha2.Instance{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, instance); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get Instance %s: %w", name, err)
+	}
+	if instance.DeletionTimestamp != nil {
+		logger.V(1).Info("skipping: Instance of the spot node is already being deleted", "instance", name)
+		return nil
+	}
+
+	logger.Info("spot node drained, deleting its Instance", "instance", name)
+	if err := r.Client.Delete(ctx, instance, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("delete Instance %s: %w", name, err)
+	}
+
+	return nil
 }
 
 // cleanupDeletedNode stops a drain running for an object nobody can see.
@@ -255,16 +298,18 @@ func inNodeGroup(obj client.Object) bool {
 
 func stateFromNode(node *corev1.Node) state {
 	return state{
-		requestedBy:   drainSource(node, nodecommon.DrainingAnnotation),
-		recordedFor:   drainSource(node, nodecommon.DrainedAnnotation),
-		unschedulable: node.Spec.Unschedulable,
+		requestedBy:     drainSource(node, nodecommon.DrainingAnnotation),
+		recordedFor:     drainSource(node, nodecommon.DrainedAnnotation),
+		unschedulable:   node.Spec.Unschedulable,
+		spotTerminating: node.Labels[spotTerminationLabel] == "true",
 	}
 }
 
 type state struct {
-	requestedBy   string
-	recordedFor   string
-	unschedulable bool
+	requestedBy     string
+	recordedFor     string
+	unschedulable   bool
+	spotTerminating bool
 }
 
 func (s state) equal(other state) bool {

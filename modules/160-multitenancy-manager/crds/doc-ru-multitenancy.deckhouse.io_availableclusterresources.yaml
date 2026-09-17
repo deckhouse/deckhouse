@@ -1,0 +1,43 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Содержит информацию о cluster-wide-ресурсах, доступных проекту, и значении, используемом по умолчанию.
+
+            Ресурс автоматически создаётся и обновляется контроллером `multitenancy-manager` в неймспейсе проекта для каждого зарегистрированного ресурса GrantableClusterResourceDefinition.
+            Имя AvailableClusterResource совпадает с именем соответствующего GrantableClusterResourceDefinition.
+
+            Информация о доступных cluster-wide-ресурсах и значении по умолчанию содержится в поле `status`.
+
+            Подробнее о просмотре доступных cluster-wide-ресурсов — [в разделе «Примеры использования»](usage.html#для-пользователей-проекта).
+
+            > **Внимание.** Ресурс предназначен только для чтения. Ручное создание AvailableClusterResource запрещено.
+          properties:
+            status:
+              description: Состояние доступности cluster-wide-ресурсов для проекта.
+              properties:
+                available:
+                  description: Список доступных проекту cluster-wide-ресурсов с указанием значения, используемого по умолчанию.
+                  items:
+                    description: Информация о доступном проекту cluster-wide-ресурсе.
+                    properties:
+                      default:
+                        description: Означает, что cluster-wide-ресурс используется в проекте по умолчанию.
+                      name:
+                        description: Имя доступного проекту cluster-wide-ресурса.
+                availableCount:
+                  description: |-
+                    Количество доступных проекту cluster-wide-ресурсов.
+
+                    Используется при выводе списка ресурсов. Имена доступных cluster-wide-ресурсов содержатся в [`status.available`](#availableclusterresource-v1alpha1-status-available).
+                default:
+                  description: |-
+                    Имя cluster-wide-ресурса, используемого в проекте по умолчанию.
+
+                    Значение может автоматически подставляться в соответствующее поле создаваемого ресурса, если поле не заполнено или указанное значение недоступно проекту. Поле остаётся пустым, если значение по умолчанию не задано или недоступно проекту.
+                grantedResourceKind:
+                  description: Тип (kind) cluster-wide-ресурса.
+                observedGeneration:
+                  description: Поколение ресурса (generation), на основе которого контроллер сформировал текущий `status`.

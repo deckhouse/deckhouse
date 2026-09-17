@@ -670,7 +670,6 @@ type TimeResult struct {
 // - ManualApproved
 //
 // If minor, calculate by checking this conditions:
-// - Cooldown
 // - Canary
 // - Notify
 // - Window

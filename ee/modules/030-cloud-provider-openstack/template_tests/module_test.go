@@ -138,9 +138,6 @@ const tolerationsAnyNodeWithUninitialized = `
   operator: "Exists"
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -309,6 +306,7 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(cinderCSIDriver.Exists()).To(BeTrue())
 		Expect(cinderNodePluginDS.Exists()).To(BeTrue())
 		Expect(cinderNodePluginDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+		Expect(cinderNodePluginDS.Field("spec.template.spec.serviceAccountName").String()).To(Equal("csi"))
 		Expect(cinderControllerPluginSA.Exists()).To(BeTrue())
 		Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
 		Expect(cinderControllerPluginSS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))

@@ -22,6 +22,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
+
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
@@ -34,13 +37,30 @@ func NewRegistryClient(ctx context.Context, scheme, ca string) (*http.Client, er
 	return &http.Client{Transport: transport}, nil
 }
 
-func NewRegistryTransport(ctx context.Context, scheme, ca string) (*http.Transport, error) {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+// NameOptions maps the registry scheme to go-containerregistry reference options.
+// Without name.Insecure the library never tries HTTP; it only permits it, so the
+// transport paired with these must still verify certificates.
+func NameOptions(scheme string) []name.Option {
+	if constant.ToScheme(scheme) == constant.SchemeHTTP {
+		return []name.Option{name.Insecure}
+	}
 
+	return nil
+}
+
+func NewRegistryTransport(ctx context.Context, scheme, ca string) (*http.Transport, error) {
 	if strings.EqualFold(scheme, "http") {
+		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
 		return transport, nil
 	}
+
+	return NewCARegistryTransport(ctx, ca)
+}
+
+// NewCARegistryTransport verifies certificates, trusting ca on top of the system pool.
+func NewCARegistryTransport(ctx context.Context, ca string) (*http.Transport, error) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
 
 	if ca == "" {
 		return transport, nil

@@ -17,7 +17,7 @@ package lifecycle
 import (
 	"context"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 // Store manages lifecycle contexts and pending settings for all runtime packages.

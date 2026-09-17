@@ -20,12 +20,12 @@ import (
 	"strings"
 	"sync"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 const (
@@ -383,6 +383,20 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.mu.Unlock()
 
 	s.queueFor(name).Add(name)
+}
+
+// ResetTracking drops the progress report left by the previous apply. Listeners
+// are not notified: an empty report is not published to the resource.
+func (s *Service) ResetTracking(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	status, ok := s.statuses[name]
+	if !ok {
+		return
+	}
+
+	status.Tracking = Tracking{}
 }
 
 // UpdateURLs stores application endpoint URLs collected from the rendered

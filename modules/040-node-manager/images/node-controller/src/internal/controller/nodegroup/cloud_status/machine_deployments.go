@@ -22,7 +22,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
@@ -97,12 +96,8 @@ func (s *Service) getCAPIMachineDeploymentInfo(ctx context.Context, ngName strin
 }
 
 func (s *Service) listMachineDeployments(ctx context.Context, gvk schema.GroupVersionKind, ngName string) *unstructured.UnstructuredList {
-	mdList := &unstructured.UnstructuredList{}
-	mdList.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
-	if err := s.Client.List(ctx, mdList, client.InNamespace(common.MachineNamespace), client.MatchingLabels{"node-group": ngName}); err != nil {
-		return nil
-	}
-	if len(mdList.Items) == 0 {
+	mdList, err := common.ListMachineDeployments(ctx, s.Client, gvk, ngName)
+	if err != nil || len(mdList.Items) == 0 {
 		return nil
 	}
 	return mdList

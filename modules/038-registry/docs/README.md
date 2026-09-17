@@ -1,11 +1,11 @@
 ---
 title: "Registry Module"
-description: "Configuration management of DKP component registry."
+description: "Configuration management of DP component registry."
 ---
 
 ## Description
 
-The module manages the registry settings for DKP components.
+The module manages the registry settings for DP components.
 
 The module can operate in the following modes:
 
@@ -26,7 +26,7 @@ The `registry` module has a number of limitations and features related to instal
 
 ### Cluster installation limitations
 
-- DKP cluster bootstrap is supported in `Direct`, `Unmanaged`, `Proxy`, and `Local` modes. Registry settings and operation mode during cluster installation are configured via the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry).
+- DP cluster bootstrap is supported in `Direct`, `Unmanaged`, `Proxy`, and `Local` modes. Registry settings and operation mode during cluster installation are configured via the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry).
 - Bootstrap for `Local` and `Proxy` modes is supported only on static clusters.
 - To launch a cluster in the non-configurable `Unmanaged` mode (Legacy), registry parameters must be specified in [`initConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
@@ -35,7 +35,7 @@ The `registry` module has a number of limitations and features related to instal
 The module works under the following conditions:
 
 - If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
-- The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
+- The cluster is fully managed by DP. The module will not work in Managed Kubernetes clusters.
 - The `Local` and `Proxy` modes are only supported on static clusters.
 
 ### Mode switching restrictions

@@ -3,16 +3,16 @@ title: Подсистема Observability
 permalink: ru/architecture/observability/
 lang: ru
 search: observability, наблюдаемость, подсистема наблюдаемости
-description: Архитектура подсистемы Observability в Deckhouse Kubernetes Platform.
+description: Архитектура подсистемы Observability в Deckhouse Platform.
 extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-В данном подразделе описывается архитектура подсистемы Observability (подсистемы наблюдаемости) Deckhouse Kubernetes Platform (DKP).
+В данном подразделе описывается архитектура подсистемы Observability (подсистемы наблюдаемости) Deckhouse Platform (DP).
 
 В подсистему Observability входят следующие модули:
 
-* [`prometheus`](/modules/prometheus/) — разворачивает стек мониторинга с предустановленными параметрами для DKP и приложений, что упрощает начальную настройку;
+* [`prometheus`](/modules/prometheus/) — разворачивает стек мониторинга с предустановленными параметрами для DP и приложений, что упрощает начальную настройку;
 * [`operator-prometheus`](/modules/operator-prometheus/) — устанавливает [Prometheus Operator](https://github.com/coreos/prometheus-operator), который автоматизирует развёртывание и управление инстансами [Prometheus](https://prometheus.io/);
 * [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) — позволяет автоскейлерам HPA и VPA  использовать метрики мониторинга для принятия решений о масштабировании;
 * [`log-shipper`](/modules/log-shipper/) — упрощает настройку сбора логов в Kubernetes-кластере;
@@ -22,10 +22,3 @@ extractedLinksMax: 0
 * [`monitoring-custom`](/modules/monitoring-custom/) — упрощает настройку мониторинга пользовательских приложений, требуя только указания определенного лейбла для нужного приложения;
 * [`monitoring-kubernetes`](/modules/monitoring-kubernetes/) — обеспечивает прозрачный и своевременный контроль состояния всех узлов кластера и ключевых инфраструктурных компонентов;
 * [`upmeter`](/modules/upmeter/) — проверяет доступность платформы и состояние компонентов кластера в реальном времени и выводит информацию на соответствующие дашборды.
-
-В подразделе на данный момент описаны:
-
-* [архитектура мониторинга в DKP](monitoring.html);
-* [модуль `prometheus`](prometheus.html);
-* [модуль `observability`](observability.html);
-* [модули логирования](logging.html).

@@ -180,6 +180,45 @@ func TestDecideExcludedUnion(t *testing.T) {
 	}
 }
 
+// The selector the module ships for clusterroles (templates/cluster-objects-controller/
+// grantable-resources.yaml) keeps the delegatable roles and nothing else. The value matters: the
+// admission webhook that guards the label accepts "true" and judges nothing else, so a role
+// labelled "false" was never validated as delegatable and must not reach a project either. An
+// exclusion by absence alone would have let exactly that role through.
+func TestDecideDelegatableMarkerNeedsTheValue(t *testing.T) {
+	reg := roleReg([]v1alpha1.ResourceFilter{
+		{MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "rbac.deckhouse.io/delegatable", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"true"}},
+		}},
+	})
+
+	cases := []struct {
+		name string
+		lbls map[string]string
+		want bool
+	}{
+		{"delegatable-true", map[string]string{"rbac.deckhouse.io/delegatable": "true"}, true},
+		{"delegatable-false", map[string]string{"rbac.deckhouse.io/delegatable": "false"}, false},
+		{"delegatable-garbage", map[string]string{"rbac.deckhouse.io/delegatable": "yes"}, false},
+		{"no-marker", map[string]string{}, false},
+	}
+
+	objs := make([]client.Object, 0, len(cases))
+	for _, c := range cases {
+		objs = append(objs, clusterRole(c.name, c.lbls))
+	}
+
+	resolved, err := Resolve(context.Background(), newClient(t, objs...), testMapper(), reg, nil)
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	for _, c := range cases {
+		if got := resolved.Decide(c.name); got != c.want {
+			t.Fatalf("%s: got available=%v want %v", c.name, got, c.want)
+		}
+	}
+}
+
 func TestDecideAllowedSelector(t *testing.T) {
 	reg := &v1alpha1.GrantableClusterResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},

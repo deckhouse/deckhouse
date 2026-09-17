@@ -34,12 +34,14 @@ import (
 // systemType: Immutable. Each of them guards an assumption the immutable
 // bootstrap path makes that the classic bashible path does not.
 const (
-	ImmutableInstallerImagesCheckName     preflight.CheckName = "immutable-installer-images"
-	ImmutableRegistryModeCheckName        preflight.CheckName = "immutable-registry-mode"
-	ImmutablePostBootstrapScriptCheckName preflight.CheckName = "immutable-post-bootstrap-script"
-	ImmutableSignatureModeCheckName       preflight.CheckName = "immutable-signature-mode"
-	ImmutableKubeconfigOutCheckName       preflight.CheckName = "immutable-kubeconfig-out"
-	ImmutableSupportedProviderCheckName   preflight.CheckName = "immutable-supported-provider"
+	ImmutableInstallerImagesCheckName      preflight.CheckName = "immutable-installer-images"
+	ImmutableRegistryModeCheckName         preflight.CheckName = "immutable-registry-mode"
+	ImmutablePostBootstrapScriptCheckName  preflight.CheckName = "immutable-post-bootstrap-script"
+	ImmutableSignatureModeCheckName        preflight.CheckName = "immutable-signature-mode"
+	ImmutableKubeconfigOutCheckName        preflight.CheckName = "immutable-kubeconfig-out"
+	ImmutableKubeconfigKeptCheckName       preflight.CheckName = "immutable-kubeconfig-kept"
+	ImmutableSupportedProviderCheckName    preflight.CheckName = "immutable-supported-provider"
+	ImmutableMachinesAvailabilityCheckName preflight.CheckName = "immutable-machines-availability"
 )
 
 // Lowercase because MetaConfig.prepareProviderName lowercases cloud.provider;
@@ -47,8 +49,9 @@ const (
 const immutableProviderDVP = "dvp"
 
 // ImmutableInstallerImages fails early when the installer image does not carry
-// what the node boots on: no system extensions means no kubelet, and an
-// unresolved control-plane image leaves the static pod silently missing.
+// what the node boots on: without the system extensions it never starts kubelet,
+// and an unresolved control-plane image reaches it as an empty string that leaves
+// the static pod silently missing.
 func ImmutableInstallerImages(metaConfig *config.MetaConfig) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableInstallerImagesCheckName,
@@ -121,18 +124,15 @@ func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.G
 	}
 }
 
-// ImmutableKubeconfigOut checks the file that is the only way into a cluster of
-// immutable nodes: dhctl-server names no path, and a path under the tmp directory
-// is swept when dhctl exits. commanderMode is a bootstrapper field, not an option.
-func ImmutableKubeconfigOut(bootstrapOpts *options.BootstrapOptions, globalOpts *options.GlobalOptions, commanderMode bool) preflight.Check {
+// ImmutableKubeconfigKept rejects a --kubeconfig-out that dhctl would delete on
+// its way out: the tmp cleaner empties the very directory the flag's help points
+// at, and on an immutable cluster that file is the only way in.
+func ImmutableKubeconfigKept(bootstrapOpts *options.BootstrapOptions, globalOpts *options.GlobalOptions) preflight.Check {
 	return preflight.Check{
-		Name:        ImmutableKubeconfigOutCheckName,
-		Description: "the admin kubeconfig has somewhere to be written that dhctl will not delete",
+		Name:        ImmutableKubeconfigKeptCheckName,
+		Description: "the admin kubeconfig is written somewhere dhctl will not delete",
 		Phase:       preflight.PhasePreInfra,
 		Run: func(ctx context.Context) error {
-			if commanderMode && bootstrapOpts.KubeconfigOut == "" {
-				return immutable.ErrKubeconfigOutRequired
-			}
 			return immutable.CheckKubeconfigOutSurvivesCleanup(ctx, bootstrapOpts.KubeconfigOut, globalOpts.TmpDir)
 		},
 	}
@@ -163,6 +163,24 @@ func ImmutableSupportedProvider(metaConfig *config.MetaConfig) preflight.Check {
 	}
 }
 
+// ImmutableKubeconfigOut rejects a Commander-mode bootstrap that names no path for
+// the admin kubeconfig: dhctl-server writes no default (TmpDir is shared by every
+// cluster) and the bootstrap response carries none, so the one-shot credentials would be lost.
+// commanderMode is a bootstrapper field, recorded nowhere in options.Options.
+func ImmutableKubeconfigOut(bootstrapOpts *options.BootstrapOptions, commanderMode bool) preflight.Check {
+	return preflight.Check{
+		Name:        ImmutableKubeconfigOutCheckName,
+		Description: "the admin kubeconfig has somewhere to be written",
+		Phase:       preflight.PhasePreInfra,
+		Run: func(_ context.Context) error {
+			if !commanderMode || bootstrapOpts.KubeconfigOut != "" {
+				return nil
+			}
+			return immutable.ErrKubeconfigOutRequired
+		},
+	}
+}
+
 // ImmutablePostBootstrapScript rejects --post-bootstrap-script-path: the script
 // runs over SSH on the master, and an immutable node has no sshd.
 func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) preflight.Check {
@@ -178,6 +196,27 @@ func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) prefl
 				"--post-bootstrap-script-path (%s) is not supported for an immutable master: the script is executed over SSH and an immutable node runs no sshd",
 				bootstrapOpts.PostBootstrapScriptPath,
 			)
+		},
+	}
+}
+
+// ImmutableMachinesAvailability asks the machines themselves: each one named with
+// --master-host answers its maintenance port, and the hardware it reports is
+// the hardware its document describes. Both come from one inventory read.
+//
+// The work lives in the bootstrapper — it owns the tunnel and the documents —
+// and arrives here as run. A cloud bootstrap names no machines and passes it
+// with nothing to do.
+func ImmutableMachinesAvailability(run func(context.Context) error) preflight.Check {
+	return preflight.Check{
+		Name:        ImmutableMachinesAvailabilityCheckName,
+		Description: "the machines named with --master-host answer and match the configuration written for them",
+		Phase:       preflight.PhasePreInfra,
+		Run: func(ctx context.Context) error {
+			if run == nil {
+				return nil
+			}
+			return run(ctx)
 		},
 	}
 }

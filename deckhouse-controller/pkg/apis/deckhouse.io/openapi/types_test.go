@@ -175,6 +175,7 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 			"storageClass": {
 				Type:                 StringOrArray{"string"},
 				XGrant:               "storageclasses",
+				XImmutable:           true,
 				XUIOrder:             int64Ptr(0),
 				XUIValidationMessage: "must reference an existing StorageClass",
 			},
@@ -182,6 +183,7 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 				Type:        StringOrArray{"integer"},
 				Default:     jsonPtr("1"),
 				XUIAdvanced: true,
+				XUIGroup:    "toggles",
 				XUIOrder:    int64Ptr(2),
 			},
 			"secretName": {
@@ -223,6 +225,9 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	if sc.XUIValidationMessage != "must reference an existing StorageClass" {
 		t.Errorf("x-deckhouse-ui-validation-message: got %q", sc.XUIValidationMessage)
 	}
+	if !sc.XImmutable {
+		t.Errorf("x-deckhouse-immutable: got false, want true")
+	}
 
 	rep, ok := restored.Properties["replicas"]
 	if !ok {
@@ -233,6 +238,9 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if rep.XUIOrder == nil || *rep.XUIOrder != 2 {
 		t.Errorf("x-deckhouse-ui-order mismatch")
+	}
+	if rep.XUIGroup != "toggles" {
+		t.Errorf("x-deckhouse-ui-group: got %q, want toggles", rep.XUIGroup)
 	}
 	if len(restored.XValidations) != 1 || restored.XValidations[0].Expression != "self.storageClass != ''" {
 		t.Errorf("x-deckhouse-validations: got %+v", restored.XValidations)
@@ -475,10 +483,10 @@ func realModuleSchema() *OpenAPIV3Schema {
 				XUIOrder:    int64Ptr(2),
 				XValidations: []ValidationRule{
 					{
-						Expression:      "self >= 1 && self <= 10",
-						Message:   "replicas must be between 1 and 10",
-						Reason:    stringPtr("FieldValueInvalid"),
-						FieldPath: ".replicas",
+						Expression: "self >= 1 && self <= 10",
+						Message:    "replicas must be between 1 and 10",
+						Reason:     stringPtr("FieldValueInvalid"),
+						FieldPath:  ".replicas",
 					},
 				},
 			},
@@ -554,8 +562,8 @@ func realModuleSchema() *OpenAPIV3Schema {
 		},
 		XValidations: []ValidationRule{
 			{
-				Expression:    "has(self.storageClass) && self.storageClass != ''",
-				Message: "storageClass is required",
+				Expression: "has(self.storageClass) && self.storageClass != ''",
+				Message:    "storageClass is required",
 			},
 		},
 	}

@@ -3,7 +3,7 @@ title: Kubelet
 permalink: ru/architecture/kubernetes-and-scheduling/kubelet.html
 lang: ru
 search: kubelet, агент kubelet, архитектура kubelet, взаимодействия kubelet
-description: Архитектура и роль kubelet в Deckhouse Kubernetes Platform.
+description: Архитектура и роль kubelet в Deckhouse Platform.
 ---
 
 Kubelet не является компонентом control plane, но играет ключевую роль в работе Kubernetes-кластера.
@@ -12,7 +12,7 @@ Kubelet — это агент, который работает на каждом
 
 ## Манифесты статических подов
 
-Kubelet запускает компоненты control plane из манифестов статических подов, расположенных в директории `/etc/kubernetes/manifests`. В Deckhouse Kubernetes Platform kubelet обрабатывает в этой директории только файлы с расширением `.yaml` или `.yml`.
+Kubelet запускает компоненты control plane из манифестов статических подов, расположенных в директории `/etc/kubernetes/manifests`. В Deckhouse Platform kubelet обрабатывает в этой директории только файлы с расширением `.yaml` или `.yml`.
 
 Файлы с другими расширениями, например `kube-apiserver.backup`, `kube-apiserver.yaml.bak`, swap-файлы редакторов или другие временные файлы, игнорируются. Это предотвращает случайную обработку резервных копий и файлов, не являющихся манифестами, как манифестов статических подов.
 
@@ -30,7 +30,7 @@ Kubelet запускает компоненты control plane из манифе�
 
 ![Взаимодействия kubelet](../../images/architecture/kubernetes-and-scheduling/c4-l2-kubelet.ru.png)
 
-Kubelet контролирует состояние контейнеров всех подов, запущенных на узле, относящихся как к пользовательским приложениям, так и к компонентам DKP, выполняя пробы Startup, Liveness и Readiness в соответствии со спецификацией пода. Подробнее о пробах можно узнать в [документации Kubernetes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes).
+Kubelet контролирует состояние контейнеров всех подов, запущенных на узле, относящихся как к пользовательским приложениям, так и к компонентам DP, выполняя пробы Startup, Liveness и Readiness в соответствии со спецификацией пода. Подробнее о пробах можно узнать в [документации Kubernetes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes).
 
 Kubelet также взаимодействует со следующими компонентами:
 

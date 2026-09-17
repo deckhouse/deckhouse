@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -37,13 +38,23 @@ const (
 	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
 	capiNamespace                = "d8-cloud-instance-manager"
 	helmManagedSelector          = "app.kubernetes.io/managed-by=Helm"
+	manualBootstrapSecretPrefix  = "manual-bootstrap-for-"
 )
+
+// zoneHashedSecretName matches <ng>-<sha256(clusterUUID+zone)[:8]>, the name both the CAPI
+// bootstrap and the machine-class Secret carry — the shape helm gave them and the one
+// node-controller keeps writing them under.
+var zoneHashedSecretName = regexp.MustCompile(`-[0-9a-f]{8}$`)
 
 type keepResource struct {
 	Group    string
 	Resource string
 	// versionPreference is tried in order; empty falls back to storedVersionPreference.
 	versionPreference []string
+	// keepName picks the objects of a resource whose namespace is shared with other
+	// owners. nil keeps every helm-managed object of the resource, which is right for
+	// the CAPI kinds: in d8-cloud-instance-manager they are all this module's.
+	keepName func(string) bool
 }
 
 var capiResources = []keepResource{
@@ -51,6 +62,10 @@ var capiResources = []keepResource{
 	{Group: "cluster.x-k8s.io", Resource: "machinehealthchecks"},
 	{Group: "cluster.x-k8s.io", Resource: "machinedeployments"},
 	{Group: "infrastructure.cluster.x-k8s.io", Resource: "staticmachinetemplates", versionPreference: []string{"v1alpha1"}},
+	// The bootstrap Secrets are node-controller's from 1.79 on. This hook runs before
+	// helm, so on the upgrade that stops rendering them the annotation is already there
+	// and the release leaves them alone. Remove together with this hook.
+	{Group: "", Resource: "secrets", keepName: IsBootstrapSecretName},
 }
 
 var crdGVR = schema.GroupVersionResource{
@@ -68,7 +83,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(setKeepPolicyOnCapiResources))
 
-func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+// Remove in 1.81: the hook only protects objects adopted during the #21372 migration, and an
+// upgrade from a pre-migration release is impossible once 1.81 is the oldest supported hop.
+func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("get k8s client: %w", err)
@@ -94,11 +111,7 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 	}
 
 	for _, res := range resources {
-		preference := res.versionPreference
-		if len(preference) == 0 {
-			preference = storedVersionPreference
-		}
-		version, ok, err := pickStoredVersion(dynClient, res.Group, res.Resource, preference)
+		version, ok, err := keepResourceVersion(ctx, dynClient, res)
 		if err != nil {
 			return fmt.Errorf("resolve stored version for %s: %w", res.Resource, err)
 		}
@@ -107,7 +120,7 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 		}
 		gvr := schema.GroupVersionResource{Group: res.Group, Version: version, Resource: res.Resource}
 
-		list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: helmManagedSelector})
+		list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(ctx, metav1.ListOptions{LabelSelector: helmManagedSelector})
 		if err != nil {
 			if isConversionUnavailable(err) {
 				input.Logger.Info("skipping resource, conversion webhook unavailable", slog.String("resource", res.Resource), slog.String("version", version))
@@ -117,11 +130,14 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 		}
 
 		for _, item := range list.Items {
+			if res.keepName != nil && !res.keepName(item.GetName()) {
+				continue
+			}
 			if item.GetAnnotations()[helmResourcePolicyAnnotation] == "keep" {
 				continue
 			}
 			if _, err := dynClient.Resource(gvr).Namespace(item.GetNamespace()).Patch(
-				context.TODO(),
+				ctx,
 				item.GetName(),
 				types.MergePatchType,
 				patch,
@@ -132,11 +148,14 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 			input.Logger.Info("stamped keep policy", slog.String("resource", res.Resource), slog.String("name", item.GetName()))
 		}
 
-		verify, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: helmManagedSelector})
+		verify, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(ctx, metav1.ListOptions{LabelSelector: helmManagedSelector})
 		if err != nil {
 			return fmt.Errorf("verify list %s/%s: %w", res.Resource, version, err)
 		}
 		for _, item := range verify.Items {
+			if res.keepName != nil && !res.keepName(item.GetName()) {
+				continue
+			}
 			if item.GetAnnotations()[helmResourcePolicyAnnotation] != "keep" {
 				return fmt.Errorf("keep policy not set on %s/%s: refusing to proceed to avoid prune", res.Resource, item.GetName())
 			}
@@ -146,8 +165,37 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 	return nil
 }
 
-func pickStoredVersion(dynClient dynamic.Interface, group, resource string, preference []string) (string, bool, error) {
-	crd, err := dynClient.Resource(crdGVR).Get(context.TODO(), resource+"."+group, metav1.GetOptions{})
+// IsBootstrapSecretName reports whether a Secret of d8-cloud-instance-manager is one this
+// migration takes over. Two shapes are at prune risk: manual-bootstrap-for-<ng>, and the
+// zone-hashed <ng>-<sha256(clusterUUID+zone)[:8]> that both the MCM machine-class Secret and
+// the CAPI bootstrap Secret carry. A cluster upgrading into 1.79 holds all of them as
+// helm-managed objects the release would otherwise prune.
+//
+// Selecting by name because the namespace is shared and the labels do not separate them:
+// deckhouse-registry, bashible-bashbooster and bashible-api-server-tls carry the same
+// heritage/module pair and no other, and four registry-packages-proxy Secrets live here too.
+//
+// Exported for the template test that binds these shapes to the names the chart still renders.
+func IsBootstrapSecretName(name string) bool {
+	return strings.HasPrefix(name, manualBootstrapSecretPrefix) || zoneHashedSecretName.MatchString(name)
+}
+
+// keepResourceVersion resolves the version to patch a resource through. A core
+// resource has no CRD to read a stored version from, and v1 is the only version
+// the group has ever served.
+func keepResourceVersion(ctx context.Context, dynClient dynamic.Interface, res keepResource) (string, bool, error) {
+	if res.Group == "" {
+		return "v1", true, nil
+	}
+	preference := res.versionPreference
+	if len(preference) == 0 {
+		preference = storedVersionPreference
+	}
+	return pickStoredVersion(ctx, dynClient, res.Group, res.Resource, preference)
+}
+
+func pickStoredVersion(ctx context.Context, dynClient dynamic.Interface, group, resource string, preference []string) (string, bool, error) {
+	crd, err := dynClient.Resource(crdGVR).Get(ctx, resource+"."+group, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return "", false, nil

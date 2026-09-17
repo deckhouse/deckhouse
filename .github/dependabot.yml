@@ -403,6 +403,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/user-authz"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/000-common/images/check-kernel-version/src"
   labels:
   - "type/dependencies"
@@ -835,6 +844,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/140-user-authz/images/user-authz-controller/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/150-user-authn/images/basic-auth-proxy/app"
   labels:
   - "type/dependencies"
@@ -917,6 +935,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/pkg/crd-enricher"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/pkg/deckhouse-registry"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

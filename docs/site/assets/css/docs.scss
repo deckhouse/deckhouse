@@ -2795,6 +2795,10 @@ select#contact-select {
   }
 }
 
+[data-tippy-root] {
+  z-index: 10 !important;
+}
+
 .tippy-box {
   min-width: 255px;
 

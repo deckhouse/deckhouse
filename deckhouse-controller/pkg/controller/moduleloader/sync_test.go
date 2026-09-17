@@ -163,10 +163,10 @@ func testReadyMPO(name, imageTag, deployedOn string) *v1alpha2.ModulePullOverrid
 	return &v1alpha2.ModulePullOverride{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Annotations: map[string]string{v1alpha1.ModulePullOverrideAnnotationDeployedOn: deployedOn},
+			Annotations: map[string]string{v1alpha2.ModulePullOverrideAnnotationDeployedOn: deployedOn},
 		},
 		Spec:   v1alpha2.ModulePullOverrideSpec{ImageTag: imageTag},
-		Status: v1alpha2.ModulePullOverrideStatus{Message: v1alpha1.ModulePullOverrideMessageReady},
+		Status: v1alpha2.ModulePullOverrideStatus{Message: v1alpha2.ModulePullOverrideMessageReady},
 	}
 }
 
@@ -422,6 +422,57 @@ func newEnsureLoader(t *testing.T, objects ...client.Object) *Loader {
 		ReleaseChannel: "Stable",
 	})
 	return l
+}
+
+// TestEnsureModuleAnnotations verifies that ensureModule owns the description
+// annotations and nothing else: the package sync runs earlier in the same start
+// and marks embedded and dev modules with annotations of its own.
+func TestEnsureModuleAnnotations(t *testing.T) {
+	def := func(ru, en string) *moduletypes.Definition {
+		definition := &moduletypes.Definition{
+			Name:   "ingress-nginx",
+			Weight: 380,
+			Path:   "/deckhouse/modules/380-ingress-nginx",
+		}
+
+		if ru != "" || en != "" {
+			definition.Descriptions = &moduletypes.ModuleDescriptions{Ru: ru, En: en}
+		}
+
+		return definition
+	}
+
+	annotated := func(annotations map[string]string) *v1alpha1.Module {
+		module := testModule("ingress-nginx", v1alpha1.ModuleSourceEmbedded)
+		module.SetAnnotations(annotations)
+
+		return module
+	}
+
+	t.Run("an annotation of another writer survives", func(t *testing.T) {
+		l := newEnsureLoader(t, annotated(map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}))
+
+		require.NoError(t, l.ensureModule(context.Background(), def("ru description", "en description"), true))
+
+		module := getModule(t, l, "ingress-nginx")
+		assert.Equal(t, map[string]string{
+			v1alpha2.ModuleAnnotationEmbedded:      "true",
+			v1alpha1.ModuleAnnotationDescriptionRu: "ru description",
+			v1alpha1.ModuleAnnotationDescriptionEn: "en description",
+		}, module.GetAnnotations())
+	})
+
+	t.Run("a description the module files dropped is cleared", func(t *testing.T) {
+		l := newEnsureLoader(t, annotated(map[string]string{
+			v1alpha2.ModuleAnnotationEmbedded:      "true",
+			v1alpha1.ModuleAnnotationDescriptionEn: "gone",
+		}))
+
+		require.NoError(t, l.ensureModule(context.Background(), def("", ""), true))
+
+		module := getModule(t, l, "ingress-nginx")
+		assert.Equal(t, map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}, module.GetAnnotations())
+	})
 }
 
 // TestEnsureModuleEmbeddedSource verifies that ensureModule keeps the invariant

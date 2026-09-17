@@ -16,6 +16,8 @@ limitations under the License.
 
 package nodeconfig
 
+import "time"
+
 const (
 	controllerName = "node-config"
 
@@ -67,6 +69,14 @@ const (
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
 
+	// staticConfigSecretName and providerConfigSecretName carry the network the
+	// cluster addresses its nodes in. A cluster has one of the two, never both,
+	// so neither read may fail the pass when its secret is absent.
+	staticConfigSecretName   = "d8-static-cluster-configuration"
+	staticConfigKey          = "static-cluster-configuration.yaml"
+	providerConfigSecretName = "d8-provider-cluster-configuration"
+	providerConfigKey        = "cloud-provider-cluster-configuration.yaml"
+
 	// defaultClusterDomain is what ClusterConfiguration defaults clusterDomain to.
 	defaultClusterDomain = "cluster.local"
 
@@ -103,6 +113,10 @@ const (
 	// must not differ between nodes. Keep in step with dhctl/pkg/immutable/digests.go.
 	platformExtensionRequestedBy = "node-manager"
 
+	// nerRequestedByPrefix qualifies an extension that came from a
+	// NodeExtensionRequest, distinguishing it from the platform marker above.
+	nerRequestedByPrefix = "NodeExtensionRequest/"
+
 	// resourceReservationModeAuto and resourceReservationModeStatic are the
 	// NodeGroup kubeReserved modes this render reasons about; Static has no
 	// counterpart on an immutable node, and Off only ever passes through.
@@ -114,8 +128,14 @@ const (
 
 	phaseReady = "Ready"
 
+	// extensionStateReady and extensionStateFailed mirror the agent's enum for
+	// NodeConfig.status.extensions[].state; the third value, Pending, means the
+	// node is still working and counts as neither outcome.
+	extensionStateReady  = "Ready"
+	extensionStateFailed = "Failed"
+
 	// cgroupLabel tells the cluster which cgroup layout the node runs;
-	// cgroupV2Value is the only answer an olcedar node has. Read by
+	// cgroupV2Value is the only answer a Deckhouse Engine node has. Read by
 	// hooks/cntrd_v2_support.go; the installer writes the same pair.
 	cgroupLabel   = "node.deckhouse.io/cgroup"
 	cgroupV2Value = "cgroup2fs"
@@ -137,14 +157,27 @@ const (
 	// running the spec that was published to it, as opposed to a rolled-back,
 	// quarantined or half-applied one.
 	configurationAppliedCondition = "ConfigurationApplied"
+
+	// disruptionApprovalExhaustedEvent names the Warning that says the cluster
+	// has stopped interrupting a node for a configuration revision.
+	disruptionApprovalExhaustedEvent = "DisruptionApprovalExhausted"
 )
 
-// nodeManagerDigestsKey and osImageName locate the olcedar image of this
+// A failed disruption takes the node out of service and changes nothing, so the
+// retries for one configuration revision are bounded: each attempt waits longer
+// than the one before, and after the last the revision is left alone.
+const (
+	maxDisruptionAttempts     = 3
+	disruptionRetryBackoff    = time.Minute
+	disruptionRetryBackoffMax = 10 * time.Minute
+)
+
+// nodeManagerDigestsKey and osImageName locate the Deckhouse Engine image of this
 // release. Pinned by digest, not by tag: the node decides a rootfs update by
 // comparing it with what it recorded at install, and a tag that moves lies.
 const (
 	nodeManagerDigestsKey = "nodeManager"
-	osImageName           = "olcedar"
+	osImageName           = "engine"
 )
 
 // systemDiskSelectorSize is the fallback diskSelector when the provisioner
@@ -163,10 +196,11 @@ const (
 	// maxPodsCeiling is what the agent's schema accepts (Maximum=1000), which is
 	// the top of the bashible ladder too, so only an operator's own number can
 	// still reach it.
-	maxPodsCeiling                = 1000
-	defaultContainerLogMaxSize    = "50Mi"
-	defaultContainerLogMaxFiles   = 4
-	defaultMaxConcurrentDownloads = 3
+	maxPodsCeiling              = 1000
+	defaultContainerLogMaxSize  = "50Mi"
+	defaultContainerLogMaxFiles = 4
+	// bashible's number (candi/bashible/common-steps/all/032_configure_containerd.sh.tpl).
+	defaultMaxConcurrentDownloads = 8
 )
 
 // reservedLabelNamespaces are the label namespaces a node may not put itself

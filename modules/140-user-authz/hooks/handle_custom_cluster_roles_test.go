@@ -72,8 +72,26 @@ metadata:
   name: ccr5
   annotations:
     user-authz.deckhouse.io/access-level: ClusterAdmin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-stale-label
+  labels:
+    user-authz.deckhouse.io/access-level: Editor
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-wrong-label
+  labels:
+    user-authz.deckhouse.io/access-level: Admin
+  annotations:
+    user-authz.deckhouse.io/access-level: User
 `
 )
+
+const accessLevelLabelPath = `metadata.labels.user-authz\.deckhouse\.io/access-level`
 
 var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
@@ -83,18 +101,9 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 			f.RunHook()
 		})
 
-		It("userAuthz.internal.customClusterRoles must be dicts of empty arrays", func() {
-			ccrExpectation := `
-			{
-			  "user":[],
-			  "privilegedUser":[],
-			  "editor":[],
-			  "admin":[],
-			  "clusterEditor":[],
-			  "clusterAdmin":[]
-			}`
+		It("Runs without values and without patches", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").String()).To(MatchJSON(ccrExpectation))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").Exists()).To(BeFalse())
 		})
 	})
 
@@ -104,14 +113,158 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 			f.RunHook()
 		})
 
-		It("Custom Roles and ClusterRoles must be stored in values", func() {
+		It("Access-level label mirrors the annotation on every custom ClusterRole", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.user").AsStringSlice()).Should(ConsistOf("ccr0"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.privilegedUser").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.editor").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.admin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterEditor").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterAdmin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4", "ccr5"))
+			for name, level := range map[string]string{
+				"ccr0": "User", "ccr1": "PrivilegedUser", "ccr2": "Editor",
+				"ccr3": "Admin", "ccr4": "ClusterEditor", "ccr5": "ClusterAdmin",
+				"ccr-wrong-label": "User",
+			} {
+				role := f.KubernetesGlobalResource("ClusterRole", name)
+				Expect(role.Exists()).To(BeTrue(), name)
+				Expect(role.Field(accessLevelLabelPath).String()).To(Equal(level), name)
+			}
+		})
+
+		It("Stale label is removed and roles without the annotation stay untouched", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-stale-label").Field(accessLevelLabelPath).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-without-annotation0").Field("metadata.labels").Exists()).To(BeFalse())
+		})
+
+		It("Patches exactly the roles whose label differs from the annotation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// ccr0..ccr5 get the label, ccr-wrong-label is corrected, ccr-stale-label loses it.
+			Expect(f.PatchCollector.Operations()).To(HaveLen(8))
+		})
+
+		It("Counts the custom roles per access level", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			counts := map[string]float64{}
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == customClusterRolesMetric && m.Value != nil {
+					counts[m.Labels["level"]] = *m.Value
+				}
+			}
+			// ccr0 and ccr-wrong-label are User; one role per other level; the stale label counts nothing.
+			Expect(counts).To(Equal(map[string]float64{
+				"User": 2, "PrivilegedUser": 1, "Editor": 1, "Admin": 1, "ClusterEditor": 1, "ClusterAdmin": 1,
+			}))
+		})
+	})
+
+	Context("Cluster where every label already matches", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-labeled
+  labels:
+    user-authz.deckhouse.io/access-level: Editor
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-super-admin
+  annotations:
+    user-authz.deckhouse.io/access-level: SuperAdmin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-unknown-level
+  annotations:
+    user-authz.deckhouse.io/access-level: Wrong
+`))
+			f.RunHook()
+		})
+
+		It("Issues no patch: a matching label is left alone and unknown levels get no label", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(BeEmpty())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-super-admin").Field(accessLevelLabelPath).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-unknown-level").Field(accessLevelLabelPath).Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Aggregated roles that did or did not collect their custom roles", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-user
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-editor
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["delete"]
+---
+# the User aggregate has collected its role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:user:custom
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels: {user-authz.deckhouse.io/access-level: User}
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get"]
+---
+# the Editor aggregate exists but is empty although User and Editor roles exist
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:editor:custom
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels: {user-authz.deckhouse.io/access-level: Editor}
+---
+# the Admin aggregate as the API server stores a freshly rendered one: rules is null, not absent
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:admin:custom
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels: {user-authz.deckhouse.io/access-level: Admin}
+rules: null
+`))
+			f.RunHook()
+		})
+
+		It("Flags the levels whose aggregated role is empty or absent while they have roles to aggregate", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			missing := map[string]float64{}
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == customAggregationMissingMetric && m.Value != nil {
+					missing[m.Labels["level"]] = *m.Value
+				}
+			}
+			// User: aggregated and filled. PrivilegedUser: aggregate absent but a User role must be in it.
+			// Editor: aggregate present but empty. Admin and above: aggregates absent, roles expected.
+			Expect(missing).To(Equal(map[string]float64{
+				"User": 0, "PrivilegedUser": 1, "Editor": 1, "Admin": 1, "ClusterEditor": 1, "ClusterAdmin": 1,
+			}))
 		})
 	})
 })

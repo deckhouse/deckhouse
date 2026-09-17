@@ -2,7 +2,7 @@
 title: "Diagnostics and observability"
 permalink: en/admin/configuration/network/policy/troubleshooting.html
 description: |
-  Tools for inspecting applied network policies in Deckhouse Kubernetes Platform: kubectl describe, Hubble UI and CLI, flow logs, and a "policy not applied" checklist.
+  Tools for inspecting applied network policies in Deckhouse Platform: kubectl describe, Hubble UI and CLI, flow logs, and a "policy not applied" checklist.
 relatedLinks:
   - title: "HubbleMonitoringConfig — cni-cilium module"
     url: /modules/cni-cilium/cr.html#hubblemonitoringconfig
@@ -61,7 +61,7 @@ Hubble shows policy verdicts in real time and is the primary diagnostic tool in 
 
 In Hubble UI, connections between pods and services are tagged as `forwarded`, `dropped`, or `audit`. Drop events show which policy blocked the traffic and which rule field matched.
 
-`hubble observe` can filter events by type. In DKP, the `hubble` client ships with the agent, so it is convenient to run commands via `d8 k exec` against a cilium-agent pod:
+`hubble observe` can filter events by type. In DP, the `hubble` client ships with the agent, so it is convenient to run commands via `d8 k exec` against a cilium-agent pod:
 
 ```bash
 d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --type policy-verdict --verdict DROPPED
@@ -70,7 +70,7 @@ d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --from-pod my-app/clie
 ```
 
 {% alert level="info" %}
-DKP does not provide a standalone `d8 hubble` binary. Hubble CLI access is provided by running `exec` into a `cilium-agent` pod, as shown above. The `-it` flag is required for streaming output when `--last` is not specified.
+DP does not provide a standalone `d8 hubble` binary. Hubble CLI access is provided by running `exec` into a `cilium-agent` pod, as shown above. The `-it` flag is required for streaming output when `--last` is not specified.
 {% endalert %}
 
 Each agent sees events only for its own node. For cluster-wide event collection, use Hubble UI or export via [HubbleMonitoringConfig](/modules/cni-cilium/cr.html#hubblemonitoringconfig).

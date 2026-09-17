@@ -22,16 +22,16 @@ entries:
                 ru: Описание
               url: /admin/configuration/
             - title:
-                en: DKP components registry
-                ru: Хранилище образов компонентов DKP
+                en: DP components registry
+                ru: Хранилище образов компонентов DP
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: DKP-managed clusters
-                    ru: Кластеры, полностью управляемые DKP
+                    en: DP-managed clusters
+                    ru: Кластеры, полностью управляемые DP
                   url: /admin/configuration/registry/managing-interaction.html
                 - title:
                     en: Managed Kubernetes clusters
@@ -429,6 +429,10 @@ entries:
                     en: Chaos engineering
                     ru: Хаос-инжиниринг
                   url: /admin/configuration/high-reliability-and-availability/chaos-engineering.html
+                - title:
+                    en: Virtual machine fault tolerance and balancing
+                    ru: Отказоустойчивость и балансировка виртуальных машин
+                  url: /admin/configuration/high-reliability-and-availability/vm-reliability.html
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
@@ -477,6 +481,10 @@ entries:
                         en: Migrating container runtime to ContainerdV2
                         ru: Миграция container runtime на ContainerdV2
                       url: /admin/configuration/platform-scaling/node/migrating.html
+                    - title:
+                        en: Maintenance of nodes running virtual machines
+                        ru: Обслуживание узлов с виртуальными машинами
+                      url: /admin/configuration/platform-scaling/node/vm-node-maintenance.html
             - title:
                 en: Application scaling and resource management
                 ru: Масштабирование приложений и управление ресурсами
@@ -574,6 +582,10 @@ entries:
                             ru: ALB средствами Kubernetes Gateway API
                           url: /admin/configuration/network/ingress/alb/alb-gateway-api.html
                         - title:
+                            en: Migrating from ingress-nginx to alb
+                            ru: Миграция с ingress-nginx на alb
+                          url: /admin/configuration/network/ingress/alb/migration.html
+                        - title:
                             en: ALB with Istio
                             ru: ALB средствами Istio
                           url: /admin/configuration/network/ingress/alb/istio.html
@@ -642,9 +654,13 @@ entries:
                         ru: Обзор
                       url: /admin/configuration/network/sdn/
                     - title:
-                        en: Configuring SDN in a DKP cluster
-                        ru: Настройка SDN в кластере DKP
+                        en: Configuring SDN in a DP cluster
+                        ru: Настройка SDN в кластере DP
                       url: /admin/configuration/network/sdn/configure.html
+                - title:
+                    en: Virtual machine networking
+                    ru: Сеть виртуальных машин
+                  url: /admin/configuration/network/vm-network.html
                 - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
@@ -786,6 +802,70 @@ entries:
                         ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
                       url: /admin/configuration/storage/external/yadro.html
             - title:
+                en: Virtualization
+                ru: Виртуализация
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/virtualization/
+                - title:
+                    en: Images and storage
+                    ru: Образы и хранилище
+                  folders:
+                    - title:
+                        en: Virtual machine image storage
+                        ru: Хранилище образов виртуальных машин
+                      url: /admin/configuration/virtualization/image-storage.html
+                    - title:
+                        en: Storage for disks and images
+                        ru: Хранилища для дисков и образов
+                      url: /admin/configuration/virtualization/storage-classes.html
+                    - title:
+                        en: Cluster images
+                        ru: Кластерные образы
+                      url: /admin/configuration/virtualization/cluster-images.html
+                - title:
+                    en: Virtual machine classes
+                    ru: Классы виртуальных машин
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/virtualization/vm-classes.html
+                    - title:
+                        en: Virtual processor
+                        ru: Виртуальный процессор
+                      url: /admin/configuration/virtualization/vm-classes-cpu.html
+                    - title:
+                        en: Placement across nodes
+                        ru: Размещение по узлам
+                      url: /admin/configuration/virtualization/vm-classes-placement.html
+                    - title:
+                        en: Sizing policy
+                        ru: Политика сайзинга
+                      url: /admin/configuration/virtualization/vm-classes-sizing.html
+                    - title:
+                        en: CPU oversubscription
+                        ru: Переподписка на CPU
+                      url: /admin/configuration/virtualization/cpu-oversubscription.html
+                - title:
+                    en: Device passthrough
+                    ru: Проброс устройств
+                  folders:
+                    - title:
+                        en: USB devices
+                        ru: USB-устройства
+                      url: /admin/configuration/virtualization/usb-devices.html
+                    - title:
+                        en: GPU devices
+                        ru: GPU-устройства
+                      url: /admin/configuration/virtualization/gpu-devices.html
+                    - title:
+                        en: PCI devices
+                        ru: PCI-устройства
+                      url: /admin/configuration/virtualization/pci-devices.html
+            - title:
                 en: Security
                 ru: Безопасность
               folders:
@@ -809,6 +889,10 @@ entries:
                         en: Runtime audit
                         ru: Рантайм-аудит
                       url: /admin/configuration/security/events/runtime-audit.html
+                    - title:
+                        en: Virtualization event audit
+                        ru: Аудит событий виртуализации
+                      url: /admin/configuration/security/events/virtualization-audit.html
                 - title:
                     en: Security policies
                     ru: Политики безопасности
@@ -897,6 +981,18 @@ entries:
                     en: Project management
                     ru: Управление проектами
                   url: /admin/multitenancy/project-management.html
+            - title:
+                en: Managed-services
+                ru: Managed-сервисы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/managed-services/
+                - title:
+                    en: Managed PostgreSQL
+                    ru: Managed PostgreSQL
+                  url: /admin/configuration/managed-services/postgres/
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
@@ -1023,7 +1119,23 @@ entries:
                 - title:
                     en: ALB
                     ru: ALB
-                  url: /user/network/ingress/alb.html
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /user/network/ingress/alb/
+                    - title:
+                        en: Kubernetes Gateway API
+                        ru: Kubernetes Gateway API
+                      url: /user/network/ingress/alb/gateway-api.html
+                    - title:
+                        en: Ingress NGINX Controller
+                        ru: Ingress NGINX Controller
+                      url: /user/network/ingress/alb/nginx.html
+                    - title:
+                        en: Istio
+                        ru: Istio
+                      url: /user/network/ingress/alb/istio.html
             - title:
                 en: SDN
                 ru: SDN
@@ -1036,6 +1148,22 @@ entries:
                     en: Connecting physical network interfaces to DPDK application pods
                     ru: Подключение физических сетевых интерфейсов к подам DPDK-приложений
                   url: /user/network/sdn/underlay.html
+            - title:
+                en: Virtual machines
+                ru: Виртуальные машины
+              folders:
+                - title:
+                    en: IP addresses of virtual machines
+                    ru: IP-адреса виртуальных машин
+                  url: /user/network/virtualization/vm-ip-addresses.html
+                - title:
+                    en: Accessing applications on a virtual machine
+                    ru: Доступ к приложениям на виртуальной машине
+                  url: /user/network/virtualization/vm-publishing.html
+                - title:
+                    en: Additional network interfaces
+                    ru: Дополнительные сетевые интерфейсы
+                  url: /user/network/virtualization/vm-additional-interfaces.html
             - title:
                 en: Intra-cluster communication
                 ru: Внутрикластерное взаимодействие
@@ -1148,6 +1276,18 @@ entries:
             ru: Мультитенантность
           url: /user/multitenancy/
         - title:
+            en: Managed-services
+            ru: Managed-сервисы
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/managed-services/
+            - title:
+                en: Managed PostgreSQL
+                ru: Managed PostgreSQL
+              url: /user/managed-services/postgres/
+        - title:
             en: Monitoring
             ru: Мониторинг
           folders:
@@ -1203,9 +1343,112 @@ entries:
               draft: true
         - title:
             en: Virtual machines
-            ru: TODO Виртуальные машины
-          url: /user/virtual-machines.html
-          draft: true
+            ru: Виртуальные машины
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/virtualization/
+            - title:
+                en: Quick start
+                ru: Быстрый старт
+              url: /user/virtualization/quickstart.html
+            - title:
+                en: Virtual machine images
+                ru: Образы виртуальных машин
+              url: /user/virtualization/images.html
+            - title:
+                en: Disks
+                ru: Диски
+              folders:
+                - title:
+                    en: Virtual machine disks
+                    ru: Диски виртуальных машин
+                  url: /user/virtualization/disks.html
+                - title:
+                    en: Resizing and migrating disks
+                    ru: Изменение размера и миграция дисков
+                  url: /user/virtualization/disk-operations.html
+                - title:
+                    en: Exporting disk data
+                    ru: Экспорт данных диска
+                  url: /user/virtualization/data-export.html
+            - title:
+                en: Working with a virtual machine
+                ru: Работа с виртуальной машиной
+              folders:
+                - title:
+                    en: Creating a virtual machine
+                    ru: Создание виртуальной машины
+                  url: /user/virtualization/vm-create.html
+                - title:
+                    en: CPU and memory
+                    ru: Процессор и память
+                  url: /user/virtualization/vm-resources.html
+                - title:
+                    en: Guest OS and bootloader
+                    ru: Гостевая ОС и загрузчик
+                  url: /user/virtualization/vm-os-and-boot.html
+                - title:
+                    en: Initial provisioning and the guest OS agent
+                    ru: Начальная инициализация и агент гостевой ОС
+                  url: /user/virtualization/vm-provisioning.html
+                - title:
+                    en: Connecting to a virtual machine
+                    ru: Подключение к виртуальной машине
+                  url: /user/virtualization/vm-access.html
+                - title:
+                    en: Changing the configuration
+                    ru: Изменение конфигурации
+                  url: /user/virtualization/vm-configuration.html
+                - title:
+                    en: Placement across nodes
+                    ru: Размещение по узлам
+                  url: /user/virtualization/vm-placement.html
+                - title:
+                    en: Attaching disks and images
+                    ru: Подключение дисков и образов
+                  url: /user/virtualization/vm-block-devices.html
+                - title:
+                    en: Live migration
+                    ru: Живая миграция
+                  url: /user/virtualization/vm-migration.html
+                - title:
+                    en: Collecting debug information
+                    ru: Сбор отладочной информации
+                  url: /user/virtualization/vm-debug.html
+            - title:
+                en: Snapshots and cloning
+                ru: Снимки и клонирование
+              folders:
+                - title:
+                    en: Snapshots of disks and virtual machines
+                    ru: Снимки дисков и виртуальных машин
+                  url: /user/virtualization/snapshots.html
+                - title:
+                    en: Cloning virtual machines
+                    ru: Клонирование виртуальных машин
+                  url: /user/virtualization/vm-cloning.html
+            - title:
+                en: Virtual machine pools
+                ru: Пулы виртуальных машин
+              url: /user/virtualization/vm-pools.html
+            - title:
+                en: Device passthrough
+                ru: Проброс устройств
+              folders:
+                - title:
+                    en: USB devices
+                    ru: USB-устройства
+                  url: /user/virtualization/usb-devices.html
+                - title:
+                    en: GPU devices
+                    ru: GPU-устройства
+                  url: /user/virtualization/gpu-devices.html
+                - title:
+                    en: PCI devices
+                    ru: PCI-устройства
+                  url: /user/virtualization/pci-devices.html
         - title:
             en: Network capabilities
             ru: TODO Сетевые возможности
@@ -1228,6 +1471,16 @@ entries:
             ru: TODO Катастрофоустойчивость
           draft: true
           url: /user/catastrophic-resistance.html
+    - title:
+        en: Modules
+        ru: Модули
+      external_url: /modules/
+      target: _self
+    - title:
+        en: Guides
+        ru: Руководства
+      external_url: /products/kubernetes-platform/guides/
+      target: _self
 # ------------- Architecture -------------
     - title:
         en: Architecture
@@ -1243,8 +1496,8 @@ entries:
           draft: true
           url: /architecture/system-requirements/
         - title:
-            en: DKP architecture (C4 model)
-            ru: Архитектура DKP (модель C4)
+            en: DP architecture (C4 model)
+            ru: Архитектура DP (модель C4)
           url: /architecture/c4-model.html
         - title:
             en: Modules
@@ -1351,8 +1604,8 @@ entries:
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
             - title:
-                en: DKP cluster management
-                ru: Управление кластерами DKP
+                en: DP cluster management
+                ru: Управление кластерами DP
               url: /architecture/deckhouse/commander.html
         - title:
             en: Delivery subsystem
@@ -1401,7 +1654,7 @@ entries:
             - title:
                 en: Pod-reloader module
                 ru: Модуль pod-reloader
-              url: /architecture/kubernetes-and-scheduling/pod-reloader.html              
+              url: /architecture/kubernetes-and-scheduling/pod-reloader.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1507,6 +1760,10 @@ entries:
                     ru: Модуль gpu
                   url: /architecture/cluster-and-infrastructure/infrastructure/gpu.html
                 - title:
+                    en: Registry-packages-proxy module
+                    ru: Модуль registry-packages-proxy
+                  url: /architecture/cluster-and-infrastructure/infrastructure/registry-packages-proxy.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
@@ -1585,7 +1842,7 @@ entries:
             - title:
                 en: Cilium-hubble module
                 ru: Модуль cilium-hubble
-              url: /architecture/network/cilium-hubble.html              
+              url: /architecture/network/cilium-hubble.html
             - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
@@ -1727,6 +1984,14 @@ entries:
                 ru: Модуль observability
               url: /architecture/observability/observability.html
             - title:
+                en: Extended-monitoring module
+                ru: Модуль extended-monitoring
+              url: /architecture/observability/extended-monitoring.html
+            - title:
+                en: Monitoring-kubernetes module
+                ru: Модуль monitoring-kubernetes
+              url: /architecture/observability/monitoring-kubernetes.html
+            - title:
                 en: Upmeter module
                 ru: Модуль upmeter
               url: /architecture/observability/upmeter.html
@@ -1749,7 +2014,7 @@ entries:
             - title:
                 en: Managed-postgres module
                 ru: Модуль managed-postgres
-              url: /architecture/managed-services/managed-postgres.html   
+              url: /architecture/managed-services/managed-postgres.html
             - title:
                 en: Managed-valkey module
                 ru: Модуль managed-valkey

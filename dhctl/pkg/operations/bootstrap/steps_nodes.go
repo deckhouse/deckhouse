@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -42,11 +41,16 @@ func BootstrapTerraNodes(
 	terraNodeGroups []config.TerraNodeGroupSpec,
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
+	build operations.ImmutablePayloadBuilder,
 ) error {
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create CloudPermanent NG", func(ctx context.Context) error {
-		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions)
+		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions, build)
 	})
 }
+
+// masterPayloadBuilder renders the cloud-init an additional master boots with.
+// nil means the group's own published cloud config is used instead.
+type masterPayloadBuilder func(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeName string) (string, error)
 
 // BootstrapAdditionalMasterNodes creates every master past the first one.
 func BootstrapAdditionalMasterNodes(
@@ -57,20 +61,19 @@ func BootstrapAdditionalMasterNodes(
 	infrastructureContext *infrastructure.Context,
 	stateCache state.Cache,
 	globalOptions *options.GlobalOptions,
+	buildPayload masterPayloadBuilder,
 ) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		dhlog.FromContext(ctx).DebugContext(ctx, "Skipping additional master node bootstrap because replicas == 1")
 		return nil
 	}
 
-	immutableMaster := immutable.IsImmutableMaster(ctx, metaConfig)
-
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Bootstrap additional master nodes", func(ctx context.Context) error {
-		// The group's published cloud config is a bashible bundle, which an
-		// immutable node cannot run: its payload is rendered here instead, and it
-		// carries the node's own name — hence per node, below.
+		// The group's published cloud config is a bashible bundle. A caller that
+		// renders the payload itself has a node which cannot run that bundle, and
+		// its payload carries the node's own name — hence per node, below.
 		masterCloudConfig := ""
-		if !immutableMaster {
+		if buildPayload == nil {
 			var err error
 			masterCloudConfig, err = entity.GetCloudConfig(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), global.MasterNodeGroupName, global.ShowDeckhouseLogs)
 			if err != nil {
@@ -82,9 +85,9 @@ func BootstrapAdditionalMasterNodes(
 			nodeName := fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)
 
 			nodeCloudConfig := masterCloudConfig
-			if immutableMaster {
+			if buildPayload != nil {
 				var err error
-				nodeCloudConfig, err = buildImmutableJoinPayload(ctx, kubeCl, metaConfig, nodeName)
+				nodeCloudConfig, err = buildPayload(ctx, kubeCl, metaConfig, nodeName)
 				if err != nil {
 					return fmt.Errorf("build the payload of %s: %w", nodeName, err)
 				}
@@ -96,9 +99,15 @@ func BootstrapAdditionalMasterNodes(
 			}
 
 			// Converge builds its SSH session from this cache, and a host that
-			// answers no sshd stalls it. The first master is kept out of the same
-			// cache for the same reason.
-			if immutableMaster {
+			// answers no sshd stalls it — which is every node whose payload is
+			// rendered here. The first master is kept out of the cache likewise.
+			if buildPayload != nil {
+				// One at a time: etcd admits a single learner, so the next machine
+				// must not start joining until this one is a voting member. The
+				// static path has always waited here; the cloud path did not.
+				if err := waitForImmutableMasterControlPlane(ctx, kubeCl, nodeName); err != nil {
+					return err
+				}
 				continue
 			}
 			addressTracker[nodeName] = outputs.MasterIPForSSH

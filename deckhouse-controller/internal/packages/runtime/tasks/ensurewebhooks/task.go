@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/kube-client/manifest"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	"go.opentelemetry.io/otel"
@@ -34,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 

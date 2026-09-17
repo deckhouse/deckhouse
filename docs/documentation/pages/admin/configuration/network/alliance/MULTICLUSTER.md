@@ -6,7 +6,7 @@ permalink: en/admin/configuration/network/alliance/multicluster.html
 ## Multicluster of Istio funds
 
 {% alert level="info" %}
-Available only in DKP Enterprise Edition (EE).
+Available only in DP Enterprise Edition (EE) and DP Ultimate.
 {% endalert %}
 
 ### Requirements for clusters
@@ -26,6 +26,10 @@ Available only in DKP Enterprise Edition (EE).
   > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the Istio's rules.
   > The intersection of subnets of services and pods is not recommended ([source](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
   > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
+
+{% alert level="warning" %}
+Only sidecar-mode workloads can take part in a multicluster. For details, refer to [Ambient mesh limitations](/modules/istio/#ambient-mesh-limitations).
+{% endalert %}
 
 ### General principles
 

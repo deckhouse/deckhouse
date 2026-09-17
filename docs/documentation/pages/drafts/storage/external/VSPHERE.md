@@ -8,8 +8,8 @@ The `csi-vsphere` module is designed for provisioning disks in static clusters b
 ## System requirements
 
 - All virtual machines in the cluster must be created using vSphere tools.
-- The virtual machine name in vSphere must exactly match the node's hostname in the Deckhouse Kubernetes Platform cluster.
-- The `disk.EnableUUID:TRUE` parameter must be enabled in the settings of each virtual machine. This parameter ensures the correct operation of the module with disk resources and allows DKP to identify the attached volumes.
+- The virtual machine name in vSphere must exactly match the node's hostname in the Deckhouse Platform cluster.
+- The `disk.EnableUUID:TRUE` parameter must be enabled in the settings of each virtual machine. This parameter ensures the correct operation of the module with disk resources and allows DP to identify the attached volumes.
 
 ## Enabling the module
 
@@ -136,7 +136,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 {% alert %}
 Due to the variety of SSO providers connected to `csi-vsphere`, the steps for creating a user are not covered in this article.
 
-The role to be created below includes all possible privileges for all DKP components.
+The role to be created below includes all possible privileges for all DP components.
 For a detailed list of privileges, refer to [the documentation](/modules/cloud-provider-vsphere/configuration.html#list-of-required-privileges).
 {% endalert %}
 

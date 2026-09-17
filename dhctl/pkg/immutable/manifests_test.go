@@ -21,8 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 )
 
 // TestRenderControlPlaneBundleOrdersEtcdFirst pins the order the node writes in.
@@ -161,7 +159,7 @@ func TestRenderWithoutAClusterTypeStillRenders(t *testing.T) {
 
 func testManifestsInput(t *testing.T) manifestsInput {
 	return manifestsInput{
-		CandiDir: immutabletest.CandiDir(t),
+		CandiDir: testCandiDir(t),
 		NodeName: "master-0",
 		NodeIP:   "10.241.32.10",
 		Cluster: controlPlaneRenderParams{

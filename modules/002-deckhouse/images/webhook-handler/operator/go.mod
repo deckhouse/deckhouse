@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
-	github.com/flant/shell-operator v1.20.3
+	github.com/flant/shell-operator v1.20.4
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.34.8
 	k8s.io/apiextensions-apiserver v0.34.8
@@ -31,7 +31,7 @@ require (
 	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/flant/kube-client v1.9.1 // indirect
+	github.com/flant/kube-client v1.9.2 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/go-chi/chi/v5 v5.3.0 // indirect
@@ -128,7 +128,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/grpc v1.83.1 // indirect
+	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

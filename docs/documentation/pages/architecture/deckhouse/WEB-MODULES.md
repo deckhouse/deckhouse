@@ -2,12 +2,12 @@
 title: Web interface modules
 permalink: en/architecture/deckhouse/web-modules.html
 search: web interface, web, console, deckhouse-tools, documentation
-description: Architecture of the Deckhouse Kubernetes Platform modules that provide the system web interface.
+description: Architecture of the Deckhouse Platform modules that provide the system web interface.
 ---
 
 ## Console module
 
-The [`console`](/modules/console/) module implements the web interface of Deckhouse Kubernetes Platform (DKP), simplifying platform management and enabling the system state monitoring.
+The [`console`](/modules/console/) module implements the web interface of Deckhouse Platform (DP), simplifying platform management and enabling the system state monitoring.
 
 ### Module architecture
 
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`console`](/modules/console/) module and its interaction with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`console`](/modules/console/) module and its interaction with other DP components are shown in the following diagram:
 
 ![Console module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-console.png)
 
@@ -32,14 +32,14 @@ At steps 1, 2, and 3, the request passes through the Ingress NGINX Controller, w
 
 The module consists of the following components:
 
-1. **Frontend**: Consists of a single **frontend** container and provides the web interface for DKP users and administrators.
+1. **Frontend**: Consists of a single **frontend** container and provides the web interface for DP users and administrators.
 
 1. **Backend**: Consists of a single **backend** container and implements an API interface that provides the following capabilities:
 
-   * Retrieving, creating, deleting, and modifying DKP resources according to the user's permissions.
+   * Retrieving, creating, deleting, and modifying DP resources according to the user's permissions.
    * Generating a kubeconfig with the user's profile.
-   * Determining the environment in which the DKP cluster is deployed.
-   * Detecting DKP and Kubernetes versions.
+   * Determining the environment in which the DP cluster is deployed.
+   * Detecting DP and Kubernetes versions.
    * Loading metrics and logs.
    * Loading platform availability information.
    * Downloading VM disks (when the [`virtualization`](/modules/virtualization/) and [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) modules are enabled).
@@ -52,9 +52,9 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
    - Establishing VM connections via console and VNC.
-   - Creating, deleting, modifying, and tracking DKP resources.
+   - Creating, deleting, modifying, and tracking DP resources.
 
-1. [**Upmeter**](/modules/upmeter/): Retrieves DKP availability information.
+1. [**Upmeter**](/modules/upmeter/): Retrieves DP availability information.
 
 1. [**Deckhouse-tools**](/modules/deckhouse-tools/): Forwards requests to download the [Deckhouse CLI](../../cli/d8/) utility.
 
@@ -70,7 +70,7 @@ The following external component interacts with the module:
 
 ## Documentation module
 
-The [`documentation`](/modules/documentation/) module provides a web interface for documentation corresponding to the running version of DKP.
+The [`documentation`](/modules/documentation/) module provides a web interface for documentation corresponding to the running version of DP.
 
 ### Module architecture
 
@@ -81,7 +81,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`documentation`](/modules/documentation/) module and its interaction with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`documentation`](/modules/documentation/) module and its interaction with other DP components are shown in the following diagram:
 
 ![Documentation module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.png)
 
@@ -104,7 +104,7 @@ The module consists of the following component:
 
   * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the main container. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
 
-  * **builder**: Sidecar container that dynamically extends the documentation when new DKP modules are installed. The [Hugo](https://github.com/gohugoio/hugo) static site generator is used to render and generate the up-to-date site content.
+  * **builder**: Sidecar container that dynamically extends the documentation when new DP modules are installed. The [Hugo](https://github.com/gohugoio/hugo) static site generator is used to render and generate the up-to-date site content.
 
     The **builder** container automatically creates and updates a Kubernetes Lease resource, placing an endpoint for documentation updates. This endpoint is used by the [`deckhouse`](/modules/deckhouse/) module controller to initiate documentation updates when modules are updated or installed. This ensures that changes are promptly rendered in the web interface.
 
@@ -137,7 +137,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`deckhouse-tools`](/modules/deckhouse-tools/) module and its interaction with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`deckhouse-tools`](/modules/deckhouse-tools/) module and its interaction with other DP components are shown in the following diagram:
 
 ![Deckhouse-tools module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.png)
 

@@ -25,24 +25,85 @@ import (
 // The line has to be usable as printed: an operator copies it, and a wrong
 // port or a missing quote costs them the debugging session the line exists to
 // prevent.
-func TestBastionForwardLineShape(t *testing.T) {
+func TestBastionTunnelCommandShape(t *testing.T) {
 	cfg := &sshconfig.Config{BastionUser: "ubuntu", BastionHost: "198.51.100.7"}
-	line := bastionForwardLine(cfg, "192.0.2.10", "/tmp/dhctl/admin.kubeconfig")
-	t.Logf("line: %s", line)
-	for _, want := range []string{
-		"ssh -f -N -L 6445:192.0.2.10:6443 ubuntu@198.51.100.7",
-		"kubectl --kubeconfig /tmp/dhctl/admin.kubeconfig config set-cluster kubernetes",
-		"--server=https://127.0.0.1:6445",
-	} {
-		if !strings.Contains(line, want) {
-			t.Fatalf("missing %q in %q", want, line)
+	line := bastionTunnelCommand(cfg)
+	t.Logf("tunnel: %s", line)
+
+	if line != "ssh -f -N -D 18443 ubuntu@198.51.100.7" {
+		t.Fatalf("tunnel command = %q", line)
+	}
+	// The tunnel outlives the command that opened it, so it must not be glued to
+	// a kubectl call: printed as one line it reads as a prelude to every call,
+	// and an operator following it literally collects a background ssh per call.
+	for _, forbidden := range []string{"kubectl", "&&", "sed", "set-cluster", "--server="} {
+		if strings.Contains(line, forbidden) {
+			t.Fatalf("the tunnel is its own step and rewrites nothing, found %q in %q", forbidden, line)
 		}
 	}
-	// A regex over the operator's only credentials: it matches a URL nobody
-	// here wrote, drops a .bak beside a 0600 file, and does nothing at all when
-	// it misses. kubectl edits the field by name instead.
-	if strings.Contains(line, "sed") {
-		t.Fatalf("the kubeconfig must not be rewritten with sed: %q", line)
+}
+
+// What the operator types again and again, and what the terminal pins: it has to
+// work on its own. A pinned line that only opens a tunnel leads nowhere, which is
+// what the screen showed on a live run.
+func TestTheCommandsThatUseTheClusterStandAlone(t *testing.T) {
+	behind := strings.Join(clusterUseCommands("/tmp/dhctl/admin.kubeconfig", true), " && ")
+	t.Logf("through a bastion: %s", behind)
+	for _, want := range []string{
+		"export KUBECONFIG=/tmp/dhctl/admin.kubeconfig",
+		"export HTTPS_PROXY=socks5://127.0.0.1:18443",
+		"kubectl get nodes",
+	} {
+		if !strings.Contains(behind, want) {
+			t.Fatalf("missing %q in %q", want, behind)
+		}
+	}
+	if strings.Contains(behind, "ssh ") {
+		t.Fatalf("the tunnel is opened once and does not belong in the line that repeats: %q", behind)
+	}
+	// Joined into the pinned line, the commands are pasted as one: without a
+	// separator the shell reads them as a single export with stray arguments.
+	if strings.Count(behind, " && ") != len(clusterUseCommands("/tmp/dhctl/admin.kubeconfig", true))-1 {
+		t.Fatalf("the pinned line must be runnable as pasted: %q", behind)
+	}
+
+	direct := strings.Join(clusterUseCommands("/tmp/dhctl/admin.kubeconfig", false), " && ")
+	t.Logf("direct: %s", direct)
+	if strings.Contains(direct, "HTTPS_PROXY") {
+		t.Fatalf("a reachable master needs no proxy: %q", direct)
+	}
+	// The saved kubeconfig is the only way into a cluster of immutable nodes, and
+	// its server is the node's own address: an edit made for one tunnel outlives
+	// it and sends every later use at a port nobody listens on.
+	for _, forbidden := range []string{"sed", "set-cluster", "--server="} {
+		if strings.Contains(behind, forbidden) || strings.Contains(direct, forbidden) {
+			t.Fatalf("the saved kubeconfig must not be rewritten (%q)", forbidden)
+		}
+	}
+}
+
+// Four commands, pinned together: the operator copies them in order, and the
+// tunnel is the one that must come first. A live run showed why the block cannot
+// be a single pinned line — only the ssh survived on screen, and by itself it
+// leads nowhere.
+func TestTheReachBlockCarriesEveryCommand(t *testing.T) {
+	lines := reachTheClusterLines("/tmp/dhctl/admin.kubeconfig", "ssh -f -N -D 18443 ubuntu@198.51.100.7")
+	t.Logf("block:\n%s", strings.Join(lines, "\n"))
+
+	require := func(index int, want string) {
+		t.Helper()
+		if index >= len(lines) || !strings.Contains(lines[index], want) {
+			t.Fatalf("line %d must carry %q, block is:\n%s", index, want, strings.Join(lines, "\n"))
+		}
+	}
+	require(0, "ssh -f -N -D 18443")
+	require(1, "export KUBECONFIG=/tmp/dhctl/admin.kubeconfig")
+	require(2, "export HTTPS_PROXY=socks5://127.0.0.1:18443")
+	require(3, "kubectl get nodes")
+
+	direct := reachTheClusterLines("/tmp/dhctl/admin.kubeconfig", "")
+	if strings.Contains(strings.Join(direct, "\n"), "ssh ") {
+		t.Fatalf("a reachable master needs no tunnel:\n%s", strings.Join(direct, "\n"))
 	}
 }
 
@@ -106,14 +167,16 @@ func TestConnectLinesAreTaggedForTheTerminal(t *testing.T) {
 		if cut := strings.Index(stmt, ")\n"); cut > 0 {
 			stmt = stmt[:cut]
 		}
-		if !strings.Contains(stmt, "ShowInCompacted()") && !strings.Contains(stmt, "ConnectionString()") {
+		if !strings.Contains(stmt, "ShowInCompacted()") && !strings.Contains(stmt, "ConnectionString()") &&
+			!strings.Contains(stmt, "Banner()") {
 			t.Fatalf("this line would be file-only, so the operator never sees it: %s", strings.TrimSpace(line))
 		}
 	}
 
-	// The tunnel command specifically: ConnectionString pins it as a milestone
-	// and repeats it in the closing summary.
+	// One of them has to be a ConnectionString: the banner lives on the live
+	// canvas, and the closing summary — where an operator looks after a long run
+	// — repeats connection strings only.
 	if !strings.Contains(fn, "dhlog.ConnectionString()") {
-		t.Fatal("the tunnel command must be tagged ConnectionString so it survives to the closing summary")
+		t.Fatal("the commands must also go out as a connection string, or the closing summary carries nothing")
 	}
 }

@@ -29,9 +29,9 @@ properties:
         default: "Deny"
         description: |
           The enforcement action to control what to do with the result of the constraint.
-          - Deny — Deny action.
-          - Dryrun — No action. It is used when debugging. Information about the event can be viewed in Grafana or in the console via `d8 k`.
-          - Warn — Same as `Dryrun`. In addition to the event information, it provides some info on why that constraint would have been denied if you had set `Deny` instead of `Warn`.
+          - `Deny` — Deny action.
+          - `Dryrun` — No action. It is used when debugging. Information about the event can be viewed in Grafana or in the console via `d8 k`.
+          - `Warn` — Same as `Dryrun`. In addition to the event information, it provides some info on why that constraint would have been denied if you had set `Deny` instead of `Warn`.
         enum:
           - Warn
           - Deny
@@ -68,7 +68,7 @@ properties:
 
       The Trivy provider prevents creation of the Pod, Deployment, StatefulSet, and DaemonSet resources with images containing vulnerabilities in namespaces labeled with `security.deckhouse.io/trivy-provider: ""`.
 
-      **Deprecated.** These settings have been moved to the `operator-trivy` module. Please migrate your configuration.
+      **Deprecated.** These settings have been moved to the `operator-trivy` module. Migrate your configuration.
     properties:
       enabled:
         type: boolean

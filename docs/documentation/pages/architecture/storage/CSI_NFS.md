@@ -2,7 +2,7 @@
 title: Csi-nfs module
 permalink: en/architecture/storage/external/csi-nfs.html
 search: csi-nfs, nfs
-description: Architecture of the csi-nfs module in Deckhouse Kubernetes Platform.
+description: Architecture of the csi-nfs module in Deckhouse Platform.
 ---
 
 The `csi-nfs` module is designed to manage NFS-based volumes. It enables creating StorageClasses in Kubernetes using the NFSStorageClass resource.
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`csi-nfs`](/modules/csi-nfs/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagrams:
+The Level 2 C4 architecture of the [`csi-nfs`](/modules/csi-nfs/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagrams:
 
 ![csi-nfs module architecture](../../../images/architecture/storage/c4-l2-csi-nfs.png)
 

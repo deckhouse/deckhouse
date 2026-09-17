@@ -148,10 +148,9 @@
     transition: margin-top .15s ease;
 
     &.sticky {
-        padding: 9px;
+        padding: 0 9px;
         margin: -10px;
         overflow: hidden;
-        transform: translateY(-10px);
         background: none;
     }
 }

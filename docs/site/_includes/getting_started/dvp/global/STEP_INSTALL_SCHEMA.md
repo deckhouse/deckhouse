@@ -1,7 +1,7 @@
 This guide walks you through installing Deckhouse Virtualization Platform on a minimal lab setup: one master node, one worker node, and an external NFS server for VM disks. When you finish, sign in to the web interface and explore Deckhouse Virtualization Platform.
 
 {% alert level="info" %}
-Virtualization is available in Deckhouse Virtualization Platform (DVP) (a standalone product covered by this guide) and in the [`virtualization`](/modules/virtualization/) module in selected [Deckhouse Kubernetes Platform (DKP)](/products/kubernetes-platform/) editions. For details on virtualization capabilities, see [Platform editions](/products/virtualization-platform/documentation/about/editions.html).
+Virtualization is available in Deckhouse Virtualization Platform (DVP) (a standalone product covered by this guide) and in the [`virtualization`](/modules/virtualization/) module in selected [Deckhouse Platform (DP)](/products/kubernetes-platform/) editions. For details on virtualization capabilities, see [Platform editions](/products/virtualization-platform/documentation/about/editions.html).
 {% endalert %}
 
 The diagram below shows the architecture of the lab setup for this guide:

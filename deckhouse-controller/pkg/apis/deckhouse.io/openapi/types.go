@@ -99,6 +99,11 @@ type OpenAPIV3Schema struct {
 	// +optional
 	XUIAdvanced bool `json:"x-deckhouse-ui-advanced,omitempty"`
 
+	// x-deckhouse-immutable marks a settings field as editable only when the
+	// application is created: the web console renders it read-only when editing.
+	// +optional
+	XImmutable bool `json:"x-deckhouse-immutable,omitempty"`
+
 	// x-deckhouse-ui-order sets the display order of a settings field in the
 	// web console UI: fields with lower values are shown first.
 	// +optional
@@ -113,6 +118,11 @@ type OpenAPIV3Schema struct {
 	// matching resource names from the application's namespace.
 	// +optional
 	XUIResourceName *UIResourceNameSelector `json:"x-deckhouse-ui-resource-name,omitempty"`
+
+	// x-deckhouse-ui-group renders a settings field inside the named root-level group
+	// of the web console form; the field's path in settings stays unchanged.
+	// +optional
+	XUIGroup string `json:"x-deckhouse-ui-group,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema

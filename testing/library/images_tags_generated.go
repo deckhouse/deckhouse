@@ -330,6 +330,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"clusterAutoscaler135":     "imageHash-nodeManager-clusterAutoscaler135",
 		"clusterAutoscaler136":     "imageHash-nodeManager-clusterAutoscaler136",
 		"d8ShutdownInhibitor":      "imageHash-nodeManager-d8ShutdownInhibitor",
+		"engine":                   "imageHash-nodeManager-engine",
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"kubernetesApiProxy":       "imageHash-nodeManager-kubernetesApiProxy",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
@@ -344,7 +345,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nvidiaMigManager134":      "imageHash-nodeManager-nvidiaMigManager134",
 		"nvidiaMigManager135":      "imageHash-nodeManager-nvidiaMigManager135",
 		"nvidiaMigManager136":      "imageHash-nodeManager-nvidiaMigManager136",
-		"olcedar":                  "imageHash-nodeManager-olcedar",
 	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator":     "imageHash-openvpn-easyrsaMigrator",
@@ -367,9 +367,9 @@ var DefaultImagesDigests = map[string]interface{}{
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":               "imageHash-registrypackages-amazonEc2Utils220",
 		"cfssl165":                        "imageHash-registrypackages-cfssl165",
-		"containerd1734":                  "imageHash-registrypackages-containerd1734",
-		"containerd227":                   "imageHash-registrypackages-containerd227",
-		"containerdSysext227":             "imageHash-registrypackages-containerdSysext227",
+		"containerd1735":                  "imageHash-registrypackages-containerd1735",
+		"containerd228":                   "imageHash-registrypackages-containerd228",
+		"containerdSysext228":             "imageHash-registrypackages-containerdSysext228",
 		"crictl132":                       "imageHash-registrypackages-crictl132",
 		"crictl133":                       "imageHash-registrypackages-crictl133",
 		"crictl134":                       "imageHash-registrypackages-crictl134",
@@ -456,6 +456,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"userAuthz": map[string]interface{}{
 		"permissionBrowserApiserver": "imageHash-userAuthz-permissionBrowserApiserver",
+		"userAuthzController":        "imageHash-userAuthz-userAuthzController",
 		"webhook":                    "imageHash-userAuthz-webhook",
 	},
 	"verticalPodAutoscaler": map[string]interface{}{
