@@ -414,32 +414,63 @@ func CreateResourcesLoop(
 			return ctx.Err()
 		case <-endChannel:
 			if len(resources) > 0 {
-				_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resources failed to become ready", func(ctx context.Context) error {
-					// Print the reason next to the list so the bare resource names are not shown
-					// without context: installation did not finish cleanly, the wait timed out.
-					dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-						"Installation finished with an error: creating resources timed out after %s. "+
-							"The resources below did not become ready and were not fully created:\n%s\n\n"+
-							"This is usually caused by the absence of worker nodes in the cluster. "+
-							"Add at least one worker node or remove the taints from the master node "+
-							"(in the case of a single-node installation).",
-						timeout, strings.Join(checkerLines(remained), "\n")))
-					return nil
-				})
+				logFailedResources(ctx, timeout, remained)
 
+				// The block above already names every resource and the usual cause. Repeating
+				// that here in slightly different words made the same explanation appear twice,
+				// once framed and once not, as if they were two separate findings - so the error
+				// stays a one-line summary and points at the report.
 				return fmt.Errorf(
-					"Creating resources timed out after %s: resources cannot become ready. "+
-						"This could be due to lack of worker nodes in the cluster. "+
-						"Add at least one worker node or remove taints from master nodes (for single-node cluster) ",
-					timeout,
+					"creating resources timed out after %s: %d checks did not pass, see the list above",
+					timeout, len(remained),
 				)
 			}
 
-			return fmt.Errorf("Creating resources failed after waiting %s", timeout)
+			return fmt.Errorf("creating resources timed out after %s", timeout)
 		case <-ticker.C:
 		}
 		attempt++
 	}
+}
+
+// logFailedResources reports the resources that never became ready as a single framed block.
+//
+// The body is emitted at Info level on purpose. In the interactive UI a Warn+ line is pinned in a
+// region of its own, above and outside the block - so logging the list as a warning would leave the
+// frame empty and scatter the resource names somewhere else on screen. Info keeps the whole report
+// inside the frame in every mode. The block is closed as FAILED, and that is what carries the
+// failure into the compact view.
+//
+// The block is untimed: it frames a report rather than measuring an operation, so "(0.00 seconds)"
+// under the heading would read as a broken timer. Lines are pre-wrapped rather than left as one
+// long run-on, so terminal wrapping does not break the frame either.
+func logFailedResources(ctx context.Context, timeout time.Duration, remained []Checker) {
+	const name = "Resources failed to become ready"
+
+	logger := dhlog.FromContext(ctx)
+	dhlog.ProcessStart(ctx, logger, name, dhlog.WithoutTiming())
+
+	// Print the reason next to the list so the bare resource names are not shown without
+	// context: installation did not finish cleanly, the wait timed out.
+	resourceLines := checkerLines(remained)
+
+	lines := make([]string, 0, len(resourceLines)+7)
+	lines = append(lines,
+		fmt.Sprintf("Installation finished with an error: creating resources timed out after %s.", timeout),
+		"The resources below did not become ready and were not fully created:",
+		"",
+	)
+	lines = append(lines, resourceLines...)
+	lines = append(lines,
+		"",
+		"This is usually caused by the absence of worker nodes in the cluster.",
+		"Add at least one worker node or remove the taints from the master node",
+		"(in the case of a single-node installation).",
+	)
+
+	logger.InfoContext(ctx, strings.Join(lines, "\n"))
+
+	dhlog.ProcessFailed(ctx, logger, name)
 }
 
 func logResources(ctx context.Context, remained, created []Checker) {

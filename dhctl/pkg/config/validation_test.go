@@ -169,7 +169,7 @@ metadata:
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ValidateInitConfiguration(tt.config, newStore, validateOpts...)
+			err := ValidateInitConfiguration(t.Context(), tt.config, newStore, validateOpts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
 			} else {
@@ -261,7 +261,7 @@ clusterType: Static
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			clusterConfig, err := ValidateClusterConfiguration(tt.config, newStore, validateOpts...)
+			clusterConfig, err := ValidateClusterConfiguration(t.Context(), tt.config, newStore, validateOpts...)
 			require.Equal(t, tt.expected, clusterConfig)
 			if tt.errContains == "" {
 				require.NoError(t, err)
@@ -454,7 +454,7 @@ sshPublicKey: ssh-key`,
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ValidateProviderSpecificClusterConfiguration(tt.config, tt.clusterConfig, newStore, validateOpts...)
+			err := ValidateProviderSpecificClusterConfiguration(t.Context(), tt.config, tt.clusterConfig, newStore, validateOpts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
 			} else {
@@ -517,7 +517,7 @@ internalNetworkCIDRs:
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ValidateStaticClusterConfiguration(tt.config, newStore, validateOpts...)
+			err := ValidateStaticClusterConfiguration(t.Context(), tt.config, newStore, validateOpts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
 			} else {

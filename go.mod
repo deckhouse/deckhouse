@@ -63,7 +63,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084840-a97e86c61556
-	github.com/deckhouse/lib-dhctl v0.22.0
+	github.com/deckhouse/lib-dhctl v0.22.1-0.20260917103007-03f01bc76bb3
 	github.com/deckhouse/module-sdk v0.12.5
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
@@ -236,7 +236,7 @@ require (
 	github.com/go-openapi/validate v0.25.1
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-graphviz v0.2.9 // indirect
-	github.com/goccy/go-yaml v1.15.23
+	github.com/goccy/go-yaml v1.15.23 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect

@@ -197,7 +197,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	return false, nil
 }
 
-func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
+func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface, actionErr error) error {
 	if runner.GetChangesInPlan() != plan.HasDestructiveChanges {
 		return nil
 	}
@@ -230,6 +230,23 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	err = h.saveKubernetesDataDevicePath(ctx, outputs.KubeDataDevicePath)
 	if err != nil {
 		return fmt.Errorf("failed to save kubernetes data device path: %w", err)
+	}
+
+	// Everything above is bookkeeping and runs either way: a partial apply can have recreated the
+	// VM before it failed, and the session pinned to the old address has to follow it.
+	//
+	// Everything below waits for the node the apply was supposed to produce, and none of it can be
+	// satisfied by an apply that failed - the node will not join, etcd will not gain a member, and
+	// the control plane will not come up on a VM that was never recreated. Waiting anyway spends
+	// the full budget of four loops, thousands of attempts between them, and then reports a second
+	// failure that says nothing the apply's own error did not already say. The plan-ordering
+	// failure that prompted this took a converge that was over in seconds and kept it waiting for
+	// a master that no longer existed.
+	if actionErr != nil {
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+			"Infrastructure apply failed, so node %s was not recreated: skipping the checks that wait for it.",
+			h.nodeToConverge))
+		return nil
 	}
 
 	kubeCl, err := h.kubeGetter.KubeClientCtx(ctx)
