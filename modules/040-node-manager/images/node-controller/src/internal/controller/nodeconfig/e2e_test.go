@@ -1525,11 +1525,11 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	layout := `{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"pause":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`
+	layout := `{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"pause":%q,"registryAgent":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`
 	original := fmt.Sprintf(layout, testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest,
-		testPausePackageDigest, testOSImageDigest, testPauseDigest)
+		testPausePackageDigest, testenv.TestRegistryAgentDigest, testOSImageDigest, testPauseDigest)
 	updated := fmt.Sprintf(layout, digest, testCNIDigest, testKubeletDigest, testNodeletDigest,
-		testPausePackageDigest, testOSImageDigest, testPauseDigest)
+		testPausePackageDigest, testenv.TestRegistryAgentDigest, testOSImageDigest, testPauseDigest)
 
 	writeDigests := func(ctx context.Context, data string) {
 		cm := &corev1.ConfigMap{}
