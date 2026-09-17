@@ -811,6 +811,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -822,6 +823,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
