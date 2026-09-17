@@ -44,8 +44,6 @@ const (
 	// must carry a different one.
 	convergeUserGecos = "dhctl converge"
 
-	cloudConfigHeader = "#cloud-config"
-
 	// convergeUserLifetime is two days because useradd -e disables the account at 00:00
 	// on the date it is given: one day would leave a converge started at 23:50 ten
 	// minutes. Two guarantee at least 24 hours, whatever time of day it started.
@@ -187,7 +185,7 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 
 	// cloud-init keeps one users list per document and the distro default user (ubuntu,
 	// ec2-user) is skipped as soon as that list exists without "default" in it.
-	block, err := renderUsers([]any{"default", map[string]any{
+	block, err := renderUsers("default", map[string]any{
 		"name":                global.ConvergeUserName,
 		"gecos":               convergeUserGecos,
 		"expiredate":          expire.Format(time.DateOnly),
@@ -195,7 +193,7 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 		"shell":               "/bin/bash",
 		"sudo":                []string{"ALL=(ALL) NOPASSWD:ALL"},
 		"ssh_authorized_keys": keys,
-	}})
+	})
 	if err != nil {
 		return "", err
 	}
@@ -205,42 +203,41 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 	return base64.StdEncoding.EncodeToString(append(out, block...)), nil
 }
 
-// convergeUserPresent reads the payload without rewriting it. A payload with a users list
-// of its own is refused rather than merged into: cloud-init reads the last users key of a
-// document and drops the rest, so which list survives would depend on what the provider
-// appends after ours.
+// convergeUserPresent reads the payload, parsing it but never rewriting it. A payload with
+// a users list of its own is refused rather than merged into: cloud-init reads the last
+// users key of a document and drops the rest, so which list survives would depend on what
+// the provider appends after ours.
 func convergeUserPresent(payload []byte) (bool, error) {
-	// The list mixes shapes: "default" is a string, an account is a mapping.
-	var doc struct {
-		Users []any `yaml:"users"`
-	}
-
+	var doc map[string]any
 	if err := yaml.Unmarshal(payload, &doc); err != nil {
 		return false, fmt.Errorf("parse cloud-config: %w", err)
 	}
 
-	if len(bytes.TrimSpace(bytes.TrimPrefix(bytes.TrimSpace(payload), []byte(cloudConfigHeader)))) == 0 {
+	if len(doc) == 0 {
 		return false, errors.New("parse cloud-config: the document is empty")
 	}
 
-	for _, user := range doc.Users {
+	// The list mixes shapes: "default" is a string, an account is a mapping.
+	users, _ := doc["users"].([]any)
+
+	for _, user := range users {
 		named, ok := user.(map[string]any)
 		if ok && named["name"] == global.ConvergeUserName {
 			return true, nil
 		}
 	}
 
-	if len(doc.Users) > 0 {
+	if len(users) > 0 {
 		return false, fmt.Errorf(
 			"render cloud-config: the payload already lists %d users of its own, and cloud-init keeps one users key per document",
-			len(doc.Users))
+			len(users))
 	}
 
 	return false, nil
 }
 
 // renderUsers is the one block this converge owns, indented the way the payload around it is.
-func renderUsers(users []any) ([]byte, error) {
+func renderUsers(users ...any) ([]byte, error) {
 	var out bytes.Buffer
 
 	encoder := yaml.NewEncoder(&out)

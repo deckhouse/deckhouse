@@ -763,12 +763,6 @@ func (r *Runner) Destroy(ctx context.Context) error {
 			return 0, err
 		})
 
-		// Only a machine the apply actually rebuilt carries the new cloud-config; an apply
-		// that died before or during it left the old one in place.
-		if err == nil {
-			r.vmDestructionApplied = r.hasVMDestruction
-		}
-
 		var errRes *multierror.Error
 		errRes = multierror.Append(errRes, err)
 
