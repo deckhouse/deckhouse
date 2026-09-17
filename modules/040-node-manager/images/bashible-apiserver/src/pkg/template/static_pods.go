@@ -187,9 +187,9 @@ mkdir -p "$manifests_dir"
 node_ip="$(bb-d8-node-ip)"
 `
 
-// renderStaticPodsStep builds the step that writes one node group's manifests,
-// removes the ones it wrote before and reports the result on the Node. Assembled
-// in Go, not rendered: the manifest has to reach the node byte for byte.
+// renderStaticPodsStep assembles the step in Go, not a template: the manifest has
+// to reach the node byte for byte. Prune and record run before the manifests, the
+// order of reconcileStaticPods in nodelet internal/controllers/kubelet/staticpods.go.
 func (s *StepsStorage) renderStaticPodsStep(ng string) (string, error) {
 	requests := s.staticPodsFor(ng)
 
@@ -204,11 +204,11 @@ func (s *StepsStorage) renderStaticPodsStep(ng string) (string, error) {
 	}
 
 	blocks := make([]string, 0, len(requests)+3)
-	blocks = append(blocks, staticPodsHeader)
+	blocks = append(blocks, staticPodsHeader, staticPodsPruningBlock(string(encodedNames)))
 	for _, request := range requests {
 		blocks = append(blocks, staticPodManifestBlock(request))
 	}
-	blocks = append(blocks, staticPodsPruningBlock(string(encodedNames)), staticPodsReportBlock(names))
+	blocks = append(blocks, staticPodsReportBlock(names))
 
 	return strings.Join(blocks, "\n"), nil
 }
