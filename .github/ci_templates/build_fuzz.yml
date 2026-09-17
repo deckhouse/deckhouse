@@ -117,6 +117,7 @@ steps:
       DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
       export WERF_REPO="${DEV_REGISTRY_PATH}"
+      export WERF_META_REPO="${WERF_REPO}/meta"
       echo "main fuzz build: push to ${WERF_REPO}"
 {!{- end }!}
 
@@ -128,8 +129,6 @@ steps:
 
       echo "Building fuzz images:"
       echo "${FUZZ_IMAGES}"
-
-      export WERF_BUILD_REPORT_OPERATIONS=true
 
       # shellcheck disable=SC2086
       werf build ${FUZZ_IMAGES} \

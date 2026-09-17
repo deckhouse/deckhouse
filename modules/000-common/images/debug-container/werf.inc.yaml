@@ -5,7 +5,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ index $.Images "builder/alpine" }}
 final: false
 import:
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- from: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /usr/bin
   includePaths:
@@ -42,25 +42,25 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /out
   to: /
   before: install
-- image: istio/istioctl-v1x25x2-build-artifact
+- from: istio/istioctl-v1x25x2-build-artifact
   add: /src/istio/out/istioctl
   to: /usr/bin/istioctl-1.25
   before: install
 {{- if ne $.Env "CSE" }}
-- image: istio/istioctl-v1x27x9-build-artifact
+- from: istio/istioctl-v1x27x9-build-artifact
   add: /src/istio/out/istioctl
   to: /usr/bin/istioctl-1.27
   before: install
-- image: istio/istioctl-v1x29x6-build-artifact
+- from: istio/istioctl-v1x29x6-build-artifact
   add: /src/istio/out/istioctl
   to: /usr/bin/istioctl-1.29
   before: install
 {{- end }}
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/bin
   to: /usr/bin
   includePaths:

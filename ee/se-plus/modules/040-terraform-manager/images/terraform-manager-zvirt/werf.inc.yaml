@@ -1,11 +1,11 @@
 {{- if not (and (index . "HasAvailableModules") (not (hasKey (index . "AvailableModulesDict") "cloud-provider-zvirt"))) }}
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "ovirt") }}'
+from: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "ovirt") }}'
 git:
   - add: /{{ .ModulePath }}modules/030-cloud-provider-zvirt/candi
     to: /deckhouse/candi/cloud-providers/zvirt
 import:
-  - image: cloud-provider-zvirt/terraform-manager
+  - from: cloud-provider-zvirt/terraform-manager
     add: /terraform-manager/terraform-provider-ovirt
     to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "ovirt") }}/{{ .TF.ovirt.namespace }}/{{ .TF.ovirt.type }}/{{ .TF.ovirt.version }}/linux_amd64/terraform-provider-ovirt
     before: setup

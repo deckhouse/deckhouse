@@ -2,7 +2,7 @@
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 fromCacheVersion: "2025-09-16"
 import:
 - from: {{ index $.Images "tools/coreutils" }}
@@ -16,18 +16,18 @@ import:
   add: /usr/bin/bash
   to: /bin/bash
   before: setup
-- image: common/iptables-wrapper
+- from: common/iptables-wrapper
   add: /iptables-wrapper
   to: /iptables-wrapper
   before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- from: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /_sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
   add: /relocate
   to: /relocate
   before: setup
@@ -35,7 +35,7 @@ import:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
 final: false
-fromImage: common/relocate-artifact
+from: common/relocate-artifact
 shell:
   install:
   - mkdir -p /relocate/sbin

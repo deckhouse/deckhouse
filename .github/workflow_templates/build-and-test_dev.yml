@@ -19,7 +19,7 @@
 name: Build and test for dev branches
 on:
   pull_request_target:
-     types:
+    types:
       - opened
       - synchronize
       - reopened

@@ -18,7 +18,7 @@
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
     {{- if $patch }}
 git:
@@ -48,7 +48,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -66,9 +66,9 @@ shell:
   - echo "{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }}-flant" > VERSION
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src
   to: /
   includePaths:

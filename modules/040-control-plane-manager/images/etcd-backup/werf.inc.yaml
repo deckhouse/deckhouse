@@ -4,20 +4,17 @@ from: {{ index $.Images "base/distroless-fin" }}
 git:
 - add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint.sh
   to: /entrypoint.sh
-  stageDependencies:
-    setup:
-    - '**/*'
 import:
 {{- include "image mount points" . }}
-- image: {{ .ModuleName }}/etcd-artifact
+- from: {{ .ModuleName }}/etcd-artifact
   add: /etcdctl
   to: /bin/etcdctl
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /out
   to: /
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /coreutils
   to: /
   includePaths:

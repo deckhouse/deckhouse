@@ -1,6 +1,6 @@
 ---
 image: dev-prebuild
-fromImage: common-base
+from: common-base
 git:
 - add: /
   to: /deckhouse

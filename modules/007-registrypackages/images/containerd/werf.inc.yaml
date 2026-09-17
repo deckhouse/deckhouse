@@ -43,7 +43,7 @@ INTEGRITY_NAMESPACES="{{ $namespaces }}"
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 {{- if $runcHasPatch }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/runc
@@ -69,7 +69,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
   add: /src
   to: /src
   before: install
@@ -107,7 +107,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /out
   to: /
   includePaths:
@@ -121,11 +121,11 @@ import:
   - containerd.service
   before: setup
 {{- if and (eq $.Env "CSE") $is_v2 }}
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
   add: /pidumount
   before: setup
 {{- end }}
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
   add: /out/runc
   to: /runc
   before: setup
@@ -140,7 +140,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
@@ -179,7 +179,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
@@ -218,7 +218,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/pidumount/src
   to: /src
@@ -227,7 +227,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
   add: /src
   before: install
 secrets:
@@ -259,7 +259,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/distroless" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
   add: /
   to: /sysext/opt/deckhouse/bin
   includePaths:
@@ -299,7 +299,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
   add: /out
   to: /
   includePaths:

@@ -15,7 +15,7 @@
 # systemd 260.3, which does not ship it, so take the two files from 260.4 instead.
 # Drop that part once the index carries 260.4 and `pm install systemd` is enough.
 {{- define "engine sysext sign imports" }}
-- image: {{ .ModuleName }}/d8
+- from: {{ .ModuleName }}/d8
   add: /d8
   to: /usr/bin/d8
   before: install

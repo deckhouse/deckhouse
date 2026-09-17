@@ -1,7 +1,7 @@
 {{- $chronyExproterVersion := "0.11.0"}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -28,11 +28,11 @@ final: false
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/chrony_exporter
   to: /chrony_exporter
   before: install
-- image: common/promu-artifact
+- from: common/promu-artifact
   add: /src/promu
   to: /bin/promu
   before: install
@@ -46,9 +46,9 @@ shell:
   - promu build
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /chrony_exporter/chrony_exporter
   to: /bin/chrony_exporter
   before: install

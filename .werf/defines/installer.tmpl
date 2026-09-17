@@ -3,11 +3,11 @@
 #   Env - werf env
 {{- define "installer_and_installer_standalone_generic_imports" }}
 {{- $context := . -}}
-- image: dhctl
+- from: dhctl
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup
-- image: dev-prebuild
+- from: dev-prebuild
   add: /deckhouse
   to: /deckhouse
   includePaths:
@@ -15,15 +15,15 @@
   - modules/*/openapi/conversions/*.yaml
   - global-hooks/openapi/config-values.yaml
   after: setup
-- image: dev-prebuild
+- from: dev-prebuild
   add: /deckhouse/deckhouse-controller/crds/module-config.yaml
   to: /deckhouse/crds/module-config.yaml
   after: setup
-- image: images-digests
+- from: images-digests
   add: /images_digests.json
   to: /deckhouse/candi/images_digests.json
   before: setup
-- image: version-map-artifact
+- from: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   before: setup
@@ -31,7 +31,7 @@
   add: /usr/share/terminfo
   to: /usr/share/terminfo
   before: install
-- image: ssh-static
+- from: ssh-static
   add: /ssh/bin
   to: /bin
   before: setup
@@ -237,7 +237,7 @@
     {{- break -}}
   {{- end }}
 {{- end }}
-- image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+- from: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /opentofu/opentofu
   to: /bin/opentofu
   before: setup
@@ -261,13 +261,13 @@
 
         {{- if $tf.versions }}
           {{- range $version := $tf.versions }}
-- image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+- from: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}-v{{ $version }}
   to: /plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
           {{- end }}
         {{- else }}
-- image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+- from: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
   to: /plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
@@ -303,7 +303,7 @@
   {{- end }}
 {{- end }}
 {{- if ne $.Env "CSE" }}
-- image: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+- from: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
   to: /bin/terraform
   before: setup
@@ -323,13 +323,13 @@
 
         {{- if $tf.versions }}
           {{- range $version := $tf.versions }}
-- image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+- from: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}-v{{ $version }}
   to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
           {{- end }}
         {{- else }}
-- image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+- from: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
   to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
@@ -486,7 +486,7 @@ shell:
 image: dev/install-standalone
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: install-standalone-builder
+- from: install-standalone-builder
   add: /dhctl-{{- $context.CI_COMMIT_TAG }}.x86_64.tar.gz
   to: /
   before: setup

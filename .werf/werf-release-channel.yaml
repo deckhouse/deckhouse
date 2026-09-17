@@ -3,7 +3,7 @@ image: release-channel-version-prebuild
 from: {{ index $.Images "builder/alpine" }}
 final: false
 dependencies:
-- image: dev
+- from: dev
   before: setup
   imports:
   - type: ImageDigest
@@ -52,7 +52,7 @@ git:
 image: release-channel-version
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: release-channel-version-prebuild
+- from: release-channel-version-prebuild
   add: /
   to: /
   after: install

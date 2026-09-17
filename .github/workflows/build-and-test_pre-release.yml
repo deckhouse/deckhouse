@@ -38,6 +38,7 @@ env:
   WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
+  WERF_BUILD_REPORT_OPERATIONS: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
   GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
@@ -330,7 +331,6 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -409,6 +409,7 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
+          export WERF_META_REPO="${WERF_REPO}/meta"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -461,26 +462,12 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
-          # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
-          werf_minor="$(werf version | cut -d. -f2)"
-          werf_build_report_operations_arg=""
-          if (( werf_major >= 3 )); then
-            echo "Using build-report-operations, werf version >=3.0"
-            werf_build_report_operations_arg="--build-report-operations=true"
-          else
-            if (( werf_minor >= 78 )); then
-              echo "Using build-report-operations, werf version >=2.78"
-              werf_build_report_operations_arg="--build-report-operations=true"
-            fi
-          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json \
-            ${werf_build_report_operations_arg}
+            --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -757,20 +744,7 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
-
-          # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
-          werf_minor="$(werf version | cut -d. -f2)"
-          werf_build_report_operations_arg=""
-          if (( werf_major >= 3 )); then
-            echo "Using build-report-operations, werf version >=3.0"
-            werf_build_report_operations_arg="--build-report-operations=true"
-          else
-            if (( werf_minor >= 78 )); then
-              echo "Using build-report-operations, werf version >=2.78"
-              werf_build_report_operations_arg="--build-report-operations=true"
-            fi
-          fi
+          export WERF_META_REPO="${WERF_REPO}/meta"
 
           type werf && source $(werf ci-env github --verbose --as-file)
           # Build only the `tests` image (and its transitive werf deps);
@@ -781,8 +755,7 @@ jobs:
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --final-images-only=true \
-            --build-report-path images_tags_werf.json \
-            ${werf_build_report_operations_arg}
+            --build-report-path images_tags_werf.json
 
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           rm -f images_tags_werf.json
@@ -1081,7 +1054,6 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -1160,6 +1132,7 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
+          export WERF_META_REPO="${WERF_REPO}/meta"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -1212,26 +1185,12 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
-          # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
-          werf_minor="$(werf version | cut -d. -f2)"
-          werf_build_report_operations_arg=""
-          if (( werf_major >= 3 )); then
-            echo "Using build-report-operations, werf version >=3.0"
-            werf_build_report_operations_arg="--build-report-operations=true"
-          else
-            if (( werf_minor >= 78 )); then
-              echo "Using build-report-operations, werf version >=2.78"
-              werf_build_report_operations_arg="--build-report-operations=true"
-            fi
-          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json \
-            ${werf_build_report_operations_arg}
+            --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1504,7 +1463,6 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -1583,6 +1541,7 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
+          export WERF_META_REPO="${WERF_REPO}/meta"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -1635,26 +1594,12 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
-          # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
-          werf_minor="$(werf version | cut -d. -f2)"
-          werf_build_report_operations_arg=""
-          if (( werf_major >= 3 )); then
-            echo "Using build-report-operations, werf version >=3.0"
-            werf_build_report_operations_arg="--build-report-operations=true"
-          else
-            if (( werf_minor >= 78 )); then
-              echo "Using build-report-operations, werf version >=2.78"
-              werf_build_report_operations_arg="--build-report-operations=true"
-            fi
-          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json \
-            ${werf_build_report_operations_arg}
+            --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1927,7 +1872,6 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -2006,6 +1950,7 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
+          export WERF_META_REPO="${WERF_REPO}/meta"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -2058,26 +2003,12 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
-          # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
-          werf_minor="$(werf version | cut -d. -f2)"
-          werf_build_report_operations_arg=""
-          if (( werf_major >= 3 )); then
-            echo "Using build-report-operations, werf version >=3.0"
-            werf_build_report_operations_arg="--build-report-operations=true"
-          else
-            if (( werf_minor >= 78 )); then
-              echo "Using build-report-operations, werf version >=2.78"
-              werf_build_report_operations_arg="--build-report-operations=true"
-            fi
-          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json \
-            ${werf_build_report_operations_arg}
+            --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -2350,7 +2281,6 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -2429,6 +2359,7 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
+          export WERF_META_REPO="${WERF_REPO}/meta"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -2481,26 +2412,12 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
-          # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
-          werf_minor="$(werf version | cut -d. -f2)"
-          werf_build_report_operations_arg=""
-          if (( werf_major >= 3 )); then
-            echo "Using build-report-operations, werf version >=3.0"
-            werf_build_report_operations_arg="--build-report-operations=true"
-          else
-            if (( werf_minor >= 78 )); then
-              echo "Using build-report-operations, werf version >=2.78"
-              werf_build_report_operations_arg="--build-report-operations=true"
-            fi
-          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json \
-            ${werf_build_report_operations_arg}
+            --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -2773,7 +2690,6 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -2852,6 +2768,7 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
+          export WERF_META_REPO="${WERF_REPO}/meta"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -2904,26 +2821,12 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
-          # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
-          werf_minor="$(werf version | cut -d. -f2)"
-          werf_build_report_operations_arg=""
-          if (( werf_major >= 3 )); then
-            echo "Using build-report-operations, werf version >=3.0"
-            werf_build_report_operations_arg="--build-report-operations=true"
-          else
-            if (( werf_minor >= 78 )); then
-              echo "Using build-report-operations, werf version >=2.78"
-              werf_build_report_operations_arg="--build-report-operations=true"
-            fi
-          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json \
-            ${werf_build_report_operations_arg}
+            --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -3196,7 +3099,6 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
-          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -3275,6 +3177,7 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
+          export WERF_META_REPO="${WERF_REPO}/meta"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -3327,26 +3230,12 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
-          # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
-          werf_minor="$(werf version | cut -d. -f2)"
-          werf_build_report_operations_arg=""
-          if (( werf_major >= 3 )); then
-            echo "Using build-report-operations, werf version >=3.0"
-            werf_build_report_operations_arg="--build-report-operations=true"
-          else
-            if (( werf_minor >= 78 )); then
-              echo "Using build-report-operations, werf version >=2.78"
-              werf_build_report_operations_arg="--build-report-operations=true"
-            fi
-          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json \
-            ${werf_build_report_operations_arg}
+            --build-report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then

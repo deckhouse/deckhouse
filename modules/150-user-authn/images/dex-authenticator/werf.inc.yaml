@@ -1,12 +1,12 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-artifact
   add: /src/oauth2-proxy
   to: /bin/oauth2_proxy
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-artifact
   add: /src/url-exec-prober
   to: /usr/local/bin/url-exec-prober
   before: setup
@@ -17,7 +17,7 @@ imageSpec:
     cmd: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
@@ -54,7 +54,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -77,7 +77,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/url-exec-prober
   to: /src
   before: install

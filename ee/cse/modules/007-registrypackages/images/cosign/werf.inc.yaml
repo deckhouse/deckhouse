@@ -3,14 +3,14 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /
   to: /
   includePaths:
   - install
   - uninstall
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /usr/bin/cosign
   to: /cosign
   before: setup
