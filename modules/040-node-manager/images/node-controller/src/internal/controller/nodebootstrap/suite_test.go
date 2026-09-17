@@ -60,6 +60,7 @@ var _ = BeforeSuite(func() {
 			testenv.WithNodeGroupCRDFile(),
 			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
 			testenv.WithNodeManager(testenv.NodeExtensionRequestCRDFile),
+			testenv.WithNodeManager(testenv.NodeStaticPodRequestCRDFile),
 			testenv.WithNodeManager(testenv.NodeBootstrapConfigCRDFile),
 			testenv.WithMachineCRDFile(),
 		)...,
