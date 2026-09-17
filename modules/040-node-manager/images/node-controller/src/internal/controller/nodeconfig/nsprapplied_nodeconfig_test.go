@@ -66,6 +66,11 @@ func TestNodeConfigOutcomesCountWhatTheNodesReport(t *testing.T) {
 			}}),
 		// Has not answered at all: the node is not refusing, it has not spoken.
 		nodeConfigWithPod("worker-2", agent, nil),
+		// A second refusal keeps the first message; a state outside the enum counts as nothing.
+		nodeConfigWithPod("worker-4", agent,
+			[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Failed", Reason: "RemoveFailed", Message: "busy"}}),
+		nodeConfigWithPod("worker-5", agent,
+			[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Pending"}}),
 		// Somebody else's static pod must not land on this one's counters.
 		nodeConfigWithPod("worker-3",
 			[]internalv1alpha1.StaticPod{{Name: "somebody-else", Manifest: podManifest("somebody-else")}},
@@ -76,7 +81,7 @@ func TestNodeConfigOutcomesCountWhatTheNodesReport(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, int32(1), outcomes["registry-agent"].applied)
-	require.Equal(t, int32(1), outcomes["registry-agent"].failed)
+	require.Equal(t, int32(2), outcomes["registry-agent"].failed)
 	// The reason has to reach the cluster, so nobody has to read a node's
 	// journal to learn whether to edit the object or to go and look at the node.
 	require.Equal(t, "WriteFailed: read-only file system", outcomes["registry-agent"].message)

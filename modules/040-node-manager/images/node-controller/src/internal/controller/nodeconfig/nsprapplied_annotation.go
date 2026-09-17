@@ -16,9 +16,10 @@ limitations under the License.
 
 // This file is the bashible half of the static-pod roll-up and is meant to be
 // removable: when the last mutable NodeGroup is gone, delete it together with
-// the two lines that call readAnnotationOutcomes in nsprstatus.go. Nothing else
-// in the package reaches into it, which is why the filtering by NodeGroup lives
-// here rather than in a shared loop.
+// the call to readAnnotationOutcomes and its merge in nsprstatus.go. Nothing
+// else in the package reaches into it, which is why the filtering by NodeGroup
+// lives here rather than in a shared loop.
+
 package nodeconfig
 
 import (
