@@ -25,9 +25,9 @@ import (
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
-// nsprOutcome is what the fleet reports back about one static pod. Counted per
-// source and added up by mergeOutcomes: an operator counts nodes, not the two
-// ways this platform has of configuring one.
+// nsprOutcome is what the fleet reports back about one static pod, counted per
+// source and added up by mergeOutcomes. Same shape and counting loop as
+// nerOutcome/readNEROutcomes (nerapplied.go); kept apart because the join differs.
 type nsprOutcome struct {
 	applied int32
 	failed  int32
@@ -100,6 +100,9 @@ func staticPodFailure(status internalv1alpha1.StaticPodStatus) string {
 // is gone, nsprapplied_annotation.go is deleted and this keeps working with one
 // argument — that is the point of it being here rather than inside a loop.
 func mergeOutcomes(into, from map[string]nsprOutcome) map[string]nsprOutcome {
+	if into == nil {
+		into = map[string]nsprOutcome{}
+	}
 	for name, add := range from {
 		outcome := into[name]
 		outcome.applied += add.applied
