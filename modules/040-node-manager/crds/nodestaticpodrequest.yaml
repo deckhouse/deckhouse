@@ -62,7 +62,7 @@ spec:
                 nodeGroupSelector:
                   type: object
                   description: |
-                    Narrows the pod to nodes of the named NodeGroups. Naming none selects every immutable group.
+                    Narrows the pod to nodes of the named NodeGroups. Naming none selects every NodeGroup there is, bashible ones included — those nodes get the manifest from a bashible step instead of from their NodeConfig.
                   properties:
                     matchNames:
                       type: array
