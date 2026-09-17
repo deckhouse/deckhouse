@@ -63,7 +63,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084840-a97e86c61556
-	github.com/deckhouse/lib-dhctl v0.22.1-0.20260917103007-03f01bc76bb3
+	github.com/deckhouse/lib-dhctl v0.23.0
 	github.com/deckhouse/module-sdk v0.12.5
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
