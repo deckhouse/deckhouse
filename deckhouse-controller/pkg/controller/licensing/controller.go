@@ -226,10 +226,11 @@ func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 	}
 
 	// Every request that is issued carries its own seq, whether it was a
-	// sampling tick that produced it or a lost status that had to be rebuilt:
-	// the license server reads seq as a strictly growing counter.
+	// sampling tick that produced it, a lost status that had to be rebuilt or
+	// a change in the installed set: the license server reads seq as a
+	// strictly growing counter.
 	request := effective.Status.RegistrationRequest
-	issue := due || request == ""
+	issue := due || request == "" || requestStale(request, res)
 	if issue {
 		journal.Seq++
 		request, err = r.buildRegistrationRequest(priv, clusterID, res, values, journal.Seq, now)
