@@ -13,10 +13,10 @@
 
 <body>
   <div class="content">
-    {% include header.html %}
+    {% if page.lang == 'ru' %}{% include header_ru.html %}{% else %}{% include header.html %}{% endif %}
     {{ content }}
   </div>
-  {% include footer.html %}
+  {% if page.lang == 'ru' %}{% include footer_ru.html %}{% else %}{% include footer.html %}{% endif %}
 
 {%- unless site.d8Revision == 'CSE' %}
 <script type="text/javascript">
