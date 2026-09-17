@@ -25,7 +25,6 @@ up: werf-bin ## Start documentation containers in a werf watch mode (rebuilding 
 		else \
 			echo "\nStarting documentation in a watch mode using local docker images store..."; \
 		fi
-		@$(MAKE) free-port-80
 		@echo -n "\nwerf: "; $(WERF_BIN) version
 		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --env local --repo $(WERF_REPO) --skip-image-spec-stage=true
 
@@ -37,7 +36,6 @@ dev: werf-bin ## Start documentation containers in a werf watch mode (rebuilding
 		else \
 			echo "\nStarting documentation in a DEV watch mode using local docker images store..."; \
 		fi
-		@$(MAKE) free-port-80
 		@echo -n "\nwerf: "; $(WERF_BIN) version
 		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
 
