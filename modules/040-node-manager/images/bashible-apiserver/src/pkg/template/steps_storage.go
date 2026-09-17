@@ -46,8 +46,9 @@ type StepsStorage struct {
 	nodeGroupConfigurations      map[string][]*nodeConfigurationScript
 	nodeGroupConfigurationsQueue chan nodeConfigurationQueueAction
 
-	staticPodRequests      map[string][]*staticPodRequest
-	staticPodRequestsQueue chan nodeConfigurationQueueAction
+	staticPodRequests          map[string][]*staticPodRequest
+	staticPodRequestsQueue     chan nodeConfigurationQueueAction
+	staticPodRequestsHasSynced func() bool
 
 	configurationsChanged chan struct{}
 	emitter               changesEmitter
@@ -94,11 +95,15 @@ func (s *StepsStorage) Render(target, provider string, templateContext map[strin
 	}
 
 	if len(ng) > 0 {
-		staticPodsStep, err := s.renderStaticPodsStep(ng[0])
-		if err != nil {
-			return nil, fmt.Errorf("render static pods step: %w", err)
+		// No step at all until the informer has listed the objects: an empty list
+		// tells the node to remove every static pod it is running.
+		if s.staticPodRequestsSynced() {
+			staticPodsStep, err := s.renderStaticPodsStep(ng[0])
+			if err != nil {
+				return nil, fmt.Errorf("render static pods step: %w", err)
+			}
+			steps[staticPodsStepName] = staticPodsStep
 		}
-		steps[staticPodsStepName] = staticPodsStep
 
 		userConfigurations, err := s.renderNodeGroupConfigurations(ng[0], templateContext)
 		if err != nil {
