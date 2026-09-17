@@ -553,7 +553,7 @@ spec:
           assertionMessage: ""
           fields:
             - path: spec.network.hostNetwork.allowedValue
-              scenario: speMatch
+              scenario: speUnused
           exception: ""
           exceptionRef: ""
           inventory:

@@ -227,7 +227,7 @@ spec:
           assertionMessage: ""
           fields:
             - path: spec.network.hostPID.allowedValue
-              scenario: speMatch
+              scenario: speUnused
           exception: ""
           exceptionRef: ""
           inventory:
@@ -251,7 +251,7 @@ spec:
           assertionMessage: ""
           fields:
             - path: spec.network.hostIPC.allowedValue
-              scenario: speMatch
+              scenario: speUnused
           exception: ""
           exceptionRef: ""
           inventory:
