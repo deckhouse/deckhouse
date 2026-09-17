@@ -30,10 +30,9 @@ import (
 var nsprWebhookLog = logf.Log.WithName("nodestaticpodrequest-webhook")
 
 // NodeStaticPodRequestValidator refuses what the CRD cannot express: an object
-// name the node config field would not take or that is reserved for a manifest
-// something else writes, and a manifest that is not a valid
-// Pod with a name and a namespace — the same single question the node's loader
-// asks, answered by the same decoder. Refused here because a node that refuses a
+// name the node config field would not take or that already has a writer, and a
+// manifest that is not a valid Pod with a name and a namespace — the same single
+// question the node's loader asks, answered by the same decoder. Refused here because a node that refuses a
 // manifest refuses the whole NodeConfig with it — one typo would stop that node
 // converging on anything at all. The nodeconfig controller checks the same two
 // things again and writes the reason onto the object, for the documents that

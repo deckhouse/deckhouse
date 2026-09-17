@@ -415,9 +415,9 @@ func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhou
 	return list.Items, nil
 }
 
-// readNodeStaticPodRequests lists the static pods the platform publishes; an empty list
-// is fine. Listed the same way as the extension requests, so both halves of a
-// pass — the render and the status report — see one set of objects.
+// readNodeStaticPodRequests lists the static pods the platform publishes; an
+// empty list is fine. Read live, while the status pass lists from the cache: the
+// two halves are eventually consistent, and a newer object costs one more pass.
 func (s *sourceReader) readNodeStaticPodRequests(ctx context.Context) ([]deckhousev1alpha1.NodeStaticPodRequest, error) {
 	list := &deckhousev1alpha1.NodeStaticPodRequestList{}
 	if err := s.Reader.List(ctx, list); err != nil {
