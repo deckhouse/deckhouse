@@ -98,7 +98,7 @@
     done < <(env)
 
   login_dev_registry: |
-    if [[ -n "${DECKHOUSE_DEV_REGISTRY_HOST:-}" ]]; then
+    if [[ -n "${DECKHOUSE_DEV_REGISTRY_HOST:-}" && -n "${DECKHOUSE_DEV_REGISTRY_USER:-}" ]]; then
       echo "${DECKHOUSE_DEV_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_DEV_REGISTRY_HOST}" \
         --username "${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin
       echo "${DECKHOUSE_DEV_REGISTRY_PASSWORD}" | regctl registry login "${DECKHOUSE_DEV_REGISTRY_HOST}" \
@@ -106,7 +106,7 @@
     fi
 
   login_stage_registry: |
-    if [[ -n "${DECKHOUSE_REGISTRY_STAGE_HOST:-}" ]]; then
+    if [[ -n "${DECKHOUSE_REGISTRY_STAGE_HOST:-}" && -n "${DECKHOUSE_REGISTRY_STAGE_USER:-}" ]]; then
       echo "${DECKHOUSE_REGISTRY_STAGE_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_STAGE_HOST}" \
         --username "${DECKHOUSE_REGISTRY_STAGE_USER}" --password-stdin
       echo "${DECKHOUSE_REGISTRY_STAGE_PASSWORD}" | regctl registry login "${DECKHOUSE_REGISTRY_STAGE_HOST}" \
@@ -114,13 +114,13 @@
     fi
   
   login_write_registry: |
-    if [[ -n "${DECKHOUSE_REGISTRY_HOST:-}" ]]; then
+    if [[ -n "${DECKHOUSE_REGISTRY_HOST:-}" && -n "${DECKHOUSE_REGISTRY_USER:-}" ]]; then
       echo "${DECKHOUSE_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_HOST}" \
         --username "${DECKHOUSE_REGISTRY_USER}" --password-stdin
     fi
 
   login_read_registry: |
-    if [[ -n "${DECKHOUSE_READ_REGISTRY_HOST:-}" ]]; then
+    if [[ -n "${DECKHOUSE_READ_REGISTRY_HOST:-}" && -n "${DECKHOUSE_READ_REGISTRY_USER:-}" ]]; then
       echo "${DECKHOUSE_READ_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_READ_REGISTRY_HOST}" \
         --username "${DECKHOUSE_READ_REGISTRY_USER}" --password-stdin
     fi
