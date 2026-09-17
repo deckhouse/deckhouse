@@ -401,7 +401,7 @@ func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhou
 func (s *sourceReader) readNodeStaticPodRequests(ctx context.Context) ([]deckhousev1alpha1.NodeStaticPodRequest, error) {
 	list := &deckhousev1alpha1.NodeStaticPodRequestList{}
 	if err := s.Reader.List(ctx, list); err != nil {
-		return nil, fmt.Errorf("list node static pods: %w", err)
+		return nil, fmt.Errorf("list node static pod requests: %w", err)
 	}
 	return list.Items, nil
 }
