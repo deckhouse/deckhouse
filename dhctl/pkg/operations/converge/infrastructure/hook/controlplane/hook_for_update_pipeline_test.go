@@ -24,6 +24,7 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -339,7 +340,51 @@ func TestAfterActionProvesTheRecreatedNodeAnswers(t *testing.T) {
 			"the operator fallback must keep the sudo password dhctl was started with")
 	})
 
+	// A machine the provider reports as running has not finished booting: sshd and
+	// cloud-init land later, and until then both accounts are refused alike. Reading that
+	// as a node that lost the converge user ends the converge on a node that was coming up.
+	t.Run("the node is still booting", func(t *testing.T) {
+		var ran []string
+
+		live := session.NewSession(session.Input{
+			User:           "ubuntu",
+			BecomePass:     operatorSudo,
+			AvailableHosts: []session.Host{{Host: oldIP, Name: "cluster-master-0"}},
+		})
+
+		provider := testssh.NewSSHProvider(live, true)
+
+		// One full pass over both accounts before sshd answers anybody.
+		refusals := 2
+
+		provider.AddCommandProvider(newIP, func(_ testssh.Bastion, _ string, _ ...string) *testssh.Command {
+			switches := provider.Switches()
+			user := switches[len(switches)-1].Session.User
+			ran = append(ran, user)
+
+			if refusals > 0 {
+				refusals--
+
+				return testssh.NewCommand(nil).WithErr(fmt.Errorf("exit status 255"))
+			}
+
+			if user != global.ConvergeUserName {
+				return testssh.NewCommand(nil).WithErr(fmt.Errorf("Permission denied (publickey)"))
+			}
+
+			return testssh.NewCommand(nil)
+		})
+
+		require.NoError(t, move(t, provider))
+		require.Equal(t, []string{global.ConvergeUserName, "ubuntu", global.ConvergeUserName}, ran,
+			"a node that answers nobody yet must be waited for, not written off")
+	})
+
 	t.Run("neither answers", func(t *testing.T) {
+		// The wait is what this subtest exhausts, so it runs on a single attempt.
+		retry.InTestEnvironment = true
+		t.Cleanup(func() { retry.InTestEnvironment = false })
+
 		var ran []string
 
 		err := move(t, newProvider(t, "nobody", &ran))

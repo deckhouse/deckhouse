@@ -238,28 +238,49 @@ func (h *HookForUpdatePipeline) moveSessionToRecreatedNode(ctx context.Context, 
 	return nil
 }
 
+// A machine the provider reports as running is not a machine that finished booting:
+// sshd and cloud-init land seconds to minutes later, and until then every account is
+// refused. Budget matches the control-plane readiness one, ~4 minutes.
+const (
+	recreatedNodeAttempts = 250
+	recreatedNodeWait     = 1 * time.Second
+)
+
 // followRecreatedNode moves the clients onto the rebuilt master as the converge user and
 // proves that account answers, falling back to the user dhctl started with. A node whose
-// provider dropped the account from its cloud-config still answers to that one.
+// provider dropped the account from its cloud-config still answers to that one. Both are
+// tried on every attempt: a booting node refuses the two alike, so neither failure proves
+// the account missing.
 func (h *HookForUpdatePipeline) followRecreatedNode(ctx context.Context, cl libcon.SSHClient, live *session.Session, host session.Host) error {
 	// The converge user's sudo is NOPASSWD, so no password is sent to that account.
-	err := switchAndCheck(ctx, h.sshProvider, sessionForHost(live, global.ConvergeUserName, "", host), cl.PrivateKeys())
-	if err == nil {
-		return nil
-	}
-
-	dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-		"Cannot connect to the rebuilt %s as %s: %v. Retrying as %s",
-		h.nodeToConverge, global.ConvergeUserName, err, live.User))
-
+	convergeUser := sessionForHost(live, global.ConvergeUserName, "", host)
 	// The operator's account is the one the sudo password was given for.
 	operator := sessionForHost(live, live.User, live.BecomePass, host)
 
-	if retryErr := switchAndCheck(ctx, h.sshProvider, operator, cl.PrivateKeys()); retryErr != nil {
-		return fmt.Errorf("connect as %s (%v), then as %s: %w", global.ConvergeUserName, err, live.User, retryErr)
-	}
+	loop := retry.NewLoop(
+		fmt.Sprintf("Waiting for the rebuilt node %s to answer", h.nodeToConverge),
+		recreatedNodeAttempts,
+		recreatedNodeWait,
+	)
 
-	return nil
+	return loop.RunContext(ctx, func() error {
+		convergeErr := switchAndCheck(ctx, h.sshProvider, convergeUser, cl.PrivateKeys())
+		if convergeErr == nil {
+			return nil
+		}
+
+		operatorErr := switchAndCheck(ctx, h.sshProvider, operator, cl.PrivateKeys())
+		if operatorErr == nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+				"Rebuilt node %s answers to %s, not to %s: %v",
+				h.nodeToConverge, live.User, global.ConvergeUserName, convergeErr))
+
+			return nil
+		}
+
+		return fmt.Errorf("connect as %s (%v), then as %s: %w",
+			global.ConvergeUserName, convergeErr, live.User, operatorErr)
+	})
 }
 
 func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
