@@ -275,8 +275,10 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 		})
 	}
 
-	if sshCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition); sshCondition == nil ||
-		sshCondition.Status != metav1.ConditionTrue {
+	sshCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition)
+	if sshCondition == nil || sshCondition.Status != metav1.ConditionTrue {
+		delay := c.sshCheckRateLimiter.When(address)
+
 		type taskDataStr struct {
 			host          string
 			address       string
@@ -345,13 +347,23 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				LastTransitionTime: metav1.Now(),
 			})
 
-			return ctrl.Result{}, err
+			// A host that does not answer over ssh is a transient condition, not a reason to
+			// give the StaticInstance back to the pool: the release would write the Pending
+			// phase to etcd and the resulting watch event would re-enqueue this very
+			// StaticMachine immediately, which is the throttling loop itself. Keep the
+			// reservation and retry with the address backoff instead; the bootstrap timeout
+			// breaks the cycle if the host never comes back.
+			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 
 		if !finished {
 			logger.Info("SSH check still running, requeueing", "requeueAfter", RequeueForCheckInProgress)
 			return ctrl.Result{RequeueAfter: RequeueForCheckInProgress}, nil
 		}
+
+		// Only a successful check resets the backoff. Forgetting unconditionally pins the
+		// delay to the base value forever, so the rate limiter never limits anything.
+		c.sshCheckRateLimiter.Forget(address)
 
 		logger.Info("SSH connectivity check passed")
 		conditions.Set(staticInstance, metav1.Condition{
