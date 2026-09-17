@@ -9,6 +9,10 @@ deliberately leaves to a human — which tier a rule belongs to, which level a c
 at, and what to do with a second aggregation lineage. If you only want the mechanical part, run the
 script and read [RBACV2_MODULE_MIGRATION.md](./RBACV2_MODULE_MIGRATION.md) instead.
 
+Like the script, it keeps the legacy object and puts the new one beside it behind a version gate, so
+one branch of the module serves clusters on either side of 1.78. A module that supports only 1.78
+and later does not need that; tell the agent so, and it drops the legacy branch.
+
 Teams working in Cursor can keep it as a skill instead: save the text below the line as
 `.cursor/skills/rbacv2-migration/SKILL.md`, prefixed with a frontmatter block carrying `name:
 rbacv2-migration` and a one-line `description`, and invoke it by name.
@@ -18,8 +22,15 @@ rbacv2-migration` and a one-line `description`, and invoke it by name.
 ## Task
 
 Migrate this module's RBACv2 templates from the legacy `manage`/`use` scheme to the role model of
-DKP 1.78. The rewrite is mostly mechanical — object names, labels and annotations — but three
-decisions need judgement, and getting them wrong changes who has access to what.
+DKP 1.78, **keeping the legacy objects for clusters below 1.78**. The rewrite is mostly mechanical —
+object names, labels and annotations — but three decisions need judgement, and getting them wrong
+changes who has access to what.
+
+This module is installed on clusters of more than one platform version, and the two role models are
+not compatible: an object of one model is invisible to the other. So each template ends up carrying
+both objects behind a gate on `global.deckhouseVersion` — the new one for DKP 1.78 and later, the
+legacy one below it. Drop the legacy branch only if the module's `module.yaml` already requires
+1.78 or newer, or the person running you says so.
 
 **Mistakes here are silent.** Nothing rejects these objects at apply time and nothing is logged: the
 labels are simply read by different code now. Three things happen to a module that gets this wrong,
@@ -41,7 +52,8 @@ Change only:
 
 - files under `**/templates/rbacv2/**`;
 - inside those files, only `metadata` (the object name, the `rbac.deckhouse.io/*` labels, the i18n
-  annotations) — and `rules`, only when you move a rule between tiers as decided below.
+  annotations) — and `rules`, only when you move a rule between tiers as decided below;
+- one new file, `templates/_rbacv2_compat.tpl`, holding the version gate.
 
 Do not:
 
@@ -63,6 +75,12 @@ find . -type f -name '*.yaml' -path '*/templates/rbacv2/*' | sort
 grep -rn 'rbac.deckhouse.io/kind: \(use\|manage\)\|d8:use:capability\|d8:manage:permission' \
   --include='*.yaml' .
 
+# Is the version gate already there? (a previous run, or a hand-written one)
+grep -rn 'rbacv2_new_scheme' --include='*.yaml' --include='*.tpl' .
+
+# Does the module already require 1.78 or newer? Then the legacy branch is dead weight.
+grep -n 'deckhouse:' module.yaml 2>/dev/null
+
 # Are the labels templated through helm_lib_module_labels?
 grep -rln 'helm_lib_module_labels' --include='*.yaml' . | grep 'templates/rbacv2'
 
@@ -71,6 +89,7 @@ grep -rn 'scope: \(Cluster\|Namespaced\)' crds/ 2>/dev/null
 ```
 
 If the first command returns nothing, the module ships no RBACv2 templates: report that and stop.
+If the gate is already there, the file was migrated before: leave it alone and say so.
 
 The legacy layout is `templates/rbacv2/{manage,use}/{view,edit}.yaml`, one `ClusterRole` per file.
 Anything that does not match — several objects in one file, an action other than `view`/`edit`, a
@@ -200,6 +219,61 @@ rules:
     verbs: ["create", "update", "patch", "delete"]
 ```
 
+## Step 3b. Keep both schemes behind the version gate
+
+Write `templates/_rbacv2_compat.tpl` once, with the module name in the define (`<module>` is the
+chart name, the same one that appears in the object names):
+
+```text
+{{- define "<module>.rbacv2_new_scheme" -}}
+  {{- $raw := (.Values.global).deckhouseVersion | default "dev" | toString -}}
+  {{- $mm := regexFind "^v?[0-9]+[.][0-9]+" $raw -}}
+  {{- if $mm -}}
+    {{- semverCompare ">= 1.78" (printf "%s.0" $mm) -}}
+  {{- else -}}
+    {{- /* "dev" or "unknown": a build off any branch says the same, so answer with the model
+           whose mistake only loses access. A dev stand below 1.78 flips this to false. */ -}}
+    true
+  {{- end -}}
+{{- end -}}
+```
+
+Copy it as it is. Six things in it are not decoration:
+
+- `global.deckhouseVersion` is `dev` on a development build and `unknown` when the version file is
+  missing. `semverCompare` raises on both, and a raise takes down the render of the whole module, not
+  just this file, so anything that is not a version has to answer without comparing.
+- It answers `true`, and that is about the direction of failure rather than about which branch is
+  likelier. The version file holds `CI_COMMIT_TAG`, so a build off any branch says `dev`: a dev stand
+  built from `release-1.77` looks exactly like one built from `main`. Of the two ways to be wrong
+  there, only one is dangerous — the new object on a 1.77 cluster is inert, because nothing there
+  selects `aggregate-to-namespace-as`, and the module's permissions are merely missing; the legacy
+  object on a 1.78 cluster is still aggregated by `d8:subsystem:kubernetes:<level>`, which is granted
+  through a `ClusterRoleBinding`, so rules meant for one namespace become cluster-wide. One direction
+  loses access, the other hands it out.
+- The comparison is on major and minor only. Semver orders `1.78.0-rc.1` **below** `1.78.0`, so
+  comparing the raw string would serve a release candidate of 1.78 the legacy object.
+- The regex uses `[.]` rather than `\.`: a backslash escape inside a Go template string literal is a
+  parse error.
+- `.Values.global` is in parentheses. Without them a chart rendered with no global values at all —
+  which is how a module is often checked locally — fails on a nil pointer instead of falling back.
+- `toString` is there because `deckhouseVersion: 1.78` unquoted in a values file is a YAML float, and
+  `regexFind` on a non-string kills the render. `--set` is safe, a values file is not, and pinning the
+  version in a values file is exactly what a template test does.
+
+Then wrap each migrated file, new object first:
+
+```text
+{{- if eq (include "<module>.rbacv2_new_scheme" .) "true" }}
+<the migrated object>
+{{- else }}
+<the original object, unchanged>
+{{- end }}
+```
+
+The legacy object keeps its old name, labels and rules verbatim — it is what the cluster below 1.78
+reads. Do not "fix" it, and do not leave a file where both branches carry the same object.
+
 ## Step 4. The three decisions
 
 Make each one explicitly, and report every one you make with the reason.
@@ -243,14 +317,33 @@ Make each one explicitly, and report every one you make with the reason.
 The migration is done when all of these pass. Run them; do not report success from reading the diff.
 
 ```shell
-# 1. Nothing legacy is left.
-grep -rn 'rbac.deckhouse.io/kind: \(use\|manage\)\|d8:use:capability\|d8:manage:permission\|rbac.deckhouse.io/level' templates/
+# 1. Every legacy object sits in the else branch of a gate, and none outside it.
+grep -rn 'd8:use:capability\|d8:manage:permission' templates/
+grep -rn 'rbacv2_new_scheme' templates/
 
-# 2. The chart still renders.
-helm template . --set global.enabledModules='{}' >/dev/null
+# 2. Both branches render, and each gives the objects of its own model.
+helm template . --set global.deckhouseVersion=1.77.5 --set global.enabledModules='{}' | grep 'name: d8:'
+helm template . --set global.deckhouseVersion=v1.78.0 --set global.enabledModules='{}' | grep 'name: d8:'
+helm template . --set global.deckhouseVersion=dev     --set global.enabledModules='{}' | grep 'name: d8:'
 
-# 3. The diff is confined to the templates you were asked to touch.
+# 3. The diff is confined to the templates you were asked to touch, plus the gate.
 git diff --name-only
+```
+
+The first render must list only `d8:use:capability:*` and `d8:manage:permission:*`, the second and
+the third only `d8:namespace-capability:*` and `d8:system-capability:*`. A render that fails on
+`dev` means the gate was not copied as written.
+
+The module's own template tests are the one thing outside `templates/` the gate does break, and they
+break silently in the sense that matters: a test that looks up a ClusterRole by name now finds it
+only in the branch its render selects. A harness that leaves `global.deckhouseVersion` unset renders
+the new scheme, so every assertion written against a legacy name fails. Report which tests reference
+these names; do not rewrite them unless you are asked to. The fix is for the test to pin the version
+it means:
+
+```shell
+grep -rn 'd8:use:capability\|d8:manage:permission\|namespace-capability\|system-capability' \
+  --include='*_test.go' --include='*_test.py' --include='*.yaml' . | grep -v templates/
 ```
 
 If the chart does not render for a reason unrelated to your change — a missing dependency, values the
@@ -292,7 +385,13 @@ Dropped lineages: <n>
 Open questions: <n>
   <path> — <what you could not decide and what you need to know>
 
-Checks: legacy markers <none|list>, helm template <ok|error>, files outside scope <none|list>
+Gate: <written|dropped, because the module requires 1.78+>
+
+Tests referencing role names: <n>
+  <path:line> — <the name it expects>
+
+Checks: renders at 1.77.5 / 1.78.0 / dev <objects of the expected model | error>,
+        files outside scope <none|list>
 ```
 
 Stop and ask instead of guessing when: a file defines a role rather than a capability; an object does

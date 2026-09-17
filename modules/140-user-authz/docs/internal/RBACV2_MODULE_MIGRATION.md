@@ -158,12 +158,71 @@ finds, and reports what it did not dare to touch. It replays the platform migrat
 decision, not a rewrite), so the mechanical part can be trusted.
 
 ```shell
-./rbacv2-migrate-module.sh -n path/to/module   # diff only
-./rbacv2-migrate-module.sh path/to/module      # rewrite in place
+./rbacv2-migrate-module.sh -n path/to/module          # diff only
+./rbacv2-migrate-module.sh path/to/module             # keep both models, gated by version
+./rbacv2-migrate-module.sh --replace path/to/module   # new model only
 ```
 
 It is idempotent: an already migrated file is reported as untouched. It never renames files, so the
 diff stays reviewable.
+
+### Serving both models from one branch
+
+An external module is installed on clusters of more than one platform version, and the two models do
+not see each other: an object of one is invisible to the other. So by default the script keeps the
+legacy object, puts the migrated one beside it, and wraps both:
+
+```text
+{{- if eq (include "<module>.rbacv2_new_scheme" .) "true" }}
+<the migrated object>
+{{- else }}
+<the legacy object, unchanged>
+{{- end }}
+```
+
+The gate itself lands in `templates/_rbacv2_compat.tpl`, written once per module. It reads
+`global.deckhouseVersion` and answers `true` from DKP 1.78 on. That value is the content of
+`/deckhouse/version`, put into the global values by a startup hook, and it reaches an external
+module's render like any other global value — `upmeter` already builds its user-agent out of it.
+A module delivered as a `ModulePackage` gets it in the same place; only an `Application` package
+reads global values as `.Platform.<path>` instead, and RBACv2 capabilities are not shipped that way.
+
+Six details in the gate matter:
+
+- that value is `dev` on a development build and `unknown` when the version file is missing, and
+  `semverCompare` raises on both — a raise takes down the render of the whole module, so anything
+  that is not a version has to answer without comparing;
+- it answers `true`, for the direction of failure rather than the likelier branch. The version file
+  holds `CI_COMMIT_TAG`, so a build off any branch says `dev`, and a dev stand built from
+  `release-1.77` looks exactly like one built from `main`. Only one of the two mistakes is dangerous:
+  the new object on a 1.77 cluster is inert, since nothing there selects `aggregate-to-namespace-as`,
+  and the module's permissions are merely missing; the legacy object on a 1.78 cluster is still
+  aggregated by `d8:subsystem:kubernetes:<level>`, which is granted through a `ClusterRoleBinding`,
+  so rules meant for one namespace become cluster-wide. A dev stand on a release branch below 1.78
+  that needs the legacy objects flips the `true` in the helper to `false` in that build;
+- the comparison is on major and minor only, because semver orders `1.78.0-rc.1` below `1.78.0` and a
+  release candidate of 1.78 would otherwise be served the legacy object;
+- the regex uses `[.]`, since a backslash escape inside a Go template string literal is a parse error;
+- the version is piped through `toString`, because `deckhouseVersion: 1.78` unquoted in a values file
+  is a YAML float and `regexFind` on a non-string kills the render;
+- `.Values.global` is parenthesized, so a chart rendered with no global values at all falls back to
+  `dev` instead of failing on a nil pointer.
+
+The module's own template tests need attention, because a test that looks up a ClusterRole by name
+finds it only in the branch its render selects, and a harness that leaves `global.deckhouseVersion`
+unset renders the new scheme. Set the version explicitly in such a test and cover both branches; that
+is also the cheapest place to prove the gate works.
+
+In-tree modules must use `--replace`, and not merely prefer it: the platform's own contract test
+(`testing/rbacv2/`) reads every file under `templates/rbacv2/**` as raw YAML, and a gated file fails
+it — which is also why the in-tree compatibility aliases live in `templates/rbacv2-compat/` instead.
+External modules are unaffected: dmt renders the chart through helm and lints the objects, so it only
+ever sees one branch.
+
+A module whose `module.yaml` already requires 1.78 or newer does not need the legacy branch:
+`--replace` writes the new object alone, which is also what in-tree modules use, since they ship with
+the platform they target. Remove the gate and the `else` branch once the module drops support for
+clusters below 1.78.
 
 ### What the script cannot decide
 
