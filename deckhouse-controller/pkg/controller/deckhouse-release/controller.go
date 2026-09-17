@@ -267,7 +267,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 			return res, fmt.Errorf("update: %w", err)
 		}
 
-		return ctrl.Result{Requeue: true}, nil // process to the next phase
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil // process to the next phase
 
 	case v1alpha1.DeckhouseReleasePhaseSkipped, v1alpha1.DeckhouseReleasePhaseSuperseded, v1alpha1.DeckhouseReleasePhaseSuspended:
 		r.logger.Debug("release phase", slog.String("phase", dr.Status.Phase))

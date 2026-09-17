@@ -77,7 +77,6 @@ func NewClient(options ...Option) Client {
 		TLSHandshakeTimeout:   5 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		DialContext:           dialer.DialContext,
-		Dial:                  dialer.Dial,
 	}
 
 	otr := otelhttp.NewTransport(
