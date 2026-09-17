@@ -46,6 +46,8 @@ type StepsStorage struct {
 	nodeGroupConfigurations      map[string][]*nodeConfigurationScript
 	nodeGroupConfigurationsQueue chan nodeConfigurationQueueAction
 
+	staticPodRequests map[string][]*staticPodRequest
+
 	configurationsChanged chan struct{}
 	emitter               changesEmitter
 
@@ -72,6 +74,7 @@ func NewStepsStorage(ctx context.Context, rootDir string, ngConfigFactory dynami
 		systemScripts:                make(map[string]map[string][]byte),
 		nodeGroupConfigurations:      make(map[string][]*nodeConfigurationScript),
 		nodeGroupConfigurationsQueue: make(chan nodeConfigurationQueueAction, 100),
+		staticPodRequests:            make(map[string][]*staticPodRequest),
 		configurationsChanged:        make(chan struct{}, 1),
 		cloudProviderStepSecrets:     make(map[string]cloudProviderStepsSecret),
 		cloudProviderStepsChanged:    make(chan struct{}, 1),
