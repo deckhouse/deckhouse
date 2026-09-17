@@ -216,6 +216,13 @@ func TestRenderStaticPodsStep(t *testing.T) {
 	require.Contains(t, worker, `new_names='["node-local-dns","registry-agent"]'`)
 	require.Contains(t, worker, `"node.deckhouse.io/static-pods=node-local-dns,registry-agent"`)
 
+	// The state file is recorded before the manifests are written: a recorded
+	// name whose file is absent is written by the next run, while a written file
+	// no run remembers is never removed. The annotation stays last.
+	require.Less(t, strings.Index(worker, `rm -f "${manifests_dir}/${old_name}.yaml"`), strings.Index(worker, "bb-sync-file"))
+	require.Less(t, strings.Index(worker, `echo "$new_names" > "$state_file"`), strings.Index(worker, "bb-sync-file"))
+	require.Less(t, strings.LastIndex(worker, "bb-sync-file"), strings.Index(worker, "bb-curl-helper-patch-node-metadata"))
+
 	master := renderStaticPodsStepFor(t, storage, "master")
 
 	require.Contains(t, master, registryAgentManifest)
@@ -289,12 +296,17 @@ spec:
 `
 
 	storage := newStaticPodsStorage()
+	// Two requests under two node-group keys, so the map walk in
+	// acceptedStaticPods has an order to randomise between the two renders.
 	storage.AddStaticPodRequest(staticPodRequestObject("nasty", time.Unix(100, 0), nil, manifest))
+	storage.AddStaticPodRequest(staticPodRequestObject("alpha-node-local-dns", time.Unix(200, 0), []string{"worker"}, nodeLocalDNSManifest))
 
 	step := renderStaticPodsStepFor(t, storage, "worker")
 
 	// Nothing is escaped or expanded on the way to the node.
 	require.Contains(t, step, manifest)
+	// By object name, not by the order the keys are read in.
+	require.Contains(t, step, `new_names='["alpha-node-local-dns","nasty"]'`)
 	// The bundle checksum is computed over the rendered steps, so the same
 	// requests must render the same bytes.
 	require.Equal(t, step, renderStaticPodsStepFor(t, storage, "worker"))
