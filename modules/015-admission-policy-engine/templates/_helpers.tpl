@@ -357,7 +357,7 @@ spec:
   namespaces the full `restricted` set of checks.
 
   The action comes from `podSecurityStandards.systemNamespaces.enforcementAction` and defaults to
-  `warn`, which reports violations in the audit and in Grafana without blocking a system component.
+  `warn`, which reports violations in the audit and in Deckhouse Console without blocking a system component.
   It is the only lever a cluster operator has here: the labels that tune the constraints below are
   written by the module that owns the namespace and cannot be edited from outside it.
 

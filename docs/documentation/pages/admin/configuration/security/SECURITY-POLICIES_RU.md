@@ -95,7 +95,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one pod violates the configured cluster pod security standards.
@@ -153,7 +153,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster operation policies.
@@ -211,7 +211,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster security policies.
@@ -272,7 +272,7 @@ status:
 Допустимые режимы применения политик:
 
 - `deny` — запрещает выполнений действий.
-- `dryrun` — не влияет на выполнение действий и используется для отладки. Информацию о событиях можно посмотреть в Grafana или в консоли с помощью команды `d8 k` или `kubectl`.
+- `dryrun` — не влияет на выполнение действий и используется для отладки. Информацию о событиях можно посмотреть в веб-интерфейсе Deckhouse или с помощью команды `d8 k`.
 - `warn` — работает как `dryrun`, но дополнительно выводит предупреждение с указанием причины,
   по которой бы произошёл запрет действия в режиме `deny`.
 
@@ -298,7 +298,7 @@ status:
 Стандарт `restricted` применяется к каждому такому неймспейсу в режиме `warn`.
 Лейбл `security.deckhouse.io/pod-policy` и [параметр `settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy)
 в них не учитываются.
-Проверка фиксирует нарушения в отчётах безопасности и в Grafana и никогда не блокирует запуск системного компонента.
+Проверка фиксирует нарушения в отчётах безопасности и в веб-интерфейсе Deckhouse и никогда не блокирует запуск системного компонента.
 
 Чтобы нарушения запрещались, а не только фиксировались, задайте
 [`settings.podSecurityStandards.systemNamespaces.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction):
@@ -342,7 +342,7 @@ settings:
 в системных только предупреждает, а в системных неймспейсах с этим лейблом — запрещает.
 
 При таком разделении появляются дополнительные констрейнты с именами `d8-system-warn-<политика>`
-и `d8-system-enforce-<политика>`, которые видны в отчётах безопасности и в Grafana рядом с исходным.
+и `d8-system-enforce-<политика>`, которые видны в отчётах безопасности и в веб-интерфейсе Deckhouse рядом с исходным.
 Оба префикса зарезервированы: политика, имя которой начинается с одного из них, отклоняется при создании.
 Политика остаётся одним констрейнтом, когда разделение ничего не меняет: если она работает
 в режиме `warn` или `dryrun`, если перечисленные в ней неймспейсы не включают системные,

@@ -94,7 +94,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one pod violates the configured cluster pod security standards.
@@ -152,7 +152,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster operation policies.
@@ -210,7 +210,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster security policies.
@@ -271,7 +271,7 @@ Allowed policy enforcement modes:
 
 - `deny`: Blocks actions from being executed.
 - `dryrun`: Does not affect execution and used for debugging.
-  Event information can be viewed in Grafana or in the console using `kubectl`.
+  Event information can be viewed in Deckhouse Console or with `d8 k`.
 - `warn`: Works like `dryrun` but also displays a warning with the reason the action would have been denied in `deny` mode.
 
 By default, Pod Security Standards policies in DP are enforced in `deny` mode.
@@ -297,7 +297,7 @@ The `restricted` standard applies to every such namespace in `warn` mode.
 The `security.deckhouse.io/pod-policy` label and the
 [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter
 are ignored there.
-The check reports violations in the audit and in Grafana, and never blocks a system component from starting.
+The check reports violations in the audit and in Deckhouse Console, and never blocks a system component from starting.
 
 To block violations instead of reporting them, set
 [`settings.podSecurityStandards.systemNamespaces.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction):
@@ -341,7 +341,7 @@ A policy with `enforcementAction: Deny` blocks workloads in ordinary namespaces,
 only warns in system ones, and blocks in system namespaces that carry the label.
 
 Splitting a policy this way produces extra constraints named `d8-system-warn-<policy>` and
-`d8-system-enforce-<policy>`, which appear in the audit and in Grafana next to the original one.
+`d8-system-enforce-<policy>`, which appear in the audit and in Deckhouse Console next to the original one.
 Both prefixes are reserved: a policy whose own name starts with one of them is rejected on creation.
 A policy stays a single constraint whenever the split would change nothing: when it warns or runs
 in dryrun, when the namespaces it names hold no system namespace, when it already excludes every

@@ -181,7 +181,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one pod violates the configured cluster pod security standards.
@@ -239,7 +239,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster operation policies.
@@ -297,7 +297,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster security policies.

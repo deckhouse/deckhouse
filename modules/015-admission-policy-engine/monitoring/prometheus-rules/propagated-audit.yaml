@@ -29,7 +29,7 @@
             )
             ```
 
-          - Alternatively, check the admission-policy-engine Grafana dashboard.
+          - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     - alert: OperationPolicyViolation
       expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="OperationPolicy"})) > 0
       for: 10m
@@ -57,7 +57,7 @@
             )
             ```
 
-          - Alternatively, check the admission-policy-engine Grafana dashboard.
+          - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     - alert: SecurityPolicyViolation
       expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="SecurityPolicy"})) > 0
       for: 10m
@@ -85,4 +85,4 @@
             )
             ```
 
-          - Alternatively, check the admission-policy-engine Grafana dashboard.
+          - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
