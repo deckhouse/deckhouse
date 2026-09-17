@@ -17,6 +17,7 @@ limitations under the License.
 package template
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -155,7 +156,7 @@ func podIdentity(manifest string) (string, error) {
 	}
 
 	if pod.Metadata.Name == "" {
-		return "", fmt.Errorf("parse manifest: metadata.name is empty")
+		return "", errors.New("parse manifest: metadata.name is empty")
 	}
 
 	return pod.Metadata.Namespace + "/" + pod.Metadata.Name, nil

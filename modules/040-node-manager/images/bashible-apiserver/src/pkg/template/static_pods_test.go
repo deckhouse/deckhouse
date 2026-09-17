@@ -95,9 +95,11 @@ func TestStaticPodsFor(t *testing.T) {
 	t.Run("a group gets its own requests and the wildcard ones", func(t *testing.T) {
 		storage := newStaticPodsStorage()
 		storage.AddStaticPodRequest(staticPodRequestObject("registry-agent", time.Unix(100, 0), nil, registryAgentManifest))
-		storage.AddStaticPodRequest(staticPodRequestObject("node-local-dns", time.Unix(200, 0), []string{"worker"}, nodeLocalDNSManifest))
+		// Named to sort after the wildcard one: the order is by name, not by the
+		// order the keys are read in.
+		storage.AddStaticPodRequest(staticPodRequestObject("zz-node-local-dns", time.Unix(200, 0), []string{"worker"}, nodeLocalDNSManifest))
 
-		require.Equal(t, []string{"node-local-dns", "registry-agent"}, staticPodNames(storage.staticPodsFor("worker")))
+		require.Equal(t, []string{"registry-agent", "zz-node-local-dns"}, staticPodNames(storage.staticPodsFor("worker")))
 		require.Equal(t, []string{"registry-agent"}, staticPodNames(storage.staticPodsFor("master")))
 	})
 
