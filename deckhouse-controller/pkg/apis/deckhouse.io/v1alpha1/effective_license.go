@@ -163,8 +163,10 @@ type LicenseMetricValue struct {
 	Avg7d float64 `json:"avg_7d,omitempty"`
 
 	// Extrapolated is the value projected to the nearest future expiration.
+	// It is null while there are not enough observations to project from, that is,
+	// while the journal is shorter than the sustained window.
 	// +optional
-	Extrapolated float64 `json:"extrapolated,omitempty"`
+	Extrapolated *float64 `json:"extrapolated"`
 }
 
 type LicenseReduction struct {

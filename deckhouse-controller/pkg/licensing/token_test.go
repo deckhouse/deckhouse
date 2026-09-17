@@ -221,6 +221,16 @@ func TestRegistrationPayloadSerialization(t *testing.T) {
 		}
 	}
 
+	// §5.3 requires extrapolated, so a metric that could not be projected yet
+	// sends the instant reading in its place rather than a null.
+	nodes, ok := metrics["nodes"].(map[string]any)
+	if !ok {
+		t.Fatalf("metrics.nodes = %T", metrics["nodes"])
+	}
+	if nodes["extrapolated"] != float64(24) {
+		t.Fatalf("metrics.nodes.extrapolated = %v, want the instant reading 24", nodes["extrapolated"])
+	}
+
 	// Optional fields disappear when empty, records and ver are always there.
 	for _, absent := range []string{"build", "dkp_version"} {
 		if _, ok := payload[absent]; ok {

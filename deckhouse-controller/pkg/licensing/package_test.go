@@ -278,7 +278,7 @@ func TestValidPackageSurvivesABadSignatureElsewhere(t *testing.T) {
 	if err != nil {
 		t.Fatalf("valid package: %v", err)
 	}
-	res := Compute(oneKey(statuses...), nil, ts("2026-02-01T00:00:00Z"), DefaultThresholds())
+	res := Compute(oneKey(statuses...), nil, nil, ts("2026-02-01T00:00:00Z"), DefaultThresholds())
 	if got := limitOf(t, res, "vCPU"); got != 50 {
 		t.Fatalf("vCPU = %d, want the 50 of the valid package alone", got)
 	}
@@ -307,7 +307,7 @@ func TestOnlyOwnClusterRecordsContribute(t *testing.T) {
 		t.Fatalf("foreign record: %+v", statuses[1])
 	}
 
-	res := Compute(oneKey(statuses...), nil, ts("2026-02-01T00:00:00Z"), DefaultThresholds())
+	res := Compute(oneKey(statuses...), nil, nil, ts("2026-02-01T00:00:00Z"), DefaultThresholds())
 	if got := limitOf(t, res, "vCPU"); got != 50 {
 		t.Fatalf("vCPU = %d, want only the own record counted", got)
 	}

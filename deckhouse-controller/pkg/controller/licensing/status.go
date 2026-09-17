@@ -213,11 +213,13 @@ func effectiveStatus(
 	}
 
 	for name, value := range values {
-		status.Metrics[name] = v1alpha1.LicenseMetricValue{
-			Instant:      value.Instant,
-			Avg7d:        value.Avg7d,
-			Extrapolated: value.Extrapolated,
+		metric := v1alpha1.LicenseMetricValue{Instant: value.Instant, Avg7d: value.Avg7d}
+		// Null, not zero: "not projected yet" and "projected to nothing" are
+		// different statements, and the status is what the customer reads.
+		if value.Extrapolated != nil {
+			metric.Extrapolated = ptr.To(*value.Extrapolated)
 		}
+		status.Metrics[name] = metric
 	}
 
 	setConditions(&status.Conditions, res, now)

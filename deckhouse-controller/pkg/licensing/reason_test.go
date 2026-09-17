@@ -27,76 +27,78 @@ func TestComputeReason(t *testing.T) {
 	now := ts("2026-05-01T00:00:00Z")
 
 	cases := []struct {
-		name    string
-		records []RecordStatus
-		metrics map[string]MetricValue
-		state   string
-		reason  string
+		name      string
+		records   []RecordStatus
+		metrics   map[string]MetricValue
+		sustained map[string]bool
+		state     string
+		reason    string
 	}{
 		{
 			name:    "valid has no reason",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: 10}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: f64(10)}},
 			state:   StateValid,
 		},
 		{
-			name:    "the seven day average is above the limit",
-			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 120, Avg7d: 110, Extrapolated: 130}},
-			state:   StateViolation,
-			reason:  ReasonLimitsExceeded,
+			name:      "the limit has been exceeded for the whole sustained window",
+			records:   []RecordStatus{live},
+			metrics:   map[string]MetricValue{"vCPU": {Instant: 120, Avg7d: 110, Extrapolated: f64(130)}},
+			sustained: map[string]bool{"vCPU": true},
+			state:     StateViolation,
+			reason:    ReasonLimitsExceeded,
 		},
 		{
 			name:    "instant at the warning ratio is still valid, with a note",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 95, Avg7d: 80, Extrapolated: 90}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 95, Avg7d: 80, Extrapolated: f64(90)}},
 			state:   StateValid,
 			reason:  ReasonLimitsApproaching,
 		},
 		{
 			name:    "spending the whole quota is normal",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 100, Avg7d: 80, Extrapolated: 100}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 100, Avg7d: 80, Extrapolated: f64(100)}},
 			state:   StateValid,
 			reason:  ReasonLimitsApproaching,
 		},
 		{
 			name:    "one over the limit warns",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 101, Avg7d: 80, Extrapolated: 90}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 101, Avg7d: 80, Extrapolated: f64(90)}},
 			state:   StateWarning,
 			reason:  ReasonLimitsExceeded,
 		},
 		{
 			name:    "an unlimited metric never approaches anything",
 			records: []RecordStatus{wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{"vCPU": nil})},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 1e9, Avg7d: 1e9, Extrapolated: 1e9}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 1e9, Avg7d: 1e9, Extrapolated: f64(1e9)}},
 			state:   StateValid,
 		},
 		{
 			name:    "a zero limit does not approach itself",
 			records: []RecordStatus{wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{"vCPU": i64(0)})},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 0, Avg7d: 0, Extrapolated: 0}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 0, Avg7d: 0, Extrapolated: f64(0)}},
 			state:   StateValid,
 		},
 		{
 			name:    "only the extrapolation is above the limit",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 70, Avg7d: 68, Extrapolated: 120}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 70, Avg7d: 68, Extrapolated: f64(120)}},
 			state:   StateWarning,
 			reason:  ReasonProjectedOverLimit,
 		},
 		{
 			name:    "an active record expires within the window",
 			records: []RecordStatus{wl(recordB, "2026-01-01T00:00:00Z", "2026-05-10T00:00:00Z", map[string]*int64{"vCPU": i64(100)})},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: 10}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: f64(10)}},
 			state:   StateWarning,
 			reason:  ReasonExpiringSoon,
 		},
 		{
 			name:    "everything has expired",
 			records: []RecordStatus{wl(recordC, "2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z", map[string]*int64{"vCPU": i64(100)})},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: 10}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: f64(10)}},
 			state:   StateViolation,
 			reason:  ReasonExpired,
 		},
@@ -105,7 +107,7 @@ func TestComputeReason(t *testing.T) {
 			// the right, it just has not been penalised for it yet.
 			name:    "the grace period is running",
 			records: []RecordStatus{wl(recordC, "2026-01-01T00:00:00Z", "2026-04-25T00:00:00Z", map[string]*int64{"vCPU": i64(100)})},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: 10}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: f64(10)}},
 			state:   StateGrace,
 			reason:  ReasonExpired,
 		},
@@ -128,23 +130,31 @@ func TestComputeReason(t *testing.T) {
 			// cluster, and a live record is not a violation.
 			name:    "a rejected record next to a live one",
 			records: []RecordStatus{rejected(recordB, ReasonSchemaViolation), live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: 10}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 10, Avg7d: 10, Extrapolated: f64(10)}},
 			state:   StateValid,
 		},
 		{
-			// The seven day average outranks the instant reading: sustained
-			// overuse is a violation even while the cluster is back under.
+			// The mean still carries a spike the cluster has already come back
+			// from. Only a continuous exceedance is a violation, and one reading
+			// within the limit ends it.
 			name:    "the average is over while the instant reading is not",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 50, Avg7d: 130, Extrapolated: 40}},
-			state:   StateViolation,
+			metrics: map[string]MetricValue{"vCPU": {Instant: 50, Avg7d: 130, Extrapolated: f64(40)}},
+			state:   StateValid,
+		},
+		{
+			// The same exceedance that has not lasted the window yet.
+			name:    "the instant reading is over but not for long enough",
+			records: []RecordStatus{live},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 130, Avg7d: 60, Extrapolated: f64(40)}},
+			state:   StateWarning,
 			reason:  ReasonLimitsExceeded,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := Compute(oneKey(tc.records...), tc.metrics, now, DefaultThresholds())
+			res := Compute(oneKey(tc.records...), tc.metrics, tc.sustained, now, DefaultThresholds())
 			if res.State != tc.state || res.Reason != tc.reason {
 				t.Fatalf("state/reason = %q/%q, want %q/%q", res.State, res.Reason, tc.state, tc.reason)
 			}
@@ -159,7 +169,7 @@ func TestComputeReasonRevoked(t *testing.T) {
 	revoked.Reason = ReasonRevoked
 	revoked.RevokedReason = ReasonNonPayment
 
-	res := Compute(oneKey(revoked), map[string]MetricValue{"vCPU": {Instant: 1000, Avg7d: 1000}}, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
+	res := Compute(oneKey(revoked), map[string]MetricValue{"vCPU": {Instant: 1000, Avg7d: 1000}}, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
 	if res.State != StateViolation || res.Reason != ReasonRevoked {
 		t.Fatalf("state/reason = %q/%q, want %q/%q", res.State, res.Reason, StateViolation, ReasonRevoked)
 	}
@@ -228,7 +238,7 @@ func TestWithinLimits(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := Compute(oneKey(tc.records...), tc.metrics, now, DefaultThresholds())
+			res := Compute(oneKey(tc.records...), tc.metrics, nil, now, DefaultThresholds())
 			if res.WithinLimits != tc.want {
 				t.Fatalf("withinLimits = %v, want %v (effective %v)", res.WithinLimits, tc.want, res.Effective)
 			}

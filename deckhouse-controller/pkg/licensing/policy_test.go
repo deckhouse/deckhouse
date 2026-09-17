@@ -134,7 +134,7 @@ func TestComputeEffectiveLimits(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := Compute(tc.keys, nil, now, DefaultThresholds())
+			res := Compute(tc.keys, nil, nil, now, DefaultThresholds())
 			assertLimit(t, res, "vCPU", tc.wantVCPU)
 			if tc.wantNodes != nil {
 				assertLimit(t, res, "nodes", tc.wantNodes)
@@ -168,7 +168,7 @@ func TestGrantedByListsEveryGrant(t *testing.T) {
 	res := Compute(oneKey(
 		wl(recordA, "2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z", map[string]*int64{"vCPU": i64(50)}),
 		wl(recordB, "2026-01-01T00:00:00Z", "2026-11-01T00:00:00Z", map[string]*int64{"vCPU": i64(40)}),
-	), nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
+	), nil, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
 
 	granted := strings.Join(res.GrantedBy["vCPU"], " ")
 	for _, want := range []string{"record:" + recordA + " (+50)", "record:" + recordB + " (+40)"} {
@@ -184,7 +184,7 @@ func TestDuplicateStatus(t *testing.T) {
 	res := Compute([]KeyRecords{
 		{Key: "a", Records: []RecordStatus{first}},
 		{Key: "b", Records: []RecordStatus{first}},
-	}, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
+	}, nil, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
 
 	if res.Counts.Records != 2 || res.Counts.Accepted != 1 || res.Counts.Rejected != 1 {
 		t.Fatalf("counts = %+v", res.Counts)
@@ -199,7 +199,7 @@ func TestDuplicateStatus(t *testing.T) {
 
 // A17: no packages at all is a violation with an empty timeline.
 func TestComputeWithoutRecords(t *testing.T) {
-	res := Compute(nil, map[string]MetricValue{"vCPU": {Instant: 12}}, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
+	res := Compute(nil, map[string]MetricValue{"vCPU": {Instant: 12}}, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
 
 	if res.State != StateViolation {
 		t.Fatalf("state = %q, want %q", res.State, StateViolation)
@@ -225,10 +225,11 @@ func TestComplianceState(t *testing.T) {
 	grace5 := 5
 
 	cases := []struct {
-		name    string
-		records []RecordStatus
-		metrics map[string]MetricValue
-		want    string
+		name      string
+		records   []RecordStatus
+		metrics   map[string]MetricValue
+		sustained map[string]bool
+		want      string
 	}{
 		{
 			name:    "A4 expired three days ago",
@@ -272,56 +273,73 @@ func TestComplianceState(t *testing.T) {
 		{
 			name:    "A13 instant at 95% of the limit is still valid",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 95, Avg7d: 80, Extrapolated: 90}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 95, Avg7d: 80, Extrapolated: f64(90)}},
 			want:    StateValid,
 		},
 		{
 			name:    "A13a instant exactly at the limit is still valid",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 100, Avg7d: 80, Extrapolated: 100}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 100, Avg7d: 80, Extrapolated: f64(100)}},
 			want:    StateValid,
 		},
 		{
 			name:    "A13b one over the limit warns",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 101, Avg7d: 80, Extrapolated: 90}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 101, Avg7d: 80, Extrapolated: f64(90)}},
 			want:    StateWarning,
 		},
 		{
 			name:    "A14 extrapolation above the limit",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 70, Avg7d: 68, Extrapolated: 120}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 70, Avg7d: 68, Extrapolated: f64(120)}},
 			want:    StateWarning,
 		},
 		{
 			name:    "instant above the limit without persistence",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 120, Avg7d: 68, Extrapolated: 70}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 120, Avg7d: 68, Extrapolated: f64(70)}},
 			want:    StateWarning,
 		},
 		{
-			name:    "A15 the seven day average is above the limit",
-			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 120, Avg7d: 110, Extrapolated: 130}},
-			want:    StateViolation,
+			name:      "A15 the limit has been exceeded for the whole sustained window",
+			records:   []RecordStatus{live},
+			metrics:   map[string]MetricValue{"vCPU": {Instant: 120, Avg7d: 110, Extrapolated: f64(130)}},
+			sustained: map[string]bool{"vCPU": true},
+			want:      StateViolation,
 		},
 		{
-			name:    "A16 the average came back, valid on the first recomputation",
+			name:    "A16 consumption came back, valid on the first recomputation",
 			records: []RecordStatus{live},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 40, Avg7d: 42, Extrapolated: 45}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 40, Avg7d: 42, Extrapolated: f64(45)}},
 			want:    StateValid,
+		},
+		{
+			// The mean is dragged over the limit by a spike that is long gone.
+			// It is reported, it is not the verdict.
+			name:    "an average above the limit is not a violation by itself",
+			records: []RecordStatus{live},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 50, Avg7d: 130, Extrapolated: f64(40)}},
+			want:    StateValid,
+		},
+		{
+			// Nothing to exceed, so nothing to sustain.
+			name:      "an unlimited metric is never sustained over its limit",
+			records:   []RecordStatus{wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{"vCPU": nil})},
+			metrics:   map[string]MetricValue{"vCPU": {Instant: 1e9, Avg7d: 1e9}},
+			sustained: map[string]bool{"vCPU": true},
+			want:      StateValid,
 		},
 		{
 			name:    "unlimited metrics never exceed anything",
 			records: []RecordStatus{wl(recordA, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{"vCPU": nil})},
-			metrics: map[string]MetricValue{"vCPU": {Instant: 1e9, Avg7d: 1e9, Extrapolated: 1e9}},
+			metrics: map[string]MetricValue{"vCPU": {Instant: 1e9, Avg7d: 1e9, Extrapolated: f64(1e9)}},
 			want:    StateValid,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := Compute(oneKey(tc.records...), tc.metrics, now, DefaultThresholds()).State; got != tc.want {
+			if got := Compute(oneKey(tc.records...), tc.metrics, tc.sustained, now, DefaultThresholds()).State; got != tc.want {
 				t.Fatalf("state = %q, want %q", got, tc.want)
 			}
 		})
@@ -333,7 +351,7 @@ func TestExpiringSoonWarns(t *testing.T) {
 	now := ts("2026-05-01T00:00:00Z")
 	res := Compute(oneKey(
 		wl(recordA, "2026-01-01T00:00:00Z", "2026-05-20T00:00:00Z", map[string]*int64{"vCPU": i64(100)}),
-	), map[string]MetricValue{"vCPU": {Instant: 1}}, now, DefaultThresholds())
+	), map[string]MetricValue{"vCPU": {Instant: 1}}, nil, now, DefaultThresholds())
 
 	if res.State != StateWarning {
 		t.Fatalf("state = %q, want %q", res.State, StateWarning)

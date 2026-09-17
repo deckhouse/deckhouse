@@ -113,7 +113,7 @@ func TestRenewsAndSupersedes(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := Compute(oneKey(tc.records...), nil, ts(tc.now), DefaultThresholds())
+			res := Compute(oneKey(tc.records...), nil, nil, ts(tc.now), DefaultThresholds())
 			if got := limitOf(t, res, "vCPU"); got != tc.wantVCPU {
 				t.Fatalf("vCPU = %d, want %d", got, tc.wantVCPU)
 			}
@@ -142,7 +142,7 @@ func TestRenewalTimelineIsFlat(t *testing.T) {
 			r.Renews = []string{recordA}
 			return r
 		}(),
-	), nil, ts("2026-06-26T00:00:00Z"), DefaultThresholds())
+	), nil, nil, ts("2026-06-26T00:00:00Z"), DefaultThresholds())
 
 	assertTimeline(t, res.Timeline, []string{
 		"2026-01-01T00:00:00Z..2027-01-01T00:00:00Z Valid vCPU=50",
@@ -161,7 +161,7 @@ func TestSupersedeCycleExcludesBoth(t *testing.T) {
 	b := wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{"vCPU": i64(40)})
 	b.Supersedes = []string{recordA}
 
-	res := Compute(oneKey(a, b), nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
+	res := Compute(oneKey(a, b), nil, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
 	if len(res.Effective) != 0 {
 		t.Fatalf("effective = %v, want nothing granted", res.Effective)
 	}
