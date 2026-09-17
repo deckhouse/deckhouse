@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	kcache "k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
@@ -170,6 +171,9 @@ func initInformers() (*initResult, error) {
 	}
 	result.clientset = clientset
 
+	// The Group/User resources of user-authn are CRDs, so they are read through
+	// the dynamic client: the module may be absent, and the report degrades to
+	// "no groups resolved" rather than failing.
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -248,9 +252,11 @@ func initRules(init *initResult) (*rulesInputs, error) {
 }
 
 // initAuthorizers creates the composite authorizer from RBAC and multi-tenancy engines.
-func initAuthorizers(init *initResult, inputs *rulesInputs, scopeCache *resolver.ResourceScopeCache) (authorizer.Authorizer, *multitenancy.Engine, error) {
+// It also returns the underlying RBAC authorizer, which is reused for reverse-RBAC
+// (WhoCan) queries.
+func initAuthorizers(init *initResult, inputs *rulesInputs, scopeCache *resolver.ResourceScopeCache) (authorizer.Authorizer, *multitenancy.Engine, *rbacadapter.RBACAuthorizer, error) {
 	if init.informerFactory == nil {
-		return nil, nil, fmt.Errorf("informer factory is not available, cannot initialize authorizers")
+		return nil, nil, nil, fmt.Errorf("informer factory is not available, cannot initialize authorizers")
 	}
 
 	// Left nil when discovery is unavailable, which turns the identity-read
@@ -288,7 +294,7 @@ func initAuthorizers(init *initResult, inputs *rulesInputs, scopeCache *resolver
 			// multi-tenancy: it would report namespaces the cluster does not let the user into,
 			// with nothing in the response to say so. A process that will not start is a visible
 			// failure; one that reports confidently wrong access is not.
-			return nil, nil, fmt.Errorf("multi-tenancy engine: %w", err)
+			return nil, nil, nil, fmt.Errorf("multi-tenancy engine: %w", err)
 		}
 	}
 
@@ -299,9 +305,9 @@ func initAuthorizers(init *initResult, inputs *rulesInputs, scopeCache *resolver
 		// Requests granted by CAR-independent RBAC (RoleBindings, non-CAR
 		// ClusterRoleBindings) must not be denied by multi-tenancy filters.
 		mtEngine.SetIndependentRBACChecker(rbacAuth)
-		return scopefilter.NewIdentityReadAuthorizer(composite.NewCompositeAuthorizer(mtEngine, rbacAuth), registry), mtEngine, nil
+		return scopefilter.NewIdentityReadAuthorizer(composite.NewCompositeAuthorizer(mtEngine, rbacAuth), registry), mtEngine, rbacAuth, nil
 	}
-	return scopefilter.NewIdentityReadAuthorizer(rbacAuth, registry), nil, nil
+	return scopefilter.NewIdentityReadAuthorizer(rbacAuth, registry), nil, rbacAuth, nil
 }
 
 // startInformers starts the informer factory and waits for cache sync.
@@ -318,7 +324,21 @@ func startInformers(ctx context.Context, informerFactory informers.SharedInforme
 }
 
 // registerAPIGroup registers the authorization API group with the server.
-func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver) error {
+//
+// SECURITY NOTE — WhoCan deliberately bypasses multi-tenancy filtering.
+// The whoCan resolver is the RAW RBAC authorizer (rbacAuth from initAuthorizers),
+// NOT the multi-tenancy compositeAuth used for forward checks. WhoCan is a
+// cluster-scoped resource whose target namespace travels inside
+// spec.resourceAttributes.namespace, so the request is authorized as a
+// cluster-scoped "create whocans" with no per-namespace authorization. As a
+// result a grantee can resolve the subjects of ANY namespace, including tenants
+// they cannot otherwise see. This is acceptable ONLY because the granting
+// ClusterRole (d8:user-authz:who-can-checker) is unbound by default and
+// documented as elevated. who-can-checker must NEVER be bound to tenant-scoped
+// (project) admins; per-namespace disclosure scoping cannot be expressed on a
+// cluster-scoped resource and would require a redesign. See the chart comment in
+// templates/permission-browser-apiserver/rbac-for-us.yaml.
+func registerAPIGroup(server *genericapiserver.GenericAPIServer, storages registry.Storages) error {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(
 		authorization.GroupName,
 		Scheme,
@@ -326,10 +346,7 @@ func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer
 		Codecs,
 	)
 
-	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorage(auth)
-	if nsResolver != nil {
-		apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorageWithResolver(auth, nsResolver)
-	}
+	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorage(storages)
 
 	return server.InstallAPIGroup(&apiGroupInfo)
 }
@@ -416,7 +433,7 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	}
 
 	// Initialize authorizers
-	compositeAuth, mtEngine, err := initAuthorizers(initRes, inputs, scopeCache)
+	compositeAuth, mtEngine, rbacAuth, err := initAuthorizers(initRes, inputs, scopeCache)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to initialize authorizers: %w", err)
@@ -433,8 +450,25 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		go inputs.serveMetrics(ctx)
 	}
 
+	// Attribute the cluster resources to the modules that ship them. Reads only
+	// CRD metadata; without it the coverage report loses its grouping but stays
+	// correct, so a failure here is not fatal.
+	var moduleIndex *resolver.ModuleIndex
+	if initRes.restConfig != nil {
+		metadataClient, err := metadata.NewForConfig(initRes.restConfig)
+		if err != nil {
+			klog.Warningf("Failed to create metadata client, the inventory will carry no module names: %v", err)
+		} else {
+			moduleIndex = resolver.NewModuleIndex(ctx, metadataClient)
+			go moduleIndex.StartRefreshLoop(ctx)
+			klog.Info("Module index initialized and refresh loop started")
+		}
+	}
+
 	// Create namespace resolver for AccessibleNamespace API
 	var nsResolver *resolver.NamespaceResolver
+	var subjectAccess *resolver.SubjectAccessResolver
+	var roleAccess *resolver.RoleAccessResolver
 	if initRes.informerFactory != nil {
 		rbacInformers := initRes.informerFactory.Rbac().V1()
 		nsResolver = resolver.NewNamespaceResolver(
@@ -447,10 +481,39 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 			mtEngine,
 		)
 		klog.Info("Namespace resolver initialized for AccessibleNamespace API")
+
+		subjectAccess = resolver.NewSubjectAccessResolver(
+			rbacInformers.Roles().Lister(),
+			rbacInformers.RoleBindings().Lister(),
+			rbacInformers.ClusterRoles().Lister(),
+			rbacInformers.ClusterRoleBindings().Lister(),
+			scopeCache,
+			mtEngine,
+			resolver.NewGroupCatalog(initRes.dynamicClient),
+		)
+		klog.Info("Subject access resolver initialized for SubjectAccessReport API")
+
+		// moduleIndex may be nil: the inventory is then reported without module
+		// attribution rather than not at all.
+		roleAccess = resolver.NewRoleAccessResolver(rbacInformers.ClusterRoles().Lister(), scopeCache, moduleIndex)
+		klog.Info("Role access resolver initialized for RoleAccessReport API")
 	}
 
 	// Register API group
-	if err := registerAPIGroup(genericServer, compositeAuth, nsResolver); err != nil {
+	storages := registry.Storages{
+		Authorizer:        compositeAuth,
+		NamespaceResolver: nsResolver,
+		WhoCan:            rbacAuth,
+	}
+	// A typed nil in the interface would register a storage that panics on use.
+	if subjectAccess != nil {
+		storages.SubjectAccess = subjectAccess
+	}
+	if roleAccess != nil {
+		storages.RoleAccess = roleAccess
+	}
+
+	if err := registerAPIGroup(genericServer, storages); err != nil {
 		cancel()
 		return nil, err
 	}

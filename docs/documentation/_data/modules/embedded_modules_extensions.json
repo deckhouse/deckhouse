@@ -1,0 +1,151 @@
+{
+  "admission-policy-engine": {
+    "extensions": [
+      "advanced_security"
+    ]
+  },
+  "cert-manager": {
+    "extensions": [
+      "cluster_union"
+    ]
+  },
+  "cloud-provider-dvp": {
+    "extensions": [
+      "on_prem_iaas"
+    ]
+  },
+  "cloud-provider-dynamix": {
+    "extensions": [
+      "on_prem_iaas"
+    ]
+  },
+  "cloud-provider-huaweicloud": {
+    "extensions": [
+      "on_prem_iaas"
+    ]
+  },
+  "cloud-provider-openstack": {
+    "extensions": [
+      "on_prem_iaas"
+    ]
+  },
+  "cloud-provider-vcd": {
+    "extensions": [
+      "on_prem_iaas"
+    ]
+  },
+  "cloud-provider-vsphere": {
+    "extensions": [
+      "on_prem_iaas"
+    ]
+  },
+  "cloud-provider-zvirt": {
+    "extensions": [
+      "on_prem_iaas"
+    ]
+  },
+  "cni-cilium": {
+    "extensions": [
+      "advanced_networking",
+      "cluster_union"
+    ],
+    "extensionsWithRestrictions": [
+      "advanced_networking"
+    ],
+    "extensionsWithRestrictionsComments": {
+      "advanced_networking": {
+        "en": "Egress gateway feature only",
+        "ru": "Только возможность определения выходных узлов (egress gateway)"
+      }
+    }
+  },
+  "csi-vsphere": {
+    "extensions": [
+      "storage_integration"
+    ]
+  },
+  "deckhouse": {
+    "extensions": [
+      "billing",
+      "cluster_union"
+    ]
+  },
+  "istio": {
+    "extensions": [
+      "advanced_networking",
+      "advanced_security",
+      "cluster_union",
+      "multitenancy",
+      "network_security"
+    ],
+    "extensionsWithRestrictions": [
+      "advanced_networking",
+      "advanced_security",
+      "cluster_union",
+      "multitenancy",
+      "network_security"
+    ],
+    "extensionsWithRestrictionsComments": {
+      "advanced_networking": {
+        "en": "Multi-cluster and federation mode only",
+        "ru": "Только объединение кластеров в режиме мультикластера или федерации"
+      },
+      "advanced_security": {
+        "en": "Service-to-service authorization (AuthorizationPolicy) only",
+        "ru": "Только управление авторизацией доступа между сервисами (AuthorizationPolicy)"
+      },
+      "cluster_union": {
+        "en": "Multi-cluster and federation mode only",
+        "ru": "Только объединение кластеров в режиме мультикластера или федерации"
+      },
+      "multitenancy": {
+        "en": "Multi-cluster and federation mode only",
+        "ru": "Только объединение кластеров в режиме мультикластера или федерации"
+      },
+      "network_security": {
+        "en": "Service-to-service authorization (AuthorizationPolicy) only",
+        "ru": "Только управление авторизацией доступа между сервисами (AuthorizationPolicy)"
+      }
+    }
+  },
+  "metallb": {
+    "extensions": [
+      "advanced_networking"
+    ],
+    "extensionsWithRestrictions": [
+      "advanced_networking"
+    ],
+    "extensionsWithRestrictionsComments": {
+      "advanced_networking": {
+        "en": "BGP mode only",
+        "ru": "Только режим BGP"
+      }
+    }
+  },
+  "multitenancy-manager": {
+    "extensions": [
+      "multitenancy"
+    ]
+  },
+  "registry": {
+    "extensions": [
+      "advanced_security",
+      "billing"
+    ]
+  },
+  "registry-packages-proxy": {
+    "extensions": [
+      "advanced_security"
+    ]
+  },
+  "service-with-healthchecks": {
+    "extensions": [
+      "advanced_networking"
+    ]
+  },
+  "user-authn": {
+    "extensions": [
+      "billing"
+    ]
+  }
+}

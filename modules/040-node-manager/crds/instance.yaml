@@ -45,7 +45,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Instance describes the full lifecycle of a server in Deckhouse Kubernetes Platform, aggregating status from the Machine object (infrastructure) and Bashible service on the node (configuration).
+            Instance describes the full lifecycle of a server in Deckhouse Platform, aggregating status from the Machine object (infrastructure) and Bashible service on the node (configuration).
           properties:
             spec:
               type: object

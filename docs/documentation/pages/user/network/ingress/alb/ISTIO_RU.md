@@ -1,6 +1,6 @@
 ---
 title: "Публикация приложений средствами Istio"
-description: "Публикация приложений с Istio в Deckhouse Kubernetes Platform. Ingress NGINX с Istio-сайдкаром и Istio Ingress Gateway с ресурсами Gateway и VirtualService."
+description: "Публикация приложений с Istio в Deckhouse Platform. Ingress NGINX с Istio-сайдкаром и Istio Ingress Gateway с ресурсами Gateway и VirtualService."
 permalink: ru/user/network/ingress/alb/istio.html
 lang: ru
 extractedLinksMax: 0
@@ -133,7 +133,7 @@ spec:
 
 ### Canary-развёртывание через VirtualService {#canary-развёртывание-через-virtualservice}
 
-Общий обзор canary в Deckhouse Kubernetes Platform (DKP) — в разделе [«Canary-развёртывание»](/products/kubernetes-platform/documentation/v1/user/network/canary-deployment.html). Ниже — пример на VirtualService и DestinationRule.
+Общий обзор canary в Deckhouse Platform (DP) — в разделе [«Canary-развёртывание»](/products/kubernetes-platform/documentation/v1/user/network/canary-deployment.html). Ниже — пример на VirtualService и DestinationRule.
 
 Для постепенного переключения трафика между версиями приложения используйте DestinationRule с подмножествами (subsets) и веса в VirtualService. Пример направляет 90% трафика на стабильную версию и 10% на canary:
 

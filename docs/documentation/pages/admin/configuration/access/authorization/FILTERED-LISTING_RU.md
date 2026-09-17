@@ -3,14 +3,14 @@ title: Листинг ресурсов с фильтрацией по права
 permalink: ru/admin/configuration/access/authorization/filtered-listing.html
 lang: ru
 search: scope, фильтрованный листинг, cross-namespace, доступные неймспейсы
-description: Принцип работы листинга ресурсов из нескольких неймспейсов с фильтрацией по правам доступа в Deckhouse Kubernetes Platform.
+description: Принцип работы листинга ресурсов из нескольких неймспейсов с фильтрацией по правам доступа в Deckhouse Platform.
 ---
 
 В Kubernetes команда `kubectl get <resource> -A` требует кластерных
 прав на операцию `list`. Если кластерных прав нет, kube-apiserver возвращает ошибку `403 Forbidden`,
 даже если пользователю по отдельности доступны десятки неймспейсов.
 
-Deckhouse Kubernetes Platform (DKP) расширяет возможности kube-apiserver: пользователь без кластерных прав может явно
+Deckhouse Platform (DP) расширяет возможности kube-apiserver: пользователь без кластерных прав может явно
 запросить ответ, отфильтрованный в соответствии с его фактическими правами доступа, вместо получения отказа в доступе.
 
 Механизм является полностью опциональным.
@@ -18,7 +18,7 @@ Deckhouse Kubernetes Platform (DKP) расширяет возможности ku
 
 ## Использование через ⁠Deckhouse CLI
 
-В DKP для работы с механизмом листинга с фильтрацией используется  [утилита ⁠Deckhouse CLI](../../../../cli/d8/).
+В DP для работы с механизмом листинга с фильтрацией используется  [утилита ⁠Deckhouse CLI](../../../../cli/d8/).
 
 ### Области фильтрации ресурсов
 
@@ -196,6 +196,6 @@ RBAC разрешить запрос раньше, чем сработает ф�
 | Компонент | Роль |
 |---|---|
 | [Deckhouse CLI](../../../../cli/d8/) | Поддержка флага `--scope` и преобразование его значений в заголовки |
-| kube-apiserver (патч DKP) | Перехват `403 Forbidden` и фильтрация на слое хранилища |
+| kube-apiserver (патч DP) | Перехват `403 Forbidden` и фильтрация на слое хранилища |
 | Модуль [`user-authz`](/modules/user-authz/) (`permission-browser`) | Определение границы доступа через `AccessibleNamespaces` и `BulkSubjectAccessReview` |
 | Модуль [`multitenancy-manager`](/modules/multitenancy-manager/) | Классификация неймспейсов по лейблу `projects.deckhouse.io/project` |

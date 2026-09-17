@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace:user
+  annotations:
+    en.meta.deckhouse.io/title: "Namespace User"
+    ru.meta.deckhouse.io/title: "Пользователь пространства имён"
+    en.meta.deckhouse.io/description: "View user resources (Deployments, Services, ConfigMaps) in a namespace, plus secrets, exec/attach, delete pods, scale, port-forward and proxy. No create/modify of workloads, no quotas, no RBAC."
+    ru.meta.deckhouse.io/description: "Просмотр пользовательских ресурсов (Deployment, Service, ConfigMap) в пространстве имён, плюс секреты, exec/attach, удаление подов, scale, port-forward и proxy. Без создания/изменения нагрузок, квот и RBAC."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/delegatable: "true"
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: manager
+    rbac.deckhouse.io/aggregate-to-project-as: user
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-namespace-as: user

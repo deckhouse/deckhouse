@@ -1,21 +1,21 @@
 ---
 title: Настройка использования TLS-сертификатов
-description: "Управление TLS-сертификатами в Deckhouse Kubernetes Platform. Работа с Certificate и ClusterIssuer, автоматическое получение сертификатов через tls-acme, интеграция с Let's Encrypt и другими CA."
+description: "Управление TLS-сертификатами в Deckhouse Platform. Работа с Certificate и ClusterIssuer, автоматическое получение сертификатов через tls-acme, интеграция с Let's Encrypt и другими CA."
 permalink: ru/user/security/tls.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) предоставляет встроенные средства управления TLS-сертификатами,
+Deckhouse Platform (DP) предоставляет встроенные средства управления TLS-сертификатами,
 упрощающие настройку и управление шифрованием трафика в приложениях, работающих в кластере.
 
-На этой странице описаны следующие аспекты использования сертификатов в DKP:
+На этой странице описаны следующие аспекты использования сертификатов в DP:
 
 - как вручную заказывать TLS-сертификаты с помощью ресурсов Certificate и ClusterIssuer;
 - как безопасно хранить и использовать учётные данные для доступа к удостоверяющим центрам (CA);
 - как автоматически получать сертификаты с помощью аннотации `tls-acme` в ресурсах Ingress.
 
 {% alert level="info" %}
-Общее описание порядка управления сертификатами в DKP, список поддерживаемых издателей,
+Общее описание порядка управления сертификатами в DP, список поддерживаемых издателей,
 а также рекомендации по их настройке приведены [на странице «Управление сертификатами»](../../admin/configuration/security/certificates.html).
 {% endalert %}
 
@@ -96,10 +96,10 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
      cloudflareEmail: some@mail.somedomain
    ```
 
-   После этого DKP автоматически создаст ClusterIssuer и Secret для Cloudflare в пространстве имён `d8-cert-manager`.
+   После этого DP автоматически создаст ClusterIssuer и Secret для Cloudflare в пространстве имён `d8-cert-manager`.
 
 1. Создайте ресурс Certificate с проверкой с помощью провайдера Cloudflare.
-   Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в DKP:
+   Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в DP:
 
    ```yaml
    apiVersion: cert-manager.io/v1
@@ -185,7 +185,7 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
    После этого Deckhouse автоматически создаст ClusterIssuer и Secret для Route53 в пространстве имён `d8-cert-manager`.
 
 1. Создайте ресурс Certificate с проверкой с помощью провайдера Route53.
-   Данная возможность появится только при указании настроек `route53AccessKeyID` и `route53SecretAccessKey` в DKP:
+   Данная возможность появится только при указании настроек `route53AccessKeyID` и `route53SecretAccessKey` в DP:
 
    ```yaml
    apiVersion: cert-manager.io/v1
@@ -375,7 +375,7 @@ spec:
 
 ## Защита учётных данных
 
-Если вы не хотите хранить учётные данные в конфигурации DKP,
+Если вы не хотите хранить учётные данные в конфигурации DP,
 можно создать отдельный Secret и ссылаться на него в ресурсе ClusterIssuer.
 
 Для этого выполните следующее:
@@ -441,7 +441,7 @@ spec:
 
 ## Поддержка аннотации tls-acme
 
-DKP поддерживает аннотацию `kubernetes.io/tls-acme: "true"` в ресурсах Ingress.
+DP поддерживает аннотацию `kubernetes.io/tls-acme: "true"` в ресурсах Ingress.
 Компонент `cert-manager-ingress-shim` следит за появлением аннотации
 и автоматически создаёт ресурсы Certificate в тех же пространствах имён, что и Ingress-ресурсы.
 

@@ -1,6 +1,6 @@
 ---
 title: "Configuring Canary deployment"
-description: "Configuring Canary deployment strategy in Deckhouse Kubernetes Platform using ingress-nginx and istio. Gradual rollout of new application versions with traffic control and rollback capabilities."
+description: "Configuring Canary deployment strategy in Deckhouse Platform using ingress-nginx and istio. Gradual rollout of new application versions with traffic control and rollback capabilities."
 permalink: en/user/network/canary-deployment.html
 ---
 
@@ -10,7 +10,7 @@ This approach makes it possible to test new versions on a small portion of traff
 minimizing risks and ensuring a smooth transition.
 With Canary deployment, traffic can be shifted to the new version as confidence in its stability grows,
 with the ability to quickly roll back to the old version if issues arise.
-In Deckhouse Kubernetes Platform, Canary deployment can be implemented
+In Deckhouse Platform, Canary deployment can be implemented
 using the [ingress-nginx](/modules/ingress-nginx/) module or the [istio](/modules/istio/) module (recommended).
 
 ## Example Canary deployment configuration with Ingress NGINX

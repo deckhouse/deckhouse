@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: descheduler
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.descheduler.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-descheduler
-  name: d8:manage:permission:module:descheduler:view
+  name: d8:system-capability:descheduler:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module descheduler: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль descheduler: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the descheduler module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля descheduler."
 rules:
 - apiGroups:
   - deckhouse.io

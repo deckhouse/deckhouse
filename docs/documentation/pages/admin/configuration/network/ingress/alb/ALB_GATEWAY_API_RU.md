@@ -63,7 +63,7 @@ Gateway API разделяет ответственность между адм�
 | | ClusterALBInstance | ALBInstance |
 | :--- | :--- | :--- |
 | Назначение | Развёртывание общекластерного Gateway | Развёртывание Gateway в неймспейсе |
-| Сценарии использования | - Общая точка входа (общекластерный шлюз).<br> - Системный шлюз для публикации веб-интерфейсов служебных компонентов Deckhouse Kubernetes Platform (DKP) и других модулей (может требоваться [«Действия перед включением и настройкой ALB в кластере»](#действия-перед-включением-и-настройкой-alb-в-кластере)).<br> - Платформенный шлюз | Отдельный шлюз для приложения или команды в выделенном неймспейсе |
+| Сценарии использования | - Общая точка входа (общекластерный шлюз).<br> - Системный шлюз для публикации веб-интерфейсов служебных компонентов Deckhouse Platform (DP) и других модулей (может требоваться [«Действия перед включением и настройкой ALB в кластере»](#действия-перед-включением-и-настройкой-alb-в-кластере)).<br> - Платформенный шлюз | Отдельный шлюз для приложения или команды в выделенном неймспейсе |
 | Поддерживаемые типы инлета | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-loadbalancer), [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) |
 | Реализация прокси | Envoy Proxy | Envoy Proxy |
 | Тип развёртывания | DaemonSet | Deployment |
@@ -96,10 +96,10 @@ Gateway API разделяет ответственность между адм�
 
 ### Действия перед включением и настройкой ALB в кластере {#действия-перед-включением-и-настройкой-alb-в-кластере}
 
-Перед включением и настройкой ALB в кластере DKP выполните следующее:
+Перед включением и настройкой ALB в кластере DP выполните следующее:
 
 - Проверьте выполнение [требований](/modules/alb/configuration.html#требования) к работе модуля `alb`.
-- Если нужно публиковать служебные домены — веб-интерфейсы [служебных компонентов DKP](../../../../../user/web/ui.html) и других модулей, — укажите глобальный параметр [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate). Без этого параметра системные объекты HTTPRoute, Gateway и ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы не опубликуются. Если публикация служебных доменов не требуется, параметр можно не указывать. Подробности — в разделе [«Публикация служебных доменов»](#публикация-служебных-доменов).
+- Если нужно публиковать служебные домены — веб-интерфейсы [служебных компонентов DP](../../../../../user/web/ui.html) и других модулей, — укажите глобальный параметр [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate). Без этого параметра системные объекты HTTPRoute, Gateway и ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы не опубликуются. Если публикация служебных доменов не требуется, параметр можно не указывать. Подробности — в разделе [«Публикация служебных доменов»](#публикация-служебных-доменов).
 - Проверьте совместимость версий API в разделе [«Совместно со сторонними реализациями Gateway API»](#alongside-third-party-gateway-api), если такие решения уже используются в кластере.
 - На bare metal для инлета [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) подготовьте внешний балансировщик или модуль [`metallb`](/modules/metallb/). Инлет [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) доступен только для ClusterALBInstance и не требует MetalLB.
 
@@ -214,10 +214,10 @@ spec:
 ## Публикация служебных доменов {#публикация-служебных-доменов}
 
 {% alert level="warning" %}
-Если нужно публиковать служебные домены, укажите глобальный параметр [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — без него системные объекты HTTPRoute/Gateway/ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы служебных компонентов DKP и других модулей не будут опубликованы. Если публикация служебных доменов не нужна, параметр можно не указывать.
+Если нужно публиковать служебные домены, укажите глобальный параметр [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — без него системные объекты HTTPRoute/Gateway/ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы служебных компонентов DP и других модулей не будут опубликованы. Если публикация служебных доменов не нужна, параметр можно не указывать.
 {% endalert %}
 
-Для предоставления доступа к служебным доменам кластера DKP укажите шлюз по умолчанию. Создайте ClusterALBInstance с нужным типом инлета и [настройками](/modules/alb/cr.html#clusteralbinstance) и установите для него параметр [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway).
+Для предоставления доступа к служебным доменам кластера DP укажите шлюз по умолчанию. Создайте ClusterALBInstance с нужным типом инлета и [настройками](/modules/alb/cr.html#clusteralbinstance) и установите для него параметр [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway).
 
 Пример манифеста ClusterALBInstance с параметром `spec.defaultDeckhouseGateway: true`:
 
@@ -243,7 +243,7 @@ d8 k get clusteralbinstances
 ClusterALBInstance должен перейти в состояние `Ready` и создать управляемый Gateway. После этого в соответствующих системных неймспейсах появятся ListenerSet и HTTPRoute.
 
 {% alert level="info" %}
-В настоящее время не все модули DKP доступны через Gateway API. Не отключайте модуль `ingress-nginx` и не удаляйте связанные с ним объекты, пока необходимые веб-интерфейсы не будут опубликованы через Gateway API и не пройдут проверку.
+В настоящее время не все модули DP доступны через Gateway API. Не отключайте модуль `ingress-nginx` и не удаляйте связанные с ним объекты, пока необходимые веб-интерфейсы не будут опубликованы через Gateway API и не пройдут проверку.
 {% endalert %}
 
 После настройки шлюза по умолчанию выполните следующую команду, чтобы увидеть, какие модули **уже** опубликовали служебные HTTPRoute через Gateway API в этом кластере. Команда показывает фактический список уже опубликованных маршрутов, а не полный перечень возможностей платформы:
@@ -261,18 +261,18 @@ d8 k get httproutes -A -l heritage=deckhouse -o json \
   | column -t -s $'\t'
 ```
 
-### Выбор шлюза DKP по умолчанию при использовании нескольких ClusterALBInstance
+### Выбор шлюза DP по умолчанию при использовании нескольких ClusterALBInstance
 
 В кластере может быть одновременно несколько общекластерных Gateway, помеченных как шлюз по умолчанию (флаг [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) в параметрах соответствующих ClusterALBInstance). В этом случае шлюзом по умолчанию становится Gateway, созданный объектом ClusterALBInstance с наиболее ранним `creationTimestamp` (то есть созданный раньше остальных).
 
-Если ни один объект ClusterALBInstance не отмечен как шлюз по умолчанию, DKP допускает использование объекта Gateway, созданного модулем `alb` для инстанса ClusterALBInstance с именем `main`.
+Если ни один объект ClusterALBInstance не отмечен как шлюз по умолчанию, DP допускает использование объекта Gateway, созданного модулем `alb` для инстанса ClusterALBInstance с именем `main`.
 
-### Смена шлюза DKP по умолчанию
+### Смена шлюза DP по умолчанию
 
-Если системные домены DKP необходимо перевести на обслуживание другим объектом Gateway, выполните следующие шаги:
+Если системные домены DP необходимо перевести на обслуживание другим объектом Gateway, выполните следующие шаги:
 
 1. Создайте новый объект ClusterALBInstance, описывающий необходимые настройки, и задайте в нём параметр [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway).
-1. В текущем объекте ClusterALBInstance, который предоставляет шлюз DKP по умолчанию, задайте `spec.defaultDeckhouseGateway: false`.
+1. В текущем объекте ClusterALBInstance, который предоставляет шлюз DP по умолчанию, задайте `spec.defaultDeckhouseGateway: false`.
 1. Проверьте, что все системные объекты ListenerSet теперь ссылаются на новый объект Gateway в `spec.parentRef`.
 
 ## Примеры для разных окружений {#infrastructure-examples}
@@ -531,14 +531,14 @@ spec:
 
 ## Совместное использование с другими модулями и сторонними решениями {#совместное-использование-с-другими-модулями-и-сторонними-решениями}
 
-ALB средствами Kubernetes Gateway API в кластере DKP можно использовать совместно с ALB средствами Ingress NGINX Controller, а также с ALB на основе сторонних решений Gateway API. Пошаговый переход — в разделе [«Миграция с ingress-nginx на alb»](migration.html).
+ALB средствами Kubernetes Gateway API в кластере DP можно использовать совместно с ALB средствами Ingress NGINX Controller, а также с ALB на основе сторонних решений Gateway API. Пошаговый переход — в разделе [«Миграция с ingress-nginx на alb»](migration.html).
 
 ### Совместно с ingress-nginx {#alongside-ingress-nginx}
 
 ALB средствами Kubernetes Gateway API может использоваться в кластере совместно с [«ALB средствами Ingress NGINX Controller»](nginx.html). В таком случае для каждого из типов ALB рекомендуется использовать отдельный объект ClusterIssuer, чтобы раздельно управлять настройками и жизненными циклами сертификатов. Один и тот же внешний hostname не должен одновременно обслуживаться обоими ALB без разделения на уровне DNS или внешнего балансировщика.
 
 {% alert level="info" %}
-Для шлюза DKP по умолчанию объект ClusterIssuer создаётся автоматически. Этот же объект ClusterIssuer используется для выпуска сертификатов системных доменов.
+Для шлюза DP по умолчанию объект ClusterIssuer создаётся автоматически. Этот же объект ClusterIssuer используется для выпуска сертификатов системных доменов.
 {% endalert %}
 
 ### Совместно со сторонними реализациями Gateway API {#alongside-third-party-gateway-api}
@@ -757,7 +757,7 @@ spec:
 
 Чтобы передавать данные трассировки OpenTelemetry по TLS, создайте Secret с CA-сертификатом и укажите его в параметре [`spec.openTelemetry.tracing.tls.caSecretName`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-casecretname).
 
-- Для ClusterALBInstance или шлюза DKP по умолчанию разместите Secret в неймспейсе `d8-alb`.
+- Для ClusterALBInstance или шлюза DP по умолчанию разместите секрет в неймспейсе `d8-alb`.
 - Для ALBInstance разместите Secret в том же неймспейсе, что и объект ALBInstance.
 
 CA-сертификат должен быть сохранён в ключе `cacert`. Дополнительные Subject Alternative Names для проверки сертификата OpenTelemetry Collector задаются параметром [`subjectAltNames`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-subjectaltnames), а параметр [`insecureSkipVerify`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-insecureskipverify) отключает эту проверку.

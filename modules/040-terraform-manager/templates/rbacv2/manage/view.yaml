@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: terraform-manager
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.terraform-manager.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-system
-  name: d8:manage:permission:module:terraform-manager:view
+  name: d8:system-capability:terraform-manager:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module terraform-manager: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль terraform-manager: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the terraform-manager module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля terraform-manager."
 rules:
 - apiGroups:
   - deckhouse.io

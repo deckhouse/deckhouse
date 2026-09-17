@@ -3,10 +3,10 @@ title: CSI-драйвер SCSI Generic
 permalink: ru/architecture/storage/csi-drivers/csi-driver-scsi-generic.html
 lang: ru
 search: csi-scsi-generic, csi driver
-description: Архитектура CSI-драйвера csi-scsi-generic в Deckhouse Kubernetes Platform.
+description: Архитектура CSI-драйвера csi-scsi-generic в Deckhouse Platform.
 ---
 
-CSI-драйвер `csi-scsi-generic` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД с подключением по SCSI в Deckhouse Kubernetes Platform (DKP). CSI-драйвер поддерживает технологии подключения iSCSI и Fibre Channel (FC).
+CSI-драйвер `csi-scsi-generic` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД с подключением по SCSI в Deckhouse Platform (DP). CSI-драйвер поддерживает технологии подключения iSCSI и Fibre Channel (FC).
 
 ## Архитектура CSI-драйвера (csi-scsi-generic)
 
@@ -17,7 +17,7 @@ CSI-драйвер `csi-scsi-generic` — это реализация станд
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура CSI-драйвера (`csi-scsi-generic`) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура CSI-драйвера (`csi-scsi-generic`) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура CSI-драйвера (csi-scsi-generic)](../../../images/architecture/storage/c4-l2-csi-driver-scsi-generic.ru.png)
 
@@ -35,7 +35,7 @@ CSI-драйвер `csi-scsi-generic` состоит из следующих к�
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
-     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
+     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
 
      Внешние контроллеры взаимодействуют с контейнером controller по gRPC через Unix-сокеты.
 

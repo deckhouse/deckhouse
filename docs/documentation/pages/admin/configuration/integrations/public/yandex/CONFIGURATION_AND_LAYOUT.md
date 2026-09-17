@@ -102,7 +102,7 @@ dhcpOptions:
 In this layout, no form of NAT is used, and each node is assigned a public IP address.
 
 {% alert level="warning" %}
-DKP does not support security groups, so all cluster nodes will be accessible without connection restrictions.
+DP does not support security groups, so all cluster nodes will be accessible without connection restrictions.
 {% endalert %}
 
 ![WithoutNAT layout in Yandex Cloud](../../../../images/cloud-provider-yandex/yandex-withoutnat.png)
@@ -251,11 +251,11 @@ If you need to connect to the master node directly using a public IP address, sp
 
 ## Defining the YandexClusterConfiguration
 
-To integrate DKP with Yandex Cloud, you need to describe the cluster infrastructure
+To integrate DP with Yandex Cloud, you need to describe the cluster infrastructure
 using the YandexClusterConfiguration resource.
 
 [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) is a custom resource (CR) that defines the parameters for integrating with Yandex Cloud.
-DKP uses this resource to:
+DP uses this resource to:
 
 - Deploy master and worker nodes in the cloud.
 - Define the network layout.
@@ -342,7 +342,7 @@ provider:
 ## Network parameters and security
 
 This section describes the settings related to addressing, routing, external traffic, and network security
-in a DKP cluster deployed in Yandex Cloud.
+in a DP cluster deployed in Yandex Cloud.
 
 ### Internal node addressing
 
@@ -396,7 +396,7 @@ using `externalIPAddresses: ["Auto", ...]`.
 ### DNS and DHCP settings for internal networks
 
 The [`dhcpOptions`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-dhcpoptions) parameter lets you set the DHCP server configuration
-applied to all subnets created within the DKP cluster in Yandex Cloud.
+applied to all subnets created within the DP cluster in Yandex Cloud.
 
 Available fields:
 
@@ -435,7 +435,7 @@ or another appropriate method depending on your system (such as `systemd-network
 
 The [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter lets you specify mappings
 between availability zones and pre-created subnets in Yandex Cloud.
-This is important if you don’t want DKP to automatically create subnets and prefer to use existing ones.
+This is important if you don’t want DP to automatically create subnets and prefer to use existing ones.
 
 Example:
 
@@ -447,13 +447,13 @@ existingZoneToSubnetIDMap:
 ```
 
 {% alert level="info" %}
-DKP creates a routing table automatically but does not associate it with subnets.
+DP creates a routing table automatically but does not associate it with subnets.
 You need to do that manually via the Yandex Cloud interface.
 {% endalert %}
 
 ### Additional external networks
 
-DKP allows you to explicitly specify a list of additional external networks
+DP allows you to explicitly specify a list of additional external networks
 whose IP addresses will be treated as public (external IPs).
 This is configured via the [`settings.additionalExternalNetworkIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-additionalexternalnetworkids) parameter in the ModuleConfig resource.
 
@@ -478,14 +478,14 @@ spec:
       - enp6t4sno
 ```
 
-If this parameter is not set, DKP will only use the subnets explicitly specified in the YandexClusterConfiguration
+If this parameter is not set, DP will only use the subnets explicitly specified in the YandexClusterConfiguration
 (for example, via `externalSubnetIDs`) to determine whether an IP is public.
 
 ## Configuring security groups in Yandex Cloud
 
 When a [cloud network](https://yandex.cloud/en/docs/vpc/concepts/network#network) is created,
 Yandex Cloud automatically adds a default [security group](https://yandex.cloud/en/docs/vpc/concepts/security-groups)
-for all attached networks, including the one used by the DKP cluster.
+for all attached networks, including the one used by the DP cluster.
 This default group includes rules that allow all incoming and outgoing traffic.
 It applies to all subnets in the cloud network unless a different security group is explicitly assigned to a VM interface.
 
@@ -500,7 +500,7 @@ Read through the [security group specifics in Yandex Cloud](https://yandex.cloud
 
 If the cluster uses Cilium with pod traffic tunneling over VXLAN, allow UDP traffic between nodes on the ports listed in [Network interaction of the platform components](../../../../reference/network_interaction.html).
 
-1. Identify the cloud network used by the DKP cluster.
+1. Identify the cloud network used by the DP cluster.
 
    The network name matches the [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) parameter of the ModuleConfig `global`.
    You can retrieve it using the following command:
@@ -529,7 +529,7 @@ you can use a bastion host — an intermediary VM with a public IP address that 
 To configure access, follow these steps:
 
 1. Bootstrap the base infrastructure.
-   Before creating a bastion host, perform the initial installation phase of DKP, which sets up the network infrastructure:
+   Before creating a bastion host, perform the initial installation phase of DP, which sets up the network infrastructure:
 
    ```shell
    dhctl bootstrap-phase base-infra --config config.yml
@@ -554,7 +554,7 @@ To configure access, follow these steps:
 
    Ensure the IP address specified in `--public-address` is accessible from your network and is correct.
 
-1. Start the main DKP bootstrap through the bastion host:
+1. Start the main DP bootstrap through the bastion host:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
@@ -566,4 +566,4 @@ To configure access, follow these steps:
    - `--ssh-bastion-user`: User for connecting to the bastion host.
    - `--ssh-user`: User on the target cluster nodes.
    - `--ssh-agent-private-keys`: Path to the private SSH key.
-   - `--config`: Path to the DKP configuration file.
+   - `--config`: Path to the DP configuration file.

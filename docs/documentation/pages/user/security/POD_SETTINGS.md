@@ -31,7 +31,7 @@ This page covers the main parameters used to configure pod and container securit
 - [`automountServiceAccountToken`](#automountserviceaccounttoken)
 
 {% alert level="info" %}
-In Deckhouse Kubernetes Platform (DKP), the [`admission-policy-engine`](/modules/admission-policy-engine/) module is responsible for monitoring the allowed values specified in these parameters.
+In Deckhouse Platform (DP), the [`admission-policy-engine`](/modules/admission-policy-engine/) module is responsible for monitoring the allowed values specified in these parameters.
 {% endalert %}
 
 ## runAsUser
@@ -878,7 +878,7 @@ In Linux, the `sysctl` utility allows you to change the kernel configuration whi
 For example, by default, the maximum number of pending connections in the queue (`somaxconn`) is limited to a small system value. A heavily loaded NGINX traffic balancer may not have enough of this, causing it to start dropping packets. Using `sysctls`, a container can be individually allocated an increased queue size.
 
 {% alert level="info" %}
-In a DKP cluster, a number of `sysctls` parameters is configured automatically during the installation.
+In a DP cluster, a number of `sysctls` parameters is configured automatically during the installation.
 For a complete list of these parameters, refer to ["Sysctl parameters managed by the platform"](../../reference/sysctl.html).
 {% endalert %}
 

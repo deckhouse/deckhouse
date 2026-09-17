@@ -1,10 +1,10 @@
 ---
 title: "Local authentication"
 permalink: en/admin/configuration/access/authentication/local.html
-description: "Configure local authentication for Deckhouse Kubernetes Platform with password policies, 2FA support, and group management. OWASP-compliant security implementation."
+description: "Configure local authentication for Deckhouse Platform with password policies, 2FA support, and group management. OWASP-compliant security implementation."
 ---
 
-In addition to external authentication providers, DKP also supports local authentication.
+In addition to external authentication providers, DP also supports local authentication.
 
 Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.
 The implementation complies with OWASP recommendations, ensuring reliable protection of access to the cluster and applications without requiring integration with external authentication systems.
@@ -156,7 +156,7 @@ By default, commands wait for the operation to complete. To only create a UserOp
 
 ### Self-service password reset
 
-A local user can reset their own password in the DKP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+A local user can reset their own password in the DP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
 
 Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
 

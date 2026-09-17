@@ -1,6 +1,6 @@
 ---
 title: Web interface for generating kubeconfig
-description: "Web interface for creating kubeconfig configuration files in Deckhouse Kubernetes Platform. Generating configuration for connecting to the cluster via kubectl for Linux, macOS, Windows."
+description: "Web interface for creating kubeconfig configuration files in Deckhouse Platform. Generating configuration for connecting to the cluster via kubectl for Linux, macOS, Windows."
 permalink: en/user/web/kubeconfig.html
 ---
 

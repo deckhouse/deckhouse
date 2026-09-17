@@ -1,20 +1,20 @@
 ---
 title: "Настройка cканирования контейнерных образов на уязвимости"
-description: "Сканирование контейнерных образов на уязвимости в Deckhouse Kubernetes Platform с помощью Trivy. CIS Kubernetes Benchmark проверки, просмотр отчётов в Grafana, фильтрация уязвимостей."
+description: "Сканирование контейнерных образов на уязвимости в Deckhouse Platform с помощью Trivy. CIS Kubernetes Benchmark проверки, просмотр отчётов в Grafana, фильтрация уязвимостей."
 permalink: ru/user/security/scanning.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) соответствует рекомендациям [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes), обеспечивая безопасность как на уровне отдельных компонентов, так и всей платформы в целом.
+Deckhouse Platform (DP) соответствует рекомендациям [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes), обеспечивая безопасность как на уровне отдельных компонентов, так и всей платформы в целом.
 
 {% alert level="info" %}
-Подробнее инструменты безопасности платформы рассматриваются в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Подробнее инструменты безопасности платформы рассматриваются в курсе [«Инструменты безопасности в Deckhouse Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 {% endalert %}
 
-Для постоянного мониторинга соответствия требованиям CIS в каждом кластере DKP автоматически выполняются проверки.
+Для постоянного мониторинга соответствия требованиям CIS в каждом кластере DP автоматически выполняются проверки.
 Результаты этих проверок представлены в виде отчётов и доступны в Grafana на дашборде `Security / CIS Kubernetes Benchmark`.
 
-DKP предоставляет встроенное средство для автоматического поиска уязвимостей в контейнерных образах на основе проекта [Trivy](https://github.com/aquasecurity/trivy).
+DP предоставляет встроенное средство для автоматического поиска уязвимостей в контейнерных образах на основе проекта [Trivy](https://github.com/aquasecurity/trivy).
 
 Ниже приведены команды для просмотра и фильтрации отчётов о результатах сканирования уязвимостей и CIS compliance-проверок, выполненных в кластере.
 
@@ -80,7 +80,7 @@ DKP предоставляет встроенное средство для ав
   - [ConfigAuditReport](scanning.html#configauditreport) — ошибки конфигурации Kubernetes-объектов;
   - [ExposedSecretReport](scanning.html#exposedsecretreport) — утечки секретов в контейнерах.
 
-DKP использует набор кастомных ресурсов, разработанных проектом [Trivy Operator от Aqua Security](https://aquasecurity.github.io/trivy-operator/), для представления результатов сканирования уязвимостей, анализа конфигурации и проверки соответствия кластера требованиям безопасности.
+DP использует набор кастомных ресурсов, разработанных проектом [Trivy Operator от Aqua Security](https://aquasecurity.github.io/trivy-operator/), для представления результатов сканирования уязвимостей, анализа конфигурации и проверки соответствия кластера требованиям безопасности.
 
 Ниже приведено описание ключевых CRD, создаваемых [operator-trivy](/modules/operator-trivy/), с примерами и ссылками на официальную документацию.
 

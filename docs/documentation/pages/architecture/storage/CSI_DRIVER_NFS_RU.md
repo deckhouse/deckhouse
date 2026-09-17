@@ -3,10 +3,10 @@ title: CSI-драйвер NFS
 permalink: ru/architecture/storage/csi-drivers/csi-driver-nfs.html
 lang: ru
 search: csi-nfs, nfs
-description: Архитектура CSI-драйвера для работы с NFS-томами в Deckhouse Kubernetes Platform.
+description: Архитектура CSI-драйвера для работы с NFS-томами в Deckhouse Platform.
 ---
 
-CSI-драйвер `csi-nfs` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для управления NFS-томами в Deckhouse Kubernetes Platform (DKP).
+CSI-драйвер `csi-nfs` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для управления NFS-томами в Deckhouse Platform (DP).
 
 ## Архитектура драйвера
 
@@ -17,7 +17,7 @@ CSI-драйвер `csi-nfs` — это реализация стандарта 
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура CSI-драйвера `csi-nfs` на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура CSI-драйвера `csi-nfs` на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура CSI-драйвера csi-nfs](../../../images/architecture/storage/c4-l2-csi-driver-nfs.ru.png)
 
@@ -39,7 +39,7 @@ CSI-драйвер `csi-nfs` состоит из следующих компон
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
-     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
+     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
 
      Внешние контроллеры взаимодействуют c контейнером controller по gRPC через Unix-сокеты.
 

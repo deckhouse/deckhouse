@@ -1,7 +1,7 @@
 ---
-title: Документация Deckhouse Kubernetes Platform
+title: Документация Deckhouse Platform
 permalink: ru/
-description: Документация Deckhouse Kubernetes Platform.
+description: Документация Deckhouse Platform.
 rootLLMStxtURL: /products/kubernetes-platform/documentation/v1/llms.txt
 lang: ru
 ---
@@ -21,7 +21,11 @@ lang: ru
 {% include pdf_download_modal.html %}
 {%- endunless %}
 
-Приветствуем вас на главной странице документации Deckhouse Kubernetes Platform — платформы для управления Kubernetes-кластерами.
+{% alert level="info" %}
+Начиная с версии 1.76 в документации название продукта Deckhouse Kubernetes Platform заменено на Deckhouse Platform.
+{% endalert %}
+
+Приветствуем вас на главной странице документации Deckhouse Platform — платформы для управления Kubernetes-кластерами.
 {% if site.mode != 'module' %}Если вы еще не использовали платформу, рекомендуем начать с раздела [Быстрый старт](/products/kubernetes-platform/gs/), где вы найдете пошаговые инструкции по развёртыванию платформы на любой инфраструктуре.{% endif %}
 
 Как быстро найти то, что нужно:
@@ -30,12 +34,12 @@ lang: ru
 - Если нужен конкретный модуль — найдите его в [списке](reference/revision-comparison.html).
 - Для поиска по области применения воспользуйтесь меню.
 
-{% if site.mode != 'module' %}Документация по Deckhouse Kubernetes Platform разных версий может отличаться. Выберите нужную версию в выпадающем списке вверху страницы. В списке доступны актуальные версии документации.{% endif %}
+{% if site.mode != 'module' %}Документация по Deckhouse Platform разных версий может отличаться. Выберите нужную версию в выпадающем списке вверху страницы. В списке доступны актуальные версии документации.{% endif %}
 
 Если возникнут вопросы, вы можете обратиться за помощью в наш [Telegram-канал]({{ site.social_links[page.lang]['telegram'] }}). Мы обязательно поможем и проконсультируем.
 
 Если вы используете коммерческую редакцию, можете написать нам [на почту](mailto:support@deckhouse.ru), мы также окажем вам поддержку.
 
-Хотите улучшить Deckhouse Kubernetes Platform? Можете завести [задачу](https://github.com/deckhouse/deckhouse/issues/), предложить свою [идею](https://github.com/deckhouse/deckhouse/discussions) или [решение](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md) на GitHub.
+Хотите улучшить Deckhouse Platform? Можете завести [задачу](https://github.com/deckhouse/deckhouse/issues/), предложить свою [идею](https://github.com/deckhouse/deckhouse/discussions) или [решение](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md) на GitHub.
 
 А если вам хочется большего, присоединяйтесь к нашей [команде](https://job.flant.ru/)! Мы рады новым специалистам.

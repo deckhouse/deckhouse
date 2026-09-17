@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — Yandex Cloud"
-description: "Cloud resource management in Deckhouse Kubernetes Platform using Yandex Cloud."
+description: "Cloud resource management in Deckhouse Platform using Yandex Cloud."
 ---
 
-The `cloud-provider-yandex` module integrates Deckhouse Kubernetes Platform with [Yandex Cloud](https://cloud.yandex.com/). It allows the [`node-manager`](/modules/node-manager/) module to use Yandex Cloud resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+The `cloud-provider-yandex` module integrates Deckhouse Platform with [Yandex Cloud](https://cloud.yandex.com/). It allows the [`node-manager`](/modules/node-manager/) module to use Yandex Cloud resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Features of the `cloud-provider-yandex` module:
 
@@ -15,7 +15,7 @@ Features of the `cloud-provider-yandex` module:
 - Provisioning base infrastructure and CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html#module-interactions) `terraform-provider-yandex`.
 - Provisioning CloudEphemeral nodes via Machine Controller Manager (MCM) or Cluster API (CAPI). Virtual machine parameters are set in the [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) resource.
 - Registering with [`node-manager`](/modules/node-manager/) so that [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
-- Enabling CNI for new clusters automatically. Starting with DKP 1.76, [`cni-cilium`](/modules/cni-cilium/) is used by default.
+- Enabling CNI for new clusters automatically. Starting with DP 1.76, [`cni-cilium`](/modules/cni-cilium/) is used by default.
 
 {% alert level="warning" %}
 The module is migrating CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing [NodeGroups](/modules/node-manager/cr.html#nodegroup) continue to use MCM, while new ones are created with CAPI by default. For migrating existing groups, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).

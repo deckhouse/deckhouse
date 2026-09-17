@@ -13,6 +13,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
+	"service-with-healthchecks/internal/kubernetes"
 )
 
 const (
@@ -30,6 +32,7 @@ const (
 	testSWHName   = "afb6b6179f7a240379b969366a6f6a75"
 	testNodeName  = "hv-06"
 	testPodIP     = "10.12.5.86"
+	testSWHUID    = types.UID("1a1cbd7c-4f2a-4a0d-9d0e-2b0f4b1f5f0a")
 )
 
 func newTestReconciler() *ServiceWithHealthchecksReconciler {
@@ -42,7 +45,7 @@ func newTestReconciler() *ServiceWithHealthchecksReconciler {
 
 func newTestSWH() networkv1alpha1.ServiceWithHealthchecks {
 	return networkv1alpha1.ServiceWithHealthchecks{
-		ObjectMeta: metav1.ObjectMeta{Name: testSWHName, Namespace: testNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: testSWHName, Namespace: testNamespace, UID: testSWHUID},
 	}
 }
 
@@ -674,5 +677,232 @@ func TestReconcileKeepsRequeueingItself(t *testing.T) {
 		if result.RequeueAfter != resyncPeriod {
 			t.Errorf("%s reconcile: RequeueAfter = %v, want %v", pass, result.RequeueAfter, resyncPeriod)
 		}
+	}
+}
+
+func newTestScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatalf("failed to add corev1 to scheme: %v", err)
+	}
+	if err := discoveryv1.AddToScheme(scheme); err != nil {
+		t.Fatalf("failed to add discoveryv1 to scheme: %v", err)
+	}
+	if err := networkv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("failed to add networkv1alpha1 to scheme: %v", err)
+	}
+	return scheme
+}
+
+// The slice has to be owned by its ServiceWithHealthchecks, otherwise nothing collects the
+// slices of the other nodes once the resource is deleted.
+func TestBuildEndpointSliceIsOwnedBySWH(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+
+	eps := r.BuildEndpointSlice(testSWHName+"-"+testNodeName, swh)
+
+	if len(eps.OwnerReferences) != 1 {
+		t.Fatalf("expected exactly one owner reference, got %+v", eps.OwnerReferences)
+	}
+	ref := eps.OwnerReferences[0]
+	if ref.APIVersion != networkv1alpha1.GroupVersion.String() || ref.Kind != kubernetes.ServiceWithHealthchecksKind {
+		t.Errorf("expected the owner to be a ServiceWithHealthchecks, got %s %s", ref.APIVersion, ref.Kind)
+	}
+	if ref.Name != testSWHName || ref.UID != testSWHUID {
+		t.Errorf("expected the owner to be %s/%s, got %s/%s", testSWHName, testSWHUID, ref.Name, ref.UID)
+	}
+	if ref.Controller == nil || !*ref.Controller {
+		t.Error("expected the owner reference to be a controller reference")
+	}
+	// OwnerReferencesPermissionEnforcement would refuse the Create otherwise
+	if ref.BlockOwnerDeletion != nil {
+		t.Errorf("expected blockOwnerDeletion to stay unset, got %v", *ref.BlockOwnerDeletion)
+	}
+}
+
+// Slices created by an older version of the agent carry no owner reference; they are adopted
+// in place instead of being recreated.
+func TestUpdateEPSAdoptsSliceWithoutOwnerReference(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	epsName := testSWHName + "-" + testNodeName
+
+	orphan := r.BuildEndpointSlice(epsName, swh)
+	orphan.OwnerReferences = nil
+	orphan.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&orphan).Build()
+	r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Namespace: testNamespace, Name: testSWHName}] = []HealthcheckTarget{
+		{
+			targetHost:         testPodIP,
+			podName:            "worker",
+			podNamespace:       testNamespace,
+			podUID:             types.UID("uid-worker"),
+			podReady:           true,
+			probeResultDetails: successfulProbeDetails(),
+		},
+	}
+
+	if err := r.updateEPSForServiceWithHealthchecks(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var updated discoveryv1.EndpointSlice
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: epsName}, &updated); err != nil {
+		t.Fatalf("failed to read back the EndpointSlice: %v", err)
+	}
+	if len(updated.OwnerReferences) != 1 || updated.OwnerReferences[0].UID != testSWHUID {
+		t.Errorf("expected the existing slice to be adopted, got %+v", updated.OwnerReferences)
+	}
+}
+
+// A slice left over from a resource with the same name but a different UID would be collected
+// right after being written, so the stale reference has to be replaced.
+func TestUpdateEPSReplacesStaleOwnerReference(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	epsName := testSWHName + "-" + testNodeName
+
+	stale := r.BuildEndpointSlice(epsName, swh)
+	stale.OwnerReferences[0].UID = types.UID("00000000-0000-0000-0000-000000000000")
+	stale.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&stale).Build()
+	r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Namespace: testNamespace, Name: testSWHName}] = []HealthcheckTarget{
+		{
+			targetHost:         testPodIP,
+			podName:            "worker",
+			podNamespace:       testNamespace,
+			podUID:             types.UID("uid-worker"),
+			podReady:           true,
+			probeResultDetails: successfulProbeDetails(),
+		},
+	}
+
+	if err := r.updateEPSForServiceWithHealthchecks(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var updated discoveryv1.EndpointSlice
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: epsName}, &updated); err != nil {
+		t.Fatalf("failed to read back the EndpointSlice: %v", err)
+	}
+	if len(updated.OwnerReferences) != 1 || updated.OwnerReferences[0].UID != testSWHUID {
+		t.Errorf("expected the stale owner reference to be replaced, got %+v", updated.OwnerReferences)
+	}
+}
+
+// ownedService builds the child Service as the controller maintains it.
+func ownedService() *corev1.Service {
+	isController := true
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testSWHName,
+			Namespace: testNamespace,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: networkv1alpha1.GroupVersion.String(),
+				Kind:       kubernetes.ServiceWithHealthchecksKind,
+				Name:       testSWHName,
+				UID:        testSWHUID,
+				Controller: &isController,
+			}},
+		},
+	}
+}
+
+// A Service the module does not control keeps its own endpoints, and kube-proxy balances over the
+// union of every slice carrying the service name.
+func TestMayPublishEPS(t *testing.T) {
+	foreign := ownedService()
+	foreign.OwnerReferences[0].APIVersion = "apps/v1"
+	foreign.OwnerReferences[0].Kind = "Deployment"
+	foreign.OwnerReferences[0].Name = "backend"
+
+	plainReference := ownedService()
+	plainReference.OwnerReferences[0].Controller = nil
+
+	recreatedParent := ownedService()
+	recreatedParent.OwnerReferences[0].UID = types.UID("00000000-0000-0000-0000-000000000000")
+
+	tests := []struct {
+		name    string
+		service *corev1.Service
+		want    bool
+	}{
+		{"no Service yet", nil, true},
+		{"owned by the parent", ownedService(), true},
+		{"owned by the parent recreated under the same name", recreatedParent, true},
+		{"controlled by another resource", foreign, false},
+		{"merely referenced by the parent, not controlled", plainReference, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := newTestReconciler()
+			builder := fake.NewClientBuilder().WithScheme(newTestScheme(t))
+			if test.service != nil {
+				builder = builder.WithObjects(test.service)
+			}
+			r.Client = builder.Build()
+
+			got, err := r.mayPublishEPS(context.Background(), newTestSWH())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != test.want {
+				t.Errorf("mayPublishEPS = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+// The slice published before the clash appeared has to be withdrawn, otherwise it keeps attracting
+// traffic for as long as the conflict lasts.
+func TestDeleteEPSForNodeWithdrawsTheSlice(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	published := r.BuildEndpointSlice(endpointSliceNameForNode(testSWHName, testNodeName), swh)
+	published.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&published).Build()
+
+	if err := r.deleteEPSForNode(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var remaining discoveryv1.EndpointSlice
+	err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: published.Name}, &remaining)
+	if !errors.IsNotFound(err) {
+		t.Errorf("expected the slice to be gone, got %v", err)
+	}
+
+	// deleting a slice that is not there is how the steady state looks
+	if err := r.deleteEPSForNode(context.Background(), swh); err != nil {
+		t.Errorf("expected a missing slice to be fine, got %v", err)
+	}
+}
+
+// A name clash means somebody else's objects are around, and a slice that is not ours is not ours
+// to delete.
+func TestDeleteEPSForNodeLeavesForeignSliceAlone(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+
+	foreign := r.BuildEndpointSlice(endpointSliceNameForNode(testSWHName, testNodeName), swh)
+	foreign.Labels[endpointControllerLabelKey] = "endpointslice-controller"
+	foreign.OwnerReferences = nil
+	foreign.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&foreign).Build()
+
+	if err := r.deleteEPSForNode(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var remaining discoveryv1.EndpointSlice
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: foreign.Name}, &remaining); err != nil {
+		t.Errorf("expected the slice of another controller to be kept, got %v", err)
 	}
 }
