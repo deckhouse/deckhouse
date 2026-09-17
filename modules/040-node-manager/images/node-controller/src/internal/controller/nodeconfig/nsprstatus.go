@@ -45,7 +45,7 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 
 	ordered := orderedNSPRs(nsprs.Items)
 	rejected := rejectedNSPRs(ordered)
-	groups, err := r.immutableNodeGroupNames(ctx)
+	groups, err := r.allNodeGroupNames(ctx)
 	if err != nil {
 		return err
 	}
@@ -61,8 +61,13 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 
 	// The bashible half. Removable as a unit: these lines go together with
 	// nsprapplied_annotation.go when the last mutable NodeGroup is gone, and
-	// mergeOutcomes keeps working with one source.
-	fromAnnotations, err := readAnnotationOutcomes(ctx, r.Client, groups)
+	// mergeOutcomes keeps working with one source. The immutable groups are read
+	// here because that source is the only thing left that needs them.
+	immutable, err := r.immutableNodeGroupNames(ctx)
+	if err != nil {
+		return err
+	}
+	fromAnnotations, err := readAnnotationOutcomes(ctx, r.Client, immutable)
 	if err != nil {
 		return fmt.Errorf("read what the bashible nodes report about NodeStaticPodRequests: %w", err)
 	}
@@ -80,10 +85,10 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 
 // updateNSPRStatus computes and patches one object's status, skipping the write
 // when nothing changed.
-func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, immutableGroups []string, outcome nsprOutcome) error {
+func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, nodeGroups []string, outcome nsprOutcome) error {
 	desired := nspr.Status.DeepCopy()
 	desired.ObservedGeneration = nspr.Generation
-	desired.MatchedNodeGroups = matchedNodeGroups(nspr.Spec.NodeGroupSelector.MatchNames, immutableGroups)
+	desired.MatchedNodeGroups = matchedNodeGroups(nspr.Spec.NodeGroupSelector.MatchNames, nodeGroups)
 	desired.AppliedNodes = outcome.applied
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
