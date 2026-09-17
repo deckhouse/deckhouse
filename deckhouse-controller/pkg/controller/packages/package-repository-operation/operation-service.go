@@ -284,9 +284,9 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 	if len(newTags) != len(rawTags) {
 		s.logger.Info("looks like your registry does not support tag listing with filtering by last version",
 			slog.String("package", packageName),
-			slog.String("lastVersion", lastVersion),
-			slog.Int("allTagsCount", len(rawTags)),
-			slog.Int("newTagsCount", len(newTags)))
+			slog.String("last_version", lastVersion),
+			slog.Int("all_tags_count", len(rawTags)),
+			slog.Int("new_tags_count", len(newTags)))
 	}
 
 	return newTags, nil

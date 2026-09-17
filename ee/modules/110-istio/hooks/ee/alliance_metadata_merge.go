@@ -589,15 +589,15 @@ multiclustersLoop:
 		validationResult := validateJWTToken(existingToken)
 		input.Logger.Info("token validation result",
 			slog.String("name", multiclusterInfo.Name),
-			slog.Bool("needReissue", validationResult.NeedReissue),
+			slog.Bool("needReissue", validationResult.NeedReissue), //nolint:sloglint
 			slog.String("error", validationResult.Error),
-			slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
+			slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339))) //nolint:sloglint
 
 		if !validationResult.NeedReissue {
 			multiclusterInfo.APIJWT = existingToken
 			input.Logger.Info("reusing existing valid token for multicluster",
 				slog.String("name", multiclusterInfo.Name),
-				slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
+				slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339))) //nolint:sloglint
 		} else {
 			reason := validationResult.Error
 			if reason == "" {
