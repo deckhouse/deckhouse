@@ -75,16 +75,6 @@ openstack:
   destinationBinary: terraform-provider-openstack
   vmResourceType: openstack_blockstorage_volume_v3
   useOpentofu: true
-ovirt:
-  namespace: terraform-provider-ovirt
-  cloudName: Zvirt
-  type: ovirt
-  version: "2.2.0"
-  artifact: terraform-provider-ovirt
-  artifactBinary: terraform-provider-ovirt
-  destinationBinary: terraform-provider-ovirt
-  vmResourceType: ovirt_vm
-  useOpentofu: true
 vsphere:
   namespace: hashicorp
   cloudName: vSphere

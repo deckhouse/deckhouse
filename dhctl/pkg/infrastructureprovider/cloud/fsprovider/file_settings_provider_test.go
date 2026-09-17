@@ -42,7 +42,6 @@ var terraformProviders = []string{
 // entry, their settings arrive with the bundle (see the bundle tests below).
 var tofuProviders = []string{
 	"dynamix",
-	"zvirt",
 	"vsphere",
 	"huaweicloud",
 	"openstack",
