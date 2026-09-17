@@ -18,21 +18,26 @@
   {%- assign productName = productMenuDataFallback.title %}
 {%- endunless %}
 {%- comment -%}
-  Products the design ships a finished brand lockup for. Everything else keeps the
-  previous mark + title, so an uncovered product still renders correctly.
-  Development Portal is deliberately absent: its lockup is live text in Figma set in
-  "Heading Now Bold Italic", so only the coloured mark exports - it needs a re-export
-  with the text outlined before it can be added here.
+  Brand lockups, taken from the live site. Every product ships one on a uniform 120x36
+  canvas - that is what keeps this bar the same height on every product page, since the
+  row is as tall as its tallest child. Development Platform is the one exception at
+  120x37, and the live site's bar is 63px on that page for exactly the same reason, so
+  the odd pixel is reproduced rather than squashed.
+  Anything not listed keeps the previous mark + title, so an uncovered product still
+  renders correctly.
   zoom-image-disable on the lockup below: assets/js/zoom-image.js makes every <img>
   inside .content a GLightbox target and sets an inline cursor: zoom-in on it, and the
   header renders inside that wrapper. The class is that script's own opt-out (:339).
 {%- endcomment -%}
 {%- assign productLockup = "" %}
+{%- assign lockupW = "120" %}
+{%- assign lockupH = "36" %}
 {%- case productCode %}
-  {%- when "deckhouse-platform" %}{% assign productLockup = "platform" %}{% assign lockupW = "120" %}{% assign lockupH = "36" %}
-  {%- when "stronghold" %}{% assign productLockup = "stronghold" %}{% assign lockupW = "104" %}{% assign lockupH = "23" %}
-  {%- when "observability-platform" %}{% assign productLockup = "observability" %}{% assign lockupW = "120" %}{% assign lockupH = "23" %}
-  {%- when "code" %}{% assign productLockup = "code" %}{% assign lockupW = "72" %}{% assign lockupH = "21" %}
+  {%- when "deckhouse-platform" %}{% assign productLockup = "platform" %}
+  {%- when "stronghold" %}{% assign productLockup = "stronghold" %}
+  {%- when "observability-platform" %}{% assign productLockup = "observability" %}
+  {%- when "code" %}{% assign productLockup = "code" %}
+  {%- when "development-platform" %}{% assign productLockup = "development-platform" %}{% assign lockupH = "37" %}
 {%- endcase %}
 <div class="header header__product-menu header__product-menu--ru">
   <div class="header__product-menu-inner container">
