@@ -88,6 +88,18 @@ func CacheOptions() (cache.Options, client.Options) {
 					// webhook's cached reads silently missed). All kube-system secrets are
 					// ~140KiB total, so caching them all is cheaper than one live GET.
 					"kube-system": {},
+					// One object: registry-bashible-config, whose `agent` key says
+					// whether containerd's registry.d on every node belongs to the
+					// registry module's agent or to nodelet. The nodeconfig
+					// controller watches it, and a watch takes its informer from
+					// here — without this scope the switch would reach no node
+					// until some unrelated input moved. Pinned by name because
+					// nothing else in d8-system is this binary's business; the
+					// deckhouse-registry secret beside it is read live through the
+					// APIReader (readRegistry in the nodeconfig controller's sources.go).
+					"d8-system": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "registry-bashible-config"}),
+					},
 				},
 			},
 			&corev1.Pod{}: {

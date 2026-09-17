@@ -109,6 +109,23 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// enabled module's crds/ before any Helm run.
 	w.Watches(&deckhousev1alpha1.NodeExtensionRequest{}, allMapper,
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	// A NodeStaticPodRequest change re-renders every node, and only a spec change
+	// can: the render reads the manifest and the selector. The predicate is what
+	// breaks the loop of this controller's own status writes re-entering its
+	// queue. The CRD is a hard dependency for the same reason as the one above.
+	w.Watches(&deckhousev1alpha1.NodeStaticPodRequest{}, allMapper,
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	// The registry module's answer to who writes containerd's registry.d. Without
+	// this watch the switch reaches no node until something else enqueues a pass,
+	// and no resync period is set. The predicate is mandatory: the Secret informer
+	// also covers kube-system, and this mapper enqueues the ALL-nodes key, so an
+	// unfiltered watch would re-render the whole fleet on every kube-system secret
+	// write. Scoped to this one object in common.CacheOptions too.
+	w.Watches(&corev1.Secret{}, allMapper, builder.WithPredicates(predicate.NewPredicateFuncs(
+		func(obj client.Object) bool {
+			return obj.GetNamespace() == d8SystemNS && obj.GetName() == registryBashibleConfigSecret
+		},
+	)))
 	// The system extension digests of the release. Without this watch a new
 	// release re-renders nothing until some unrelated input moves: nothing else
 	// enqueues a pass, and no resync period is set. Scoped to the single
@@ -184,6 +201,9 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 	// same all-nodes pass a NER change triggers, so editing a request refreshes
 	// both the nodes it targets and its status.
 	if err := r.reconcileNERStatuses(ctx, logger); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.reconcileNSPRStatuses(ctx, logger); err != nil {
 		return ctrl.Result{}, err
 	}
 
