@@ -85,8 +85,8 @@
         {
           "id": 6094,
           "parent_id": 6082,
-          "title": "Guides",
-          "url": "/products/virtualization-platform/guides/",
+          "title": "Going to Production",
+          "url": "/products/virtualization-platform/guides/production.html",
           "target": "",
           "rel": ""
         }
@@ -251,7 +251,7 @@
     {
       "id": 10570,
       "parent_id": 0,
-      "title": "Development Portal",
+      "title": "Development Platform",
       "url": "/products/development-platform/",
       "target": "",
       "rel": "",
@@ -317,6 +317,14 @@
               "rel": ""
             },
             {
+              "id": 12666,
+              "parent_id": 8398,
+              "title": "Биллинг",
+              "url": "/products/kubernetes-platform/features/billing/",
+              "target": "",
+              "rel": ""
+            },
+            {
               "id": 10110,
               "parent_id": 8398,
               "title": "Виртуализация",
@@ -325,10 +333,42 @@
               "rel": ""
             },
             {
+              "id": 12898,
+              "parent_id": 8398,
+              "title": "Графический интерфейс",
+              "url": "/products/kubernetes-platform/features/web-interface/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 11045,
+              "parent_id": 8398,
+              "title": "Графический установщик",
+              "url": "/products/kubernetes-platform/features/installer/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 11039,
+              "parent_id": 8398,
+              "title": "Интеграция с&nbsp;инфраструктурой",
+              "url": "/products/kubernetes-platform/features/infrastructure-integration/",
+              "target": "",
+              "rel": ""
+            },
+            {
               "id": 8450,
               "parent_id": 8398,
               "title": "Наблюдаемость",
               "url": "/products/kubernetes-platform/features/observability/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 10958,
+              "parent_id": 8398,
+              "title": "Сетевые возможности",
+              "url": "/products/kubernetes-platform/features/sdn-network/",
               "target": "",
               "rel": ""
             },
@@ -345,6 +385,22 @@
               "parent_id": 8398,
               "title": "Управление секретами",
               "url": "/products/kubernetes-platform/features/secrets-management/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 11581,
+              "parent_id": 8398,
+              "title": "Управляемые сервисы",
+              "url": "/products/kubernetes-platform/features/managed-services/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 10899,
+              "parent_id": 8398,
+              "title": "Хранение данных",
+              "url": "/products/kubernetes-platform/features/storage/",
               "target": "",
               "rel": ""
             }
@@ -383,6 +439,14 @@
               "rel": ""
             },
             {
+              "id": 11114,
+              "parent_id": 9665,
+              "title": "Запуск микросервисного приложения",
+              "url": "/products/kubernetes-platform/solutions/dkp-for-microservices/",
+              "target": "",
+              "rel": ""
+            },
+            {
               "id": 9666,
               "parent_id": 9665,
               "title": "Хранение и обработка данных",
@@ -393,7 +457,7 @@
             {
               "id": 10356,
               "parent_id": 9665,
-              "title": "Kubernetes для организаций",
+              "title": "Kubernetes для&nbsp;организаций",
               "url": "/products/kubernetes-platform/solutions/kubernetes-standard-for-orgs/",
               "target": "",
               "rel": ""
@@ -412,7 +476,7 @@
           "id": 5393,
           "parent_id": 5349,
           "title": "Быстрый старт",
-          "url": "/products/kubernetes-platform/gs/installer",
+          "url": "/products/kubernetes-platform/gs/installer/",
           "target": "",
           "rel": ""
         },
@@ -459,6 +523,14 @@
           "rel": ""
         },
         {
+          "id": 11256,
+          "parent_id": 5352,
+          "title": "ФСТЭК-редакция",
+          "url": "/products/virtualization-platform/certified-security-edition/",
+          "target": "",
+          "rel": ""
+        },
+        {
           "id": 8209,
           "parent_id": 5352,
           "title": "Возможности и лицензирование",
@@ -483,7 +555,7 @@
           "rel": ""
         },
         {
-          "id": 5884,
+          "id": 11964,
           "parent_id": 5352,
           "title": "Руководства",
           "url": "/products/virtualization-platform/guides/",
@@ -496,7 +568,7 @@
       "id": 5350,
       "parent_id": 0,
       "title": "Observability Platform",
-      "url": "/products/observability-platform/",
+      "url": "/products/observability/",
       "target": "",
       "rel": "",
       "items": [
@@ -504,7 +576,7 @@
           "id": 5356,
           "parent_id": 5350,
           "title": "О продукте",
-          "url": "/products/observability-platform/",
+          "url": "/products/observability/",
           "target": "",
           "rel": ""
         },
@@ -521,7 +593,7 @@
     {
       "id": 7585,
       "parent_id": 0,
-      "title": "Observability в кластере",
+      "title": "Observability в&nbsp;кластере",
       "url": "/products/kubernetes-platform/features/observability/",
       "target": "",
       "rel": "",
@@ -725,8 +797,8 @@
     {
       "id": 8618,
       "parent_id": 0,
-      "title": "Development Portal",
-      "url": "/products/development-platform/",
+      "title": "Development Platform",
+      "url": "/products/development-portal/",
       "target": "",
       "rel": "",
       "items": [
@@ -734,7 +806,7 @@
           "id": 8619,
           "parent_id": 8618,
           "title": "О продукте",
-          "url": "/products/development-platform/",
+          "url": "/products/development-portal/",
           "target": "",
           "rel": ""
         },
@@ -743,6 +815,150 @@
           "parent_id": 8618,
           "title": "Документация",
           "url": "/products/development-platform/documentation/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "id": 12675,
+      "parent_id": 0,
+      "title": "Airlock",
+      "url": "/products/airlock/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "id": 12676,
+          "parent_id": 12675,
+          "title": "О продукте",
+          "url": "/products/airlock/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 12677,
+          "parent_id": 12675,
+          "title": "Документация",
+          "url": "/products/airlock/documentation/functional-description/architecture/interaction/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "id": 13273,
+      "parent_id": 0,
+      "title": "Galleon",
+      "url": "/products/galleon/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "id": 13279,
+          "parent_id": 13273,
+          "title": "О продукте",
+          "url": "/products/galleon/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 13441,
+          "parent_id": 13273,
+          "title": "Документация",
+          "url": "/products/galleon/documentation/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "id": 14952,
+      "parent_id": 0,
+      "title": "Deckhouse Platform",
+      "url": "/products/deckhouse-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "id": 14953,
+          "parent_id": 14952,
+          "title": "О продукте",
+          "url": "/products/deckhouse-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 14955,
+          "parent_id": 14952,
+          "title": "Редакции",
+          "url": "",
+          "target": "",
+          "rel": "",
+          "items": [
+            {
+              "id": 14959,
+              "parent_id": 14955,
+              "title": "Deckhouse Platform Core",
+              "url": "/products/deckhouse-platform/core/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 14956,
+              "parent_id": 14955,
+              "title": "Deckhouse Platform Ultimate",
+              "url": "/products/deckhouse-platform/ultimate/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 14958,
+              "parent_id": 14955,
+              "title": "Deckhouse Platform Certified Core",
+              "url": "/products/deckhouse-platform/certified-core/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 14957,
+              "parent_id": 14955,
+              "title": "Deckhouse Platform Certified Pro",
+              "url": "/products/deckhouse-platform/certified-pro/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 14968,
+              "parent_id": 14955,
+              "title": "Deckhouse Platform Open",
+              "url": "/products/deckhouse-platform/open-source/",
+              "target": "",
+              "rel": ""
+            }
+          ]
+        },
+        {
+          "id": 15044,
+          "parent_id": 14952,
+          "title": "Расширения",
+          "url": "/products/deckhouse-platform/extensions/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 14918,
+          "parent_id": 14952,
+          "title": "Быстрый старт",
+          "url": "/products/kubernetes-platform/gs/installer/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 14919,
+          "parent_id": 14952,
+          "title": "Документация",
+          "url": "/products/kubernetes-platform/documentation/v1/",
           "target": "",
           "rel": "doc"
         }

@@ -9,6 +9,7 @@
 {%- endcomment -%}
 {%- assign productCode = page.product_code | default: "deckhouse-platform" %}
 {%- if productCode == "kubernetes-platform" %}{% assign productCode = "deckhouse-platform" %}{% endif %}
+{%- if productCode == "development-platform" %}{% assign productCode = "development-portal" %}{% endif %}
 {%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
 {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
 {%- assign productMenuDataFallback = l2MenuDataFallback | where: "url", _conditionProductURL | first %}
@@ -38,6 +39,7 @@
   {%- when "observability-platform" %}{% assign productLockup = "observability" %}
   {%- when "code" %}{% assign productLockup = "code" %}
   {%- when "development-platform" %}{% assign productLockup = "development-platform" %}{% assign lockupH = "37" %}
+  {%- when "development-portal" %}{% assign productLockup = "development-platform" %}{% assign lockupH = "37" %}
 {%- endcase %}
 <div class="header header__product-menu header__product-menu--ru">
   <div class="header__product-menu-inner container">
