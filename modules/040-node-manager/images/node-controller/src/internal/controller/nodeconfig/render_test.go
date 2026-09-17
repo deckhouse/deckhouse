@@ -988,3 +988,58 @@ func TestRenderedFallbackNICMatchesTheWebhookCarveOut(t *testing.T) {
 
 	require.Equal(t, webhook.ClusterFallbackInterfaces(), rendered.Interfaces)
 }
+
+// crdItems steps into an array's item schema, which crdField cannot: items is a
+// sibling of properties, not one of them.
+func crdItems(t *testing.T, field map[string]any) map[string]any {
+	t.Helper()
+
+	items, ok := field["items"].(map[string]any)
+	require.True(t, ok, "the field is not an array")
+	return items
+}
+
+// The static-pod contract lives in two repositories — this one and nodelet's
+// internal/config/types.go — and the shipped CRD is what the API server enforces
+// on the objects this controller writes. A field that never reached the schema is
+// a field the API server strips on the way in, silently.
+func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
+	schema := nodeConfigCRDSchema(t)
+
+	images := crdField(t, schema, "spec", "images")
+	require.Equal(t, "map", images["x-kubernetes-list-type"])
+	require.Equal(t, []any{"name"}, images["x-kubernetes-list-map-keys"])
+	require.Equal(t, float64(32), images["maxItems"])
+	require.Equal(t, `^sha256:[a-f0-9]{64}$`, crdField(t, crdItems(t, images), "digest")["pattern"])
+
+	// The bounds are one number: 16 manifests of 32 KiB is 512 KiB, which has to
+	// leave room under etcd's 1.5 MiB request limit for the rest of the spec.
+	staticPods := crdField(t, schema, "spec", "staticPods")
+	require.Equal(t, "map", staticPods["x-kubernetes-list-type"])
+	require.Equal(t, []any{"name"}, staticPods["x-kubernetes-list-map-keys"])
+	require.Equal(t, float64(16), staticPods["maxItems"])
+
+	manifest := crdField(t, crdItems(t, staticPods), "manifest")
+	require.Equal(t, float64(1), manifest["minLength"])
+	require.Equal(t, float64(32768), manifest["maxLength"])
+
+	// Who writes containerd's registry.d. The default is what keeps a cluster
+	// that never heard of an agent behaving exactly as it did before.
+	owner := crdField(t, schema, "spec", "containerRuntime", "registryOwner")
+	require.Equal(t, "nodelet", owner["default"])
+	require.Equal(t, []any{"nodelet", "agent"}, owner["enum"])
+
+	// The node reports one entry per image and per static pod, the way it already
+	// does for extensions and units.
+	imageState := crdField(t, crdItems(t, crdField(t, schema, "status", "images")), "state")
+	require.Equal(t, []any{"Ready", "Pending", "Failed"}, imageState["enum"])
+
+	// Two states, not three: a node either holds the file the spec asked for or
+	// it does not. What an operator does next is in the reason, because the three
+	// causes call for three different actions — and an enum is what keeps the two
+	// repositories from drifting into four.
+	podStatus := crdItems(t, crdField(t, schema, "status", "staticPods"))
+	require.Equal(t, []any{"Written", "Failed"}, crdField(t, podStatus, "state")["enum"])
+	require.Equal(t, []any{"ManifestRejected", "WriteFailed", "RemoveFailed"},
+		crdField(t, podStatus, "reason")["enum"])
+}
