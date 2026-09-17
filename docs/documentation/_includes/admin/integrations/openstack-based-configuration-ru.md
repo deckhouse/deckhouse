@@ -358,7 +358,7 @@ provider:
 
 ## Конфигурация
 
-Интеграции с {{ site.data.admin.cloud-types.types[page.cloud_type].name }} осуществляется с помощью [ресурса OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration), который описывает конфигурацию облачного кластера в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграции с {{ site.data.admin.cloud-types.types[page.cloud_type].name }} осуществляется с помощью [ресурса OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration), который описывает конфигурацию облачного кластера в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DP настраивается автоматически, исходя из выбранной схемы размещения.
 
 Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 

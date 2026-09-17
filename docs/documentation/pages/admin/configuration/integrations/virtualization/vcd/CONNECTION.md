@@ -9,7 +9,7 @@ permalink: en/admin/integrations/virtualization/vcd/connection-and-authorization
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
-To manage resources in VCD using the "Deckhouse Kubernetes Platform", the following resources must be configured in the system:
+To manage resources in VCD using the "Deckhouse Platform", the following resources must be configured in the system:
 
 * Organization
 * VirtualDataCenter
@@ -277,7 +277,7 @@ The provider has been tested only with virtual machine templates based on "Ubunt
 {% endalert %}
 
 {% alert level="warning" %}
-Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. DKP performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
+Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. DP performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
 {% endalert %}
 
 {% include notice_envinronment.liquid %}
@@ -411,14 +411,14 @@ shutdown -P now
 
 * VCD supports CSI. Disks are created as VCD Independent Disks.
 * The guest property `disk.EnableUUID` must be enabled for the VM templates in use.
-* Deckhouse Kubernetes Platform supports disk resizing starting from version v1.59.1.
+* Deckhouse Platform supports disk resizing starting from version v1.59.1.
 
 ## Using the LoadBalancer
 
-- DKP components support `Service` resources of type `LoadBalancer` when deployed on VMware Cloud Director (VCD).
+- DP components support `Service` resources of type `LoadBalancer` when deployed on VMware Cloud Director (VCD).
 - VMware NSX Advanced Load Balancer (ALB or Avi Networks) is used as the load balancer.
 - Support is available **only** when using the `NSX-T` network virtualization platform.
 - The load balancer functionality must be enabled on the Edge Gateway by your VCD provider. You can verify this under Edge Gateway → Load Balancer → General Settings — the `State` parameter must be `Active`.
-- If the load balancer was enabled after the DKP cluster was successfully created, the components will automatically pick up the changes within an hour (no additional actions are required).
+- If the load balancer was enabled after the DP cluster was successfully created, the components will automatically pick up the changes within an hour (no additional actions are required).
 - For each open port, a Pool + Virtual Service pair is created.
 - If a firewall is in place, you must create an allow rule for the load balancer’s external IP address and the corresponding ports.

@@ -5,9 +5,9 @@ permalink: en/admin/configuration/platform-scaling/control-plane/updating-and-ve
 
 ## Updating and version management
 
-The control plane update process in DKP is fully automated.
+The control plane update process in DP is fully automated.
 
-- DKP supports the latest five Kubernetes versions.
+- DP supports the latest five Kubernetes versions.
 - You can roll back the control plane one minor version and upgrade forward several minor versions — one at a time.
 - Patch versions (e.g., `1.27.3` → `1.27.5`) are updated automatically with Deckhouse and cannot be managed manually.
 - Minor versions are set manually using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter in the ClusterConfiguration resource.
@@ -60,7 +60,7 @@ The `d8-cluster-kubernetes` ConfigMap displays:
 - **Target and current version**: The desired version from configuration and the actual state during the update.
 - **Version mismatch**: If any components are running a version different from the target (including newer than desired).
 - **Version lists**:
-  - `supportedVersions`: Lists minor Kubernetes versions supported in the current DKP release.
+  - `supportedVersions`: Lists minor Kubernetes versions supported in the current DP release.
   - `availableVersions`: Lists versions that can be selected for upgrade or downgrade in the *current* cluster. The set is limited by the highest minor version ever installed on the cluster and by the rule that downgrade proceeds one minor at a time.
   - `automaticVersion`: Minor version that will be used when the update mode is `Automatic`.
 

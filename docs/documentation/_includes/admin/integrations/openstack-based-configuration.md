@@ -365,7 +365,7 @@ Integration with {{ site.data.admin.cloud-types.types[page.cloud_type].name }} i
 using the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
 It defines the configuration of the cloud cluster in {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 and is used by the cloud provider when the cluster control plane is hosted in the cloud.
-The DKP module responsible for the integration is automatically configured based on the selected layout.
+The DP module responsible for the integration is automatically configured based on the selected layout.
 
 To modify the configuration in a running cluster, run the following command:
 

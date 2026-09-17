@@ -576,7 +576,9 @@ spec:
 
 ## Setting up federation for two clusters using the IstioFederation CR
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and DP Ultimate only.{% endalert %}
+
+{% alert level="warning" %}Federation covers sidecar-mode workloads only. For details, refer to [Ambient mesh limitations](./#ambient-mesh-limitations).{% endalert %}
 
 Cluster A:
 
@@ -604,7 +606,9 @@ spec:
 
 ## Setting up multicluster for two clusters using the IstioMulticluster CR
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and DP Ultimate only.{% endalert %}
+
+{% alert level="warning" %}Multicluster covers sidecar-mode workloads only. For details, refer to [Ambient mesh limitations](./#ambient-mesh-limitations).{% endalert %}
 
 Cluster A:
 
@@ -656,7 +660,7 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 
 ### Upgrading Istio control-plane
 
-* Deckhouse allows you to install different control-plane versions simultaneously:
+* DP allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
   * Additional versions handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
@@ -683,7 +687,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 ### Auto upgrading istio data-plane
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and DP Ultimate only.{% endalert %}
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
 

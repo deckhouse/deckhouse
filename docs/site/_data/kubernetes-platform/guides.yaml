@@ -22,13 +22,13 @@
     - baremetal
     - production
 - name:
-    ru: "Обновление DKP в закрытом окружении"
-    en: "Updating DKP in air-gapped environment"
+    ru: "Обновление DP в закрытом окружении"
+    en: "Updating DP in air-gapped environment"
   link: "airgapped-update.html"
   #minutesToRead: 30
   description:
-    ru: Руководство по обновлению Deckhouse Kubernetes Platform в закрытом окружении
-    en: A guide for updating Deckhouse Kubernetes Platform in an air-gapped environment
+    ru: Руководство по обновлению Deckhouse Platform в закрытом окружении
+    en: A guide for updating Deckhouse Platform in an air-gapped environment
   tags:
     - private environment
     - baremetal
@@ -39,18 +39,18 @@
   link: "fs-requirements.html"
   #minutesToRead: 30
   description:
-    ru: Руководство по выбору объема дисков и разметке файловой системы перед установкой Deckhouse Kubernetes Platform
-    en: A guide on how to select the disk size and layout of the file system before installing the Deckhouse Kubernetes Platform
+    ru: Руководство по выбору объема дисков и разметке файловой системы перед установкой Deckhouse Platform
+    en: A guide on how to select the disk size and layout of the file system before installing the Deckhouse Platform
   tags:
     - storage
 - name:
-    ru: "Установка DKP в закрытом окружении"
-    en: "Installing DKP in a private environment"
+    ru: "Установка DP в закрытом окружении"
+    en: "Installing DP in a private environment"
   link: "private-environment.html"
   #minutesToRead: 30
   description:
-    ru: Руководство по установке Deckhouse Kubernetes Platform в закрытом окружении.
-    en: A guide to installing the Deckhouse Kubernetes Platform in a closed environment.
+    ru: Руководство по установке Deckhouse Platform в закрытом окружении.
+    en: A guide to installing the Deckhouse Platform in a closed environment.
   tags:
     - private environment
 - name:

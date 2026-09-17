@@ -205,10 +205,10 @@ It is also important to get the Ingress controller and the application's Ingress
 ## Federation and multicluster
 
 {% alert level="warning" %}
-Available in Enterprise Edition only.
+Available in Enterprise Edition and DP Ultimate only.
 {% endalert %}
 
-Deckhouse supports two schemes of inter-cluster interaction:
+DP supports two schemes of inter-cluster interaction:
 
 - [federation](#federation)
 - [multicluster](#multicluster)
@@ -295,14 +295,14 @@ In the `.spec.ports` section of `services`, each port must have the `name` field
 <!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 - Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
-- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This Deckhouse module takes care of the corresponding communication channel.
+- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This DP module takes care of the corresponding communication channel.
 
 #### Enabling the multicluster
 
 Enabling the multicluster (via the `istio.multicluster.enabled = true` module parameter) results in the following activities:
 
 - A proxy is added to the cluster to publish access to the API server via the standard Ingress resource:
-  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. Deckhouse automatically exchanges trusted public keys during the mutual configuration of the multicluster.
+  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. DP automatically exchanges trusted public keys during the mutual configuration of the multicluster.
   - The proxy itself has read-only access to a limited set of resources.
 - A service gets added to the cluster that exports the following cluster metadata to the outside:
   - Istio root certificate (accessible without authentication).

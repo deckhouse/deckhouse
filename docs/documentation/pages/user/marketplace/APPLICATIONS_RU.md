@@ -1,7 +1,7 @@
 ---
 title: Установка и управление приложениями
 permalink: ru/user/marketplace/applications.html
-description: "Установка, обновление и удаление приложений в Deckhouse Kubernetes Platform Marketplace. Просмотр доступных версий пакетов, создание Application, проверка условий статуса и управление несколькими экземплярами."
+description: "Установка, обновление и удаление приложений в Deckhouse Platform Marketplace. Просмотр доступных версий пакетов, создание Application, проверка условий статуса и управление несколькими экземплярами."
 lang: ru
 search: Application, install application, application conditions, установка приложения, условия приложения, обновление приложения
 ---
@@ -104,7 +104,7 @@ d8 k get app -n <NAMESPACE> <APPLICATION_NAME> -o yaml
 | `UpdateInstalled` | Новая версия скачана, манифесты и хуки применены при обновлении |
 | `ConfigurationApplied` | Пользовательские настройки успешно применены |
 | `Scaled` | Все реплики подов находятся в состоянии Ready |
-| `Managed` | Приложение корректно управляется DKP |
+| `Managed` | Приложение корректно управляется DP |
 | `Ready` | Приложение полностью готово к работе |
 
 Для быстрого просмотра всех условий используйте следующую команду:
@@ -134,12 +134,12 @@ status:
   summary:
     state: Updating
     message: "Update is waiting for dependent modules to converge; previous version is still serving"
-    tip: "Waiting until DKP processes all dependent modules to start the update."
+    tip: "Waiting until DP processes all dependent modules to start the update."
 ```
 
 - **`state`** — текущее общее состояние приложения.
 - **`message`** — объясняет, почему приложение находится в этом состоянии.
-- **`tip`** — что нужно сделать для решения проблемы или чего ожидает DKP.
+- **`tip`** — что нужно сделать для решения проблемы или чего ожидает DP.
 
 ## Несколько экземпляров
 
@@ -188,7 +188,7 @@ d8 k patch app -n <NAMESPACE> <APPLICATION_NAME> --type=merge -p '{"spec":{"pack
 Если указанная версия не существует в репозитории, `UpdateInstalled` становится `False` с `reason: UpdateFailed`, а текущая версия продолжает работу.
 
 {% alert level="warning" %}
-Указание более ранней версии приложения (downgrade) допускается, но DKP не применяет никакую логику миграции при откате. Убедитесь в совместимость настроек с целевой версией перед применением изменения, при необходимости.
+Указание более ранней версии приложения (downgrade) допускается, но DP не применяет никакую логику миграции при откате. Убедитесь в совместимость настроек с целевой версией перед применением изменения, при необходимости.
 {% endalert %}
 
 ## Удаление приложения

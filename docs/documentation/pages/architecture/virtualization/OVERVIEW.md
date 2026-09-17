@@ -2,10 +2,10 @@
 title: Virtualization subsystem
 permalink: en/architecture/virtualization/
 search: virtualization, virtualization subsystem, dvp
-description: Architecture of the Virtualization subsystem in Deckhouse Kubernetes Platform
+description: Architecture of the Virtualization subsystem in Deckhouse Platform
 ---
 
-This subsection describes the architecture of the Virtualization subsystem of Deckhouse Kubernetes Platform (DKP).
+This subsection describes the architecture of the Virtualization subsystem of Deckhouse Platform (DP).
 
 The Virtualization subsystem is represented by the [`virtualization`](/modules/virtualization/) module, which allows you to declaratively create, run, and manage virtual machines (VM) and their resources.
 

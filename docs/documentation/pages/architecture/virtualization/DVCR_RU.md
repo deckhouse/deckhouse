@@ -3,7 +3,7 @@ title: Deckhouse Virtualization Container Registry (DVCR)
 permalink: ru/architecture/virtualization/dvcr.html
 lang: ru
 search: deckhouse virtualization container registry, dvcr 
-description: Архитектура компонента DVCR модуля virtualization в Deckhouse Kubernetes Platform.
+description: Архитектура компонента DVCR модуля virtualization в Deckhouse Platform.
 ---
 
 Компонент Deckhouse Virtualization Container Registry (DVCR) модуля [`virtualization`](/modules/virtualization/) — это специализированное хранилище образов контейнеров для хранения и кеширования образов виртуальных машин (ВМ). Компонент [CDI](cdi.html) модуля [`virtualization`](/modules/virtualization/) использует хранящиеся в DVCR образы в качестве источника для ресурсов InternalVirtualizationDataVolume, с помощью которых создаются диски ВМ, управляемых KubeVirt.
@@ -17,7 +17,7 @@ description: Архитектура компонента DVCR модуля virtu
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура компонента DVCR модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура компонента DVCR модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура компонента DVCR модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-dvcr.ru.png)

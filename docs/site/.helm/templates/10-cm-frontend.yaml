@@ -113,7 +113,7 @@ data:
             try_files /$lang/sitemap.xml =404;
         }
 
-        # DKP GS and Guides
+        # DP GS and Guides
         location ~* ^/products/kubernetes-platform/((gs|guides)/(.*))$  {
             try_files /$lang/$1 /$lang/$1/index.html /$lang/$1/ $1 $1/index.html $1/ =404;
         }
@@ -252,8 +252,8 @@ data:
             proxy_pass              $orig_loc;
         }
 
-        # Requests for defaul DKP docs ../documentation/v1/...
-        # This is the default URL for DKP documentation and it is indexed by search engines.
+        # Requests for defaul DP docs ../documentation/v1/...
+        # This is the default URL for DP documentation and it is indexed by search engines.
         location ~* ^/products/kubernetes-platform/documentation/v1/(.*)$ {
             # $channel_name is mapped to $channel_version (see map above)
 {{- if eq $.Values.werf.env "web-production" }}
@@ -294,7 +294,7 @@ data:
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
-        # PDF downloads for specific DKP docs version
+        # PDF downloads for specific DP docs version
         location ~* ^/products/kubernetes-platform/documentation/(latest|v1\.[0-9]+)/pdf/(.+\.pdf)$ {
             set $doc_version "$1";
             set $pdf_file "$2";
@@ -327,7 +327,7 @@ data:
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
-        # Requests for specific DKP docs version
+        # Requests for specific DP docs version
         location ~* ^/products/kubernetes-platform/documentation/(latest|v1\.[0-9]+)/(.*)$ {
             set $doc_version "$1";
             set $doc_path "$2";
@@ -361,7 +361,7 @@ data:
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
-        # Requests for DKP CSE docs version
+        # Requests for DP CSE docs version
         location ~* ^/products/kubernetes-platform/documentation/(v[0-9]+\.[0-9]+-cse)/(.*)$ {
             set $doc_version "$1";
             set $doc_path "$2";

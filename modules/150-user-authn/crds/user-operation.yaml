@@ -40,7 +40,7 @@ spec:
                   type: string
                   description: |
                     Type of the user operation. Possible values:
-                    
+
                     * `ResetPassword`: Password reset.
                     * `Reset2FA`: Two-factor authentication reset.
                     * `Lock`: User lock.
@@ -49,7 +49,7 @@ spec:
                   type: string
                   description: |
                     Indicates who initiated the operation. Possible values:
- 
+
                     * `admin`: By an administrator.
                     * `system`: Automatically by the system.
                     * `self`: By the user.
@@ -74,7 +74,7 @@ spec:
                   type: string
                   description: |
                     Current phase of the operation. Possible values:
- 
+
                     * `Succeeded`: Operation completed successfully.
                     * `Failed`: Operation failed.
                   enum:
@@ -126,7 +126,7 @@ spec:
                   type: string
                   description: |
                     Type of the user operation. Possible values:
-                    
+
                     * `ResetPassword`: Password reset.
                     * `Reset2FA`: Two-factor authentication reset.
                     * `Lock`: User lock.
@@ -135,10 +135,10 @@ spec:
                   type: string
                   description: |
                     Indicates who initiated the operation. Possible values:
- 
-                    * `admin`: By an administrator.
-                    * `system`: Automatically by the system.
-                    * `self`: By the user.
+
+                    * `admin`: By an administrator (e.g. via `d8 iam user` CLI or a manual UserOperation).
+                    * `system`: Automatically by the system (e.g. automatic lockout after exceeding `passwordPolicy.lockout.maxAttempts`).
+                    * `self`: By the user (self-service password reset in the DP authentication interface).
                 resetPassword:
                   type: object
                   description: "Parameters for password reset."
@@ -160,7 +160,7 @@ spec:
                   type: string
                   description: |
                     Current phase of the operation. Possible values:
- 
+
                     * `Succeeded`: Operation was completed successfully.
                     * `Failed`: Operation failed.
                   enum:

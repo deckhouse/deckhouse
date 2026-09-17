@@ -1,6 +1,6 @@
 ---
 title: "The descheduler module"
-description: "Deckhouse Kubernetes Platform, the descheduler module. Every 15 minutes, analyzes the cluster state and performs pod eviction according to the conditions described in the active strategies."
+description: "Deckhouse Platform, the descheduler module. Every 15 minutes, analyzes the cluster state and performs pod eviction according to the conditions described in the active strategies."
 ---
 
 Every 15 minutes, the module analyzes the cluster state and performs pod eviction according to the conditions described in the active [strategies](#strategies). Evicted pods go through the scheduling process again, considering the current state of the cluster. This helps redistribute workloads according to the chosen strategy.

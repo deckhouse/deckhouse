@@ -17,7 +17,7 @@ description: Архитектура модуля node-manager для Static-уз
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля node-manager для Static-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-static-nodes.ru.png)
@@ -39,7 +39,7 @@ Bashible — это ключевой компонент подсистемы Clu
 
 3. **Caps-controller-manager** (Deployment) — CAPI Provider Static (CAPS), реализация провайдера декларативного управления статическими узлами (серверами bare metal или виртуальными машинами) для проекта [Cluster API Kubernetes](https://github.com/kubernetes-sigs/cluster-api). Работает как дополнение к capi-controller-manager.
 
-   CAPS представляет собой дополнительный слой абстракции над существующим функционалом DKP по автоматической настройке и очистке статических узлов с помощью скриптов, генерируемых для каждой группы узлов. Компонент не привязан к конкретному облаку. Подробнее про работу CAPS можно почитать в [документации модуля `node-manager`](/modules/node-manager/#работа-со-статическими-узлами).
+   CAPS представляет собой дополнительный слой абстракции над существующим функционалом DP по автоматической настройке и очистке статических узлов с помощью скриптов, генерируемых для каждой группы узлов. Компонент не привязан к конкретному облаку. Подробнее про работу CAPS можно почитать в [документации модуля `node-manager`](/modules/node-manager/#работа-со-статическими-узлами).
 
 4. **Early-oom** (DaemonSet) — на каждом узле разворачивается под, который считывает из каталога `/proc` метрики по загрузке ресурсов на хосте и в случае повышенной нагрузки завершает поды раньше, чем это сделает [kubelet](../../kubernetes-and-scheduling/kubelet.html). **Early-oom** по умолчанию включен, но его можно отключить в [настройках модуля](/modules/node-manager/configuration.html#parameters-earlyoomenabled) в случае, если он создаёт проблемы для нормальной работы узлов.
 

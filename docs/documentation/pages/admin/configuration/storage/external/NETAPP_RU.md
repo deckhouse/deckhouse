@@ -4,14 +4,14 @@ permalink: ru/admin/configuration/storage/external/netapp.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform (DKP) реализована поддержка систем хранения данных (СХД) NetApp для управления томами в Kubernetes с использованием CSI-драйвера. Такая интеграция обеспечивает надежное, масштабируемое и высокопроизводительное хранилище, подходящее для критически важных рабочих нагрузок. Для работы с системами хранения NetApp применяется [модуль `csi-netapp`](/modules/csi-netapp/), с помощью которого можно создавать StorageClass в Kubernetes через создание ресурса [NetappStorageClass](/modules/csi-netapp/cr.html#netappstorageclass).
+В Deckhouse Platform (DP) реализована поддержка систем хранения данных (СХД) NetApp для управления томами в Kubernetes с использованием CSI-драйвера. Такая интеграция обеспечивает надежное, масштабируемое и высокопроизводительное хранилище, подходящее для критически важных рабочих нагрузок. Для работы с системами хранения NetApp применяется [модуль `csi-netapp`](/modules/csi-netapp/), с помощью которого можно создавать StorageClass в Kubernetes через создание ресурса [NetappStorageClass](/modules/csi-netapp/cr.html#netappstorageclass).
 
 {% alert level="warning" %}
 Создание StorageClass для CSI-драйвера `csi.netapp.com` пользователем запрещено.
 На данный момент модулем поддерживаются СХД, совместимые с [Trident CSI от NetApp](https://github.com/NetApp/trident). Для поддержки других СХД NetApp свяжитесь [с технической поддержкой Deckhouse](/tech-support/).
 {% endalert %}
 
-На этой странице представлены инструкции по подключению NetApp к DKP, настройке соединения и созданию StorageClass.
+На этой странице представлены инструкции по подключению NetApp к DP, настройке соединения и созданию StorageClass.
 
 ## Системные требования
 

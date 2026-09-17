@@ -1,7 +1,7 @@
 ---
 title: "An example of creating a module with adaptation of an existing chart"
 permalink: en/architecture/module-development/example/
-description: Step-by-step example of creating a Deckhouse Kubernetes Platform module by adapting an existing Helm chart and publishing it through a CI/CD pipeline.
+description: Step-by-step example of creating a Deckhouse Platform module by adapting an existing Helm chart and publishing it through a CI/CD pipeline.
 ---
 
 {% raw %}
@@ -79,7 +79,7 @@ This section provides an example of creating a `helloworld` module based on [mod
    echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/helloworld/Dockerfile
    ```
 
-1. Replace the image in the Deployment manifest with the Deckhouse Kubernetes Platform library helper. This will allow you to use the current content-based image tag.
+1. Replace the image in the Deployment manifest with the Deckhouse Platform library helper. This will allow you to use the current content-based image tag.
 
    ```shell
    sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloworld") }}/g' templates/deployment.yaml
@@ -133,11 +133,11 @@ Here's how you can publish version `v0.0.1` of the module to the *Alpha* release
 
 1. Confirm that the module publishing workflow has completed successfully.
 
-You can now access your module in a cluster managed by Deckhouse Kubernetes Platform.
+You can now access your module in a cluster managed by Deckhouse Platform.
 
 ## Enabling a module in a cluster
 
-The following is the sequence of steps to enable the `helloworld` in a cluster managed by Deckhouse Kubernetes Platform.
+The following is the sequence of steps to enable the `helloworld` in a cluster managed by Deckhouse Platform.
 
 1. Create an access token in the GitHub repository with permissions to handle GitHub Packages.
 1. Generate an authentication string to access the GitHub Packages container registry in [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials) format; insert your GitHub username (or organization) and access token in the angle brackets below:
@@ -240,7 +240,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-1. If the release has been successfully installed, wait for the Deckhouse Kubernetes Platform pod to restart.
+1. If the release has been successfully installed, wait for the Deckhouse Platform pod to restart.
 
    ```shell
    d8 k -n d8-system get pod -l app=deckhouse
@@ -248,13 +248,13 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
 
    After a while, the module objects will be available in the cluster.
 
-   If you run into errors while starting the module, check the DKP log:
+   If you run into errors while starting the module, check the DP log:
 
    ```shell
    d8 k -n d8-system logs deploy/deckhouse -f | jq -rc '.msg'
    ```
 
-  or check the status of the DKP queue:
+  or check the status of the DP queue:
 
    ```shell
    d8 system queue list

@@ -1,9 +1,9 @@
 ---
-title: Архитектура DKP (модель C4)
+title: Архитектура DP (модель C4)
 permalink: ru/architecture/c4-model.html
 lang: ru
 search: модель C4, диаграмма контекста, диаграмма подсистем, диаграмма модулей
-description: Описание архитектуры Deckhouse Kubernetes Platform в нотации модели C4 — диаграммы контекста, подсистем и модулей.
+description: Описание архитектуры Deckhouse Platform в нотации модели C4 — диаграммы контекста, подсистем и модулей.
 relatedLinks:
   - title: "The C4 model for visualising software architecture"
     url: "https://c4model.com/"
@@ -27,21 +27,19 @@ relatedLinks:
 
 Диаграммы уровня 2 и выше приведены в разделах, описывающих архитектуру отдельных модулей.
 
-Чтобы получить общее представление об архитектуре Deckhouse Kubernetes Platform (DKP), достаточно изучить диаграмму уровня 1, а также диаграммы подсистем и модулей. Для детального изучения устройства каждого сервиса обратитесь к диаграммам уровня 2 и выше, представленным в соответствующих разделах.
+Чтобы получить общее представление об архитектуре Deckhouse Platform (DP), достаточно изучить диаграмму уровня 1, а также диаграммы подсистем и модулей. Для детального изучения устройства каждого сервиса обратитесь к диаграммам уровня 2 и выше, представленным в соответствующих разделах.
 
 ## Условные обозначения
 
 Для элементов диаграмм используется следующие графические символы:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Условные обозначения на диаграммах DKP](../../images/architecture/c4-legend.ru.png)
+![Условные обозначения на диаграммах DP](../../images/architecture/c4-legend.ru.png)
 
 ## Диаграмма контекста
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Диаграмма контекста DKP](../../images/architecture/c4-l1-context.ru.png)
+![Диаграмма контекста DP](../../images/architecture/c4-l1-context.ru.png)
 
-С DKP взаимодействуют:
+С DP взаимодействуют:
 
 * **Администратор** — устанавливает и настраивает платформу.
 * **Инженер безопасности** — управляет информационной безопасностью.
@@ -52,14 +50,13 @@ relatedLinks:
 
 ## Диаграмма подсистем
 
-На данной диаграмме изображены подсистемы DKP.
+На данной диаграмме изображены подсистемы DP.
 
 {% alert level="info" %}
 Связи между подсистемами показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Диаграмма подсистем DKP](../../images/architecture/c4-subsystems.ru.png)
+![Диаграмма подсистем DP](../../images/architecture/c4-subsystems.ru.png)
 
 ## Диаграмма модулей
 
@@ -69,5 +66,4 @@ relatedLinks:
 Связи между модулями показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Диаграмма модулей DKP](../../images/architecture/c4-modules.ru.png)
+![Диаграмма модулей DP](../../images/architecture/c4-modules.ru.png)

@@ -12,7 +12,7 @@
 
 ### Подсистема Deckhouse
 
-- Добавлена возможность развертывания кластера DKP с использованием [режима `Proxy`](https://deckhouse.ru/modules/deckhouse/v1.76/configuration.html#parameters-registry-proxy) для доступа к хранилищу образов.
+- Добавлена возможность развертывания кластера DP с использованием [режима `Proxy`](https://deckhouse.ru/modules/deckhouse/v1.76/configuration.html#parameters-registry-proxy) для доступа к хранилищу образов.
 
 - `Kubectl` на узлах кластера заменен на алиас `d8 k` ([утилита Deckhouse CLI](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.76/cli/d8/)).
 
@@ -84,7 +84,7 @@
     Интеграции, использующие Authorization Code Flow, не затрагиваются.
 
   - Добавлена поддержка стандарта аутентификации SAML 2.0 [через ресурс DexProvider](https://deckhouse.ru/modules/user-authn/v1.76/cr.html#dexprovider-v1-spec-saml).
-    Кластер DKP теперь можно подключать к таким провайдерам, как AD FS, Okta, Keycloak, OneLogin и Shibboleth.
+    Кластер DP теперь можно подключать к таким провайдерам, как AD FS, Okta, Keycloak, OneLogin и Shibboleth.
 
   - Для SAML-провайдера реализована поддержка refresh-токенов на стороне Dex.
     Это позволяет DexAuthenticator и kubeconfig-generator обновлять токены без повторного входа пользователя вручную.
@@ -153,7 +153,7 @@
 
 - Изменения [в модуле `cloud-provider-aws`](https://deckhouse.ru/modules/cloud-provider-aws/v1.76/):
 
-  - Логика освобождения узла от нагрузок при завершении Spot Instance перенесена в DKP.
+  - Логика освобождения узла от нагрузок при завершении Spot Instance перенесена в DP.
     Это делает обработку spot-узлов более единообразной.
   - Исправлена обработка регионов, где ещё не поддерживается API DescribeInstanceTopology.
     Это снижает число ложных ошибок IAM.
@@ -194,7 +194,7 @@
 
   - Добавлена поддержка ответов на ICMP-запросы (`ping`) по ExternalIP для сервисов с `type: LoadBalancer` при использовании MetalLB.
 
-- Реализован [механизм переключения между поддерживаемыми CNI-плагинами](https://deckhouse.ru/products/kubernetes-platform/guides/cni-migration.html) в кластере DKP.
+- Реализован [механизм переключения между поддерживаемыми CNI-плагинами](https://deckhouse.ru/products/kubernetes-platform/guides/cni-migration.html) в кластере DP.
 
 - В модуле `node-local-dns` добавлена возможность отключения резолвинга DNS-запросов по IPv6 с помощью [параметра `disableIPv6`](https://deckhouse.ru/modules/node-local-dns/v1.76/configuration.html#parameters-disableipv6).
 

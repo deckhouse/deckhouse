@@ -1,19 +1,19 @@
 ---
 title: Политики безопасности
 permalink: ru/admin/configuration/security/policies.html
-description: "Настройка политик безопасности в Deckhouse Kubernetes Platform с использованием Gatekeeper и Pod Security Standards. Применение политик, соответствие требованиям и управление безопасностью кластера."
+description: "Настройка политик безопасности в Deckhouse Platform с использованием Gatekeeper и Pod Security Standards. Применение политик, соответствие требованиям и управление безопасностью кластера."
 lang: ru
 search: security policies, pod security standards, gatekeeper, security enforcement, policy management, политики безопасности
 ---
 
-Deckhouse Kubernetes Platform (DKP) позволяет управлять безопасностью приложений в кластере с помощью набора политик,
-соответствующих модели [Kubernetes Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и дополнительно расширяемых через встроенные механизмы DKP.
+Deckhouse Platform (DP) позволяет управлять безопасностью приложений в кластере с помощью набора политик,
+соответствующих модели [Kubernetes Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и дополнительно расширяемых через встроенные механизмы DP.
 
 Для реализации политик безопасности в DKP используется [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
 
 ## Применение Pod Security Standards
 
-В DKP поддерживаются три уровня политики безопасности:
+В DP поддерживаются три уровня политики безопасности:
 
 - `privileged` — неограничивающая политика с максимально широким уровнем разрешений;
 - `baseline` — минимально ограничивающая политика,
@@ -25,11 +25,11 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 
 Используемая по умолчанию политика определяется следующим образом:
 
-- в версиях DKP до v1.55 политика по умолчанию — `privileged`;
-- начиная с версии DKP v1.55, политика по умолчанию — `baseline`.
+- в версиях DP до v1.55 политика по умолчанию — `privileged`;
+- начиная с версии DP v1.55, политика по умолчанию — `baseline`.
 
 {% alert level="info" %}
-При обновлении DKP на версию v1.55 или выше политика по умолчанию не изменится автоматически.
+При обновлении DP на версию v1.55 или выше политика по умолчанию не изменится автоматически.
 {% endalert %}
 
 ### Назначение политики
@@ -54,7 +54,7 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 - `warn` — работает как `dryrun`, но дополнительно выводит предупреждение с указанием причины,
   по которой бы произошёл запрет действия в режиме `deny`.
 
-По умолчанию, политики Pod Security Standards в DKP применяются в режиме `deny`.
+По умолчанию, политики Pod Security Standards в DP применяются в режиме `deny`.
 В этом режиме поды приложений, не удовлетворяющие политикам, не могут быть запущены в кластере.
 
 Как и в случае с назначением политик, режим их применения можно задать:
@@ -150,11 +150,11 @@ spec:
 
 ## Операционные политики
 
-DKP предоставляет механизм создания операционных политик с помощью [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy).
+DP предоставляет механизм создания операционных политик с помощью [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy).
 В операционных политиках задаются требования к объектам в кластере:
 допустимые репозитории, требуемые ресурсы, наличие проб и т. д.
 
-Команда разработки DKP рекомендует установить следующую политику с минимально необходимым набором требований:
+Команда разработки DP рекомендует установить следующую политику с минимально необходимым набором требований:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -611,12 +611,12 @@ spec:
 ## Проверка подписи образов
 
 {% alert level="warning" %}
-Доступно в следующих редакциях DKP: SE+, EE, CSE Lite, CSE Pro.
+Доступно в следующих редакциях DP: SE+, EE, Ultimate, CSE Lite, CSE Pro, DP Certified Pro, DP Certified Lite.
 
 Поддерживается Cosign не выше v2. Версии v3 и выше не поддерживаются.
 {% endalert %}
 
-DKP поддерживает проверку подписей образов контейнеров с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).  
+DP поддерживает проверку подписей образов контейнеров с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).  
 Проверка подписи образов контейнеров позволяет убедиться в их целостности (что образ не был изменен после его создания) и подлинности (что образ был создан доверенным источником). Включить проверку подписи образов контейнеров в кластере можно с помощью параметра [policies.verifyImageSignatures](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) SecurityPolicy.  
 
 При подписании образа, в хранилище образов контейнеров создается специальный тег, который содержит подпись образа.  
@@ -649,7 +649,7 @@ DKP поддерживает проверку подписей образов к
    Здесь:
    - `<REGISTRY_IMAGE_PATH>` — путь к образу, который нужно указать при запуске, например: `registry.private.ru/labs/application/image:latest`.
 
-Чтобы включить проверку подписи образов контейнеров в кластере DKP:
+Чтобы включить проверку подписи образов контейнеров в кластере DP:
 
 1. Используйте [параметр `policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) SecurityPolicy, указав сгенерированный публичный ключ.
 
@@ -740,7 +740,7 @@ DKP поддерживает проверку подписей образов к
 ## Использование альтернатив для управления политиками безопасности
 
 Если вместо встроенного механизма управления политиками безопасности
-в кластере DKP используется альтернативное решение (например, [Kyverno](https://kyverno.io/docs/introduction/)),
+в кластере DP используется альтернативное решение (например, [Kyverno](https://kyverno.io/docs/introduction/)),
 настройте исключения для следующих неймспейсов:
 
 - `kube-system`;

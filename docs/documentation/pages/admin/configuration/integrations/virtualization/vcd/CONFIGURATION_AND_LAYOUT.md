@@ -5,7 +5,7 @@ permalink: en/admin/integrations/virtualization/vcd/configuration-and-layout-sch
 
 ## Layouts
 
-Deckhouse Kubernetes Platform supports two layouts for deploying resources in VCD.
+Deckhouse Platform supports two layouts for deploying resources in VCD.
 
 ### Standard
 
@@ -169,7 +169,7 @@ masterNodeGroup:
 
 ## Configuration
 
-Integration is carried out using the [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) resource, which describes the configuration of the cloud cluster in VCD and is used by the virtualization system if the cluster’s control plane is hosted there. The DKP module responsible for integration is automatically configured based on the selected deployment layout.
+Integration is carried out using the [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) resource, which describes the configuration of the cloud cluster in VCD and is used by the virtualization system if the cluster’s control plane is hosted there. The DP module responsible for integration is automatically configured based on the selected deployment layout.
 
 To modify the configuration in a running cluster, execute the following command:
 

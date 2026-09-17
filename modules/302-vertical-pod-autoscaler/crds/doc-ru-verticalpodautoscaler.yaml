@@ -153,7 +153,7 @@ spec:
               groups:
                 description: |-
                   Сгруппированные рекомендации по значениям `spec.scope` для scoped DaemonSet.
-                  
+
                   В этом режиме `status.groups` является источником истины, а `status.recommendation` не заполняется.
                 items:
                   properties:
@@ -165,7 +165,7 @@ spec:
                     containerRecommendations:
                       description: |-
                         Рекомендации по контейнерам для группы.
-                        
+
                         В scoped-режиме поле хранится в компактном виде (в первую очередь `containerName` и `target`).
                       items:
                         properties:
@@ -174,12 +174,12 @@ spec:
                           scope:
                             description: |-
                               Необязательное поле совместимости.
-                              
+
                               Для scoped DaemonSet фактическая область рекомендации определяется через `spec.scope` + `scopeValue` группы.
               recommendation:
                 description: |-
                   Последнее вычисленное количество ресурсов, рекомендованных автоскейлером для контролируемых подов.
-                  
+
                   Используется для обычного режима (Deployment/StatefulSet/DaemonSet без `spec.scope`).
                 properties:
                   containerRecommendations:

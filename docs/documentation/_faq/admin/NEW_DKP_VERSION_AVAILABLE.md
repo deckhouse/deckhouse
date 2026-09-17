@@ -1,5 +1,5 @@
 ---
-title: How can I know when a new DKP version is available for the cluster?
+title: How can I know when a new DP version is available for the cluster?
 subsystems:
   - deckhouse
 lang: en

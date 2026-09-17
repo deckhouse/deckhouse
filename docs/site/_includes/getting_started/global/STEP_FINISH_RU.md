@@ -7,7 +7,7 @@
 <div markdown="1">
 ## Все установлено, настроено и работает!
 
-Рассмотрим дальнейшие возможности Deckhouse Kubernetes Platform, открывающиеся сразу после установки.
+Рассмотрим дальнейшие возможности Deckhouse Platform, открывающиеся сразу после установки.
 
 По умолчанию, доступ ко всем компонентам осуществляется через [Dex](https://dexidp.io/) c использованием статического пользователя, созданного в кластере во время установки.
 
@@ -16,7 +16,7 @@
 - Логин — `admin@deckhouse.io`
 - Пароль — `<GENERATED_PASSWORD>` (вы также можете найти его в CustomResource `User` в файле `config.yml`)
 
-Используйте их для доступа к веб-интерфейсу компонентов Deckhouse Kubernetes Platform.
+Используйте их для доступа к веб-интерфейсу компонентов Deckhouse Platform.
 </div>
 
 {% include getting_started/global/partials/FINISH_CARDS_RU.md %}

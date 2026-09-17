@@ -15,7 +15,7 @@ The provider supports working with only one disk in the virtual machine template
 
 To rule the Microsoft Azure cloud, you need an account and at least a single [Subscription connected to id](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
 
-You have to create a service account with Microsoft Azure so that Deckhouse Kubernetes Platform can manage cloud resources:
+You have to create a service account with Microsoft Azure so that Deckhouse Platform can manage cloud resources:
 
 1. Install the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), login and get Subscription ID:
 

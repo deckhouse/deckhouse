@@ -7,7 +7,7 @@
 <div markdown="1">
 ## Everything is installed, configured, and working!
 
-Now that you have installed and properly configured Deckhouse Kubernetes Platform, let's look at what you can do with it.
+Now that you have installed and properly configured Deckhouse Platform, let's look at what you can do with it.
 
 By default, the [Dex](https://dexidp.io/) is used for accessing all the components.
 
@@ -16,7 +16,7 @@ Here are credentials **generated** in the previous steps:
 - Username — `admin@deckhouse.io`
 - Password — `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `config.yml` file)
 
-Use them to access the web interface of the Deckhouse Kubernetes Platform components.
+Use them to access the web interface of the Deckhouse Platform components.
 </div>
 
 {% include getting_started/global/partials/FINISH_CARDS.md %}

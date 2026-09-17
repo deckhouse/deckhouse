@@ -578,7 +578,7 @@ spec:
 
 ## Устройство федерации из двух кластеров с помощью кастомного ресурса IstioFederation
 
-{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition, Ultimate, Certified Security Edition Pro, DP Certified Pro.{% endalert %}
 
 Cluster A:
 
@@ -606,7 +606,9 @@ spec:
 
 ## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
 
-{% alert level="warning" %}Доступно только в редакции Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition, Ultimate, Certified Security Edition Pro, DP Certified Pro.{% endalert %}
+
+{% alert level="warning" %}Мультикластер работает только с рабочими нагрузками в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).{% endalert %}
 
 Cluster A:
 
@@ -658,7 +660,7 @@ annotations:
 
 ### Обновление control plane Istio
 
-* Deckhouse Kubernetes Platform позволяет установить несколько версий control plane одновременно:
+* DP позволяет установить несколько версий control plane одновременно:
   * Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [`globalVersion`](configuration.html#parameters-globalversion).
   * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x21`). Настраиваются параметром [`additionalVersions`](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
@@ -685,7 +687,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 ### Автоматическое обновление data plane Istio
 
-{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition, Ultimate, Certified Security Edition Pro, DP Certified Pro.{% endalert %}
 
 Для автоматизации обновления istio-сайдкаров установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
 

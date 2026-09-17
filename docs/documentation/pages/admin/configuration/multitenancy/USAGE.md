@@ -4,7 +4,7 @@ permalink: en/admin/multitenancy/project-management.html
 description: Project management
 ---
 
-Deckhouse Kubernetes Platform includes a set of templates for creating projects:
+Deckhouse Platform includes a set of templates for creating projects:
 
 - `default` is a template for basic project use cases:
   - resource limits
