@@ -58,25 +58,9 @@ func orderedNSPRs(nsprs []deckhousev1alpha1.NodeStaticPodRequest) []*deckhousev1
 	return ordered
 }
 
-// rejectedNSPRs settles, once per pass, everything this controller can decide
-// before a node sees the object. Three checks in this order, because each only
-// makes sense once the one before it passed:
-//
-//  1. the object's own name belongs to a control-plane manifest the node agent
-//     writes itself;
-//  2. the manifest is not a valid Pod, or names no pod at all;
-//  3. the pod it names was already asked for by an older object.
-//
-// The third is the only contest between objects, and it is cluster-wide the way
-// the extension requests' is (resolveNERConflicts, extensions.go). Two entries
-// for one namespace/metadata.name in one NodeConfig is a document the node's
-// loader refuses whole — the node would lose every other static pod with it.
-// Settling it per node would be laxer, since two objects selecting disjoint
-// groups never meet, but it would also let one object be applied on one node and
-// refused on another, with a single status field to say so.
-//
-// A refused object claims nothing, so the pod it named stays free for the next
-// one: an object that lost on its own name must not take a pod down with it.
+// rejectedNSPRs runs the three checks in order (reserved name, invalid manifest,
+// pod already claimed by an older object); the contest is cluster-wide, as in
+// resolveNERConflicts (extensions.go), and a refused object claims nothing.
 func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) map[string]nsprRefusal {
 	rejected := map[string]nsprRefusal{}
 	claimed := make(map[string]string, len(ordered))

@@ -36,8 +36,7 @@ func podManifest(pod string) string {
 		"spec:\n  hostNetwork: true\n  containers:\n  - name: main\n    image: deckhouse.local/images:" + pod + "\n"
 }
 
-// nspr builds an object whose manifest names a pod after the object itself. Use
-// nsprForPod where the point is that the two names differ.
+// nspr builds an object whose manifest names a pod after the object itself.
 func nspr(name string, spec deckhousev1alpha1.NodeStaticPodRequestSpec) deckhousev1alpha1.NodeStaticPodRequest {
 	if spec.Manifest == "" {
 		spec.Manifest = podManifest(name)
@@ -202,7 +201,7 @@ func TestNodeStaticPodRequestsOrderDoesNotFollowTheListing(t *testing.T) {
 		nsprCreated("apple", metav1.NewTime(time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)), deckhousev1alpha1.NodeStaticPodRequestSpec{}),
 	}, "worker")
 	require.Equal(t, []string{"apple", "zebra"}, []string{byName[0].Name, byName[1].Name},
-		"the rendered array follows the pod contest order, not the names")
+		"the rendered array is sorted by name, not by creation order")
 }
 
 // An object this controller refused never reaches a node, so the reason has to
@@ -298,4 +297,24 @@ func TestRejectedNSPRs(t *testing.T) {
 		}))
 		require.Equal(t, reasonReservedName, rejected["etcd"].reason)
 	})
+}
+
+// The contest is cluster-wide: a younger object naming a pod an older one already
+// asked for is refused in every group, even one the older object never selects.
+func TestAYoungerDuplicateIsRefusedInEveryGroup(t *testing.T) {
+	manifest := nspr("shared", deckhousev1alpha1.NodeStaticPodRequestSpec{}).Spec.Manifest
+	nsprs := []deckhousev1alpha1.NodeStaticPodRequest{
+		nsprCreated("older", metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)), deckhousev1alpha1.NodeStaticPodRequestSpec{
+			NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: []string{"a"}},
+			Manifest:          manifest,
+		}),
+		nsprCreated("younger", metav1.NewTime(time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)), deckhousev1alpha1.NodeStaticPodRequestSpec{
+			NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: []string{"b"}},
+			Manifest:          manifest,
+		}),
+	}
+	inA := staticPodsOf(nsprs, "a")
+	require.Len(t, inA, 1)
+	require.Equal(t, "older", inA[0].Name)
+	require.Empty(t, staticPodsOf(nsprs, "b"))
 }
