@@ -17,6 +17,8 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	sigsyaml "sigs.k8s.io/yaml"
+
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
 func TestPickKubeletDigest(t *testing.T) {
@@ -572,5 +576,118 @@ func TestSysextDigestsAgent(t *testing.T) {
 
 		_, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: without}, "1.35")
 		require.ErrorContains(t, err, nodeletExtension)
+	})
+}
+
+// Without pause in the preload nothing starts at all once registry.d belongs to
+// an agent that is not running yet: the sandbox is the first pull of any pod,
+// including the agent's own. So it is put there by the platform, on every node,
+// whether or not that node runs a static pod.
+func TestPlatformImages(t *testing.T) {
+	pause := "sha256:" + strings.Repeat("c", 64)
+	agent := "sha256:" + strings.Repeat("d", 64)
+	digests := map[string]map[string]string{
+		registryPackagesDigestsKey: {"pause": pause, "registryAgent": agent},
+		// The common/pause image is still in the release's digest map and is
+		// deliberately not read here: it is the image a registry serves, while
+		// this list is of artifacts a node imports. Since revision 3.3 nothing
+		// reads it at all — the sandbox is named by the imported image instead.
+		"common": {"pause": "sha256:" + strings.Repeat("e", 64)},
+	}
+
+	t.Run("no agent: pause and nothing else", func(t *testing.T) {
+		images, err := platformImages(digests, false)
+		require.NoError(t, err)
+		require.Equal(t, []internalv1alpha1.Image{{Name: "pause", Digest: pause}}, images)
+	})
+
+	t.Run("agent mode: the agent's own image joins it", func(t *testing.T) {
+		images, err := platformImages(digests, true)
+		require.NoError(t, err)
+		require.Equal(t, []internalv1alpha1.Image{
+			{Name: "pause", Digest: pause},
+			{Name: "registry-agent", Digest: agent},
+		}, images)
+		// Empty on purpose: the proxy's default registry, as for a platform sysext.
+		require.Empty(t, images[1].Repository)
+		require.Empty(t, images[1].AdditionalPath)
+	})
+
+	// Fail-closed, like every other read here. A node told registry.d belongs to
+	// an agent whose image the release did not build pulls nothing at all, so
+	// rendering nothing is the better of two bad answers.
+	t.Run("agent mode with no agent package refuses to render", func(t *testing.T) {
+		_, err := platformImages(map[string]map[string]string{
+			registryPackagesDigestsKey: {"pause": pause},
+		}, true)
+		require.ErrorContains(t, err, "registryAgent")
+	})
+
+	t.Run("no pause package refuses to render", func(t *testing.T) {
+		_, err := platformImages(map[string]map[string]string{
+			registryPackagesDigestsKey: {"registryAgent": agent},
+		}, false)
+		require.ErrorContains(t, err, "pause")
+	})
+}
+
+// Who owns containerd's registry.d is the registry module's answer, read from
+// the one secret it already writes for bashible. A cluster where that module
+// never said anything must go on exactly as it did before.
+func TestReadRegistryAgentMode(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	secret := func(data map[string][]byte) client.Client {
+		return fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "registry-bashible-config"},
+			Data:       data,
+		}).Build()
+	}
+
+	tests := []struct {
+		name   string
+		client client.Client
+		want   bool
+	}{
+		{
+			// origin/main: the legacy orchestrator writes this secret and its
+			// config type has no agent field at all.
+			name:   "a config with no agent key",
+			client: secret(map[string][]byte{"config": []byte("mode: Direct\nversion: abc\nimagesBase: registry.example.com\n")}),
+		},
+		{
+			name: "the agent marker",
+			client: secret(map[string][]byte{"config": []byte(
+				"agent:\n  endpoint: 127.0.0.1:5001\n  dropInFile: /etc/containerd/registry.d/_default/hosts.toml\nmode: Managed\n")}),
+			want: true,
+		},
+		{
+			name:   "the secret carries no config key",
+			client: secret(map[string][]byte{"other": []byte("{}")}),
+		},
+		{
+			// A cluster whose registry module never wrote it, or is not enabled.
+			name:   "no secret at all",
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &sourceReader{Reader: tt.client}
+			agent, err := s.readRegistryAgentMode(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, tt.want, agent)
+		})
+	}
+
+	// A document nobody can parse is not "no agent": it is a read that did not
+	// happen, and guessing "nodelet owns the directory" would take registry.d
+	// away from an agent that is running on every node.
+	t.Run("a config that does not parse stops the pass", func(t *testing.T) {
+		s := &sourceReader{Reader: secret(map[string][]byte{"config": []byte("\tnot: yaml")})}
+		_, err := s.readRegistryAgentMode(context.Background())
+		require.Error(t, err)
 	})
 }
