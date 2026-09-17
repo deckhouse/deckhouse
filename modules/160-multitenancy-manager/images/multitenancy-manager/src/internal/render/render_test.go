@@ -191,3 +191,37 @@ func TestManifestsSingleNamespace(t *testing.T) {
 	}
 	require.Equal(t, 1, count, "single-namespace project renders exactly one NetworkPolicy")
 }
+
+func TestManifestsSkipsOperationPolicyWhenRequiredRequestsDisabled(t *testing.T) {
+	t.Parallel()
+	tmpl := &v1alpha2.ProjectTemplate{
+		Spec: v1alpha2.ProjectTemplateSpec{
+			ParametersSchema: v1alpha2.ParametersSchema{
+				OpenAPIV3Schema: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"requiredRequests": map[string]any{"type": "boolean", "default": true},
+					},
+				},
+			},
+		},
+	}
+	project := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+		Spec:       v1alpha3.ProjectSpec{Parameters: map[string]any{"requiredRequests": false}},
+	}
+
+	out, err := Manifests(tmpl, project)
+	require.NoError(t, err)
+	require.NotContains(t, out, "kind: OperationPolicy")
+}
+
+func TestManifestsKeepsOperationPolicyByDefault(t *testing.T) {
+	t.Parallel()
+	tmpl := &v1alpha2.ProjectTemplate{Spec: v1alpha2.ProjectTemplateSpec{}}
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
+
+	out, err := Manifests(tmpl, project)
+	require.NoError(t, err)
+	require.Contains(t, out, "kind: OperationPolicy")
+}

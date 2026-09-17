@@ -19,6 +19,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
   - `podSecurityProfile` — the [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) profile for the project namespaces: `Baseline` (default) prevents known privilege escalations, `Restricted` applies the strictest hardening practices, `Privileged` restricts nothing.
   - `extendedMonitoringEnabled` (default `true`) — alerts on controller outages and restarts, 5xx errors in ingress-nginx and low free space on the project's persistent volumes.
   - `clusterLogDestinationName` — the name of the ClusterLogDestination to ship the project logs to. Left unset, the project logs are not shipped anywhere.
+  - `requiredRequests` (default `true`) — when true, workloads in the project must specify CPU and memory requests (a Deny-mode OperationPolicy). Adoption of an existing namespace seeds this to `false` so running workloads are not blocked.
 
 - `secure` — includes all the capabilities of the `default` template, and additionally restricts the users and groups inside containers, audits their calls to the kernel and scans images for vulnerabilities.
 
@@ -100,9 +101,9 @@ To create a project, follow these steps:
 
    A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `d8 k get projects my-project -o yaml`) to get more detailed information about the error.
 
-### Creating a project without a template
+### Creating a project without specifying a template
 
-The `projectTemplateName` field is optional. A project without a template consists only of the namespace and the [standard fields](#standard-project-fields) (administrators, quota) — no template policies are created in it. This is convenient when no settings are needed or they are managed by other means:
+The `projectTemplateName` field is optional: when omitted, the `simple` template is used. Such a project consists only of the namespace and the [standard fields](#standard-project-fields) (administrators, quota) — no template policies are created in it. This is convenient when no settings are needed or they are managed by other means:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -165,10 +166,12 @@ When the source object (a binding, the quota field, etc.) is removed, the corres
 
 ## Virtual projects
 
-Besides the user-created projects, the `d8 k get projects` list always contains two **virtual** projects (labelled `projects.deckhouse.io/virtual-project: "true"`):
+Besides the user-created projects, the `d8 k get projects` list always contains two **virtual** projects (labeled `projects.deckhouse.io/virtual-project: "true"`):
 
-- `deckhouse` — groups the system namespaces (with the `d8-` and `kube-` prefixes);
-- `default` — groups all other namespaces that do not belong to any project.
+- `deckhouse` — groups system namespaces (`d8-*`, `kube-*`, `upmeter-*`, `heritage: deckhouse` / `heritage: upmeter`);
+- `default` — groups remaining namespaces that do not belong to any project (the `default` namespace itself).
+
+Virtual-project status is rebuilt from the live namespace list: a deleted namespace disappears from that list. Virtual projects do not recreate namespaces.
 
 Virtual projects exist for completeness: with them, every namespace of the cluster belongs to some project. They cannot be managed: they are not editable, [ProjectNamespace](cr.html#projectnamespace) and [ProjectRoleBinding](cr.html#projectrolebinding) resources cannot be created in them, and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) does not extend to them.
 
@@ -246,26 +249,22 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 
 ## Creating a project automatically for a namespace
 
-By default (the [`allowNamespacesWithoutProjects: true`](configuration.html#parameters-allownamespaceswithoutprojects) parameter), a namespace created directly (for example, `d8 k create ns my-app`) is automatically wrapped into a project with the same name:
+A namespace created directly (for example, `d8 k create ns my-app`) becomes a project with the same name:
 
-- the project is created without a template and is labelled `multitenancy.deckhouse.io/project-managed-by-namespace: "true"`;
-- the namespace is the source of truth: its labels and annotations are synced into the project parameters; edit and delete the namespace itself (deleting it deletes the project automatically);
-- the specification of such a project cannot be edited manually. To turn it into a regular project (for example, to assign a template), remove the `multitenancy.deckhouse.io/project-managed-by-namespace` label from the project — after that, the project will be managed as usual.
+- the template is picked from what the namespace already carries: `secure` if it has the `security-scanning.deckhouse.io/enabled` label, `default` if it has `security.deckhouse.io/pod-policy` or `extended-monitoring.deckhouse.io/enabled`, and `simple` otherwise;
+- the project parameters are filled in from the current state of the namespace, so nothing inside it changes: the network policy stays unrestricted and the Pod Security Standard keeps the value the namespace already had;
+- from then on the project is the source of truth and is edited like any other project. Deleting the namespace no longer deletes the project — the project recreates the namespace.
 
-If the `allowNamespacesWithoutProjects` parameter is disabled, creating namespaces outside of projects is prohibited — an attempt to run `d8 k create ns` is rejected with an explanation.
+System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`, which stays on the virtual `default` project). There is no label that leaves a user namespace without a project. A namespace whose name is longer than 61 characters is also skipped: that is the Project name limit.
 
-An existing namespace can also be explicitly adopted into a project by adding the `projects.deckhouse.io/adopt` annotation. For example:
+Existing RoleBinding and AuthorizationRule objects inside the namespace keep working after adoption. The namespace Admin is **not** copied into `.spec.administrators` and does **not** become `d8:project:admin`: that role additionally manages ProjectRoleBinding resources, which is a wider contract than in-namespace Admin. To make the team lead a project administrator, a platform operator adds them to `.spec.administrators` or creates a ProjectRoleBinding. Namespace Admin never had `update`/`patch`/`delete` on the Namespace object itself (`get`/`list`/`watch` only); after adoption the Namespace is also owned by Helm (`heritage: multitenancy-manager`), so labels and annotations are changed through the Project, not on the Namespace.
+
+For example:
 
 1. Create a new namespace:
 
    ```shell
    d8 k create ns test
-   ```
-
-1. Add the annotation:
-
-   ```shell
-   d8 k annotate ns test projects.deckhouse.io/adopt=""
    ```
 
 1. Make sure that the project was created:
@@ -280,7 +279,7 @@ An existing namespace can also be explicitly adopted into a project by adding th
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d
-   test        Deployed                                                                             1m
+   test        Deployed   simple                                                                    1m
    ```
 
 You can change the template of the created project to the existing one.
@@ -295,7 +294,7 @@ Note that changing the template may cause a resource conflict. If the template c
 
 ## Standard project fields
 
-Project administrators and resource quotas are no longer part of the project template parameters — they are first-class fields of the [Project](cr.html#project) resource and work with any template (including `simple` and template-less projects):
+Project administrators and resource quotas are no longer part of the project template parameters — they are first-class fields of the [Project](cr.html#project) resource and work with any template (including `simple`):
 
 - `.spec.administrators` — a list of subjects (`kind: User` or `kind: Group` and `name`) that receive administrative access to the project. The controller manages this access as an auto-generated [ProjectRoleBinding](cr.html#projectrolebinding) in the project namespace.
 - `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`). The controller maintains a `ResourceQuota` in the project namespace and reports current usage in `.status.usage`. For `memory` and `storage`, a unit suffix is required (for example `2Gi`). Numbers without a unit mean bytes and are rejected.
@@ -352,7 +351,7 @@ To use a [custom role](/modules/user-authz/faq.html#creating-a-custom-namespace-
 d8 k label clusterrole d8:custom:namespace:developer rbac.deckhouse.io/delegatable=true
 ```
 
-The restriction applies only in the namespaces of "real" projects. It does not apply to [automatically wrapped](#creating-a-project-automatically-for-a-namespace) namespaces (labelled `multitenancy.deckhouse.io/project-managed-by-namespace`).
+The restriction applies in the namespaces of every project, including the ones adopted from a standalone namespace.
 
 ```yaml
 ---

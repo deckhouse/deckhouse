@@ -99,7 +99,10 @@ spec:
                 projectTemplateName:
                   description: |
                     The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
+
+                    Optional. If omitted, the `simple` template is used: it creates the project namespace and nothing else.
                   type: string
+                  default: simple
                 parameters:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
@@ -195,8 +198,9 @@ spec:
                   description: |
                     The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
 
-                    Optional. If omitted, the controller only ensures the project namespace and the standard fields (`administrators`, `quota`).
+                    Optional. If omitted, the `simple` template is used: it creates the project namespace and nothing else.
                   type: string
+                  default: simple
                 administrators:
                   description: |
                     Users and groups that get administrative access to the project.

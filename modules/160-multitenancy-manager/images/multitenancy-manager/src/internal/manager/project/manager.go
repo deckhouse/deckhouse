@@ -18,6 +18,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -30,6 +31,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -38,8 +40,10 @@ import (
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
+	namespacemanager "controller/internal/manager/namespace"
 	"controller/internal/render"
 	rolebinding "controller/internal/rolebinding"
+	"controller/internal/startup"
 	"controller/internal/validate"
 )
 
@@ -62,6 +66,11 @@ const (
 	DefaultProjectName   = "default"
 
 	VirtualTemplate = "virtual"
+
+	// MinimalTemplate renders the project namespace and nothing else. It is what a project gets
+	// when it names no template: the CRD schema defaults the field, and the controller falls back
+	// to the same value for the explicit empty string the schema cannot default.
+	MinimalTemplate = "simple"
 )
 
 type Manager struct {
@@ -78,7 +87,7 @@ func New(client client.Client, helmClient helmClient, logger logr.Logger) *Manag
 	}
 }
 
-func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup) error {
+func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, migration *startup.Migration) error {
 	m.logger.Info("wait until webhook server start")
 	check := func(ctx context.Context) (bool, error) {
 		if err := checker(&http.Request{}); err != nil {
@@ -96,6 +105,20 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		return fmt.Errorf("ensure virtual projects: %w", err)
 	}
 
+	// Wait for leftover-project migration so ensureTemplateName cannot persist "simple"
+	// on a template-less Project before Migrate infers the real template and stamps Helm.
+	if err := migration.Wait(ctx); err != nil {
+		return fmt.Errorf("wait for namespace migration: %w", err)
+	}
+
+	// Rebuild virtual-project inventory from the live namespace list. Status is
+	// otherwise only refreshed when a watch event reaches HandleVirtual, and a
+	// deleted namespace can leave a stale name behind (the Project spec does not
+	// change, so a restart alone does not reconcile).
+	if err := m.refreshVirtualProjects(ctx); err != nil {
+		return fmt.Errorf("refresh virtual projects: %w", err)
+	}
+
 	m.logger.Info("the virtual projects ensured")
 	init.Done()
 
@@ -104,9 +127,50 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 
 // Handle ensures project`s resources
 func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
+	if namespacemanager.IsLeftoverWrap(project) {
+		deleted, err := namespacemanager.New(m.client, m.logger).CompleteLeftover(ctx, project)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if deleted {
+			return ctrl.Result{}, nil
+		}
+		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
+			if apierrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("get the '%s' project: %w", project.Name, err)
+		}
+	}
+
 	// add finalizer and remove labels
 	if err := m.prepareProject(ctx, project); err != nil {
 		m.logger.Error(err, "failed to update the project", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
+	// A project always has a template now. The CRD defaults the field when it is omitted, but an
+	// explicit empty string is a value the apiserver keeps as it is — and that spelling was
+	// meaningful before, so manifests and GitOps repos still carry it. Normalise it here instead of
+	// rejecting it, otherwise such a project would look for a template named "" and never get its
+	// namespace.
+	if err := m.ensureTemplateName(ctx, project); err != nil {
+		m.logger.Error(err, "failed to default the project template", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
+	// Defense in depth: Adopt stamps Helm ownership, but a Project that already existed
+	// (or whose Adopt raced) can still reach the first upgrade without the metadata.
+	if err := helm.StampReleaseOwnership(ctx, m.client, project.Name); err != nil {
+		var holdoff helm.StampHoldoffError
+		if errors.As(err, &holdoff) {
+			return ctrl.Result{RequeueAfter: holdoff.Remaining}, nil
+		}
+		if errors.Is(err, helm.ErrForeignRelease) {
+			project.ClearConditions()
+			_, err := m.failAndRequeue(ctx, project, v1alpha3.ProjectConditionHelmOwnership, err)
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -125,22 +189,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		project.Status.Namespaces = nsStatus
 	}
 
-	if project.Spec.ProjectTemplateName == "" {
-		// Optional template: only ensure the project namespace, no helm release is created.
-		m.logger.Info("the project has no template, ensure namespace only", "project", project.Name)
-		if err := m.ensureNamespace(ctx, project); err != nil {
-			m.logger.Error(err, "failed to ensure the project namespace", "project", project.Name)
-			project.SetState(v1alpha3.ProjectStateError)
-			project.SetConditionFalse(v1alpha3.ProjectConditionProjectResourcesUpgraded, err.Error())
-			if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-				return ctrl.Result{}, updateErr
-			}
-			return ctrl.Result{}, err
-		}
-		project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
-		project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
-		project.SetConditionTrue(v1alpha3.ProjectConditionProjectResourcesUpgraded)
-	} else if done, err := m.handleTemplate(ctx, project); done {
+	if done, err := m.handleTemplate(ctx, project); done {
 		return ctrl.Result{}, err
 	}
 
@@ -357,7 +406,8 @@ func (m *Manager) roleViolation(ctx context.Context, name string, enforceAllowLi
 	return "", nil
 }
 
-// HandleVirtual handles virtual project
+// HandleVirtual inventories unowned namespaces onto a virtual project. It does
+// not create, stamp, or recreate namespaces — delete stays delete.
 func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
 	namespaces := new(corev1.NamespaceList)
 	if err := m.client.List(ctx, namespaces); err != nil {
@@ -365,21 +415,22 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha3.Project) 
 		return ctrl.Result{}, err
 	}
 
+	claimed, err := m.realProjectNames(ctx)
+	if err != nil {
+		m.logger.Error(err, "failed to list projects", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
 	var involvedNamespaces []string
-	for _, namespace := range namespaces.Items {
-		if _, ok := namespace.GetLabels()[v1alpha3.ResourceLabelProject]; ok {
+	for i := range namespaces.Items {
+		ns := &namespaces.Items[i]
+		if VirtualProjectName(ns) != project.Name {
 			continue
 		}
-
-		isDeckhouseNamespace := strings.HasPrefix(namespace.Name, DeckhouseNamespacePrefix) || strings.HasPrefix(namespace.Name, KubernetesNamespacePrefix)
-
-		if project.Name == DeckhouseProjectName && isDeckhouseNamespace {
-			involvedNamespaces = append(involvedNamespaces, namespace.Name)
+		if _, taken := claimed[ns.Name]; taken {
+			continue
 		}
-
-		if project.Name == DefaultProjectName && !isDeckhouseNamespace {
-			involvedNamespaces = append(involvedNamespaces, namespace.Name)
-		}
+		involvedNamespaces = append(involvedNamespaces, ns.Name)
 	}
 
 	if err := m.updateVirtualProject(ctx, project, involvedNamespaces); err != nil {
@@ -389,6 +440,19 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha3.Project) 
 
 	m.logger.Info("the virtual project reconciled", "project", project.Name)
 	return ctrl.Result{}, nil
+}
+
+func (m *Manager) refreshVirtualProjects(ctx context.Context) error {
+	for _, name := range []string{DeckhouseProjectName, DefaultProjectName} {
+		project := new(v1alpha3.Project)
+		if err := m.client.Get(ctx, client.ObjectKey{Name: name}, project); err != nil {
+			return fmt.Errorf("get the '%s' virtual project: %w", name, err)
+		}
+		if _, err := m.HandleVirtual(ctx, project); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Delete deletes project`s resources
@@ -406,14 +470,6 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	// template-less projects own their namespace directly (no helm release deletes it)
-	if project.Spec.ProjectTemplateName == "" {
-		if err := m.deleteNamespace(ctx, project.Name); err != nil {
-			m.logger.Error(err, "failed to delete the project namespace", "project", project.Name)
-			return ctrl.Result{}, err
-		}
-	}
-
 	// remove finalizer
 	if err := m.removeFinalizer(ctx, project); err != nil {
 		m.logger.Error(err, "failed to remove finalizer from the project", "project", project.Name)
@@ -424,19 +480,39 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	return ctrl.Result{}, nil
 }
 
-func (m *Manager) deleteNamespace(ctx context.Context, name string) error {
-	ns := &corev1.Namespace{}
-	if err := m.client.Get(ctx, client.ObjectKey{Name: name}, ns); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return fmt.Errorf("get the '%s' namespace: %w", name, err)
-	}
-	if _, managed := ns.Labels[v1alpha3.ResourceLabelProject]; !managed {
+// ensureTemplateName replaces an explicitly empty spec.projectTemplateName with the minimal template
+// and persists it, so the stored object says what the controller actually does.
+//
+// The CRD schema defaults the field when it is absent, but an explicit "" is a value the apiserver
+// keeps verbatim, and that spelling used to mean "a project without a template" — so manifests and
+// GitOps repositories still carry it. Without this fallback such a project would look for a template
+// named "" and never get its namespace. Virtual projects are skipped: they are platform-owned and
+// carry their own template. Leftover wrap projects are skipped too: writing "simple" here would
+// pin the wrong template after a failed migrate.
+func (m *Manager) ensureTemplateName(ctx context.Context, project *v1alpha3.Project) error {
+	if project.Spec.ProjectTemplateName != "" ||
+		project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" ||
+		namespacemanager.IsLeftoverWrap(project) {
 		return nil
 	}
-	if err := m.client.Delete(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("delete the '%s' namespace: %w", name, err)
+
+	m.logger.Info("the project names no template, falling back to the minimal one",
+		"project", project.Name, "template", MinimalTemplate)
+
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		current := new(v1alpha3.Project)
+		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, current); err != nil {
+			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
+		}
+		if current.Spec.ProjectTemplateName != "" {
+			return nil
+		}
+		current.Spec.ProjectTemplateName = MinimalTemplate
+		return m.client.Update(ctx, current)
+	}); err != nil {
+		return fmt.Errorf("set the template of the '%s' project: %w", project.Name, err)
 	}
+
+	project.Spec.ProjectTemplateName = MinimalTemplate
 	return nil
 }
