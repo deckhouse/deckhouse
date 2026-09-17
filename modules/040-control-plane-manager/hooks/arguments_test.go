@@ -84,6 +84,33 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: arguments ::", fu
 			})
 		})
 
+		Context("controllerManager.concurrentDeploymentSyncs is set", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.controllerManager.concurrentDeploymentSyncs", 20)
+				f.RunHook()
+			})
+
+			It("only that worker count must be passed through", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("controlPlaneManager.internal.arguments").String()).To(MatchJSON(`{"concurrentDeploymentSyncs": 20}`))
+			})
+		})
+
+		Context("all controllerManager worker counts are set together with nodeMonitorGracePeriodSeconds", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.nodeMonitorGracePeriodSeconds", 15)
+				f.ValuesSet("controlPlaneManager.controllerManager.concurrentDeploymentSyncs", 20)
+				f.ValuesSet("controlPlaneManager.controllerManager.concurrentReplicaSetSyncs", 20)
+				f.ValuesSet("controlPlaneManager.controllerManager.concurrentHorizontalPodAutoscalerSyncs", 10)
+				f.RunHook()
+			})
+
+			It("arguments must carry every value", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("controlPlaneManager.internal.arguments").String()).To(MatchJSON(`{"nodeMonitorPeriod": 2, "nodeMonitorGracePeriod": 15, "concurrentDeploymentSyncs": 20, "concurrentReplicaSetSyncs": 20, "concurrentHorizontalPodAutoscalerSyncs": 10}`))
+			})
+		})
+
 	})
 
 })
