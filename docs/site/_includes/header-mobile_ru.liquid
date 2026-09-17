@@ -114,12 +114,13 @@
     {%- unless site.mode == "module" %}
     <div class="sidebar__footer">
       {%- if site.mode == "module" %}
-        <label class="switch">
+        <!-- <label class="switch">
             <input id="language-switch" type="checkbox">
             <span class="slider round">
               <span>En</span>
               <span>Ru</span>
         </label>
+        -->
       {%- endif %}
       {%- unless site.d8Revision == 'CSE' %}
       <a data-open-modal="request_callback" href="#" class="header__btn header__btn--primary">{{ site.data.i18n.common['contact_us_button'][page.lang] }}</a>
