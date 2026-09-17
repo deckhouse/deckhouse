@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/validation"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -91,7 +92,8 @@ type NodeStaticPodRequestStatus struct {
 	Phase string `json:"phase,omitempty"`
 
 	// Conditions carry the details. Ready answers whether the pod resolved:
-	// Resolved, ReservedName, InvalidManifest, Conflict or RefusedByNodes.
+	// Resolved, InvalidName, ReservedName, InvalidManifest, Conflict or
+	// RefusedByNodes.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
@@ -129,6 +131,17 @@ type NodeStaticPodRequestList struct {
 // contract so the admission webhook and the controller backstop enforce one list.
 func IsReservedStaticPodName(name string) bool {
 	return slices.Contains([]string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}, name)
+}
+
+// ValidateStaticPodName refuses a name spec.staticPods[].name would not take: a
+// DNS label of at most 63 characters (api/internal.deckhouse.io/v1alpha1
+// nodeconfig_types.go, StaticPod.Name), which a CR name is free not to be.
+func ValidateStaticPodName(name string) error {
+	problems := validation.IsDNS1123Label(name)
+	if len(problems) == 0 {
+		return nil
+	}
+	return fmt.Errorf("%q cannot be a static pod file name: %s", name, strings.Join(problems, ", "))
 }
 
 // podDeserializer knows core/v1 and nothing else, so "is this a Pod?" is one

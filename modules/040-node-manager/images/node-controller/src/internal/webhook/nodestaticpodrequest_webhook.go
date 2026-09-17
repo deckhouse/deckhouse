@@ -30,7 +30,8 @@ import (
 var nsprWebhookLog = logf.Log.WithName("nodestaticpodrequest-webhook")
 
 // NodeStaticPodRequestValidator refuses what the CRD cannot express: an object
-// name reserved for a control-plane manifest, and a manifest that is not a valid
+// name the node config field would not take or that is reserved for a manifest
+// something else writes, and a manifest that is not a valid
 // Pod with a name and a namespace — the same single question the node's loader
 // asks, answered by the same decoder. Refused here because a node that refuses a
 // manifest refuses the whole NodeConfig with it — one typo would stop that node
@@ -53,6 +54,10 @@ func (w *NodeStaticPodRequestValidator) Handle(_ context.Context, req admission.
 	nspr := &deckhousev1alpha1.NodeStaticPodRequest{}
 	if err := w.decoder.Decode(req, nspr); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	if err := deckhousev1alpha1.ValidateStaticPodName(nspr.Name); err != nil {
+		return admission.Denied(fmt.Sprintf("metadata.name is refused: %s", err))
 	}
 
 	if deckhousev1alpha1.IsReservedStaticPodName(nspr.Name) {
