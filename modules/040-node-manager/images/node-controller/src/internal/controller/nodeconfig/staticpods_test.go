@@ -240,9 +240,9 @@ func TestRejectedNSPRs(t *testing.T) {
 		))
 	})
 
-	// Checked before the reserved name: this one the API server let through and
-	// the NodeConfig field will not, so it is the refusal an operator has to see
-	// even when the name is also something they may not use.
+	// Checked first: the API server let this name through and the NodeConfig
+	// field will not, so it is the one refusal that would otherwise wedge the
+	// whole node config.
 	t.Run("a name the NodeConfig field would not take is refused", func(t *testing.T) {
 		rejected := reject(nspr("registry-agent.v2", deckhousev1alpha1.NodeStaticPodRequestSpec{
 			Manifest: podManifest("registry-agent"),

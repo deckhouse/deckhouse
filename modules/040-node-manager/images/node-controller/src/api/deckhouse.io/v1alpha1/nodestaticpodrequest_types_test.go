@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -259,4 +260,20 @@ func crdField(t *testing.T, schema map[string]any, path ...string) map[string]an
 		require.True(t, ok, "the CRD has no %s", name)
 	}
 	return node
+}
+
+// The reason vocabulary lives in prose in three places and is generated from
+// none of them: the Conditions doc, the CRD description and its Russian twin.
+// This is what stops the next reason landing in only one of them.
+func TestTheDegradedReasonsAreDocumented(t *testing.T) {
+	paths := testenv.NodeManagerCRDPaths(testenv.NodeStaticPodRequestCRDFile)
+	require.Len(t, paths, 1)
+	files := []string{paths[0], filepath.Join(filepath.Dir(paths[0]), "doc-ru-nodestaticpodrequest.yaml"), "nodestaticpodrequest_types.go"}
+	for _, path := range files {
+		raw, err := os.ReadFile(path)
+		require.NoError(t, err)
+		for _, reason := range []string{"InvalidName", "ReservedName", "InvalidManifest", "Conflict", "RefusedByNodes"} {
+			require.Contains(t, string(raw), reason, "%s must be described in %s", reason, path)
+		}
+	}
 }
