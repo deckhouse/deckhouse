@@ -3,24 +3,24 @@ title: Модуль istio
 permalink: ru/architecture/network/istio.html
 lang: ru
 search: istio, service mesh, ambient, federation, multicluster, sidecar
-description: Архитектура модуля istio в Deckhouse Kubernetes Platform.
+description: Архитектура модуля istio в Deckhouse Platform.
 ---
 
-Модуль [`istio`](/modules/istio/) реализует Service Mesh (сервис-меш) на основе [Istio](https://istio.io/) для централизованного управления сетевым трафиком в Deckhouse Kubernetes Platform (DKP). Модуль обеспечивает mTLS (Mutual Transport Layer Security), авторизацию запросов, маршрутизацию трафика, балансировку нагрузки и наблюдаемость взаимодействий между приложениями.
+Модуль [`istio`](/modules/istio/) реализует Service Mesh (сервис-меш) на основе [Istio](https://istio.io/) для централизованного управления сетевым трафиком в Deckhouse Platform (DP). Модуль обеспечивает mTLS (Mutual Transport Layer Security), авторизацию запросов, маршрутизацию трафика, балансировку нагрузки и наблюдаемость взаимодействий между приложениями.
 
 Модуль [`istio`](/modules/istio/) предоставляет возможность одновременной работы нескольких версий Istio. В параметре модуля [`globalVersion`](/modules/istio/configuration.html#parameters-globalversion) указывается какая версия Istio будет использоваться по-умолчанию для тех неймспейсов, у которых установлен лейбл `istio-injection: enabled`. В случае, если требуется использовать версию Istio, отличную от версии по-умолчанию, для неймспейсов устанавливается лейбл, соответствующий ревизии Istio, например, `istio.io/rev: v1x27`.
 
 Модуль работает со следующими кастомными ресурсами API-группы `deckhouse.io`:
 
 - [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller) — описывает инстанс Istio ingress gateway, обслуживающий выбранный класс шлюза;
-- [IstioFederation](/modules/istio/cr.html#istiofederation) — назначает один или несколько удалённых кластеров доверенными для федерации сервис-меш (доступно в редакции DKP EE);
-- [IstioMulticluster](/modules/istio/cr.html#istiomulticluster) — назначает один или несколько удалённых кластеров доверенными для multicluster-конфигурации (доступно в редакции DKP EE);
-- [WaypointInstance](/modules/istio/cr.html#waypointinstance) — описывает ambient-прокси waypoint, создаваемый компонентом waypoint-controller (доступно в редакции DKP EE).
+- [IstioFederation](/modules/istio/cr.html#istiofederation) — назначает один или несколько удалённых кластеров доверенными для федерации сервис-меш (доступно в редакциях DP EE, Ultimate);
+- [IstioMulticluster](/modules/istio/cr.html#istiomulticluster) — назначает один или несколько удалённых кластеров доверенными для multicluster-конфигурации (доступно в редакциях DP EE, Ultimate);
+- [WaypointInstance](/modules/istio/cr.html#waypointinstance) — описывает ambient-прокси waypoint, создаваемый компонентом waypoint-controller (доступно в редакциях DP EE, Ultimate).
 
 Модуль также устанавливает и использует кастомные ресурсы [Istio](https://istio.io/) (API-группы `networking.istio.io`, `security.istio.io`, `telemetry.istio.io`, `extensions.istio.io`). Подробнее можно ознакомиться [в справочнике кастомных ресурсов Istio](/modules/istio/istio-cr.html).
 
 {% alert level="warning" %}
-В DKP поддерживается только одна версия Istio с поддержкой оператора — версия 1.25. Все последующие версии работают без оператора.
+В DP поддерживается только одна версия Istio с поддержкой оператора — версия 1.25. Все последующие версии работают без оператора.
 Версия Istio 1.25 является устаревшей и будет удалена в будущих обновлениях.
 {% endalert %}
 
@@ -29,7 +29,7 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 - Istio — описывает развёртывание сервис-меш Istio, состоящее из одного или нескольких control plane;
 - IstioRevision — представляет одну ревизию control plane Istio.
 
-Набор компонентов модуля и его архитектура зависит от редакции DKP. Редакция DKP Enterprise Edition (EE) включает возможность реализовать межкластерную федерацию сервис-меш, периодический анализ конфигурации сервис-меш и возможность использования [ambient-режима Istio](https://istio.io/latest/docs/ambient/overview/).
+Набор компонентов модуля и его архитектура зависит от редакции DP. Редакции DP Enterprise Edition (EE) и Ultimate включают возможность реализовать межкластерную федерацию сервис-меш, периодический анализ конфигурации сервис-меш и возможность использования [ambient-режима Istio](https://istio.io/latest/docs/ambient/overview/).
 
 Подробнее с настройками модуля можно ознакомиться [в разделе документации модуля](/modules/istio/).
 
@@ -42,7 +42,7 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`istio`](/modules/istio/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующих диаграммах:
+Архитектура модуля [`istio`](/modules/istio/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Platform (DP) изображены на следующих диаграммах:
 
 - Базовая функциональность модуля (control plane, CNI, ingress gateway, Kiali, config-analyzer):
 
@@ -64,7 +64,7 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 
 1. **Operator-\<VERSION>** (Deployment) — реализация [Sail Operator](https://github.com/istio-ecosystem/sail-operator), управляющий жизненным циклом control plane Istio. Компонент отвечает за установку всех ресурсов, необходимых для работы control plane определенной версии.
 
-   В DKP поддерживается работа оператора только для версии Istio 1.25.
+   В DP поддерживается работа оператора только для версии Istio 1.25.
 
    Компонент отслеживает кастомные ресурсы Istio и IstioRevision и на их основе создаёт Deployment `istiod-<VERSION>`, Service и ConfigMap. Управление вебхуками для валидации и мутации принудительно отключено в операторе, этим занимается контроллер Deckhouse модуля [`deckhouse`](/modules/deckhouse/) при применении Helm-чарта модуля.
 
@@ -79,7 +79,7 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
    - выполняет валидацию и мутацию подов пользовательских приложений сайдкар-контейнерами через механику [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/);
    - выполняет валидацию кастомных ресурсов API-групп `*.istio.io` через механику Validating Admission Controllers.
 
-   Для версии Istio 1.25 (устарела и запланирована к удалению) компонент создаётся и управляется компонентом operator-\<VERSION> через кастомные ресурсы Istio и IstioRevision. Для остальных [поддерживаемых в DKP версий Istio](/modules/istio/#таблица-совместимости-поддерживаемых-версий) разворачивается напрямую Helm-чартом модуля.
+   Для версии Istio 1.25 (устарела и запланирована к удалению) компонент создаётся и управляется компонентом operator-\<VERSION> через кастомные ресурсы Istio и IstioRevision. Для остальных [поддерживаемых в DP версий Istio](/modules/istio/#таблица-совместимости-поддерживаемых-версий) разворачивается напрямую Helm-чартом модуля.
 
    Состоит из одного контейнера:
 
@@ -119,7 +119,7 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 
 1. **Istio-cni-node** (DaemonSet) — компонент Istio, настраивающий CNI-плагин на каждом узле кластера и выполняющий настройку перехвата трафика подов в ambient-режиме работы Istio.
 
-   Компонент подготавливает исполняемый файл `istio-cni` и дописывает его как дополнительный плагин в первый обнаруженный CNI-конфиг в каталоге `/etc/cni/net.d/` на каждом узле кластера. В стандартной конфигурации DKP это файл `05-cilium.conflist`, который создаёт CNI-плагин Cilium модуля [`cni-cilium`](/modules/cni-cilium/). При создании каждого пода kubelet (через containerd) вызывает оба CNI-плагина по очереди — сначала cilium, потом istio-cni. Результат работы первого плагина передаётся второму.
+   Компонент подготавливает исполняемый файл `istio-cni` и дописывает его как дополнительный плагин в первый обнаруженный CNI-конфиг в каталоге `/etc/cni/net.d/` на каждом узле кластера. В стандартной конфигурации DP это файл `05-cilium.conflist`, который создаёт CNI-плагин Cilium модуля [`cni-cilium`](/modules/cni-cilium/). При создании каждого пода kubelet (через containerd) вызывает оба CNI-плагина по очереди — сначала cilium, потом istio-cni. Результат работы первого плагина передаётся второму.
 
    В ambient-режиме работы Istio компонент обрабатывает API-запросы от CNI-плагина `istio-cni` и настраивает маршрутизацию к компоненту ztunnel.
 
@@ -165,7 +165,7 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 ### Компоненты в режиме федерации или мультикластера
 
 {% alert level="warning" %}
-Возможности межкластерного взаимодействия ([федерация](/modules/istio/#федерация) или [мультикластер](/modules/istio/#мультикластер)) доступны только между кластерами DKP, так как в DKP устанавливается модифицированный Istio, не совместимый с ванильным Istio других кластеров.
+Возможности межкластерного взаимодействия ([федерация](/modules/istio/#федерация) или [мультикластер](/modules/istio/#мультикластер)) доступны только между кластерами DP, так как в DP устанавливается модифицированный Istio, не совместимый с ванильным Istio других кластеров.
 {% endalert %}
 
 В режиме федерации или мультикластера Istio дополнительно создаются следующие компоненты:
@@ -239,7 +239,7 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 
 1. **Модуль [`user-authn`](/modules/user-authn/)** — выполняет аутентификацию пользователей веб-интерфейса Kiali.
 1. **Trickster** — запрашивает метрики трафика сервис-меш для веб-интерфейса Kiali.
-1. **Внешний кластер DKP**:
+1. **Внешний кластер DP**:
 
    - проверяет доступность меш-соединения между кластерами;
    - получает параметры сервис-меш и приложений пользователя в удалённом кластере.
@@ -255,7 +255,7 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 1. **Containerd** — запускает исполняемые файлы CNI-плагинов.
 1. **Балансировщик нагрузки** — балансирует входящий трафик к ingress-gateway-controller.
 1. **Gateway/Ingress-контроллер** — пересылает авторизованный запрос пользователя к веб-интерфейсу Kiali. Зависит от выбранного способа публикации ресурсов: с использованием Ingress-контроллера модуля [`ingress-nginx`](/modules/ingress-nginx/) или с использованием Gateway-контроллера модуля [`alb`](/modules/alb/).
-1. **Удалённый кластер DKP**:
+1. **Удалённый кластер DP**:
 
    - запрашивает публичные метаданные кластера;
    - отправляет меш-трафик через mTLS SNI passthrough;

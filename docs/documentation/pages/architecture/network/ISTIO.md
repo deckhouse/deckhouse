@@ -2,10 +2,10 @@
 title: Istio module
 permalink: en/architecture/network/istio.html
 search: istio, service mesh, ambient, federation, multicluster, sidecar
-description: Architecture of the istio module in Deckhouse Kubernetes Platform.
+description: Architecture of the istio module in Deckhouse Platform.
 ---
 
-The [`istio`](/modules/istio/) module implements a Service Mesh based on [Istio](https://istio.io/) for centralized management of network traffic in Deckhouse Kubernetes Platform (DKP). The module provides mTLS (Mutual Transport Layer Security), request authorization, traffic routing, load balancing, and observability of interactions between applications.
+The [`istio`](/modules/istio/) module implements a Service Mesh based on [Istio](https://istio.io/) for centralized management of network traffic in Deckhouse Platform (DP). The module provides mTLS (Mutual Transport Layer Security), request authorization, traffic routing, load balancing, and observability of interactions between applications.
 
 The [`istio`](/modules/istio/) module allows several Istio versions to run at the same time. The module's [`globalVersion`](/modules/istio/configuration.html#parameters-globalversion) parameter specifies which Istio version is used by default for namespaces labeled `istio-injection: enabled`. If a namespace needs to use an Istio version other than the default one, it is labeled with the label corresponding to the Istio revision instead, for example, `istio.io/rev: v1x27`.
 
@@ -14,14 +14,14 @@ The module works with the following custom resources.
 Resources managed directly by the module (the `deckhouse.io` group):
 
 * [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller): Describes an Istio ingress gateway instance serving the selected gateway class.
-* [IstioFederation](/modules/istio/cr.html#istiofederation): Marks one or more remote clusters as trusted for mesh federation (available in the Enterprise Edition).
-* [IstioMulticluster](/modules/istio/cr.html#istiomulticluster): Marks one or more remote clusters as trusted for a multicluster configuration (available in the Enterprise Edition).
-* [WaypointInstance](/modules/istio/cr.html#waypointinstance): Describes a waypoint ambient proxy created by the waypoint-controller component (available in the Enterprise Edition).
+* [IstioFederation](/modules/istio/cr.html#istiofederation): Marks one or more remote clusters as trusted for mesh federation (available in the Enterprise Edition and Ultimate).
+* [IstioMulticluster](/modules/istio/cr.html#istiomulticluster): Marks one or more remote clusters as trusted for a multicluster configuration (available in the Enterprise Edition and Ultimate).
+* [WaypointInstance](/modules/istio/cr.html#waypointinstance): Describes a waypoint ambient proxy created by the waypoint-controller component (available in the Enterprise Edition and Ultimate).
 
 The module also installs and uses the standard [Istio](https://istio.io/) custom resources (the `networking.istio.io`, `security.istio.io`, `telemetry.istio.io`, and `extensions.istio.io` groups — VirtualService, DestinationRule, Gateway, PeerAuthentication, and others). For more details, see the [Istio custom resource reference](/modules/istio/istio-cr.html).
 
 {% alert level="warning" %}
-DKP only supports operator-based management for Istio version 1.25. All later versions run without the operator.
+DP only supports operator-based management for Istio version 1.25. All later versions run without the operator.
 Istio 1.25 is deprecated and will be removed in a future update.
 {% endalert %}
 
@@ -30,13 +30,13 @@ If an Istio version with operator support is requested, the following [Sail Oper
 * Istio: Represents an Istio Service Mesh deployment consisting of one or more control planes.
 * IstioRevision: Represents a single revision of the Istio control plane.
 
-The set of module components and its architecture depend on the DKP edition. The Enterprise Edition (EE) adds cross-cluster service mesh federation, periodic service mesh configuration analysis, and support for [Istio ambient mode](https://istio.io/latest/docs/ambient/overview/).
+The set of module components and its architecture depend on the DP edition. The Enterprise Edition (EE) and Ultimate adds cross-cluster service mesh federation, periodic service mesh configuration analysis, and support for [Istio ambient mode](https://istio.io/latest/docs/ambient/overview/).
 
 For more details about module configuration, refer to the [corresponding documentation section](/modules/istio/).
 
 ## Module architecture
 
-The Level 2 C4 architecture of the [`istio`](/modules/istio/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagrams:
+The Level 2 C4 architecture of the [`istio`](/modules/istio/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagrams:
 
 {% alert level="info" %}
 The following simplifications are made in the diagrams:
@@ -49,11 +49,11 @@ The following simplifications are made in the diagrams:
 
   ![Istio module architecture](../../images/architecture/network/c4-l2-istio.svg)
 
-* Ambient mode (ztunnel, waypoint-controller; available only in the Enterprise Edition, disabled by default — the diagram shows only the differences from the base configuration):
+* Ambient mode (ztunnel, waypoint-controller; available only in the Enterprise Edition and Ultimate, disabled by default — the diagram shows only the differences from the base configuration):
 
   ![Istio module architecture in ambient mode](../../images/architecture/network/c4-l2-istio-ambient.svg)
 
-* Federation and multicluster configuration (available only in the Enterprise Edition, disabled by default — the diagram shows only the differences from the base configuration):
+* Federation and multicluster configuration (available only in the Enterprise Edition and Ultimate, disabled by default — the diagram shows only the differences from the base configuration):
 
   ![Istio module architecture in federation/multicluster configuration](../../images/architecture/network/c4-l2-istio-multicluster.svg)
 
@@ -65,7 +65,7 @@ The module consists of the following components:
 
 1. **Operator-&lt;VERSION&gt;** (Deployment): an implementation of the [Sail Operator](https://github.com/istio-ecosystem/sail-operator) that manages the Istio control plane lifecycle. The component is responsible for installing all the resources required for a given control plane version to work.
 
-   DKP only supports the operator for Istio version 1.25.
+   DP only supports the operator for Istio version 1.25.
 
    The component watches the Istio and IstioRevision custom resources and uses them to create the `istiod-<VERSION>` Deployment, a Service, and a ConfigMap. Webhook management for validation and mutation is deliberately disabled in the operator; it is handled by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module when the module's Helm chart is applied.
 
@@ -80,7 +80,7 @@ The module consists of the following components:
    * Validates user application pods and mutates them to inject sidecar containers, via [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
    * Validates custom resources of the `*.istio.io` API groups via Validating Admission Controllers.
 
-   For Istio 1.25 (deprecated and scheduled for removal), the component is created and managed by the operator-&lt;VERSION&gt; component through the Istio and IstioRevision custom resources. For [other Istio versions supported in DKP](/modules/istio/#compatibility-table-for-supported-versions), it is deployed directly by the module's Helm chart.
+   For Istio 1.25 (deprecated and scheduled for removal), the component is created and managed by the operator-&lt;VERSION&gt; component through the Istio and IstioRevision custom resources. For [other Istio versions supported in DP](/modules/istio/#compatibility-table-for-supported-versions), it is deployed directly by the module's Helm chart.
 
    It consists of a single container:
 
@@ -120,7 +120,7 @@ The following additional components are created when Istio runs in ambient mode:
 
 1. **Istio-cni-node** (DaemonSet): Istio component that installs the CNI plugin on each cluster node and, in Istio ambient mode, sets up traffic interception for pods.
 
-   The component prepares the `istio-cni` binary and appends it as an additional plugin to the first CNI config found in the `/etc/cni/net.d/` directory on each cluster node. In the standard DKP configuration this is the `05-cilium.conflist` file, created by the Cilium CNI plugin of the [`cni-cilium`](/modules/cni-cilium/) module. When creating each pod, kubelet (via containerd) calls both CNI plugins in sequence — first cilium, then istio-cni. The result produced by the first plugin is passed to the second.
+   The component prepares the `istio-cni` binary and appends it as an additional plugin to the first CNI config found in the `/etc/cni/net.d/` directory on each cluster node. In the standard DP configuration this is the `05-cilium.conflist` file, created by the Cilium CNI plugin of the [`cni-cilium`](/modules/cni-cilium/) module. When creating each pod, kubelet (via containerd) calls both CNI plugins in sequence — first cilium, then istio-cni. The result produced by the first plugin is passed to the second.
 
    In Istio ambient mode, the component handles API requests from the `istio-cni` CNI plugin and configures routing to the ztunnel component.
 
@@ -166,7 +166,7 @@ The following additional components are created when Istio runs in ambient mode:
 ### Federation or multicluster mode components
 
 {% alert level="warning" %}
-Cross-cluster interaction ([federation](/modules/istio/#federation) or [multicluster](/modules/istio/#multicluster)) is only available between DKP clusters, since DKP installs a modified version of Istio that is not compatible with vanilla Istio in other clusters.
+Cross-cluster interaction ([federation](/modules/istio/#federation) or [multicluster](/modules/istio/#multicluster)) is only available between DP clusters, since DP installs a modified version of Istio that is not compatible with vanilla Istio in other clusters.
 {% endalert %}
 
 The following additional components are created when Istio runs in federation or multicluster mode:
@@ -240,7 +240,7 @@ The module interacts with the following components:
 
 1. **The [`user-authn`](/modules/user-authn/) module**: Authenticates Kiali web interface users.
 1. **Trickster**: Queries service mesh traffic metrics for the Kiali web interface.
-1. **Remote DKP cluster**:
+1. **Remote DP cluster**:
 
    * Checks the availability of the mesh connection between clusters.
    * Retrieves the remote cluster's service mesh and application parameters.
@@ -256,7 +256,7 @@ The following external components interact with the module:
 1. **Containerd**: Runs CNI plugin binaries.
 1. **Load balancer**: Balances incoming traffic to ingress-gateway-controller.
 1. **Gateway/Ingress controller**: Forwards the authenticated user request to the Kiali web interface. Depends on the chosen method of publishing resources: using the Ingress controller of the [`ingress-nginx`](/modules/ingress-nginx/) module or the Gateway controller of the [`alb`](/modules/alb/) module.
-1. **Remote DKP cluster**:
+1. **Remote DP cluster**:
 
    * Requests the cluster's public metadata.
    * Sends mesh traffic via mTLS SNI passthrough.
