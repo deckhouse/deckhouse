@@ -98,7 +98,7 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			op:          admissionv1.Create,
 			nspr:        makeNSPR("kube-apiserver", nsprManifest("registry-agent")),
 			wantAllowed: false,
-			wantMessage: "reserved",
+			wantMessage: "belongs to a control-plane manifest",
 		},
 		{
 			name:        "a reserved name is refused on UPDATE too",
