@@ -28,12 +28,19 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-// The control plane's own manifests are written by the node agent. A static pod
-// of one of those names would give one file two writers, and the loser is
-// whichever of them ran last.
+// These manifests are written by something else — the node agent on an Engine
+// node, a bashible step on a mutable one. A static pod of one of those names
+// would give one file two writers, and the loser is whichever ran last.
+//
+// The twin list is reservedStaticPodNames in bashible-apiserver
+// pkg/template/static_pods.go, pinned by TestAcceptedStaticPodsSkipsAReservedName;
+// separate modules, so nothing but these two tests keeps them equal.
 func TestIsReservedStaticPodName(t *testing.T) {
-	for _, name := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
-		require.True(t, IsReservedStaticPodName(name), "%s is the node agent's own manifest", name)
+	for _, name := range []string{
+		"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler",
+		"kubernetes-api-proxy", "registry-proxy", "registry-nodeservices",
+	} {
+		require.True(t, IsReservedStaticPodName(name), "%s is written by the node agent or by a bashible step", name)
 	}
 	require.False(t, IsReservedStaticPodName("registry-agent"))
 	require.False(t, IsReservedStaticPodName("etcd-backup"))

@@ -133,6 +133,15 @@ func TestNodeStaticPodRequests(t *testing.T) {
 			ngName: "worker",
 		},
 		{
+			// A bashible step writes this manifest itself, on every node of every
+			// mutable group; the object would replace the node's own API proxy.
+			name: "a name a bashible step writes itself contributes nothing",
+			nsprs: []deckhousev1alpha1.NodeStaticPodRequest{
+				nspr("kubernetes-api-proxy", deckhousev1alpha1.NodeStaticPodRequestSpec{Manifest: podManifest("agent")}),
+			},
+			ngName: "worker",
+		},
+		{
 			name: "a manifest that is not a Pod contributes nothing",
 			nsprs: []deckhousev1alpha1.NodeStaticPodRequest{
 				nspr("broken", deckhousev1alpha1.NodeStaticPodRequestSpec{Manifest: "apiVersion: apps/v1\nkind: Deployment\n"}),
@@ -258,7 +267,7 @@ func TestRejectedNSPRs(t *testing.T) {
 			Manifest: podManifest("kube-apiserver"),
 		}))
 		require.Equal(t, reasonReservedName, rejected["kube-apiserver"].reason)
-		require.Contains(t, rejected["kube-apiserver"].message, "control plane")
+		require.Contains(t, rejected["kube-apiserver"].message, "writes itself")
 	})
 
 	t.Run("a manifest with no namespace is refused with the checker's own reason", func(t *testing.T) {
