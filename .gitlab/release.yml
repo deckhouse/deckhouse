@@ -21,52 +21,30 @@
     - vm-intteam-cloud-d8-ssdlc-runner
   needs: []
   variables:
+    VAULT_ADDR: "https://seguro.flant.com"
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse
+    DECKHOUSE_REGISTRY_STAGE_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host#DECKHOUSE_REGISTRY_STAGE_HOST"
+    DECKHOUSE_REGISTRY_STAGE_USER: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken#login"
+    DECKHOUSE_REGISTRY_STAGE_PASSWORD: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken#password"
+    DECKHOUSE_READ_REGISTRY_HOST: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host#DECKHOUSE_READ_REGISTRY_HOST"
+    DECKHOUSE_READ_REGISTRY_USER: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token#login"
+    DECKHOUSE_READ_REGISTRY_PASSWORD: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token#password"
+    # Prod/write registry: only resolves in the deckhouse/deckhouse project —
+    # empty everywhere else, which is what the fork-fallback check in
+    # promote-image.sh/deploy-channel.sh keys off of.
+    DECKHOUSE_REGISTRY_HOST: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host#DECKHOUSE_REGISTRY_HOST"
+    DECKHOUSE_REGISTRY_USER: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry-write/deckhouse-admin#login"
+    DECKHOUSE_REGISTRY_PASSWORD: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry-write/deckhouse-admin#password"
   id_tokens:
     VAULT_ID_TOKEN:
       aud: gitlab-access-aud
-  secrets:
-    DECKHOUSE_REGISTRY_STAGE_HOST:
-      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_REGISTRY_STAGE_HOST@projects
-      token: $VAULT_ID_TOKEN
-      file: false
-    DECKHOUSE_REGISTRY_STAGE_USER:
-      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken/login@projects
-      token: $VAULT_ID_TOKEN
-      file: false
-    DECKHOUSE_REGISTRY_STAGE_PASSWORD:
-      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken/password@projects
-      token: $VAULT_ID_TOKEN
-      file: false
-    DECKHOUSE_REGISTRY_HOST:
-      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry_host/DECKHOUSE_REGISTRY_HOST@projects
-      token: $VAULT_ID_TOKEN
-      file: false
-    DECKHOUSE_REGISTRY_USER:
-      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry-write/deckhouse-admin/login@projects
-      token: $VAULT_ID_TOKEN
-      file: false
-    DECKHOUSE_REGISTRY_PASSWORD:
-      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry-write/deckhouse-admin/password@projects
-      token: $VAULT_ID_TOKEN
-      file: false
-    DECKHOUSE_READ_REGISTRY_HOST:
-      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry_host/DECKHOUSE_READ_REGISTRY_HOST@projects
-      token: $VAULT_ID_TOKEN
-      file: false
-    DECKHOUSE_READ_REGISTRY_USER:
-      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token/login@projects
-      token: $VAULT_ID_TOKEN
-      file: false
-    DECKHOUSE_READ_REGISTRY_PASSWORD:
-      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token/password@projects
-      token: $VAULT_ID_TOKEN
-      file: false
   before_script:
     - !reference [.scripts, docker_config_isolation]
     - !reference [.scripts, read_werf_version]
     - !reference [.scripts, install_werf]
+    - !reference [.scripts, install_d8]
+    - !reference [.scripts, import_vault_secrets]
     - !reference [.scripts, login_stage_registry]
     - !reference [.scripts, login_write_registry]
     - !reference [.scripts, login_read_registry]
@@ -85,7 +63,7 @@
 
 # promote:tag IS a WERF_ENV parallel:matrix job, so deploy:<channel> below can
 # depend on the matching edition instance via a matrix expression
-# (GitLab 18.6+, https://docs.gitlab.com/ci/yaml/matrix_expressions).
+# (GitLab 18.6+, docs.gitlab.com/ci/yaml/matrix_expressions).
 .needs_promote_tag: &needs_promote_tag
   job: promote:tag
   parallel:
@@ -107,6 +85,9 @@ promote:tag:
 # Self-review gate: required before deploying to a channel above EarlyAccess.
 # Runs on the default k8s executor (tools/curl image, same as
 # e2e-ensure-build in .gitlab/e2e.yml) — just curl + jq against the GitLab API.
+# FOX_TOKEN isn't restricted to the main project (already used the same way,
+# unconditionally, in .gitlab/changelog-update.yml), so this keeps using
+# GitLab-native `secrets:` — no need for the vault: marker/import dance.
 # ---------------------------------------------------------------------------
 
 .check_release_operator_base:

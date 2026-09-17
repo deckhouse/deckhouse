@@ -60,6 +60,41 @@
       echo "Current werf is ${CACHED_VERSION}, skipping download"
     fi
 
+  # d8 wraps the Vault CLI (`stronghold` subcommand) — hashicorp's own vault
+  # binary/releases are blocked for Russian IPs, see seguro-policy README.
+  install_d8: |
+    D8_VERSION="v0.29.24"
+    D8_PATH="${HOME}/.bin"
+    mkdir -p "${D8_PATH}"
+    export PATH="${D8_PATH}:${PATH}"
+    export D8_BIN="${D8_PATH}/d8-${D8_VERSION}"
+    if [[ ! -x "${D8_BIN}" ]]; then
+      curl --fail --show-error -L "https://github.com/deckhouse/deckhouse-cli/releases/download/${D8_VERSION}/d8-${D8_VERSION}-linux-amd64.tar.gz" -o "/tmp/d8-${D8_VERSION}-linux-amd64.tar.gz"
+      tar --strip-components=2 -C /tmp -xzf "/tmp/d8-${D8_VERSION}-linux-amd64.tar.gz" linux-amd64/bin/d8
+      mv /tmp/d8 "${D8_BIN}"
+      chmod u+x "${D8_BIN}"
+    fi
+
+  # Same pattern as .import_secrets in ssdlc-tools/e2e-framework
+  # (ci-templates/e2e-framework.gitlab-ci.yml): any job variable whose value
+  # looks like "vault:<path>#<field>" gets resolved in place and re-exported
+  # with the actual secret value, using $VAULT_AUTH_ROLE (set before calling
+  # this). If the login or a read is denied (e.g. this project/role doesn't
+  # have access), the variable is just left empty — no `set -e`/`|| true`
+  # needed, this is not a hard failure, callers are expected to check
+  # emptiness themselves (same as GitHub Actions secrets on this project).
+  import_vault_secrets: |
+    VAULT_TOKEN="$(${D8_BIN} stronghold write -field=token "auth/${VAULT_AUTH_PATH:-fox}/login" role="${VAULT_AUTH_ROLE}" jwt="${VAULT_ID_TOKEN}")"
+    export VAULT_TOKEN
+    while IFS='=' read -r name value; do
+      if [[ ${value} == vault:* ]]; then
+        stripped_value=${value#vault:}
+        secret_path="${stripped_value%%#*}"
+        secret_value=$(${D8_BIN} stronghold read -field=data -format=json "${secret_path}" | jq --arg v "${stripped_value#*#}" '.[$v]' -r)
+        export "${name}=${secret_value}"
+      fi
+    done < <(env)
+
   login_dev_registry: |
     if [[ -n "${DECKHOUSE_DEV_REGISTRY_HOST:-}" ]]; then
       echo "${DECKHOUSE_DEV_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_DEV_REGISTRY_HOST}" \

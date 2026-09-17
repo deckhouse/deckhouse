@@ -2,36 +2,36 @@
 # on the deckhouse-web clusters, once a release channel has been fully
 # deployed (deploy:<channel> succeeded for every edition).
 #
-# KUBECONFIG_BASE64_PROD_25 / KUBECONFIG_BASE64_DEV come from Vault (same
-# secret engine as DOC_API_KEY in .gitlab/web.yml); a cluster whose secret is
-# empty is skipped, not failed — see .gitlab/scripts/patch-channel-configmap.sh.
+# KUBECONFIG_BASE64_PROD_25 / KUBECONFIG_BASE64_DEV come from the same Vault
+# secret engine as DOC_API_KEY in .gitlab/web.yml. Same note as in
+# release.yml: resolved as plain "vault:<path>#<field>" variables via
+# import_vault_secrets (tolerant of a denied/failed lookup — the cluster is
+# just skipped, see .gitlab/scripts/patch-channel-configmap.sh), not GitLab
+# native `secrets:`, which would hard-fail the job outright if this ever
+# runs outside deckhouse/deckhouse.
 #
 # Runs on the default k8s executor (tools/golang-tools image, same as
-# k8s-autoupdate.yml) — werf is installed inline via the shared
-# read_werf_version/install_werf script references, same as on VM runners.
+# k8s-autoupdate.yml) — werf and d8 are installed inline via the shared
+# script references, same as on VM runners.
 
 .release_web_base:
   stage: deploy
   image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
   needs: []
   variables:
+    VAULT_ADDR: "https://seguro.flant.com"
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse
+    KUBECONFIG_BASE64_PROD_25: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret#KUBECONFIG_BASE64_PROD_25"
+    KUBECONFIG_BASE64_DEV: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret#KUBECONFIG_BASE64_DEV"
   id_tokens:
     VAULT_ID_TOKEN:
       aud: gitlab-access-aud
-  secrets:
-    KUBECONFIG_BASE64_PROD_25:
-      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/KUBECONFIG_BASE64_PROD_25@projects
-      token: $VAULT_ID_TOKEN
-      file: false
-    KUBECONFIG_BASE64_DEV:
-      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/KUBECONFIG_BASE64_DEV@projects
-      token: $VAULT_ID_TOKEN
-      file: false
   before_script:
     - !reference [.scripts, read_werf_version]
     - !reference [.scripts, install_werf]
+    - !reference [.scripts, install_d8]
+    - !reference [.scripts, import_vault_secrets]
   script:
     - bash .gitlab/scripts/patch-channel-configmap.sh
 
