@@ -4,14 +4,20 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
-  to: /candi
+  to: /
   excludePaths:
   - '**/terraform_versions.yml'
+  - '**/plan_rules.yml'
   stageDependencies:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/plan_rules.yml
+  to: /terraform-manager/plan_rules.yml
   stageDependencies:
     install:
     - '**/*'
