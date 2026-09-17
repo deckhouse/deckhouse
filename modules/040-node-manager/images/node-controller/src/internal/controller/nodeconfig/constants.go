@@ -57,14 +57,44 @@ const (
 	registryPathKey         = "path"
 	registrySchemeKey       = "scheme"
 	registryCAKey           = "ca"
-	registryImagesKey       = "imagesRegistry"
 	registryDockerConfigKey = ".dockerconfigjson"
 
-	// pauseDigestGroup and pauseDigestName locate the pause image in the digest
-	// map. The group is a key in that map, not a path segment: every Deckhouse
-	// image lives in one repository and is addressed by digest alone.
-	pauseDigestGroup = "common"
-	pauseDigestName  = "pause"
+	// pausePackageName and registryAgentPackageName are registrypackages
+	// artifacts: a tar of the image's OCI layout, which the node imports into
+	// containerd. Not the common/pause image, which is only the reference
+	// containerd resolves a sandbox by — the node cannot pull that one until
+	// something is already running.
+	//
+	// registryAgentImageName is the same image on the other side of the import:
+	// the artifact carries deckhouse.local/images:registry-agent in its
+	// index.json, so that is the name spec.images must use, while the digest is
+	// keyed by the camelCased image directory
+	// (modules/007-registrypackages/images/registry-agent).
+	pausePackageName         = "pause"
+	registryAgentPackageName = "registryAgent"
+	registryAgentImageName   = "registry-agent"
+
+	// sandboxImageRef is the pause image as containerd knows it after the import,
+	// and naming it here is the whole point of preloading pause. containerd
+	// creates the sandbox itself (podsandbox/sandbox_run.go:326) with no
+	// credentials from kubelet, authorising with whatever registry.d says — and
+	// under registryOwner: agent registry.d belongs to an agent that needs a
+	// sandbox to start. A reference into a registry is therefore a pull this node
+	// may be unable to make; a reference into containerd's own store always
+	// works. bashible writes the same string
+	// (032_configure_containerd.sh.tpl:48-50). Built from pausePackageName so the
+	// ref and the preloaded image cannot be changed apart.
+	sandboxImageRef = "deckhouse.local/images:" + pausePackageName
+
+	// registryBashibleConfigSecret is what the registry module writes for
+	// bashible; the presence of its "agent" key is the one signal that
+	// containerd's registry.d belongs to that module's node agent rather than to
+	// nodelet (go_lib/registry/models/bashible/config.go on rewrite-registry).
+	// Absent on a cluster whose registry module never said so, which is not an
+	// error but the ordinary answer.
+	registryBashibleConfigSecret = "registry-bashible-config"
+	registryBashibleConfigKey    = "config"
+	registryBashibleAgentKey     = "agent"
 
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"

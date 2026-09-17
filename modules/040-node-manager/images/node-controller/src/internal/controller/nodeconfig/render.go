@@ -399,9 +399,9 @@ func isCloudNodeType(t v1.NodeType) bool {
 // renderContainerRuntime carries over the only containerd knob a NodeGroup
 // exposes; the runtime itself is a platform-chosen system extension. Defaults
 // mirror the CRD defaults so the bootstrap file path gets the same values.
-func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1.ContainerRuntime {
+func renderContainerRuntime(ng *v1.NodeGroup, _ clusterInputs) internalv1alpha1.ContainerRuntime {
 	runtime := internalv1alpha1.ContainerRuntime{
-		SandboxImage:           in.SandboxImage,
+		SandboxImage:           sandboxImageRef,
 		MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
 	}
 	if ng.Spec.CRI == nil {

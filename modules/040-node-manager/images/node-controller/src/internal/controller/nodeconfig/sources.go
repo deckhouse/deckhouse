@@ -77,13 +77,18 @@ type clusterInputs struct {
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
 	RegistryPackagesProxyToken string
-	// SandboxImage is the pause image, resolved against the cluster's own
-	// registry: a cluster installed from a private registry has no route to the
-	// upstream one, and a node that cannot pull pause runs no pods at all.
-	SandboxImage string
+	// Images is what every node puts into containerd before kubelet starts. The
+	// list is the platform's, not a module's and not an object's: it follows from
+	// which modules are enabled, and it is the same for every node, so it is
+	// built once per pass rather than once per node.
+	Images []internalv1alpha1.Image
+	// RegistryAgentMode says the registry module has handed containerd's
+	// registry.d to its own node agent. One fact, two consequences: the agent's
+	// image joins Images, and containerRuntime.registryOwner says "agent".
+	RegistryAgentMode bool
 	// Registry is how a node reaches the cluster's registry on its own. Every
-	// node gets it: containerd pulls pause with no imagePullSecret, so a worker
-	// without credentials fails every sandbox it tries to create.
+	// node gets it: the pulls containerd makes for itself — the control-plane
+	// static pods of a bootstrapping master among them — carry no imagePullSecret.
 	Registry *internalv1alpha1.Registry
 	// NodeExtensions are the operator's requests to merge extra system extensions
 	// onto the nodes they select, in the order their uniqueness contest ran; the
@@ -162,7 +167,7 @@ func (s *sourceReader) readClusterState(ctx context.Context, in *clusterInputs) 
 // on: the static configuration's list first, then the provider's single subnet.
 // A cluster carries one of the two secrets, so a missing one is an empty answer.
 func (s *sourceReader) readInternalNetworkCIDRs(ctx context.Context) ([]string, error) {
-	static, err := s.readConfigurationSecret(ctx, staticConfigSecretName, staticConfigKey)
+	static, err := s.readConfigurationSecret(ctx, kubeSystemNS, staticConfigSecretName, staticConfigKey)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +176,7 @@ func (s *sourceReader) readInternalNetworkCIDRs(ctx context.Context) ([]string, 
 		return nil, fmt.Errorf("read the internal networks of %s/%s: %w", kubeSystemNS, staticConfigSecretName, err)
 	}
 
-	provider, err := s.readConfigurationSecret(ctx, providerConfigSecretName, providerConfigKey)
+	provider, err := s.readConfigurationSecret(ctx, kubeSystemNS, providerConfigSecretName, providerConfigKey)
 	if err != nil {
 		return nil, err
 	}
@@ -188,14 +193,14 @@ func (s *sourceReader) readInternalNetworkCIDRs(ctx context.Context) ([]string, 
 // readConfigurationSecret returns one of the cluster's configuration documents
 // as a plain map. An absent secret is the other kind of cluster and yields
 // nothing; a document that cannot be parsed stops the pass, as every read here does.
-func (s *sourceReader) readConfigurationSecret(ctx context.Context, name, key string) (map[string]any, error) {
+func (s *sourceReader) readConfigurationSecret(ctx context.Context, namespace, name, key string) (map[string]any, error) {
 	secret := &corev1.Secret{}
-	err := s.Reader.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: name}, secret)
+	err := s.Reader.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, secret)
 	if apierrors.IsNotFound(err) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read %s/%s: %w", kubeSystemNS, name, err)
+		return nil, fmt.Errorf("read %s/%s: %w", namespace, name, err)
 	}
 	raw, ok := secret.Data[key]
 	if !ok {
@@ -203,7 +208,7 @@ func (s *sourceReader) readConfigurationSecret(ctx context.Context, name, key st
 	}
 	var config map[string]any
 	if err := sigsyaml.Unmarshal(raw, &config); err != nil {
-		return nil, fmt.Errorf("parse %s of %s/%s: %w", key, kubeSystemNS, name, err)
+		return nil, fmt.Errorf("parse %s of %s/%s: %w", key, namespace, name, err)
 	}
 	return config, nil
 }
@@ -245,7 +250,7 @@ func providerInternalNetworkCIDR(config map[string]any) (string, error) {
 
 // readReleaseImages fills in what the release ships and how a node reaches it.
 func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs) error {
-	// One read for the system extensions, the OS image and the pause image: they
+	// One read for the system extensions, the OS image and the preload list: they
 	// come out of the same ConfigMap, and reading it three times pays three times.
 	images, err := s.readImagesDigests(ctx)
 	if err != nil {
@@ -262,11 +267,10 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 		return err
 	}
 
-	registry, imagesRepo, err := s.readRegistry(ctx)
+	in.Registry, err = s.readRegistry(ctx)
 	if err != nil {
 		return err
 	}
-	in.Registry = registry
 
 	osImage, err := digestAt(images, nodeManagerDigestsKey, osImageName)
 	if err != nil {
@@ -281,7 +285,12 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 		RootHash: s.rootHashes().known(osImage),
 	}
 
-	in.SandboxImage, err = sandboxImage(images, imagesRepo)
+	in.RegistryAgentMode, err = s.readRegistryAgentMode(ctx)
+	if err != nil {
+		return err
+	}
+
+	in.Images, err = platformImages(images, in.RegistryAgentMode)
 	if err != nil {
 		return err
 	}
@@ -313,36 +322,32 @@ func (s *sourceReader) rootHashes() *rootHashResolver {
 }
 
 // readRegistry describes the cluster's registry: the spec a node needs to reach
-// it, and the repository every image of the release lives in.
-func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Registry, string, error) {
+// it. It used to answer with the repository every image of the release lives in
+// as well; nothing asks any more, since the sandbox is named by the image the
+// node imported rather than by one it would have to pull.
+func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Registry, error) {
 	secret := &corev1.Secret{}
 	if err := s.Reader.Get(ctx, types.NamespacedName{Namespace: d8SystemNS, Name: deckhouseRegistrySecret}, secret); err != nil {
-		return nil, "", fmt.Errorf("read the registry configuration from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
+		return nil, fmt.Errorf("read the registry configuration from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
 	}
 
 	address := string(secret.Data[registryAddressKey])
 	if address == "" {
-		return nil, "", fmt.Errorf("secret %s/%s carries no %q", d8SystemNS, deckhouseRegistrySecret, registryAddressKey)
+		return nil, fmt.Errorf("secret %s/%s carries no %q", d8SystemNS, deckhouseRegistrySecret, registryAddressKey)
 	}
 
 	auth, err := registryAuth(secret.Data[registryDockerConfigKey], address)
 	if err != nil {
-		return nil, "", fmt.Errorf("read the registry credentials from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
+		return nil, fmt.Errorf("read the registry credentials from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
 	}
 
-	registry := &internalv1alpha1.Registry{
+	return &internalv1alpha1.Registry{
 		Address: address,
 		Path:    string(secret.Data[registryPathKey]),
 		Scheme:  strings.ToUpper(string(secret.Data[registrySchemeKey])),
 		CA:      string(secret.Data[registryCAKey]),
 		Auth:    auth,
-	}
-
-	imagesRepo := string(secret.Data[registryImagesKey])
-	if imagesRepo == "" {
-		imagesRepo = address + registry.Path
-	}
-	return registry, imagesRepo, nil
+	}, nil
 }
 
 // registryAuth pulls one registry's credentials out of a docker config. No
@@ -363,14 +368,51 @@ func registryAuth(dockerConfig []byte, address string) (string, error) {
 	return config.Auths[address].Auth, nil
 }
 
-// sandboxImage resolves the pause image against the cluster's own registry.
-// Mirrors dhctl/pkg/immutable/digests.go:140.
-func sandboxImage(images map[string]map[string]string, imagesRepo string) (string, error) {
-	digest, err := digestAt(images, pauseDigestGroup, pauseDigestName)
+// readRegistryAgentMode reports whether the registry module has handed
+// containerd's registry.d to its node agent. The signal is the "agent" key of
+// the configuration that module already writes for bashible — the same key that
+// silences the bashible step which would otherwise write per-registry
+// directories there, so both kinds of node follow one decision.
+//
+// A cluster with no such secret, or one whose configuration has no agent key, is
+// simply a cluster where nodelet owns the directory: that is the answer, not a
+// failure. A document that does not parse is a failure, like every read here.
+func (s *sourceReader) readRegistryAgentMode(ctx context.Context) (bool, error) {
+	config, err := s.readConfigurationSecret(ctx, d8SystemNS, registryBashibleConfigSecret, registryBashibleConfigKey)
 	if err != nil {
-		return "", err
+		return false, err
 	}
-	return imagesRepo + "@" + digest, nil
+	return config[registryBashibleAgentKey] != nil, nil
+}
+
+// platformImages is what every node puts into containerd before kubelet starts.
+// It is a platform list, exactly as bashible's 034_ctr_import_local_images is:
+// a module does not declare it, the platform knows it from which modules are on.
+//
+// pause is unconditional. The sandbox is the first pull of any pod, so a node
+// that cannot make it runs nothing at all — which is precisely what happens once
+// registry.d points at an agent that has not started, the agent's own sandbox
+// included. The agent's image joins the list when the registry module has taken
+// the directory over.
+//
+// Repository and AdditionalPath stay empty: the proxy's default registry, the
+// same addressing the platform sysexts use.
+func platformImages(all map[string]map[string]string, agentMode bool) ([]internalv1alpha1.Image, error) {
+	pause, err := digestAt(all, registryPackagesDigestsKey, pausePackageName)
+	if err != nil {
+		return nil, err
+	}
+	pauseImage := internalv1alpha1.Image{Name: pausePackageName, Digest: pause}
+
+	if !agentMode {
+		return []internalv1alpha1.Image{pauseImage}, nil
+	}
+
+	agent, err := digestAt(all, registryPackagesDigestsKey, registryAgentPackageName)
+	if err != nil {
+		return nil, err
+	}
+	return []internalv1alpha1.Image{pauseImage, {Name: registryAgentImageName, Digest: agent}}, nil
 }
 
 // digestAt returns one image's digest out of the release's digest map. Absent
