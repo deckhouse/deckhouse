@@ -57,6 +57,7 @@ func nodeRenderInputsChanged(before, after client.Object) bool {
 // fields (caCert, serverTLSBootstrap, proxy token); every other field must agree.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
 	extraExtensions, extraModules := nodeExtensions(in.NodeExtensions, in.NodeExtensionConflicts, node, ng.Name)
+	staticPods := nodeStaticPods(in.NodeStaticPodRequests, in.NodeStaticPodRequestsRejected, ng.Name)
 
 	kernel := renderKernel()
 	kernel.Modules = extraModules
@@ -67,6 +68,10 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		APIServerEndpoints:   in.APIServerEndpoints,
 		InternalNetworkCIDRs: in.InternalNetworkCIDRs,
 		Extensions:           mergeExtensions(renderExtensions(in.SysextDigests), extraExtensions),
+		// The preload list is the same for every node of the cluster: it follows
+		// from which modules are enabled, not from this group or this node.
+		Images:     in.Images,
+		StaticPods: staticPods,
 		// A NodeGroup has no disk field; without a selector the boot path refuses
 		// outright ("neither device nor diskSelector set"). Any selector the
 		// operator wrote survives this one through keepBootstrapOnlyFields.
@@ -399,10 +404,17 @@ func isCloudNodeType(t v1.NodeType) bool {
 // renderContainerRuntime carries over the only containerd knob a NodeGroup
 // exposes; the runtime itself is a platform-chosen system extension. Defaults
 // mirror the CRD defaults so the bootstrap file path gets the same values.
-func renderContainerRuntime(ng *v1.NodeGroup, _ clusterInputs) internalv1alpha1.ContainerRuntime {
+func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1.ContainerRuntime {
 	runtime := internalv1alpha1.ContainerRuntime{
 		SandboxImage:           sandboxImageRef,
 		MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
+		RegistryOwner:          registryOwnerNodelet,
+	}
+	// The agent owns the whole directory or none of it: nodelet writing
+	// spec.registry there would put an explicit host directory over the agent's
+	// _default and route the platform registry past the agent.
+	if in.RegistryAgentMode {
+		runtime.RegistryOwner = registryOwnerAgent
 	}
 	if ng.Spec.CRI == nil {
 		return runtime

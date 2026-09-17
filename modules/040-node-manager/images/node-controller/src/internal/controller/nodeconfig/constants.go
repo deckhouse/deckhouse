@@ -86,6 +86,13 @@ const (
 	// ref and the preloaded image cannot be changed apart.
 	sandboxImageRef = "deckhouse.local/images:" + pausePackageName
 
+	// registryOwnerNodelet and registryOwnerAgent are the two answers
+	// containerRuntime.registryOwner has, mirroring the CRD enum
+	// (crds/nodeconfig.yaml). Written explicitly because the bootstrap file path
+	// never reaches an API server and sees no CRD default.
+	registryOwnerNodelet = "nodelet"
+	registryOwnerAgent   = "agent"
+
 	// registryBashibleConfigSecret is what the registry module writes for
 	// bashible; the presence of its "agent" key is the one signal that
 	// containerd's registry.d belongs to that module's node agent rather than to

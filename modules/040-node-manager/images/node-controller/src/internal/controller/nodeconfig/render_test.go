@@ -41,6 +41,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -667,6 +668,17 @@ func TestRenderDefaultsMatchTheShippedCRD(t *testing.T) {
 	require.Equal(t, float64(defaultContainerLogMaxFiles), kubelet("containerLogMaxFiles")["default"])
 	require.Equal(t, float64(defaultMaxConcurrentDownloads),
 		crdField(t, schema, "spec", "containerRuntime", "maxConcurrentDownloads")["default"])
+
+	// The bootstrap file path never reaches an API server, so the render writes
+	// this default itself; a drift here gives a bootstrapping node a different
+	// owner of registry.d than a day-2 one.
+	require.Equal(t, registryOwnerNodelet,
+		crdField(t, schema, "spec", "containerRuntime", "registryOwner")["default"])
+
+	// The render is what fills the list, so the bound it caps at is the bound the
+	// API server enforces: a longer list is refused whole and the node is left
+	// without a config at all.
+	require.Equal(t, float64(maxStaticPods), crdField(t, schema, "spec", "staticPods")["maxItems"])
 }
 
 // nodeConfigCRDSchema reads the NodeConfig CRD the module ships, located the way
@@ -1050,4 +1062,95 @@ func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 func TestTheSandboxImageIsThePreloadedPause(t *testing.T) {
 	ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{}}
 	require.Equal(t, "deckhouse.local/images:pause", renderContainerRuntime(ng, clusterInputs{}).SandboxImage)
+}
+
+// The whole point of the object: what a module published reaches the node's
+// spec, byte for byte, and nothing of the objects meant for another group.
+func TestRenderSpecCompilesStaticPods(t *testing.T) {
+	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
+	pauseDigest := "sha256:" + strings.Repeat("c", 64)
+
+	ordered := orderedNSPRs([]deckhousev1alpha1.NodeStaticPodRequest{
+		nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{}),
+		nspr("other-group-only", deckhousev1alpha1.NodeStaticPodRequestSpec{
+			NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: []string{"storage"}},
+		}),
+	})
+
+	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{
+		Images:                        []internalv1alpha1.Image{{Name: "pause", Digest: pauseDigest}},
+		NodeStaticPodRequests:         ordered,
+		NodeStaticPodRequestsRejected: rejectedNSPRs(ordered),
+	})
+
+	require.Len(t, spec.StaticPods, 1)
+	require.Equal(t, "registry-agent", spec.StaticPods[0].Name)
+	require.Equal(t, podManifest("registry-agent"), spec.StaticPods[0].Manifest,
+		"the manifest reaches the node byte for byte")
+
+	// The preload list is the platform's and does not follow the objects: a pod
+	// of another group brought nothing, and pause is there regardless.
+	require.Equal(t, []internalv1alpha1.Image{{Name: "pause", Digest: pauseDigest}}, spec.Images)
+
+	// And the sandbox is named by the image that was just preloaded, not by a
+	// reference into a registry: containerd creates the sandbox itself, with no
+	// credentials from kubelet, so preloading pause buys nothing unless the
+	// config asks for it under the name containerd knows it by.
+	require.Equal(t, "deckhouse.local/images:pause", spec.ContainerRuntime.SandboxImage)
+	require.Equal(t, "deckhouse.local/images:"+spec.Images[0].Name, spec.ContainerRuntime.SandboxImage,
+		"the sandbox reference and the preloaded image must not be changed apart")
+}
+
+// A spec holding more pods than the schema accepts is refused whole, which
+// leaves the node with no config at all — so the render drops the surplus
+// instead, and drops it in the order the contest settled: the object that
+// arrived last loses its place, whatever it is called.
+func TestRenderSpecBoundsStaticPods(t *testing.T) {
+	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
+	created := metav1.Date(2026, time.March, 1, 0, 0, 0, 0, time.UTC)
+
+	nsprs := make([]deckhousev1alpha1.NodeStaticPodRequest, 0, maxStaticPods+1)
+	for i := range maxStaticPods {
+		nsprs = append(nsprs, nsprCreated(fmt.Sprintf("pod-%02d", i),
+			metav1.NewTime(created.Add(time.Duration(i)*time.Minute)),
+			deckhousev1alpha1.NodeStaticPodRequestSpec{}))
+	}
+	// Named so that it sorts first and was created last: a cap taken after the
+	// render sorts by name would keep this one and drop somebody older.
+	nsprs = append(nsprs, nsprCreated("aaa-newest",
+		metav1.NewTime(created.Add(time.Hour)), deckhousev1alpha1.NodeStaticPodRequestSpec{}))
+	ordered := orderedNSPRs(nsprs)
+
+	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{
+		NodeStaticPodRequests:         ordered,
+		NodeStaticPodRequestsRejected: rejectedNSPRs(ordered),
+	})
+
+	require.Len(t, spec.StaticPods, maxStaticPods)
+	names := make([]string, 0, len(spec.StaticPods))
+	for _, pod := range spec.StaticPods {
+		names = append(names, pod.Name)
+	}
+	require.NotContains(t, names, "aaa-newest", "the object that arrived last is the one that loses its place")
+	require.Contains(t, names, fmt.Sprintf("pod-%02d", maxStaticPods-1), "and no older object is dropped in its stead")
+}
+
+// Who writes containerd's registry.d is a field, not a detection: a node that
+// worked it out from "somebody wrote _default" would behave differently
+// depending on which of two writers ran first.
+func TestRenderRegistryOwner(t *testing.T) {
+	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}
+
+	bare := renderSpec(ng, node, clusterInputs{})
+	require.Equal(t, registryOwnerNodelet, bare.ContainerRuntime.RegistryOwner,
+		"a cluster that never heard of an agent goes on as it did before")
+
+	claimed := renderSpec(ng, node, clusterInputs{RegistryAgentMode: true})
+	require.Equal(t, registryOwnerAgent, claimed.ContainerRuntime.RegistryOwner)
+
+	// And it is taken back the moment the registry module stops saying so: the
+	// directory goes back to nodelet without anybody editing a node.
+	require.Equal(t, registryOwnerNodelet,
+		renderSpec(ng, node, clusterInputs{}).ContainerRuntime.RegistryOwner)
 }

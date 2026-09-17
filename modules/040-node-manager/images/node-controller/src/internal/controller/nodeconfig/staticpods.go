@@ -22,9 +22,21 @@ import (
 	"sort"
 	"strings"
 
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
+
+// maxStaticPods is what NodeSpec.StaticPods accepts (MaxItems=16 in
+// crds/nodeconfig.yaml). Beyond it the API server refuses the whole config and
+// the node is left with none, so the render drops the surplus instead.
+const maxStaticPods = 16
+
+// staticPodLog reports the objects a node config had no room for. renderSpec is
+// pure and takes no logger, and the drop is a misconfiguration an operator has
+// to see.
+var staticPodLog = log.Log.WithName(controllerName)
 
 // reasonInvalidManifest is the one refusal a static pod has that an extension
 // request does not; the rest of the vocabulary (Resolved, ReservedName, Conflict,
@@ -96,6 +108,8 @@ func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) map[string
 // select the node's group, sorted by name so the rendered spec does not follow
 // the listing order. The entry's name is the object's — the manifest's file name
 // on the node — and the pod inside it is called whatever the manifest says.
+// Beyond maxStaticPods the surplus is dropped in contest order, youngest first:
+// the alternative is a spec the API server refuses whole.
 func nodeStaticPods(ordered []*deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, ngName string) []internalv1alpha1.StaticPod {
 	// Left nil rather than empty: both marshal the same under omitempty.
 	var pods []internalv1alpha1.StaticPod
@@ -111,6 +125,16 @@ func nodeStaticPods(ordered []*deckhousev1alpha1.NodeStaticPodRequest, rejected 
 			Name:     nspr.Name,
 			Manifest: nspr.Spec.Manifest,
 		})
+	}
+
+	if len(pods) > maxStaticPods {
+		dropped := make([]string, 0, len(pods)-maxStaticPods)
+		for _, pod := range pods[maxStaticPods:] {
+			dropped = append(dropped, pod.Name)
+		}
+		staticPodLog.Error(nil, "more static pods select the group than a node config holds; the youngest are left out",
+			"nodeGroup", ngName, "limit", maxStaticPods, "dropped", dropped)
+		pods = pods[:maxStaticPods]
 	}
 
 	slices.SortFunc(pods, func(a, b internalv1alpha1.StaticPod) int {
