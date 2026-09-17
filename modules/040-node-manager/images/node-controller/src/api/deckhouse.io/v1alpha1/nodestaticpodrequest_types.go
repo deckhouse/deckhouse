@@ -39,6 +39,8 @@ import (
 // +kubebuilder:resource:scope=Cluster,shortName=nspr
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Phase,jsonPath=.status.phase,type=string
+// +kubebuilder:printcolumn:name=Applied,jsonPath=.status.appliedNodes,type=integer
+// +kubebuilder:printcolumn:name=Failed,jsonPath=.status.failedNodes,type=integer
 // +kubebuilder:printcolumn:name=Age,jsonPath=.metadata.creationTimestamp,type=date
 type NodeStaticPodRequest struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -140,26 +142,12 @@ var podDeserializer = func() runtime.Decoder {
 	return serializer.NewCodecFactory(scheme).UniversalDeserializer()
 }()
 
-// ValidateStaticPodManifest checks that a manifest is a valid Pod with a name
-// and a namespace, and returns the "namespace/name" of the pod it declares — the
-// key two objects can collide on, handed back rather than decoded a second time.
-//
-// One question and one answer: either the document is a Pod or it is not, and
-// the decoder's own error says why. Taking the document apart to report which
-// field offended would be a second, worse copy of the validation the API server
-// already performs — and every sentence of it would be one more thing to keep in
-// step with the loader in nodelet, which asks exactly this.
-//
-// Decoded with a nil "into" on purpose. Handing it a &corev1.Pod{} would let the
-// decoder fill a missing kind in from the destination type, so a document that
-// names no kind at all would sail through as a Pod. With nil, the decoder answers
-// "Object 'Kind' is missing in ..." itself, and the kind it did find comes back
-// as the GroupVersionKind — which is what a wrong kind is reported as.
-//
-// The object's own name is deliberately not compared with the pod's: it is the
-// manifest's file name on the node and nothing else. kubelet names the mirror
-// pod from the document, never from the file.
+// ValidateStaticPodManifest checks the document is a Pod and returns its "namespace/name",
+// the identity two objects may not share. Deliberately not strict: kubelet runs it with its
+// own types, and an unknown field must not cost the node its whole config.
 func ValidateStaticPodManifest(manifest string) (string, error) {
+	// into=nil on purpose: a destination would let the decoder fill a missing
+	// kind in from the type, so a document naming no kind would pass as a Pod.
 	object, gvk, err := podDeserializer.Decode([]byte(manifest), nil, nil)
 	if err != nil {
 		return "", fmt.Errorf("manifest is not a valid Pod: %w", err)
