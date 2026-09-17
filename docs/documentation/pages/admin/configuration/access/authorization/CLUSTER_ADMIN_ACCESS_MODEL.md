@@ -27,7 +27,7 @@ If `user-authz`is **enabled**, the group is bound to `user-authz:cluster-admin`,
 
 ## Recommended admin access
 
-If the [`user-authn`](/modules/user-authn/) module is enabled, use personalized OIDC-based kubeconfig obtained through the kubeconfig generator. This provides individual accountability and audit trail.
+If the [`user-authn`](/modules/user-authn/) module is enabled, use personalized OIDC-based kubeconfig obtained through the DKP web UI. This provides individual accountability and audit trail.
 
 If `user-authn` is disabled, administrators can explicitly use the admin kubeconfig on a master node:
 

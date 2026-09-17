@@ -260,7 +260,7 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
 
 ## Как сгенерировать kubeconfig для доступа к Kubernetes API?
 
-`kubeconfig` для удалённого доступа к кластеру через `kubectl` можно сгенерировать в [веб-интерфейсе `kubeconfigurator`](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
+`kubeconfig` для удалённого доступа к кластеру через `kubectl` можно сгенерировать в [веб-интерфейсе Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).
 
 Настройте параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi):
 
@@ -277,11 +277,9 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
     enabled: true
   ```
 
-Имя `kubeconfig` зарезервировано для веб-интерфейса генерации kubeconfig. URL зависит от параметра [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (например, при шаблоне вида `%s.kube.my` веб-интерфейс генерации kubeconfig будет доступен по адресу `kubeconfig.kube.my`, при `%s-kube.company.my` — по адресу `kubeconfig-kube.company.my`).  
-
 ### Настройка kube-apiserver
 
-С помощью функций модуля [`control-plane-manager`](/modules/control-plane-manager/) DP автоматически настраивает `kube-apiserver`, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
+С помощью функций модуля [`control-plane-manager`](/modules/control-plane-manager/) DP автоматически настраивает `kube-apiserver`, выставляя следующие флаги так, чтобы в кластере работала аутентификация через OIDC.
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 

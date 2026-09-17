@@ -19,6 +19,7 @@ The Network subsystem includes the following modules:
 * [`ingress-nginx`](/modules/ingress-nginx/): Installs and manages the [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) using custom resources. The module architecture is described on the [corresponding page](ingress-nginx.html) of this subsection.
 * [`metallb`](/modules/metallb/): Implements the LoadBalancer mechanism for Services in bare-metal clusters.
 * [`sdn`](/modules/sdn/): Provides software-defined networking (SDN) functions in the cluster — node network interface configuration, additional networks for pods and VMs, underlay networks, and system networks. The module architecture is described on the [corresponding page](sdn.html) of this subsection.
+* [`istio`](/modules/istio/): Implements a Service Mesh based on Istio for centralized management of network traffic in the cluster. The module architecture is described on the [corresponding page](istio.html) of this subsection.
 
 The subsection also describes:
 

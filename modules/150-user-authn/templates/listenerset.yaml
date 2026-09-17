@@ -41,37 +41,6 @@ spec:
     port: 80
     protocol: HTTP
   {{- end }}
-  {{- if or (and (.Values.userAuthn.internal.publishAPI.enabled) (.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
-    name: kubeconfig
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - group: ""
-        kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "kubeconfig-ingress-tls" "kubeconfig-httproute-tls") }}
-        namespace: d8-{{ .Chart.Name }}
-      mode: Terminate
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
-    name: kubeconfig-redirect
-    port: 80
-    protocol: HTTP
-  {{- else }}
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
-    name: kubeconfig
-    port: 80
-    protocol: HTTP
-  {{- end }}
   parentRef:
     group: gateway.networking.k8s.io
     kind: Gateway
