@@ -43,8 +43,8 @@ var staticPodLog = log.Log.WithName(controllerName)
 // RefusedByNodes) is shared and declared in extensions.go.
 const reasonInvalidManifest = "InvalidManifest"
 
-// reasonInvalidName is the second: an object name the API server admits and
-// spec.staticPods[].name does not.
+// reasonInvalidName is the other: an object name the API server admits — a CR
+// name is a DNS subdomain — and spec.staticPods[].name does not.
 const reasonInvalidName = "InvalidName"
 
 // nsprRefusal records why a static pod was refused: the reason its Ready
