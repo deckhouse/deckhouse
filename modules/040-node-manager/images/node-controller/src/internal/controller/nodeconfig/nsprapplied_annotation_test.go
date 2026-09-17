@@ -114,6 +114,23 @@ func TestAnnotationOutcomesTolerateSpaces(t *testing.T) {
 	require.Equal(t, int32(1), outcomes["something-else"].applied)
 }
 
+// An annotation edited by hand can carry an empty element, and Split hands one
+// back as "". Counted, it becomes an outcome keyed on no object at all, which no
+// NodeStaticPodRequest ever collects and nothing ever clears.
+func TestAnnotationOutcomesIgnoreEmptyNames(t *testing.T) {
+	cl := fake.NewClientBuilder().WithScheme(annotationScheme(t)).WithObjects(
+		bashibleNode("mutable-0", "workers", "registry-agent,,something-else"),
+		bashibleNode("mutable-1", "workers", ","),
+	).Build()
+
+	outcomes, err := readAnnotationOutcomes(context.Background(), cl, []string{immutableGroupName})
+	require.NoError(t, err)
+
+	require.NotContains(t, outcomes, "")
+	require.Equal(t, int32(1), outcomes["registry-agent"].applied)
+	require.Equal(t, int32(1), outcomes["something-else"].applied)
+}
+
 // A bashible node reports through its annotation and has no NodeConfig at all,
 // so the merge of the second source is what keeps it counted; without it such a
 // node reads as one that never wrote the pod.
