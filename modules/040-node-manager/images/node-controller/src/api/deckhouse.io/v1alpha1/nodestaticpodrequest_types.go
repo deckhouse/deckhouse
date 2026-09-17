@@ -126,16 +126,9 @@ func IsReservedStaticPodName(name string) bool {
 	return slices.Contains([]string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}, name)
 }
 
-// podDeserializer decodes a manifest the way the API server decodes a request
-// body: apiVersion and kind pick the type, and the document is then read into
-// it. The scheme knows core/v1 and nothing else, which is what makes "is this a
-// Pod?" a single question — a Deployment names a group this scheme never heard
-// of and fails to decode at all.
-//
-// Not strict: the document is executed by a kubelet of its own version, and a
-// strict decode would refuse a Pod field newer than the k8s.io/api this binary
-// vendors — on every node the document reaches, as a rejected NodeConfig rather
-// than as one bad manifest.
+// podDeserializer knows core/v1 and nothing else, so "is this a Pod?" is one
+// question. Not strict: kubelet runs the document with its own types, and a
+// field newer than the vendored k8s.io/api must not make the manifest invalid.
 var podDeserializer = func() runtime.Decoder {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
