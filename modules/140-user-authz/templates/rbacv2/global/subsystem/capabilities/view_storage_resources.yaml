@@ -1,0 +1,48 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem-capability:storage:view_resources
+  annotations:
+    en.meta.deckhouse.io/title: "Storage: view cluster resources"
+    ru.meta.deckhouse.io/title: "Хранилище: просмотр кластерных ресурсов"
+    en.meta.deckhouse.io/description: "Read-only access to cluster-scoped storage resources."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к кластерным ресурсам хранилища."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "subsystem-capability.storage.view_resources"
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: storage
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+    rbac.deckhouse.io/aggregate-to-storage-as: viewer
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csidrivers
+      - csinodes
+      - storageclasses
+      - volumeattachments
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshotclasses
+      - volumesnapshotcontents
+    verbs:
+      - get
+      - list
+      - watch
+

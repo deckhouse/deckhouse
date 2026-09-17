@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
-	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/validate"
 )
 
@@ -51,13 +51,15 @@ func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPa
 			return fmt.Errorf("read the '%s' project template file: %w", file.Name(), err)
 		}
 
-		projectTemplate := new(v1alpha1.ProjectTemplate)
+		// Parse as v1alpha2 (the storage version) so the structured fields of the built-in templates are
+		// preserved; v1alpha1 helm-string templates remain valid as a subset.
+		projectTemplate := new(v1alpha2.ProjectTemplate)
 		if err = yaml.Unmarshal(projectTemplateBytes, projectTemplate); err != nil {
 			return fmt.Errorf("unmarshal the '%s' project template file: %w", file.Name(), err)
 		}
 
 		m.logger.Info("validate project template", "file", file.Name())
-		if err = validate.ProjectTemplate(projectTemplate); err != nil {
+		if _, err = validate.LoadSchema(projectTemplate.Spec.ParametersSchema.OpenAPIV3Schema); err != nil {
 			return fmt.Errorf("'%s' invalid project template file: %w", file.Name(), err)
 		}
 
@@ -69,12 +71,12 @@ func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPa
 	return nil
 }
 
-func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1alpha1.ProjectTemplate) error {
+func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1alpha2.ProjectTemplate) error {
 	m.logger.Info("ensure project template", "projectTemplate", projectTemplate.Name)
 	if err := m.client.Create(ctx, projectTemplate); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				existingProjectTemplate := new(v1alpha1.ProjectTemplate)
+				existingProjectTemplate := new(v1alpha2.ProjectTemplate)
 				if err = m.client.Get(ctx, client.ObjectKey{Name: projectTemplate.Name}, existingProjectTemplate); err != nil {
 					return fmt.Errorf("get the '%s' project template: %w", projectTemplate.Name, err)
 				}
@@ -98,7 +100,7 @@ func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1
 	return nil
 }
 
-func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha1.ProjectTemplate, message string, ready bool) error {
+func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha2.ProjectTemplate, message string, ready bool) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, client.ObjectKey{Name: template.Name}, template); err != nil {
 			return fmt.Errorf("get the '%s' project template: %w", template.Name, err)
@@ -109,15 +111,15 @@ func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha1.Proj
 	})
 }
 
-func (m *Manager) projectsByTemplate(ctx context.Context, template *v1alpha1.ProjectTemplate) ([]*v1alpha2.Project, error) {
-	projects := new(v1alpha2.ProjectList)
-	if err := m.client.List(ctx, projects, client.MatchingLabels{v1alpha2.ResourceLabelTemplate: template.Name}); err != nil {
+func (m *Manager) projectsByTemplate(ctx context.Context, template *v1alpha2.ProjectTemplate) ([]*v1alpha3.Project, error) {
+	projects := new(v1alpha3.ProjectList)
+	if err := m.client.List(ctx, projects, client.MatchingLabels{v1alpha3.ResourceLabelTemplate: template.Name}); err != nil {
 		return nil, fmt.Errorf("list projects by template: %w", err)
 	}
 	if len(projects.Items) == 0 {
 		return nil, nil
 	}
-	var result []*v1alpha2.Project
+	var result []*v1alpha3.Project
 	for _, project := range projects.Items {
 		result = append(result, project.DeepCopy())
 	}

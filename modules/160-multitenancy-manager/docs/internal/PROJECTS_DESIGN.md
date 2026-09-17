@@ -1,9 +1,13 @@
 # Multi-namespace projects — design
 
-> Status: **draft / discussion.** How a Deckhouse project evolves from "project == one namespace"
-> to a project that its administrator can split into several namespaces — *optionally*, because not
-> every project needs self-service. Sibling of
-> [Cluster resource grants](./CLUSTER_OBJECT_GRANTS_DESIGN.md) (per-project resource grants/quotas).
+> Status: **draft / discussion — not the shipped API.** How a Deckhouse project evolves from
+> "project == one namespace" to a project that its administrator can split into several namespaces —
+> *optionally*, because not every project needs self-service. Sibling of
+> [Cluster resource grants](./CLUSTER_OBJECT_GRANTS_DESIGN.md) (per-project resource grants).
+>
+> The `owners` field with `User | Group | ServiceAccount` below is a proposal. The shipped
+> `Project.spec.administrators` accepts **User or Group only**; ServiceAccount is a
+> ProjectRoleBinding subject, not a project administrator.
 
 ## Problem
 
