@@ -172,6 +172,19 @@ func TestStaticPodsFor(t *testing.T) {
 		require.Empty(t, storage.staticPodsFor("worker"))
 	})
 
+	// generateNgPairs keeps one key per name it is given, duplicates included, so
+	// the object sits twice under one key: the step would write the manifest
+	// twice, the annotation would list it twice and appliedNodes count the node twice.
+	t.Run("a group named twice gets the object once", func(t *testing.T) {
+		storage := newStaticPodsStorage()
+		storage.AddStaticPodRequest(staticPodRequestObject("node-local-dns", time.Unix(200, 0), []string{"worker", "worker"}, nodeLocalDNSManifest))
+
+		require.Equal(t, []string{"node-local-dns"}, staticPodNames(storage.staticPodsFor("worker")))
+	})
+
+	// The wildcard key and the group key are read one after the other, and an
+	// object selecting its group explicitly is in neither twice — but a stored
+	// duplicate must not survive the concatenation either.
 	t.Run("a removed object leaves every key it was stored under", func(t *testing.T) {
 		storage := newStaticPodsStorage()
 		request := staticPodRequestObject("node-local-dns", time.Unix(200, 0), []string{"worker", "master"}, nodeLocalDNSManifest)
