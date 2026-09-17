@@ -55,11 +55,17 @@
 # of them, not just its own edition.
 .needs_build_tag: &needs_build_tag
   - job: build_fe:tag
+    artifacts: false
   - job: build_ce:tag
+    artifacts: false
   - job: build_ee:tag
+    artifacts: false
   - job: build_be:tag
+    artifacts: false
   - job: build_se:tag
+    artifacts: false
   - job: build_se_plus:tag
+    artifacts: false
 
 # promote:tag IS a WERF_ENV parallel:matrix job, so deploy:<channel> below can
 # depend on the matching edition instance via a matrix expression

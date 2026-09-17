@@ -69,10 +69,12 @@
     export PATH="${D8_PATH}:${PATH}"
     export D8_BIN="${D8_PATH}/d8-${D8_VERSION}"
     if [[ ! -x "${D8_BIN}" ]]; then
-      curl --fail --show-error -L "https://github.com/deckhouse/deckhouse-cli/releases/download/${D8_VERSION}/d8-${D8_VERSION}-linux-amd64.tar.gz" -o "/tmp/d8-${D8_VERSION}-linux-amd64.tar.gz"
-      tar --strip-components=2 -C /tmp -xzf "/tmp/d8-${D8_VERSION}-linux-amd64.tar.gz" linux-amd64/bin/d8
-      mv /tmp/d8 "${D8_BIN}"
-      chmod u+x "${D8_BIN}"
+      D8_TMP_DIR="$(mktemp -d)"
+      curl --fail --show-error -L "https://github.com/deckhouse/deckhouse-cli/releases/download/${D8_VERSION}/d8-${D8_VERSION}-linux-amd64.tar.gz" -o "${D8_TMP_DIR}/d8.tar.gz"
+      tar --strip-components=2 -C "${D8_TMP_DIR}" -xzf "${D8_TMP_DIR}/d8.tar.gz" linux-amd64/bin/d8
+      chmod u+x "${D8_TMP_DIR}/d8"
+      mv "${D8_TMP_DIR}/d8" "${D8_BIN}"
+      rm -rf "${D8_TMP_DIR}"
     fi
 
   # Same pattern as .import_secrets in ssdlc-tools/e2e-framework
