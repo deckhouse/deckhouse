@@ -17,15 +17,20 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // NodeStaticPodRequest asks kubelet on the selected nodes to run one pod outside the
@@ -139,6 +144,9 @@ var podDeserializer = func() runtime.Decoder {
 // the identity two objects may not share. Deliberately not strict: kubelet runs it with its
 // own types, and an unknown field must not cost the node its whole config.
 func ValidateStaticPodManifest(manifest string) (string, error) {
+	if err := refuseMultipleDocuments(manifest); err != nil {
+		return "", err
+	}
 	// into=nil on purpose: a destination would let the decoder fill a missing
 	// kind in from the type, so a document naming no kind would pass as a Pod.
 	object, gvk, err := podDeserializer.Decode([]byte(manifest), nil, nil)
@@ -156,6 +164,30 @@ func ValidateStaticPodManifest(manifest string) (string, error) {
 		return "", errors.New("manifest is not a valid Pod: metadata.namespace is empty")
 	}
 	return pod.Namespace + "/" + pod.Name, nil
+}
+
+// refuseMultipleDocuments refuses a manifest carrying more than one YAML document:
+// the decoder reads the first and stops, so a second escaped every check. Mirrors
+// refuseMultipleDocuments in nodelet internal/config/loader.go, message included.
+func refuseMultipleDocuments(manifest string) error {
+	reader := utilyaml.NewYAMLReader(bufio.NewReader(strings.NewReader(manifest)))
+	documents := 0
+	for {
+		document, err := reader.Read()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("manifest is not a valid Pod: %w", err)
+		}
+		if len(bytes.TrimSpace(document)) == 0 {
+			continue
+		}
+		documents++
+		if documents > 1 {
+			return errors.New("manifest is not a valid Pod: contains more than one document")
+		}
+	}
 }
 
 func init() {
