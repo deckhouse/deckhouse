@@ -28,8 +28,9 @@
     {{- if eq $scope "user" }}
       {{- $excluded = concat $excluded (include "system_namespaces" . | fromYamlArray) | uniq }}
     {{- else if eq $scope "system-excluded" }}
+      {{/* The policy's own excludeNames stay in force: the operator's list widens what is spared
+           from enforcement, it does not drag back a namespace the policy author ruled out. */}}
       {{- $namespaces = $match.d8ExcludedNamespaces }}
-      {{- $excluded = list }}
     {{- else if or (eq $scope "system-default") (eq $scope "system-enforce") (eq $scope "system-all") }}
       {{- $namespaces = $match.d8SystemNamespaces }}
       {{- $excluded = concat $excluded ($match.d8ExcludedNamespaces | default list) | uniq }}
