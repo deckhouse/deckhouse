@@ -1051,7 +1051,9 @@ func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 	// causes call for three different actions — and an enum is what keeps the two
 	// repositories from drifting into four.
 	podStatus := crdItems(t, crdField(t, schema, "status", "staticPods"))
-	require.Equal(t, []any{"Written", "Failed"}, crdField(t, podStatus, "state")["enum"])
+	require.Equal(t, []any{staticPodStateWritten, staticPodStateFailed},
+		crdField(t, podStatus, "state")["enum"],
+		"the roll-up reads these two spellings and nothing else")
 	require.Equal(t, []any{"ManifestRejected", "WriteFailed", "RemoveFailed"},
 		crdField(t, podStatus, "reason")["enum"])
 }
