@@ -91,6 +91,12 @@ func (s *StepsStorage) Render(target, provider string, templateContext map[strin
 	}
 
 	if len(ng) > 0 {
+		staticPodsStep, err := s.renderStaticPodsStep(ng[0])
+		if err != nil {
+			return nil, fmt.Errorf("render static pods step: %w", err)
+		}
+		steps[staticPodsStepName] = staticPodsStep
+
 		userConfigurations, err := s.renderNodeGroupConfigurations(ng[0], templateContext)
 		if err != nil {
 			klog.Errorf("Render user NodeGroupConfigurations failed: %s", err)
