@@ -343,7 +343,7 @@ status:
 
 {% alert level="info" %}
 В неймспейсах с именами `d8-*` и `kube-*` стандарт `restricted` применяется в режиме `warn` независимо от политики по умолчанию.
-Чтобы нарушения запрещались, а не только фиксировались, задайте [`settings.podSecurityStandards.systemNamespaces.enforcementAction`](configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction) со значением `Deny`, а системные неймспейсы с прикладной нагрузкой перечислите в [`excludeNamespaces`](configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces), чтобы оставить их в режиме `warn`.
+Чтобы нарушения блокировались, а не только фиксировались, задайте [`settings.podSecurityStandards.systemNamespaces.enforcementAction`](configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction) со значением `Deny`. Чтобы оставить в режиме `warn` системный неймспейс с прикладной нагрузкой, перечислите его в [`excludeNamespaces`](configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces).
 {% endalert %}
 
 {% alert level="info" %}

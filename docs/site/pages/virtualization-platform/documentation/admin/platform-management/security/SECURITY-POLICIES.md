@@ -67,16 +67,17 @@ As with policy assignment, enforcement mode can be set:
 
 ### Policies in system namespaces
 
-Namespaces named `d8-*` and `kube-*` hold the components of the platform itself,
-so the policies that apply to them are decided separately from the settings above.
+Namespaces named `d8-*` and `kube-*` hold the components of the platform itself.
+The policies that apply to them are configured separately from the settings above.
 
-The `restricted` standard applies to every such namespace in `warn` mode.
+Every such namespace is checked against the `restricted` standard in `warn` mode.
 The `security.deckhouse.io/pod-policy` label and the
 [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter
-are ignored there.
-The check reports violations in the audit and in Deckhouse Console, and never blocks a system component from starting.
+do not apply there.
+Violations are recorded in the audit and shown in Deckhouse Console,
+and a system component is never blocked from starting.
 
-To block violations instead of reporting them, set
+To block violations instead of recording them, set
 [`settings.podSecurityStandards.systemNamespaces.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction):
 
 ```yaml
@@ -86,14 +87,15 @@ settings:
       enforcementAction: Deny
 ```
 
-This is the only lever you have over system namespaces, and it is deliberate.
-The labels that tune the constraints are written by the module that owns the namespace,
-so a cluster operator cannot edit them: Deckhouse restores them on the next converge.
+After that, a workload that violates the standard is not started in a system namespace.
 
-A system namespace may legitimately host application workloads that the platform's own standards
-would block. List such namespaces in
-[`excludeNamespaces`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces)
-to keep them at `warn`:
+This parameter is the only way to change how policies are applied to system namespaces.
+The labels that tune the constraints belong to the module that owns the namespace,
+and Deckhouse restores them at the next converge, so editing them has no lasting effect.
+
+A system namespace may host application workloads that the standards of the platform would block.
+To keep such a namespace in `warn` mode, list it in
+[`excludeNamespaces`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces):
 
 ```yaml
 settings:
@@ -105,35 +107,39 @@ settings:
         - d8-team-*
 ```
 
-The list supports a prefix or suffix glob and outranks everything else,
-including a namespace a module labeled `security.deckhouse.io/enable-security-policy-check: "true"`.
-That label makes a module's own namespace enforce even at the default `warn`,
-and an exclusion is the only way to override it.
+The list supports a prefix or a suffix glob.
+It takes precedence over the `security.deckhouse.io/enable-security-policy-check` label,
+which otherwise makes the namespace of a module block violations even in `warn` mode.
 
-For a single workload rather than a whole namespace, the `security.deckhouse.io/skip-pss-check` label
-on the Pod or its controller, and a SecurityPolicyException in that namespace, both still apply.
+To exempt a single workload instead of a whole namespace, use the `security.deckhouse.io/skip-pss-check` label
+on the Pod or on its controller, or a SecurityPolicyException in that namespace.
 
-The same rule governs OperationPolicy and SecurityPolicy resources, which matters most for a policy
-whose selector covers every namespace. Such a policy with `enforcementAction: Deny` blocks workloads
-in ordinary namespaces, and in system ones it follows `systemNamespaces.enforcementAction` — so by
-default it only warns and cannot take a platform component down by accident. Where a module opted
-its namespace into enforcement, the policy keeps its own action; where the operator excluded a
-namespace, it only warns.
+OperationPolicy and SecurityPolicy resources follow the same settings.
+A policy with `enforcementAction: Deny` blocks workloads in ordinary namespaces.
+In a system namespace its action is taken from `systemNamespaces.enforcementAction`, with two exceptions:
+in a namespace labeled `security.deckhouse.io/enable-security-policy-check` the policy keeps its own action,
+and in a namespace listed in `excludeNamespaces` the policy only warns.
 
-Splitting a policy this way produces extra constraints next to the original one, visible in the audit
-and in Deckhouse Console: `d8-system-default-<policy>` for the system namespaces no module opted in,
-`d8-system-enforce-<policy>` for those a module did, and `d8-system-excluded-<policy>` for the
-namespaces named in `excludeNamespaces`. The first two collapse into one when
-`systemNamespaces.enforcementAction` already equals the policy's own action.
-Both prefixes are reserved: a policy whose own name starts with one of them is rejected on creation.
-A policy stays a single constraint whenever the split would change nothing: when it warns or runs
-in dryrun, when the namespaces it names hold no system namespace, when it already excludes every
-system namespace it names, or when that list uses a leading glob such as `*-system`, which cannot
-be intersected with `d8-*` exactly.
+Such a policy is rendered as several Gatekeeper constraints, which are visible in the audit and in Deckhouse Console:
 
-Gatekeeper mutations are never applied in system namespaces, whether the namespace carries the label or not.
-The platform sets the parameters of its own components itself, so an `Assign` or `ModifySet` resource
-that would change them is not allowed to run there.
+- `d8-system-default-<policy>`: For the system namespaces that no module opted into enforcement.
+- `d8-system-enforce-<policy>`: For the system namespaces that a module opted into enforcement.
+- `d8-system-excluded-<policy>`: For the namespaces listed in `excludeNamespaces`.
+
+The first two are rendered as a single constraint
+when `systemNamespaces.enforcementAction` matches the action of the policy.
+All three prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
+
+A policy is rendered as a single constraint when the split would change nothing:
+
+- The policy uses the `Warn` or the `Dryrun` action.
+- The namespaces the policy selects include no system namespace.
+- The policy already excludes every system namespace it selects.
+- The namespace list uses a leading glob, such as `*-system`, which cannot be intersected with `d8-*` exactly.
+
+Gatekeeper mutations do not apply in system namespaces, whatever labels the namespace carries.
+The platform sets the parameters of its own components,
+so an `Assign` or a `ModifySet` resource is not allowed to change them there.
 
 ### Extending a policy
 
