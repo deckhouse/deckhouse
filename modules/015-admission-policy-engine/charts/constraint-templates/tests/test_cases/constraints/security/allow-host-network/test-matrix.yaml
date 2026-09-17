@@ -548,6 +548,69 @@ spec:
                     name: nginx
                     ports:
                       - containerPort: 80
+        - name: allowed-by-exception-hostnetwork-true-pod-without-hostnetwork
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-unused
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-unused
+                name: allowed-by-exception-hostnetwork-true-pod-without-hostnetwork
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+        - name: allowed-by-exception-hostnetwork-true-pod-opts-out
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-explicit-false
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-explicit-false
+                name: allowed-by-exception-hostnetwork-true-pod-opts-out
+              spec:
+                hostNetwork: false
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
         - name: disallowed-by-exception-hostnetwork-true-container-port
           violations: "yes"
           assertionMessage: ""

@@ -95,12 +95,27 @@ spec:
                 msg := violation_message("The hostNetwork or hostPort are not allowed", sprintf("%v: %v", [review_kind, obj.metadata.name]), failed.detail)
               }
 
+              # Where an exception is in force it decides whether the host network may be used,
+              # including narrowing a constraint that allows it. What it cannot do is turn
+              # `allowedValue: true` into a requirement: comparing the pod against the exception
+              # alone denied a pod that did not use hostNetwork at all, because its `false`
+              # differed from the `true` the exception permitted. Not using a feature is never a
+              # violation of a rule that restricts it.
+              host_network_permitted(actual, _) if {
+                actual == false
+              }
+
+              host_network_permitted(actual, spe_allowed) if {
+                actual == true
+                spe_allowed == true
+              }
+
               host_network_result(obj, allow_host_network, spe) := result if {
                 spe_path := ["spec", "network", "hostNetwork", "allowedValue"]
                 path_value_resolved(spe, spe_path)
                 actual := object.get(pod_spec, "hostNetwork", false)
                 spe_allowed := object.get(spe, spe_path, false)
-                actual == spe_allowed
+                host_network_permitted(actual, spe_allowed)
                 result := {"allowed": true, "msg": "", "detail": {}}
               }
 
@@ -109,7 +124,7 @@ spec:
                 path_value_resolved(spe, spe_path)
                 actual := object.get(pod_spec, "hostNetwork", false)
                 spe_allowed := object.get(spe, spe_path, false)
-                actual != spe_allowed
+                not host_network_permitted(actual, spe_allowed)
                 result := {
                   "allowed": false,
                   "msg": "",

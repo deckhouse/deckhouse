@@ -222,6 +222,56 @@ spec:
       template: ../../../../templates/security/allow-host-processes.yaml
       constraint: constraints/policy_1.yaml
       cases:
+        - name: allowed-by-exception-hostpid-true-pod-without-hostpid
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPID.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpid-true-unused
+                spec:
+                  network:
+                    hostPID:
+                      allowedValue: true
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpid-true-unused
+                name: allowed-by-exception-hostpid-true-pod-without-hostpid
+        - name: allowed-by-exception-hostipc-true-pod-opts-out
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostIPC.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostipc-true-explicit-false
+                spec:
+                  network:
+                    hostIPC:
+                      allowedValue: true
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostipc-true-explicit-false
+                name: allowed-by-exception-hostipc-true-pod-opts-out
+              spec:
+                hostIPC: false
         - name: allowed-by-exception-hostpid-true
           violations: "no"
           assertionMessage: ""
