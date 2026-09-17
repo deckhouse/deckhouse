@@ -56,3 +56,36 @@ func TestMergeMasterHostsKeepsAnAddressOverAnEmptyOne(t *testing.T) {
 		{Host: "10.0.0.1", Name: "cluster-master-0"},
 	}, MergeMasterHosts(sessionHosts, cachedHosts))
 }
+
+// The addresses of --ssh-host carry no node name, and the hosts cache is empty until a
+// master is recreated. The node's own infrastructure state is what names the rest of them:
+// without it the readiness checks report "no SSH address found" for every master converge
+// did not touch.
+func TestMasterHostsFromState(t *testing.T) {
+	nodesState := map[string][]byte{
+		"cluster-master-0": []byte(`{"outputs":{"master_ip_address_for_ssh":{"value":"10.12.0.174"}}}`),
+		"cluster-master-1": []byte(`{"outputs":{"master_ip_address_for_ssh":{"value":"10.12.0.230"}}}`),
+		// An immutable master answers no SSH and carries no address.
+		"cluster-master-2": []byte(`{"outputs":{}}`),
+		// A master whose state was never written: commander keeps it in its own cache.
+		"cluster-master-3": nil,
+	}
+
+	require.Equal(t, []session.Host{
+		{Host: "10.12.0.174", Name: "cluster-master-0"},
+		{Host: "10.12.0.230", Name: "cluster-master-1"},
+	}, MasterHostsFromState(nodesState))
+}
+
+// The session names a host after its own address, so it never matches a node name. The
+// state must not be shadowed by it, while the cache — rewritten on every rebuild — must win.
+func TestMergeMasterHostsPrefersTheCacheOverTheState(t *testing.T) {
+	stateHosts := []session.Host{{Host: "10.12.1.33", Name: "cluster-master-2"}}
+	sessionHosts := []session.Host{{Host: "10.12.0.174", Name: "10.12.0.174"}}
+	cachedHosts := []session.Host{{Host: "10.12.9.9", Name: "cluster-master-2"}}
+
+	require.Equal(t, []session.Host{
+		{Host: "10.12.0.174", Name: "10.12.0.174"},
+		{Host: "10.12.9.9", Name: "cluster-master-2"},
+	}, MergeMasterHosts(stateHosts, sessionHosts, cachedHosts))
+}

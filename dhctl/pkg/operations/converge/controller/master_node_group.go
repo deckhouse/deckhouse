@@ -109,7 +109,14 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not read master hosts from cache: %v", err))
 	}
 
-	userPassedHosts := state.MergeMasterHosts(sessionHosts, cachedHosts)
+	// The hosts of --ssh-host carry no node name, so on their own they map to nothing and
+	// every readiness check refuses the master it cannot address. The node's own state
+	// names it.
+	userPassedHosts := state.MergeMasterHosts(
+		state.MasterHostsFromState(c.state.State),
+		sessionHosts,
+		cachedHosts,
+	)
 
 	nodesNames := make([]string, 0, len(c.state.State))
 	for nodeName := range c.state.State {
