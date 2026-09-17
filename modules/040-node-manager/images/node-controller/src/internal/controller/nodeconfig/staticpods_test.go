@@ -116,6 +116,16 @@ func TestNodeStaticPodRequests(t *testing.T) {
 			want:   []internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}},
 		},
 		{
+			// The object name becomes spec.staticPods[].name, which is a DNS label;
+			// a CR name is a DNS subdomain. Rendering this one costs the node its
+			// whole NodeConfig, so it never leaves the controller.
+			name: "a name the NodeConfig field would not take contributes nothing",
+			nsprs: []deckhousev1alpha1.NodeStaticPodRequest{
+				nspr("registry-agent.v2", deckhousev1alpha1.NodeStaticPodRequestSpec{Manifest: podManifest("registry-agent")}),
+			},
+			ngName: "worker",
+		},
+		{
 			name: "a reserved control-plane name contributes nothing",
 			nsprs: []deckhousev1alpha1.NodeStaticPodRequest{
 				nspr("etcd", deckhousev1alpha1.NodeStaticPodRequestSpec{Manifest: podManifest("etcd")}),
@@ -219,6 +229,28 @@ func TestRejectedNSPRs(t *testing.T) {
 			nspr("alpha", deckhousev1alpha1.NodeStaticPodRequestSpec{}),
 			nspr("beta", deckhousev1alpha1.NodeStaticPodRequestSpec{}),
 		))
+	})
+
+	// Checked before the reserved name: this one the API server let through and
+	// the NodeConfig field will not, so it is the refusal an operator has to see
+	// even when the name is also something they may not use.
+	t.Run("a name the NodeConfig field would not take is refused", func(t *testing.T) {
+		rejected := reject(nspr("registry-agent.v2", deckhousev1alpha1.NodeStaticPodRequestSpec{
+			Manifest: podManifest("registry-agent"),
+		}))
+		require.Equal(t, reasonInvalidName, rejected["registry-agent.v2"].reason)
+		require.Contains(t, rejected["registry-agent.v2"].message, "registry-agent.v2")
+	})
+
+	// A refused name claims no pod either, so a typo does not take the object
+	// that spells it right down with it.
+	t.Run("an object with a refused name does not hold the pod it named", func(t *testing.T) {
+		rejected := reject(
+			nsprCreated("agent.v2", older, deckhousev1alpha1.NodeStaticPodRequestSpec{Manifest: podManifest("agent")}),
+			nsprCreated("legitimate", newer, deckhousev1alpha1.NodeStaticPodRequestSpec{Manifest: podManifest("agent")}),
+		)
+		require.Equal(t, reasonInvalidName, rejected["agent.v2"].reason)
+		require.NotContains(t, rejected, "legitimate")
 	})
 
 	t.Run("a reserved control-plane name is refused", func(t *testing.T) {

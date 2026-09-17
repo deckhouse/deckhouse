@@ -43,6 +43,10 @@ var staticPodLog = log.Log.WithName(controllerName)
 // RefusedByNodes) is shared and declared in extensions.go.
 const reasonInvalidManifest = "InvalidManifest"
 
+// reasonInvalidName is the second: an object name the API server admits and
+// spec.staticPods[].name does not.
+const reasonInvalidName = "InvalidName"
+
 // nsprRefusal records why a static pod was refused: the reason its Ready
 // condition carries, and the message that says what is wrong with it.
 type nsprRefusal struct {
@@ -70,14 +74,18 @@ func orderedNSPRs(nsprs []deckhousev1alpha1.NodeStaticPodRequest) []*deckhousev1
 	return ordered
 }
 
-// rejectedNSPRs runs the three checks in order (reserved name, invalid manifest,
-// pod already claimed by an older object); the contest is cluster-wide, as in
-// resolveNERConflicts (extensions.go), and a refused object claims nothing.
+// rejectedNSPRs runs the four checks in order (a name the node config would not
+// take, reserved name, invalid manifest, pod already claimed by an older object);
+// the contest is cluster-wide, as in resolveNERConflicts, and a refusal claims nothing.
 func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) map[string]nsprRefusal {
 	rejected := map[string]nsprRefusal{}
 	claimed := make(map[string]string, len(ordered))
 
 	for _, nspr := range ordered {
+		if err := deckhousev1alpha1.ValidateStaticPodName(nspr.Name); err != nil {
+			rejected[nspr.Name] = nsprRefusal{reason: reasonInvalidName, message: err.Error()}
+			continue
+		}
 		if deckhousev1alpha1.IsReservedStaticPodName(nspr.Name) {
 			rejected[nspr.Name] = nsprRefusal{
 				reason:  reasonReservedName,

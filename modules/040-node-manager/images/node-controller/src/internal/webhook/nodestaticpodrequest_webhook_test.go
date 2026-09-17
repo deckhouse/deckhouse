@@ -93,6 +93,23 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			wantAllowed: true,
 		},
 		{
+			// A CR name is a DNS subdomain and the field it becomes is a DNS label:
+			// the API server admits this one, every node it reached would refuse the
+			// whole NodeConfig, and the rollout would stop there.
+			name:        "a name the NodeConfig field would not take is denied",
+			op:          admissionv1.Create,
+			nspr:        makeNSPR("registry-agent.v2", nsprManifest("registry-agent")),
+			wantAllowed: false,
+			wantMessage: "metadata.name",
+		},
+		{
+			name:        "a name longer than a DNS label is denied",
+			op:          admissionv1.Create,
+			nspr:        makeNSPR(strings.Repeat("a", 64), nsprManifest("registry-agent")),
+			wantAllowed: false,
+			wantMessage: "metadata.name",
+		},
+		{
 			// The object name is what is reserved, whatever pod the manifest names.
 			name:        "a reserved control-plane name is denied",
 			op:          admissionv1.Create,
