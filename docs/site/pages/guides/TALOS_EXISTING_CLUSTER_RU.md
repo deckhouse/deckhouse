@@ -6,36 +6,38 @@ lang: ru
 layout: sidebar-guides
 ---
 
-Эта инструкция подходит для ситуации, когда Talos-кластер уже создан и работает: control plane запущен, worker-узлы присоединены, CNI установлен, а Kubernetes API доступен через `kubectl`.
+Это руководство подходит для ситуации, когда Kubernetes-кластер на базе [Talos Linux](https://www.siderolabs.com/talos-linux) уже создан и работает: control plane запущен, worker-узлы присоединены, CNI установлен, Kubernetes API доступен через `kubectl`.
 
-Deckhouse устанавливается поверх готового Kubernetes-кластера в режиме существующего кластера. В примере используется Community Edition, канал обновлений `EarlyAccess` и bundle `Managed`.
+Deckhouse устанавливается поверх готового Kubernetes-кластера. В примере используется [Community Edition](/products/kubernetes-platform/documentation/v1/reference/revision-comparison.html), [канал обновлений](/products/kubernetes-platform/documentation/v1/reference/release-channels.html) `EarlyAccess` и [набор модулей](/products/kubernetes-platform/documentation/v1/admin/configuration/#наборы-модулей) `Managed`.
 
 В этой схеме:
 
 - Talos продолжает управлять ОС, MachineConfig, kubelet, containerd, etcd, control plane, Kubernetes PKI и обновлением Kubernetes;
-- существующий CNI продолжает отвечать за сеть Pod;
+- существующий CNI продолжает отвечать за сеть подов;
 - внешний инфраструктурный провайдер или пользователь продолжает создавать и удалять машины;
 - Deckhouse устанавливает и обновляет платформенные модули, но не управляет Talos и жизненным циклом узлов.
 
 {% alert level="warning" %}
-Значение `bundle` выбирается во время установки и впоследствии не изменяется. Нельзя установить `Managed`, а затем обычным patch переключить его на `Minimal` или `Default`.
+Набор модулей выбирается во время установки и впоследствии не изменяется. Нельзя установить `Managed`, а затем обычным patch переключить его на `Minimal` или `Default`.
 {% endalert %}
 
-## Что понадобится
+## Предварительные требования
 
-На компьютере, с которого запускается установка, нужны:
+На машине, с которой будет выполняться установка, необходимы:
 
 - Docker;
-- `kubectl`;
-- `yq` для проверки YAML;
-- административный Kubernetes kubeconfig Talos-кластера;
+- утилита `kubectl`;
+- утилита `yq` для проверки YAML;
+- административный kubeconfig Talos-кластера;
 - доступ к Kubernetes API;
-- HTTPS-доступ к `registry.deckhouse.ru` с компьютера и узлов кластера;
-- `talosctl` и `talosconfig`, если административный Kubernetes kubeconfig ещё не получен.
+- HTTPS-доступ к `registry.deckhouse.ru`;
+- `talosctl` и `talosconfig`, если административный kubeconfig ещё не получен.
 
-SSH к Talos-узлам не нужен: installer работает через Kubernetes API.
+Ну узлах кластера необходим HTTPS-доступ к `registry.deckhouse.ru`.
 
-Перед установкой рекомендуется сделать снимок etcd средствами Talos и сохранить исходные `talosconfig` и Kubernetes kubeconfig.
+SSH-доступ к узлам кластера не требуется, установка происходит через Kubernetes API.
+
+Перед установкой рекомендуется сделать снимок etcd средствами Talos и сохранить исходные talosconfig и kubeconfig.
 
 ## Настройка рабочих путей
 
@@ -64,9 +66,9 @@ CONFIG_FILE="$PWD/config.yml"
 | `INSTALLER_KUBECONFIG` | Переносимая копия административного kubeconfig для Docker-контейнера |
 | `CONFIG_FILE` | Конфигурация установки Deckhouse |
 
-Если вы открыли новый терминал, снова перейдите в каталог и повторите блок с четырьмя переменными.
+Если вы открыли новый терминал, снова перейдите в каталог и заново задайте переменные окружения с конфигурацией.
 
-## Подготовка административного Kubernetes kubeconfig
+## Подготовка административного kubeconfig
 
 ### Если kubeconfig уже есть
 
@@ -77,11 +79,13 @@ cp /путь/к/существующему/admin-kubeconfig "$ADMIN_KUBECONFIG"
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
-Это должен быть Kubernetes kubeconfig для `kubectl`, а не `talosconfig` для `talosctl`.
+{% alert level="info" %}
+Имеется ввиду kubeconfig для `kubectl`, а не talosconfig для `talosctl`.
+{% endalert %}
 
 ### Если kubeconfig нужно получить через Talos
 
-Сначала поместите существующий `talosconfig` в рабочий каталог:
+Сначала поместите существующий talosconfig в рабочий каталог:
 
 ```bash
 cp /путь/к/существующему/talosconfig "$TALOSCONFIG"
@@ -94,7 +98,7 @@ chmod 600 "$TALOSCONFIG"
 CONTROL_PLANE_ADDRESS=<CONTROL_PLANE_IP_OR_DNS>
 ```
 
-Получите административный Kubernetes kubeconfig:
+Получите административный kubeconfig:
 
 ```bash
 talosctl kubeconfig "$ADMIN_KUBECONFIG" \
@@ -105,7 +109,7 @@ talosctl kubeconfig "$ADMIN_KUBECONFIG" \
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
-По умолчанию `talosctl` возьмёт Talos API endpoints из текущего контекста `talosconfig`. Если нужен другой endpoint, добавьте:
+По умолчанию `talosctl` возьмёт Talos API endpoints из текущего контекста talosconfig. Если нужен другой endpoint, добавьте:
 
 ```text
 --endpoints=<TALOS_API_ENDPOINT>
@@ -115,13 +119,13 @@ chmod 600 "$ADMIN_KUBECONFIG"
 
 ### Проверка прав
 
-Проверьте, кем Kubernetes видит пользователя:
+Проверьте, как Kubernetes определяет пользователя:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" auth whoami
 ```
 
-Для установки нужен стабильный административный доступ. Talos admin kubeconfig обычно использует группу `system:masters`. Пользовательский OIDC kubeconfig для installer нежелателен: после включения модулей авторизации Deckhouse права такого пользователя на системные неймспейсы могут измениться.
+Для установки нужен стабильный административный доступ. Talos admin kubeconfig обычно использует группу `system:masters`. Пользовательский OIDC kubeconfig для установки нежелателен, так как после включения модулей авторизации Deckhouse права такого пользователя на системные неймспейсы могут измениться.
 
 Проверьте основные разрешения:
 
@@ -156,7 +160,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" get --raw='/readyz?verbose'
 
 В конце ответа должно быть `readyz check passed`.
 
-Проверьте системные Pod:
+Проверьте системные поды:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
@@ -170,11 +174,13 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
 - kube-proxy, если он используется выбранной сетевой схемой;
 - компоненты control plane.
 
-Также убедитесь, что версия Kubernetes поддерживается выбранной версией DKP.
+Также убедитесь, что версия Kubernetes [поддерживается](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) выбранной версией DKP.
 
 ## Проверка границ ответственности
 
 Deckhouse не должен одновременно с Talos или внешним инфраструктурным провайдером управлять одними и теми же компонентами.
+
+В таблице приведен список компонентов и их владельцев после установки:
 
 | Компонент | Владелец после установки |
 | --- | --- |
@@ -198,9 +204,11 @@ Deckhouse не должен одновременно с Talos или внешн�
 - cloud-provider-модули;
 - `registry-packages-proxy`.
 
-Если в Talos-кластере уже установлен Cilium, включать Deckhouse `cni-cilium` нельзя: два оператора не должны одновременно управлять одним CNI.
+{% alert level="warning" %}
+Если в Talos-кластере уже установлен Cilium, включать модуль `cni-cilium` нельзя, два оператора не должны одновременно управлять одним CNI.
+{% endalert %}
 
-Bundle `Managed` включает ingress, cert-manager, local-path-provisioner, VPA, мониторинг и модули авторизации. До установки проверьте, нет ли в кластере их внешних аналогов:
+Набор модулей `Managed` включает `ingress-nginx`, `cert-manager`, `local-path-provisioner`, VPA, мониторинг и модули авторизации. До установки проверьте, нет ли в кластере их внешних аналогов:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" get storageclass
@@ -209,11 +217,11 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" get deployments -A
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" get crd
 ```
 
-Если компонент уже установлен, заранее определите единственного владельца. Не запускайте одновременно два ingress-controller, два cert-manager или два VPA.
+Если компонент уже установлен, заранее определите единственного владельца. Не запускайте одновременно два `ingress-controller`, два cert-manager или два VPA.
 
-## Подготовка kubeconfig для installer-контейнера
+## Подготовка kubeconfig
 
-Installer запускается внутри Docker. Ему нужна переносимая копия kubeconfig, которая не ссылается на файлы сертификатов и ключей, доступные только на компьютере пользователя.
+Установщик запускается внутри Docker. Ему нужна переносимая копия kubeconfig, которая не ссылается на файлы сертификатов и ключей, доступные только на компьютере пользователя.
 
 Создайте такую копию:
 
@@ -251,7 +259,7 @@ kubectl --kubeconfig="$INSTALLER_KUBECONFIG" \
 
 Этот адрес должен быть доступен из Docker-контейнера. Предпочтительный вариант — доступный по сети адрес Kubernetes API, VPN или адрес балансировщика.
 
-Если указан `https://127.0.0.1:6443`, installer не сможет использовать его напрямую: внутри контейнера `127.0.0.1` указывает на сам контейнер. Сначала организуйте доступ контейнера к Kubernetes API и только затем продолжайте установку.
+Если указан `https://127.0.0.1:6443`, установщик не сможет использовать его напрямую, т.к. внутри контейнера `127.0.0.1` указывает на сам контейнер. Сначала организуйте доступ контейнера к Kubernetes API и только затем продолжайте установку.
 
 ## Создание `config.yml`
 
@@ -294,9 +302,7 @@ grep -n $'\t' "$CONFIG_FILE"
 
 Первая команда должна вывести `YAML OK`, вторая — ничего.
 
-## Запуск официального CE installer
-
-Тег installer должен соответствовать `releaseChannel` в конфигурации. Для `EarlyAccess` используется тег `early-access`.
+## Запуск установщика
 
 Проверьте наличие файлов:
 
@@ -304,7 +310,7 @@ grep -n $'\t' "$CONFIG_FILE"
 ls -l "$CONFIG_FILE" "$INSTALLER_KUBECONFIG"
 ```
 
-Запустите installer:
+Запустите установщик:
 
 ```bash
 docker run --pull=always -it \
@@ -314,6 +320,8 @@ docker run --pull=always -it \
   bash
 ```
 
+Обратите внимание на редакцию `ce`и канал обновлений `early-access`, указанные в ссылке на образ установщика.
+
 Внутри открывшегося контейнера запустите:
 
 ```bash
@@ -322,18 +330,18 @@ dhctl bootstrap-phase install-deckhouse \
   --config=/config.yml
 ```
 
-Не закрывайте терминал до завершения bootstrap. Обычно установка занимает от 5 до 30 минут.
+Не закрывайте терминал до завершения bootstrap. Установка может занимать от 5 до 30 минут.
 
 ## Наблюдение за установкой
 
-В отдельном терминале перейдите в тот же рабочий каталог и снова задайте переменные из раздела «Настройка рабочих путей». Затем следите за Deckhouse:
+В отдельном терминале перейдите в тот же рабочий каталог и снова задайте переменные из раздела «Настройка рабочих путей». Выполните команду:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
   -n d8-system get deployment,replicaset,pods -w
 ```
 
-Если Pod не создаётся, посмотрите события:
+Если под deckhouse не создаётся, посмотрите события:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
@@ -343,7 +351,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
 
 Ошибки `ImagePullBackOff`, `ErrImagePull`, `401 Unauthorized` или `403 Forbidden` обычно означают проблему с адресом registry, доступом к нему, DNS или маршрутизацией.
 
-Для диагностики конкретного Pod используйте:
+Для диагностики конкретного пода используйте:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
@@ -371,16 +379,16 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide
 
 У включённых модулей ожидаются `PHASE: Ready`, `ENABLED: True` и `READY: True`.
 
-Статуса `Module` недостаточно: он может быть `Ready`, даже если отдельный workload модуля не был создан или перезапускается. Проверьте реальные ресурсы:
+Статуса `Module` недостаточно - он может быть `Ready`, даже если отдельный workload модуля не был создан или перезапускается. Проверьте реальные ресурсы:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
   get deployment,statefulset,daemonset -A
 ```
 
-У DaemonSet значения `DESIRED`, `CURRENT` и `READY` должны совпадать. У Deployment и StatefulSet ожидаемое количество реплик должно быть готово.
+У DaemonSet значения `DESIRED`, `CURRENT` и `READY` должны совпадать. У Deployment и StatefulSet ожидаемое количество реплик должно быть в статусе `Ready`.
 
-Найдите остальные проблемные Pod:
+Найдите остальные проблемные поды:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
@@ -399,7 +407,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
 
 Старое предупреждение само по себе не означает текущую неисправность. Учитывайте время события, число повторов и состояние связанного ресурса.
 
-### Проверка того, что Deckhouse не забрал управление Talos
+### Проверка, что Deckhouse не забрал управление Talos
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" get modules \

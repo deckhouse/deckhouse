@@ -6,9 +6,9 @@ lang: en
 layout: sidebar-guides
 ---
 
-This guide applies to an existing, operational Talos cluster: the control plane is running, worker nodes have joined the cluster, a CNI is installed, and the Kubernetes API is accessible with `kubectl`.
+This guide applies to an existing, operational Kubernetes cluster based on [Talos Linux](https://www.siderolabs.com/talos-linux): the control plane is running, worker nodes have joined the cluster, a CNI is installed, and the Kubernetes API is accessible with `kubectl`.
 
-Deckhouse is installed on top of the existing Kubernetes cluster in existing-cluster mode. This example uses Community Edition, the `EarlyAccess` release channel, and the `Managed` bundle.
+Deckhouse is installed on top of the existing Kubernetes cluster. This example uses [Community Edition](/products/kubernetes-platform/documentation/v1/reference/revision-comparison.html), [release channel](/products/kubernetes-platform/documentation/v1/reference/release-channels.html) `EarlyAccess`, and [module bundle](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles) `Managed`.
 
 In this setup:
 
@@ -18,7 +18,7 @@ In this setup:
 - Deckhouse installs and updates platform modules but does not manage Talos or the node lifecycle.
 
 {% alert level="warning" %}
-The `bundle` value is selected during installation and cannot be changed afterwards. You cannot install `Managed` and then switch it to `Minimal` or `Default` with a regular patch.
+The module bundle is selected during installation and cannot be changed afterwards. You cannot install `Managed` and then switch it to `Minimal` or `Default` with a regular patch.
 {% endalert %}
 
 ## Prerequisites
@@ -28,14 +28,16 @@ The following tools and access are required on the computer from which the insta
 - Docker;
 - `kubectl`;
 - `yq` for validating YAML;
-- an administrative Kubernetes kubeconfig for the Talos cluster;
+- an administrative kubeconfig for the Talos cluster;
 - access to the Kubernetes API;
-- HTTPS access to `registry.deckhouse.ru` from both the computer and the cluster nodes;
-- `talosctl` and `talosconfig` if an administrative Kubernetes kubeconfig has not yet been obtained.
+- HTTPS access to `registry.deckhouse.ru`;
+- `talosctl` and `talosconfig` if an administrative kubeconfig has not yet been obtained.
 
-SSH access to Talos nodes is not required: the installer communicates with the cluster through the Kubernetes API.
+The cluster nodes also require HTTPS access to `registry.deckhouse.ru`.
 
-Before installation, it is recommended to create an etcd snapshot using Talos and save the original `talosconfig` and Kubernetes kubeconfig.
+SSH access to the cluster nodes is not required: the installation is performed through the Kubernetes API.
+
+Before installation, it is recommended to create an etcd snapshot using Talos and save the original talosconfig and kubeconfig.
 
 ## Setting the working paths
 
@@ -64,9 +66,9 @@ The files are used as follows:
 | `INSTALLER_KUBECONFIG` | Portable copy of the administrative kubeconfig for the Docker container |
 | `CONFIG_FILE` | Deckhouse installation configuration |
 
-If you open a new terminal, return to this directory and repeat the block that defines the four variables.
+If you open a new terminal, return to this directory and set the configuration environment variables again.
 
-## Preparing an administrative Kubernetes kubeconfig
+## Preparing an administrative kubeconfig
 
 ### If you already have a kubeconfig
 
@@ -77,11 +79,13 @@ cp /path/to/existing/admin-kubeconfig "$ADMIN_KUBECONFIG"
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
-This must be a Kubernetes kubeconfig for `kubectl`, not a `talosconfig` file for `talosctl`.
+{% alert level="info" %}
+This refers to the kubeconfig for `kubectl`, not the talosconfig for `talosctl`.
+{% endalert %}
 
 ### If you need to obtain a kubeconfig through Talos
 
-First, copy the existing `talosconfig` to the working directory:
+First, copy the existing talosconfig to the working directory:
 
 ```bash
 cp /path/to/existing/talosconfig "$TALOSCONFIG"
@@ -94,7 +98,7 @@ Specify the address of a control-plane node:
 CONTROL_PLANE_ADDRESS=<CONTROL_PLANE_IP_OR_DNS>
 ```
 
-Obtain an administrative Kubernetes kubeconfig:
+Obtain an administrative kubeconfig:
 
 ```bash
 talosctl kubeconfig "$ADMIN_KUBECONFIG" \
@@ -105,7 +109,7 @@ talosctl kubeconfig "$ADMIN_KUBECONFIG" \
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
-By default, `talosctl` uses the Talos API endpoints from the current `talosconfig` context. If a different endpoint is required, add:
+By default, `talosctl` uses the Talos API endpoints from the current talosconfig context. If a different endpoint is required, add:
 
 ```text
 --endpoints=<TALOS_API_ENDPOINT>
@@ -115,13 +119,13 @@ Use `--force` only when you intentionally want to overwrite an existing file.
 
 ### Verifying permissions
 
-Check which identity Kubernetes sees:
+Check how Kubernetes identifies the user:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" auth whoami
 ```
 
-Installation requires stable administrative access. A Talos administrative kubeconfig usually uses the `system:masters` group. Using an OIDC user kubeconfig for the installer is not recommended: after Deckhouse authentication and authorization modules are enabled, that user's access to system namespaces may change.
+Installation requires stable administrative access. A Talos administrative kubeconfig usually uses the `system:masters` group. Using an OIDC user kubeconfig for the installation is not recommended, since after Deckhouse authorization modules are enabled, that user's access to system namespaces may change.
 
 Verify the required permissions:
 
@@ -170,11 +174,13 @@ Before installing Deckhouse, the following components must already be running:
 - kube-proxy, if it is used by the selected network setup;
 - control-plane components.
 
-Also make sure that the Kubernetes version is supported by the selected DKP version.
+Also make sure that the Kubernetes version is [supported](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) by the selected DKP version.
 
 ## Verifying component ownership
 
 Deckhouse must not manage the same components as Talos or an external provisioner.
+
+The table below lists the components and their owners after installation:
 
 | Component | Owner after installation |
 | --- | --- |
@@ -198,9 +204,11 @@ In this setup, the following Deckhouse modules must remain disabled:
 - cloud provider modules;
 - `registry-packages-proxy`.
 
-If Cilium is already installed in the Talos cluster, do not enable the Deckhouse `cni-cilium` module: two operators must not manage the same CNI at the same time.
+{% alert level="warning" %}
+If Cilium is already installed in the Talos cluster, do not enable the `cni-cilium` module: two operators must not manage the same CNI at the same time.
+{% endalert %}
 
-The `Managed` bundle includes ingress, cert-manager, local-path-provisioner, VPA, monitoring, and authentication and authorization modules. Before installation, check whether external equivalents are already present in the cluster:
+The `Managed` bundle includes `ingress-nginx`, `cert-manager`, `local-path-provisioner`, VPA, monitoring, and authorization modules. Before installation, check whether external equivalents are already present in the cluster:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" get storageclass
@@ -209,9 +217,9 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" get deployments -A
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" get crd
 ```
 
-If a component is already installed, choose a single owner before proceeding. Do not run two ingress controllers, two cert-manager installations, or two VPA installations at the same time.
+If a component is already installed, choose a single owner before proceeding. Do not run two `ingress-controller` instances, two cert-manager installations, or two VPA installations at the same time.
 
-## Preparing a kubeconfig for the installer container
+## Preparing a kubeconfig
 
 The installer runs inside Docker. It requires a portable kubeconfig that does not reference certificate and key files available only on the user's computer.
 
@@ -294,9 +302,7 @@ grep -n $'\t' "$CONFIG_FILE"
 
 The first command must print `YAML OK`; the second command must not print anything.
 
-## Running the official CE installer
-
-The installer tag must match the `releaseChannel` in the configuration. The `early-access` tag is used for `EarlyAccess`.
+## Running the installer
 
 Check that the files exist:
 
@@ -314,6 +320,8 @@ docker run --pull=always -it \
   bash
 ```
 
+Note the `ce` edition and the `early-access` release channel specified in the installer image reference.
+
 Inside the installer container, run:
 
 ```bash
@@ -322,18 +330,18 @@ dhctl bootstrap-phase install-deckhouse \
   --config=/config.yml
 ```
 
-Do not close the terminal until the bootstrap process completes. Installation usually takes between 5 and 30 minutes.
+Do not close the terminal until the bootstrap process completes. Installation can take anywhere from 5 to 30 minutes.
 
 ## Monitoring the installation
 
-In a separate terminal, change to the same working directory and define the variables from the "Setting the working paths" section again. Then monitor Deckhouse:
+In a separate terminal, change to the same working directory and define the variables from the "Setting the working paths" section again. Run the command:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
   -n d8-system get deployment,replicaset,pods -w
 ```
 
-If a Pod is not created, check the events:
+If the deckhouse Pod is not created, check the events:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
@@ -378,7 +386,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
   get deployment,statefulset,daemonset -A
 ```
 
-For each DaemonSet, the `DESIRED`, `CURRENT`, and `READY` values must match. For Deployments and StatefulSets, the expected number of replicas must be ready.
+For each DaemonSet, the `DESIRED`, `CURRENT`, and `READY` values must match. For Deployments and StatefulSets, the expected number of replicas must be in the `Ready` state.
 
 Find any other problematic Pods:
 
