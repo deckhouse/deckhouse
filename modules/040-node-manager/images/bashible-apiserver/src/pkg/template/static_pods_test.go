@@ -17,11 +17,19 @@ limitations under the License.
 package template
 
 import (
+	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/tools/cache"
 )
 
 const registryAgentManifest = `apiVersion: v1
@@ -64,8 +72,9 @@ func newStaticPodsStorage() *StepsStorage {
 	return &StepsStorage{
 		// "all:" is the cache key of the common steps for an empty provider: a
 		// populated cache keeps Render off the filesystem.
-		systemScripts:     map[string]map[string][]byte{"all:": {}},
-		staticPodRequests: make(map[string][]*staticPodRequest),
+		systemScripts:          map[string]map[string][]byte{"all:": {}},
+		staticPodRequests:      make(map[string][]*staticPodRequest),
+		staticPodRequestsQueue: make(chan nodeConfigurationQueueAction, 100),
 	}
 }
 
@@ -289,4 +298,155 @@ spec:
 	// The bundle checksum is computed over the rendered steps, so the same
 	// requests must render the same bytes.
 	require.Equal(t, step, renderStaticPodsStepFor(t, storage, "worker"))
+}
+
+func staticPodRequestUnstructured(name, manifest string, matchNames []string) *unstructured.Unstructured {
+	spec := map[string]interface{}{"manifest": manifest}
+	if len(matchNames) > 0 {
+		names := make([]interface{}, 0, len(matchNames))
+		for _, matchName := range matchNames {
+			names = append(names, matchName)
+		}
+		spec["nodeGroupSelector"] = map[string]interface{}{"matchNames": names}
+	}
+
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "NodeStaticPodRequest",
+		"metadata": map[string]interface{}{
+			"name":              name,
+			"creationTimestamp": "2026-01-01T00:00:00Z",
+		},
+		"spec": spec,
+	}}
+}
+
+func TestSubscribeOnStaticPodRequests(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	gvr := schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "nodestaticpodrequests",
+	}
+
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
+		runtime.NewScheme(),
+		map[schema.GroupVersionResource]string{gvr: "NodeStaticPodRequestList"},
+		staticPodRequestUnstructured("registry-agent", registryAgentManifest, nil),
+	)
+
+	factory := dynamicinformer.NewDynamicSharedInformerFactory(client, 0)
+
+	storage := newStaticPodsStorage()
+	storage.subscribeOnStaticPodRequests(ctx, factory)
+
+	// require.Eventually runs the condition in its own goroutine, so it must not
+	// call require itself.
+	rendered := func(needle string, want bool) func() bool {
+		return func() bool {
+			steps, err := storage.Render("all", "", map[string]interface{}{}, "worker")
+			if err != nil {
+				return false
+			}
+
+			return strings.Contains(steps[staticPodsStepName], needle) == want
+		}
+	}
+
+	require.Eventually(t, rendered(registryAgentManifest, true), time.Second, 10*time.Millisecond)
+
+	_, err := client.Resource(gvr).Create(
+		ctx,
+		staticPodRequestUnstructured("node-local-dns", nodeLocalDNSManifest, []string{"worker"}),
+		metav1.CreateOptions{},
+	)
+	require.NoError(t, err)
+
+	require.Eventually(t, rendered(nodeLocalDNSManifest, true), time.Second, 10*time.Millisecond)
+
+	require.NoError(t, client.Resource(gvr).Delete(ctx, "registry-agent", metav1.DeleteOptions{}))
+
+	require.Eventually(t, rendered(registryAgentManifest, false), time.Second, 10*time.Millisecond)
+}
+
+func TestApplyStaticPodRequestEvent(t *testing.T) {
+	storage := newStaticPodsStorage()
+	object := staticPodRequestUnstructured("registry-agent", registryAgentManifest, nil)
+
+	require.True(t, storage.applyStaticPodRequestEvent(nodeConfigurationQueueAction{
+		action:    "add",
+		newObject: object,
+	}))
+
+	// A resync repeats the object unchanged: nothing to re-render, so no event
+	// and no new configuration checksum.
+	require.False(t, storage.applyStaticPodRequestEvent(nodeConfigurationQueueAction{
+		action:    "update",
+		newObject: object,
+		oldObject: object,
+	}))
+
+	changed := staticPodRequestUnstructured("registry-agent", nodeLocalDNSManifest, nil)
+	require.True(t, storage.applyStaticPodRequestEvent(nodeConfigurationQueueAction{
+		action:    "update",
+		newObject: changed,
+		oldObject: object,
+	}))
+
+	step := renderStaticPodsStepFor(t, storage, "worker")
+	require.Contains(t, step, nodeLocalDNSManifest)
+	require.NotContains(t, step, registryAgentManifest)
+
+	require.True(t, storage.applyStaticPodRequestEvent(nodeConfigurationQueueAction{
+		action:    "delete",
+		oldObject: changed,
+	}))
+	require.Empty(t, storage.staticPodsFor("worker"))
+}
+
+func TestApplyStaticPodRequestEventMovesTheRequestBetweenGroups(t *testing.T) {
+	storage := newStaticPodsStorage()
+	object := staticPodRequestUnstructured("node-local-dns", nodeLocalDNSManifest, []string{"worker"})
+	require.True(t, storage.applyStaticPodRequestEvent(nodeConfigurationQueueAction{
+		action:    "add",
+		newObject: object,
+	}))
+
+	moved := staticPodRequestUnstructured("node-local-dns", nodeLocalDNSManifest, []string{"master"})
+	require.True(t, storage.applyStaticPodRequestEvent(nodeConfigurationQueueAction{
+		action:    "update",
+		newObject: moved,
+		oldObject: object,
+	}))
+
+	require.Empty(t, storage.staticPodsFor("worker"))
+	require.Equal(t, []string{"node-local-dns"}, staticPodNames(storage.staticPodsFor("master")))
+
+	require.True(t, storage.applyStaticPodRequestEvent(nodeConfigurationQueueAction{
+		action:    "delete",
+		oldObject: moved,
+	}))
+
+	// The last request gone still renders the step: it is what removes the
+	// manifest and takes the annotation off the Node.
+	step := renderStaticPodsStepFor(t, storage, "master")
+	require.Contains(t, step, `new_names='[]'`)
+	require.Contains(t, step, `"node.deckhouse.io/static-pods-"`)
+}
+
+func TestDeletedStaticPodRequest(t *testing.T) {
+	object := staticPodRequestUnstructured("registry-agent", registryAgentManifest, nil)
+
+	request, ok := deletedStaticPodRequest(object)
+	require.True(t, ok)
+	require.Same(t, object, request)
+
+	request, ok = deletedStaticPodRequest(cache.DeletedFinalStateUnknown{Key: "registry-agent", Obj: object})
+	require.True(t, ok)
+	require.Same(t, object, request)
+
+	_, ok = deletedStaticPodRequest(cache.DeletedFinalStateUnknown{Key: "registry-agent", Obj: "not an object"})
+	require.False(t, ok)
 }

@@ -46,7 +46,8 @@ type StepsStorage struct {
 	nodeGroupConfigurations      map[string][]*nodeConfigurationScript
 	nodeGroupConfigurationsQueue chan nodeConfigurationQueueAction
 
-	staticPodRequests map[string][]*staticPodRequest
+	staticPodRequests      map[string][]*staticPodRequest
+	staticPodRequestsQueue chan nodeConfigurationQueueAction
 
 	configurationsChanged chan struct{}
 	emitter               changesEmitter
@@ -75,12 +76,14 @@ func NewStepsStorage(ctx context.Context, rootDir string, ngConfigFactory dynami
 		nodeGroupConfigurations:      make(map[string][]*nodeConfigurationScript),
 		nodeGroupConfigurationsQueue: make(chan nodeConfigurationQueueAction, 100),
 		staticPodRequests:            make(map[string][]*staticPodRequest),
+		staticPodRequestsQueue:       make(chan nodeConfigurationQueueAction, 100),
 		configurationsChanged:        make(chan struct{}, 1),
 		cloudProviderStepSecrets:     make(map[string]cloudProviderStepsSecret),
 		cloudProviderStepsChanged:    make(chan struct{}, 1),
 	}
 
 	ss.subscribeOnCRD(ctx, ngConfigFactory)
+	ss.subscribeOnStaticPodRequests(ctx, ngConfigFactory)
 	return ss
 }
 

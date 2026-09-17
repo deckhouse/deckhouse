@@ -17,6 +17,7 @@ limitations under the License.
 package template
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +25,10 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
 )
@@ -276,4 +281,139 @@ until bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "` +
   sleep 10
 done
 `
+}
+
+// subscribeOnStaticPodRequests mirrors the NodeGroupConfiguration informer,
+// (*StepsStorage).subscribeOnCRD in steps_storage.go, on a second resource; the
+// buffered emitter it starts serves this queue too.
+func (s *StepsStorage) subscribeOnStaticPodRequests(ctx context.Context, factory dynamicinformer.DynamicSharedInformerFactory) {
+	if factory == nil {
+		return
+	}
+
+	go s.runStaticPodRequestsQueue(ctx)
+
+	ginformer := factory.ForResource(schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "nodestaticpodrequests",
+	})
+
+	informer := ginformer.Informer()
+	_ = informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+
+	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			request, ok := obj.(*unstructured.Unstructured)
+			if !ok {
+				return
+			}
+			s.staticPodRequestsQueue <- nodeConfigurationQueueAction{
+				action:    "add",
+				newObject: request,
+			}
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldRequest, oldOK := oldObj.(*unstructured.Unstructured)
+			newRequest, newOK := newObj.(*unstructured.Unstructured)
+			if !oldOK || !newOK {
+				return
+			}
+			s.staticPodRequestsQueue <- nodeConfigurationQueueAction{
+				action:    "update",
+				newObject: newRequest,
+				oldObject: oldRequest,
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			request, ok := deletedStaticPodRequest(obj)
+			if !ok {
+				return
+			}
+			s.staticPodRequestsQueue <- nodeConfigurationQueueAction{
+				action:    "delete",
+				oldObject: request,
+			}
+		},
+	})
+
+	go informer.Run(ctx.Done())
+
+	// Errorf, not Fatalf: the CRD is shipped by the same module, but an agent
+	// that kills itself over a watch cannot serve the bundles every node reads.
+	if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
+		klog.Errorf("unable to sync NodeStaticPodRequest informer: %v", ctx.Err())
+	}
+}
+
+func (s *StepsStorage) runStaticPodRequestsQueue(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case event := <-s.staticPodRequestsQueue:
+			if s.applyStaticPodRequestEvent(event) {
+				s.emitter.emitChanges()
+			}
+		}
+	}
+}
+
+// applyStaticPodRequestEvent reports whether anything changed, so a resync that
+// repeats an object does not rebuild the context and bump every checksum.
+func (s *StepsStorage) applyStaticPodRequestEvent(event nodeConfigurationQueueAction) bool {
+	switch event.action {
+	case "add":
+		var request NodeStaticPodRequest
+		if err := fromUnstructured(event.newObject, &request); err != nil {
+			klog.Errorf("Convert NodeStaticPodRequest from unstructured failed: %s", err)
+			return false
+		}
+		s.AddStaticPodRequest(&request)
+
+	case "update":
+		var newRequest NodeStaticPodRequest
+		if err := fromUnstructured(event.newObject, &newRequest); err != nil {
+			klog.Errorf("Convert NodeStaticPodRequest from unstructured failed: %s", err)
+			return false
+		}
+
+		var oldRequest NodeStaticPodRequest
+		if err := fromUnstructured(event.oldObject, &oldRequest); err != nil {
+			klog.Errorf("Convert NodeStaticPodRequest from unstructured failed: %s", err)
+			return false
+		}
+
+		if newRequest.Spec.IsEqual(oldRequest.Spec) {
+			return false
+		}
+
+		s.RemoveStaticPodRequest(&oldRequest)
+		s.AddStaticPodRequest(&newRequest)
+
+	case "delete":
+		var request NodeStaticPodRequest
+		if err := fromUnstructured(event.oldObject, &request); err != nil {
+			klog.Errorf("Convert NodeStaticPodRequest from unstructured failed: %s", err)
+			return false
+		}
+		s.RemoveStaticPodRequest(&request)
+	}
+
+	return true
+}
+
+func deletedStaticPodRequest(obj interface{}) (*unstructured.Unstructured, bool) {
+	if request, ok := obj.(*unstructured.Unstructured); ok {
+		return request, true
+	}
+
+	tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+	if !ok {
+		return nil, false
+	}
+
+	request, ok := tombstone.Obj.(*unstructured.Unstructured)
+	return request, ok
 }
