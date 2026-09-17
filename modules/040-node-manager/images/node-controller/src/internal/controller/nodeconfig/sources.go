@@ -91,6 +91,13 @@ type clusterInputs struct {
 	// once per node. NodeExtensionConflicts says which requests lost it.
 	NodeExtensions         []*deckhousev1alpha1.NodeExtensionRequest
 	NodeExtensionConflicts map[string]nerConflict
+	// NodeStaticPodRequests are the pods the platform asks kubelet to run outside
+	// the scheduler, in the order their pod contest ran; like the extension
+	// requests that contest is cluster-wide, so it is settled here once per pass
+	// rather than once per node. NodeStaticPodRequestsRejected says which objects
+	// this controller refused and why.
+	NodeStaticPodRequests         []*deckhousev1alpha1.NodeStaticPodRequest
+	NodeStaticPodRequestsRejected map[string]nsprRefusal
 }
 
 // sourceReader reads cluster state straight from the API server: these
@@ -275,6 +282,13 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 	in.NodeExtensions = orderedNERs(ners)
 	in.NodeExtensionConflicts = resolveNERConflicts(in.NodeExtensions)
 
+	nsprs, err := s.readNodeStaticPodRequests(ctx)
+	if err != nil {
+		return err
+	}
+	in.NodeStaticPodRequests = orderedNSPRs(nsprs)
+	in.NodeStaticPodRequestsRejected = rejectedNSPRs(in.NodeStaticPodRequests)
+
 	return nil
 }
 
@@ -357,6 +371,17 @@ func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhou
 	list := &deckhousev1alpha1.NodeExtensionRequestList{}
 	if err := s.Reader.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list node extension requests: %w", err)
+	}
+	return list.Items, nil
+}
+
+// readNodeStaticPodRequests lists the static pods the platform publishes; an empty list
+// is fine. Listed the same way as the extension requests, so both halves of a
+// pass — the render and the status report — see one set of objects.
+func (s *sourceReader) readNodeStaticPodRequests(ctx context.Context) ([]deckhousev1alpha1.NodeStaticPodRequest, error) {
+	list := &deckhousev1alpha1.NodeStaticPodRequestList{}
+	if err := s.Reader.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list node static pods: %w", err)
 	}
 	return list.Items, nil
 }
