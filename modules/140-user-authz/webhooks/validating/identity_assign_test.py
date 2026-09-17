@@ -27,8 +27,11 @@ USERS_EDIT = [{"apiGroups": ["deckhouse.io"], "resources": ["users", "groups"],
                "verbs": ["create", "update", "patch", "delete"]}]
 
 
-def entry(name, rules=None, labels=None, access_level=""):
-    return assign.CatalogEntry(name=name, rules=rules or [], labels=labels or {},
+def entry(name, rules=None, labels=None, access_level="", heritage=True):
+    labels = dict(labels or {})
+    if heritage:
+        labels.setdefault("heritage", "deckhouse")
+    return assign.CatalogEntry(name=name, rules=rules or [], labels=labels,
                                access_level=access_level)
 
 
@@ -302,6 +305,508 @@ class TestIdentityCollection(unittest.TestCase):
             {"username": "system:serviceaccount:kube-system:foo",
              "groups": ["system:serviceaccounts:kube-system"]}))
         self.assertFalse(assign.is_exempt({"username": "eve@corp", "groups": []}))
+
+    def test_membership_from_group_snapshot(self):
+        snaps = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [{"filterResult": {
+                "name": "superadmins", "members": ["admin"],
+            }}],
+            assign.CAR_SNAP: [],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        self.assertEqual(assign.membership_groups(snaps, email="admin@deckhouse.io"),
+                         ["superadmins"])
+
+    def test_membership_walks_nested_groups(self):
+        snaps = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [
+                {"filterResult": {
+                    "name": "inner",
+                    "members": [{"kind": "User", "name": "admin"}],
+                }},
+                {"filterResult": {
+                    "name": "superadmins",
+                    "members": [{"kind": "Group", "name": "inner"}],
+                }},
+            ],
+            assign.CAR_SNAP: [],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        self.assertEqual(assign.membership_groups(snaps, email="admin@deckhouse.io"),
+                         ["inner", "superadmins"])
+
+    def test_membership_nested_group_cycle_stops(self):
+        snaps = {
+            assign.GROUP_SNAP: [
+                {"filterResult": {
+                    "name": "a",
+                    "members": [{"kind": "Group", "name": "b"},
+                                {"kind": "User", "name": "admin"}],
+                }},
+                {"filterResult": {
+                    "name": "b",
+                    "members": [{"kind": "Group", "name": "a"}],
+                }},
+            ],
+        }
+        self.assertEqual(assign.groups_containing_user(snaps, "admin"), ["a", "b"])
+
+    def test_range_ignores_forged_can_assign_labels_without_heritage(self):
+        cat = default_catalog()
+        cat["d8:manage:pwned:manager"] = entry(
+            "d8:manage:pwned:manager", rules=[], labels=SUPER_LABELS, heritage=False)
+        rng = assign.actor_range(["d8:manage:pwned:manager"], cat)
+        self.assertIsNone(rng.basic_max)
+        self.assertIsNone(rng.max_level)
+
+    def test_user_record_name_does_not_fallback_to_email(self):
+        snaps = {
+            assign.USER_SNAP: [
+                {"filterResult": {"name": "other", "email": "eve@corp", "groups": ["superadmins"]}},
+                {"filterResult": {"name": "eve", "email": "eve-real@corp", "groups": []}},
+            ],
+        }
+        rec = assign.user_record(snaps, name="eve", email="eve@corp")
+        self.assertEqual(rec["name"], "eve")
+        self.assertEqual(rec["email"], "eve-real@corp")
+        self.assertIsNone(assign.user_record(snaps, name="missing", email="eve@corp"))
+        self.assertEqual(assign.user_record(snaps, email="eve@corp")["name"], "other")
+
+
+class TestUnknownRoles(unittest.TestCase):
+    def test_role_absent_from_catalog_is_leftover_below_superadmin(self):
+        cat = default_catalog()
+        self.assertEqual(assign.can_assign(["user-authz:cluster-admin"], ["gone:role"], cat),
+                         ["gone:role"])
+        self.assertEqual(assign.can_assign(["d8:manage:all:manager"], ["gone:role"], cat),
+                         ["gone:role"])
+
+    def test_superadmin_range_covers_a_role_absent_from_catalog(self):
+        # A ClusterRoleBinding outliving its ClusterRole still names a human
+        # subject; that must not lock SuperAdmin out of every open provider.
+        cat = default_catalog()
+        self.assertIsNone(assign.can_assign(["user-authz:super-admin"], ["gone:role"], cat))
+        self.assertIsNone(assign.can_assign(["cluster-admin"], ["gone:role", "user-authz:super-admin"], cat))
+
+    def test_forged_superadmin_range_does_not_cover_unknown_roles(self):
+        cat = default_catalog()
+        cat["d8:system:pwned"] = entry("d8:system:pwned", rules=[], labels=SUPER_LABELS, heritage=False)
+        self.assertEqual(assign.can_assign(["d8:system:pwned"], ["gone:role"], cat), ["gone:role"])
+
+
+class TestTargetOwnership(unittest.TestCase):
+    """A level is read off a target role only when the platform installed it (review #14)."""
+
+    def test_rbacv2_target_without_heritage_is_leftover_inside_range(self):
+        cat = default_catalog()
+        cat["d8:manage:networking:user"] = entry("d8:manage:networking:user", rules=STAR, heritage=False)
+        actor = ["d8:manage:security:manager"]
+        cat["d8:manage:security:manager"] = entry("d8:manage:security:manager", rules=CAR_EDIT, labels={
+            "can-assign-basic-max": "ClusterAdmin", "can-assign-scope": "subsystem",
+            "can-assign-subsystem": "networking", "can-assign-max-level": "admin"})
+        self.assertEqual(assign.can_assign(actor, ["d8:manage:networking:user"], cat),
+                         ["d8:manage:networking:user"])
+        cat["d8:manage:networking:user"] = entry("d8:manage:networking:user", rules=STAR)
+        self.assertIsNone(assign.can_assign(actor, ["d8:manage:networking:user"], cat))
+
+    def test_basic_annotation_without_heritage_is_leftover_inside_range(self):
+        cat = default_catalog()
+        cat["d8:x"] = entry("d8:x", rules=STAR, access_level="User", heritage=False)
+        cat["editor-range"] = entry("editor-range", rules=CAR_EDIT, labels={"can-assign-basic-max": "Editor"})
+        # the actor's own range label is honoured only on platform names; use a real one
+        cat["user-authz:editor"] = entry("user-authz:editor", rules=CAR_EDIT, labels={"can-assign-basic-max": "Editor"})
+        actor = ["user-authz:editor"]
+        self.assertEqual(assign.can_assign(actor, ["d8:x"], cat), ["d8:x"])
+        cat["d8:x"] = entry("d8:x", rules=STAR, access_level="User")
+        self.assertIsNone(assign.can_assign(actor, ["d8:x"], cat))
+
+    def test_ladder_name_without_heritage_is_leftover(self):
+        # Rules the actor does not cover, so range is the only way in; the ladder
+        # name alone must not open it.
+        cat = default_catalog()
+        cat["user-authz:user"] = entry("user-authz:user", rules=STAR_ALL, heritage=False)
+        self.assertEqual(assign.can_assign(["user-authz:cluster-admin"], ["user-authz:user"], cat),
+                         ["user-authz:user"])
+        cat["user-authz:user"] = entry("user-authz:user", rules=STAR_ALL)
+        self.assertIsNone(assign.can_assign(["user-authz:cluster-admin"], ["user-authz:user"], cat))
+
+    def test_forged_high_level_still_hits_disaster_first(self):
+        cat = default_catalog()
+        cat["d8:manage:all:superadmin"] = entry("d8:manage:all:superadmin", rules=[], heritage=False)
+        self.assertEqual(assign.can_assign(["user-authz:cluster-admin"], ["d8:manage:all:superadmin"], cat),
+                         ["d8:manage:all:superadmin"])
+        self.assertIsNone(assign.can_assign(["user-authz:super-admin"], ["d8:manage:all:superadmin"], cat))
+
+    def test_basic_level_of_requires_ownership(self):
+        self.assertIsNone(assign.basic_level_of("user-authz:editor", None))
+        self.assertIsNone(assign.basic_level_of("user-authz:editor", entry("user-authz:editor", heritage=False)))
+        self.assertEqual(assign.basic_level_of("user-authz:editor", entry("user-authz:editor")), "Editor")
+        self.assertIsNone(assign.basic_level_of("d8:x", entry("d8:x", access_level="User", heritage=False)))
+        self.assertEqual(assign.basic_level_of("d8:x", entry("d8:x", access_level="User")), "User")
+
+
+# --- DexProvider: identity space -> targets (specs/002-dexprovider-identity-gate) ---
+
+def car(name, level, users=(), groups=(), additional=()):
+    return {"filterResult": {
+        "name": name, "accessLevel": level, "additionalRoles": list(additional),
+        "userSubjects": list(users), "groupSubjects": list(groups), "saSubjects": [],
+    }}
+
+
+def crb(name, role, users=(), groups=()):
+    return {"filterResult": {
+        "name": name, "role": role,
+        "userSubjects": list(users), "groupSubjects": list(groups), "saSubjects": [],
+    }}
+
+
+def dex_snaps():
+    return {
+        assign.CAR_SNAP: [
+            car("super", "SuperAdmin", users=["root@corp"], groups=["superadmins"]),
+            car("cadmins", "ClusterAdmin", users=["alice@corp"]),
+            car("boss", "Editor", users=["Boss@Contractor.Example"]),
+            car("trap", "SuperAdmin", groups=["gate-trap"]),
+            car("parent-super", "SuperAdmin", groups=["parent"]),
+        ],
+        assign.AR_SNAP: [{"filterResult": {
+            "name": "ns-admin", "namespace": "app", "accessLevel": "SuperAdmin",
+            "additionalRoles": [], "userSubjects": ["dev@contractor.example"],
+            "groupSubjects": [], "saSubjects": [],
+        }}],
+        assign.CRB_SNAP: [
+            crb("sa-binding", "user-authz:user", users=["system:serviceaccount:d8-system:x"]),
+            crb("masters", "cluster-admin", groups=["system:masters"]),
+            crb("devs-view", "d8:manage:security:viewer", groups=["devs"]),
+        ],
+        assign.CROLE_SNAP: [],
+        assign.USER_SNAP: [],
+        assign.GROUP_SNAP: [{"filterResult": {
+            "name": "parent", "members": [{"kind": "Group", "name": "child"}],
+        }}],
+    }
+
+
+def oidc(**extra):
+    spec = {"type": "OIDC", "displayName": "corp",
+            "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "s",
+                     "scopes": ["openid", "email", "groups"]}}
+    for k, v in extra.items():
+        if k == "allowedIdentities":
+            spec["allowedIdentities"] = v
+        else:
+            spec["oidc"][k] = v
+    return spec
+
+
+class TestDexIdentityFilters(unittest.TestCase):
+    def test_email_axis_open_without_block(self):
+        self.assertIsNone(assign.dex_email_filter(oidc()))
+
+    def test_email_axis_open_with_empty_lists(self):
+        self.assertIsNone(assign.dex_email_filter(
+            oidc(allowedIdentities={"emails": [], "emailDomains": []})))
+
+    def test_email_filter_lowercases_and_splits_axes(self):
+        emails, domains = assign.dex_email_filter(oidc(allowedIdentities={
+            "emails": ["Alice@Corp", " bob@corp "], "emailDomains": ["Contractor.Example"]}))
+        self.assertEqual(emails, frozenset({"alice@corp", "bob@corp"}))
+        self.assertEqual(domains, frozenset({"contractor.example"}))
+
+    def test_email_filter_ignores_non_strings(self):
+        emails, domains = assign.dex_email_filter(oidc(allowedIdentities={
+            "emails": ["a@corp", 5, None, ""], "emailDomains": [{"x": 1}]}))
+        self.assertEqual(emails, frozenset({"a@corp"}))
+        self.assertEqual(domains, frozenset())
+
+    def test_group_axis_open_for_ldap(self):
+        self.assertIsNone(assign.dex_group_filter({"type": "LDAP", "ldap": {"host": "x"}}))
+
+    def test_group_axis_open_for_oidc_without_allowed_groups(self):
+        self.assertIsNone(assign.dex_group_filter(oidc()))
+
+    def test_group_axis_closed_by_oidc_allowed_groups(self):
+        self.assertEqual(assign.dex_group_filter(oidc(allowedGroups=["devs", "ops"])),
+                         frozenset({"devs", "ops"}))
+
+    def test_group_axis_closed_by_gitlab_and_crowd_groups(self):
+        self.assertEqual(assign.dex_group_filter(
+            {"type": "Gitlab", "gitlab": {"groups": ["g1"]}}), frozenset({"g1"}))
+        self.assertEqual(assign.dex_group_filter(
+            {"type": "Crowd", "crowd": {"groups": ["c1"]}}), frozenset({"c1"}))
+
+    def test_group_axis_bitbucket_teams_unless_team_groups(self):
+        self.assertEqual(assign.dex_group_filter(
+            {"type": "BitbucketCloud", "bitbucketCloud": {"teams": ["t1"]}}), frozenset({"t1"}))
+        self.assertIsNone(assign.dex_group_filter(
+            {"type": "BitbucketCloud",
+             "bitbucketCloud": {"teams": ["t1"], "includeTeamGroups": True}}))
+
+    def test_group_axis_github_needs_teams_on_every_org(self):
+        closed = {"type": "Github", "github": {"orgs": [
+            {"name": "acme", "teams": ["dev", "ops"]}, {"name": "lab", "teams": ["x"]}]}}
+        self.assertEqual(assign.dex_group_filter(closed),
+                         frozenset({"acme:dev", "acme:ops", "lab:x"}))
+        open_org = {"type": "Github", "github": {"orgs": [
+            {"name": "acme", "teams": ["dev"]}, {"name": "lab"}]}}
+        self.assertIsNone(assign.dex_group_filter(open_org))
+        self.assertIsNone(assign.dex_group_filter({"type": "Github", "github": {"orgs": []}}))
+
+    def test_group_axis_saml_needs_filter_groups(self):
+        self.assertIsNone(assign.dex_group_filter(
+            {"type": "SAML", "saml": {"allowedGroups": ["a"]}}))
+        self.assertEqual(assign.dex_group_filter(
+            {"type": "SAML", "saml": {"allowedGroups": ["a"], "filterGroups": True}}),
+            frozenset({"a"}))
+
+    def test_group_axis_universal_block(self):
+        self.assertEqual(assign.dex_group_filter(
+            {"type": "LDAP", "ldap": {}, "allowedIdentities": {"groups": ["g"]}}),
+            frozenset({"g"}))
+
+    def test_group_axis_universal_intersects_connector_filter(self):
+        spec = oidc(allowedGroups=["devs", "ops"], allowedIdentities={"groups": ["ops", "qa"]})
+        self.assertEqual(assign.dex_group_filter(spec), frozenset({"ops"}))
+
+
+class TestDexTargetRoles(unittest.TestCase):
+    def test_open_provider_targets_every_human_grant(self):
+        targets = assign.dex_target_roles({"type": "LDAP", "ldap": {"host": "x"}}, dex_snaps())
+        self.assertIn("user-authz:super-admin", targets)
+        self.assertIn("user-authz:cluster-admin", targets)
+        self.assertIn("user-authz:editor", targets)
+        self.assertIn("d8:manage:security:viewer", targets)
+
+    def test_open_provider_skips_system_prefixed_subjects(self):
+        # kube-apiserver refuses OIDC usernames and groups with the system: prefix,
+        # so no provider can assert them.
+        targets = assign.dex_target_roles({"type": "LDAP", "ldap": {"host": "x"}}, dex_snaps())
+        self.assertNotIn("user-authz:user", targets)
+        self.assertNotIn("cluster-admin", targets)
+
+    def test_groups_closed_email_open_still_reaches_user_grants(self):
+        targets = assign.dex_target_roles(oidc(allowedGroups=["devs"]), dex_snaps())
+        self.assertIn("user-authz:super-admin", targets)
+        self.assertIn("d8:manage:security:viewer", targets)
+        self.assertNotIn("cluster-admin", targets)
+
+    def test_email_closed_groups_open_still_reaches_group_grants(self):
+        targets = assign.dex_target_roles(
+            oidc(allowedIdentities={"emailDomains": ["contractor.example"]}), dex_snaps())
+        self.assertIn("user-authz:editor", targets)
+        self.assertIn("user-authz:super-admin", targets)
+        self.assertNotIn("user-authz:cluster-admin", targets)
+
+    def test_both_closed_targets_only_listed_identities(self):
+        targets = assign.dex_target_roles(oidc(
+            allowedIdentities={"emailDomains": ["contractor.example"], "groups": ["devs"]}),
+            dex_snaps())
+        self.assertEqual(sorted(targets),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:editor"])
+
+    def test_namespaced_rule_is_capped_at_admin(self):
+        targets = assign.dex_target_roles(oidc(
+            allowedIdentities={"emails": ["dev@contractor.example"], "groups": ["none"]}),
+            dex_snaps())
+        self.assertEqual(targets, ["user-authz:admin"])
+
+    def test_both_closed_with_no_grants_is_empty(self):
+        targets = assign.dex_target_roles(oidc(
+            allowedIdentities={"emailDomains": ["nobody.example"], "groups": ["none"]}),
+            dex_snaps())
+        self.assertEqual(targets, [])
+
+    def test_email_match_is_case_insensitive(self):
+        targets = assign.dex_target_roles(oidc(
+            allowedIdentities={"emails": ["boss@contractor.example"], "groups": ["none"]}),
+            dex_snaps())
+        self.assertEqual(targets, ["user-authz:editor"])
+
+    def test_domain_match_is_exact(self):
+        targets = assign.dex_target_roles(oidc(
+            allowedIdentities={"emailDomains": ["example"], "groups": ["none"]}),
+            dex_snaps())
+        self.assertEqual(targets, [])
+
+    def test_group_trap_reaches_superadmin(self):
+        targets = assign.dex_target_roles(oidc(
+            allowedIdentities={"emailDomains": ["nobody.example"], "groups": ["gate-trap"]}),
+            dex_snaps())
+        self.assertEqual(targets, ["user-authz:super-admin"])
+
+    def test_parent_group_grant_is_not_inherited_by_idp_groups(self):
+        # research R8: Group nesting is applied to local Users only; a token from an
+        # external IdP carries exactly the groups the IdP asserted.
+        targets = assign.dex_target_roles(oidc(
+            allowedIdentities={"emailDomains": ["nobody.example"], "groups": ["child"]}),
+            dex_snaps())
+        self.assertEqual(targets, [])
+
+    def test_local_user_group_membership_is_not_inherited_by_email(self):
+        snaps = dex_snaps()
+        snaps[assign.USER_SNAP] = [{"filterResult": {
+            "name": "boss", "email": "boss@contractor.example", "groups": ["superadmins"]}}]
+        targets = assign.dex_target_roles(oidc(
+            allowedIdentities={"emails": ["boss@contractor.example"], "groups": ["none"]}),
+            snaps)
+        self.assertEqual(targets, ["user-authz:editor"])
+
+
+class TestDexAllowedIdentitiesCombinations(unittest.TestCase):
+    """Every combination of the three lists, against the same grant fixture."""
+
+    def targets(self, **block):
+        return sorted(assign.dex_target_roles(oidc(allowedIdentities=block), dex_snaps()))
+
+    def test_emails_only_leaves_the_group_axis_open(self):
+        # boss is Editor; every Group-subject grant is reachable through the open axis
+        self.assertEqual(self.targets(emails=["boss@contractor.example"]),
+                         ["d8:manage:security:viewer", "user-authz:editor", "user-authz:super-admin"])
+
+    def test_domains_only_leaves_the_group_axis_open(self):
+        self.assertEqual(self.targets(emailDomains=["contractor.example"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:editor",
+                          "user-authz:super-admin"])
+
+    def test_groups_only_leaves_the_email_axis_open(self):
+        # every User-subject grant is reachable; the listed group adds its own
+        self.assertEqual(self.targets(groups=["devs"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:cluster-admin",
+                          "user-authz:editor", "user-authz:super-admin"])
+
+    def test_emails_and_domains_together_close_the_email_axis(self):
+        # root@corp by address, dev@contractor.example by domain; groups stay open
+        self.assertEqual(self.targets(emails=["root@corp"], emailDomains=["contractor.example"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:editor",
+                          "user-authz:super-admin"])
+
+    def test_emails_and_groups(self):
+        self.assertEqual(self.targets(emails=["boss@contractor.example"], groups=["devs"]),
+                         ["d8:manage:security:viewer", "user-authz:editor"])
+
+    def test_domains_and_groups(self):
+        self.assertEqual(self.targets(emailDomains=["contractor.example"], groups=["devs"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:editor"])
+
+    def test_all_three_lists(self):
+        self.assertEqual(self.targets(emails=["alice@corp"], emailDomains=["contractor.example"],
+                                      groups=["devs", "gate-trap"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:cluster-admin",
+                          "user-authz:editor", "user-authz:super-admin"])
+
+    def test_all_three_lists_with_nothing_granted(self):
+        self.assertEqual(self.targets(emails=["nobody@corp"], emailDomains=["nobody.example"],
+                                      groups=["nobody"]), [])
+
+    def test_empty_lists_behave_as_absent(self):
+        self.assertEqual(self.targets(emails=[], emailDomains=[], groups=[]),
+                         self.targets())
+        self.assertEqual(self.targets(emails=[], emailDomains=["contractor.example"], groups=[]),
+                         self.targets(emailDomains=["contractor.example"]))
+
+    def test_emails_list_narrowing_and_widening(self):
+        two = oidc(allowedIdentities={"emails": ["a@corp", "b@corp"], "groups": ["g"]})
+        one = oidc(allowedIdentities={"emails": ["a@corp"], "groups": ["g"]})
+        self.assertTrue(assign.dex_benign_update(two, one))
+        self.assertFalse(assign.dex_benign_update(one, two))
+
+    def test_moving_an_address_into_a_domain_is_not_treated_as_narrowing(self):
+        # a@corp -> domain corp admits more than a@corp did; checked as a fresh connection
+        by_email = oidc(allowedIdentities={"emails": ["a@corp"], "groups": ["g"]})
+        by_domain = oidc(allowedIdentities={"emailDomains": ["corp"], "groups": ["g"]})
+        self.assertFalse(assign.dex_benign_update(by_email, by_domain))
+
+
+class TestDexBenignUpdate(unittest.TestCase):
+    def test_identical_is_benign(self):
+        self.assertTrue(assign.dex_benign_update(oidc(), oidc()))
+
+    def test_credential_rotation_is_benign(self):
+        self.assertTrue(assign.dex_benign_update(oidc(clientSecret="old"), oidc(clientSecret="new")))
+        old = {"type": "LDAP", "ldap": {"host": "h", "bindPW": "a"}}
+        new = {"type": "LDAP", "ldap": {"host": "h", "bindPW": "b"}}
+        self.assertTrue(assign.dex_benign_update(old, new))
+
+    def test_display_name_and_disabling_are_benign(self):
+        new = oidc(); new["displayName"] = "renamed"
+        self.assertTrue(assign.dex_benign_update(oidc(), new))
+        on = oidc(); on["enabled"] = True
+        off = oidc(); off["enabled"] = False
+        self.assertTrue(assign.dex_benign_update(on, off))
+        self.assertTrue(assign.dex_benign_update(oidc(), off))  # absent enabled means true
+
+    def test_enabling_is_a_fresh_connection(self):
+        # Disabling is the containment action for a suspect provider; undoing it
+        # must not be free for an actor that could not have created it (review #15).
+        on = oidc(); on["enabled"] = True
+        off = oidc(); off["enabled"] = False
+        self.assertFalse(assign.dex_benign_update(off, on))
+        self.assertFalse(assign.dex_benign_update(off, oidc()))
+        # ... even when the rest of the spec only narrows
+        narrowed_on = oidc(allowedIdentities={"emailDomains": ["a"], "groups": ["g"]})
+        self.assertFalse(assign.dex_benign_update(off, narrowed_on))
+
+    def test_list_order_and_null_noise_are_benign(self):
+        new = oidc(scopes=["groups", "email", "openid"])
+        self.assertTrue(assign.dex_benign_update(oidc(), new))
+        new = oidc(insecureSkipVerify=None)
+        new["oidc"]["allowedGroups"] = []
+        self.assertTrue(assign.dex_benign_update(oidc(), new))
+
+    def test_narrowing_is_benign(self):
+        self.assertTrue(assign.dex_benign_update(
+            oidc(), oidc(allowedIdentities={"emailDomains": ["a"], "groups": ["g"]})))
+        self.assertTrue(assign.dex_benign_update(
+            oidc(allowedIdentities={"emailDomains": ["a", "b"]}),
+            oidc(allowedIdentities={"emailDomains": ["a"]})))
+        self.assertTrue(assign.dex_benign_update(
+            oidc(allowedGroups=["a", "b"]), oidc(allowedGroups=["a"])))
+        saml_off = {"type": "SAML", "saml": {"ssoURL": "u", "allowedGroups": ["a"]}}
+        saml_on = {"type": "SAML", "saml": {"ssoURL": "u", "allowedGroups": ["a"], "filterGroups": True}}
+        self.assertTrue(assign.dex_benign_update(saml_off, saml_on))
+
+    def test_widening_is_not_benign(self):
+        self.assertFalse(assign.dex_benign_update(
+            oidc(allowedIdentities={"emailDomains": ["a"]}),
+            oidc(allowedIdentities={"emailDomains": ["a", "b"]})))
+        self.assertFalse(assign.dex_benign_update(
+            oidc(allowedIdentities={"emailDomains": ["a"], "groups": ["g"]}),
+            oidc(allowedIdentities={"groups": ["g"]})))
+        self.assertFalse(assign.dex_benign_update(
+            oidc(allowedGroups=["a"]), oidc(allowedGroups=["a", "b"])))
+        self.assertFalse(assign.dex_benign_update(oidc(allowedGroups=["a"]), oidc()))
+
+    def test_source_or_other_connector_changes_are_not_benign(self):
+        self.assertFalse(assign.dex_benign_update(oidc(), oidc(issuer="https://other")))
+        self.assertFalse(assign.dex_benign_update(oidc(), oidc(promptType="consent")))
+        self.assertFalse(assign.dex_benign_update(oidc(), oidc(insecureSkipEmailVerified=True)))
+        self.assertFalse(assign.dex_benign_update(
+            oidc(), {"type": "LDAP", "displayName": "corp", "ldap": {"host": "h"}}))
+
+    def test_narrowing_plus_source_change_is_not_benign(self):
+        self.assertFalse(assign.dex_benign_update(
+            oidc(), oidc(issuer="https://other",
+                         allowedIdentities={"emailDomains": ["a"], "groups": ["g"]})))
+
+
+class TestDexDenyMessage(unittest.TestCase):
+    def test_message_names_provider_leftover_range_and_remedy(self):
+        rng = assign.AssignRange(basic_max="ClusterAdmin", scope=None, subsystems=(), max_level=None)
+        msg = assign.deny_dex_message("corp", ["user-authz:super-admin"], rng)
+        self.assertTrue(msg.startswith('dexproviders.deckhouse.io "corp": the provider can assert '
+                                       'identities that already carry roles [user-authz:super-admin]'))
+        self.assertIn("basic<=ClusterAdmin", msg)
+        self.assertIn("spec.allowedIdentities", msg)
+        self.assertIn("SuperAdmin", msg)
 
 
 if __name__ == "__main__":

@@ -671,7 +671,34 @@ d8 iam user delete anton --keep-memberships
 
 Для административных действий над локальными пользователями используйте команды `d8 iam user`. Они создают ресурс UserOperation с `initiatorType: admin`, дожидаются выполнения операции и выводят результат.
 
-Удалить или пересоздать локального пользователя, чей email уже несёт грант, можно только если вы можете назначить эти роли (покрывающие права или явный диапазон can-assign).
+Удалить, пересоздать или выполнить UserOperation (`ResetPassword`, `Reset2FA`, `Lock`, `Unlock`) над локальным пользователем, чей email или членство в группе уже несёт грант, можно только если вы можете назначить эти роли (покрывающие права или явный диапазон can-assign). `initiatorType: self` эту проверку не обходит.
+
+Подключить DexProvider — то же назначение. Провайдер утверждает email и набор групп, а имя пользователя в Kubernetes — это и есть email, поэтому провайдер дотягивается до всех грантов, которые уже висят на идентичностях, которые он способен утвердить. Что он способен утвердить, ограничивается по двум осям блоком `spec.allowedIdentities`: `emails` и `emailDomains` ограничивают email, `groups` — claim групп. Фильтры групп, специфичные для типа провайдера, тоже учитываются (`oidc.allowedGroups`, `gitlab.groups`, `crowd.groups`, `bitbucketCloud.teams` без `includeTeamGroups`, `github.orgs[].teams` у каждой организации, `saml.allowedGroups` вместе с `filterGroups: true`). Ось без ограничителя открыта и дотягивается до всех грантов на субъектах этого вида.
+
+SuperAdmin в каждом кластере выдан пользователю (User), поэтому провайдер без ограничителя по email способен утвердить этот email, и создать его или подключить заново может только SuperAdmin. При ограничителях по обеим осям учитываются только роли, уже выданные перечисленным идентичностям: ClusterAdmin или менеджер подсистемы `security` подключает провайдер для `@contractor.example` и группы `contractors` без SuperAdmin, если ни у одной из этих идентичностей ещё нет роли, которую он не может назначить. Имена групп сравниваются точно; вхождение объекта Group в другие объекты Group список не расширяет: токен внешнего провайдера несёт только те группы, которые провайдер утвердил.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: contractors
+spec:
+  type: OIDC
+  displayName: Contractors
+  oidc:
+    issuer: https://idp.contractor.example
+    clientID: dex
+    clientSecret: secret
+  allowedIdentities:
+    emailDomains: [contractor.example]
+    groups: [contractors]
+```
+
+Dex применяет те же ограничители при входе: пользователю, чей email не входит в `emails` и `emailDomains`, отказывается во входе, claim групп сужается до пересечения со списком `groups`, пустое пересечение — отказ. Оба ограничителя действуют для любого типа провайдера поверх фильтров, специфичных для типа провайдера.
+
+Ротация `clientSecret` или `bindPW`, смена `displayName`, выключение провайдера, сужение ограничителей и повторное применение того же манифеста проходят без проверки. Любое другое изменение проверяется как новое подключение провайдера в его новом виде: адрес провайдера идентичности, маппинг claim или атрибутов, параметры проверки подписи и email, расширение ограничителей, а также включение выключенного провайдера (выключение — способ изолировать подозрительный провайдер, и его отмена не бесплатна). Удаление провайдера не проверяется.
+
+Отказ называет роли, до которых провайдер мог бы дотянуться, и диапазон запрашивающего, например: `dexproviders.deckhouse.io "corp": the provider can assert identities that already carry roles [user-authz:super-admin]; the requester's can-assign range is basic<=ClusterAdmin and does not cover them. Narrow spec.allowedIdentities (emails, emailDomains, groups) or ask a SuperAdmin`.
 
 При выполнении операций `ResetPassword`, `Reset2FA` и `Lock` удаляются объекты Dex OfflineSessions и RefreshToken, принадлежащие пользователю. Это завершает активные offline-сессии пользователя и требует повторной аутентификации.
 
