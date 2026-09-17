@@ -453,6 +453,11 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
       flex-direction: column;
       align-items: flex-start;
       gap: 5.6px;
+      // 14/20, not the 16/20 the shared panel rule gives: the reference styles this panel
+      // with .sub-menu_products (the class list is "sub-menu sub-menu_products solutions"),
+      // and there a is .875rem/1.25rem. The description keeps its own size below.
+      font-size: 14px;
+      line-height: 20px;
     }
 
     span {
@@ -1027,7 +1032,13 @@ $chevron-l2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 .header__btn {
   @include breakpoints.min-w(xl) {
     padding: 8px 16px;
-    border-width: 1px;
+    // 1.5px is a deliberate departure: main.min.css declares it for
+    // .header__right-box .button, but the declaration loses in the cascade and the live
+    // site paints 1px at every device pixel ratio. The height is pinned so the thicker
+    // edge does not push the button to 39px - box-sizing is already border-box, and the
+    // button is an inline-flex box centred on its cross axis, so the text stays put.
+    border-width: 1.5px;
+    height: 38px;
     font-size: 14px;
     line-height: 20px;
   }
