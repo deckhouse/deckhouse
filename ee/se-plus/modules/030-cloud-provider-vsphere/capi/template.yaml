@@ -54,7 +54,15 @@ machineDeployment:
       {{- $sanZone := lower .zone | replace " " "-" -}}
       {{- $sanZone = regexReplaceAll "[^a-z0-9.-]" $sanZone "" -}}
       {{- $sanZone = trimAll "-." $sanZone -}}
-      {{- if or (hasKey .instanceClass "resourcePool") (hasKey .instanceClass "datastore") -}}
+      {{- /* Test the override flag on NON-EMPTY, not hasKey: an empty string still parses
+             as `hasKey` true, but ensure_failure_domains.go's `if ic.ResourcePool == "" &&
+             ic.Datastore == ""` filter skips such InstanceClasses and does NOT create the
+             override DZ. If we used hasKey here Machine.Spec.FailureDomain would point at
+             a DZ that was never created — CAPV logs "not found" and silently falls back
+             to baseline placement. */ -}}
+      {{- $ovRP := get .instanceClass "resourcePool" | default "" -}}
+      {{- $ovDS := get .instanceClass "datastore" | default "" -}}
+      {{- if or (ne $ovRP "") (ne $ovDS "") -}}
         {{- $sanNG := lower .nodeGroup.name | replace " " "-" -}}
         {{- $sanNG = regexReplaceAll "[^a-z0-9.-]" $sanNG "" -}}
         {{- $sanNG = trimAll "-." $sanNG -}}
@@ -153,19 +161,20 @@ template: |
          VMs are created without tags. See PR #21595 follow-up. */ -}}
   {{- $tags := dig "tagURNs" (list) .provider }}
 
-  {{- /* Optional string fields — go through get to survive missingkey=error. Fall back to
-         instanceClassDefaults from the discovery payload when the InstanceClass omits them.
-         resourcePool and datastore intentionally do NOT read from the InstanceClass under CAPI:
-         CAPV's overrideWithFailureDomainFunc rewrites both from the resolved DeploymentZone /
-         FailureDomain topology on every reconcile (pkg/services/vimmachine.go), so a value from
-         the InstanceClass would be a dead-write that never lands on the VM. Sourcing them from
-         the discovery defaults keeps the pre-DZ/FD fresh-install window (before ensure_failure_domains
-         has published the CRs) working without misleading operators into thinking VsphereInstanceClass
-         .{resourcePool,datastore} still tunes the placement. */ -}}
-  {{- $template := get $ic "template" | default (get $icd "template") }}
-  {{- $datastore := get $icd "datastore" }}
+  {{- /* Required string fields resolved with InstanceClass → instanceClassDefaults fallback.
+         An empty result MUST fail the render (contract rule 5, MACHINE_TEMPLATE_CONTRACT.md):
+         a silent empty would land as `template: ""` in VSphereMachineTemplate.spec, which
+         CAPV's finder rejects at clone time with a misleading error. Openstack's template
+         uses the same `{{ fail ... }}` pattern for imageName / mainNetwork.
+         resourcePool and datastore are baseline defaults only; per-NG override lives on
+         VSphereDeploymentZone.placementConstraint created by the ensure_failure_domains hook.
+         An empty datastore here is still safe — CAPV falls back to FD.topology.datastore. */ -}}
+  {{- $template := get $ic "template" | default (get $icd "template" | default "") }}
+  {{- if eq $template "" }}
+    {{- fail "template is required: set VsphereInstanceClass.spec.template or masterNodeGroup.instanceClass.template" }}
+  {{- end }}
+  {{- $datastore := get $icd "datastore" | default "" }}
   {{- $rootDiskSize := get $ic "rootDiskSize" | default 20 }}
-  {{- $rp := get $icd "resourcePoolPath" }}
 
   apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
   kind: VSphereMachineTemplate
@@ -174,15 +183,14 @@ template: |
       spec:
         template: {{ $template | quote }}
         server: {{ .provider.server | quote }}
-        {{- /* thumbprint pins the vCenter TLS certificate: CAPV's session code does
-               `insecure := thumbprint == ""` (pkg/session/session.go), so an unset thumbprint on
-               a non-dev vCenter silently disables TLS validation for every clone task. Falls back
-               to the empty string when the operator explicitly opted into providerClusterConfiguration
-               .provider.insecure: true. */ -}}
-        {{- $thumbprint := get .provider "thumbprint" }}
-        {{- if $thumbprint }}
-        thumbprint: {{ $thumbprint | quote }}
-        {{- end }}
+        {{- /* thumbprint is NOT rendered on VSphereMachineTemplate here. CAPV falls back to
+               VSphereCluster.spec.thumbprint (`pkg/services/vimmachine.go`: `if vm.Spec.Thumbprint
+               == "" { vm.Spec.Thumbprint = vsphereCluster.Spec.Thumbprint }`) on every reconcile,
+               so a single source of truth on the Cluster is enough. Keeping it out of the
+               immutable machine template also protects against the discovery-async race:
+               providerDiscoveryData.thumbprint appears only after the first discoverer cycle,
+               and the CAPV validating webhook rejects any change to VSphereMachineTemplate.spec.
+               Renderer: capi/cluster.yaml. */}}
         {{- /* datacenter + absolute folder are baseline: CAPV's `generateOverrideFunc` in
                pkg/services/vimmachine.go overrides them from the resolved VSphereDeploymentZone
                / VSphereFailureDomain topology when both CRs exist. If DZ/FD are missing at the
@@ -201,22 +209,15 @@ template: |
         folder: {{ $folder | quote }}
         {{- end }}
         datastore: {{ $datastore | quote }}
-        {{- /* Prefer an absolute resourcePool inventory path built from the zone's
-               ClusterComputeResource (published by ensure_failure_domains hook) joined with
-               providerDiscoveryData.resourcePoolPath. CAPV's finder resolves a bare name relative
-               to the datacenter and errors out ambiguously when several compute clusters carry a
-               resource pool of the same name. Fall back to the raw value only if the hook has
-               not populated the map yet (fresh install). CAPV then further overrides the RP from
-               the resolved VSphereDeploymentZone.spec.placementConstraint.resourcePool when the
-               DZ has one, so this is a safe pre-resolution. */ -}}
-        {{- if $rp }}
-        {{- $zoneCluster := dig "zoneComputeClusterPaths" .zone "" .provider }}
-        {{- if $zoneCluster }}
-        resourcePool: {{ printf "%s/Resources/%s" $zoneCluster $rp | quote }}
-        {{- else }}
-        resourcePool: {{ $rp | quote }}
-        {{- end }}
-        {{- end }}
+        {{- /* resourcePool is intentionally NOT rendered here. CAPV's overrideFunc
+               unconditionally overwrites VSphereVM.spec.ResourcePool from the resolved
+               VSphereDeploymentZone.spec.placementConstraint.resourcePool
+               (pkg/services/vimmachine.go), and hooks/ensure_failure_domains.go writes it
+               both on the zone-baseline DZ and on per-NG override DZs — so any value here
+               would be a dead-write on immutable VSphereMachineTemplate.spec. Keeping it
+               out also removes a discovery-async field: zoneComputeClusterPaths arrives
+               after the first discoverer tick, and any change to the template's spec after
+               creation is rejected by the CAPV validating webhook. */}}
         numCPUs: {{ $ic.numCPUs | int }}
         memoryMiB: {{ $memoryMiB }}
         diskGiB: {{ $rootDiskSize | int }}

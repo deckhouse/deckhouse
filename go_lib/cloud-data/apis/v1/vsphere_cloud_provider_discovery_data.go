@@ -34,6 +34,14 @@ type VsphereCloudDiscoveryData struct {
 	// see the module USAGE doc for why the per-NodeGroup MCM tag is intentionally not
 	// published here.
 	TagURNs []string `json:"tagURNs,omitempty"`
+
+	// Thumbprint is the SHA-1 fingerprint of the vCenter leaf TLS certificate, formatted
+	// as colon-separated uppercase hex ("AA:BB:CC:...:99", 20 bytes). Populated by
+	// cloud-data-discoverer from the same TLS session it uses for discovery (which is
+	// verified against caBundle or the system trust store when insecure=false), then
+	// consumed by capi/cluster.yaml to render VSphereCluster.spec.thumbprint. CAPV's
+	// session code pins the leaf cert to this value on every vCenter round-trip.
+	Thumbprint string `json:"thumbprint,omitempty"`
 }
 
 type VsphereDatastore struct {

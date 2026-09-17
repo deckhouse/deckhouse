@@ -81,21 +81,14 @@ spec:
       server: {{ $vsphere.server | quote }}
       folder: {{ $vsphere.vmFolderPath | quote }}
       datastore: {{ $ic.datastore | default $icd.datastore | quote }}
-      {{- /* Prefer an absolute resourcePool inventory path built from the zone's
-             ClusterComputeResource (published by ensure_failure_domains hook) joined with
-             providerDiscoveryData.resourcePoolPath. CAPV's finder resolves a bare name
-             relative to the datacenter and errors out ambiguously when several compute
-             clusters carry a resource pool of the same name. Fall back to the raw value
-             only if the hook has not populated the map yet (fresh install). */ -}}
-      {{- $rp := $ic.resourcePool | default $icd.resourcePoolPath }}
-      {{- if $rp }}
-      {{- $zoneCluster := dig "zoneComputeClusterPaths" .zoneName "" $vsphere }}
-      {{- if $zoneCluster }}
-      resourcePool: {{ printf "%s/Resources/%s" $zoneCluster $rp | quote }}
-      {{- else }}
-      resourcePool: {{ $rp | quote }}
-      {{- end }}
-      {{- end }}
+      {{- /* resourcePool is intentionally NOT rendered here in the parity snapshot. CAPV
+             overwrites VSphereVM.spec.ResourcePool from the resolved VSphereDeploymentZone.
+             spec.placementConstraint.resourcePool (pkg/services/vimmachine.go), and the
+             deckhouse module writes it on both the zone-baseline DZ (populated from
+             providerDiscoveryData.resourcePoolPath) and per-NG override DZs. A value on
+             VSphereMachineTemplate.spec would be a dead-write on immutable spec, and
+             zoneComputeClusterPaths is a discovery-async input the immutable template must
+             not depend on. This mirrors the v2 template (capi/template.yaml). */}}
       numCPUs: {{ int $ic.numCPUs }}
       memoryMiB: {{ $memoryMiB }}
       diskGiB: {{ $ic.rootDiskSize | default 20 }}

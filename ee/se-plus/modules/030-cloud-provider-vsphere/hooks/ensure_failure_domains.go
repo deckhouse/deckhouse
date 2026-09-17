@@ -279,14 +279,29 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 	zoneTagCategory := strPtrOrEmpty(pcc.ZoneTagCategory)
 	server := *pcc.Provider.Server
 
+	// Module-wide datastore default = masterNodeGroup.instanceClass.datastore, matching
+	// what registration.yaml publishes as instanceClassDefaults.datastore. It is the same
+	// value MCM's driver_vsphere used ("datastore from master InstanceClass") — carrying
+	// it through the CAPI path via base DZ.placementConstraint.datastore restores that
+	// contract: CAPV (with patches/003) reads DZ.placementConstraint.datastore first and
+	// falls back to FD.topology.datastore only if empty.
+	var moduleDefaultDatastore string
+	if pcc.MasterNodeGroup != nil && pcc.MasterNodeGroup.InstanceClass != nil && pcc.MasterNodeGroup.InstanceClass.Datastore != nil {
+		moduleDefaultDatastore = *pcc.MasterNodeGroup.InstanceClass.Datastore
+	}
+
 	for _, zone := range missing {
 		clusterPath, ok := dd.ZoneComputeClusterPaths[zone]
 		if !ok || clusterPath == "" {
 			input.Logger.Warn("skip zone: no compute-cluster path from discovery", "zone", zone)
 			continue
 		}
-		datastore := datastoreForZone(zone, dd.Datastores)
-		if datastore == "" {
+		// FD.topology.datastore is a zone-safe fallback: an auto-picked datastore tagged
+		// for the zone, only consulted by CAPV when DZ.placementConstraint.datastore is
+		// empty. Deterministic sort keeps FD.spec stable across reconciles (FD.spec is
+		// immutable via webhook, so it must be identical between hook runs).
+		fdDatastore := datastoreForZone(zone, dd.Datastores)
+		if fdDatastore == "" {
 			input.Logger.Warn("skip zone: no datastore tagged for it", "zone", zone)
 			continue
 		}
@@ -295,22 +310,23 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 		fdName := fdNamePrefix + rfc1123SubdomainName(zone)
 		dzName := rfc1123SubdomainName(zone)
 
-		fd := buildFailureDomain(fdName, region, regionTagCategory, zone, zoneTagCategory, dd.Datacenter, clusterPath, datastore)
-		// Base DZ leaves placementConstraint.datastore empty on purpose: CAPV then falls
-		// back to FD.topology.datastore for the zone-wide default.
-		dz := buildDeploymentZone(dzName, server, fdName, folder, baselineRP, "", dzTypeBase, "")
+		fd := buildFailureDomain(fdName, region, regionTagCategory, zone, zoneTagCategory, dd.Datacenter, clusterPath, fdDatastore)
+		dz := buildDeploymentZone(dzName, server, fdName, folder, baselineRP, moduleDefaultDatastore, dzTypeBase, "")
 		input.PatchCollector.CreateIfNotExists(fd)
 		input.PatchCollector.CreateIfNotExists(dz)
 		input.Logger.Info("created baseline VSphereFailureDomain and VSphereDeploymentZone",
 			"zone", zone, "fdName", fdName, "dzName", dzName,
-			"computeCluster", clusterPath, "datastore", datastore)
+			"computeCluster", clusterPath, "fdDatastore", fdDatastore, "dzDatastore", moduleDefaultDatastore)
 	}
 
 	// Override pass: consume the InstanceClass + NodeGroup snapshots, compute the desired
 	// set of override DZs, then reconcile (create/update newly needed, delete no-longer
 	// needed). Only DZs with dzTypeLabel=override are touched — a base DZ never falls into
-	// the deletion diff.
-	overrides, err := desiredOverrideDZs(input.Snapshots, *pcc.Zones)
+	// the deletion diff. zoneComputeClusterPaths is passed in so per-NG override
+	// resourcePool can be resolved into an absolute inventoryPath relative to the zone's
+	// ClusterComputeResource — a bare name collides when the same pool name exists in
+	// several compute clusters.
+	overrides, err := desiredOverrideDZs(input.Snapshots, *pcc.Zones, dd.ZoneComputeClusterPaths)
 	if err != nil {
 		return fmt.Errorf("compute desired override DZs: %w", err)
 	}
@@ -343,8 +359,15 @@ type desiredOverrideDZ struct {
 //   - the InstanceClass has a non-empty spec.resourcePool OR spec.datastore.
 //
 // pccZones is the fallback zone list for a NodeGroup that leaves spec.cloudInstances.zones
-// empty. Result is keyed by DZ name for O(1) diff.
-func desiredOverrideDZs(snaps sdkpkg.Snapshots, pccZones []string) (map[string]desiredOverrideDZ, error) {
+// empty. zoneComputeClusterPaths (published by cloud-data-discoverer) is used to resolve a
+// relative resourcePool from InstanceClass into an absolute inventoryPath under the zone's
+// ClusterComputeResource — CAPV's finder errors ambiguously ("path 'rp' resolves to
+// multiple resource pools") when several compute clusters carry a pool with the same name.
+// If the operator passed an absolute "/…" value, it is kept as-is; if the zone is missing
+// from the map (discovery lagging), the zone is skipped and logged upstream.
+//
+// Result is keyed by DZ name for O(1) diff.
+func desiredOverrideDZs(snaps sdkpkg.Snapshots, pccZones []string, zoneComputeClusterPaths map[string]string) (map[string]desiredOverrideDZ, error) {
 	ics, err := sdkobjectpatch.UnmarshalToStruct[instanceClassSnapshot](snaps, "vsphere-instance-classes")
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal vsphere-instance-classes snapshot: %w", err)
@@ -380,11 +403,22 @@ func desiredOverrideDZs(snaps sdkpkg.Snapshots, pccZones []string) (map[string]d
 			zones = pccZones
 		}
 		for _, z := range zones {
+			rp := over.ResourcePool
+			if rp != "" && !strings.HasPrefix(rp, "/") {
+				clusterPath, hasPath := zoneComputeClusterPaths[z]
+				if !hasPath || clusterPath == "" {
+					// Relative resourcePool + no compute-cluster path from discovery: writing
+					// a bare pool name would make a DZ CAPV cannot resolve unambiguously in a
+					// multi-cluster datacenter. Wait until discovery catches up.
+					continue
+				}
+				rp = absResourcePoolPath(clusterPath, rp)
+			}
 			dz := desiredOverrideDZ{
 				Name:         dzNameOverride(z, ng.Name),
 				Zone:         z,
 				NodeGroup:    ng.Name,
-				ResourcePool: over.ResourcePool,
+				ResourcePool: rp,
 				Datastore:    over.Datastore,
 				FDName:       fdNamePrefix + rfc1123SubdomainName(z),
 			}
@@ -556,23 +590,38 @@ func absFolderPath(datacenter, discoveredFolder string, cfgFolder *string) strin
 	return path.Join("/", datacenter, "vm", folder)
 }
 
-// absResourcePoolPath returns "<clusterPath>/Resources/<providerDiscoveryData.resourcePoolPath>",
-// which is the absolute form CAPV placementConstraint requires. ResourcePoolPath is a name
-// relative to the cluster and produced by the infrastructure step during bootstrap.
-func absResourcePoolPath(clusterPath, relativeRP string) string {
-	relativeRP = strings.TrimPrefix(relativeRP, "/")
-	if relativeRP == "" {
+// absResourcePoolPath returns an absolute inventory path CAPV placementConstraint accepts.
+// A leading "/" in rp is honored as an already-absolute inventoryPath (operator explicitly
+// pins one). Otherwise rp is treated as a name relative to <clusterPath>/Resources — this
+// is the MCM contract (docs/instance_class.yaml: "relative to the zone/cluster") and how
+// CAPV's finder resolves a bare name once it has the compute cluster context. An empty rp
+// collapses to the cluster's own root Resources pool.
+func absResourcePoolPath(clusterPath, rp string) string {
+	if strings.HasPrefix(rp, "/") {
+		return rp
+	}
+	if rp == "" {
 		return path.Join(clusterPath, "Resources")
 	}
-	return path.Join(clusterPath, "Resources", relativeRP)
+	return path.Join(clusterPath, "Resources", rp)
 }
 
-// datastoreForZone picks a datastore deterministically: sort every datastore that carries the
-// zone tag by InventoryPath (fall back to Name), then take the first. Deterministic order matters
-// because FailureDomain.topology.datastore is immutable via the CAPV webhook.
+// datastoreForZone picks a datastore deterministically: sort every zone-tagged Datastore by
+// InventoryPath (fall back to Name), then take the first. Deterministic order matters
+// because FailureDomain.topology.datastore is immutable via the CAPV webhook — a different
+// pick between reconciles would 422 on the update.
+//
+// DatastoreCluster (StoragePod / SDRS) entries are filtered out: CAPV's clone code path
+// resolves the value via govmomi Finder.Datastore, which errors on a StoragePod reference
+// ("not a Datastore"). MCM used to support SDRS via a dedicated code path, CAPV does not.
+// A cluster whose only zone-tagged storage is a DatastoreCluster is therefore not usable
+// under the CAPI path — the operator has to tag a member Datastore individually.
 func datastoreForZone(zone string, datastores []cloudDataV1.VsphereDatastore) string {
 	var matches []string
 	for _, ds := range datastores {
+		if ds.DatastoreType != "" && ds.DatastoreType != "Datastore" {
+			continue
+		}
 		for _, z := range ds.Zones {
 			if z != zone {
 				continue
