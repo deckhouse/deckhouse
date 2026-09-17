@@ -222,10 +222,10 @@ func TestRenderStaticPodsStep(t *testing.T) {
 	require.Contains(t, worker, `new_names='["node-local-dns","registry-agent"]'`)
 	require.Contains(t, worker, `"node.deckhouse.io/static-pods=node-local-dns,registry-agent"`)
 
-	// Prune, then record, then write: the prune reads the old names, so a state
-	// file written first would leave the manifests of the departed objects. A
-	// recorded name whose file is absent is written by the next run, while a
-	// written file no run remembers is never removed. The annotation stays last.
+	// Prune, then record, then write, annotation last: a recorded name whose file
+	// is absent is written by the next run, while a written file no run remembers
+	// is never removed, and a state written before the prune would hide old names.
+	require.Contains(t, worker, `rm -f "${manifests_dir}/${old_name}.yaml"`)
 	require.Less(t, strings.Index(worker, `rm -f "${manifests_dir}/${old_name}.yaml"`), strings.Index(worker, `echo "$new_names" > "$state_file"`))
 	require.Less(t, strings.Index(worker, `echo "$new_names" > "$state_file"`), strings.Index(worker, "bb-sync-file"))
 	require.Less(t, strings.LastIndex(worker, "bb-sync-file"), strings.Index(worker, "bb-curl-helper-patch-node-metadata"))
