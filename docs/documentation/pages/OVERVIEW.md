@@ -15,10 +15,6 @@ rootLLMStxtURL: /products/kubernetes-platform/documentation/v1/llms.txt
 {% include pdf_download_modal.html %}
 {%- endunless %}
 
-{% alert level="info" %}
-Starting with version 1.76, the product name Deckhouse Kubernetes Platform has been changed to Deckhouse Platform in the documentation.
-{% endalert %}
-
 Welcome to the home page of the Deckhouse Platform documentation.
 {% if site.mode != 'module' %}We recommend starting with the [Getting started](/products/kubernetes-platform/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.{% endif %}
 

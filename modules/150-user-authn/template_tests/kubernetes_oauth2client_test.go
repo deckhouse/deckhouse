@@ -279,18 +279,12 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 				"kubeconfig-prod-eu",
 			))
 
-			uris := []string{}
-			for _, u := range oauth2Client.Field("redirectURIs").Array() {
-				uris = append(uris, u.String())
-			}
-			Expect(uris).To(ConsistOf(
-				"https://kubeconfig.example.com/callback/0",
-				"https://kubeconfig.example.com/callback/1",
-				"https://kubeconfig.example.com/callback/",
-			))
-			// Authenticators redirect to their own OAuth2Client, so no tenant-controlled
-			// domain may reach the redirect URIs of the privileged kubernetes client.
-			Expect(uris).NotTo(ContainElement(ContainSubstring("/dex-authenticator/callback")))
+			// Every peer redirects to its own OAuth2Client, so the privileged kubernetes
+			// client needs no redirect URI of its own. In particular, no tenant-controlled
+			// domain and no leftover kubeconfig web UI callback may reach it.
+			redirectURIs := oauth2Client.Field("redirectURIs")
+			Expect(redirectURIs.IsArray()).To(BeTrue(), "redirectURIs must render as a list, not a bare key parsed as null")
+			Expect(redirectURIs.Array()).To(BeEmpty())
 		})
 
 		It("Should render a separate OAuth2Client for each slug-based clientID and for publishAPI", func() {
@@ -310,6 +304,40 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 				for _, u := range oc.Field("redirectURIs").Array() {
 					uris = append(uris, u.String())
 				}
+				Expect(uris).To(ConsistOf(
+					"http://localhost:8000",
+					"http://localhost:18000",
+					"/device/callback",
+				))
+			}
+		})
+
+		// The kubeconfig-generator web UI is gone, but its dex clients outlive it: every
+		// kubeconfig the UI ever issued carries one of these client ids and refreshes its
+		// token through them. They are scheduled for removal one release later, so until
+		// then dropping templates/kubeconfig-generator/ — now down to two files — would
+		// lock those users out at both login and refresh. Pin the clients and the CLI
+		// callbacks they must keep accepting.
+		It("Should keep the legacy kubeconfig-generator OAuth2Clients for already issued kubeconfigs", func() {
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+			for _, clientID := range []string{
+				"kubeconfig-generator",
+				"kubeconfig-generator-0",
+				"kubeconfig-generator-1",
+			} {
+				crName := encoding.ToFnvLikeDex(clientID)
+				oc := hec.KubernetesResource("OAuth2Client", "d8-user-authn", crName)
+				Expect(oc.Exists()).To(BeTrue(),
+					"legacy OAuth2Client %s (CR %s) must survive the web UI removal", clientID, crName)
+				Expect(oc.Field("id").String()).To(Equal(clientID))
+
+				uris := []string{}
+				for _, u := range oc.Field("redirectURIs").Array() {
+					uris = append(uris, u.String())
+				}
+				// kubelogin and the device flow are the only ways these kubeconfigs can
+				// still authenticate: the web UI callback went away with the hostname.
 				Expect(uris).To(ConsistOf(
 					"http://localhost:8000",
 					"http://localhost:18000",
