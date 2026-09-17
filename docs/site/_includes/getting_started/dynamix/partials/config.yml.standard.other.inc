@@ -91,8 +91,10 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: DynamixClusterConfiguration
 layout: Standard
-# [<en>] The name of the location to install the cluster.
-# [<ru>] Имя места установки кластера.
+# [<en>] The name of the grid used to resolve the resource group the cluster is created in.
+# [<en>] This parameter has no effect on disk placement; use storagePolicy for that.
+# [<ru>] Имя грида, используемое для определения resource group, в которой создается кластер.
+# [<ru>] На размещение дисков этот параметр не влияет — для этого используется storagePolicy.
 location: *!CHANGE_LOCATION!*
 # [<en>] Account name.
 # [<ru>] Имя аккаунта.

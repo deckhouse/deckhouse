@@ -33,8 +33,8 @@ A storage policy describes a set of storage endpoint and pool pairs available to
 
 That is also why changing the storage policy — cluster-wide or in a single instanceClass — recreates the CloudEphemeral nodes it applies to.
 
-## Which storage classes does the module create?
+## Which StorageClasses does the module create?
 
-One storage class per storage policy that is available to the cluster account and has the `ENABLED` status, named after the policy. A policy name that isn't a valid Kubernetes object name is converted into one, so two policies can end up claiming the same storage class name; in that case only one of them gets a class.
+One StorageClass per storage policy that is available to the cluster account and has the `ENABLED` status, named after the policy. A policy name that isn't a valid Kubernetes object name is converted into one, so two policies can end up claiming the same StorageClass name; in that case only one of them gets a StorageClass.
 
 To keep some of them out of the cluster, list the names or regular expressions in the [`storageClass.exclude`](configuration.html#parameters-storageclass-exclude) parameter.
