@@ -176,11 +176,6 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/modules/030-cloud-provider-zvirt/candi/docs
-  to: /src/se-plus/modules/030-cloud-provider-zvirt/docs
-  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
-  stageDependencies:
-    setup: ['**/*']
 - add: /modules/030-cloud-provider-azure/candi/openapi
   to: /src/modules/030-cloud-provider-azure/crds
   includePaths: ['*instance_class.yaml']
