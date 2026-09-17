@@ -1,9 +1,0 @@
-version: v1
-template: |
-  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-  kind: DeckhouseCluster
-  metadata:
-    name: {{ .cluster.name | quote }}
-    namespace: {{ .cluster.namespace | quote }}
-    labels:
-      app: capdvp-controller-manager
