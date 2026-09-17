@@ -1,11 +1,11 @@
 ---
 title: "Registry module: FAQ"
-description: "Frequently asked questions about the Deckhouse Kubernetes Platform registry module: migrating to the module, cache maintenance, and troubleshooting registry issues."
+description: "Frequently asked questions about the Deckhouse Platform registry module: migrating to the module, cache maintenance, and troubleshooting registry issues."
 ---
 
 ## How does the migration to the registry module work?
 
-There are two ways a Deckhouse Kubernetes Platform (DKP) cluster's image pull path can be managed:
+There are two ways a Deckhouse Platform (DP) cluster's image pull path can be managed:
 
 - **the previous implementation** — the `registry` section of the
   [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry), with the
@@ -20,7 +20,7 @@ the same thing on every node — which registry the container runtime pulls from
 credentials — so they never manage a cluster at the same time.
 
 What has to be done for the handover, and when, depends on the mode the previous implementation
-is running in. The mode is set in the `settings.registry.mode` parameter of the `deckhouse`
+is running in. The mode is set in the [`settings.registry.mode`](/modules/deckhouse/configuration.html#parameters-registry-mode) parameter of the `deckhouse`
 ModuleConfig:
 
 ```bash
@@ -86,12 +86,12 @@ nothing to prepare: the handover happens on its own.
    d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
    ```
 
-1. Upgrade the cluster to the release with the module (or, if it is already on it, just wait
+1. Upgrade the cluster to the release with the current implementation of the module (or, if it is already on it, just wait
    for the next reconciliation). The module takes over automatically, and the behavior does not
    change: the module's default mode is also `Unmanaged`, so the cluster keeps pulling from the
    same registry as before.
 
-1. To have the module manage the pull path, set `mode: Managed` in the `registry` ModuleConfig
+1. To have the module manage the pull path, set [`mode: Managed`](configuration.html#parameters-mode) in the `registry` ModuleConfig
    and specify the registry to pull from. A ready-made configuration for your cluster is
    published in the `registry-suggested-config` secret — see
    [enabling the module](examples.html#enabling-the-module).
@@ -104,7 +104,7 @@ handover of that address: no switch through `Unmanaged` is needed, and no compon
 
 1. Configure the module before the upgrade — without this configuration the upgrade is
    blocked. Take the values from the
-   `registry.direct` section of the `deckhouse` ModuleConfig: `imagesRepo` splits into `host`
+   [`registry.direct`](/modules/deckhouse/configuration.html#parameters-registry-direct) section of the `deckhouse` ModuleConfig: `imagesRepo` splits into `host`
    and `path`, the credentials are the same `license` (or `username`/`password`), plus `ca` if
    the registry requires one:
 
@@ -153,7 +153,7 @@ handover of that address: no switch through `Unmanaged` is needed, and no compon
 module cannot adopt. So the cluster must first be switched to `Unmanaged`, and this can only be
 done before the upgrade.
 
-1. In the `deckhouse` ModuleConfig, set `registry.mode: Unmanaged`, keeping the same registry
+1. In the `deckhouse` ModuleConfig, set [`registry.mode: Unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-mode), keeping the same registry
    address and credentials — see
    [the mode switching examples](examples.html#examples-for-the-previous-implementation). All
    nodes are reconfigured to pull directly from the external registry, so the caching `Proxy`
@@ -170,7 +170,7 @@ done before the upgrade.
 1. Upgrade the cluster. The handover happens on the module's next reconciliation and does not
    change the behavior: in `Unmanaged` mode the module does not manage the pull path either.
 
-1. To get in-cluster caching back, set `mode: Managed` with `storage.cache: true` and the same
+1. To get in-cluster caching back, set [`mode: Managed`](configuration.html#parameters-mode) with `storage.cache: true` and the same
    upstream registry. Note that the module's cache is built differently from `Proxy`: a single
    store with replicas on the master nodes instead of a proxy on every node. Before enabling it
    on a cluster with little free disk space on the control-plane nodes, read
@@ -183,7 +183,7 @@ external one. The standard procedure does not apply here: it goes through `Unman
 every node pulls directly from an external registry — and this cluster has none.
 
 The way through is to give the cluster an external registry temporarily: run it in the same
-cluster, but outside the DKP namespaces; switch the cluster to it; upgrade; let the
+cluster, but outside the DP namespaces; switch the cluster to it; upgrade; let the
 module's storage fill up; then remove it. The procedure has been verified end to end on a test
 cluster.
 
@@ -193,10 +193,10 @@ Before starting, make sure the control-plane nodes have free space for **four im
 Three copies exist at the peak — the `Local` store, the temporary registry, and the module's
 storage being filled — and the fourth set is headroom the node must not run out of.
 
-To get a sense of the scale, take a 13 GiB image set (platform with modules): it occupies
-about 21 GiB in the temporary registry (two releases — the one the cluster runs and the one it
-moves to) and grows the store from 13.0 to 21.4 GiB, on top of the node's own image cache and
-the system. A 100 GiB control-plane node peaks at around 38 GiB that way, while a 50 GiB node
+To get a sense of the scale, take a 13 GB image set (platform with modules): it occupies
+about 21 GB in the temporary registry (two releases — the one the cluster runs and the one it
+moves to) and grows the store from 13 to 21 GB, on top of the node's own image cache and
+the system. A 100 GB control-plane node peaks at around 38 GB that way, while a 50 GB node
 runs into pod eviction.
 
 The headroom is critical. When free disk space on a control-plane node runs low, kubelet
@@ -217,7 +217,7 @@ Steps 1–4 are performed before the upgrade, on the release that still contains
 implementation.
 
 1. Run a temporary OCI registry in a namespace of your own. Any registry implementation will
-   do, but it must serve TLS with a certificate the cluster can verify. DKP must not
+   do, but it must serve TLS with a certificate the cluster can verify. DP must not
    manage it: whatever happens to the module's own objects, the temporary registry must keep
    working.
 
@@ -237,11 +237,11 @@ implementation.
    runtime on a node does not resolve cluster DNS.
 
 1. Load the image set into the temporary registry: run `d8 mirror pull` on a machine with
-   access to the DKP registry, then `d8 mirror push` into the temporary one. This is the
+   access to the DP registry, then `d8 mirror push` into the temporary one. This is the
    copy the disk budget above accounts for.
 
 1. Point the previous implementation at the temporary registry and switch it to `Unmanaged`:
-   in the `deckhouse` ModuleConfig, set `registry.mode: Unmanaged` together with the address,
+   in the `deckhouse` ModuleConfig, set [`registry.mode: Unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-mode) together with the address,
    the CA certificate, and the credentials of the temporary registry. The nodes start pulling
    from it. The `Local` store leaves the pull path, but its data stays where it is — under
    `/opt/deckhouse/registry` on the control-plane nodes.
@@ -257,12 +257,12 @@ implementation.
 1. Upgrade the cluster to the release with the module. The handover happens on the module's
    next reconciliation; the cluster keeps pulling from the temporary registry throughout.
 
-1. Enable the module: `mode: Managed` with `storage.cache: true`, the temporary registry as
+1. Enable the module: [`mode: Managed`](configuration.html#parameters-mode) with `storage.cache: true`, the temporary registry as
    `primary.upstream` — **and `storage.source` in the same edit**. The module's storage starts
    on the same host path the `Local` store used, so the images already on the disks are
    adopted: the fill verifies them and downloads only what is missing.
 
-   Do not postpone `storage.source`: without it, the upstream cannot be removed in the next
+   Do not postpone specifying [`storage.source`](configuration.html#parameters-storage-source): without it, the upstream cannot be removed in the next
    step. A `Managed` configuration without `primary.upstream` is only accepted when
    `storage.source` is set, so the next step would be rejected with
    `'storage.source' is required when 'primary.upstream' is not set`.
@@ -296,7 +296,7 @@ state where everything works, but not the way the configuration asks — a state
 miss otherwise.
 
 `D8RegistryMigrationPending`
-: The cluster is still running the previous implementation. Nothing is degraded; the migration
+: The cluster is still running the previous implementation of the module. Nothing is degraded; the migration
   is not complete. See [how the migration works](#how-does-the-migration-to-the-registry-module-work).
 
 `D8RegistryConfigInvalid`
@@ -328,7 +328,7 @@ miss otherwise.
 : A change to the primary upstream was rejected, and the cluster keeps using the last working
   one. The `outcome` label tells the problems apart: `unreachable` — network or the registry
   itself; `auth` — usually an expired license key; `sentinel` — the registry responded and
-  accepted the credentials, but does not contain the DKP images (usually a wrong
+  accepted the credentials, but does not contain the DP images (usually a wrong
   repository path).
 
 `D8RegistryUpstreamRejected`
@@ -371,7 +371,7 @@ ssh <NODE> 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registr
 
 Garbage collection, run on a schedule by the storage replicas themselves.
 
-It is the only mechanism that removes anything from the store. Every DKP release adds new
+It is the only mechanism that removes anything from the store. Every DP release adds new
 images, so without collection the store of a long-lived cluster eventually fills up and stops
 accepting writes — and an air-gapped cluster with a full store cannot be updated.
 
@@ -390,11 +390,18 @@ still needed is unrecoverable without another `d8 mirror push`, while keeping an
 merely costs disk space. So a run that cannot determine what to keep — for example, when no
 deployed release is found — does nothing at all.
 
-To check the collection status and schedule:
+To check the collection status and schedule, use these commands:
+
+Check the last collection time on each replica, and any errors:
 
 ```bash
 d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
   'map({node, collectedAt, collectionError})'
+```
+
+Check the current collection schedule:
+
+```bash
 d8 k get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
 ```
 
@@ -414,7 +421,7 @@ Only one replica collects at a time; the others work normally.
 
 By default, collection is scheduled at a night hour — or, if the `master` node group has a
 maintenance window, at its start, since that hour is already declared safe for disruption. To
-set your own schedule:
+set your own schedule, use the [`storage.garbageCollection`](configuration.html#parameters-storage-garbagecollection) parameter:
 
 ```yaml
 spec:
@@ -429,7 +436,7 @@ unexpected hour is worse than not collecting.
 
 ### Turning it off
 
-Garbage collection is turned off in the module settings:
+Garbage collection is turned off in the module settings (the [`storage.garbageCollection`](configuration.html#parameters-storage-garbagecollection) parameter):
 
 ```yaml
 spec:
@@ -446,16 +453,16 @@ the last collection: from the outside, "turned off" and "silently stopped" look 
 
 ## A pull is failing on a node. Where do I look?
 
-Start with the agent: it is on the path of every pull on the node. It runs as a static pod, so
-it is available even when the cluster is not.
+Start with the agent: it is on the path of every pull on the node. It is deployed as a static
+pod, so it is available even when the cluster is not.
 
-The agent's logs:
+To check the agent's logs, use the command:
 
 ```bash
 d8 k -n kube-system logs -l component=registry-agent --tail=100
 ```
 
-The configuration the agent has, and whether it agrees with the cluster:
+To check the configuration the agent has, and whether it agrees with the cluster, use the command:
 
 ```bash
 d8 k get registrynode <NODE> -o jsonpath='{.status}' | jq
@@ -483,15 +490,15 @@ the failure is beyond the agent — the metrics above name the target that faile
 
 ## How do I check the state of the in-cluster cache?
 
-The state of the cache is published in the status of the RegistryStorage resource:
+The state of the cache is published in the status of the RegistryStorage resource. To view it, use the command:
 
 ```bash
 d8 k get registrystorage registry -o jsonpath='{.status}' | jq
 ```
 
-Notes on the fields:
+Description of the response fields:
 
-- `replicas` is the only place where completeness is reported, and each entry is the replica's
+- `replicas` is the only place where completeness information is reported, and each entry is the replica's
   own account of itself. A replica reporting `full: true` alongside an `error` is not
   complete: `full` says what it holds, and the error says whether its last pass finished.
 - `leader` is the replica that fills from the upstream and serves as the replication source
@@ -502,7 +509,7 @@ Notes on the fields:
 
 ## The previous implementation
 
-Everything below applies to a cluster still running the implementation configured through the
+The information below applies to a cluster still running the implementation of the module configured through the
 `deckhouse` ModuleConfig.
 
 ### How to Migrate to the registry module?

@@ -1,6 +1,6 @@
 ---
-title: "Module registry: usage example"
-description: "Examples for switching between registry modes in Deckhouse Kubernets Platform."
+title: "Module registry: usage examples"
+description: "Examples for switching between registry modes in Deckhouse Platform."
 ---
 
 {% alert level="warning" %}
@@ -9,8 +9,7 @@ If, during the switching process, the image of a module did not reload and the m
 
 ## Enabling the module
 
-To have the module manage how the cluster pulls images, set `mode: Managed` and name the
-registry to pull from:
+To have the module manage how the cluster pulls images, set [`mode: Managed`](configuration.html#parameters-mode) and specify the registry to pull from:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -43,7 +42,7 @@ across a secret and a docker configuration blob, and retyping them by hand is wh
 truncated path or the wrong authority comes from — on the one setting that decides whether the
 cluster can pull at all.
 
-Watch it take effect:
+To see the change take effect, use the following commands:
 
 ```bash
 d8 k get registryconfig registry -o jsonpath='{.status}' | jq
@@ -53,7 +52,7 @@ NODE:.metadata.name,APPLIED:.status.observedGeneration,OK:.status.reconciled,BAC
 
 ## Turning the in-cluster cache on
 
-Add `storage.cache` and a size for the store:
+To turn on the in-cluster cache, add the module's [`storage.cache`](configuration.html#parameters-storage-cache) ModuleConfig setting and specify a size for the store:
 
 ```yaml
 spec:
@@ -74,22 +73,26 @@ Nothing on any node is reconfigured. The container runtime already asks the node
 every registry, and the agent starts preferring the cache with the upstream as a fallback — so
 a cache miss is a slower pull rather than a failed one, from the first moment.
 
+To check how full the in-cluster cache is, use the following command:
+
 ```bash
 d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,leader,allReplicasFull}'
 ```
 
-Turning it back off is the same change in reverse, and just as safe. The blobs on disk are left
+Turning the in-cluster cache off again is the same change in reverse, and just as safe. The blobs on disk are left
 alone, so turning it on again refills from what is already there rather than from scratch — see
 [how to reclaim that space](faq.html#how-do-i-remove-leftover-cache-data-from-a-node)
 if you do not intend to.
 
 ## Going air-gapped
 
-An air-gapped cluster has no upstream: the cache is the only source of images, and
+An air-gapped cluster has no upstream (not set in the [`primary.upstream`](configuration.html#parameters-primary-upstream) parameter). For such a cluster, the cache is the only source of images, and
 `d8 mirror push` is the way in. Because completeness has to be decidable before the cache can
-be trusted alone, `storage.source` says what the expected image set is.
+be trusted alone, [`storage.source`](configuration.html#parameters-storage-source) must describe the expected image set.
 
-1. Pull the images somewhere with internet access:
+To move a cluster to air-gap, follow these steps:
+
+1. Pull the images on a machine that has internet access:
 
    ```bash
    d8 mirror pull --license <LICENSE_KEY> ./d8-bundle
@@ -104,7 +107,7 @@ be trusted alone, `storage.source` says what the expected image set is.
      --password "$(echo "$PUSH_SECRET" | jq -r .data.password | base64 -d)"
    ```
 
-1. Declare what the cache is expected to hold, and remove the upstream:
+1. Describe the expected set of images in the cache, and remove the upstream:
 
    ```yaml
    spec:
@@ -120,10 +123,17 @@ be trusted alone, `storage.source` says what the expected image set is.
 
 The upstream is not removed from the nodes the moment you remove it from the configuration. It
 is removed once the cache leader holds the whole expected set — this is the one transition that
-could otherwise leave every node with nowhere to pull from, so it waits, and says so:
+could otherwise leave every node with nowhere to pull from, so it waits, and says so. To check the status of the transition, use the following commands:
+
+Check whether the cache leader holds the whole expected set of images:
 
 ```bash
 d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{safeToDropUpstream,fill}'
+```
+
+Get the value of `effectiveUpstream`:
+
+```bash
 d8 k get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
 ```
 
@@ -132,8 +142,8 @@ cluster is air-gapped.
 
 ## Adding another registry
 
-A registry that is not the source of Deckhouse component images is declared as its own
-resource, not as another field in the ModuleConfig:
+A registry that is not the source of DP component images is declared as its own
+resource — [RegistryUpstream](cr.html#registryupstream) — rather than another field in the ModuleConfig. Example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -155,7 +165,7 @@ Pulls naming `images.virtualization.example.com` are then routed to `vendor.exam
 by the agent on every node, with the credentials and certificate authority held by the cluster
 rather than by each workload. Nothing on any node is reconfigured for this.
 
-Check that it was accepted — a conflict with the primary registry, or with another resource
+After creating the RegistryUpstream, check that it was accepted: a conflict with the primary registry, or with another resource
 claiming the same name, is refused rather than merged:
 
 ```bash
@@ -165,9 +175,15 @@ NAME:.metadata.name,MATCH:.spec.match,ACCEPTED:.status.conditions[0].status,REAS
 
 ## Pulling from a private registry without declaring it
 
-Nothing needs to be declared. The node agent forwards a registry it does not know about
-untouched, along with whatever credentials the pull already carried, so an ordinary
-`imagePullSecret` behaves exactly as it would on a cluster where this module was never enabled:
+Nothing needs to be declared to pull from a registry the module does not know about. When the
+module manages how images are pulled, the node agent is what the container runtime turns to for
+any registry, including ones the module has no information about. An unconfigured registry is
+proxied untouched, along with whatever credentials the pull request already carried.
+
+So an ordinary `imagePullSecret` behaves exactly as it would on a cluster where this module was
+never enabled.
+
+To create a secret with the credentials of the private registry, run:
 
 ```bash
 d8 k create secret docker-registry my-private-registry \
@@ -175,6 +191,8 @@ d8 k create secret docker-registry my-private-registry \
   --docker-username=robot \
   --docker-password=<PASSWORD>
 ```
+
+To use this secret when pulling images, add it to the pod's `imagePullSecrets`:
 
 ```yaml
 apiVersion: v1
@@ -189,12 +207,13 @@ spec:
     image: private.example.com/team/app:v1
 ```
 
-Declare a `RegistryUpstream` instead when you want the cluster to hold the credentials, or when
-the registry needs a certificate authority the nodes do not have.
+It is worth creating a `RegistryUpstream` only if you want the cluster to hold the credentials
+instead of every workload doing so individually, or if the registry needs a certificate authority
+the nodes do not have.
 
 ## Turning the module off again
 
-Set the mode back to `Unmanaged`:
+To have the module stop managing how images are pulled, set the [`mode`](configuration.html#parameters-mode) parameter to `Unmanaged`:
 
 ```yaml
 spec:
@@ -207,8 +226,9 @@ withdrawn, and the cluster goes back to pulling from the registry recorded in th
 `deckhouse-registry` secret — which is where it was pulling from before the module was ever
 enabled.
 
-Cache data on the control-plane nodes is deliberately left behind, so that turning the cache on
-again refills from what is already there. See
+Cache data on the control-plane nodes is deliberately left behind: turning the cache on again
+fills in only the missing images from the registry, rather than starting from scratch. If you do
+not plan to use the cache again, see
 [how to reclaim that space](faq.html#how-do-i-remove-leftover-cache-data-from-a-node).
 
 ## Examples for the previous implementation
@@ -221,7 +241,7 @@ Everything below applies to a cluster still running the implementation configure
 To switch an already running cluster to `Direct` mode, follow these steps:
 
 {% alert level="danger" %}
-The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DKP components.
+The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DP components.
 {% endalert %}
 
 1. Before switching, perform the [migration to use the `registry` module](faq.html#how-to-migrate-to-the-registry-module).
@@ -296,7 +316,7 @@ The first switch from `Unmanaged` to `Direct` mode will result in a full restart
          direct:
            imagesRepo: registry.deckhouse.io/deckhouse/ee
            scheme: HTTPS
-           license: <LICENSE_KEY> # Replace with your license key
+           license: <LICENSE_KEY> # Replace with your license key.
    ```
 
 1. Check the registry switch status in the `registry-state` secret using [this guide](faq.html#how-to-check-the-registry-mode-switch-status).
@@ -321,7 +341,7 @@ The first switch from `Unmanaged` to `Direct` mode will result in a full restart
 To switch an already running cluster to `Proxy` mode, follow these steps:
 
 {% alert level="danger" %}
-- The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DKP components.
+- The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DP components.
 - Switching from `Local` mode to `Proxy` mode is not available. To switch from `Local` mode, you must switch the registry to another available mode (for example: `Direct`).
 {% endalert %}
 
@@ -397,7 +417,7 @@ To switch an already running cluster to `Proxy` mode, follow these steps:
          proxy:
            imagesRepo: registry.deckhouse.io/deckhouse/ee
            scheme: HTTPS
-           license: <LICENSE_KEY> # Replace with your license key
+           license: <LICENSE_KEY> # Replace with your license key.
    ```
 
 1. Check the registry switch status in the `registry-state` secret using [this guide](faq.html#how-to-check-the-registry-mode-switch-status).
@@ -422,7 +442,7 @@ To switch an already running cluster to `Proxy` mode, follow these steps:
 To switch an already running cluster to `Local` mode, follow these steps:
 
 {% alert level="danger" %}
-- The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DKP components.
+- The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DP components.
 - Switching from `Proxy` mode to `Local` mode is not available. To switch from `Proxy` mode, you must switch the registry to another available mode (for example: `Direct`).
 {% endalert %}
 
@@ -480,7 +500,7 @@ To switch an already running cluster to `Local` mode, follow these steps:
    - no tasks to handle.
    ```
 
-1. Prepare archives with DKP images of the current version. To do this, use the `d8 mirror` command.
+1. Prepare archives with DP images of the current version. To do this, use the `d8 mirror` command.
 
    Example:
 
@@ -610,7 +630,7 @@ To switch an already running cluster to `Local` mode, follow these steps:
 To switch an already running cluster to `Unmanaged` mode, follow these steps:
 
 {% alert level="danger" %}
-Changing the registry in `Unmanaged` mode will result in a full restart of all DKP components.
+Changing the registry in `Unmanaged` mode will result in a full restart of all DP components.
 {% endalert %}
 
 1. Before switching, perform the [migration to use the `registry` module](faq.html#how-to-migrate-to-the-registry-module).
@@ -661,7 +681,7 @@ Changing the registry in `Unmanaged` mode will result in a full restart of all D
          unmanaged:
            imagesRepo: registry.deckhouse.io/deckhouse/ee
            scheme: HTTPS
-           license: <LICENSE_KEY> # Replace with your license key
+           license: <LICENSE_KEY> # Replace with your license key.
    ```
 
 1. Check the registry switch status in the `registry-state` secret using [this guide](faq.html#how-to-check-the-registry-mode-switch-status).
