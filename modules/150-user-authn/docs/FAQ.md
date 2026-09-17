@@ -274,7 +274,7 @@ Make sure your application Ingress has TLS configured before integrating with De
 
 ## How to generate a kubeconfig and access Kubernetes API?
 
-`kubeconfig` for remote access to the cluster via `kubectl` can be generated in the [`kubeconfigurator` web interface](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
+`kubeconfig` for remote access to the cluster via `kubectl` can be generated in the [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).
 
 Configure the [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter:
 
@@ -291,11 +291,9 @@ Configure the [`publishAPI`](/modules/user-authn/configuration.html#parameters-p
     enabled: true
   ```
 
-The name `kubeconfig` is reserved for the kubeconfig generation web interface. The URL depends on the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter (for example, for the template that looks like `%s.kube.my`, the kubeconfig generation web interface will be available at `kubeconfig.kube.my`, and for `%s-kube.company.my` — at `kubeconfig-kube.company.my`).
-
 ### Configuring kube-apiserver
 
-Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DP automatically configures `kube-apiserver` with the following flags so that the `dashboard` and `kubeconfig-generator` modules can work in the cluster.
+Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DP automatically configures `kube-apiserver` with the following flags so that OIDC authentication works in the cluster.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 
