@@ -187,14 +187,9 @@ func (r *reconciler) saveJournal(ctx context.Context, journal *licensing.Journal
 // ids with the cluster key. The request declares the cluster identity with an
 // inline jwk while no record has been accepted yet, and references it by
 // thumbprint afterwards: the license server already knows the key by then.
-func (r *reconciler) buildRegistrationRequest(
-	priv ed25519.PrivateKey,
-	clusterID string,
-	res licensing.Result,
-	values map[string]licensing.MetricValue,
-	seq uint64,
-	now time.Time,
-) (string, error) {
+// acceptedRecords returns the sorted ids of the accepted records and whether
+// any of them is a Workload, which is what makes the cluster registered.
+func acceptedRecords(res licensing.Result) ([]string, bool) {
 	accepted := make([]string, 0, len(res.Records))
 	registered := false
 	for _, rec := range res.Records {
@@ -207,6 +202,52 @@ func (r *reconciler) buildRegistrationRequest(
 		}
 	}
 	sort.Strings(accepted)
+	return accepted, registered
+}
+
+// requestStale reports whether the published registration request no longer
+// describes the installed set: the license server reads records from it to
+// issue renewals and top-ups, so a key that was just added or removed must show
+// up without waiting for the next sampling tick. A request that cannot be
+// decoded is stale as well. The signature is not checked: the request is our
+// own status field, and a stale verdict only costs a reissue.
+func requestStale(request string, res licensing.Result) bool {
+	tok, err := licensing.Parse(request)
+	if err != nil {
+		return true
+	}
+	var payload struct {
+		Records []string `json:"records"`
+	}
+	if err := json.Unmarshal(tok.Payload, &payload); err != nil {
+		return true
+	}
+	accepted, registered := acceptedRecords(res)
+	_, hasJWK := tok.Header["jwk"]
+	if hasJWK == registered {
+		return true
+	}
+	if len(payload.Records) != len(accepted) {
+		return true
+	}
+	sort.Strings(payload.Records)
+	for i := range accepted {
+		if payload.Records[i] != accepted[i] {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *reconciler) buildRegistrationRequest(
+	priv ed25519.PrivateKey,
+	clusterID string,
+	res licensing.Result,
+	values map[string]licensing.MetricValue,
+	seq uint64,
+	now time.Time,
+) (string, error) {
+	accepted, registered := acceptedRecords(res)
 
 	return licensing.BuildRegistrationRequest(licensing.RegistrationInput{
 		ClusterID: clusterID,
