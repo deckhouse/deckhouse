@@ -7,8 +7,6 @@ editionsNotAvailable: [cse]
 search: edition comparison, platform editions, feature comparison, сравнение редакций, редакции платформы, сравнение функций
 ---
 
-Deckhouse Platform поставляется в нескольких редакциях. Они отличаются набором возможностей и уровнем доступной поддержки. Краткое сравнение ключевых возможностей и особенностей можно найти на [сайте Deckhouse Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/pricing/#revisions).
+Deckhouse Platform поставляется в нескольких редакциях. Они отличаются набором возможностей и уровнем доступной поддержки.
 
-В таблице ниже перечислены модули Deckhouse Platform, доступные для использования в разных редакциях платформы:
-
-{% include revision_comparison_detail_table.liquid %}
+С версии 1.76 состав редакций обновился. Информация о поддерживаемых редакциях и их возможностях обновляется и будет доступна позже.
