@@ -16,7 +16,10 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-const resolvedRamdiskImagePath = "cloudProviderBaremetal.internal.ramdiskImage"
+const (
+	defaultRamdiskImageName  = "baremetal-default-ramdisk"
+	resolvedRamdiskImagePath = "cloudProviderBaremetal.internal.resolvedRamdiskImage"
+)
 
 type ramdiskImageSnapshot struct {
 	Name   string             `json:"name"`
@@ -61,10 +64,16 @@ func filterRamdiskImage(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func resolveRamdiskImage(_ context.Context, input *go_hook.HookInput) error {
-	ref, ok := input.Values.GetOk("cloudProviderBaremetal.nodes.parameters.ironic.ramdiskImageRef.name")
-	if !ok || ref.String() == "" {
+	if _, external := input.Values.GetOk("cloudProviderBaremetal.nodes.parameters.ironic.externalInstance"); external {
 		input.Values.Remove(resolvedRamdiskImagePath)
 		return nil
+	}
+
+	refName := defaultRamdiskImageName
+	customRef := false
+	if ref, ok := input.Values.GetOk("cloudProviderBaremetal.nodes.parameters.ironic.ramdiskImageRef.name"); ok && ref.String() != "" {
+		refName = ref.String()
+		customRef = true
 	}
 
 	images, err := sdkobjectpatch.UnmarshalToStruct[ramdiskImageSnapshot](input.Snapshots, "baremetal_ramdisk_images")
@@ -73,7 +82,7 @@ func resolveRamdiskImage(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	for _, image := range images {
-		if image.Name != ref.String() {
+		if image.Name != refName {
 			continue
 		}
 		if image.Direct.KernelURL == "" || image.Direct.InitramfsURL == "" {
@@ -89,7 +98,22 @@ func resolveRamdiskImage(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	return fmt.Errorf("BareMetalRamdiskImage %q not found", ref.String())
+	if !customRef {
+		provisioningIP, ok := input.Values.GetOk("cloudProviderBaremetal.nodes.parameters.ironic.provisioningNetwork.ipAddress")
+		if ok && provisioningIP.String() != "" {
+			baseURL := fmt.Sprintf("http://%s:6180/images", provisioningIP.String())
+			input.Values.Set(resolvedRamdiskImagePath, map[string]interface{}{
+				"direct": map[string]interface{}{
+					"architecture": "x86_64",
+					"kernelURL":    baseURL + "/ironic-python-agent.kernel",
+					"initramfsURL": baseURL + "/ironic-python-agent.initramfs",
+				},
+			})
+			return nil
+		}
+	}
+
+	return fmt.Errorf("BareMetalRamdiskImage %q not found", refName)
 }
 
 func stringValueOrDefault(values map[string]interface{}, key, fallback string) string {

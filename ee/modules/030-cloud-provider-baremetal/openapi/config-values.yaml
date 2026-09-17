@@ -50,6 +50,7 @@ properties:
                   endpoint:
                     type: string
                     pattern: '^https?://.+/v1/?$'
+                    maxLength: 2048
                     description: External provisioning API endpoint reachable by the host management operator.
                   credentialsRef:
                     type: object
@@ -66,6 +67,7 @@ properties:
                       name:
                         type: string
                         minLength: 1
+                        maxLength: 253
                       namespace:
                         type: string
                         pattern: '^d8-cloud-provider-baremetal$'
@@ -89,12 +91,14 @@ properties:
                           name:
                             type: string
                             minLength: 1
+                            maxLength: 253
                           namespace:
                             type: string
                             pattern: '^d8-cloud-provider-baremetal$'
                           key:
                             type: string
                             minLength: 1
+                            maxLength: 253
                       clientCertRef:
                         type: object
                         additionalProperties: false
@@ -112,15 +116,18 @@ properties:
                           name:
                             type: string
                             minLength: 1
+                            maxLength: 253
                           namespace:
                             type: string
                             pattern: '^d8-cloud-provider-baremetal$'
                           certKey:
                             type: string
                             minLength: 1
+                            maxLength: 253
                           privateKey:
                             type: string
                             minLength: 1
+                            maxLength: 253
                       insecure:
                         type: boolean
                         default: false
@@ -133,7 +140,7 @@ properties:
                 properties:
                   interface:
                     type: string
-                    minLength: 1
+                    pattern: '^[A-Za-z0-9_.:-]{1,15}$'
                   ipAddress:
                     type: string
                     format: ipv4
@@ -195,8 +202,12 @@ properties:
                         properties:
                           bios:
                             type: string
+                            minLength: 1
+                            maxLength: 1024
                           uefi:
                             type: string
+                            minLength: 1
+                            maxLength: 1024
               ramdiskImageRef:
                 type: object
                 additionalProperties: false
@@ -211,3 +222,4 @@ properties:
                   name:
                     type: string
                     minLength: 1
+                    maxLength: 253

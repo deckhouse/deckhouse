@@ -47,6 +47,7 @@ properties:
                   endpoint:
                     type: string
                     pattern: '^https?://.+/v1/?$'
+                    maxLength: 2048
                   credentialsRef:
                     type: object
                     additionalProperties: false
@@ -61,6 +62,8 @@ properties:
                         - Secret
                       name:
                         type: string
+                        minLength: 1
+                        maxLength: 253
                       namespace:
                         type: string
                         pattern: '^d8-cloud-provider-baremetal$'
@@ -83,11 +86,15 @@ properties:
                             - Secret
                           name:
                             type: string
+                            minLength: 1
+                            maxLength: 253
                           namespace:
                             type: string
                             pattern: '^d8-cloud-provider-baremetal$'
                           key:
                             type: string
+                            minLength: 1
+                            maxLength: 253
                       clientCertRef:
                         type: object
                         additionalProperties: false
@@ -104,13 +111,19 @@ properties:
                             - Secret
                           name:
                             type: string
+                            minLength: 1
+                            maxLength: 253
                           namespace:
                             type: string
                             pattern: '^d8-cloud-provider-baremetal$'
                           certKey:
                             type: string
+                            minLength: 1
+                            maxLength: 253
                           privateKey:
                             type: string
+                            minLength: 1
+                            maxLength: 253
                       insecure:
                         type: boolean
                         default: false
@@ -123,6 +136,7 @@ properties:
                 properties:
                   interface:
                     type: string
+                    pattern: '^[A-Za-z0-9_.:-]{1,15}$'
                   ipAddress:
                     type: string
                     format: ipv4
@@ -184,8 +198,12 @@ properties:
                         properties:
                           bios:
                             type: string
+                            minLength: 1
+                            maxLength: 1024
                           uefi:
                             type: string
+                            minLength: 1
+                            maxLength: 1024
               ramdiskImageRef:
                 type: object
                 additionalProperties: false
@@ -199,6 +217,8 @@ properties:
                     - BareMetalRamdiskImage
                   name:
                     type: string
+                    minLength: 1
+                    maxLength: 253
   internal:
     type: object
     default: {}
@@ -246,7 +266,7 @@ properties:
             type: string
           ca:
             type: string
-      ramdiskImage:
+      resolvedRamdiskImage:
         type: object
         additionalProperties: false
         properties:

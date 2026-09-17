@@ -115,6 +115,12 @@ dhcp:
 		It("renders Ironic with DHCP DNS and gateway settings", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
+			defaultRamdisk := f.KubernetesGlobalResource("BareMetalRamdiskImage", "baremetal-default-ramdisk")
+			Expect(defaultRamdisk.Exists()).To(BeTrue())
+			Expect(defaultRamdisk.Field("spec.direct.architecture").String()).To(Equal("x86_64"))
+			Expect(defaultRamdisk.Field("spec.direct.kernelURL").String()).To(Equal("http://172.22.0.20:6180/images/ironic-python-agent.kernel"))
+			Expect(defaultRamdisk.Field("spec.direct.initramfsURL").String()).To(Equal("http://172.22.0.20:6180/images/ironic-python-agent.initramfs"))
+
 			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-baremetal", "ironic")
 			Expect(ironic.Exists()).To(BeTrue())
 			Expect(ironic.Field("spec.images.ironic").String()).NotTo(BeEmpty())
@@ -159,6 +165,12 @@ dhcp:
 			Expect(instanceManager.Exists()).To(BeTrue())
 			instanceManagerArgs := instanceManager.Field("spec.template.spec.containers.0.args").String()
 			Expect(instanceManagerArgs).To(ContainSubstring("--target-namespace=d8-cloud-instance-manager"))
+
+			instanceManagerRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "baremetal-instance-manager")
+			Expect(instanceManagerRole.Exists()).To(BeTrue())
+			instanceManagerRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "baremetal-instance-manager")
+			Expect(instanceManagerRoleBinding.Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "baremetal-instance-manager").Exists()).To(BeFalse())
 			Expect(instanceManagerArgs).To(ContainSubstring("--bmc-probe-timeout=15s"))
 			Expect(instanceManagerArgs).NotTo(ContainSubstring("--default-online"))
 			Expect(instanceManagerArgs).NotTo(ContainSubstring("--default-disable-automated-cleaning"))
@@ -239,7 +251,7 @@ dhcp:
     rangeBegin: 172.22.0.200
     rangeEnd: 172.22.0.210
 `)
-			f.ValuesSetFromYaml("cloudProviderBaremetal.internal.ramdiskImage", `
+			f.ValuesSetFromYaml("cloudProviderBaremetal.internal.resolvedRamdiskImage", `
 direct:
   architecture: aarch64
   kernelURL: http://172.22.0.30/ipa/ironic-python-agent.kernel

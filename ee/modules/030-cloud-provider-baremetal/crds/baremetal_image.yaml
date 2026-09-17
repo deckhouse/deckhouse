@@ -48,6 +48,9 @@ spec:
             properties:
               direct:
                 type: object
+                x-kubernetes-validations:
+                - rule: "(self.checksumType == 'md5' && self.checksum.size() == 32) || (self.checksumType == 'sha256' && self.checksum.size() == 64) || (self.checksumType == 'sha512' && self.checksum.size() == 128)"
+                  message: checksum length must match checksumType.
                 required:
                 - url
                 - checksum
@@ -57,10 +60,13 @@ spec:
                   url:
                     type: string
                     pattern: '^https?://'
+                    maxLength: 2048
                     description: Image URL reachable from Ironic and provisioning hosts.
                   checksum:
                     type: string
                     minLength: 1
+                    maxLength: 128
+                    pattern: '^[a-fA-F0-9]+$'
                   checksumType:
                     type: string
                     description: Checksum algorithm. This is a closed set of supported values.

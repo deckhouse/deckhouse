@@ -62,6 +62,8 @@ spec:
                   kernelURL:
                     type: string
                     pattern: '^https?://'
+                    maxLength: 2048
                   initramfsURL:
                     type: string
                     pattern: '^https?://'
+                    maxLength: 2048

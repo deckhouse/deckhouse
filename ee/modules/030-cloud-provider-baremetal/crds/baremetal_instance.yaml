@@ -29,15 +29,9 @@ spec:
     - name: Boot MAC
       type: string
       jsonPath: .spec.bootMACAddress
-    - name: BMH
-      type: string
-      jsonPath: .status.host.name
     - name: State
       type: string
       jsonPath: .status.host.state
-    - name: Consumer
-      type: string
-      jsonPath: .status.host.consumer
     - name: Desired Online
       type: boolean
       jsonPath: .status.host.desiredOnline
@@ -84,9 +78,11 @@ spec:
                 properties:
                   deviceName:
                     type: string
+                    maxLength: 256
                     description: A Linux device name like "/dev/vda", or a by-path link. The hint must match the actual value exactly.
                   hctl:
                     type: string
+                    maxLength: 256
                     description: A SCSI bus address like 0:0:0:0. The hint must match the actual value exactly.
                   minSizeGigabytes:
                     type: integer
@@ -94,24 +90,30 @@ spec:
                     description: The minimum size of the device in Gigabytes.
                   model:
                     type: string
+                    maxLength: 256
                     description: A vendor-specific device identifier. The hint can be a substring of the actual value.
                   rotational:
                     type: boolean
                     description: True if the device should use spinning media, false otherwise.
                   serialNumber:
                     type: string
+                    maxLength: 256
                     description: Device serial number. The hint must match the actual value exactly.
                   vendor:
                     type: string
+                    maxLength: 256
                     description: The name of the vendor or manufacturer of the device. The hint can be a substring of the actual value.
                   wwn:
                     type: string
+                    maxLength: 256
                     description: Unique storage identifier. The hint must match the actual value exactly.
                   wwnVendorExtension:
                     type: string
+                    maxLength: 256
                     description: Unique vendor storage identifier. The hint must match the actual value exactly.
                   wwnWithExtension:
                     type: string
+                    maxLength: 256
                     description: Unique storage identifier with the vendor extension appended. The hint must match the actual value exactly.
               bmc:
                 type: object
@@ -147,6 +149,7 @@ spec:
                       name:
                         type: string
                         minLength: 1
+                        maxLength: 253
                   insecure:
                     type: boolean
                     default: false
@@ -157,36 +160,10 @@ spec:
               observedGeneration:
                 type: integer
                 format: int64
-              bmc:
-                type: object
-                properties:
-                  protocol:
-                    type: string
-                    description: Resolved BMC protocol. This is a closed set of protocols supported by the controller.
-                    enum:
-                    - Redfish
-                    - IPMI
-                  address:
-                    type: string
-                    description: Resolved BMC address passed to the provisioning backend.
-                  systemUUID:
-                    type: string
-                  credentialsVersion:
-                    type: string
-                  lastResolvedTime:
-                    type: string
-                    format: date-time
-                    description: Time of the most recent successful BMC endpoint resolution. The resolved endpoint can be reused from this cache until the instance specification or credentials change.
               host:
                 type: object
                 properties:
-                  name:
-                    type: string
-                  namespace:
-                    type: string
                   state:
-                    type: string
-                  consumer:
                     type: string
                   desiredOnline:
                     type: boolean
@@ -197,13 +174,6 @@ spec:
                   error:
                     type: string
                     description: Generic indication that the physical host reports an error. Inspect the host resource for details.
-              credentialsSecret:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  namespace:
-                    type: string
               conditions:
                 type: array
                 description: |

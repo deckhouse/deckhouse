@@ -90,9 +90,8 @@ func TestReconcileCreatesResolvedBareMetalHost(t *testing.T) {
 	if firstCondition["type"] != "BMCResolved" || firstCondition["status"] != "True" || firstCondition["reason"] != "BMCResolved" {
 		t.Fatalf("unexpected first condition: %#v", firstCondition)
 	}
-	statusResourceVersion := updatedAfterFirstReconcile.GetResourceVersion()
 	if _, err := r.Reconcile(context.Background(), request); err != nil {
-		t.Fatalf("reconcile cached BMC: %v", err)
+		t.Fatalf("reconcile current BMC: %v", err)
 	}
 
 	bmh := &unstructured.Unstructured{}
@@ -118,33 +117,29 @@ func TestReconcileCreatesResolvedBareMetalHost(t *testing.T) {
 	if string(generated.Data["username"]) != "admin" || string(generated.Data["password"]) != "password" {
 		t.Fatalf("unexpected translated credentials keys: %#v", generated.Data)
 	}
-	if resolver.calls != 1 {
-		t.Fatalf("expected one resolver call, got %d", resolver.calls)
+	if resolver.calls != 2 {
+		t.Fatalf("expected current BMC resolution on each reconcile, got %d calls", resolver.calls)
 	}
 
 	if _, err := r.Reconcile(context.Background(), request); err != nil {
-		t.Fatalf("reconcile cached BMC: %v", err)
+		t.Fatalf("reconcile current BMC: %v", err)
 	}
-	if resolver.calls != 1 {
-		t.Fatalf("expected resolved BMC to be cached, got %d calls", resolver.calls)
+	if resolver.calls != 3 {
+		t.Fatalf("expected current BMC resolution on each reconcile, got %d calls", resolver.calls)
 	}
 	updatedInstance := &unstructured.Unstructured{}
 	updatedInstance.SetGroupVersionKind(bareMetalInstanceGVK)
 	if err := kubeClient.Get(context.Background(), request.NamespacedName, updatedInstance); err != nil {
 		t.Fatalf("get updated instance: %v", err)
 	}
-	if updatedInstance.GetResourceVersion() != statusResourceVersion {
-		t.Fatalf("unchanged reconcile rewrote instance: resourceVersion %q -> %q", statusResourceVersion, updatedInstance.GetResourceVersion())
+	if _, found, err := unstructured.NestedMap(updatedInstance.Object, "status", "bmc"); err != nil || found {
+		t.Fatalf("status must not contain a BMC resolution cache: found=%v err=%v", found, err)
 	}
-	resolvedAt, found, err := unstructured.NestedString(updatedInstance.Object, "status", "bmc", "lastResolvedTime")
-	if err != nil || !found {
-		t.Fatalf("expected BMC resolution timestamp, found=%v err=%v", found, err)
+	if _, found, err := unstructured.NestedString(updatedInstance.Object, "status", "host", "name"); err != nil || found {
+		t.Fatalf("status must not disclose managed BareMetalHost name: found=%v err=%v", found, err)
 	}
-	if _, err := time.Parse(time.RFC3339, resolvedAt); err != nil {
-		t.Fatalf("parse BMC resolution timestamp %q: %v", resolvedAt, err)
-	}
-	if hostName, found, err := unstructured.NestedString(updatedInstance.Object, "status", "host", "name"); err != nil || !found || hostName != "server" {
-		t.Fatalf("expected status.host.name=server, got %q found=%v err=%v", hostName, found, err)
+	if _, found, err := unstructured.NestedMap(updatedInstance.Object, "status", "credentialsSecret"); err != nil || found {
+		t.Fatalf("status must not disclose generated credentials Secret: found=%v err=%v", found, err)
 	}
 	if _, found, err := unstructured.NestedMap(updatedInstance.Object, "status", "bareMetalHost"); err != nil || found {
 		t.Fatalf("obsolete status.bareMetalHost is present: found=%v err=%v", found, err)
@@ -157,19 +152,19 @@ func TestReconcileCreatesResolvedBareMetalHost(t *testing.T) {
 	if _, err := r.Reconcile(context.Background(), request); err != nil {
 		t.Fatalf("restore cleared status: %v", err)
 	}
-	if resolver.calls != 2 {
-		t.Fatalf("expected BMC resolution after status loss, got %d calls", resolver.calls)
+	if resolver.calls != 4 {
+		t.Fatalf("expected current BMC resolution after status loss, got %d calls", resolver.calls)
 	}
 	restoredInstance := &unstructured.Unstructured{}
 	restoredInstance.SetGroupVersionKind(bareMetalInstanceGVK)
 	if err := kubeClient.Get(context.Background(), request.NamespacedName, restoredInstance); err != nil {
 		t.Fatalf("get restored instance: %v", err)
 	}
-	if hostName, found, err := unstructured.NestedString(restoredInstance.Object, "status", "host", "name"); err != nil || !found || hostName != "server" {
-		t.Fatalf("expected restored status.host.name=server, got %q found=%v err=%v", hostName, found, err)
+	if _, found, err := unstructured.NestedString(restoredInstance.Object, "status", "host", "name"); err != nil || found {
+		t.Fatalf("restored status must not disclose managed BareMetalHost name: found=%v err=%v", found, err)
 	}
-	if _, found, err := unstructured.NestedString(restoredInstance.Object, "status", "bmc", "address"); err != nil || !found {
-		t.Fatalf("expected restored BMC status, found=%v err=%v", found, err)
+	if _, found, err := unstructured.NestedMap(restoredInstance.Object, "status", "bmc"); err != nil || found {
+		t.Fatalf("restored status must not contain a BMC resolution cache: found=%v err=%v", found, err)
 	}
 }
 
@@ -317,18 +312,29 @@ func TestReconcileDeleteRejectsForeignCredentialSecret(t *testing.T) {
 func TestBareMetalHostStatusSeparatesDesiredAndObservedPowerState(t *testing.T) {
 	bmh := &unstructured.Unstructured{Object: map[string]interface{}{
 		"metadata": map[string]interface{}{"name": "server", "namespace": "d8-cloud-instance-manager"},
-		"spec":     map[string]interface{}{"online": true},
+		"spec": map[string]interface{}{
+			"online": true,
+			"consumerRef": map[string]interface{}{
+				"name": "desired-consumer",
+			},
+		},
 		"status": map[string]interface{}{
 			"poweredOn":    false,
 			"errorMessage": "x509: certificate signed by unknown authority",
+			"consumerRef": map[string]interface{}{
+				"name": "observed-consumer",
+			},
 		},
 	}}
-	status := (&reconciler{}).bareMetalHostStatus(bmh)
+	status := bareMetalHostStatus(bmh)
 	if status["desiredOnline"] != true || status["poweredOn"] != false {
 		t.Fatalf("unexpected power status: %#v", status)
 	}
 	if status["error"] != "Physical host reported an error." {
 		t.Fatalf("unexpected BMH error status: %#v", status["error"])
+	}
+	if _, found := status["consumer"]; found {
+		t.Fatalf("status must not disclose BMH consumer: %#v", status)
 	}
 }
 

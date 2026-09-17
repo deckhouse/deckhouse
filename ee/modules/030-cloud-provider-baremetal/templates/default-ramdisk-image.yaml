@@ -1,0 +1,13 @@
+{{- $bareMetal := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderBaremetal -}}
+{{- if and $bareMetal (not $bareMetal.externalInstance) }}
+apiVersion: deckhouse.io/v1
+kind: BareMetalRamdiskImage
+metadata:
+  name: baremetal-default-ramdisk
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  direct:
+    architecture: x86_64
+    kernelURL: {{ printf "http://%s:6180/images/ironic-python-agent.kernel" $bareMetal.provisioningNetwork.ipAddress | quote }}
+    initramfsURL: {{ printf "http://%s:6180/images/ironic-python-agent.initramfs" $bareMetal.provisioningNetwork.ipAddress | quote }}
+{{- end }}

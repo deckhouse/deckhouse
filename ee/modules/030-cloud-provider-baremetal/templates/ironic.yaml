@@ -3,7 +3,7 @@
 {{- $provisioningNetwork := $bareMetal.provisioningNetwork -}}
 {{- $dhcp := $bareMetal.dhcp | default dict -}}
 {{- $internalDHCP := $dhcp.internal | default dict -}}
-{{- $resolvedRamdisk := dig "internal" "ramdiskImage" "direct" dict .Values.cloudProviderBaremetal -}}
+{{- $resolvedRamdisk := dig "internal" "resolvedRamdiskImage" "direct" dict .Values.cloudProviderBaremetal -}}
 {{- if and $internalDHCP.serveDNS $internalDHCP.dnsAddress -}}
 {{- fail "cloudProviderBaremetal.nodes.parameters.ironic.dhcp.internal.serveDNS and dnsAddress cannot be used together" -}}
 {{- end }}

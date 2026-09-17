@@ -60,16 +60,20 @@ spec:
                   name:
                     type: string
                     minLength: 1
+                    maxLength: 253
               hostSelector:
                 type: object
                 description: Label selector used to select physical hosts.
                 properties:
                   matchLabels:
                     type: object
+                    maxProperties: 64
                     additionalProperties:
                       type: string
+                      maxLength: 63
                   matchExpressions:
                     type: array
+                    maxItems: 64
                     x-kubernetes-list-type: atomic
                     items:
                       type: object
@@ -79,6 +83,7 @@ spec:
                       properties:
                         key:
                           type: string
+                          maxLength: 253
                         operator:
                           type: string
                           enum:
@@ -88,9 +93,11 @@ spec:
                           - DoesNotExist
                         values:
                           type: array
+                          maxItems: 64
                           x-kubernetes-list-type: set
                           items:
                             type: string
+                            maxLength: 63
               disableAutomatedCleaning:
                 type: boolean
                 default: false

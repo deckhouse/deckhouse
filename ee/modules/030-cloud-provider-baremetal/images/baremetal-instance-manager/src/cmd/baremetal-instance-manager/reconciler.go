@@ -67,9 +67,8 @@ type objectReference struct {
 }
 
 type credentials struct {
-	Username        string
-	Password        string
-	ResourceVersion string
+	Username string
+	Password string
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -101,13 +100,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.fail(ctx, instance, "CredentialsInvalid", err)
 	}
 
-	resolved, resolvedAt, ok := cachedResolvedBMC(instance, spec, creds.ResourceVersion)
-	if !ok {
-		resolved, err = r.resolver.Resolve(ctx, spec.BMC, creds.Username, creds.Password)
-		if err != nil {
-			return r.fail(ctx, instance, "BMCResolutionFailed", err)
-		}
-		resolvedAt = metav1.Now()
+	resolved, err := r.resolver.Resolve(ctx, spec.BMC, creds.Username, creds.Password)
+	if err != nil {
+		return r.fail(ctx, instance, "BMCResolutionFailed", err)
 	}
 
 	secretName := r.generatedSecretName(instance)
@@ -118,7 +113,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		return r.fail(ctx, instance, failureReason(err, "HostSyncFailed"), err)
 	}
-	if err := r.setStatus(ctx, instance, bmh, secretName, resolved, resolvedAt, creds.ResourceVersion, "", true, "BMCResolved"); err != nil {
+	if err := r.setStatus(ctx, instance, bmh, "", true, "BMCResolved"); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
@@ -184,7 +179,7 @@ func (r *reconciler) readCredentials(ctx context.Context, instance *unstructured
 	if username == "" || password == "" {
 		return credentials{}, fmt.Errorf("Secret %s must contain non-empty identity and secret keys", key)
 	}
-	return credentials{Username: username, Password: password, ResourceVersion: secret.ResourceVersion}, nil
+	return credentials{Username: username, Password: password}, nil
 }
 
 func (r *reconciler) ensureCredentialSecret(ctx context.Context, instance *unstructured.Unstructured, creds credentials, name string) error {
@@ -343,48 +338,20 @@ func setNestedMap(obj *unstructured.Unstructured, value map[string]interface{}, 
 	return true, unstructured.SetNestedMap(obj.Object, value, fields...)
 }
 
-func cachedResolvedBMC(instance *unstructured.Unstructured, spec instanceSpec, credentialsVersion string) (ResolvedBMC, metav1.Time, bool) {
-	if observed, _, _ := unstructured.NestedInt64(instance.Object, "status", "observedGeneration"); observed != instance.GetGeneration() {
-		return ResolvedBMC{}, metav1.Time{}, false
-	}
-	version, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "credentialsVersion")
-	address, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "address")
-	protocol, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "protocol")
-	uuid, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "systemUUID")
-	resolvedAtRaw, _, _ := unstructured.NestedString(instance.Object, "status", "bmc", "lastResolvedTime")
-	resolvedAt, err := time.Parse(time.RFC3339, resolvedAtRaw)
-	if err != nil || version != credentialsVersion || address == "" || uuid == "" || !equalUUID(uuid, spec.BMC.SystemUUID) {
-		return ResolvedBMC{}, metav1.Time{}, false
-	}
-	return ResolvedBMC{Address: address, Protocol: protocol, SystemUUID: uuid}, metav1.NewTime(resolvedAt), true
-}
-
 func (r *reconciler) fail(ctx context.Context, instance *unstructured.Unstructured, reason string, cause error) (ctrl.Result, error) {
-	if err := r.setStatus(ctx, instance, nil, "", ResolvedBMC{}, metav1.Time{}, "", failureMessage(reason), false, reason); err != nil {
+	if err := r.setStatus(ctx, instance, nil, failureMessage(reason), false, reason); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, cause
 }
 
-func (r *reconciler) setStatus(ctx context.Context, instance, bmh *unstructured.Unstructured, secretName string, resolved ResolvedBMC, resolvedAt metav1.Time, credentialsVersion, message string, resolvedOK bool, reason string) error {
+func (r *reconciler) setStatus(ctx context.Context, instance, bmh *unstructured.Unstructured, message string, resolvedOK bool, reason string) error {
 	status := map[string]interface{}{
 		"observedGeneration": instance.GetGeneration(),
 		"conditions":         []interface{}{conditionMap(instance, resolvedOK, reason, message)},
 	}
 	if bmh != nil {
-		status["host"] = r.bareMetalHostStatus(bmh)
-	}
-	if secretName != "" {
-		status["credentialsSecret"] = map[string]interface{}{"name": secretName, "namespace": r.targetNamespace}
-	}
-	if resolved.Address != "" {
-		status["bmc"] = map[string]interface{}{
-			"protocol":           resolved.Protocol,
-			"address":            resolved.Address,
-			"systemUUID":         resolved.SystemUUID,
-			"credentialsVersion": credentialsVersion,
-			"lastResolvedTime":   resolvedAt.Format(time.RFC3339),
-		}
+		status["host"] = bareMetalHostStatus(bmh)
 	}
 	if message != "" {
 		status["message"] = message
@@ -483,8 +450,8 @@ func (r *reconciler) secretToInstances(ctx context.Context, obj client.Object) [
 	return requests
 }
 
-func (r *reconciler) bareMetalHostStatus(bmh *unstructured.Unstructured) map[string]interface{} {
-	status := map[string]interface{}{"name": bmh.GetName(), "namespace": bmh.GetNamespace()}
+func bareMetalHostStatus(bmh *unstructured.Unstructured) map[string]interface{} {
+	status := map[string]interface{}{}
 	if state, ok, _ := unstructured.NestedString(bmh.Object, "status", "provisioning", "state"); ok {
 		status["state"] = state
 	}
@@ -494,21 +461,10 @@ func (r *reconciler) bareMetalHostStatus(bmh *unstructured.Unstructured) map[str
 	if poweredOn, ok, _ := unstructured.NestedBool(bmh.Object, "status", "poweredOn"); ok {
 		status["poweredOn"] = poweredOn
 	}
-	if consumer := bareMetalHostConsumer(bmh); consumer != "" {
-		status["consumer"] = consumer
-	}
 	if message, ok, _ := unstructured.NestedString(bmh.Object, "status", "errorMessage"); ok && message != "" {
 		status["error"] = "Physical host reported an error."
 	}
 	return status
-}
-
-func bareMetalHostConsumer(bmh *unstructured.Unstructured) string {
-	if name, ok, _ := unstructured.NestedString(bmh.Object, "status", "consumerRef", "name"); ok {
-		return name
-	}
-	name, _, _ := unstructured.NestedString(bmh.Object, "spec", "consumerRef", "name")
-	return name
 }
 
 func (r *reconciler) generatedSecretName(instance *unstructured.Unstructured) string {
