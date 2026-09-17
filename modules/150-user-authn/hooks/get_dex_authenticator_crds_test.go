@@ -500,6 +500,94 @@ spec:
 			inputDexAuthenticatorClientSecret{omitExisting: true},
 		),
 	)
+
+	// An authenticator whose namespace cannot take objects must not reach the values. The API
+	// server refuses every create in a namespace that is gone or terminating, so one such entry
+	// fails the whole module release, and the failing ModuleRun then blocks the main queue.
+	DescribeTable("A DexAuthenticator whose namespace cannot take objects",
+		func(namespaces string, expectedIDs []string) {
+			f.BindingContexts.Set(f.KubeStateSet(namespaces + `
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: alive
+  namespace: live-ns
+spec:
+  applications:
+  - domain: alive
+    ingressClassName: "nginx"
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: doomed
+  namespace: dead-ns
+spec:
+  applications:
+  - domain: doomed
+    ingressClassName: "nginx"
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			ids := make([]string, 0, 2)
+			for _, authenticator := range f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").Array() {
+				ids = append(ids, authenticator.Get("uuid").String())
+			}
+
+			Expect(ids).To(ConsistOf(expectedIDs))
+
+			names := f.ValuesGet("userAuthn.internal.dexAuthenticatorNames")
+			for _, id := range expectedIDs {
+				Expect(names.Get(id).Exists()).To(BeTrue(), "computed names must be kept for "+id)
+			}
+			if len(expectedIDs) == 1 {
+				Expect(names.Get("doomed@dead-ns").Exists()).To(BeFalse(),
+					"computed names must not be kept for an authenticator that is not rendered")
+			}
+		},
+		Entry("is dropped while its namespace is terminating",
+			`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: live-ns
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dead-ns
+status:
+  phase: Terminating
+`,
+			[]string{"alive@live-ns"},
+		),
+		Entry("is dropped when its namespace is gone and other namespaces are known",
+			`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: live-ns
+status:
+  phase: Active
+`,
+			[]string{"alive@live-ns"},
+		),
+		// The guard against filtering on an unpopulated snapshot: a cluster always has
+		// namespaces, so an empty snapshot means the hook cannot tell what is alive. Filtering
+		// against it would drop every authenticator in the cluster and delete the objects of
+		// namespaces that are perfectly healthy.
+		Entry("is kept when no namespace is known at all",
+			"",
+			[]string{"alive@live-ns", "doomed@dead-ns"},
+		),
+	)
 })
 
 var _ = Describe("safeDNS1123Name", func() {

@@ -124,6 +124,25 @@ func applyDexAuthenticatorSecretFilter(obj *unstructured.Unstructured) (go_hook.
 	}, nil
 }
 
+// applicationNamespace is a namespace an authenticator can be rendered into. Only the two fields
+// that decide that are kept: the snapshot holds one entry per namespace in the cluster.
+type applicationNamespace struct {
+	Name          string `json:"name"`
+	IsTerminating bool   `json:"isTerminating"`
+}
+
+func applyApplicationNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	phase, _, err := unstructured.NestedString(obj.Object, "status", "phase")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get status.phase from namespace %s: %v", obj.GetName(), err)
+	}
+
+	return applicationNamespace{
+		Name:          obj.GetName(),
+		IsTerminating: phase == string(v1.NamespaceTerminating),
+	}, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/user-authn",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -132,6 +151,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "deckhouse.io/v2alpha1",
 			Kind:       "DexAuthenticator",
 			FilterFunc: applyDexAuthenticatorFilter,
+		},
+		{
+			Name:       "namespaces",
+			ApiVersion: "v1",
+			Kind:       "Namespace",
+			FilterFunc: applyApplicationNamespaceFilter,
 		},
 		{
 			Name:       "credentials",
@@ -187,6 +212,40 @@ func sharedKubernetesClientSecret(input *go_hook.HookInput) (string, error) {
 	return string(secretContent), nil
 }
 
+// renderableNamespaces returns the namespaces an authenticator can be rendered into, and whether
+// the answer is usable at all.
+//
+// A namespace that is gone, or that is terminating, accepts no new objects: the API server refuses
+// every create in it. Keeping an authenticator of such a namespace in the values makes the whole
+// module release fail on that one object, and the failing ModuleRun then sits at the head of the
+// main queue and retries, which stops every other module from being applied.
+//
+// The second return value is false when the snapshot carries no namespace at all. A cluster always
+// has namespaces, so that means the snapshot is not populated rather than that nothing is alive,
+// and filtering against it would drop every authenticator in the cluster and delete the objects of
+// namespaces that are perfectly healthy.
+func renderableNamespaces(input *go_hook.HookInput) (map[string]struct{}, bool, error) {
+	snapshots := input.Snapshots.Get("namespaces")
+	if len(snapshots) == 0 {
+		return nil, false, nil
+	}
+
+	renderable := make(map[string]struct{}, len(snapshots))
+	for namespace, err := range sdkobjectpatch.SnapshotIter[applicationNamespace](snapshots) {
+		if err != nil {
+			return nil, false, fmt.Errorf("cannot convert namespace: failed to iterate over 'namespaces' snapshot: %w", err)
+		}
+
+		if namespace.IsTerminating {
+			continue
+		}
+
+		renderable[namespace.Name] = struct{}{}
+	}
+
+	return renderable, true, nil
+}
+
 func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 	authenticators := input.Snapshots.Get("authenticators")
 	credentials := input.Snapshots.Get("credentials")
@@ -211,6 +270,11 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 		return err
 	}
 
+	renderable, namespacesKnown, err := renderableNamespaces(input)
+	if err != nil {
+		return err
+	}
+
 	dexAuthenticators := make([]DexAuthenticator, 0, len(authenticators))
 	// Build computed names map: key "<name>@<namespace>" => {name, truncated, hash}
 	namesMap := make(map[string]interface{})
@@ -218,6 +282,17 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 	for dexAuthenticator, err := range sdkobjectpatch.SnapshotIter[DexAuthenticator](authenticators) {
 		if err != nil {
 			return fmt.Errorf("cannot convert dex authenticaor: failed to iterate over 'authenticators' snapshot: %w", err)
+		}
+
+		if _, alive := renderable[dexAuthenticator.Namespace]; namespacesKnown && !alive {
+			// An authenticator outlives its namespace for as long as the object is still being
+			// deleted, and one left behind by a namespace that never finished terminating stays
+			// here for good. Either way the release must not carry it.
+			input.Logger.Warn("Skipping DexAuthenticator of a namespace that is gone or terminating",
+				slog.String("dexauthenticator", dexAuthenticator.Name),
+				slog.String("namespace", dexAuthenticator.Namespace))
+
+			continue
 		}
 
 		existedCredentials, ok := credentialsByID[fmt.Sprintf("dex-authenticator-%s", dexAuthenticator.ID)]
