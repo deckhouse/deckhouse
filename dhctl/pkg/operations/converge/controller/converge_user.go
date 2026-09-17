@@ -162,9 +162,10 @@ func publicKeyFromPrivateKey(key sshconfig.AgentPrivateKey) (string, error) {
 	return string(ssh.MarshalAuthorizedKey(signer.PublicKey())), nil
 }
 
-// withConvergeUser adds the converge user to the unmodified manual-bootstrap-for-master
-// payload, base64 in and out. Given its own output it returns that as is, with the keys
-// and expiry already rendered there, so callers must not feed it back to refresh them.
+// withConvergeUser appends the converge user to the manual-bootstrap-for-master payload,
+// base64 in and out. The payload is copied byte for byte and only the users key is added:
+// re-rendering someone else's document would put every scalar in it through yaml.v3, which
+// reads YAML 1.2, while the consumer is cloud-init's PyYAML, which reads 1.1.
 func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (string, error) {
 	if len(keys) == 0 {
 		return "", errors.New("render cloud-config: the converge user has no authorized keys")
@@ -175,32 +176,18 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 		return "", fmt.Errorf("decode cloud-config: %w", err)
 	}
 
-	var doc map[string]any
-	if err := yaml.Unmarshal(decoded, &doc); err != nil {
-		return "", fmt.Errorf("parse cloud-config: %w", err)
-	}
-
-	if doc == nil {
-		return "", errors.New("parse cloud-config: the document is empty")
-	}
-
-	users, err := cloudConfigUsers(doc)
+	present, err := convergeUserPresent(decoded)
 	if err != nil {
 		return "", err
 	}
 
-	for _, user := range users {
-		named, ok := user.(map[string]any)
-		if !ok {
-			continue
-		}
-
-		if named["name"] == global.ConvergeUserName {
-			return cloudConfigB64, nil
-		}
+	if present {
+		return cloudConfigB64, nil
 	}
 
-	doc["users"] = append(users, map[string]any{
+	// cloud-init keeps one users list per document and the distro default user (ubuntu,
+	// ec2-user) is skipped as soon as that list exists without "default" in it.
+	block, err := renderUsers([]any{"default", map[string]any{
 		"name":                global.ConvergeUserName,
 		"gecos":               convergeUserGecos,
 		"expiredate":          expire.Format(time.DateOnly),
@@ -208,40 +195,64 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 		"shell":               "/bin/bash",
 		"sudo":                []string{"ALL=(ALL) NOPASSWD:ALL"},
 		"ssh_authorized_keys": keys,
-	})
+	}})
+	if err != nil {
+		return "", err
+	}
 
+	out := append(bytes.TrimRight(decoded, "\n"), '\n')
+
+	return base64.StdEncoding.EncodeToString(append(out, block...)), nil
+}
+
+// convergeUserPresent reads the payload without rewriting it. A payload with a users list
+// of its own is refused rather than merged into: cloud-init reads the last users key of a
+// document and drops the rest, so which list survives would depend on what the provider
+// appends after ours.
+func convergeUserPresent(payload []byte) (bool, error) {
+	// The list mixes shapes: "default" is a string, an account is a mapping.
+	var doc struct {
+		Users []any `yaml:"users"`
+	}
+
+	if err := yaml.Unmarshal(payload, &doc); err != nil {
+		return false, fmt.Errorf("parse cloud-config: %w", err)
+	}
+
+	if len(bytes.TrimSpace(bytes.TrimPrefix(bytes.TrimSpace(payload), []byte(cloudConfigHeader)))) == 0 {
+		return false, errors.New("parse cloud-config: the document is empty")
+	}
+
+	for _, user := range doc.Users {
+		named, ok := user.(map[string]any)
+		if ok && named["name"] == global.ConvergeUserName {
+			return true, nil
+		}
+	}
+
+	if len(doc.Users) > 0 {
+		return false, fmt.Errorf(
+			"render cloud-config: the payload already lists %d users of its own, and cloud-init keeps one users key per document",
+			len(doc.Users))
+	}
+
+	return false, nil
+}
+
+// renderUsers is the one block this converge owns, indented the way the payload around it is.
+func renderUsers(users []any) ([]byte, error) {
 	var out bytes.Buffer
-	out.WriteString(cloudConfigHeader + "\n")
 
-	// yaml.v3 re-renders the whole document, and its default indent of four would push
-	// every line of the bootstrap script two columns further right for nothing.
 	encoder := yaml.NewEncoder(&out)
 	encoder.SetIndent(2)
 
-	if err := encoder.Encode(doc); err != nil {
-		return "", fmt.Errorf("render cloud-config: %w", err)
+	if err := encoder.Encode(map[string]any{"users": users}); err != nil {
+		return nil, fmt.Errorf("render cloud-config: %w", err)
 	}
 
 	if err := encoder.Close(); err != nil {
-		return "", fmt.Errorf("render cloud-config: %w", err)
+		return nil, fmt.Errorf("render cloud-config: %w", err)
 	}
 
-	return base64.StdEncoding.EncodeToString(out.Bytes()), nil
-}
-
-// cloudConfigUsers returns the list our user is appended to. cloud-init skips the distro
-// default user (ubuntu, ec2-user) as soon as a users list exists and does not name
-// "default", so a document with no list of its own is seeded with it.
-func cloudConfigUsers(doc map[string]any) ([]any, error) {
-	value, ok := doc["users"]
-	if !ok || value == nil {
-		return []any{"default"}, nil
-	}
-
-	users, ok := value.([]any)
-	if !ok {
-		return nil, fmt.Errorf("parse cloud-config: users is %T, not a list", value)
-	}
-
-	return users, nil
+	return out.Bytes(), nil
 }

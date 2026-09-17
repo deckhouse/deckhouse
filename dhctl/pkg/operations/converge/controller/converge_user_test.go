@@ -255,9 +255,10 @@ runcmd:
 		require.Equal(t, "0700", written["permissions"])
 	})
 
-	// The whole render is a yaml round-trip of the node-controller payload, so the guard
-	// that matters is a real one going through it unchanged but for our users key.
-	t.Run("a real node-controller payload survives the round-trip", func(t *testing.T) {
+	// Comparing parsed trees would not see a scalar changing meaning between YAML 1.1 and
+	// 1.2 (0700 as octal or as seven hundred, yes as a boolean or as a word), because both
+	// sides would be read by the same parser. The payload is compared as bytes instead.
+	t.Run("a real node-controller payload is copied byte for byte", func(t *testing.T) {
 		// Copied from modules/040-node-manager/images/node-controller/src/internal/
 		// bootstrap/testdata/golden/mcm-aws-userData.txt: the werf tests image excludes
 		// every module's images directory, so it cannot be read in place.
@@ -270,12 +271,18 @@ runcmd:
 		require.NoError(t, yaml.Unmarshal(payload, &before))
 		require.NotContains(t, before, "users")
 
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString(payload), keys, expire)
+		require.NoError(t, err)
+
+		raw, err := base64.StdEncoding.DecodeString(out)
+		require.NoError(t, err)
+
+		require.Equal(t, string(payload), string(raw)[:len(payload)],
+			"the payload of another component must reach the node exactly as it was written")
+
 		after := render(t, string(payload))
 		require.Equal(t, "default", after["users"].([]any)[0])
 		require.Equal(t, global.ConvergeUserName, convergeUser(t, after)["name"])
-
-		delete(after, "users")
-		require.Equal(t, before, after)
 	})
 
 	// DVP does not merge the payload in HCL, it appends its own block to it, and
@@ -327,14 +334,14 @@ runcmd:
 		require.Error(t, err)
 	})
 
-	t.Run("cloud-config users of the provider survive", func(t *testing.T) {
-		doc := render(t, base+"users:\n- name: user\n  sudo: 'ALL=(ALL) NOPASSWD:ALL'\n")
+	// Merging into a list somebody else wrote cannot be done safely: which users key of
+	// the finished document survives is decided by whoever appends last, and on DVP that
+	// is the provider template. A payload that brings its own list is refused out loud.
+	t.Run("a payload with a users list of its own is refused", func(t *testing.T) {
+		_, err := withConvergeUser(
+			base64.StdEncoding.EncodeToString([]byte(base+"users:\n- name: user\n")), keys, expire)
 
-		users, ok := doc["users"].([]any)
-		require.True(t, ok)
-		require.Len(t, users, 2)
-		require.Equal(t, "user", users[0].(map[string]any)["name"])
-		require.Equal(t, "d8-converge", users[1].(map[string]any)["name"])
+		require.ErrorContains(t, err, "lists 1 users of its own")
 	})
 
 	// A sshPublicKey field may hold several keys separated by newlines, so an
