@@ -184,31 +184,21 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 	staticInstance *deckhousev1.StaticInstance,
 	staticMachine *infrav1.StaticMachine,
 	credentials deckhousev1.SSHCredentialsSpec,
-	sshLegacyMode bool) (res ctrl.Result, resErr error) {
+	sshLegacyMode bool) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx).WithValues("staticMachineUID", staticMachine.UID, "staticInstanceAddress", staticInstance.Spec.Address)
 
-	// Snapshot the status as it was observed, so that a failed attempt can restore it.
-	observedStatus := staticInstance.Status.CurrentStatus.DeepCopy()
-
+	// The reservation is deliberately kept for the whole bootstrap window: a failed check is
+	// retried with the address backoff rather than released, so that a Pending write and the
+	// watch event it produces cannot re-enqueue this StaticMachine. Giving the instance back
+	// to the pool is the bootstrap timeout's job, in reconcileStaticInstancePhase.
 	if err := c.reserveStaticInstance(staticInstance, staticMachine); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reserve StaticInstance: %w", err)
 	}
-
-	defer func() {
-		if resErr == nil {
-			return
-		}
-
-		logger.Info("Releasing StaticInstance reservation due to error", "error", resErr.Error())
-		c.releaseStaticInstance(staticInstance, staticMachine, observedStatus)
-	}()
 
 	address := net.JoinHostPort(staticInstance.Spec.Address, strconv.Itoa(credentials.SSHPort))
 
 	tcpCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckTCPConnection)
 	if tcpCondition == nil || tcpCondition.Status != metav1.ConditionTrue {
-		delay := c.tcpCheckRateLimiter.When(address)
-
 		type taskDataStr struct {
 			address string
 		}
@@ -253,7 +243,10 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				LastTransitionTime: metav1.Now(),
 			})
 
-			return ctrl.Result{RequeueAfter: delay}, nil
+			// When counts a failure, so it belongs here and not at the top of the branch:
+			// called on every poll of a still running check it would reach the ceiling after
+			// a handful of reconciles regardless of how many attempts actually failed.
+			return ctrl.Result{RequeueAfter: c.tcpCheckRateLimiter.When(address)}, nil
 		}
 
 		if !finished {
@@ -277,8 +270,6 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 
 	sshCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition)
 	if sshCondition == nil || sshCondition.Status != metav1.ConditionTrue {
-		delay := c.sshCheckRateLimiter.When(address)
-
 		type taskDataStr struct {
 			host          string
 			address       string
@@ -353,7 +344,11 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			// StaticMachine immediately, which is the throttling loop itself. Keep the
 			// reservation and retry with the address backoff instead; the bootstrap timeout
 			// breaks the cycle if the host never comes back.
-			return ctrl.Result{RequeueAfter: delay}, nil
+			//
+			// When counts a failure, so it belongs here and not at the top of the branch:
+			// called on every poll of a still running check it would reach the ceiling after
+			// a handful of reconciles regardless of how many attempts actually failed.
+			return ctrl.Result{RequeueAfter: c.sshCheckRateLimiter.When(address)}, nil
 		}
 
 		if !finished {
@@ -404,29 +399,6 @@ func (c *Client) reserveStaticInstance(staticInstance *deckhousev1.StaticInstanc
 
 	staticInstance.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
 	return nil
-}
-
-// releaseStaticInstance returns the StaticInstance to the pool.
-//
-// observedStatus is the status the StaticInstance was fetched with. When it was already
-// Pending, it is restored as is: a reserve -> fail -> release round trip has to leave the
-// object exactly as it was found. Otherwise every failed attempt rewrites
-// status.currentStatus.lastUpdateTime, which is a real write to etcd, and the resulting
-// Pending watch event re-enqueues the StaticMachine immediately — a self-sustaining loop.
-func (c *Client) releaseStaticInstance(
-	staticInstance *deckhousev1.StaticInstance,
-	staticMachine *infrav1.StaticMachine,
-	observedStatus *deckhousev1.StaticInstanceStatusCurrentStatus,
-) {
-	if staticInstance.Status.MachineRef == nil || staticInstance.Status.MachineRef.UID != staticMachine.UID {
-		return
-	}
-
-	staticInstance.ToPending()
-
-	if observedStatus != nil && observedStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
-		staticInstance.Status.CurrentStatus = observedStatus
-	}
 }
 
 // setStaticInstancePhaseToRunning finishes the bootstrap process by waiting for bootstrapping Node to appear and patching StaticMachine and StaticInstance.

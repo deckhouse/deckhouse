@@ -51,56 +51,46 @@ func staticMachine() *infrav1.StaticMachine {
 	}
 }
 
-// A failed bootstrap attempt must leave the StaticInstance exactly as it was fetched.
-// Any diff here becomes a write to etcd and a Pending watch event that re-enqueues every
-// matching StaticMachine at once.
-func TestReserveReleaseRoundTripProducesNoDiff(t *testing.T) {
+// Reserving an instance that this very StaticMachine already holds must not touch the
+// status again: SetPhase returns early on an unchanged phase, so a repeated attempt
+// produces no diff and therefore no write to etcd.
+func TestReserveIsIdempotentForTheSameMachine(t *testing.T) {
 	c := &Client{}
 	instance := pendingStaticInstance()
 	machine := staticMachine()
 
-	roundTrip := func() {
-		observedStatus := instance.Status.CurrentStatus.DeepCopy()
-
-		require.NoError(t, c.reserveStaticInstance(instance, machine))
-		require.Equal(t, deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping, instance.GetPhase())
-		require.NotNil(t, instance.Status.MachineRef)
-
-		c.releaseStaticInstance(instance, machine, observedStatus)
-	}
-
-	// The first attempt legitimately records the failure condition.
-	roundTrip()
+	require.NoError(t, c.reserveStaticInstance(instance, machine))
+	require.Equal(t, deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping, instance.GetPhase())
+	require.NotNil(t, instance.Status.MachineRef)
 
 	settled := instance.DeepCopy()
 
-	// Every attempt after that must be a no-op for the API server.
-	roundTrip()
+	require.NoError(t, c.reserveStaticInstance(instance, machine))
 
 	require.Equal(t, settled.Status, instance.Status)
 }
 
-// When the instance was already Bootstrapping, releasing it has to move it back to Pending
-// with a fresh timestamp: restoring the snapshot would leave a reserved phase without a
-// machineRef, and the instance would never be picked from the pool again.
-func TestReleaseFromBootstrappingFallsBackToPending(t *testing.T) {
+// An instance already reserved by another StaticMachine must be refused rather than stolen.
+func TestReserveRefusesInstanceHeldByAnotherMachine(t *testing.T) {
 	c := &Client{}
-	machine := staticMachine()
-
 	instance := pendingStaticInstance()
-	require.NoError(t, c.reserveStaticInstance(instance, machine))
 
-	observedStatus := instance.Status.CurrentStatus.DeepCopy()
+	owner := staticMachine()
+	require.NoError(t, c.reserveStaticInstance(instance, owner))
 
-	c.releaseStaticInstance(instance, machine, observedStatus)
+	reserved := instance.DeepCopy()
 
-	require.Equal(t, deckhousev1.StaticInstanceStatusCurrentStatusPhasePending, instance.GetPhase())
-	require.Nil(t, instance.Status.MachineRef)
+	other := staticMachine()
+	other.UID = types.UID("a2c0f1ba-0000-4000-8000-000000000002")
+
+	require.Error(t, c.reserveStaticInstance(instance, other))
+	require.Equal(t, reserved.Status, instance.Status)
 }
 
-// A host that keeps refusing ssh must not produce a write per attempt: the failure condition
-// is already there, so setting it again has to be a no-op for the API server. Together with
-// keeping the reservation this is what makes a repeated failure cost zero etcd writes.
+// A host that keeps refusing ssh must not rewrite the StaticInstance on every attempt: the
+// failure condition is already there, so setting it again has to be a no-op for the API
+// server. Warning events are still emitted per attempt — those are separate objects, this
+// only bounds writes to the StaticInstance itself.
 func TestSSHCheckFailureConditionIsIdempotent(t *testing.T) {
 	instance := pendingStaticInstance()
 
@@ -134,21 +124,4 @@ func TestSSHCheckRateLimiterBacksOffUntilSuccess(t *testing.T) {
 	c.sshCheckRateLimiter.Forget(address)
 
 	require.Equal(t, first, c.sshCheckRateLimiter.When(address))
-}
-
-func TestReleaseIgnoresInstanceReservedByAnotherMachine(t *testing.T) {
-	c := &Client{}
-	instance := pendingStaticInstance()
-
-	owner := staticMachine()
-	require.NoError(t, c.reserveStaticInstance(instance, owner))
-
-	other := staticMachine()
-	other.UID = types.UID("a2c0f1ba-0000-4000-8000-000000000002")
-
-	reserved := instance.DeepCopy()
-
-	c.releaseStaticInstance(instance, other, nil)
-
-	require.Equal(t, reserved.Status, instance.Status)
 }

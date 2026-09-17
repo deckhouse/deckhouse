@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -34,6 +35,43 @@ import (
 
 // sudoPromptPollInterval is how often the sudo password prompt is polled for.
 const sudoPromptPollInterval = 100 * time.Millisecond
+
+// dialWithHandshakeTimeout connects to addr and completes the ssh handshake, bounding both
+// steps by config.Timeout.
+//
+// ssh.Dial cannot be used here: it passes config.Timeout to net.DialTimeout only, leaving
+// NewClientConn unbounded. A host that accepts the TCP connection but never speaks ssh -
+// exactly the case this controller has to survive - would hang the calling goroutine
+// forever and hold the per-address task slot with it.
+func dialWithHandshakeTimeout(addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	conn, err := net.DialTimeout("tcp", addr, config.Timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := conn.SetDeadline(time.Now().Add(config.Timeout)); err != nil {
+		conn.Close()
+
+		return nil, fmt.Errorf("cannot set handshake deadline: %w", err)
+	}
+
+	clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	if err != nil {
+		conn.Close()
+
+		return nil, err
+	}
+
+	// The deadline must not outlive the handshake: it is absolute and would abort every
+	// later read and write on this connection.
+	if err := conn.SetDeadline(time.Time{}); err != nil {
+		clientConn.Close()
+
+		return nil, fmt.Errorf("cannot clear handshake deadline: %w", err)
+	}
+
+	return ssh.NewClient(clientConn, chans, reqs), nil
+}
 
 type SSH struct {
 	sshClient *ssh.Client
@@ -110,7 +148,7 @@ func CreateSSHClient(host string, credentials deckhousev1.SSHCredentialsSpec) (*
 
 	addr := fmt.Sprintf("%s:%d", host, credentials.SSHPort)
 
-	sshClient, err := ssh.Dial("tcp", addr, config)
+	sshClient, err := dialWithHandshakeTimeout(addr, config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to SSH host %s : %w", addr, err)
 	}
@@ -161,22 +199,41 @@ func (s *SSH) ExecSSHCommand(ctx context.Context, command string, stdout io.Writ
 		return fmt.Errorf("failed to start command: %w", err)
 	}
 
-	// The session is closed by the deferred Close, which unblocks Wait below.
+	// Closing the session is what unblocks a Wait that is stuck on a command which never
+	// finishes: the context timeout alone does not reach the ssh layer.
 	go func() {
 		<-ctx.Done()
 		_ = session.Close()
 	}()
 
-	if err := s.answerSudoPrompt(ctx, stdin, stdoutWriter, stderrWriter); err != nil {
+	// Wait runs in its own goroutine so that the prompt loop below can observe the command
+	// finishing. waitErr is written before waitDone is closed, so reading it after a receive
+	// on that channel is safe.
+	var waitErr error
+	waitDone := make(chan struct{})
+	go func() {
+		defer close(waitDone)
+
+		waitErr = session.Wait()
+	}()
+
+	if err := s.answerSudoPrompt(ctx, stdin, stdoutWriter, stderrWriter, waitDone); err != nil {
 		return err
 	}
 
-	return session.Wait()
+	<-waitDone
+
+	return waitErr
 }
 
 // answerSudoPrompt waits for the remote command to produce output, sending the sudo
 // password once the prompt shows up on stderr.
-func (s *SSH) answerSudoPrompt(ctx context.Context, stdin io.Writer, stdout, stderr *syncWriter) error {
+//
+// waitDone is closed when the remote command finishes. Without it a command that exits
+// without ever writing to stdout - a wrong sudo password that gets re-prompted while
+// passwordSent blocks a second write, a host with no sudo or no bash - would keep this
+// loop spinning until the command timeout, holding the task slot for that address.
+func (s *SSH) answerSudoPrompt(ctx context.Context, stdin io.Writer, stdout, stderr *syncWriter, waitDone <-chan struct{}) error {
 	ticker := time.NewTicker(sudoPromptPollInterval)
 	defer ticker.Stop()
 
@@ -195,6 +252,8 @@ func (s *SSH) answerSudoPrompt(ctx context.Context, stdin io.Writer, stdout, std
 		}
 
 		select {
+		case <-waitDone:
+			return nil
 		case <-ctx.Done():
 			return fmt.Errorf("timed out waiting for the command output: %w", ctx.Err())
 		case <-ticker.C:
