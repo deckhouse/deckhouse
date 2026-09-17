@@ -1,0 +1,91 @@
+{%- comment -%}
+  Russian footer (DDS-Foundations redesign).
+  The English footer is rendered from _includes/footer.html and is not affected by this file.
+  The switch lives in _layouts/default.html and keys off page.lang.
+{%- endcomment -%}
+{%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<script type="text/javascript" src="/assets/js/codeblock.js?v={{ assetHash }}"></script>
+
+<!--noindex-->
+{% include gdpr.html %}
+{% include form_in_modal.html mode="request_access" %}
+{% include form_in_modal.html mode="request_callback" %}
+{% include form_in_modal.html mode="request_education" %}
+{% include form_in_modal.html mode="request_demo" %}
+{% include form_in_modal.html mode="get_a_report" %}
+{% include form_in_modal.html mode="become_a_partner" %}
+
+<footer class="footer footer--ru">
+  <div class="footer__content container">
+    <div class="footer__brand">
+      {%- comment -%}
+        The stripe is a single 1567px-wide SVG with no viewBox: it is pinned to the right
+        edge of its box, so its left end overflows the container and is clipped by the footer.
+      {%- endcomment -%}
+      <div class="footer__brand-line" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="1567" height="34" fill="none"><path fill="#1c1b1f" d="M1545.2 0h21.8l-8.2 34H1537zM1494.35 0H1534l-8.35 34H1486zM1407.31 0H1483l-8.31 34H1399zM0 0h1399l-8.34 34H0z"></path></svg>
+      </div>
+      {%- comment -%} Vector export of Figma node 6751:75588; the #1C1B1F fill is baked into the SVG. {%- endcomment -%}
+      <a class="footer__wordmark" href="/products/kubernetes-platform/documentation/v1/" aria-label="Deckhouse">
+        <img src="/images/footer/deckhouse-wordmark.svg" width="417" height="96" alt="Deckhouse" loading="lazy">
+      </a>
+    </div>
+
+    <div class="footer__cols">
+      <div class="footer__col footer__col--contacts">
+        <div class="footer__col-title">Контакты</div>
+        <ul class="nav footer__nav">
+          <li>
+            <a class="footer__link--accent" href="mailto:contact@deckhouse.ru">contact@deckhouse.ru</a>
+          </li>
+          <li>
+            <a href="tel:+74957211027">+7 (495) 721-10-27</a>
+          </li>
+        </ul>
+        <div class="footer__socials">
+          <a href="{{ site.social_links[page.lang]['telegram'] }}" target="_blank" aria-label="Telegram">
+            <svg xmlns="http://www.w3.org/2000/svg" width="68" height="58" viewBox="0 0 68 58" fill="none"><path d="M62.498 0.38476C62.498 0.38476 49.0103 5.35411 45.0284 6.91781C34.6503 10.8075 4.73479 21.8334 4.73479 21.8334C-2.17351 24.0694 0.0853641 26.9353 1.59951 27.4594C2.58953 27.8088 18.3129 32.6997 18.3129 32.6997L20.2606 31.4779C20.2606 31.4779 32.5056 24.0018 44.9445 16.0099C46.6849 14.9089 51.743 11.7337 52.7003 11.346C53.4809 10.8018 54.0879 10.7468 54.4561 10.9826C54.8327 11.2237 54.8988 11.8825 54.3983 12.3977C53.4083 13.4169 49.964 16.6446 49.3048 17.2628C44.6841 21.5955 37.0586 28.4121 30.6851 33.8877C29.3722 35.0985 27.1687 37.0193 27.1687 37.0193L26.0822 52.8679C26.0822 52.8679 27.1509 53.2112 28.2073 52.3466C31.1305 49.9545 36.6942 44.168 36.6942 44.168L45.3924 50.564C45.3924 50.564 53.6364 56.7862 54.9133 57.0082C57.5921 57.4741 58.1803 53.2608 58.5879 51.4555C58.9956 49.6501 61.4596 37.2455 64.1048 24.2494C65.8926 15.0616 67.6478 6.5723 67.9314 4.13651C68.717 -1.77429 62.498 0.38476 62.498 0.38476Z" fill="currentColor"></path></svg>
+          </a>
+          <!-- Habr. The href is a placeholder until the real profile URL is known. -->
+          <a href="#" target="_blank" aria-label="Habr">
+            <img src="/images/footer/habr.svg" width="32" height="32" alt="" loading="lazy">
+          </a>
+          <a href="{{ site.social_links[page.lang]['youtube'] }}" target="_blank" aria-label="YouTube">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814ZM9.545 15.568V8.432L15.818 12l-6.273 3.568Z" fill="currentColor"></path></svg>
+          </a>
+        </div>
+      </div>
+
+      {%- for column in site.data.footer.columns[page.lang] %}
+        <div class="footer__col">
+          {%- if column.title %}
+            <div class="footer__col-title">{{- column.title -}}</div>
+          {%- endif %}
+          <ul class="nav footer__nav">
+            {%- for item in column.items %}
+              <li>
+                <a {% if item.url %}href="{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>
+                  {{- item.title -}}
+                </a>
+              </li>
+            {%- endfor %}
+          </ul>
+        </div>
+      {%- endfor %}
+    </div>
+
+    <div class="footer__copyright">
+      <ul class="nav footer__legal">
+        {%- for item in site.data.copyright[page.lang] %}
+          <li>
+            <a {% if item.url %}href="{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>
+              {{- item.title -}}
+            </a>
+          </li>
+        {%- endfor %}
+      </ul>
+      <span>© {{ "now" | date: "%Y" }} АО «Флант». Все права защищены.</span>
+    </div>
+  </div>
+</footer>
+<!--/noindex-->

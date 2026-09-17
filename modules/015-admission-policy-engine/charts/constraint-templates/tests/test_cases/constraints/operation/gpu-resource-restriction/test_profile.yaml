@@ -9,3 +9,4 @@ spec:
       - operation-policy
       - operation-policy-custom-parameters
       - operation-policy-unanchored-pattern
+      - operation-policy-controller

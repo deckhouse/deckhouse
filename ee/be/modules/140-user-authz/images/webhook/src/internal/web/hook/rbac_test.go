@@ -6,18 +6,23 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"fmt"
 	"io"
 	"log"
-	"regexp"
+	"reflect"
+	"sort"
 	"testing"
+	"time"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
+	kcache "k8s.io/client-go/tools/cache"
 
-	"webhook/internal/cache"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 )
 
 func newTestRBACEvaluator(t *testing.T, objs ...runtime.Object) *RBACEvaluator {
@@ -25,7 +30,10 @@ func newTestRBACEvaluator(t *testing.T, objs ...runtime.Object) *RBACEvaluator {
 
 	client := fake.NewSimpleClientset(objs...)
 	informerFactory := informers.NewSharedInformerFactory(client, 0)
-	evaluator := NewRBACEvaluator(log.New(io.Discard, "", 0), informerFactory)
+	evaluator, err := NewRBACEvaluator(log.New(io.Discard, "", 0), informerFactory)
+	if err != nil {
+		t.Fatalf("build the RBAC evaluator: %v", err)
+	}
 
 	stopCh := make(chan struct{})
 	t.Cleanup(func() { close(stopCh) })
@@ -33,6 +41,99 @@ func newTestRBACEvaluator(t *testing.T, objs ...runtime.Object) *RBACEvaluator {
 	informerFactory.WaitForCacheSync(stopCh)
 
 	return evaluator
+}
+
+// The index answers the hot path instead of the cluster, so it has to follow
+// the cluster: a binding created after start-up counts, and one deleted stops
+// counting. A stale index would either miss a deliberate cluster-wide grant or
+// keep honouring a revoked one.
+func TestSubjectIndexFollowsTheCluster(t *testing.T) {
+	role := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: "pod-reader"},
+		Rules:      []rbacv1.PolicyRule{{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"list"}}},
+	}
+
+	client := fake.NewSimpleClientset(role)
+	informerFactory := informers.NewSharedInformerFactory(client, 0)
+	evaluator, err := NewRBACEvaluator(log.New(io.Discard, "", 0), informerFactory)
+	if err != nil {
+		t.Fatalf("build the RBAC evaluator: %v", err)
+	}
+
+	stopCh := make(chan struct{})
+	t.Cleanup(func() { close(stopCh) })
+	informerFactory.Start(stopCh)
+	informerFactory.WaitForCacheSync(stopCh)
+
+	spec := &WebhookResourceSpec{
+		User:               "system:serviceaccount:tenant:deployer",
+		ResourceAttributes: WebhookResourceAttributes{Verb: "list", Resource: "pods"},
+	}
+
+	if evaluator.AllowsIndependently(spec) {
+		t.Fatal("nothing grants the ServiceAccount yet")
+	}
+
+	binding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "deployer-pods"},
+		RoleRef:    rbacv1.RoleRef{Kind: "ClusterRole", Name: "pod-reader"},
+		Subjects:   []rbacv1.Subject{{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: "tenant"}},
+	}
+
+	if _, err := client.RbacV1().ClusterRoleBindings().Create(t.Context(), binding, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("creating the binding: %v", err)
+	}
+	waitFor(t, func() bool { return evaluator.AllowsIndependently(spec) }, "the new binding must be seen")
+
+	if err := client.RbacV1().ClusterRoleBindings().Delete(t.Context(), binding.Name, metav1.DeleteOptions{}); err != nil {
+		t.Fatalf("deleting the binding: %v", err)
+	}
+	waitFor(t, func() bool { return !evaluator.AllowsIndependently(spec) }, "the removed binding must stop counting")
+}
+
+// A binding that existed before the process started must count on the very
+// first request, without polling. The index is not filled by the initial
+// listing -- that would make the sync quadratic -- so the read path has to
+// notice that nothing has filled it yet. Getting this wrong denies every
+// cluster-wide grant for as long as no binding happens to change, which on a
+// settled cluster is forever.
+func TestSubjectIndexIsBuiltBeforeTheFirstAnswer(t *testing.T) {
+	role := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: "pod-reader"},
+		Rules:      []rbacv1.PolicyRule{{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"list"}}},
+	}
+	binding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "deployer-pods"},
+		RoleRef:    rbacv1.RoleRef{Kind: "ClusterRole", Name: "pod-reader"},
+		Subjects:   []rbacv1.Subject{{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: "tenant"}},
+	}
+
+	evaluator := newTestRBACEvaluator(t, role, binding)
+
+	spec := &WebhookResourceSpec{
+		User:               "system:serviceaccount:tenant:deployer",
+		ResourceAttributes: WebhookResourceAttributes{Verb: "list", Resource: "pods"},
+	}
+
+	if !evaluator.AllowsIndependently(spec) {
+		t.Fatal("a binding that predates the process must be seen by the first request")
+	}
+}
+
+// waitFor polls until the informer event reaches the index. The delay is the
+// watch round-trip of the fake client, not a cost of the check itself.
+func waitFor(t *testing.T, condition func() bool, message string) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if condition() {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	t.Fatal(message)
 }
 
 // TestAuthorizeRequestWithIndependentRBAC covers the interaction between
@@ -106,7 +207,10 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 
 	evaluator := newTestRBACEvaluator(t, rbacObjs...)
 
-	limitedRegex, _ := regexp.Compile("^limited-.*$")
+	limited := rulesFor(
+		rules.Rule{Name: "alice", Subjects: []rules.Subject{{Kind: "User", Name: "alice"}}, LimitNamespaces: []string{"limited-.*"}},
+		rules.Rule{Name: "bob", Subjects: []rules.Subject{{Kind: "User", Name: "bob"}}, LimitNamespaces: []string{"limited-.*"}},
+	)
 	newHandler := func() *Handler {
 		return &Handler{
 			logger: log.New(io.Discard, "", 0),
@@ -114,14 +218,9 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 				data: map[string]map[string]bool{
 					"v1": {"pods": true},
 				},
-				coreResources: cache.CoreResourcesDict{"pods": struct{}{}},
 			},
-			directory: map[string]map[string]DirectoryEntry{
-				"User": {
-					"alice": {LimitNamespaces: []*regexp.Regexp{limitedRegex}},
-					"bob":   {LimitNamespaces: []*regexp.Regexp{limitedRegex}},
-				},
-			},
+			rules:           limited,
+			bindings:        binding.NewIndex(),
 			nsLister:        newFakeNamespaceLister(nil),
 			nsSynced:        func() bool { return true },
 			independentRBAC: evaluator,
@@ -277,5 +376,231 @@ func TestRBACEvaluatorUnsyncedCaches(t *testing.T) {
 	}
 	if evaluator.AllowsIndependently(spec) {
 		t.Error("expected the evaluator to fail closed with unsynced caches")
+	}
+}
+
+// plainCRB is a ClusterRoleBinding that no ClusterAuthorizationRule generated.
+func plainCRB(name string, subjects ...rbacv1.Subject) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Subjects:   subjects,
+		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "some-role"},
+	}
+}
+
+// indexedFor returns the names of the bindings the index answers for a request, sorted.
+func indexedFor(idx *independentCRBIndex, user string, groups ...string) []string {
+	var names []string
+	for _, crb := range idx.forRequest(user, groups) {
+		names = append(names, crb.Name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// The index has to answer exactly what a full scan with subjectsMatch would: the bindings naming
+// the user, its groups, or its ServiceAccount identity, and nothing else.
+func TestIndependentCRBIndex_LookupBySubjectKind(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	idx.upsert(plainCRB("by-user", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}))
+	idx.upsert(plainCRB("by-group", rbacv1.Subject{Kind: rbacv1.GroupKind, Name: "devs"}))
+	idx.upsert(plainCRB("by-sa", rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "runner", Namespace: "ci"}))
+	idx.upsert(plainCRB("someone-else", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "bob"}))
+
+	if got := indexedFor(idx, "alice"); !reflect.DeepEqual(got, []string{"by-user"}) {
+		t.Errorf("user lookup: got %v", got)
+	}
+	if got := indexedFor(idx, "alice", "devs"); !reflect.DeepEqual(got, []string{"by-group", "by-user"}) {
+		t.Errorf("user and group lookup: got %v", got)
+	}
+	if got := indexedFor(idx, "system:serviceaccount:ci:runner"); !reflect.DeepEqual(got, []string{"by-sa"}) {
+		t.Errorf("service account lookup: got %v", got)
+	}
+	if got := indexedFor(idx, "nobody", "no-group"); got != nil {
+		t.Errorf("an unbound subject must match nothing, got %v", got)
+	}
+}
+
+// A binding naming both the user and one of its groups is evaluated once, not twice.
+func TestIndependentCRBIndex_DeduplicatesAcrossSubjects(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	idx.upsert(plainCRB("both",
+		rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"},
+		rbacv1.Subject{Kind: rbacv1.GroupKind, Name: "devs"},
+	))
+
+	if got := indexedFor(idx, "alice", "devs"); !reflect.DeepEqual(got, []string{"both"}) {
+		t.Errorf("expected the binding once, got %v", got)
+	}
+}
+
+// An update that moves a binding to another subject must stop answering for the old one: the
+// previous contribution is withdrawn, not left behind.
+func TestIndependentCRBIndex_UpdateWithdrawsOldSubjects(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	idx.upsert(plainCRB("moving", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}))
+	idx.upsert(plainCRB("moving", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "bob"}))
+
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("alice must no longer be bound, got %v", got)
+	}
+	if got := indexedFor(idx, "bob"); !reflect.DeepEqual(got, []string{"moving"}) {
+		t.Errorf("bob must be bound, got %v", got)
+	}
+	if idx.len() != 1 {
+		t.Errorf("an update must not duplicate the binding, index holds %d", idx.len())
+	}
+}
+
+func TestIndependentCRBIndex_Delete(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	crb := plainCRB("gone", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"})
+	idx.upsert(crb)
+	idx.deleteByName(crb.Name)
+
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("a deleted binding must not be returned, got %v", got)
+	}
+	if idx.len() != 0 {
+		t.Errorf("the index must be empty, holds %d", idx.len())
+	}
+}
+
+// A delete the informer did not observe directly still has to withdraw the binding.
+//
+// The tombstone usually carries the last known object, and the handler used to give up when it did
+// not. Giving up leaves the entry in the index for the life of the process, and a stale entry here
+// claims a CAR-independent grant that no longer exists - a claim that OVERRIDES the multi-tenancy
+// denial, so the subject keeps namespace-wide access the deleted binding gave them.
+func TestIndependentCRBIndex_TombstoneWithoutTheObject(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		tombstone kcache.DeletedFinalStateUnknown
+	}{
+		{
+			name:      "carrying the object",
+			tombstone: kcache.DeletedFinalStateUnknown{Key: "gone", Obj: plainCRB("gone", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"})},
+		},
+		{
+			// A watch replaced under the informer can leave a key with something else behind it.
+			name:      "carrying something else",
+			tombstone: kcache.DeletedFinalStateUnknown{Key: "gone", Obj: &rbacv1.RoleBinding{}},
+		},
+		{
+			name:      "carrying nothing",
+			tombstone: kcache.DeletedFinalStateUnknown{Key: "gone"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			idx := newIndependentCRBIndex()
+			idx.upsert(plainCRB("gone", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}))
+
+			idx.eventHandler().OnDelete(tc.tombstone)
+
+			if got := indexedFor(idx, "alice"); got != nil {
+				t.Errorf("the binding is still indexed after its delete: %v", got)
+			}
+			if idx.len() != 0 {
+				t.Errorf("the index must be empty, holds %d", idx.len())
+			}
+		})
+	}
+}
+
+// The bindings a ClusterAuthorizationRule generated are the ones whose scope this webhook
+// enforces; they must never count as an independent grant, and a binding that gains the module's
+// labels is withdrawn from the index.
+func TestIndependentCRBIndex_ExcludesCARManaged(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	idx.upsert(ruleBinding("user-authz:rule:admin", "alice"))
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("a CAR-generated binding must not be indexed, got %v", got)
+	}
+
+	// The same name without the module labels is an ordinary binding.
+	idx.upsert(plainCRB("user-authz:rule:admin", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}))
+	if got := indexedFor(idx, "alice"); !reflect.DeepEqual(got, []string{"user-authz:rule:admin"}) {
+		t.Errorf("expected the unlabelled binding to be indexed, got %v", got)
+	}
+
+	// ...and once it gains them, it stops answering.
+	idx.upsert(ruleBinding("user-authz:rule:admin", "alice"))
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("a binding that became CAR-generated must be withdrawn, got %v", got)
+	}
+}
+
+// The informer reports a delete it could not observe directly as a tombstone.
+func TestIndependentCRBIndex_EventHandlerTombstone(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	crb := plainCRB("tombstoned", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"})
+
+	handler := idx.eventHandler()
+	handler.OnAdd(crb, false)
+	if got := indexedFor(idx, "alice"); !reflect.DeepEqual(got, []string{"tombstoned"}) {
+		t.Fatalf("expected the binding to be indexed, got %v", got)
+	}
+
+	handler.OnDelete(kcache.DeletedFinalStateUnknown{Key: "tombstoned", Obj: crb})
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("a tombstoned delete must withdraw the binding, got %v", got)
+	}
+}
+
+// benchCRBs builds n ordinary ClusterRoleBindings, plus one that names the user under test, in the
+// proportion a cluster with a few thousand ClusterAuthorizationRules has: most bindings belong to
+// somebody else, and half of them are CAR-generated.
+func benchCRBs(n int) []*rbacv1.ClusterRoleBinding {
+	out := make([]*rbacv1.ClusterRoleBinding, 0, n+1)
+	for i := 0; i < n; i++ {
+		name := fmt.Sprintf("binding-%d", i)
+		subject := rbacv1.Subject{Kind: rbacv1.UserKind, Name: fmt.Sprintf("user-%d", i)}
+		if i%2 == 0 {
+			out = append(out, ruleBinding(fmt.Sprintf("user-authz:rule-%d:editor", i), subject.Name))
+			continue
+		}
+		out = append(out, plainCRB(name, subject))
+	}
+	out = append(out, plainCRB("the-one", rbacv1.Subject{Kind: rbacv1.GroupKind, Name: "target-group"}))
+	return out
+}
+
+// BenchmarkIndependentCRB_IndexLookup measures what a request costs now: one map lookup per
+// subject of the request.
+func BenchmarkIndependentCRB_IndexLookup(b *testing.B) {
+	idx := newIndependentCRBIndex()
+	for _, crb := range benchCRBs(20000) {
+		idx.upsert(crb)
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if got := idx.forRequest("someone", []string{"target-group"}); len(got) != 1 {
+			b.Fatalf("expected the one binding, got %d", len(got))
+		}
+	}
+}
+
+// BenchmarkIndependentCRB_FullScan measures what a request used to cost: a scan of every
+// ClusterRoleBinding in the cluster with the subject match run on each one.
+func BenchmarkIndependentCRB_FullScan(b *testing.B) {
+	all := benchCRBs(20000)
+	spec := &WebhookResourceSpec{User: "someone", Group: []string{"target-group"}}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		matched := 0
+		for _, crb := range all {
+			if isCARManagedClusterRoleBinding(crb) {
+				continue
+			}
+			if !subjectsMatch(crb.Subjects, spec, "") {
+				continue
+			}
+			matched++
+		}
+		if matched != 1 {
+			b.Fatalf("expected the one binding, got %d", matched)
+		}
 	}
 }

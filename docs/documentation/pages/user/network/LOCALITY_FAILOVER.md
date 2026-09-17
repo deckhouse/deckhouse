@@ -1,10 +1,10 @@
 ---
 title: "Configuring Locality failover with Istio"
-description: "Configuring geographic failover using Istio in Deckhouse Kubernetes Platform. Managing priority-based traffic routing between zones using DestinationRule and node labels."
+description: "Configuring geographic failover using Istio in Deckhouse Platform. Managing priority-based traffic routing between zones using DestinationRule and node labels."
 permalink: en/user/network/locality_failover_istio.html
 ---
 
-In Deckhouse Kubernetes Platform,
+In Deckhouse Platform,
 you can implement the Locality failover mechanism using the [istio](/modules/istio/) module.
 Before configuring the mechanism, make sure the module is enabled in the cluster.
 

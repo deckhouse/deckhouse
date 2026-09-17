@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — DVP"
-description: "Integration of Deckhouse Kubernetes Platform with the Deckhouse Virtualization Platform."
+description: "Integration of Deckhouse Platform with the Deckhouse Virtualization Platform."
 ---
 
-The `cloud-provider-dvp` module integrates Deckhouse Kubernetes Platform with the [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/). It allows the [`node-manager`](/modules/node-manager/) module to use DVP resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+The `cloud-provider-dvp` module integrates Deckhouse Platform with the [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/). It allows the [`node-manager`](/modules/node-manager/) module to use DVP resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Features of the `cloud-provider-dvp` module:
 

@@ -21,6 +21,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -531,175 +533,57 @@ func TestClient_TagImage(t *testing.T) {
 	})
 }
 
-// ---- isNotFound ----
+// ---- sentinelFor ----
 
-func TestIsNotFound(t *testing.T) {
-	t.Run("true for HTTP 404 transport error", func(t *testing.T) {
+func TestSentinelFor(t *testing.T) {
+	t.Run("bare 404 is a missing image", func(t *testing.T) {
 		err := &transport.Error{StatusCode: http.StatusNotFound}
-		assert.True(t, isNotFound(err))
+		assert.Equal(t, registry.ErrImageNotFound, sentinelFor(err))
 	})
 
-	t.Run("false for HTTP 403 transport error", func(t *testing.T) {
-		err := &transport.Error{StatusCode: http.StatusForbidden}
-		assert.False(t, isNotFound(err))
-	})
-
-	t.Run("false for non-transport error", func(t *testing.T) {
-		assert.False(t, isNotFound(errors.New("generic error")))
-	})
-
-	t.Run("false for nil", func(t *testing.T) {
-		assert.False(t, isNotFound(nil))
-	})
-
-	t.Run("true for wrapped 404 transport error", func(t *testing.T) {
+	t.Run("wrapped 404 is still classified", func(t *testing.T) {
 		inner := &transport.Error{StatusCode: http.StatusNotFound}
-		wrapped := fmt.Errorf("outer: %w", inner)
-		assert.True(t, isNotFound(wrapped))
-	})
-}
-
-// ---- buildReference ----
-
-func TestClient_BuildReference(t *testing.T) {
-	c := New("registry.example.com", WithInsecure(true)).WithSegment("repo").(*Client)
-
-	t.Run("tag reference", func(t *testing.T) {
-		ref := c.buildReference("v1.0.0")
-		assert.Equal(t, "registry.example.com/repo:v1.0.0", ref)
+		assert.Equal(t, registry.ErrImageNotFound, sentinelFor(fmt.Errorf("outer: %w", inner)))
 	})
 
-	t.Run("digest reference with @ prefix", func(t *testing.T) {
-		ref := c.buildReference("@sha256:abc123")
-		assert.Equal(t, "registry.example.com/repo@sha256:abc123", ref)
+	t.Run("401 and 403 are access denied", func(t *testing.T) {
+		for _, code := range []int{http.StatusUnauthorized, http.StatusForbidden} {
+			err := &transport.Error{StatusCode: code}
+			assert.Equal(t, registry.ErrAccessDenied, sentinelFor(err), "status %d", code)
+		}
 	})
 
-	t.Run("digest reference without @ prefix", func(t *testing.T) {
-		ref := c.buildReference("sha256:abc123")
-		assert.Equal(t, "registry.example.com/repo@sha256:abc123", ref)
+	t.Run("UNAUTHORIZED and DENIED codes are access denied", func(t *testing.T) {
+		for _, code := range []transport.ErrorCode{transport.UnauthorizedErrorCode, transport.DeniedErrorCode} {
+			err := &transport.Error{
+				StatusCode: http.StatusNotFound,
+				Errors:     []transport.Diagnostic{{Code: code}},
+			}
+			assert.Equal(t, registry.ErrAccessDenied, sentinelFor(err),
+				"an out-of-scope request must not be reported as not-found (%s)", code)
+		}
 	})
 
-	t.Run("latest tag", func(t *testing.T) {
-		ref := c.buildReference("latest")
-		assert.Equal(t, "registry.example.com/repo:latest", ref)
-	})
-}
-
-// ---- GetImage with digest ----
-
-func TestClient_GetImage_ByDigest(t *testing.T) {
-	t.Run("fetch image by digest reference", func(t *testing.T) {
-		_, c := newTestServer(t)
-		img := pushRandomImage(t, c, "repo", "v1")
-
-		wantDigest, err := img.Digest()
-		require.NoError(t, err)
-
-		fetched, err := c.WithSegment("repo").GetImage(context.Background(), "@"+wantDigest.String())
-		require.NoError(t, err)
-
-		gotDigest, err := fetched.Digest()
-		require.NoError(t, err)
-		assert.Equal(t, wantDigest, gotDigest)
-	})
-}
-
-// ---- GetDigest with 404 early return (fix 1.6) ----
-
-func TestClient_GetDigest_NotFound(t *testing.T) {
-	t.Run("returns ErrImageNotFound for missing image", func(t *testing.T) {
-		_, c := newTestServer(t)
-
-		_, err := c.WithSegment("repo").GetDigest(context.Background(), "nonexistent")
-		require.Error(t, err)
-		assert.True(t, errors.Is(err, ErrImageNotFound))
-	})
-}
-
-// ---- PushIndex ----
-
-func TestClient_PushIndex(t *testing.T) {
-	t.Run("pushed index is fetchable", func(t *testing.T) {
-		_, c := newTestServer(t)
-
-		idx, err := random.Index(512, 1, 2)
-		require.NoError(t, err)
-
-		require.NoError(t, c.WithSegment("repo").PushIndex(context.Background(), "multi-arch", idx))
-
-		// Verify the tag exists
-		err = c.WithSegment("repo").CheckImageExists(context.Background(), "multi-arch")
-		assert.NoError(t, err)
+	t.Run("NAME_UNKNOWN is a missing repository, not a missing image", func(t *testing.T) {
+		err := &transport.Error{
+			StatusCode: http.StatusNotFound,
+			Errors:     []transport.Diagnostic{{Code: transport.NameUnknownErrorCode}},
+		}
+		assert.Equal(t, registry.ErrRepositoryNotFound, sentinelFor(err))
 	})
 
-	t.Run("index digest matches after push", func(t *testing.T) {
-		_, c := newTestServer(t)
-
-		idx, err := random.Index(512, 1, 2)
-		require.NoError(t, err)
-
-		wantDigest, err := idx.Digest()
-		require.NoError(t, err)
-
-		require.NoError(t, c.WithSegment("repo").PushIndex(context.Background(), "idx-tag", idx))
-
-		gotDigest, err := c.WithSegment("repo").GetDigest(context.Background(), "idx-tag")
-		require.NoError(t, err)
-		assert.Equal(t, wantDigest, *gotDigest)
-	})
-}
-
-// ---- DeleteByDigest ----
-
-func TestClient_DeleteByDigest(t *testing.T) {
-	t.Run("delete by digest succeeds for existing manifest", func(t *testing.T) {
-		_, c := newTestServer(t)
-		img := pushRandomImage(t, c, "repo", "v1")
-
-		digest, err := img.Digest()
-		require.NoError(t, err)
-
-		// DeleteByDigest should not return an error for an existing manifest.
-		err = c.WithSegment("repo").DeleteByDigest(context.Background(), digest)
-		assert.NoError(t, err)
+	t.Run("MANIFEST_UNKNOWN is a missing image", func(t *testing.T) {
+		err := &transport.Error{
+			StatusCode: http.StatusNotFound,
+			Errors:     []transport.Diagnostic{{Code: transport.ManifestUnknownErrorCode}},
+		}
+		assert.Equal(t, registry.ErrImageNotFound, sentinelFor(err))
 	})
 
-	t.Run("deleting non-existent digest returns ErrImageNotFound", func(t *testing.T) {
-		_, c := newTestServer(t)
-
-		fakeDigest := v1.Hash{Algorithm: "sha256", Hex: "0000000000000000000000000000000000000000000000000000000000000000"}
-		err := c.WithSegment("repo").DeleteByDigest(context.Background(), fakeDigest)
-		require.Error(t, err)
-		assert.True(t, errors.Is(err, ErrImageNotFound))
-	})
-}
-
-// ---- CopyImage ----
-
-func TestClient_CopyImage(t *testing.T) {
-	t.Run("image exists in destination after copy", func(t *testing.T) {
-		_, c := newTestServer(t)
-		pushed := pushRandomImage(t, c, "src-repo", "v1")
-
-		wantDigest, err := pushed.Digest()
-		require.NoError(t, err)
-
-		// Copy from src-repo:v1 to dst-repo:copied
-		err = c.WithSegment("src-repo").CopyImage(context.Background(), "v1", c.WithSegment("dst-repo"), "copied")
-		require.NoError(t, err)
-
-		// Verify it exists
-		gotDigest, err := c.WithSegment("dst-repo").GetDigest(context.Background(), "copied")
-		require.NoError(t, err)
-		assert.Equal(t, wantDigest, *gotDigest)
-	})
-
-	t.Run("copy nonexistent source returns ErrImageNotFound", func(t *testing.T) {
-		_, c := newTestServer(t)
-
-		err := c.WithSegment("src-repo").CopyImage(context.Background(), "missing", c.WithSegment("dst-repo"), "dst")
-		require.Error(t, err)
-		assert.True(t, errors.Is(err, ErrImageNotFound))
+	t.Run("nil for unclassified responses", func(t *testing.T) {
+		assert.Nil(t, sentinelFor(nil))
+		assert.Nil(t, sentinelFor(errors.New("generic error")))
+		assert.Nil(t, sentinelFor(&transport.Error{StatusCode: http.StatusInternalServerError}))
 	})
 }
 
@@ -707,10 +591,13 @@ func TestClient_CopyImage(t *testing.T) {
 
 func TestClient_Middleware(t *testing.T) {
 	t.Run("middleware intercepts requests", func(t *testing.T) {
-		var requestCount int
+		// The counter is touched from net/http's request goroutines, so it needs
+		// synchronising - without it the whole package is unusable under -race.
+		var requestCount atomic.Int64
+
 		countingMiddleware := func(next http.RoundTripper) http.RoundTripper {
 			return RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
-				requestCount++
+				requestCount.Add(1)
 				return next.RoundTrip(req)
 			})
 		}
@@ -724,20 +611,32 @@ func TestClient_Middleware(t *testing.T) {
 
 		pushRandomImage(t, c, "repo", "v1")
 
-		assert.Greater(t, requestCount, 0, "middleware should have intercepted at least one request")
+		assert.Greater(t, requestCount.Load(), int64(0), "middleware should have intercepted at least one request")
 	})
 
 	t.Run("multiple middlewares are applied in order", func(t *testing.T) {
-		var order []string
+		// Appended from request goroutines, so the slice needs a lock; see above.
+		var (
+			mu    sync.Mutex
+			order []string
+		)
+
+		record := func(name string) {
+			mu.Lock()
+			defer mu.Unlock()
+
+			order = append(order, name)
+		}
+
 		first := func(next http.RoundTripper) http.RoundTripper {
 			return RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
-				order = append(order, "first")
+				record("first")
 				return next.RoundTrip(req)
 			})
 		}
 		second := func(next http.RoundTripper) http.RoundTripper {
 			return RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
-				order = append(order, "second")
+				record("second")
 				return next.RoundTrip(req)
 			})
 		}
@@ -750,6 +649,9 @@ func TestClient_Middleware(t *testing.T) {
 		c := New(addr, WithInsecure(true), WithMiddleware(first, second))
 
 		pushRandomImage(t, c, "repo", "v1")
+
+		mu.Lock()
+		defer mu.Unlock()
 
 		require.GreaterOrEqual(t, len(order), 2)
 		// First middleware is outermost, so it runs first

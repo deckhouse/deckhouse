@@ -5,9 +5,9 @@ description: Deckhouse CLI is a command line interface for cluster management cr
 search: d8, deckhouse cli, d8 utility, command line interface
 ---
 
-Deckhouse CLI (`d8`) is a command-line interface for working with products in the Deckhouse ecosystem. It combines commands for working with Kubernetes, administering Deckhouse Kubernetes Platform, delivering applications, copying images, creating backups, collecting diagnostic information, virtualization, working with user data, and other tasks.
+Deckhouse CLI (`d8`) is a command-line interface for working with products in the Deckhouse ecosystem. It combines commands for working with Kubernetes, administering Deckhouse Platform, delivering applications, copying images, creating backups, collecting diagnostic information, virtualization, working with user data, and other tasks.
 
-Starting from release 1.59, `d8` is automatically installed on all DKP cluster nodes. The utility can also be [installed](#how-do-i-install-the-deckhouse-cli) on a separate administrator machine.
+Starting from release 1.59, `d8` is automatically installed on all DP cluster nodes. The utility can also be [installed](#how-do-i-install-the-deckhouse-cli) on a separate administrator machine.
 
 ## Main command groups
 

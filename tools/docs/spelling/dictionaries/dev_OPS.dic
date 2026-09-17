@@ -1,4 +1,4 @@
-2838
+2869
 1GB
 2GB
 5XX
@@ -151,6 +151,7 @@ ClusterObservabilityAlert
 ClusterPodLoggingConfig
 ClusterRole
 ClusterRoleBinding
+ClusterRoles
 ClusterVirtualImage
 CoC
 Colocating
@@ -210,6 +211,7 @@ DSS
 DVCR
 DVP
 DVPClusterConfiguration
+DVPInstanceClass
 DaemonSet
 DaemonSets
 Daemonset
@@ -319,6 +321,7 @@ GPG
 GPU
 GPUs
 GRPC
+GVK
 GVKs
 GateKeeper
 Gb
@@ -616,6 +619,8 @@ PV
 PVCs
 PVs
 PWD
+PackageRepository
+PackageRepositoryOperation
 PagerDuty
 PagerDutyConfig
 Passthrough
@@ -648,6 +653,8 @@ Prestable
 PrimaryIPFromEgressGatewayNodeInterface
 PriorityClass
 PriorityLevelConfiguration
+ProjectNamespace
+ProjectRoleBinding
 ProjectTemplate
 ProjectType
 PromQL
@@ -764,6 +771,7 @@ Sep
 ServiceAccount
 ServiceAccountJSON
 ServiceAccounts
+ServiceEntries
 ServiceEntry
 ServiceMonitor
 ServiceMonitors
@@ -1159,6 +1167,7 @@ de
 deckhouse
 defaultCRI
 defaultClusterStorageClass
+delegatable
 descheduled
 descheduler
 descheduling
@@ -1260,6 +1269,7 @@ globalVersion
 goroutines
 govc
 grafana
+grantable
 grep
 gz
 hardcoded
@@ -1387,6 +1397,7 @@ lifecycle
 linkTitle
 linstor
 linters
+linting
 linux
 livenessProbe
 loadBalancer
@@ -1716,9 +1727,11 @@ txt
 uid
 un
 uncordoned
+unicode
 uninstall
 uninstalled
 uninstalling
+unioned
 unmarshalling
 unschedulable
 uploadproxy
@@ -1819,6 +1832,7 @@ zoneTagCategory
 МБ
 МУЛЬТИФАКТОР
 Мб
+Межкластерный
 Меньшеe
 Метадата
 МиБ
@@ -1856,6 +1870,7 @@ zoneTagCategory
 Смаршрутизировать
 Создайте
 Сохраняеем
+Сохраняем
 Столярова
 Стрибог
 Терминация
@@ -1942,6 +1957,7 @@ zoneTagCategory
 бакету
 балансировщик
 балансировщика
+балансировщиками
 балансировщиках
 балансировщике
 балансировщики
@@ -1990,6 +2006,7 @@ zoneTagCategory
 валидирует
 валидируется
 валидируются
+валидирующим
 валидная
 валидной
 валидными
@@ -2051,6 +2068,8 @@ zoneTagCategory
 гитерминизма
 гитерминизмом
 гитерминизму
+грантируемый
+грантируемым
 гугл
 гуглить
 д
@@ -2087,6 +2106,7 @@ zoneTagCategory
 деплоят
 деструктивна
 детализированно
+дефолтное
 дефолтный
 донастройка
 доустановить
@@ -2233,6 +2253,7 @@ zoneTagCategory
 лексикографически
 линтеров
 линтеры
+линтинг
 логгер
 логгера
 логгеру
@@ -2257,6 +2278,8 @@ zoneTagCategory
 медиафайлы
 межкластерная
 межкластерного
+межкластерное
+межкластерные
 межкластерных
 межузловой
 мейнтейнер
@@ -2286,6 +2309,7 @@ zoneTagCategory
 мультиарендность
 мультикластер
 мультикластера
+мультикластере
 мультикластерной
 мультикластерный
 мультикластерных
@@ -2316,6 +2340,7 @@ zoneTagCategory
 незапрошенных
 незашифрованном
 неизменяем
+неизменяемо
 неинтерактивном
 неймспейс
 неймспейса
@@ -2437,6 +2462,7 @@ zoneTagCategory
 переиспользования
 переиспользовать
 переиспользоваться
+переиспользуемый
 перенаправление
 перенаправления
 перенаправлениям
@@ -2454,6 +2480,7 @@ zoneTagCategory
 пересборке
 пересборку
 пересборок
+пересканирует
 пересоберется
 пересоберётся
 пересобирает
@@ -2492,6 +2519,7 @@ zoneTagCategory
 подсетям
 подсетями
 подсетях
+подсистемные
 покоммитное
 помотрим
 превью
@@ -2571,6 +2599,7 @@ zoneTagCategory
 рендеринга
 рендеринге
 рендерится
+рендерятся
 репликационным
 реплицированного
 реплицированные
@@ -2681,6 +2710,8 @@ zoneTagCategory
 сокеты
 соотвествущая
 соответствующий
+сопоставление
+сопоставления
 спанов
 спаны
 спецзаголовки

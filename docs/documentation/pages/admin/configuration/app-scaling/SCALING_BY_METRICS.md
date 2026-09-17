@@ -1,7 +1,7 @@
 ---
 title: "Scaling by metrics"
 permalink: en/admin/configuration/app-scaling/scaling-by-metrics.html
-description: "Configure metric-based scaling in Deckhouse Kubernetes Platform. Custom metrics scaling, Prometheus integration, and HPA configuration for dynamic resource adjustment."
+description: "Configure metric-based scaling in Deckhouse Platform. Custom metrics scaling, Prometheus integration, and HPA configuration for dynamic resource adjustment."
 ---
 
 ## Scaling based on metrics
@@ -18,7 +18,7 @@ Scaling can be based on both standard and custom monitoring metrics. For example
 
 ### Configuration
 
-To simplify metric-based scaling configuration, DKP offers special resources (`Cluster*Metric` and `*Metric`). You can also configure scaling [based on custom metric calculation rules](#configuring-metrics-using-observability-module-resources).
+To simplify metric-based scaling configuration, DP offers special resources (`Cluster*Metric` and `*Metric`). You can also configure scaling [based on custom metric calculation rules](#configuring-metrics-using-observability-module-resources).
 
 To configure scaling based on metrics, follow these steps:
 
@@ -166,7 +166,7 @@ d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
 
 ### Configuring autoscaling in the Deckhouse Web Interface
 
-In Deckhouse Kubernetes Platform, you can configure node autoscaling settings through the [Deckhouse web interface](/modules/console/). This allows you to dynamically change the number of nodes depending on the load.
+In Deckhouse Platform, you can configure node autoscaling settings through the [Deckhouse web interface](/modules/console/). This allows you to dynamically change the number of nodes depending on the load.
 
 To configure autoscaling in the web interface:
 

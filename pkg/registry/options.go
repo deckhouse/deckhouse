@@ -25,6 +25,27 @@ type ImageGetOption interface {
 }
 
 type ImageGetOptions struct {
+	// Platform selects one image out of a multi-arch index.
+	//
+	// Leaving it nil does NOT mean "the host's platform": go-containerregistry
+	// falls back to a hardcoded linux/amd64, so an index resolves to its amd64
+	// child even on an arm64 machine. Set it explicitly whenever the answer
+	// must match the caller's architecture.
+	Platform *v1.Platform
+}
+
+// ManifestGetOption is some configuration that modifies options for a manifest
+// get request.
+type ManifestGetOption interface {
+	// ApplyToManifestGet applies this configuration to the given manifest get options.
+	ApplyToManifestGet(*ManifestGetOptions)
+}
+
+type ManifestGetOptions struct {
+	// Platform resolves a multi-arch index to the manifest of one child image.
+	//
+	// Leaving it nil returns the manifest as served, which for a multi-arch
+	// reference is the index itself - not any single image's manifest.
 	Platform *v1.Platform
 }
 
@@ -35,6 +56,10 @@ type ImagePushOption interface {
 }
 
 type ImagePushOptions struct {
+	// AllowNondistributableArtifacts uploads foreign layers instead of skipping
+	// them. Registries that proxy Windows base images need it; for everything
+	// else it wastes bandwidth on blobs the client can fetch from their origin.
+	AllowNondistributableArtifacts bool
 }
 
 // ListTagsOption is some configuration that modifies options for a list tags request.

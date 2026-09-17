@@ -5,7 +5,7 @@
 .web_build:
   stage: build
   tags:
-    - vm-intteam-cloud-d8-ssdlc-runner
+    - deckhouse
   needs: []
   timeout: 2h
   variables:

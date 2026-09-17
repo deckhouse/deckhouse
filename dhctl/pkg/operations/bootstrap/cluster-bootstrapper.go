@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -780,6 +780,14 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 	}
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "MetaConfig was loaded")
+
+	// Both CIDRs lost their ClusterConfiguration schema requirement now that they may live in
+	// ModuleConfig instead (see RequireNetwork); bootstrap is the one caller that must still refuse
+	// to proceed when neither document sets them, and it must do so here — before any infrastructure
+	// is created — rather than render an empty --service-cluster-ip-range into a master manifest.
+	if err := metaConfig.RequireNetwork(); err != nil {
+		return err
+	}
 
 	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
 		return fmt.Errorf("apply cni bootstrap: %w", err)
@@ -1783,7 +1791,7 @@ func isCloudProviderCredentialSecret(resource *template.Resource) bool {
 		return false
 	}
 	secretType, _, _ := unstructured.NestedString(resource.Object.Object, "type")
-	return secretType == proto.CredentialsSecretType
+	return secretType == validatev1.CredentialsSecretType
 }
 
 // prependMissingNamespaces inserts a minimal Namespace stub for every distinct

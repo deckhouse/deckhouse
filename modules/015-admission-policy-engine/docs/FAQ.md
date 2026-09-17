@@ -5,7 +5,7 @@ description: "Answers to frequently asked questions about the admission-policy-e
 
 ## How do I configure alternative security policy management solutions?
 
-For DKP to work correctly, extended privileges are required to run and operate system component payloads. If you are using some alternative security policy management solution (e. g., Kyverno) instead of the admission-policy-engine module, you have to configure exceptions for the following namespaces:
+For DP to work correctly, extended privileges are required to run and operate system component payloads. If you are using some alternative security policy management solution (e. g., Kyverno) instead of the admission-policy-engine module, you have to configure exceptions for the following namespaces:
 
 - `kube-system`;
 - all namespaces with the `d8-*` prefix (e.g., `d8-system`).
@@ -477,12 +477,12 @@ The module enforces the following restrictions:
 ## Verification of image signatures
 
 {% alert level="warning" %}
-Available in the following DKP editions: SE+, EE, CSE Lite, CSE Pro.
+Available in the following DP editions: SE+, EE, Ultimate.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
 
-The module implements a function for verifying signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). For more details on signing and verifying container images, see the [DKP documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#image-signature-verification).
+The module implements a function for verifying signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). For more details on signing and verifying container images, see the [DP documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#image-signature-verification).
 
 ## How to block deleting a node without a label
 
@@ -563,7 +563,7 @@ This policy doesn't apply to the following users who are allowed to run `kubectl
 
 ### Built-in policy for finalizers
 
-To protect objects managed by DKP controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `deckhouse.io` substring on any cluster objects.
+To protect objects managed by DP controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `deckhouse.io` substring on any cluster objects.
 
 This policy doesn't apply to the following users who are allowed to remove such finalizers:
 
@@ -657,8 +657,9 @@ Key data and checks available when validating `CONNECT` operations:
 ## How do I restrict GPU resource usage in namespaces?
 
 The `gpuResourceRestriction` policy in [OperationPolicy](cr.html#operationpolicy)
-denies the pods that request GPU resources when the namespace has no label allowing GPU usage.
-The check runs on pod creation and update, including when an ephemeral container is added.
+denies the workloads that request GPU resources when the namespace has no label allowing GPU usage.
+The check runs on creation and update of a pod, including when an ephemeral container is added,
+and on creation and update of the controllers that create pods.
 Both `resources.requests` and `resources.limits` of every container, init container,
 and ephemeral container are inspected. A resource with a quantity of `0` is not treated as a GPU request.
 
@@ -708,8 +709,9 @@ After that, the pods that request GPU resources are allowed only in the namespac
 with the `gpu.deckhouse.io/enabled: "true"` label.
 
 {% alert level="warning" %}
-The policy is applied to pods. A Deployment or another controller that requests GPU resources
-is created successfully, and the denial is reported in the ReplicaSet events.
+The policy is applied to pods and to the pod-creating controllers,
+so a Deployment whose pod template requests GPU resources is denied on creation.
+To leave controllers unchecked, set the [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) parameter to `false`.
 
 The namespace label is read from the Gatekeeper cache. While a namespace is missing from that cache,
 for example when the namespace and the pod are applied together and the namespace has not been cached yet,

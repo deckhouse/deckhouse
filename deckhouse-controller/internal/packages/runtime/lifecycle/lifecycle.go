@@ -17,7 +17,7 @@ package lifecycle
 import (
 	"context"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 // Event types determine context cancellation behavior in newContext.

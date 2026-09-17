@@ -277,6 +277,8 @@ $(document).ready(function () {
   $(document)
     .off('click.resourcesToggle', '.resources__prop_name')
     .on('click.resourcesToggle', '.resources__prop_name', function () {
+      if (window.getSelection().toString()) return;
+
       const parentElem = $(this).closest('li');
       const firstList = parentElem.parent('ul');
 

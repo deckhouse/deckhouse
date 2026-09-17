@@ -7,8 +7,8 @@ title: "Встроенные правила аудита"
 
 ## Что такое Audit Policy
 
-Audit Policy — это YAML-файл, который определяет, какие события должен записывать API-сервер.  
-Когда происходит запрос, Kubernetes проверяет его на соответствие правилам в файле.  
+Audit Policy — это YAML-файл, который определяет, какие события должен записывать API-сервер.
+Когда происходит запрос, Kubernetes проверяет его на соответствие правилам в файле.
 **Первое сработавшее правило** определяет уровень логирования.
 
 ## Структура политики
@@ -70,7 +70,7 @@ rules:                       # Набор правил для аудита
 
 ## Встроенные правила аудита
 
-В Deckhouse Kubernetes Platform (DKP) по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.  
+В Deckhouse Platform (DP) по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.
 
 В этой политике реализованы следующие правила:
 - [Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.](#rule-1)
@@ -344,6 +344,7 @@ users:
   - system:serviceaccount:d8-user-authn:basic-auth-proxy
   - system:serviceaccount:d8-user-authn:controller
   - system:serviceaccount:d8-user-authn:dex
+  - system:serviceaccount:d8-user-authz:controller
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
   - system:serviceaccount:d8-user-authz:webhook
   - system:serviceaccount:kube-system:d8-control-plane-manager
@@ -822,6 +823,7 @@ rules:
       - system:serviceaccount:d8-user-authn:basic-auth-proxy
       - system:serviceaccount:d8-user-authn:controller
       - system:serviceaccount:d8-user-authn:dex
+      - system:serviceaccount:d8-user-authz:controller
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
       - system:serviceaccount:d8-user-authz:webhook
       - system:serviceaccount:kube-system:d8-control-plane-manager

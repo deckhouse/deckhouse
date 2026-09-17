@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — Yandex Cloud"
-description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Yandex Cloud."
+description: "Управление облачными ресурсами в Deckhouse Platform с помощью Yandex Cloud."
 ---
 
-Модуль `cloud-provider-yandex` обеспечивает интеграцию Deckhouse Kubernetes Platform с [Yandex Cloud](https://cloud.yandex.ru/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Yandex Cloud при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-yandex` обеспечивает интеграцию Deckhouse Platform с [Yandex Cloud](https://cloud.yandex.ru/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Yandex Cloud при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Функции модуля `cloud-provider-yandex`:
 
@@ -15,7 +15,7 @@ description: "Управление облачными ресурсами в Deck
 - Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html#взаимодействия-модуля) `terraform-provider-yandex`.
 - Заказ CloudEphemeral-узлов через Machine Controller Manager (MCM) или Cluster API (CAPI). Параметры виртуальных машин задаются в ресурсе [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
-- Автоматическое включение CNI для новых кластеров. Начиная с DKP 1.76 по умолчанию используется [`cni-cilium`](/modules/cni-cilium/).
+- Автоматическое включение CNI для новых кластеров. Начиная с DP 1.76 по умолчанию используется [`cni-cilium`](/modules/cni-cilium/).
 
 {% alert level="warning" %}
 Модуль находится в процессе миграции управления CloudEphemeral-узлами с Machine Controller Manager (MCM) на Cluster API (CAPI). Существующие [NodeGroup](/modules/node-manager/cr.html#nodegroup) продолжают использовать MCM, а новые по умолчанию создаются с использованием CAPI. Порядок миграции существующих групп — в разделе [«Как мигрировать группы узлов на Cluster API (CAPI)»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-группы-узлов-на-cluster-api-capi).

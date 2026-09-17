@@ -5,7 +5,7 @@ permalink: en/admin/integrations/private/huaweicloud/storage.html
 
 ## Storage
 
-Deckhouse Kubernetes Platform provisions disks in Huawei Cloud using the CSI driver.
+Deckhouse Platform provisions disks in Huawei Cloud using the CSI driver.
 Storage type is configured via parameters in the HuaweiCloudClusterConfiguration resource,
 specifically the [`volumeTypeMap`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-masternodegroup-volumetypemap) field.
 

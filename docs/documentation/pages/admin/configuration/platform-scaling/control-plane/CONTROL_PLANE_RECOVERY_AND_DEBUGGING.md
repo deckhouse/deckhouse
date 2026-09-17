@@ -5,7 +5,7 @@ permalink: en/admin/configuration/platform-scaling/control-plane/control-plane-r
 
 ## Recovery from failures
 
-During its operation DKP automatically creates backups of configuration and data that may be useful in case of problems. These backups are saved in the `/etc/kubernetes/deckhouse/backup` directory. If any issues or unexpected situations occur during operation, you can use these backups to restore the system to a previously healthy state.
+During its operation DP automatically creates backups of configuration and data that may be useful in case of problems. These backups are saved in the `/etc/kubernetes/deckhouse/backup` directory. If any issues or unexpected situations occur during operation, you can use these backups to restore the system to a previously healthy state.
 
 ## Restoring etcd cluster functionality
 
@@ -27,7 +27,7 @@ Below is an instruction on how you can restore the master node.
 
 ### containerd
 
-1. Execute the following command to restore the master node in any cluster running under DKP:
+1. Execute the following command to restore the master node in any cluster running under DP:
 
    ```shell
    d8 k -n d8-system get secrets deckhouse-registry -o json |
@@ -330,12 +330,12 @@ After new control plane nodes are added:
 
 - The label `node-role.kubernetes.io/control-plane=""` is applied.
 - A DaemonSet launches control plane pods on the new nodes.
-- DKP creates or updates files in `/etc/kubernetes`: manifests, configuration files, certificates, etc.
-- All DKP modules that support high availability will enable it automatically, unless the global setting [`highAvailability`](../../../../../reference/api/global.html#parameters-highavailability) is manually overridden.
+- DP creates or updates files in `/etc/kubernetes`: manifests, configuration files, certificates, etc.
+- All DP modules that support high availability will enable it automatically, unless the global setting [`highAvailability`](../../../../../reference/api/global.html#parameters-highavailability) is manually overridden.
 
 Control plane node removal is performed in reverse:
 
 - Labels `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, and `node.deckhouse.io/group` are removed.
-- DKP removes its pods from these nodes.
+- DP removes its pods from these nodes.
 - etcd members on the nodes are automatically deleted.
 - If the number of nodes drops from two to one, etcd may enter `readonly` mode. In this case, you must start etcd with the `--force-new-cluster` flag, which should be removed after a successful startup.

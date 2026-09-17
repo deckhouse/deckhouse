@@ -104,8 +104,9 @@ spec:
                       default: 100%
                       description: |-
                         Fraction is a guaranteed share of CPU time that will be allocated to the VM.
-                        Expressed as percentage.
-                      pattern: ^100%$|^[1-9][0-9]?%$
+                        Expressed as percentage, or "Auto" to hand the share over to the Vertical
+                        VirtualMachine Autoscaler of the parent DVP cluster (EE).
+                      pattern: ^(Auto|(100|[1-9][0-9]?)%)$
                       type: string
                   required:
                     - cores

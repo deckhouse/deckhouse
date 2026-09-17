@@ -2,7 +2,7 @@
   <li>
 <p>На главной странице нажмите кнопку «Установить Deckhouse Kubernetes Platform».</p>
 <div class="gs-installer__image">
-<img src="/images/gs/installer/install-button.png" alt="Установить Deckhouse Kubernetes Platform" style="width: 100%;">
+<img src="/images/gs/installer/install-button.png" alt="Установить Deckhouse Platform" style="width: 100%;">
 </div>
   </li>
   <li>
@@ -14,7 +14,7 @@
 <img src="/images/gs/installer/enter-license-key.png" alt="Базовые параметры установки" style="width: 100%;">
 </div>
   </li>
-  <li><a href="../../../documentation/v1/reference/release-channels.html">Канал обновления Deckhouse Kubernetes Platform</a>. По умолчанию выбран Stable.</li>
+  <li><a href="../../../documentation/v1/reference/release-channels.html">Канал обновления Deckhouse Platform</a>. По умолчанию выбран Stable.</li>
   <li>Версию Kubernetes. По умолчанию выбран режим «Авто», в котором выбирается <a href="../../../documentation/v1/reference/supported_versions.html#kubernetes">текущая актуальная версия</a>.</li>
 </ul>
 <div class="gs-installer__image">
@@ -24,7 +24,7 @@
   </li>
   <li>
     <p>В выпадающем списке «Добавить инфраструктуру» в верхней части страницы выберите необходимую облачную платформу.<br>
-    В списке доступные облачные провайдеры активны в зависимости от выбранной редакции DKP.</p>
+    В списке доступные облачные провайдеры активны в зависимости от выбранной редакции DP.</p>
 <div class="gs-installer__image">
 <img src="/images/gs/installer/select-cloud-provider.png" alt="Как выглядит выпадающий список" style="width: 100%;">
 </div>

@@ -3,7 +3,7 @@ title: Модули логирования
 permalink: ru/architecture/observability/logging.html
 lang: ru
 search: логирование, logging, loki, log-shipper, vector
-description: Архитектура модулей log-shipper и loki в Deckhouse Kubernetes Platform.
+description: Архитектура модулей log-shipper и loki в Deckhouse Platform.
 ---
 
 ## Модуль log-shipper
@@ -11,7 +11,7 @@ description: Архитектура модулей log-shipper и loki в Deckho
 Модуль `log-shipper` упрощает настройку сбора логов в Kubernetes-кластере. Он позволяет организовать сбор логов как с приложений, запущенных в кластере, так и с самих узлов, а затем отправлять их в любую систему хранения — внутреннюю или внешнюю (например, Loki, Elasticsearch и другие).
 
 {% alert level="info" %}
-Deckhouse Kubernetes Platform (DKP) обеспечивает интеграцию с системами хранения логов. Сами системы хранения пользователь разворачивает и настраивает самостоятельно.
+Deckhouse Platform (DP) обеспечивает интеграцию с системами хранения логов. Сами системы хранения пользователь разворачивает и настраивает самостоятельно.
 {% endalert %}
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться в [соответствующем разделе документации](/modules/log-shipper/).
@@ -25,7 +25,7 @@ Deckhouse Kubernetes Platform (DKP) обеспечивает интеграци�
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`log-shipper`](/modules/log-shipper/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`log-shipper`](/modules/log-shipper/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля log-shipper](../../images/architecture/observability/c4-l2-log-shipper.ru.png)
 
@@ -85,7 +85,7 @@ Deckhouse Kubernetes Platform (DKP) обеспечивает интеграци�
 
 ### Архитектура модуля
 
-Архитектура модуля [`loki`](/modules/loki/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`loki`](/modules/loki/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля loki](../../images/architecture/observability/c4-l2-loki.ru.png)
 

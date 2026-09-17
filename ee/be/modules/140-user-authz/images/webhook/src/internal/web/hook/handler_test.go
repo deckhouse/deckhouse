@@ -6,19 +6,87 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
-	"regexp"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
-	"webhook/internal/cache"
-
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+
+	"webhook/internal/cache"
 )
+
+// staticRules is a RulesProvider over a directory built once from a fixed set of rules.
+type staticRules struct {
+	dir *rules.Directory
+}
+
+func (s staticRules) Directory() *rules.Directory { return s.dir }
+func (s staticRules) HasSynced() bool             { return s.dir != nil }
+
+func rulesFor(rs ...rules.Rule) staticRules {
+	dir, _ := rules.NewBuilder().Build(rs)
+	return staticRules{dir: dir}
+}
+
+func groupRule(name, group string, limit []string, system bool) rules.Rule {
+	return rules.Rule{Name: name, Subjects: []rules.Subject{{Kind: "Group", Name: group}}, LimitNamespaces: limit, AllowAccessToSystemNamespaces: system}
+}
+
+// fixtureRules mirror the directory the tests used to assemble by hand: one rule per group, named
+// after the scope it grants.
+func fixtureRules() staticRules {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchLabels: map[string]string{"match": "true"},
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "expression", Operator: "In", Values: []string{"match", "allow"}},
+		},
+	}}
+	return rulesFor(
+		groupRule("normal", "normal", nil, false),
+		groupRule("system-allowed", "system-allowed", nil, true),
+		groupRule("limited", "limited", []string{"test-.*"}, false),
+		groupRule("limited-with-system-regex", "limited-with-system-regex", []string{"d8-.*"}, false),
+		groupRule("limited-with-unlimited-regex", "limited-with-unlimited-regex", []string{".*"}, false),
+		groupRule("limited-and-system-allowed", "limited-and-system-allowed", []string{"test-.*"}, true),
+		groupRule("limited-with-unlimited-regex-and-system-allowed", "limited-with-unlimited-regex-and-system-allowed", []string{".*"}, true),
+		rules.Rule{Name: "limited-namespace-selector", Subjects: []rules.Subject{{Kind: "Group", Name: "limited-namespace-selector"}}, NamespaceSelector: selector},
+		rules.Rule{Name: "limited-with-match-any-namespace-selector", Subjects: []rules.Subject{{Kind: "Group", Name: "limited-with-match-any-namespace-selector"}}, NamespaceSelector: &rules.NamespaceSelector{MatchAny: true}},
+	)
+}
+
+func fixtureCache() *dummyCache {
+	return &dummyCache{
+		data: map[string]map[string]bool{
+			"test/v1": {
+				"object1": true,
+				"object2": false,
+			},
+			"v1": {
+				"namespaces": false,
+				"services":   true,
+			},
+		},
+		preferredVersions: map[string]string{
+			"object2.test": "v1",
+			"object1.test": "v1",
+		},
+	}
+}
 
 func TestAuthorizeRequest(t *testing.T) {
 	tc := []struct {
@@ -199,6 +267,9 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 		},
 		{
+			// No version of the group serves the resource, which is discovery answering that it
+			// does not exist. RBAC decides, and the API server turns that into a 404 rather than
+			// telling the caller they are forbidden from something that is not there.
 			Name:  "Cluster scoped. Without version. Version does not exists",
 			Group: []string{"normal"},
 			Attributes: WebhookResourceAttributes{
@@ -208,8 +279,8 @@ func TestAuthorizeRequest(t *testing.T) {
 				Namespace: "",
 			},
 			ResultStatus: WebhookRequestStatus{
-				Denied: true,
-				Reason: "webhook: kubernetes api request error",
+				Denied: false,
+				Reason: "",
 			},
 		},
 		{
@@ -598,88 +669,11 @@ func TestAuthorizeRequest(t *testing.T) {
 
 	for _, testCase := range tc {
 		t.Run(testCase.Name, func(t *testing.T) {
-			nsRegex, _ := regexp.Compile("^test-.*$")
-			allRegex, _ := regexp.Compile("^.*$")
-			systemRegex, _ := regexp.Compile("^d8-.*$")
-			namespaceSelector := &NamespaceSelector{
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"match": "true",
-					},
-					MatchExpressions: []metav1.LabelSelectorRequirement{
-						{
-							Key:      "expression",
-							Operator: "In",
-							Values:   []string{"match", "allow"},
-						},
-					},
-				},
-			}
-			namespaceSelectorMatchAny := &NamespaceSelector{
-				MatchAny: true,
-			}
-
 			handler := &Handler{
-				logger: log.New(io.Discard, "", 0),
-				cache: &dummyCache{
-					data: map[string]map[string]bool{
-						"test/v1": {
-							"object1": true,
-							"object2": false,
-						},
-						"v1": {
-							"namespaces": false,
-							"services":   true,
-						},
-					},
-					preferredVersions: map[string]string{
-						"object2.test": "v1",
-						"object1.test": "v1",
-					},
-					coreResources: cache.CoreResourcesDict{
-						"pods":       struct{}{},
-						"namespaces": struct{}{},
-						"services":   struct{}{},
-					},
-				},
-				directory: map[string]map[string]DirectoryEntry{
-					"Group": {
-						"normal": {
-							NamespaceFiltersAbsent: true,
-						},
-						"system-allowed": {
-							NamespaceFiltersAbsent:        true,
-							AllowAccessToSystemNamespaces: true,
-						},
-						"limited": {
-							LimitNamespaces: []*regexp.Regexp{nsRegex},
-						},
-						"limited-with-system-regex": {
-							LimitNamespaces: []*regexp.Regexp{systemRegex},
-						},
-						"limited-with-unlimited-regex": {
-							LimitNamespaces: []*regexp.Regexp{allRegex},
-						},
-						"limited-and-system-allowed": {
-							LimitNamespaces:               []*regexp.Regexp{nsRegex},
-							AllowAccessToSystemNamespaces: true,
-						},
-						"limited-with-unlimited-regex-and-system-allowed": {
-							LimitNamespaces:               []*regexp.Regexp{allRegex},
-							AllowAccessToSystemNamespaces: true,
-						},
-						"limited-namespace-selector": {
-							NamespaceSelectors: []*NamespaceSelector{
-								namespaceSelector,
-							},
-						},
-						"limited-with-match-any-namespace-selector": {
-							NamespaceSelectors: []*NamespaceSelector{
-								namespaceSelectorMatchAny,
-							},
-						},
-					},
-				},
+				logger:   log.New(io.Discard, "", 0),
+				cache:    fixtureCache(),
+				rules:    fixtureRules(),
+				bindings: binding.NewIndex(),
 				nsLister: newFakeNamespaceLister(testCase.Namespaces),
 				nsSynced: func() bool { return true },
 			}
@@ -708,26 +702,37 @@ func TestAuthorizeRequest(t *testing.T) {
 type dummyCache struct {
 	data              map[string]map[string]bool
 	preferredVersions map[string]string
-	coreResources     cache.CoreResourcesDict
+	// err, when set, stands for a discovery lookup that did not happen: a timeout, a 5xx, an
+	// aggregated APIService that is down. The real cache reports that differently from a resource
+	// it looked up and did not find, and the handler must too.
+	err error
 }
 
 func (d *dummyCache) Get(api, key string) (bool, error) {
-	return d.data[api][key], nil
-}
-
-func (d *dummyCache) GetCoreResources() (cache.CoreResourcesDict, error) {
-	return d.coreResources, nil
+	if d.err != nil {
+		return false, d.err
+	}
+	namespaced, ok := d.data[api][key]
+	if !ok {
+		// What the real cache returns after listing the group successfully and not finding the
+		// resource in it.
+		return false, fmt.Errorf("resource %s/%s is not found in cluster: %w", api, key, cache.ErrResourceAbsent)
+	}
+	return namespaced, nil
 }
 
 func (d *dummyCache) GetPreferredVersion(group, resource string) (string, error) {
+	if d.err != nil {
+		return "", d.err
+	}
 	if v, ok := d.preferredVersions[fmt.Sprintf("%s.%s", resource, group)]; ok {
 		return v, nil
 	}
 
-	return "", fmt.Errorf("not found")
+	return "", fmt.Errorf("no version of %s serves %s: %w", group, resource, cache.ErrNotFound)
 }
 
-func (d *dummyCache) Check() error {
+func (d *dummyCache) Check(context.Context) error {
 	return nil
 }
 
@@ -767,40 +772,539 @@ func (l *fakeNamespaceLister) Get(name string) (*corev1.Namespace, error) {
 	return nil, fmt.Errorf("namespaces %q not found", name)
 }
 
-func TestWrapRegexpTest(t *testing.T) {
-	tc := []struct {
-		Name   string
-		Input  string
-		Output string
+// ruleBinding is a ClusterRoleBinding as user-authz-controller creates it for a rule.
+func ruleBinding(name, username string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{
+			binding.LabelHeritage: binding.HeritageValue, binding.LabelModule: binding.ModuleName, binding.LabelManagedBy: binding.ManagedByValue,
+		}},
+		Subjects: []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: username}},
+		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "user-authz:admin"},
+	}
+}
+
+// TestAuthorizeRequest_UnlistedDirectoryDeniesEverySubjectOfARule pins the state the serving gate
+// exists to keep off the wire, and the reason that gate has to wait for the rules and not only for
+// the bindings.
+//
+// The bindings index and the rules arrive over independent watches. With the index filled and the
+// directory still nil - the rules were never listed at all - the ordering guard cannot tell "this
+// rule does not cover you" from "I have not observed this rule", so EVERY subject whose access
+// comes from a ClusterAuthorizationRule is denied. Each denial is correct in isolation and
+// catastrophic in bulk: the API server caches denials for unauthorizedTTL, so they outlive the
+// startup that produced them. Answering 503 instead costs nothing, because a webhook in this state
+// has nothing to say.
+//
+// If this test ever starts reporting "no opinion", rulesListed in server.go may be relaxed. While
+// it reports a denial, the serving gate must include the rules source.
+func TestAuthorizeRequest_UnlistedDirectoryDeniesEverySubjectOfARule(t *testing.T) {
+	idx := binding.NewIndex()
+	idx.Upsert(ruleBinding("user-authz:team-a:admin", "alice"))
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    staticRules{dir: nil}, // the rules have not been listed even once
+		bindings: idx,
+	}
+
+	req := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "alice",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "team-a", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(req)
+
+	if !req.Status.Denied {
+		t.Fatal("a subject bound by a rule the webhook has never listed was granted; " +
+			"if that is now intended, revisit rulesListed in server.go before relaxing this test")
+	}
+	if req.Status.Reason != noNamespaceAccessReason {
+		t.Errorf("reason = %q, want %q", req.Status.Reason, noNamespaceAccessReason)
+	}
+
+	// A subject no binding names is still none of this layer's business, listed or not.
+	other := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "nobody",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "team-a", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(other)
+	if other.Status.Denied {
+		t.Errorf("an unbound subject was denied: %q", other.Status.Reason)
+	}
+}
+
+// A namespaceSelector whose namespace cannot be read must deny.
+//
+// Both wrong answers look alike from outside - a selector that does not match denies too - so the
+// selector here is one that WOULD match a namespace with no labels at all. If the lister error is
+// swallowed and an empty label set used instead, the subject is granted a namespace nobody
+// evaluated the selector against.
+func TestAuthorizeRequest_NamespaceLookupFailureDenies(t *testing.T) {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
+		},
+	}}
+	handler := &Handler{
+		logger: log.New(io.Discard, "", 0),
+		cache:  fixtureCache(),
+		rules: rulesFor(rules.Rule{
+			Name:              "by-selector",
+			Subjects:          []rules.Subject{{Kind: "User", Name: "selector-user"}},
+			NamespaceSelector: selector,
+		}),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister([]runtime.Object{
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "labelless"}},
+		}),
+	}
+
+	// The control: a namespace that exists and carries no labels is opened by this selector.
+	req := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "selector-user",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "labelless", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(req)
+	if req.Status.Denied {
+		t.Fatalf("the selector matches a namespace with no labels; got denied with %q", req.Status.Reason)
+	}
+
+	// And a namespace the lister cannot resolve is denied rather than treated as label-less.
+	denied := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "selector-user",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "unreadable", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(denied)
+	if !denied.Status.Denied || denied.Status.Reason != noNamespaceAccessReason {
+		t.Errorf("a namespace whose labels could not be read was not denied: denied=%v reason=%q",
+			denied.Status.Denied, denied.Status.Reason)
+	}
+}
+
+// A namespace cache that has not filled yet denies, it does not answer "no labels".
+//
+// An empty cache says "no such namespace" for every name, which is what a namespace with no labels
+// looks like - and a DoesNotExist selector matches that, so a rule would open every namespace in
+// the cluster for as long as the cache took to fill. The webhook held this predicate and did not
+// consult it; nothing exercised the branch once it did.
+func TestAuthorizeRequest_UnsyncedNamespaceCacheDenies(t *testing.T) {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
+		},
+	}}
+	newHandler := func(synced bool) *Handler {
+		return &Handler{
+			logger: log.New(io.Discard, "", 0),
+			cache:  fixtureCache(),
+			rules: rulesFor(rules.Rule{
+				Name:              "by-selector",
+				Subjects:          []rules.Subject{{Kind: "User", Name: "selector-user"}},
+				NamespaceSelector: selector,
+			}),
+			bindings: binding.NewIndex(),
+			nsLister: newFakeNamespaceLister([]runtime.Object{
+				&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "labelless"}},
+			}),
+			nsSynced: func() bool { return synced },
+		}
+	}
+	request := func() *WebhookRequest {
+		return &WebhookRequest{Spec: WebhookResourceSpec{
+			User:               "selector-user",
+			ResourceAttributes: WebhookResourceAttributes{Namespace: "labelless", Resource: "pods", Verb: "get"},
+		}}
+	}
+
+	// The control: with the cache filled, this selector opens a namespace with no labels.
+	if got := newHandler(true).authorizeRequest(request()); got.Status.Denied {
+		t.Fatalf("with the cache synced the selector opens the namespace; got denied with %q", got.Status.Reason)
+	}
+
+	// And with it still filling, the same request is denied rather than answered from nothing.
+	got := newHandler(false).authorizeRequest(request())
+	if !got.Status.Denied || got.Status.Reason != rules.NoNamespaceAccessReason {
+		t.Errorf("an unsynced namespace cache must deny: denied=%v reason=%q", got.Status.Denied, got.Status.Reason)
+	}
+}
+
+// A subject bound by a rule binding whose rule is not in the directory is restricted until the rule
+// arrives: the binding is created seconds after the rule, and this webhook may see it first.
+func TestAuthorizeRequest_UnknownRuleBindingRestricts(t *testing.T) {
+	idx := binding.NewIndex()
+	idx.Upsert(ruleBinding("user-authz:late:admin", "carol"))
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    fixtureRules(), // knows nothing about the rule "late"
+		bindings: idx,
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	namespaced := &WebhookRequest{Spec: WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-a"}}}
+	if got := handler.authorizeRequest(namespaced); !got.Status.Denied || got.Status.Reason != rules.NoNamespaceAccessReason {
+		t.Errorf("namespaced request of a subject with an unobserved rule must be denied, got %+v", got.Status)
+	}
+	clusterScoped := &WebhookRequest{Spec: WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1"}}}
+	if got := handler.authorizeRequest(clusterScoped); !got.Status.Denied || got.Status.Reason != rules.NamespaceLimitedAccessReason {
+		t.Errorf("cluster-scoped request of a subject with an unobserved rule must be denied, got %+v", got.Status)
+	}
+
+	// once the rule is in the directory, its own scope applies
+	handler.rules = rulesFor(rules.Rule{Name: "late", Subjects: []rules.Subject{{Kind: "User", Name: "carol"}}, LimitNamespaces: []string{"team-a"}})
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: namespaced.Spec}); got.Status.Denied {
+		t.Errorf("the rule opens team-a, got %+v", got.Status)
+	}
+	other := &WebhookRequest{Spec: WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-b"}}}
+	if got := handler.authorizeRequest(other); !got.Status.Denied {
+		t.Errorf("the rule does not open team-b, got %+v", got.Status)
+	}
+
+	// a directory that has not been listed yet restricts too
+	handler.rules = staticRules{}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: namespaced.Spec}); !got.Status.Denied {
+		t.Errorf("an unsynced directory must restrict a subject bound by a rule, got %+v", got.Status)
+	}
+	// but a subject nobody binds gets no opinion, as before
+	nobody := &WebhookRequest{Spec: WebhookResourceSpec{User: "dave", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-a"}}}
+	if got := handler.authorizeRequest(nobody); got.Status.Denied {
+		t.Errorf("a subject without rule bindings is not restricted, got %+v", got.Status)
+	}
+}
+
+// The controller updates the bindings of a rule when a subject is added to it, and the binding can
+// reach the webhook before the rule's own update. The rule keeps its name throughout, so the guard
+// has to notice that the observed copy of the rule does not name the new subject yet - otherwise
+// the cluster-wide binding grants that subject every namespace.
+func TestAuthorizeRequest_SubjectAddedToKnownRuleRestricts(t *testing.T) {
+	// The directory's copy of "team-a" still names only alice.
+	observed := rulesFor(rules.Rule{
+		Name:            "team-a",
+		Subjects:        []rules.Subject{{Kind: "User", Name: "alice"}},
+		LimitNamespaces: []string{"dev"},
+	})
+
+	// The controller has already added bob to the bindings of the same rule.
+	idx := binding.NewIndex()
+	idx.Upsert(ruleBinding("user-authz:team-a:admin", "bob"))
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    observed,
+		bindings: idx,
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	inDev := WebhookResourceSpec{User: "bob", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "dev"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: inDev}); !got.Status.Denied {
+		t.Errorf("bob is bound by team-a but the observed rule does not name him; must be denied, got %+v", got.Status)
+	}
+	elsewhere := WebhookResourceSpec{User: "bob", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "kube-system"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: elsewhere}); !got.Status.Denied {
+		t.Errorf("the same holds for a system namespace, got %+v", got.Status)
+	}
+
+	// alice, whom the observed rule does name, keeps exactly the rule's scope.
+	aliceDev := WebhookResourceSpec{User: "alice", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "dev"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: aliceDev}); got.Status.Denied {
+		t.Errorf("alice is named by the rule and dev is in its scope, got %+v", got.Status)
+	}
+
+	// Once the rule's own update lands, bob gets the rule's scope and nothing more.
+	handler.rules = rulesFor(rules.Rule{
+		Name:            "team-a",
+		Subjects:        []rules.Subject{{Kind: "User", Name: "alice"}, {Kind: "User", Name: "bob"}},
+		LimitNamespaces: []string{"dev"},
+	})
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: inDev}); got.Status.Denied {
+		t.Errorf("the updated rule opens dev for bob, got %+v", got.Status)
+	}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: elsewhere}); !got.Status.Denied {
+		t.Errorf("the updated rule does not open kube-system, got %+v", got.Status)
+	}
+}
+
+// A subject that already has an observed rule keeps its scope when the guard fires for another
+// rule: rules union, so an unobserved one may only widen, and clamping the observed scope would
+// deny access the observed rule legitimately grants.
+func TestAuthorizeRequest_GuardDoesNotNarrowObservedScope(t *testing.T) {
+	observed := rulesFor(rules.Rule{
+		Name:            "known",
+		Subjects:        []rules.Subject{{Kind: "User", Name: "carol"}},
+		LimitNamespaces: []string{"team-a"},
+	})
+
+	idx := binding.NewIndex()
+	idx.Upsert(ruleBinding("user-authz:unobserved:admin", "carol"))
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    observed,
+		bindings: idx,
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	inScope := WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-a"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: inScope}); got.Status.Denied {
+		t.Errorf("the observed rule opens team-a and the guard must not take that away, got %+v", got.Status)
+	}
+	outOfScope := WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-b"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: outOfScope}); !got.Status.Denied {
+		t.Errorf("neither rule opens team-b, got %+v", got.Status)
+	}
+}
+
+// A cluster-scoped request for a resource that does not exist must not be denied. The webhook
+// cannot know whether RBAC grants it, and the API server answers 404 for a resource that is not
+// there - so denying turned every typo and every uninstalled CRD into "Forbidden" for anyone a
+// rule limits, including a SuperAdmin.
+func TestAuthorizeClusterScoped_AbsentResourceIsLeftToRBAC(t *testing.T) {
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    fixtureRules(),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	cases := []struct {
+		name  string
+		attrs WebhookResourceAttributes
 	}{
 		{
-			Name:   "Wrap",
-			Input:  ".*",
-			Output: "^.*$",
+			// The API server fills the version for real traffic, which is why the old escape hatch
+			// for a missing resource never ran outside hand-written SubjectAccessReviews.
+			"a resource of a group that does not exist, version filled in",
+			WebhookResourceAttributes{Group: "nonexistent.example.com", Version: "v1", Resource: "foos", Verb: "list"},
 		},
 		{
-			Name:   "Wrap tail",
-			Input:  "^.*",
-			Output: "^.*$",
+			"a core resource that does not exist, version filled in",
+			WebhookResourceAttributes{Version: "v1", Resource: "foobars", Verb: "list"},
 		},
 		{
-			Name:   "Wrap head",
-			Input:  ".*$",
-			Output: "^.*$",
+			"a resource of a known group that the group does not serve",
+			WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "nosuchthing", Verb: "list"},
 		},
 		{
-			Name:   "No wrap",
-			Input:  "^.*$",
-			Output: "^.*$",
+			"no version, as a hand-written SubjectAccessReview leaves it",
+			WebhookResourceAttributes{Group: "nonexistent.example.com", Resource: "foos", Verb: "list"},
 		},
 	}
 
-	for _, testCase := range tc {
-		t.Run(testCase.Name, func(t *testing.T) {
-			res := wrapRegex(testCase.Input)
-			if testCase.Output != res {
-				t.Fatalf("got %q, expected %q", res, testCase.Output)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := handler.authorizeRequest(&WebhookRequest{
+				Spec: WebhookResourceSpec{User: "limited", Group: []string{"limited"}, ResourceAttributes: tc.attrs},
+			})
+			if got.Status.Denied {
+				t.Errorf("denied with %q; a resource that does not exist is RBAC's to answer", got.Status.Reason)
 			}
 		})
+	}
+}
+
+// The distinction the fix rests on: when discovery could not be consulted we do not know whether
+// the resource is namespaced, and a cluster-wide list of a namespaced resource is exactly what a
+// limited subject must not get through the cluster-wide binding of its rule.
+func TestAuthorizeClusterScoped_UnreachableDiscoveryStillDenies(t *testing.T) {
+	broken := fixtureCache()
+	broken.err = errors.New("dial tcp 10.0.0.1:6443: i/o timeout")
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    broken,
+		rules:    fixtureRules(),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	got := handler.authorizeRequest(&WebhookRequest{
+		Spec: WebhookResourceSpec{
+			User:               "limited",
+			Group:              []string{"limited"},
+			ResourceAttributes: WebhookResourceAttributes{Version: "v1", Resource: "services", Verb: "list"},
+		},
+	})
+	if !got.Status.Denied {
+		t.Error("a lookup that did not happen must keep the request closed")
+	}
+	if got.Status.Reason != internalErrorReason {
+		t.Errorf("reason = %q, want the internal error reason", got.Status.Reason)
+	}
+}
+
+// A subject nobody limits is unaffected either way: the handler never reaches discovery for it.
+func TestAuthorizeClusterScoped_UnfilteredSubjectIgnoresDiscovery(t *testing.T) {
+	broken := fixtureCache()
+	broken.err = errors.New("dial tcp 10.0.0.1:6443: i/o timeout")
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    broken,
+		rules:    fixtureRules(),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	got := handler.authorizeRequest(&WebhookRequest{
+		Spec: WebhookResourceSpec{
+			User:               "nobody-limits-me",
+			ResourceAttributes: WebhookResourceAttributes{Version: "v1", Resource: "services", Verb: "list"},
+		},
+	})
+	if got.Status.Denied {
+		t.Errorf("denied with %q; the webhook has no opinion about a subject no rule names", got.Status.Reason)
+	}
+}
+
+// The full SubjectAccessReview - identity, groups, resource - used to be written for every decision
+// at the default verbosity: ~125 KB/min from a 5 rps probe on a stand, with no way to turn it off.
+// Denials are what an operator looks for; the rest is background and is opt-in.
+func TestDecisionLogMode(t *testing.T) {
+	for _, tc := range []struct {
+		env      string
+		want     decisionLogMode
+		warnings int
+	}{
+		{env: "", want: logDenied},
+		{env: "denied", want: logDenied},
+		{env: "all", want: logAll},
+		{env: "none", want: logNone},
+		{env: "ALL", want: logAll},
+		{env: "verbose", want: logDenied, warnings: 1},
+	} {
+		t.Run("env="+tc.env, func(t *testing.T) {
+			var buf bytes.Buffer
+			got := DecisionLogModeFrom(tc.env, log.New(&buf, "", 0))
+			if got != tc.want {
+				t.Errorf("mode = %v, want %v", got, tc.want)
+			}
+			if lines := strings.Count(buf.String(), "\n"); lines != tc.warnings {
+				t.Errorf("%d warning lines, want %d: %q", lines, tc.warnings, buf.String())
+			}
+		})
+	}
+
+	for _, tc := range []struct {
+		mode   decisionLogMode
+		denied bool
+		want   bool
+	}{
+		{logNone, false, false}, {logNone, true, false},
+		{logDenied, false, false}, {logDenied, true, true},
+		{logAll, false, true}, {logAll, true, true},
+	} {
+		if got := tc.mode.logs(tc.denied); got != tc.want {
+			t.Errorf("mode %v denied=%v: logs=%v, want %v", tc.mode, tc.denied, got, tc.want)
+		}
+	}
+}
+
+// ServeHTTP writes the review body only when the mode says so.
+func TestServeHTTPLogsDecisionsByMode(t *testing.T) {
+	// A cluster-wide list by a subject limited to selected namespaces is denied (see the table
+	// above); a subject no rule covers gets no opinion.
+	review := func(groups []string) *bytes.Reader {
+		body, _ := json.Marshal(WebhookRequest{Spec: WebhookResourceSpec{
+			User:               "test",
+			Group:              groups,
+			ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1"},
+		}})
+		return bytes.NewReader(body)
+	}
+	limited, nobody := []string{"limited-namespace-selector"}, []string(nil)
+	for _, tc := range []struct {
+		name    string
+		mode    decisionLogMode
+		groups  []string
+		wantLog bool
+	}{
+		{"denied is logged under the default", logDenied, limited, true},
+		{"no opinion is silent under the default", logDenied, nobody, false},
+		{"everything is logged under all", logAll, nobody, true},
+		{"nothing is logged under none", logNone, limited, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			handler := &Handler{
+				logger:       log.New(&buf, "", 0),
+				cache:        fixtureCache(),
+				rules:        fixtureRules(),
+				bindings:     binding.NewIndex(),
+				nsLister:     newFakeNamespaceLister(nil),
+				nsSynced:     func() bool { return true },
+				logDecisions: tc.mode,
+			}
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/", review(tc.groups)))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status %d", rec.Code)
+			}
+			if got := strings.Contains(buf.String(), "response body:"); got != tc.wantLog {
+				t.Errorf("logged=%v, want %v; log: %q", got, tc.wantLog, buf.String())
+			}
+		})
+	}
+}
+
+// retiredVersionCache answers only for the version the cluster still serves, the way discovery does
+// once a CRD version is switched to served: false.
+type retiredVersionCache struct {
+	served    string
+	preferred string
+	err       error
+}
+
+func (c *retiredVersionCache) Get(apiGroup, resource string) (bool, error) {
+	if apiGroup != c.served {
+		return false, fmt.Errorf("resource %s/%s is not found in cluster", apiGroup, resource)
+	}
+
+	return true, nil
+}
+
+func (c *retiredVersionCache) GetPreferredVersion(_, _ string) (string, error) {
+	return c.preferred, c.err
+}
+
+func (c *retiredVersionCache) Check(context.Context) error { return nil }
+
+// A client that still names a retired API version -- a stale discovery snapshot, or a generated
+// client built against the previous version of a CRD -- must not be told it has no access. Whether
+// a resource is namespaced is the only thing being asked here, and no two versions of a resource
+// disagree about that, so the scope is resolved through the version the cluster serves.
+func TestResourceScope_RetiredVersionIsResolvedThroughThePreferredOne(t *testing.T) {
+	handler := &Handler{
+		logger: log.New(io.Discard, "", 0),
+		cache:  &retiredVersionCache{served: "deckhouse.io/v1alpha2", preferred: "v1alpha2"},
+	}
+
+	for _, version := range []string{"v1alpha1", "v1alpha2"} {
+		scope, err := handler.resourceScope(version)("deckhouse.io", "projecttemplates")
+		if err != nil {
+			t.Fatalf("version %s: %v", version, err)
+		}
+		if !scope.Known || scope.Absent || !scope.Namespaced {
+			t.Fatalf("version %s: scope %+v, want a known namespaced resource", version, scope)
+		}
+	}
+
+	// A resource the cluster has never heard of is a different matter: nothing can resolve it, and
+	// the webhook has no basis to answer -- the error keeps the decision failing closed.
+	unknown := &Handler{
+		logger: log.New(io.Discard, "", 0),
+		cache:  &retiredVersionCache{served: "deckhouse.io/v1alpha2", err: fmt.Errorf("not found")},
+	}
+	if _, err := unknown.resourceScope("v1alpha1")("deckhouse.io", "ghosts"); err == nil {
+		t.Fatal("an unknown resource was resolved")
 	}
 }

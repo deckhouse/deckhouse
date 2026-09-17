@@ -17,7 +17,7 @@ package global
 import (
 	"maps"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 type Info struct {

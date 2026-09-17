@@ -282,7 +282,7 @@ Network (внутренняя сеть) может быть настроена �
 {% endalert %}
 
 {% alert level="warning" %}
-Отключите vApp/Guest OS Customization (Guest Customization, vApp Customization и аналогичные механизмы) для шаблона и виртуальных машин кластера в VMware Cloud Director. DKP выполняет первичную настройку узлов через `cloud-init` (datasource OVF/VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
+Отключите vApp/Guest OS Customization (Guest Customization, vApp Customization и аналогичные механизмы) для шаблона и виртуальных машин кластера в VMware Cloud Director. DP выполняет первичную настройку узлов через `cloud-init` (datasource OVF/VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
 {% endalert %}
 
 {% include notice_envinronment.liquid %}
@@ -423,15 +423,15 @@ shutdown -P now
 
 * VCD поддерживает CSI. Диски создаются как VCD Independent Disks.
 * Guest property `disk.EnableUUID` должно быть разрешено для используемых шаблонов виртуальных машин.
-* Deckhouse Kubernetes Platform поддерживает изменение размера дисков с версии v1.59.1.
+* Deckhouse Platform поддерживает изменение размера дисков с версии v1.59.1.
 
 ## Использование балансировщика нагрузки
 
-* Компоненты DKP поддерживают ресурсов Service типа LoadBalancer при установке в VMware Cloud Director (VCD).
+* Компоненты DP поддерживают ресурсов Service типа LoadBalancer при установке в VMware Cloud Director (VCD).
 * В качестве балансировщика используется VMware NSX Advanced Load Balancer (ALB или Avi Networks).
 * Поддержка доступна **только** при использовании платформы виртуализации сети `NSX-T`.
 * Балансировка должна быть включёна на Edge Gateway вашим провайдером VCD. Проверить, включёна ли балансировка, можно в разделе Edge Gateway → Load Balancer → General Settings — параметр `State` должен быть в статусе `Active`.
-* Если балансировщик был активирован после успешного создания кластера DKP, компоненты автоматически подхватят изменения в течение часа (дополнительных действий не требуется).
+* Если балансировщик был активирован после успешного создания кластера DP, компоненты автоматически подхватят изменения в течение часа (дополнительных действий не требуется).
 * Для каждого открытого порта создаётся связка Pool + Virtual Service.
 * При наличии межсетевого экрана необходимо создать разрешающее правило для внешнего IP-адреса балансировщика и соответствующих портов.
 

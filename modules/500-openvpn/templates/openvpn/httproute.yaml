@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
@@ -22,7 +22,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls" "httproute-tls") }}
         namespace: d8-{{ .Chart.Name }}
       mode: Terminate
   - allowedRoutes:
@@ -56,9 +56,6 @@ metadata:
     web.deckhouse.io/export-name: "openvpn"
     web.deckhouse.io/export-icon: "/public/img/openvpn.png"
     alb.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
-  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
-  {{- end }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.openvpn.auth.externalAuthentication }}
     alb.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "openvpn-admin")) .Values.openvpn.auth.externalAuthentication.authSignInURL | quote }}
     alb.network.deckhouse.io/auth-url: {{ .Values.openvpn.auth.externalAuthentication.authURL | quote }}
@@ -89,6 +86,14 @@ spec:
     - path:
         type: PathPrefix
         value: /
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
 {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1

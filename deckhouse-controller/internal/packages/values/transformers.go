@@ -15,10 +15,10 @@
 package values
 
 import (
-	addonvalues "github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-openapi/spec"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/defaults"
+	addonvalues "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 // transformer interface for applying transformations to values.

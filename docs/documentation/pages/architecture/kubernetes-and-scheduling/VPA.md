@@ -2,13 +2,13 @@
 title: "Vertical Pod Autoscaler"
 permalink: en/architecture/kubernetes-and-scheduling/vpa.html
 search: autoscaler architecture, vertical scaling, resource optimization, pod scaling, vpa, vertical pod autoscaler, vertical-pod-autoscaler
-description: VPA operating modes and limitations in Deckhouse Kubernetes Platform.
+description: VPA operating modes and limitations in Deckhouse Platform.
 relatedLinks:
   - title: "Enabling vertical scaling"
     url: /products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/vpa.html
 ---
 
-The [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module provides [Vertical Pod Autoscaler (VPA)](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) in Deckhouse Kubernetes Platform (DKP).
+The [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module provides [Vertical Pod Autoscaler (VPA)](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) in Deckhouse Platform (DP).
 
 For details on module configuration and usage examples, refer to the [relevant documentation section](/modules/vertical-pod-autoscaler/configuration.html).
 
@@ -26,7 +26,7 @@ VPA can operate in two modes:
 
   - **Recreate**: VPA adjusts the resources of running Pods by restarting them. For a single Pod (`replicas: 1`), this will result in service unavailability during the restart. VPA does not restart Pods that were created without a controller.
 
-  - **Auto**: A deprecated mode. It will no longer be supported in future DKP versions. Use one of the supported operating modes instead.
+  - **Auto**: A deprecated mode. It will no longer be supported in future DP versions. Use one of the supported operating modes instead.
 
 - Recommendations only, without modifying resources:
 
@@ -69,7 +69,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module and its interactions with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module and its interactions with other DP components are shown in the following diagram:
 
 ![vertical-pod-autoscaler module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-vertical-pod-autoscaler.png)
 

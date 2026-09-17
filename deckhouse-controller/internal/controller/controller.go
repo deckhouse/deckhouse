@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -46,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
@@ -345,7 +345,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	// object, and the user module sources their repositories, while the
 	// controllers still wait for the sync. Runs after the resolver, so a
 	// deployed duplicate it superseded no longer counts.
-	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("pkgsync")); err != nil {
+	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.DefaultReleaseChannel, app.EmbeddedModulesDir, app.GlobalHooksDir, c.logger.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 

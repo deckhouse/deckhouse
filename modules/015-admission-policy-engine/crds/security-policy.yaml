@@ -376,7 +376,14 @@ spec:
                       description: If set to true, only the pods with the read-only root filesystem across all containers will be permitted to run. See the [Kubernetes documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core) for more details.
                     automountServiceAccountToken:
                       type: boolean
-                      description: Allows pods to run with `automountServiceAccountToken` enabled.
+                      description: |
+                        Allows pods to run with `automountServiceAccountToken` enabled.
+
+                        When set to `false`, a pod is denied if it either sets
+                        `spec.automountServiceAccountToken: true` or mounts
+                        `/var/run/secrets/kubernetes.io/serviceaccount` in any container.
+                        The mount is checked regardless of the flag value, so explicitly
+                        projecting a service account token at that path is denied as well.
                     allowedClusterRoles:
                       type: array
                       description: "A list of allowed cluster roles to bind to users."

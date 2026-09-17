@@ -319,10 +319,6 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 			return fmt.Errorf("creating provider: %w", err)
 		}
 
-		if sshProviderInitializer == nil {
-			return errors.New("connection config is required, converge reaches the nodes over ssh")
-		}
-
 		return nil
 	})
 

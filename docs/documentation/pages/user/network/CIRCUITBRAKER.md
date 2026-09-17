@@ -1,10 +1,10 @@
 ---
 title: "Configuring Circuit Breaker"
-description: "Configuring Circuit Breaker using Istio in Deckhouse Kubernetes Platform. Managing TCP connection limits, request timeouts, and excluding problematic endpoints via DestinationRule."
+description: "Configuring Circuit Breaker using Istio in Deckhouse Platform. Managing TCP connection limits, request timeouts, and excluding problematic endpoints via DestinationRule."
 permalink: en/user/network/circuit-breaker.html
 ---
 
-In Deckhouse Kubernetes Platform, the Circuit Breaker mechanism is implemented
+In Deckhouse Platform, the Circuit Breaker mechanism is implemented
 using Istio (the [istio](/modules/istio/) module) and provides the following capabilities:
 
 - Temporarily exclude an endpoint from load balancing if the error limit is exceeded.

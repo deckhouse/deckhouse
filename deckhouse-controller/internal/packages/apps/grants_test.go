@@ -18,12 +18,12 @@ import (
 	"context"
 	"testing"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 const grantSettings = `

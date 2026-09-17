@@ -4,7 +4,7 @@
 
 # Secrets Scan job.
 include:
-  - '.gitlab/notify-failure.yml'
+  - '.gitlab/notify.yml'
 
 .scripts:
   gitleaks_config: |
@@ -62,7 +62,7 @@ secrets-scan:
   extends:
     - .rules:on_schedule_secrets_scan
     - .gitleaks-base-common
-    - .notify
+    - .notify-failure
   script:
     - !reference [.scripts, gitleaks_full_cmd]
 

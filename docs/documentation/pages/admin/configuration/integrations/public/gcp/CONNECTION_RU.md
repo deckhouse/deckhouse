@@ -4,10 +4,16 @@ permalink: ru/admin/integrations/public/gcp/connection-and-authorization.html
 lang: ru
 ---
 
-Для управления ресурсами в Google Cloud с помощью Deckhouse Kubernetes Platform необходимо создать Service Account.
+Для управления ресурсами в Google Cloud с помощью Deckhouse Platform необходимо создать Service Account.
 
 {% alert level="warning" %}
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
+{% endalert %}
+
+{% alert level="warning" %}
+Начиная с версии 1.77, новые кластеры в Google Cloud по умолчанию используют CNI Cilium с туннелированием трафика подов через VXLAN. В существующих кластерах CNI не меняется.
+
+Убедитесь, что на всех узлах используется ядро Linux версии 5.8 или новее, а правила межсетевого экрана разрешают UDP-трафик между узлами. Список портов приведён в разделе [«Сетевое взаимодействие компонентов платформы»](../../../../reference/network_interaction.html), настройка CNI описана в разделе [«Настройка внутренней сети»](../../../configuration/network/internal/configuration.html).
 {% endalert %}
 
 ## Создание Service Account
