@@ -154,11 +154,11 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 	return nil
 }
 
-// matchedNodeGroups returns the immutable NodeGroups a selector picks: the
+// matchedNodeGroups returns the NodeGroups a selector picks out of groups: the
 // listed names it intersects, or all of them when it names none.
-func matchedNodeGroups(matchNames, immutableGroups []string) []string {
+func matchedNodeGroups(matchNames, groups []string) []string {
 	var matched []string
-	for _, name := range immutableGroups {
+	for _, name := range groups {
 		if len(matchNames) == 0 || slices.Contains(matchNames, name) {
 			matched = append(matched, name)
 		}

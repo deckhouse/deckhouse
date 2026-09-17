@@ -59,10 +59,9 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 		return fmt.Errorf("read what the Engine nodes report about NodeStaticPodRequests: %w", err)
 	}
 
-	// The bashible half. Removable as a unit: these lines go together with
-	// nsprapplied_annotation.go when the last mutable NodeGroup is gone, and
-	// mergeOutcomes keeps working with one source. The immutable groups are read
-	// here because that source is the only thing left that needs them.
+	// The bashible half, removable as a unit with nsprapplied_annotation.go once
+	// the last mutable NodeGroup is gone; the immutable groups are read here
+	// because this source is the only thing left that needs them.
 	immutable, err := r.immutableNodeGroupNames(ctx)
 	if err != nil {
 		return err
