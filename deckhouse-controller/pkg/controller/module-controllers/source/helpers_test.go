@@ -16,15 +16,20 @@ package source
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -281,4 +286,202 @@ func TestReleaseChainToTargetComplete(t *testing.T) {
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// TestSyncRegistrySettings covers the fan-out that re-applies changed registry settings to the
+// deployed releases of a source. The release controller drops the annotation as soon as it has
+// handled it, so it writes the very objects this fan-out writes; the cases below pin down that a
+// collision there cannot cost progress, because a lost fan-out replays a moduleRun task per release.
+func TestSyncRegistrySettings(t *testing.T) {
+	const sourceName = "deckhouse"
+
+	const sourceUID = types.UID("11111111-1111-1111-1111-111111111111")
+
+	scheme, err := project.Scheme()
+	require.NoError(t, err)
+
+	newSource := func() *v1alpha1.ModuleSource {
+		return &v1alpha1.ModuleSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: sourceName,
+				UID:  sourceUID,
+				// a stale checksum, so the fan-out is due
+				Annotations: map[string]string{v1alpha1.ModuleSourceAnnotationRegistryChecksum: "stale"},
+			},
+			Spec: v1alpha1.ModuleSourceSpec{
+				Registry: v1alpha1.ModuleSourceSpecRegistry{Repo: "registry.example.com/modules", Scheme: "HTTPS"},
+			},
+		}
+	}
+
+	newRelease := func(name, phase string, owned bool) *v1alpha1.ModuleRelease {
+		release := &v1alpha1.ModuleRelease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: map[string]string{v1alpha1.ModuleReleaseLabelSource: sourceName},
+			},
+			Spec:   v1alpha1.ModuleReleaseSpec{ModuleName: name},
+			Status: v1alpha1.ModuleReleaseStatus{Phase: phase},
+		}
+
+		if owned {
+			release.OwnerReferences = []metav1.OwnerReference{{
+				Kind: v1alpha1.ModuleSourceGVK.Kind,
+				Name: sourceName,
+				UID:  sourceUID,
+			}}
+		}
+
+		return release
+	}
+
+	annotationOf := func(t *testing.T, cl client.Client, name string) (string, bool) {
+		t.Helper()
+
+		release := new(v1alpha1.ModuleRelease)
+		require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, release))
+		value, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]
+
+		return value, set
+	}
+
+	t.Run("annotates deployed releases of the source and commits the checksum", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			newRelease("console", v1alpha1.ModuleReleasePhaseDeployed, true),
+			newRelease("observability", v1alpha1.ModuleReleasePhaseDeployed, true),
+			newRelease("prompp", v1alpha1.ModuleReleasePhasePending, true),
+			newRelease("foreign", v1alpha1.ModuleReleasePhaseDeployed, false),
+		).Build()
+
+		r := &reconciler{client: cl, dc: dependency.NewDependencyContainer(), logger: log.NewNop()}
+
+		source := newSource()
+		require.NoError(t, r.syncRegistrySettings(context.Background(), source))
+
+		for _, name := range []string{"console", "observability"} {
+			_, set := annotationOf(t, cl, name)
+			assert.True(t, set, "deployed release %q of the source must be annotated", name)
+		}
+
+		for _, name := range []string{"prompp", "foreign"} {
+			_, set := annotationOf(t, cl, name)
+			assert.False(t, set, "release %q is not a deployed release of the source", name)
+		}
+
+		assert.NotEqual(t, "stale", source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationRegistryChecksum],
+			"a complete fan-out must commit the new checksum, otherwise the next resync replays it")
+	})
+
+	t.Run("nothing to do when the checksum already matches", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			newRelease("console", v1alpha1.ModuleReleasePhaseDeployed, true),
+		).Build()
+
+		r := &reconciler{client: cl, dc: dependency.NewDependencyContainer(), logger: log.NewNop()}
+
+		// prime the checksum by running a full sync first
+		source := newSource()
+		require.NoError(t, r.syncRegistrySettings(context.Background(), source))
+
+		require.ErrorIs(t, r.syncRegistrySettings(context.Background(), source), ErrSettingsNotChanged)
+	})
+
+	t.Run("annotates through a patch, never an update", func(t *testing.T) {
+		// An update carries a resourceVersion and therefore races the release controller, which
+		// writes the same releases to drop the annotation. Losing that race used to cost the whole
+		// fan-out, so this path must not go anywhere near an update.
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			newRelease("console", v1alpha1.ModuleReleasePhaseDeployed, true),
+			newRelease("observability", v1alpha1.ModuleReleasePhaseDeployed, true),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			Update: func(_ context.Context, _ client.WithWatch, obj client.Object, _ ...client.UpdateOption) error {
+				return apierrors.NewConflict(v1alpha1.ModuleReleaseGVR.GroupResource(), obj.GetName(),
+					errors.New("the object has been modified"))
+			},
+		}).Build()
+
+		r := &reconciler{client: cl, dc: dependency.NewDependencyContainer(), logger: log.NewNop()}
+
+		source := newSource()
+		require.NoError(t, r.syncRegistrySettings(context.Background(), source))
+
+		for _, name := range []string{"console", "observability"} {
+			_, set := annotationOf(t, cl, name)
+			assert.True(t, set, "release %q must be annotated", name)
+		}
+
+		assert.NotEqual(t, "stale", source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationRegistryChecksum])
+	})
+
+	t.Run("a release deleted meanwhile is not a failure", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			newRelease("console", v1alpha1.ModuleReleasePhaseDeployed, true),
+			newRelease("observability", v1alpha1.ModuleReleasePhaseDeployed, true),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, p client.Patch, opts ...client.PatchOption) error {
+				if obj.GetName() == "console" {
+					return apierrors.NewNotFound(v1alpha1.ModuleReleaseGVR.GroupResource(), obj.GetName())
+				}
+
+				return cl.Patch(ctx, obj, p, opts...)
+			},
+		}).Build()
+
+		r := &reconciler{client: cl, dc: dependency.NewDependencyContainer(), logger: log.NewNop()}
+
+		source := newSource()
+		require.NoError(t, r.syncRegistrySettings(context.Background(), source),
+			"a release that no longer exists has nothing to pick the settings up for")
+
+		assert.NotEqual(t, "stale", source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationRegistryChecksum])
+	})
+
+	t.Run("one unwritable release does not hold back the others", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			newRelease("aaa-first", v1alpha1.ModuleReleasePhaseDeployed, true),
+			newRelease("bbb-broken", v1alpha1.ModuleReleasePhaseDeployed, true),
+			newRelease("ccc-last", v1alpha1.ModuleReleasePhaseDeployed, true),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, p client.Patch, opts ...client.PatchOption) error {
+				if obj.GetName() == "bbb-broken" {
+					return errors.New("boom")
+				}
+
+				return cl.Patch(ctx, obj, p, opts...)
+			},
+		}).Build()
+
+		r := &reconciler{client: cl, dc: dependency.NewDependencyContainer(), logger: log.NewNop()}
+
+		source := newSource()
+		err := r.syncRegistrySettings(context.Background(), source)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "bbb-broken")
+
+		// the release listed after the broken one must still have been reached
+		for _, name := range []string{"aaa-first", "ccc-last"} {
+			_, set := annotationOf(t, cl, name)
+			assert.True(t, set, "release %q must be annotated despite a failure on another release", name)
+		}
+
+		assert.Equal(t, "stale", source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationRegistryChecksum],
+			"an incomplete fan-out must not commit the checksum, or the failed release keeps stale settings")
+	})
+
+	t.Run("an annotation left over from an earlier change is refreshed", func(t *testing.T) {
+		const earlier = "2006-01-02T15:04:05Z"
+
+		release := newRelease("console", v1alpha1.ModuleReleasePhaseDeployed, true)
+		release.Annotations = map[string]string{v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged: earlier}
+
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(release).Build()
+
+		r := &reconciler{client: cl, dc: dependency.NewDependencyContainer(), logger: log.NewNop()}
+
+		require.NoError(t, r.syncRegistrySettings(context.Background(), newSource()))
+
+		value, set := annotationOf(t, cl, "console")
+		require.True(t, set)
+		assert.NotEqual(t, earlier, value, "the stamp must move, so the release is not left on an old change")
+	})
 }
