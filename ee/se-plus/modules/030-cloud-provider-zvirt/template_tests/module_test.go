@@ -68,6 +68,10 @@ nodes:
     sshPublicKey: ssh-rsa deadbeef
     layout: Standard
 internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
   credentialSecrets:
     d8-credentials:
       authScheme: userPassword
@@ -115,6 +119,10 @@ nodes:
     sshPublicKey: ssh-rsa deadbeef
     layout: Standard
 internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
   credentialSecrets:
     d8-credentials:
       authScheme: userPassword
@@ -225,6 +233,70 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 
+			validationWebhookDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "validation-webhook")
+			Expect(validationWebhookDeployment.Exists()).To(BeTrue())
+			Expect(validationWebhookDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
+- --webhook-port=4330
+- --webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs
+- --metrics-bind-address=0
+- --health-probe-bind-address=0.0.0.0:4332`))
+
+			validationWebhookTLS := f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", "validation-webhook-tls")
+			Expect(validationWebhookTLS.Exists()).To(BeTrue())
+
+			// The webhook must review exactly three resources, and reach the InstanceClass through
+			// v1 — v1alpha1 is frozen and carries none of the fields the rules look at.
+			validatingWebhookConfiguration := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-cloud-provider-zvirt-validation-webhook")
+			Expect(validatingWebhookConfiguration.Exists()).To(BeTrue())
+			Expect(validatingWebhookConfiguration.Field("webhooks.#").Int()).To(BeEquivalentTo(4))
+			Expect(validatingWebhookConfiguration.Field("webhooks.0.clientConfig.service.path").String()).To(Equal("/validate--v1-secret"))
+			Expect(validatingWebhookConfiguration.Field("webhooks.1.clientConfig.service.path").String()).To(Equal("/validate-deckhouse-io-v1alpha1-moduleconfig"))
+			Expect(validatingWebhookConfiguration.Field("webhooks.2.clientConfig.service.path").String()).To(Equal("/validate-deckhouse-io-v1-nodegroup"))
+			Expect(validatingWebhookConfiguration.Field("webhooks.3.clientConfig.service.path").String()).To(Equal("/validate-deckhouse-io-v1-zvirtinstanceclass"))
+			Expect(validatingWebhookConfiguration.Field("webhooks.3.rules.0.apiVersions").String()).To(MatchYAML(`["v1"]`))
+
+			// Deletion of the ModuleConfig is deliberately not reviewed: disabling the module is
+			// the operator's call.
+			Expect(validatingWebhookConfiguration.Field("webhooks.1.rules.0.operations").String()).To(MatchYAML(`["CREATE", "UPDATE"]`))
+
+			// Read-only: the webhook reviews writes, it never makes any.
+			validationWebhookRole := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-zvirt:validation-webhook")
+			Expect(validationWebhookRole.Exists()).To(BeTrue())
+			Expect(validationWebhookRole.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - zvirtinstanceclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch`))
+
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-zvirt:user")
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzUser.Field("rules").String()).To(MatchYAML(`
@@ -322,6 +394,10 @@ storage:
 ccm:
   disabled: true
 internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
   credentialSecrets:
     d8-credentials:
       authScheme: userPassword

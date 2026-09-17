@@ -6,14 +6,27 @@ properties:
     type: object
     default: {}
     properties:
+      validationWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
       cniSecretData:
         type: string
         x-examples:
         - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lrUnBjbVZqZEZkcGRHaE9iMlJsVW05MWRHVnpJbjA9Cg=="
-      # Managed credential Secrets of the module namespace, keyed by Secret name. Written by
-      # hooks/credentials.go; while the migration from the legacy ZvirtClusterConfiguration is
-      # incomplete, hooks/zvirt_cluster_configuration.go seeds the same map from the legacy
-      # provider.username/password so the workloads keep rendering.
       credentialSecrets:
         type: object
         default: {}
@@ -156,7 +169,7 @@ properties:
                     additionalProperties: false
                     description: |
                       Enables a custom static network configuration for nodes in this NodeGroup.
-                      
+
                       If specified, you must set `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
                     properties:
                       networkInterfaceName:
