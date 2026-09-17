@@ -3,7 +3,7 @@ title: Layouts and configuration in Basis Dynamix
 permalink: en/admin/integrations/private/dynamix/layout.html
 ---
 
-Deckhouse Kubernetes Platform supports two layouts in the Basis Dynamix cloud:
+Deckhouse Platform supports two layouts in the Basis Dynamix cloud:
 
 - Standard — a layout that uses only an external network;
 - StandardWithInternalNetwork — a layout with an internal (private) network and DNS servers.

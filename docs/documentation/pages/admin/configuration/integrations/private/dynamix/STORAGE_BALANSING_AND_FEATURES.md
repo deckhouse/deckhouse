@@ -32,7 +32,7 @@ Editing the cluster-wide `storagePolicy` recreates the CloudEphemeral nodes of e
 
 ## Load balancing
 
-The Basis Dynamix platform doesn't provide a built-in load balancer. To handle inbound traffic to a Deckhouse Kubernetes Platform cluster, the following approaches are recommended:
+The Basis Dynamix platform doesn't provide a built-in load balancer. To handle inbound traffic to a Deckhouse Platform cluster, the following approaches are recommended:
 
 1. An external load balancer. If your infrastructure has an external load balancer (hardware or software), configure it to forward ports 80 and 443 to the cluster's frontend nodes.
 

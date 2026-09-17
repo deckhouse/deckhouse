@@ -22,7 +22,7 @@ The integration provides the following capabilities:
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
-To integrate Deckhouse Kubernetes Platform (DKP) with Basis Dynamix, you need the following:
+To integrate Deckhouse Platform (DP) with Basis Dynamix, you need the following:
 
 - Basis Dynamix 4.6 or newer (on an older platform `dhctl bootstrap` refuses to deploy a cluster);
 - Access to the API controller and to the Basis Dynamix SSO;
@@ -34,7 +34,7 @@ To integrate Deckhouse Kubernetes Platform (DKP) with Basis Dynamix, you need th
 
 ## Preparing a cloud image
 
-To deploy virtual machines, DKP uses OS cloud images prepared by vendors for virtual environments. Such images usually include:
+To deploy virtual machines, DP uses OS cloud images prepared by vendors for virtual environments. Such images usually include:
 
 - `cloud-init`;
 - Virtual hardware drivers;
