@@ -2,7 +2,7 @@ diff --git a/yandex/resource_yandex_vpc_address.go b/yandex/resource_yandex_vpc_
 index 186ff8a..8370927 100644
 --- a/yandex/resource_yandex_vpc_address.go
 +++ b/yandex/resource_yandex_vpc_address.go
-@@ -8,9 +8,11 @@ import (
+@@ -8,10 +8,16 @@ import (
  	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
  
  	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -14,12 +14,17 @@ index 186ff8a..8370927 100644
  )
  
  const yandexVPCAddressDefaultTimeout = 30 * time.Second
-@@ -375,20 +377,108 @@ func resourceYandexVPCAddressDelete(d *schema.ResourceData, meta interface{}) er
++
++// vpcAddressReleaseTimeout bounds the detach + retry attempt that runs when the
++// initial delete is rejected because a compute instance still holds the address.
++const vpcAddressReleaseTimeout = 5 * time.Minute
+ 
+@@ -375,20 +381,114 @@ func resourceYandexVPCAddressDelete(d *schema.ResourceData, meta interface{}) er
  	ctx, cancel := context.WithTimeout(config.Context(), d.Timeout(schema.TimeoutDelete))
  	defer cancel()
  
 -	op, err := config.sdk.WrapOperation(config.sdk.VPC().Address().Delete(ctx, req))
-+	deleteAddress := func() error {
++	deleteAddress := func(ctx context.Context) error {
 +		op, err := config.sdk.WrapOperation(config.sdk.VPC().Address().Delete(ctx, req))
 +		if err != nil {
 +			return err
@@ -33,7 +38,7 @@ index 186ff8a..8370927 100644
 +		return err
 +	}
 +
-+	err := deleteAddress()
++	err := deleteAddress(ctx)
 +
 +	// An address that is still assigned to a compute instance cannot be deleted:
 +	// the API answers FailedPrecondition. Terraform gives no way to guarantee
@@ -41,11 +46,17 @@ index 186ff8a..8370927 100644
 +	// release it here and retry. Deleting an address the caller has removed from
 +	// configuration implies detaching it first.
 +	if err != nil && isStatusWithCode(err, codes.FailedPrecondition) {
-+		if detachErr := detachAddressFromInstances(ctx, config, d); detachErr != nil {
-+			return addressError("releasing address %q before deletion: %s", d.Id(), detachErr)
++		// Detach + retry needs its own timeout: instance listing,
++		// RemoveOneToOneNat, and a second Delete easily exceed the
++		// TimeoutDelete that governed the initial attempt.
++		releaseCtx, releaseCancel := context.WithTimeout(config.Context(), vpcAddressReleaseTimeout)
++		defer releaseCancel()
++
++		if detachErr := detachAddressFromInstances(releaseCtx, config, d); detachErr != nil {
++			return addressError("releasing address %q before deletion: %s (original error: %s)", d.Id(), detachErr, err)
 +		}
 +
-+		err = deleteAddress()
++		err = deleteAddress(releaseCtx)
 +	}
 +
  	if err != nil {
