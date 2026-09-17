@@ -115,10 +115,9 @@ func (s *StepsStorage) staticPodsFor(ng string) []*staticPodRequest {
 	return requests
 }
 
-// reservedStaticPodNames are the manifests the bashible steps write into
-// /etc/kubernetes/manifests themselves: 051, 052, cluster-bootstrap 020/070 and
-// the control-plane four of 050/072. Mirrors the list of the same name in
-// node-controller api/deckhouse.io/v1alpha1/nodestaticpodrequest_types.go.
+// reservedStaticPodNames are the manifests bashible steps (051, 052, 020/070,
+// the control-plane four of 050/072) write themselves. Mirrors the list of the
+// same name in node-controller api/deckhouse.io/v1alpha1/nodestaticpodrequest_types.go.
 var reservedStaticPodNames = []string{
 	"etcd",
 	"kube-apiserver",
@@ -167,7 +166,7 @@ func acceptedStaticPods(stored map[string][]*staticPodRequest) map[string]bool {
 		}
 
 		if slices.Contains(reservedStaticPodNames, request.Name) {
-			klog.Errorf("Skipping NodeStaticPodRequest %s: the name belongs to a manifest the node writes itself", request.Name)
+			klog.Errorf("Skipping NodeStaticPodRequest %s: the name belongs to a manifest the node agent or a bashible step writes itself", request.Name)
 			continue
 		}
 

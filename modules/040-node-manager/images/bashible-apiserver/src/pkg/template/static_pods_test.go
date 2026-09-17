@@ -182,9 +182,6 @@ func TestStaticPodsFor(t *testing.T) {
 		require.Equal(t, []string{"node-local-dns"}, staticPodNames(storage.staticPodsFor("worker")))
 	})
 
-	// The wildcard key and the group key are read one after the other, and an
-	// object selecting its group explicitly is in neither twice — but a stored
-	// duplicate must not survive the concatenation either.
 	t.Run("a removed object leaves every key it was stored under", func(t *testing.T) {
 		storage := newStaticPodsStorage()
 		request := staticPodRequestObject("node-local-dns", time.Unix(200, 0), []string{"worker", "master"}, nodeLocalDNSManifest)
