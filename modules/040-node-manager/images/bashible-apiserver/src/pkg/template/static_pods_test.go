@@ -74,9 +74,10 @@ func newStaticPodsStorage() *StepsStorage {
 	return &StepsStorage{
 		// "all:" is the cache key of the common steps for an empty provider: a
 		// populated cache keeps Render off the filesystem.
-		systemScripts:          map[string]map[string][]byte{"all:": {}},
-		staticPodRequests:      make(map[string][]*staticPodRequest),
-		staticPodRequestsQueue: make(chan nodeConfigurationQueueAction, 100),
+		systemScripts:              map[string]map[string][]byte{"all:": {}},
+		staticPodRequests:          make(map[string][]*staticPodRequest),
+		staticPodRequestsQueue:     make(chan nodeConfigurationQueueAction, 100),
+		staticPodRequestsHasSynced: func() bool { return true },
 	}
 }
 
@@ -218,10 +219,11 @@ func TestRenderStaticPodsStep(t *testing.T) {
 	require.Contains(t, worker, `new_names='["node-local-dns","registry-agent"]'`)
 	require.Contains(t, worker, `"node.deckhouse.io/static-pods=node-local-dns,registry-agent"`)
 
-	// The state file is recorded before the manifests are written: a recorded
-	// name whose file is absent is written by the next run, while a written file
-	// no run remembers is never removed. The annotation stays last.
-	require.Less(t, strings.Index(worker, `rm -f "${manifests_dir}/${old_name}.yaml"`), strings.Index(worker, "bb-sync-file"))
+	// Prune, then record, then write: the prune reads the old names, so a state
+	// file written first would leave the manifests of the departed objects. A
+	// recorded name whose file is absent is written by the next run, while a
+	// written file no run remembers is never removed. The annotation stays last.
+	require.Less(t, strings.Index(worker, `rm -f "${manifests_dir}/${old_name}.yaml"`), strings.Index(worker, `echo "$new_names" > "$state_file"`))
 	require.Less(t, strings.Index(worker, `echo "$new_names" > "$state_file"`), strings.Index(worker, "bb-sync-file"))
 	require.Less(t, strings.LastIndex(worker, "bb-sync-file"), strings.Index(worker, "bb-curl-helper-patch-node-metadata"))
 
@@ -487,6 +489,31 @@ func TestSubscribeOnStaticPodRequestsSurvivesAnUnreadableResource(t *testing.T) 
 
 	storage := newStaticPodsStorage()
 	storage.subscribeOnStaticPodRequests(ctx, dynamicinformer.NewDynamicSharedInformerFactory(client, 0))
+
+	steps, err := storage.Render("all", "", map[string]interface{}{}, "worker")
+	require.NoError(t, err)
+	require.NotContains(t, steps, staticPodsStepName)
+}
+
+func TestRenderOmitsTheStaticPodsStepUntilTheInformerSynced(t *testing.T) {
+	storage := newStaticPodsStorage()
+	storage.staticPodRequestsHasSynced = nil
+
+	steps, err := storage.Render("all", "", map[string]interface{}{}, "worker")
+	require.NoError(t, err)
+	// An informer that listed nothing knows of no requests, and a step with an
+	// empty list removes every static pod the node is running.
+	require.NotContains(t, steps, staticPodsStepName)
+
+	synced := false
+	storage.staticPodRequestsHasSynced = func() bool { return synced }
+
+	steps, err = storage.Render("all", "", map[string]interface{}{}, "worker")
+	require.NoError(t, err)
+	require.NotContains(t, steps, staticPodsStepName)
+
+	// A CRD installed after the bounded wait gave up still switches the step on.
+	synced = true
 
 	require.Contains(t, renderStaticPodsStepFor(t, storage, "worker"), `new_names='[]'`)
 }

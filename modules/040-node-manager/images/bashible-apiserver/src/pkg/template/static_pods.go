@@ -72,6 +72,17 @@ func (s *StepsStorage) RemoveStaticPodRequest(request *NodeStaticPodRequest) {
 	}
 }
 
+// staticPodRequestsSynced reports whether the informer has listed the objects at
+// least once, which HasSynced stays true after, including a CRD installed long
+// after the bounded wait gave up.
+func (s *StepsStorage) staticPodRequestsSynced() bool {
+	s.m.RLock()
+	hasSynced := s.staticPodRequestsHasSynced
+	s.m.RUnlock()
+
+	return hasSynced != nil && hasSynced()
+}
+
 // staticPodsFor returns this group's requests and the wildcard ones, sorted by
 // object name. The pod contest is settled over all stored requests, not just
 // this group's, so an object that lost a pod is refused by every group.
@@ -306,6 +317,10 @@ func (s *StepsStorage) subscribeOnStaticPodRequests(ctx context.Context, factory
 
 	informer := ginformer.Informer()
 	_ = informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+
+	s.m.Lock()
+	s.staticPodRequestsHasSynced = informer.HasSynced
+	s.m.Unlock()
 
 	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
