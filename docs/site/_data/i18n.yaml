@@ -204,6 +204,15 @@ common:
   version:
     en: version
     ru: версия
+  alert_renaming:
+    en: |
+      **Starting from version 1.76, Deckhouse Kubernetes Platform has been renamed to Deckhouse Platform.**
+
+      The platform now offers more features, and editions have changed. We are already updating the documentation, but if you have any questions, please contact your account manager or technical support.
+    ru: |
+      **Начиная с версии 1.76, Deckhouse Kubernetes Platform переименована в Deckhouse Platform.**
+
+      У платформы стало больше возможностей и изменились редакции. Мы уже обновляем документацию, но если у вас есть вопросы, то обратитесь к вашему менеджеру или [технической поддержке](https://deckhouse.ru/tech-support/).
   modules_of_a_scope:
     en: The modules within the scope
     ru: Модули, входящие в область

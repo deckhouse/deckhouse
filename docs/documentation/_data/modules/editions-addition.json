@@ -1,7 +1,54 @@
 {
   "ce": {
-    "name": "CE",
-    "title": "Community Edition"
+    "name": "Open/CE",
+    "title": "Open/Community Edition"
+  },
+  "core": {
+    "name": "Core",
+    "title": "Core",
+    "includeModules": [
+      "admission-policy-engine",
+      "cert-manager",
+      "chrony",
+      "cilium-hubble",
+      "cloud-provider-aws",
+      "cloud-provider-azure",
+      "cloud-provider-dvp",
+      "cloud-provider-gcp",
+      "cloud-provider-huaweicloud",
+      "cloud-provider-openstack",
+      "cloud-provider-yandex",
+      "cni-cilium",
+      "cni-flannel",
+      "cni-simple-bridge",
+      "control-plane-manager",
+      "deckhouse",
+      "deckhouse-tools",
+      "descheduler",
+      "documentation",
+      "istio",
+      "keepalived",
+      "kube-dns",
+      "kube-proxy",
+      "local-path-provisioner",
+      "metallb",
+      "monitoring-deckhouse",
+      "monitoring-kubernetes-control-plane",
+      "multitenancy-manager",
+      "namespace-configurator",
+      "network-gateway",
+      "network-policy-engine",
+      "node-local-dns",
+      "node-manager",
+      "openvpn",
+      "registry",
+      "registry-packages-proxy",
+      "secret-copier",
+      "terraform-manager",
+      "user-authn",
+      "user-authz",
+      "vertical-pod-autoscaler"
+    ]
   },
   "be": {
     "name": "BE",
@@ -20,14 +67,13 @@
     "title": "Standard Edition"
   },
   "ee": {
-    "name": "EE",
-    "title": "Enterprise Edition"
+    "name": "Ultimate/EE",
+    "title": "Ultimate/Enterprise Edition"
   },
   "cse-lite": {
-    "name": "CSE Lite",
-    "name_version": "CSE Lite (1.73)",
-    "title": "Certified Security Edition Lite (1.73)",
-    "title_version": "Certified Security Edition Lite",
+    "name": "Certified Core/CSE Lite",
+    "name_version": "Certified Core/CSE Lite (1.73)",
+    "title": "Certified Core/CSE Lite (1.73)",
     "languages": [
       "ru"
     ],
@@ -95,10 +141,9 @@
     ]
   },
   "cse-pro": {
-    "name": "CSE Pro",
-    "name_version": "CSE Pro (1.73)",
-    "title": "Certified Security Edition Pro",
-    "title_version": "Certified Security Edition Pro (1.73)",
+    "name": "Certified Pro/CSE Pro",
+    "name_version": "Certified Pro/CSE Pro (1.73)",
+    "title": "Certified Pro/CSE Pro",
     "languages": [
       "ru"
     ],

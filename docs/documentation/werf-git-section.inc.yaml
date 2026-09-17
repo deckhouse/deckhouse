@@ -11,6 +11,11 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+# Shared helpers of the docs-builder (Hugo) site: the extensions dictionary is used by module-extensions.liquid.
+- add: /docs/site/backends/docs-builder-template/data/helpers.yaml
+  to: /srv/jekyll-data/documentation/_data/site-helpers.yaml
+  stageDependencies:
+    setup: ['**/*']
 - add: /candi/feature_gates_map.yml
   to: /srv/jekyll-data/documentation/_data/feature_gates_map.yml
   owner: jekyll
