@@ -150,10 +150,9 @@ func TestValidateStaticPodManifest(t *testing.T) {
 	}
 }
 
-// The kubebuilder markers on the type and the shipped CRD are two copies of one
-// declaration, and only the CRD is what the API server enforces and kubectl
-// prints. Nothing regenerates one from the other — this API group ships its CRD
-// by hand — so this is what keeps them equal.
+// The markers on the type and the shipped CRD are two copies of one declaration
+// and nothing regenerates one from the other: this API group ships its CRD by
+// hand. This test is what keeps them equal.
 func TestShippedCRDMatchesTheGoTypes(t *testing.T) {
 	paths := testenv.NodeManagerCRDPaths(testenv.NodeStaticPodRequestCRDFile)
 	require.Len(t, paths, 1)
