@@ -217,7 +217,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" get deployments -A
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" get crd
 ```
 
-If a component is already installed, choose a single owner before proceeding. Do not run two `ingress-controller` instances, two cert-manager installations, or two VPA installations at the same time.
+If a component is already installed, choose a single owner before proceeding. Do not run two `ingress-controller` instances, two `cert-manager` installations, or two VPA installations at the same time.
 
 ## Preparing a kubeconfig
 
@@ -449,7 +449,7 @@ The installation is considered successful when all of the following conditions a
 
 ## Useful links
 
-- [Installing Deckhouse in existing cluster](https://deckhouse.io/products/kubernetes-platform/gs/existing/step2.html)
+- [Installing Deckhouse in an existing cluster](https://deckhouse.io/products/kubernetes-platform/gs/existing/step2.html)
 - [Deckhouse module configuration](https://deckhouse.io/modules/deckhouse/configuration.html)
 - [Bundles and module management](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/)
 - [Patching Talos MachineConfig](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/patching)

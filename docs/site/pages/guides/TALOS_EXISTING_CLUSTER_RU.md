@@ -33,7 +33,7 @@ Deckhouse устанавливается поверх готового Kubernete
 - HTTPS-доступ к `registry.deckhouse.ru`;
 - `talosctl` и `talosconfig`, если административный kubeconfig ещё не получен.
 
-Ну узлах кластера необходим HTTPS-доступ к `registry.deckhouse.ru`.
+На узлах кластера необходим HTTPS-доступ к `registry.deckhouse.ru`.
 
 SSH-доступ к узлам кластера не требуется, установка происходит через Kubernetes API.
 
@@ -80,7 +80,7 @@ chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
 {% alert level="info" %}
-Имеется ввиду kubeconfig для `kubectl`, а не talosconfig для `talosctl`.
+Имеется в виду kubeconfig для `kubectl`, а не talosconfig для `talosctl`.
 {% endalert %}
 
 ### Если kubeconfig нужно получить через Talos
@@ -180,7 +180,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
 
 Deckhouse не должен одновременно с Talos или внешним инфраструктурным провайдером управлять одними и теми же компонентами.
 
-В таблице приведен список компонентов и их владельцев после установки:
+В таблице приведён список компонентов и их владельцев после установки:
 
 | Компонент | Владелец после установки |
 | --- | --- |
@@ -205,7 +205,7 @@ Deckhouse не должен одновременно с Talos или внешн�
 - `registry-packages-proxy`.
 
 {% alert level="warning" %}
-Если в Talos-кластере уже установлен Cilium, включать модуль `cni-cilium` нельзя, два оператора не должны одновременно управлять одним CNI.
+Если в Talos-кластере уже установлен Cilium, включать модуль `cni-cilium` нельзя — два оператора не должны одновременно управлять одним CNI.
 {% endalert %}
 
 Набор модулей `Managed` включает `ingress-nginx`, `cert-manager`, `local-path-provisioner`, VPA, мониторинг и модули авторизации. До установки проверьте, нет ли в кластере их внешних аналогов:
@@ -217,7 +217,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" get deployments -A
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" get crd
 ```
 
-Если компонент уже установлен, заранее определите единственного владельца. Не запускайте одновременно два `ingress-controller`, два cert-manager или два VPA.
+Если компонент уже установлен, заранее определите единственного владельца. Не запускайте одновременно два `ingress-controller`, два `cert-manager` или два VPA.
 
 ## Подготовка kubeconfig
 
@@ -320,7 +320,7 @@ docker run --pull=always -it \
   bash
 ```
 
-Обратите внимание на редакцию `ce`и канал обновлений `early-access`, указанные в ссылке на образ установщика.
+Обратите внимание на редакцию `ce` и канал обновлений `early-access`, указанные в ссылке на образ установщика.
 
 Внутри открывшегося контейнера запустите:
 
@@ -379,7 +379,7 @@ kubectl --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide
 
 У включённых модулей ожидаются `PHASE: Ready`, `ENABLED: True` и `READY: True`.
 
-Статуса `Module` недостаточно - он может быть `Ready`, даже если отдельный workload модуля не был создан или перезапускается. Проверьте реальные ресурсы:
+Статуса `Module` недостаточно — он может быть `Ready`, даже если отдельный workload модуля не был создан или перезапускается. Проверьте реальные ресурсы:
 
 ```bash
 kubectl --kubeconfig="$ADMIN_KUBECONFIG" \
