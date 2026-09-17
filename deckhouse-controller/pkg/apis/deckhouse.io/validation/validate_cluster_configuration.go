@@ -459,20 +459,24 @@ func validateCRIChange(oldCRI, newCRI string, cli client.Client) (*kwhvalidating
 	return allowResult(nil)
 }
 
-func validateUnsafeConfigChanges(oldConfig, newConfig *clusterConfig, unsafeMode bool) (*kwhvalidating.ValidatorResult, error) {
+// The three network fields step aside once ModuleConfig control-plane-manager owns them: that
+// guard (validateControlPlaneManagerNetwork) already enforces immutability there, and this one
+// must not also reject the now-inert ClusterConfiguration field - otherwise removing it after a
+// migration (see 1.6) would be impossible.
+func validateUnsafeConfigChanges(ctx context.Context, cli client.Client, oldConfig, newConfig *clusterConfig, unsafeMode bool) (*kwhvalidating.ValidatorResult, error) {
 	if unsafeMode {
 		return allowResult(nil)
 	}
 
-	if oldConfig.PodSubnetNodeCIDRPrefix != newConfig.PodSubnetNodeCIDRPrefix {
+	if oldConfig.PodSubnetNodeCIDRPrefix != newConfig.PodSubnetNodeCIDRPrefix && !moduleConfigOwnsNetworkField(ctx, cli, "podSubnetNodeCIDRPrefix") {
 		return rejectResult("it is forbidden to change podSubnetNodeCIDRPrefix in a running cluster")
 	}
 
-	if oldConfig.PodSubnetCIDR != newConfig.PodSubnetCIDR {
+	if oldConfig.PodSubnetCIDR != newConfig.PodSubnetCIDR && !moduleConfigOwnsNetworkField(ctx, cli, "podSubnetCIDR") {
 		return rejectResult("it is forbidden to change podSubnetCIDR in a running cluster")
 	}
 
-	if oldConfig.ServiceSubnetCIDR != newConfig.ServiceSubnetCIDR {
+	if oldConfig.ServiceSubnetCIDR != newConfig.ServiceSubnetCIDR && !moduleConfigOwnsNetworkField(ctx, cli, "serviceSubnetCIDR") {
 		return rejectResult("it is forbidden to change serviceSubnetCIDR in a running cluster")
 	}
 
@@ -556,8 +560,8 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 							}
 						}
 
-						unsafeValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-							return validateUnsafeConfigChanges(oldClusterConf, clusterConf, unsafeMode)
+						unsafeValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+							return validateUnsafeConfigChanges(ctx, cli, oldClusterConf, clusterConf, unsafeMode)
 						})
 
 						k8sDowngradeValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {

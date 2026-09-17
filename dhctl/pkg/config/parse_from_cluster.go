@@ -142,6 +142,16 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, gmc)
 	}
 
+	// Load the control-plane-manager ModuleConfig so MetaConfig.Network() (podSubnetCIDR,
+	// serviceSubnetCIDR, podSubnetNodeCIDRPrefix) can see it during converge/destroy. Without
+	// this, clusterConfigForInfrastructure's network resolution always falls through to
+	// ClusterConfiguration on this path — m.ModuleConfigs never has an entry to find — so once a
+	// field is migrated and removed from ClusterConfiguration, the Terraform variable ends up
+	// with no such attribute at all instead of the value the cluster actually runs with.
+	if cpm := loadControlPlaneManagerModuleConfig(ctx, f.kubeCl); cpm != nil {
+		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, cpm)
+	}
+
 	pcc, err := loadLegacyProviderClusterConfig(ctx, f.kubeCl, f.schemaStore)
 	if err != nil {
 		return nil, err
@@ -183,6 +193,33 @@ func loadGlobalModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient
 	mc := &ModuleConfig{}
 	if err := json.Unmarshal(raw, mc); err != nil {
 		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to parse global ModuleConfig: %v", err))
+		return nil
+	}
+	return mc
+}
+
+// loadControlPlaneManagerModuleConfig fetches the control-plane-manager ModuleConfig from the
+// cluster. It deserialises without full schema validation because it is only consulted for
+// spec.settings.network (network parameter resolution, MetaConfig.Network()); a not-found
+// control-plane-manager ModuleConfig is not an error. This must not be able to block
+// converge/destroy.
+func loadControlPlaneManagerModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient) *ModuleConfig {
+	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, "control-plane-manager", metav1.GetOptions{})
+	if err != nil {
+		if !k8serrors.IsNotFound(err) {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+				"failed to read control-plane-manager ModuleConfig, falling back to the deprecated ClusterConfiguration network fields: %v", err))
+		}
+		return nil
+	}
+	raw, err := json.Marshal(obj.Object)
+	if err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to marshal control-plane-manager ModuleConfig: %v", err))
+		return nil
+	}
+	mc := &ModuleConfig{}
+	if err := json.Unmarshal(raw, mc); err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to parse control-plane-manager ModuleConfig: %v", err))
 		return nil
 	}
 	return mc
