@@ -23,12 +23,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -461,4 +463,30 @@ func TestDeletedStaticPodRequest(t *testing.T) {
 
 	_, ok = deletedStaticPodRequest(cache.DeletedFinalStateUnknown{Key: "registry-agent", Obj: "not an object"})
 	require.False(t, ok)
+}
+
+func TestSubscribeOnStaticPodRequestsSurvivesAnUnreadableResource(t *testing.T) {
+	gvr := schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "nodestaticpodrequests",
+	}
+
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
+		runtime.NewScheme(),
+		map[schema.GroupVersionResource]string{gvr: "NodeStaticPodRequestList"},
+	)
+	client.PrependReactor("list", "nodestaticpodrequests", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, apierrors.NewForbidden(gvr.GroupResource(), "", nil)
+	})
+
+	// A cluster with no CRD, or one where the RBAC has not landed yet: the cache
+	// never syncs, and the agent still has every other bundle to serve.
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	storage := newStaticPodsStorage()
+	storage.subscribeOnStaticPodRequests(ctx, dynamicinformer.NewDynamicSharedInformerFactory(client, 0))
+
+	require.Contains(t, renderStaticPodsStepFor(t, storage, "worker"), `new_names='[]'`)
 }
