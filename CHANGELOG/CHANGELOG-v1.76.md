@@ -321,6 +321,8 @@
  - **[candi]** kube-apiserver no longer caches watches for `ManifestCheckpointContentChunk` resources from `state-snapshotter`. [#21223](https://github.com/deckhouse/deckhouse/pull/21223)
     kube-apiserver static pod is reconfigured and restarts on the next control-plane sync.
  - **[cert-manager]** Disable SecurityPolicyExceptions for cert-manager namespace [#19184](https://github.com/deckhouse/deckhouse/pull/19184)
+ - **[cert-manager]** Restore the `cert-manager` and `cainjector` permissions that were lost against the upstream chart, including access to `ListenerSet` resources. [#23077](https://github.com/deckhouse/deckhouse/pull/23077)
+ - **[chrony]** Fixed the unit-detection condition in the `disable-ntp-on-node.sh` node step. [#23035](https://github.com/deckhouse/deckhouse/pull/23035)
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend  by bumping OpenTelemetry Go to v1.41.0 [#20250](https://github.com/deckhouse/deckhouse/pull/20250)
  - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18657](https://github.com/deckhouse/deckhouse/pull/18657)
  - **[cilium-hubble]** Fixed CVE-2026-41520 in hubble-ui-backend [#20360](https://github.com/deckhouse/deckhouse/pull/20360)
@@ -332,6 +334,7 @@
  - **[cloud-provider-aws]** add information about AWS security group rules limits [#18819](https://github.com/deckhouse/deckhouse/pull/18819)
  - **[cloud-provider-aws]** fix CVE in cloud-provider-aws [#18057](https://github.com/deckhouse/deckhouse/pull/18057)
  - **[cloud-provider-aws]** fix getInstancesByIDs to comply with the describeInstanceBatcher. [#18267](https://github.com/deckhouse/deckhouse/pull/18267)
+ - **[cloud-provider-azure]** Fix multimaster bootstrap by falling back to the `d8-masters-kubernetes-data-device-path` Secret when the master data device LUN is not provided via cloud-init. [#23098](https://github.com/deckhouse/deckhouse/pull/23098)
  - **[cloud-provider-azure]** Fixed CVEs in `cloud-provider-azure`. [#18067](https://github.com/deckhouse/deckhouse/pull/18067)
  - **[cloud-provider-azure]** fix CVEs in cloud-provider-azure [#18240](https://github.com/deckhouse/deckhouse/pull/18240)
  - **[cloud-provider-dvp]** Add skip storage class annotation handling to skip discovery of some storage classes from parent clusters, e.g., local disks. [#19783](https://github.com/deckhouse/deckhouse/pull/19783)
@@ -378,6 +381,7 @@
  - **[cloud-provider-yandex]** fix CVEs in cloud-provider-yandex [#18291](https://github.com/deckhouse/deckhouse/pull/18291)
  - **[cloud-provider-zvirt]** Fixed CVEs in `cloud-provider-zvirt`. [#18115](https://github.com/deckhouse/deckhouse/pull/18115)
  - **[cloud-provider-zvirt]** Prevent capz-controller-manager from crashlooping without diagnostics when zVirt tags cannot be created. [#22458](https://github.com/deckhouse/deckhouse/pull/22458)
+ - **[cloud-provider-zvirt]** Resize the boot disk of a recreated VM, let a replaced VM actually power off, and recreate the VM when customNetworkConfig changes. [#22955](https://github.com/deckhouse/deckhouse/pull/22955)
  - **[cloud-provider-zvirt]** fix CSI token refresh patch apply [#18449](https://github.com/deckhouse/deckhouse/pull/18449)
  - **[cloud-provider-zvirt]** fix CVEs in cloud-provider-zvirt [#18257](https://github.com/deckhouse/deckhouse/pull/18257)
  - **[cni-cilium]** Bump Go dependencies and backport upstream cilium security patches to fix known CVEs. [#21507](https://github.com/deckhouse/deckhouse/pull/21507)
@@ -413,6 +417,7 @@
     After upgrading to v1.76.0, kubectl logs and exec fail cluster-wide for all users. Manual workaround is available — see PR description.
  - **[csi-vsphere]** Fixed the Deckhouse queue getting stuck [#20092](https://github.com/deckhouse/deckhouse/pull/20092)
  - **[deckhouse-controller]** A module that conditionally depends on another is no longer disabled when an incompatible version of that dependency is enabled; the enable is rejected instead. [#20344](https://github.com/deckhouse/deckhouse/pull/20344)
+ - **[deckhouse-controller]** Do not commit the package repository registry checksum when no application could be annotated, which left them all on stale registry settings. [#23114](https://github.com/deckhouse/deckhouse/pull/23114)
  - **[deckhouse-controller]** Fix applications charts rendering issue [#20282](https://github.com/deckhouse/deckhouse/pull/20282)
  - **[deckhouse-controller]** Fix deckhouse-controller crash loop and hooks receiving silently empty snapshots [#21255](https://github.com/deckhouse/deckhouse/pull/21255)
  - **[deckhouse-controller]** Fix false DeckhouseUpdatingFailed alert on registries without version tags in release-channel repo [#18310](https://github.com/deckhouse/deckhouse/pull/18310)
@@ -426,6 +431,7 @@
     A Deckhouse release suspended on its release channel is no longer applied by clusters that are behind and reach it through a step-by-step update. The suspend flag lives only in the release-channel image; previously it was dropped when the target release was built from its per-version image, so lagging clusters updated to a suspended release anyway.
  - **[deckhouse-controller]** Module releases rendered with nelm no longer raise false absent-resource alerts. [#21831](https://github.com/deckhouse/deckhouse/pull/21831)
  - **[deckhouse-controller]** ModuleDocumentation will not be created for embedded modules. [#21652](https://github.com/deckhouse/deckhouse/pull/21652)
+ - **[deckhouse-controller]** Stop the module source registry fan-out from replaying and flooding the main queue with duplicate moduleRun tasks. [#23114](https://github.com/deckhouse/deckhouse/pull/23114)
  - **[deckhouse-controller]** add werf dependency to webhook [#20970](https://github.com/deckhouse/deckhouse/pull/20970)
  - **[deckhouse-controller]** added extra validation for kubernets version multiple downgrades scenario [#18794](https://github.com/deckhouse/deckhouse/pull/18794)
  - **[deckhouse-controller]** nelm now takes over fields left by the old Helm 3 engine, so stale fields get removed on module upgrade. [#21831](https://github.com/deckhouse/deckhouse/pull/21831)
@@ -443,6 +449,7 @@
  - **[deckhouse]** Fixed global configuration generation. [#18161](https://github.com/deckhouse/deckhouse/pull/18161)
  - **[deckhouse]** Fixed goroutine and memory leak in upmeter-agent caused by per-request HTTP clients leaving idle keep-alive connections to Prometheus open forever. [#22480](https://github.com/deckhouse/deckhouse/pull/22480)
  - **[deckhouse]** Fixed module updates skipping patch releases when updating to a new minor version. [#19328](https://github.com/deckhouse/deckhouse/pull/19328)
+ - **[deckhouse]** In upmeter, the `monitoring-and-autoscaling/alertmanager` probe is disabled by default and is turned on with the new `alertmanagerProbe.enabled` setting. [#23123](https://github.com/deckhouse/deckhouse/pull/23123)
  - **[deckhouse]** Overwrite currentReleaseImageName on mismatch. [#19412](https://github.com/deckhouse/deckhouse/pull/19412)
  - **[deckhouse]** Remove notified=false annotation reset from runReleaseDeploy in the module release controller. [#19169](https://github.com/deckhouse/deckhouse/pull/19169)
  - **[deckhouse]** Restore ModuleIsInMaintenanceMode alert by switching to d8_module_config_maintenance sourced from ModuleConfig. [#19352](https://github.com/deckhouse/deckhouse/pull/19352)
@@ -550,6 +557,8 @@
     Unsafe custom HelperPod settings in the `local-path-config` ConfigMap are no longer accepted. Default DKP installations are unaffected.
  - **[local-path-provisioner]** Update local-path-provisioner to v0.0.36 to pick up the upstream fix for CVE-2026-44543 (HelperPod template injection, CVSS 8.7). [#20456](https://github.com/deckhouse/deckhouse/pull/20456)
     The `local-path-provisioner` Pod is restarted during the update. Custom edits to the `local-path-config` ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
+ - **[log-shipper]** Fixed an invalid VRL script generated by the `replaceValue` transformation. [#23051](https://github.com/deckhouse/deckhouse/pull/23051)
+    log-shipper
  - **[log-shipper]** fix daemonset template [#21368](https://github.com/deckhouse/deckhouse/pull/21368)
     log-shipper
  - **[metallb]** Bump Go dependencies in the metallb and l2lb images to fix known CVEs. [#21549](https://github.com/deckhouse/deckhouse/pull/21549)
@@ -818,6 +827,8 @@
     All pods of Ingress-NGINX Controllers using default version  (the controllerVersion is not set) will be restarted and updated from 1.10 to 1.12.
  - **[ingress-nginx]** The werf images are comply with DMT. [#18434](https://github.com/deckhouse/deckhouse/pull/18434)
     All Ingerss-nginx controller pods will be restarted.
+ - **[ingress-nginx]** Update nginx to 1.30.5. [#23078](https://github.com/deckhouse/deckhouse/pull/23078)
+    All ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** open source components versions migrated from werf.inc.yaml to oss.yaml [#18117](https://github.com/deckhouse/deckhouse/pull/18117)
  - **[istio]** Added kubernetes v1.31-1.35 in docs supported versions. [#18447](https://github.com/deckhouse/deckhouse/pull/18447)
  - **[istio]** Changing the multi-network Istio documentation [#18591](https://github.com/deckhouse/deckhouse/pull/18591)
