@@ -1,0 +1,54 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://deckhouse.io/ns/vex/prometheus/memcached-exporter",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-09-18T12:31:05.246677Z",
+  "version": 3,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "description": "golang.org/x/crypto/openpgp: unmaintained, unsafe by design, исправленной версии нет"
+      },
+      "timestamp": "2026-09-18T12:31:05.146785Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который признан неподдерживаемым и небезопасным по своему дизайну (unmaintained, unsafe by design) и не имеет исправленной версии. memcached_exporter использует библиотеку golang.org/x/crypto исключительно как транзитивную зависимость: единственный потребитель — github.com/prometheus/exporter-toolkit/web, которому нужен только golang.org/x/crypto/bcrypt для проверки basic-auth (go mod why -m golang.org/x/crypto). Проверка графа импортов бинарного файла (CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/... на дереве memcached_exporter v0.15.3 с применёнными патчами 001-004) даёт из golang.org/x/crypto ровно два пакета: blowfish и bcrypt; golang.org/x/crypto/openpgp в сборку не попадает. Проверка собранного бинарного файла через go tool nm подтверждает: символов с префиксом golang.org/x/crypto/openpgp в нём нет (при 122 символах golang.org/x/crypto в целом). Уязвимый код физически отсутствует в образе и не может быть вызван."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: deadlock установленного канала при особых сообщениях от злонамеренного пира"
+      },
+      "timestamp": "2026-09-18T12:31:05.195983Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-56855 (GO-2026-6355) находится в пакете golang.org/x/crypto/ssh: злонамеренный SSH-пир может специально сформированными сообщениями заблокировать (deadlock) уже установленный канал. Исправление выпущено в golang.org/x/crypto v0.56.0, однако эта версия объявляет в своём go.mod директиву go 1.26.0, тогда как сборочный образ DKP (candi/base_images.yml, builder/golang-alpine указывает на builder/golang-alpine-1.25) поставляет Go 1.25.x, поэтому поднять зависимость выше v0.55.0 в релизе 1.76 невозможно. При этом memcached_exporter не использует SSH ни в каком виде: golang.org/x/crypto тянется транзитивно только через github.com/prometheus/exporter-toolkit/web ради bcrypt. Проверка графа импортов (CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/... на дереве v0.15.3 с патчами 001-004) даёт из golang.org/x/crypto только blowfish и bcrypt; пакет golang.org/x/crypto/ssh в сборку не попадает, и go tool nm по собранному бинарному файлу не находит ни одного символа с префиксом golang.org/x/crypto/ssh. Уязвимый код в образе отсутствует."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: переполнение incomingRequests неустановленного канала и deadlock соединения"
+      },
+      "timestamp": "2026-09-18T12:31:05.246677Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-78662 (GO-2026-6354) находится в пакете golang.org/x/crypto/ssh: злонамеренный SSH-пир может переполнить очередь incomingRequests ещё не установленного канала и заблокировать (deadlock) соединение. Исправление выпущено в golang.org/x/crypto v0.56.0, которая объявляет в своём go.mod директиву go 1.26.0, тогда как сборочный образ DKP (candi/base_images.yml, builder/golang-alpine указывает на builder/golang-alpine-1.25) поставляет Go 1.25.x; поднять зависимость выше v0.55.0 в релизе 1.76 невозможно. memcached_exporter не использует SSH: golang.org/x/crypto тянется транзитивно только через github.com/prometheus/exporter-toolkit/web ради bcrypt. Проверка графа импортов (CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/... на дереве v0.15.3 с патчами 001-004) даёт из golang.org/x/crypto только blowfish и bcrypt; golang.org/x/crypto/ssh в сборку не попадает, и go tool nm по собранному бинарному файлу не находит ни одного символа с префиксом golang.org/x/crypto/ssh. Уязвимый код в образе отсутствует."
+    }
+  ]
+}

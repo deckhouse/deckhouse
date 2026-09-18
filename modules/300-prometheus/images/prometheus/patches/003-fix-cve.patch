@@ -2,15 +2,14 @@ diff --git a/go.mod b/go.mod
 index 0631611..5671d73 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,8 +1,8 @@
+@@ -1,8 +1,6 @@
  module github.com/prometheus/prometheus
  
 -go 1.22.0
-+go 1.24.0
++go 1.25.0
  
 -toolchain go1.23.0
-+toolchain go1.24.3
- 
+-
  require (
  	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0
 @@ -18,7 +18,7 @@ require (

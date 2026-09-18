@@ -1,14 +1,12 @@
 module vector
 
-go 1.23.0
-
-toolchain go1.24.3
+go 1.25.0
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/shirou/gopsutil/v3 v3.23.2
-	golang.org/x/sys v0.35.0
+	golang.org/x/sys v0.47.0
 )
 
 require (
