@@ -16,27 +16,13 @@ package status
 
 import "time"
 
-// DefaultResyncPeriod is how often every registered package is re-enqueued.
-const DefaultResyncPeriod = 10 * time.Minute
-
-// Option overrides a Service default at construction.
-type Option func(*Service)
-
-// WithResyncPeriod sets the status resync period; zero disables periodic resync.
-func WithResyncPeriod(period time.Duration) Option {
-	return func(s *Service) {
-		s.resyncPeriod = period
-	}
-}
+// defaultResyncPeriod is how often every registered package is re-enqueued.
+const defaultResyncPeriod = 10 * time.Minute
 
 // StartResync launches the periodic re-enqueue of every registered package: the
 // level-triggered backstop that republishes a status whose notification was
-// lost. A zero period starts nothing. Called once, paired with Shutdown.
+// lost. Called once, paired with Shutdown.
 func (s *Service) StartResync() {
-	if s.resyncPeriod <= 0 {
-		return
-	}
-
 	go s.runResync()
 }
 
@@ -46,7 +32,7 @@ func (s *Service) StartResync() {
 func (s *Service) runResync() {
 	defer close(s.resyncDone)
 
-	ticker := time.NewTicker(s.resyncPeriod)
+	ticker := time.NewTicker(defaultResyncPeriod)
 	defer ticker.Stop()
 
 	for {
@@ -60,14 +46,8 @@ func (s *Service) runResync() {
 }
 
 // stopResync ends the resync goroutine and waits for it to exit, so no key can
-// reach a queue after the caller shuts it down. It branches on the same
-// immutable period StartResync did, so the two always agree on whether a
-// goroutine exists.
+// reach a queue after the caller shuts it down.
 func (s *Service) stopResync() {
-	if s.resyncPeriod <= 0 {
-		return
-	}
-
 	close(s.resyncStop)
 	<-s.resyncDone
 }

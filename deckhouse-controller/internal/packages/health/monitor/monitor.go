@@ -94,25 +94,23 @@ type Reconcile func(name string, status []WorkloadStatus)
 // Deployment/StatefulSet in the cluster.
 func NewMonitor(client kubernetes.Interface, reconcile Reconcile, labelKey string, logger *log.Logger) (*Monitor, error) {
 	s := &Monitor{
+		factory: informers.NewSharedInformerFactoryWithOptions(client, defaultResyncPeriod,
+			informers.WithTransform(stripUnusedFields),
+			informers.WithTweakListOptions(func(o *metav1.ListOptions) {
+				o.LabelSelector = labelKey
+			}),
+		),
 		indexers: make(map[workloadKind]cache.Indexer, 2),
 		syncs:    make(map[workloadKind]cache.InformerSynced, 2),
 		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
 			workqueue.DefaultTypedControllerRateLimiter[string](),
 			workqueue.TypedRateLimitingQueueConfig[string]{Name: "health"},
 		),
-
 		reconcile: reconcile,
 		labelKey:  labelKey,
 		logger:    logger,
 		done:      make(chan struct{}),
 	}
-
-	s.factory = informers.NewSharedInformerFactoryWithOptions(client, defaultResyncPeriod,
-		informers.WithTransform(stripUnusedFields),
-		informers.WithTweakListOptions(func(o *metav1.ListOptions) {
-			o.LabelSelector = labelKey
-		}),
-	)
 
 	if err := s.registerInformer(kindDeployment, s.factory.Apps().V1().Deployments().Informer()); err != nil {
 		return nil, fmt.Errorf("register Deployment informer: %w", err)
