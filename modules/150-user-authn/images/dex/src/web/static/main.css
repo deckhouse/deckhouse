@@ -90,6 +90,13 @@ body {
   background-repeat: no-repeat;
 }
 
+.login-page {
+  background-color: #EAF0FB;
+  background-image: url("img/deckhouse-background-logo-theme-light.svg");
+  background-size: auto;
+  background-position: right -110px bottom -11px;
+}
+
 .layout {
   position: relative;
   min-height: 100dvh;
@@ -114,6 +121,7 @@ body {
   border-radius: 16px;
   background-color: #F6F6FD;
   padding: 32px;
+  box-shadow: 5px 8px 10.3px 0 rgba(161, 178, 214, 0.33);
 }
 
 @media (max-width: 512px) {
@@ -337,4 +345,15 @@ body {
 .qr-code-container {
   display: flex;
   justify-content: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .login-page {
+    background-color: #004DF2;
+    background-image: url("img/deckhouse-background-logo-theme-dark.svg");
+  }
+
+  .layout-content {
+    box-shadow: none;
+  }
 }
