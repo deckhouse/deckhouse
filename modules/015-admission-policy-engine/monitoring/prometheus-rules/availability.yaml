@@ -30,14 +30,12 @@
         description: |-
           The `gatekeeper-controller-manager` deployment in the `d8-admission-policy-engine` namespace has no available replicas.
 
-          The deployment serves the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration, whose main webhook has `failurePolicy: Fail`. While no replica is available, the API server cannot reach the webhook and rejects every request it intercepts. The cluster is degraded cluster-wide:
+          The deployment serves the admission webhook of the module, and the webhook has `failurePolicy: Fail`. While no replica is available, the API server rejects every request the webhook intercepts, cluster-wide:
 
-          - Pods, Deployments, StatefulSets, DaemonSets, Jobs and CronJobs are not created or updated in namespaces the webhook covers.
-          - Deletion of those resources is rejected as well, because policies must be able to forbid it.
+          - Pods and the controllers that create them are not created or updated.
+          - Deletion of those resources is rejected as well.
           - Roles, RoleBindings and Gatekeeper constraints are not applied.
-          - `kubectl exec` and `kubectl attach` into pods of `d8-*` and `kube-*` namespaces are blocked, which limits the ways to diagnose the failure.
-
-          The module keeps the ability to recover on its own: the pods of `gatekeeper-controller-manager` carry the `gatekeeper.sh/operation: webhook` label and are excluded from validation, so the ReplicaSet creates a replacement pod even while no replica serves the webhook. A deployment that stays at zero replicas therefore points at scheduling, the image or the node, not at admission.
+          - `kubectl exec` and `kubectl attach` in `d8-*` and `kube-*` namespaces are blocked.
 
           Find out why the replicas are gone:
 
@@ -48,7 +46,7 @@
           d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
           ```
 
-          A pod that stays `Pending` points at the nodes rather than at the component: the replicas run on the nodes of the module, on system nodes or on control-plane nodes, and in HA mode an anti-affinity rule requires a separate node for each replica. Check the events of the namespace and the nodes the replicas can be scheduled on:
+          If a pod stays `Pending`, look at the events of the namespace and at the nodes the replicas can run on:
 
           ```bash
           d8 k -n d8-admission-policy-engine get events --sort-by=.lastTimestamp | tail -30
@@ -91,16 +89,15 @@
         description: |-
           The `gatekeeper-controller-manager` deployment in the `d8-admission-policy-engine` namespace has unavailable replicas, and the remaining ones still serve admission requests.
 
-          The webhook has no redundancy left. Losing the last replica rejects every request the webhook intercepts, cluster-wide, because its `failurePolicy` is `Fail`.
+          The webhook has no redundancy left. Losing the last replica blocks admission cluster-wide, because the webhook has `failurePolicy: Fail`.
 
           A rollout of the deployment raises this alert for a short time and needs no action. If the alert holds, find out why the replica does not start:
 
           ```bash
           d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=controller-manager -o wide
           d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=controller-manager
+          d8 k -n d8-admission-policy-engine get events --sort-by=.lastTimestamp | tail -30
           ```
-
-          The replicas are spread over nodes by a `requiredDuringSchedulingIgnoredDuringExecution` anti-affinity rule and run on system or control-plane nodes only, so a pod stays `Pending` when the cluster has fewer such nodes than replicas.
 
     - alert: D8AdmissionPolicyEngineAuditUnavailable
       expr: |
@@ -132,10 +129,10 @@
         description: |-
           The `gatekeeper-audit` deployment in the `d8-admission-policy-engine` namespace has no available replicas.
 
-          Admission of new objects is not affected, but two things silently stop:
+          Admission of new objects is not affected, but the module stops reporting and stops picking up new policies:
 
-          - Violations among objects that already run are no longer collected. The `PodSecurityStandardsViolation`, `OperationPolicyViolation` and `SecurityPolicyViolation` alerts are built on the metrics of this deployment, so they stop firing and report nothing rather than reporting that all is well.
-          - The `constraint-exporter` container stops updating the `constraint-exporter` ConfigMap, from which Deckhouse builds the `rules` section of the webhook configuration. Resources that only new policies match are not added to the webhook, so those policies are not enforced on admission.
+          - Violations among the objects that already run are not collected, so the `PodSecurityStandardsViolation`, `OperationPolicyViolation` and `SecurityPolicyViolation` alerts go silent instead of reporting that all is well.
+          - The list of resources the webhook intercepts is not updated, so a policy added while the audit is down is not enforced on admission.
 
           Find out why the replica is gone:
 

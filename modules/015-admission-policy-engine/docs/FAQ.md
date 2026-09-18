@@ -748,12 +748,8 @@ Look for the cause first. Disabling the module unblocks the cluster, but it also
 d8 platform module disable admission-policy-engine
 ```
 
-Deckhouse removes the webhook configuration along with the rest of the module's objects and keeps it removed, so the cluster stays unblocked for as long as the module is off. Return the module as soon as the cause is fixed, since no policy is enforced while it is disabled:
+Deckhouse keeps the objects of the module removed while it is disabled, so the cluster stays unblocked for as long as the module is off. Return the module as soon as the cause is fixed, since no policy is enforced while it is disabled:
 
 ```bash
 d8 platform module enable admission-policy-engine
 ```
-
-{% alert level="warning" %}
-Deleting the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration by hand unblocks the cluster as well, but Deckhouse restores the object at the next reconciliation of the module. Use this only as a temporary measure and expect the block to return.
-{% endalert %}

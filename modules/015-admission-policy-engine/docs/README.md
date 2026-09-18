@@ -47,8 +47,7 @@ a rule that inspects `input.review.operation` only runs if the request reaches G
 {% alert level="warning" %}
 The webhook uses `failurePolicy: Fail`.
 While Gatekeeper is unavailable, both creating and deleting the resource kinds listed above is blocked.
-To restore operations, bring the `gatekeeper-controller-manager` deployment back up
-or remove the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration.
+To restore operations, bring the `gatekeeper-controller-manager` deployment back up.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -666,7 +665,7 @@ The mutating webhook is configured differently: its `failurePolicy` is `Ignore`,
 
 One exclusion in the webhook configuration covers the pods of `gatekeeper-controller-manager` and nothing else: every webhook excludes objects carrying the `gatekeeper.sh/operation: webhook` label through its `objectSelector`. The exclusion exists to break a circular dependency, not to relax the policies for the module.
 
-A webhook that validates the pods serving it cannot recover from its own outage. Once the last replica is gone, the API server has nowhere to deliver the request, so it rejects the creation of the replacement pod, and the deployment stays at zero replicas until an operator removes the webhook configuration by hand. The label, which Gatekeeper sets on its own pods, is the narrowest exclusion that breaks the cycle: the deployment can always create a pod, while every other object of the namespace is validated as usual.
+A webhook that validates the pods serving it cannot recover from its own outage. Once the last replica is gone, the API server has nowhere to deliver the request, so it rejects the creation of the replacement pod and the deployment can never return to a running replica on its own. The label, which Gatekeeper sets on its own pods, is the narrowest exclusion that breaks the cycle: the deployment can always create a pod, while every other object of the namespace is validated as usual.
 
 The pods of `gatekeeper-audit` carry `gatekeeper.sh/operation: audit` and are deliberately not excluded. Admission does not depend on the audit, so the audit is not on the recovery path and the exclusion would widen the hole without making anything recoverable. The trade-off is that while the webhook is unavailable, the audit deployment cannot create a pod either, and the audit returns only after the webhook does.
 
