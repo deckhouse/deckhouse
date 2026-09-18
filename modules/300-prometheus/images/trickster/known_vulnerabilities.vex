@@ -2,8 +2,8 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5d195d15939683637393fa45a68bff40324ab22e443c55904b61b51596efa3f5",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2025-10-23T15:35:52.818817+03:00",
-  "version": 1,
+  "timestamp": "2026-09-18T12:36:05.388452Z",
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -18,6 +18,36 @@
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
       "impact_statement": "Уязвимость CVE-2023-45142 связана с компонентом Trickster и его интеграцией с OpenTelemetry. В Deckhouse Kubernetes Platform Trickster используется как прокси для Prometheus, однако в поставляемых в составе Deckhouse компонентах Prometheus и Trickster интеграция с OpenTelemetry полностью отключена. Пользователи платформы не имеют возможности самостоятельно включить или сконфигурировать поддержку OpenTelemetry для данных компонентов. В связи с отсутствием поддержки и недоступностью функционала OpenTelemetry в Trickster и Prometheus под управлением Deckhouse, соответствующие уязвимые участки кода остаются недостижимыми для пользователей и приложений внутри кластера. Таким образом, эксплуатация уязвимости CVE-2023-45142 в Deckhouse Kubernetes Platform невозможна."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41602",
+        "description": "github.com/apache/thrift: Integer Overflow/Wraparound в TFramedTransport (Go)"
+      },
+      "timestamp": "2026-09-18T12:36:05.335857Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/apache/thrift@v0.13.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41602 представляет собой Integer Overflow/Wraparound в Go-реализации TFramedTransport библиотеки Apache Thrift (фикс в v0.23.0). Образ trickster v1.1.5 в Deckhouse подтягивает github.com/apache/thrift v0.13.0 исключительно как транзитивную зависимость: go mod why -m github.com/apache/thrift на дереве v1.1.5 с применёнными патчами 001-003 даёт единственную цепочку github.com/tricksterproxy/trickster/pkg/tracing/exporters/jaeger -> go.opentelemetry.io/otel/exporters/trace/jaeger -> github.com/apache/thrift/lib/go/thrift. Проверка графа импортов бинарного файла (CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/trickster/) показывает, что из github.com/influxdata/influxdb в сборку попадают только пакеты pkg/escape и models, то есть Thrift-клиент InfluxDB не линкуется вовсе (InfluxDB поддерживается trickster только через HTTP API без TFramedTransport). Сам TFramedTransport в вендорированном дереве не упоминается нигде за пределами самой библиотеки github.com/apache/thrift/lib/go/thrift (grep -rn TFramedTransport vendor/ вне каталога thrift не даёт ни одного совпадения), а jaeger-экспортер использует TMemoryBuffer (agent.go:72) и TMemoryBuffer + TBinaryProtocolTransport (uploader.go:211-212). Сверх того, в Deckhouse-сборке трассировка у trickster не включается: в modules/300-prometheus/templates/trickster/ нет ни одного упоминания tracing/jaeger/otel, поэтому ни один экспортер не инстанцируется (см. также statement CVE-2023-45142 для этого же образа). Прямой бамп thrift до v0.23.0 невозможен без массового рефакторинга: API thrift между v0.13 и v0.23 несовместимы (требуют context.Context в каждом методе, TException вместо error), а вендорированный jaeger-экспортер otel v0.16.0 содержит сгенерированный код под старый API, и в связке с trickster v1.1.5 (последний релиз 2021 года) поднять otel выше невозможно без выпуска новой мажорной версии trickster. Уязвимый исполняемый путь TFramedTransport в данном контексте не активируется."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-43871",
+        "description": "github.com/apache/thrift: бесконечный цикл (CWE-835) в readVarint32/readVarint64 TCompactProtocol (Go)"
+      },
+      "timestamp": "2026-09-18T12:36:05.388452Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/apache/thrift@v0.13.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-43871 представляет собой бесконечный цикл (CWE-835) в Go-реализации TCompactProtocol библиотеки Apache Thrift: в функциях readVarint64/readVarint32 (lib/go/thrift/compact_protocol.go) цикл чтения байтов varint не ограничен по количеству байт. Фикс в v0.24.0 добавляет константу maxVarint64Bytes = 10; в вендорированной v0.13.0 её действительно нет (grep -n maxVarint64Bytes vendor/github.com/apache/thrift/lib/go/thrift/compact_protocol.go не даёт совпадений). Уязвимость лежит исключительно на пути ЧТЕНИЯ (десериализации). Образ trickster v1.1.5 в Deckhouse подтягивает thrift транзитивно: go mod why -m github.com/apache/thrift даёт единственную цепочку через go.opentelemetry.io/otel/exporters/trace/jaeger, а go list -deps ./cmd/trickster/ показывает, что из github.com/influxdata/influxdb линкуются только pkg/escape и models, то есть Thrift-клиент InfluxDB в сборку не попадает. Единственным потребителем github.com/apache/thrift/lib/go/thrift остаются пакеты jaeger-экспортера (go.opentelemetry.io/otel/exporters/trace/jaeger и .../internal/gen-go/jaeger). Этот экспортер использует TCompactProtocol только для ЗАПИСИ: единственное место его создания — agent.go:73 thrift.NewTCompactProtocolFactory() для UDP-аплоадера, а отправка выполняется через AgentClient.sendEmitBatch (gen-go/jaeger/agent.go:60), который вызывает WriteMessageBegin(\"emitBatch\", thrift.ONEWAY, ...), args.Write(oprot), WriteMessageEnd() и Flush(); вызов объявлен как oneway, ответ не читается, и в agent.go и uploader.go самого экспортера нет ни одного вызова ReadMessageBegin/ReadMessageEnd. Единственный код чтения в сгенерированном пакете — серверный AgentProcessor.Process (gen-go/jaeger/agent.go:107); поиск по всему вендорированному дереву и по коду trickster не находит ни одного вызова NewAgentProcessor, AgentProcessor, thrift.TServer или NewTSimpleServer, то есть Thrift-сервер в образе не поднимается и десериализатор не вызывается. Второй (HTTP-коллекторный) аплоадер сериализует батч через thrift.NewTBinaryProtocolTransport (uploader.go:212), то есть вообще не через TCompactProtocol, и тоже только пишет. Сверх того, в Deckhouse-сборке трассировка у trickster не включается: в modules/300-prometheus/templates/trickster/ нет ни одного упоминания tracing/jaeger/otel, поэтому ни один экспортер не инстанцируется (см. также statements CVE-2023-45142 и CVE-2026-41602 для этого же образа). Бамп thrift до v0.24.0 в контексте trickster v1.1.5 невозможен: API thrift изменился в v0.14.0 (context.Context в каждом методе протокола, TException вместо error), и сгенерированный код jaeger-экспортера otel v0.16.0 против него не компилируется. Подъём otel до v0.18.0, где jaeger-экспортер перестал требовать внешний github.com/apache/thrift, проблему не решает: otel скопировал thrift внутрь себя (internal/third_party/thrift/lib/go/thrift/compact_protocol.go), и в этой копии readVarint64 по-прежнему без ограничения maxVarint64Bytes, то есть находка исчезла бы из отчёта сканера, а уязвимый код остался бы в образе. Уязвимый путь чтения TCompactProtocol в контексте trickster не активируется."
     }
   ]
 }

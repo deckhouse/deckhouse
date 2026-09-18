@@ -1,0 +1,54 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-6a1f386dae8fcee6c78c0558e8f547e66b7446046bd3c494d9dc09748b82a30d",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-09-18T00:00:00.000000+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "description": "golang.org/x/crypto/openpgp: пакет не поддерживается и небезопасен по архитектуре"
+      },
+      "timestamp": "2026-09-18T00:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 не описывает конкретную уязвимую функцию, а помечает пакет golang.org/x/crypto/openpgp (и его субпакеты packet, armor, clearsign, elgamal, errors, s2k) как неподдерживаемый и небезопасный по архитектуре; апстрим рекомендует переход на github.com/ProtonMail/go-crypto/openpgp, фикс-версии в golang.org/x/crypto не существует (fix_available=False). kube-state-metrics (/bin/kube-state-metrics) не реализует и не использует функциональность OpenPGP. Проверено на чистом дереве kube-state-metrics v2.17.0 с применённым patches/001-go-mod.patch (golang.org/x/crypto v0.55.0). `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps .` для собираемого пакета даёт 1095 пакетов, из которых к golang.org/x/crypto относятся только golang.org/x/crypto/bcrypt и golang.org/x/crypto/blowfish; сверка точным именем `go list -deps . | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт ни одной строки (exit 1), аналогично для `go list -deps ./...` (1100 пакетов). Что список полон и grep рабочий, подтверждает положительный контроль: тот же grep по '^golang\\.org/x/crypto' находит bcrypt и blowfish. `go tool nm` на несжатом (без -s -w) бинарнике kube-state-metrics: 0 символов golang.org/x/crypto/ssh. и 0 символов golang.org/x/crypto/openpgp при 111 символах golang.org/x/crypto всего, из них 23 — golang.org/x/crypto/bcrypt. (контроль). `go mod why -m golang.org/x/crypto` даёт цепочку k8s.io/kube-state-metrics/v2/pkg/app -> github.com/prometheus/exporter-toolkit/web -> golang.org/x/crypto/bcrypt, то есть x/crypto нужен только для bcrypt-хеширования пароля basic-auth в exporter-toolkit. Отдельно: `go mod why golang.org/x/crypto/ssh` выводит путь через github.com/hairyhenderson/gomplate/v4/cmd/gomplate -> github.com/hairyhenderson/go-fsimpl/gitfs -> go-git/plumbing/transport/ssh. Это запись из директивы `tool` в go.mod — вспомогательная утилита кодогенерации, которая не является зависимостью пакета main: в `go list -deps .` её нет, в бинарнике её символов нет, а рецепт сборки (werf.inc.yaml) собирает только корневой пакет через `make build-local`. Уязвимый код не компилируется в исполняемый путь и не может быть эксплуатирован."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: DoS из-за взаимоблокировки установленного канала"
+      },
+      "timestamp": "2026-09-18T00:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-56855 (GO-2026-6355) — DoS на установленном канале SSH: уязвимые символы объявлены исключительно в пакете golang.org/x/crypto/ssh (Dial, NewClientConn, NewControlClientConn, NewServerConn, channel.handlePacket). Исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine с Go 1.25 (candi/base_images.yml), поэтому подъём до v0.56.0 в этой ветке невозможен; зафиксирована максимально возможная v0.55.0. kube-state-metrics (/bin/kube-state-metrics) не использует SSH ни как клиент, ни как сервер. Проверено на чистом дереве kube-state-metrics v2.17.0 с применённым patches/001-go-mod.patch (golang.org/x/crypto v0.55.0). `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps .` для собираемого пакета даёт 1095 пакетов, из которых к golang.org/x/crypto относятся только golang.org/x/crypto/bcrypt и golang.org/x/crypto/blowfish; сверка точным именем `go list -deps . | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт ни одной строки (exit 1), аналогично для `go list -deps ./...` (1100 пакетов). Что список полон и grep рабочий, подтверждает положительный контроль: тот же grep по '^golang\\.org/x/crypto' находит bcrypt и blowfish. `go tool nm` на несжатом (без -s -w) бинарнике kube-state-metrics: 0 символов golang.org/x/crypto/ssh. и 0 символов golang.org/x/crypto/openpgp при 111 символах golang.org/x/crypto всего, из них 23 — golang.org/x/crypto/bcrypt. (контроль). `go mod why -m golang.org/x/crypto` даёт цепочку k8s.io/kube-state-metrics/v2/pkg/app -> github.com/prometheus/exporter-toolkit/web -> golang.org/x/crypto/bcrypt, то есть x/crypto нужен только для bcrypt-хеширования пароля basic-auth в exporter-toolkit. Отдельно: `go mod why golang.org/x/crypto/ssh` выводит путь через github.com/hairyhenderson/gomplate/v4/cmd/gomplate -> github.com/hairyhenderson/go-fsimpl/gitfs -> go-git/plumbing/transport/ssh. Это запись из директивы `tool` в go.mod — вспомогательная утилита кодогенерации, которая не является зависимостью пакета main: в `go list -deps .` её нет, в бинарнике её символов нет, а рецепт сборки (werf.inc.yaml) собирает только корневой пакет через `make build-local`. Уязвимый код не компилируется в исполняемый путь и не может быть эксплуатирован."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: DoS из-за взаимоблокировки неопределившегося канала"
+      },
+      "timestamp": "2026-09-18T00:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-78662 (GO-2026-6354) — DoS на неопределившемся канале SSH: уязвимые символы объявлены исключительно в пакете golang.org/x/crypto/ssh (Dial, NewClientConn, NewControlClientConn, NewServerConn, channel.Accept, channel.handlePacket, channel.responseMessageReceived). Исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine с Go 1.25 (candi/base_images.yml), поэтому подъём до v0.56.0 в этой ветке невозможен; зафиксирована максимально возможная v0.55.0. kube-state-metrics (/bin/kube-state-metrics) не использует SSH ни как клиент, ни как сервер. Проверено на чистом дереве kube-state-metrics v2.17.0 с применённым patches/001-go-mod.patch (golang.org/x/crypto v0.55.0). `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps .` для собираемого пакета даёт 1095 пакетов, из которых к golang.org/x/crypto относятся только golang.org/x/crypto/bcrypt и golang.org/x/crypto/blowfish; сверка точным именем `go list -deps . | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт ни одной строки (exit 1), аналогично для `go list -deps ./...` (1100 пакетов). Что список полон и grep рабочий, подтверждает положительный контроль: тот же grep по '^golang\\.org/x/crypto' находит bcrypt и blowfish. `go tool nm` на несжатом (без -s -w) бинарнике kube-state-metrics: 0 символов golang.org/x/crypto/ssh. и 0 символов golang.org/x/crypto/openpgp при 111 символах golang.org/x/crypto всего, из них 23 — golang.org/x/crypto/bcrypt. (контроль). `go mod why -m golang.org/x/crypto` даёт цепочку k8s.io/kube-state-metrics/v2/pkg/app -> github.com/prometheus/exporter-toolkit/web -> golang.org/x/crypto/bcrypt, то есть x/crypto нужен только для bcrypt-хеширования пароля basic-auth в exporter-toolkit. Отдельно: `go mod why golang.org/x/crypto/ssh` выводит путь через github.com/hairyhenderson/gomplate/v4/cmd/gomplate -> github.com/hairyhenderson/go-fsimpl/gitfs -> go-git/plumbing/transport/ssh. Это запись из директивы `tool` в go.mod — вспомогательная утилита кодогенерации, которая не является зависимостью пакета main: в `go list -deps .` её нет, в бинарнике её символов нет, а рецепт сборки (werf.inc.yaml) собирает только корневой пакет через `make build-local`. Уязвимый код не компилируется в исполняемый путь и не может быть эксплуатирован."
+    }
+  ]
+}

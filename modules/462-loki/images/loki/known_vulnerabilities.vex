@@ -1,0 +1,99 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-loki-image-loki",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-09-18T11:42:59.748065Z",
+  "version": 7,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42154",
+        "description": "Prometheus: DoS через неконтролируемое выделение памяти в обработчике remote read"
+      },
+      "timestamp": "2026-09-18T11:41:55.743464Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.43.1-0.20230419161410-69155c6ba1e9"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость находится в обработчике remote read эндпоинта Prometheus (/api/v1/read): при разборе snappy-сжатого тела запроса не проверяется заявленная длина распакованных данных. Исправление затрагивает функцию DecodeReadRequest в storage/remote/codec.go. Пакет github.com/prometheus/prometheus/storage/remote действительно вендорится в Loki, но только ради клиента remote-write в ruler (pkg/ruler/config/remotewrite.go, pkg/ruler/storage/instance/instance.go). Loki не регистрирует HTTP-эндпоинт /api/v1/read, не создаёт remote.NewReadHandler и не создаёт web/api/v1.API: `grep -rn \"DecodeReadRequest\\|NewReadHandler\\|v1.NewAPI\" ./cmd ./pkg` на дереве v2.9.15 со всеми патчами — пусто. Как следствие недостижимости компоновщик Go удаляет уязвимый код из бинарника: `go tool nm loki | grep -E \"storage/remote\\.(DecodeReadRequest|NewReadHandler)\"` — пусто, при том что в том же бинарнике присутствует 321 символ пакета storage/remote (все — путь записи: Client.Store, QueueManager, MetadataWatcher). Обновление невозможно: исправление доступно начиная с github.com/prometheus/prometheus v0.305.2 / v0.311.3 (Prometheus 3.5.3 / 3.11.3), а в рамках Loki 2.9.15 Prometheus 3.x несовместим по API."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179",
+        "description": "Prometheus: stored XSS в веб-интерфейсе"
+      },
+      "timestamp": "2026-09-18T11:42:12.605896Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.43.1-0.20230419161410-69155c6ba1e9"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость (stored XSS) находится исключительно в веб-интерфейсе Prometheus: исправляющий коммит затрагивает только TypeScript/JavaScript-файлы (web/ui/mantine-ui/src/pages/query/uPlotChartHelpers.ts, web/ui/react-app/src/pages/graph/GraphHelpers.ts, web/ui/react-app/src/pages/graph/MetricsExplorer.tsx, web/ui/react-app/src/vendor/flot/jquery.flot.heatmap.js) — ни одной строки Go-кода. Loki не содержит веб-интерфейс Prometheus: единственный вендорящийся файл в поддереве web/ — это web/api/v1/api.go (`find vendor/github.com/prometheus/prometheus/web -type f`), каталог web/ui и пакет github.com/prometheus/prometheus/web в vendor/modules.txt отсутствуют (`grep -E \"^github\\.com/prometheus/prometheus/(web|ui)\" vendor/modules.txt` даёт единственную строку web/api/v1), а образ на базе distroless не содержит ассетов UI. Из web/api/v1 Loki использует только структуру PrometheusVersion (pkg/loki/version_handler.go, pkg/util/build/build.go, pkg/analytics/seed.go, pkg/analytics/stats.go); в бинарнике из этого пакета остаются лишь init и функции marshal* для JSON-сериализации точек. Уязвимый код физически отсутствует в поставляемом артефакте. Дополнительно: заявленный уязвимый диапазон (Prometheus 3.0-3.5.1 и 3.6.0-3.11.1) не включает вендоренную версию, соответствующую Prometheus 2.43."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-44903",
+        "description": "Prometheus: XSS через значения метки le на диаграмме-heatmap в устаревшем веб-интерфейсе"
+      },
+      "timestamp": "2026-09-18T11:42:12.651236Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.43.1-0.20230419161410-69155c6ba1e9"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в устаревшем веб-интерфейсе Prometheus, включаемом флагом --enable-feature=old-ui. Исправляющий коммит затрагивает единственный файл web/ui/react-app/src/pages/graph/Graph.tsx — Go-код не затронут. Loki не поставляет веб-интерфейс Prometheus: в vendor попадает только web/api/v1/api.go, каталог web/ui и пакет github.com/prometheus/prometheus/web отсутствуют (`grep -E \"^github\\.com/prometheus/prometheus/(web|ui)\" vendor/modules.txt` даёт единственную строку web/api/v1). Флага --enable-feature в CLI Loki не существует. Уязвимый код физически отсутствует в поставляемом артефакте. Обновление невозможно по той же причине, что и для CVE-2026-42154: исправление доступно только начиная с Prometheus 3.5.3 / 3.11.3, что в рамках Loki 2.9.15 несовместимо по API."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: отказ в обслуживании на заблокированном канале SSH"
+      },
+      "timestamp": "2026-09-18T11:42:32.945318Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/crypto/ssh (взаимная блокировка на установленном или неопределившемся канале, приводящая к отказу в обслуживании). Loki не является SSH-сервером или клиентом и пакет golang.org/x/crypto/ssh в него не линкуется: `GOOS=linux GOARCH=amd64 go list -deps ./cmd/loki | grep -x golang.org/x/crypto/ssh` — пусто, `go tool nm loki | grep 'golang.org/x/crypto/ssh\\.'` — ни одного символа. В сборку из golang.org/x/crypto попадают только пакеты argon2, bcrypt, blake2b, blowfish, chacha20, chacha20poly1305, cryptobyte (+asn1), hkdf, internal/alias, internal/poly1305, pbkdf2, pkcs12 (+internal/rc2), scrypt, sha3 — полный список по `GOOS=linux GOARCH=amd64 go list -deps ./cmd/loki | grep \"^golang.org/x/crypto\"` на дереве v2.9.15 со всеми патчами. Зависимость x/crypto попадает в граф транзитивно ради хеш-функций: `go mod why -m golang.org/x/crypto` даёт цепочку github.com/grafana/loki/clients/pkg/logentry/stages -> golang.org/x/crypto/sha3. Бамп до исправленной версии невозможен на этой ветке: исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine, дающим Go 1.25 (candi/base_images.yml: ключи builder/golang-alpine и builder/golang-alpine-1.25 имеют один digest, ключей 1.26 в файле нет). Компонент поднят до максимально совместимой версии v0.55.0."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: отказ в обслуживании на заблокированном канале SSH"
+      },
+      "timestamp": "2026-09-18T11:42:32.989778Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/crypto/ssh (взаимная блокировка на установленном или неопределившемся канале, приводящая к отказу в обслуживании). Loki не является SSH-сервером или клиентом и пакет golang.org/x/crypto/ssh в него не линкуется: `GOOS=linux GOARCH=amd64 go list -deps ./cmd/loki | grep -x golang.org/x/crypto/ssh` — пусто, `go tool nm loki | grep 'golang.org/x/crypto/ssh\\.'` — ни одного символа. В сборку из golang.org/x/crypto попадают только пакеты argon2, bcrypt, blake2b, blowfish, chacha20, chacha20poly1305, cryptobyte (+asn1), hkdf, internal/alias, internal/poly1305, pbkdf2, pkcs12 (+internal/rc2), scrypt, sha3 — полный список по `GOOS=linux GOARCH=amd64 go list -deps ./cmd/loki | grep \"^golang.org/x/crypto\"` на дереве v2.9.15 со всеми патчами. Зависимость x/crypto попадает в граф транзитивно ради хеш-функций: `go mod why -m golang.org/x/crypto` даёт цепочку github.com/grafana/loki/clients/pkg/logentry/stages -> golang.org/x/crypto/sha3. Бамп до исправленной версии невозможен на этой ветке: исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine, дающим Go 1.25 (candi/base_images.yml: ключи builder/golang-alpine и builder/golang-alpine-1.25 имеют один digest, ключей 1.26 в файле нет). Компонент поднят до максимально совместимой версии v0.55.0."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "description": "golang.org/x/crypto/openpgp не поддерживается и небезопасен по конструкции"
+      },
+      "timestamp": "2026-09-18T11:42:59.748065Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 является общим предупреждением о том, что пакет golang.org/x/crypto/openpgp не поддерживается и небезопасен по своей конструкции, а не уязвимостью с конкретным вектором эксплуатации; исправленной версии не существует, поэтому обновление зависимости проблему не закрывает. Бинарный файл /usr/bin/loki не импортирует golang.org/x/crypto/openpgp ни напрямую, ни транзитивно: `GOOS=linux GOARCH=amd64 go list -deps ./cmd/loki | grep -x golang.org/x/crypto/openpgp` — пусто. В сборку из golang.org/x/crypto попадают только пакеты argon2, bcrypt, blake2b, blowfish, chacha20, chacha20poly1305, cryptobyte (+asn1), hkdf, internal/alias, internal/poly1305, pbkdf2, pkcs12 (+internal/rc2), scrypt, sha3 — полный список по `go list -deps ./cmd/loki | grep \"^golang.org/x/crypto\"` на дереве v2.9.15 со всеми патчами. Регистронезависимый поиск по символам бинарника (`go tool nm loki | grep -i openpgp`) находит только тип DNS-записи github.com/miekg/dns.OPENPGPKEY, не имеющий отношения к OpenPGP-реализации x/crypto. Уязвимый код физически не попадает в собранный бинарник и не может быть исполнен."
+    }
+  ]
+}

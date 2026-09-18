@@ -1,0 +1,54 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-prometheus-metrics-adapter-image-k8s-prometheus-adapter",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-09-18T11:45:26.734872Z",
+  "version": 3,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "description": "golang.org/x/crypto/openpgp не поддерживается и небезопасен по конструкции"
+      },
+      "timestamp": "2026-09-18T11:45:26.642672Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 является общим предупреждением о том, что пакет golang.org/x/crypto/openpgp не поддерживается и небезопасен по своей конструкции, а не уязвимостью с конкретным вектором эксплуатации; исправленной версии не существует, поэтому обновление зависимости проблему не закрывает. Бинарный файл /adapter не импортирует golang.org/x/crypto/openpgp ни напрямую, ни транзитивно: `GOOS=linux GOARCH=amd64 go list -deps ./cmd/adapter | grep -x golang.org/x/crypto/openpgp` — пусто, `go tool nm adapter | grep -i openpgp` — ни одного символа (при 83 символах других пакетов golang.org/x/crypto в том же бинарнике). Из golang.org/x/crypto в /adapter линкуются только пакеты cryptobyte (+asn1), hkdf, internal/alias, internal/poly1305, nacl/secretbox, salsa20/salsa — полный список по `GOOS=linux GOARCH=amd64 go list -deps ./cmd/adapter | grep \"^golang.org/x/crypto\"` на дереве v0.12.0 со всеми патчами. Зависимость приходит транзитивно из apiserver: `go mod why -m golang.org/x/crypto` даёт цепочку sigs.k8s.io/prometheus-adapter/cmd/adapter -> k8s.io/apiserver/pkg/server -> golang.org/x/crypto/cryptobyte. Уязвимый код физически не попадает в собранный бинарник и не может быть исполнен."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: отказ в обслуживании на заблокированном канале SSH"
+      },
+      "timestamp": "2026-09-18T11:45:26.689141Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/crypto/ssh (взаимная блокировка на установленном или неопределившемся канале, приводящая к отказу в обслуживании). prometheus-adapter не является SSH-сервером или клиентом, и пакет golang.org/x/crypto/ssh в него не линкуется: `GOOS=linux GOARCH=amd64 go list -deps ./cmd/adapter | grep -x golang.org/x/crypto/ssh` — пусто, `go tool nm adapter | grep 'golang.org/x/crypto/ssh\\.'` — ни одного символа. Из golang.org/x/crypto в /adapter линкуются только пакеты cryptobyte (+asn1), hkdf, internal/alias, internal/poly1305, nacl/secretbox, salsa20/salsa — полный список по `GOOS=linux GOARCH=amd64 go list -deps ./cmd/adapter | grep \"^golang.org/x/crypto\"` на дереве v0.12.0 со всеми патчами. Зависимость приходит транзитивно из apiserver: `go mod why -m golang.org/x/crypto` даёт цепочку sigs.k8s.io/prometheus-adapter/cmd/adapter -> k8s.io/apiserver/pkg/server -> golang.org/x/crypto/cryptobyte. Бамп до исправленной версии невозможен на этой ветке: исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine, дающим Go 1.25 (в candi/base_images.yml ключи builder/golang-alpine и builder/golang-alpine-1.25 имеют один digest, ключей 1.26 в файле нет). Компонент поднят до максимально совместимой версии v0.55.0."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: отказ в обслуживании на заблокированном канале SSH"
+      },
+      "timestamp": "2026-09-18T11:45:26.734872Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/crypto/ssh (взаимная блокировка на установленном или неопределившемся канале, приводящая к отказу в обслуживании). prometheus-adapter не является SSH-сервером или клиентом, и пакет golang.org/x/crypto/ssh в него не линкуется: `GOOS=linux GOARCH=amd64 go list -deps ./cmd/adapter | grep -x golang.org/x/crypto/ssh` — пусто, `go tool nm adapter | grep 'golang.org/x/crypto/ssh\\.'` — ни одного символа. Из golang.org/x/crypto в /adapter линкуются только пакеты cryptobyte (+asn1), hkdf, internal/alias, internal/poly1305, nacl/secretbox, salsa20/salsa — полный список по `GOOS=linux GOARCH=amd64 go list -deps ./cmd/adapter | grep \"^golang.org/x/crypto\"` на дереве v0.12.0 со всеми патчами. Зависимость приходит транзитивно из apiserver: `go mod why -m golang.org/x/crypto` даёт цепочку sigs.k8s.io/prometheus-adapter/cmd/adapter -> k8s.io/apiserver/pkg/server -> golang.org/x/crypto/cryptobyte. Бамп до исправленной версии невозможен на этой ветке: исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine, дающим Go 1.25 (в candi/base_images.yml ключи builder/golang-alpine и builder/golang-alpine-1.25 имеют один digest, ключей 1.26 в файле нет). Компонент поднят до максимально совместимой версии v0.55.0."
+    }
+  ]
+}

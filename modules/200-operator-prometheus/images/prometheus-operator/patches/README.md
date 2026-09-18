@@ -47,6 +47,39 @@ go mod tidy
 git diff
 ```
 
+## 007-cve-go-mod.patch
+
+Fixes CVEs disclosed against the dependency versions introduced by `004-fix_cve.patch`
+(golang.org/x/crypto CVE-2024-45337, CVE-2026-39827..39835, CVE-2026-42508,
+CVE-2026-46595/46597/46598, CVE-2026-56854; golang.org/x/net CVE-2026-25680/25681,
+CVE-2026-27136, CVE-2026-33814, CVE-2026-39821, CVE-2026-42502/42506, CVE-2026-46600;
+golang.org/x/sys CVE-2026-39824; golang.org/x/text CVE-2026-56852;
+go.mongodb.org/mongo-driver CVE-2026-2303). Only `go.mod` and `go.sum` are touched.
+
+``` sh
+go mod edit -go=1.25.0 -toolchain=none
+go get golang.org/x/crypto@v0.55.0 golang.org/x/net@v0.57.0 golang.org/x/text@v0.41.0 \
+       golang.org/x/sys@v0.47.0 golang.org/x/term@v0.45.0 golang.org/x/sync@v0.22.0 \
+       go.mongodb.org/mongo-driver@v1.17.7
+go mod tidy
+git diff go.mod go.sum
+```
+
+Note: `golang.org/x/crypto` is deliberately capped at v0.55.0. v0.56.0 declares
+`go 1.26.0`, while the builder image used here (`builder/golang-alpine` in
+`candi/base_images.yml`) ships Go 1.25.13, so v0.56.0 cannot be compiled in this
+repository. The two findings that are only fixed in v0.56.0 — CVE-2026-56855 /
+GO-2026-6355 and CVE-2026-78662 / GO-2026-6354, a denial of service on a deadlocked
+established/undecided channel in `golang.org/x/crypto/ssh` — are covered by
+`known_vulnerabilities.vex` instead: neither `/bin/operator` nor
+`/bin/prometheus-config-reloader` links `golang.org/x/crypto/ssh`.
+
+Leaves `github.com/prometheus/prometheus` at v0.47.0, so the vendored-tree patches
+`005-op-functions.patch` and `006-printer-op-top-aggregate-string.patch` keep applying
+unchanged. The four CVEs reported against `github.com/prometheus/prometheus` v0.47.0
+(CVE-2026-40179, CVE-2026-42151, CVE-2026-42154, CVE-2026-44903) are covered by
+`known_vulnerabilities.vex` as well.
+
 ## 005-op-functions.patch
 
 Applied to vendored `github.com/prometheus/prometheus` after `go mod vendor`.

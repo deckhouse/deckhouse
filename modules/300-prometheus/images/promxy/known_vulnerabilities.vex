@@ -2,8 +2,8 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-29ee29150ad2b251ccdee6c203c52b31b355dd476df45ac4f10de08d24ac9ee6",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2025-10-10T19:56:32.366855+03:00",
-  "version": 1,
+  "timestamp": "2026-09-18T12:44:31.965869Z",
+  "version": 8,
   "statements": [
     {
       "vulnerability": {
@@ -32,6 +32,104 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2025-54410 связана с работой демона Docker (dockerd) при использовании firewalld - при перезагрузке firewalld не восстанавливаются iptables правила изоляции bridge сетей между контейнерами. Promxy является Go-бинарем, который выступает агрегирующим прокси для Prometheus и использует библиотеку github.com/docker/docker только как зависимость Go модуля. Promxy не запускает Docker daemon, не управляет контейнерами и не создает bridge сети. Уязвимый код находится в функциях управления сетями Docker daemon (libnetwork/iptables/firewalld.go), которые никогда не вызываются в контексте работы Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в рамках использования Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "timestamp": "2026-09-18T12:44:10.038889Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33997 связана с обходом проверки привилегий при установке Docker-плагинов через команду 'docker plugin install'. Promxy использует github.com/docker/docker исключительно как транзитивную зависимость через github.com/prometheus/prometheus (discovery/moby) и только клиентский SDK. Проверка на дереве promxy v0.0.93 с применёнными патчами 001, 004-007: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/promxy (1069 пакетов) содержит из github.com/docker/docker только api/types/*, api, client, errdefs, image/spec и internal/multierror; go tool nm по собранному /app/promxy даёт 0 символов по маске docker/docker/(daemon|plugin|libnetwork) при 373 символах клиента как положительном контроле. Promxy никогда не устанавливает и не обслуживает Docker-плагины, а уязвимый код находится в обработчике установки плагинов Docker-демона. Обновление до исправленной версии 29.3.1 невозможно: у модуля github.com/docker/docker максимальная опубликованная версия — v28.5.2+incompatible, у модуля github.com/docker/docker/v29 нет ни одной опубликованной версии, а в апстриме moby/moby тег v29.3.1 отсутствует. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "timestamp": "2026-09-18T12:44:10.087296Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41567 позволяет вредоносному образу выполнить произвольный код с привилегиями демона Docker (root на хосте) при загрузке сжатого архива в контейнер через 'docker cp' или endpoint 'PUT /containers/{id}/archive'. Promxy использует github.com/docker/docker исключительно как транзитивную зависимость через github.com/prometheus/prometheus (discovery/moby) и только клиентский SDK. Проверка на дереве promxy v0.0.93 с применёнными патчами 001, 004-007: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/promxy (1069 пакетов) содержит из github.com/docker/docker только api/types/*, api, client, errdefs, image/spec и internal/multierror; go tool nm по собранному /app/promxy даёт 0 символов по маске docker/docker/(daemon|plugin|libnetwork) при 373 символах клиента как положительном контроле. Promxy никогда не загружает архивы в контейнеры и не выполняет операции 'docker cp'. Исправленной версии у находки нет. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "timestamp": "2026-09-18T12:44:10.131960Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41568 представляет собой состояние гонки при создании точки монтирования во время операции 'docker cp' демона Docker, позволяющее вредоносному контейнеру через подмену символьной ссылки создавать пустые файлы или каталоги по произвольным путям на хосте с правами root (отказ в обслуживании). Promxy использует github.com/docker/docker исключительно как транзитивную зависимость через github.com/prometheus/prometheus (discovery/moby) и только клиентский SDK. Проверка на дереве promxy v0.0.93 с применёнными патчами 001, 004-007: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/promxy (1069 пакетов) содержит из github.com/docker/docker только api/types/*, api, client, errdefs, image/spec и internal/multierror; go tool nm по собранному /app/promxy даёт 0 символов по маске docker/docker/(daemon|plugin|libnetwork) при 373 символах клиента как положительном контроле. Уязвимый код находится в функции createIfNotExists Docker-демона. Исправленной версии у находки нет. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "timestamp": "2026-09-18T12:44:10.176874Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42306 представляет собой состояние гонки при настройке bind-монтирования во время операции 'docker cp' демона Docker, позволяющее вредоносному контейнеру через подмену символьной ссылки перенаправить целевую точку монтирования на произвольный путь хоста. Promxy использует github.com/docker/docker исключительно как транзитивную зависимость через github.com/prometheus/prometheus (discovery/moby) и только клиентский SDK. Проверка на дереве promxy v0.0.93 с применёнными патчами 001, 004-007: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/promxy (1069 пакетов) содержит из github.com/docker/docker только api/types/*, api, client, errdefs, image/spec и internal/multierror; go tool nm по собранному /app/promxy даёт 0 символов по маске docker/docker/(daemon|plugin|libnetwork) при 373 символах клиента как положительном контроле. Уязвимый код находится в логике настройки монтирования Docker-демона. Исправленной версии у находки нет. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "timestamp": "2026-09-18T12:44:31.875610Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который признан неподдерживаемым и небезопасным по своему дизайну (unmaintained, unsafe by design) и не имеет исправленной версии, поэтому не может быть устранена обновлением зависимости. Promxy использует golang.org/x/crypto только как транзитивную зависимость и не импортирует подпакет openpgp. Проверка на дереве promxy v0.0.93 с применёнными патчами 001, 004-007: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/promxy | grep -xE 'golang.org/x/crypto/(ssh|openpgp)' не даёт совпадений при 1069 пакетах в графе, тогда как 11 других подпакетов golang.org/x/crypto (bcrypt, blowfish, chacha20, chacha20poly1305, cryptobyte, hkdf, pkcs12 и их внутренние зависимости) в списке присутствуют — положительный контроль, подтверждающий работоспособность проверки. go tool nm по собранному /app/promxy даёт 0 символов golang.org/x/crypto/ssh и golang.org/x/crypto/openpgp при 23 символах golang.org/x/crypto/bcrypt. Таким образом, уязвимый код отсутствует в образе и данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855"
+      },
+      "timestamp": "2026-09-18T12:44:31.921211Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-56855 (GO-2026-6355) — отказ в обслуживании на установленном канале SSH: вредоносный пир мог отправить сообщения, приводящие к взаимной блокировке соединения. По данным Go vulnerability database уязвимость локализована исключительно в пакете golang.org/x/crypto/ssh (символы Dial, NewClientConn, NewControlClientConn, NewServerConn, channel.handlePacket) и исправлена в golang.org/x/crypto v0.56.0. Поднять x/crypto до v0.56.0 в этом образе нельзя: v0.56.0 объявляет go 1.26.0, а сборочный образ builder/golang-alpine, зафиксированный в candi/base_images.yml, даёт Go 1.25.13. Патч 007-fix-cve-bump.patch поднимает x/crypto до максимально совместимой версии v0.55.0, закрывающей все остальные находки по этой библиотеке. Сам уязвимый пакет в образ не входит. Проверка на дереве promxy v0.0.93 с применёнными патчами 001, 004-007: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/promxy | grep -xE 'golang.org/x/crypto/(ssh|openpgp)' не даёт совпадений при 1069 пакетах в графе, тогда как 11 других подпакетов golang.org/x/crypto (bcrypt, blowfish, chacha20, chacha20poly1305, cryptobyte, hkdf, pkcs12 и их внутренние зависимости) в списке присутствуют — положительный контроль, подтверждающий работоспособность проверки. go tool nm по собранному /app/promxy даёт 0 символов golang.org/x/crypto/ssh и golang.org/x/crypto/openpgp при 23 символах golang.org/x/crypto/bcrypt. Promxy не является ни SSH-клиентом, ни SSH-сервером. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662"
+      },
+      "timestamp": "2026-09-18T12:44:31.965869Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-78662 (GO-2026-6354) — отказ в обслуживании на ещё не установленном канале SSH: вредоносный пир мог переполнить очередь incomingRequests канала и заблокировать соединение. По данным Go vulnerability database уязвимость локализована исключительно в пакете golang.org/x/crypto/ssh (символы Dial, NewClientConn, NewControlClientConn, NewServerConn, channel.Accept, channel.handlePacket, channel.responseMessageReceived) и исправлена в golang.org/x/crypto v0.56.0. Поднять x/crypto до v0.56.0 в этом образе нельзя: v0.56.0 объявляет go 1.26.0, а сборочный образ builder/golang-alpine, зафиксированный в candi/base_images.yml, даёт Go 1.25.13. Патч 007-fix-cve-bump.patch поднимает x/crypto до v0.55.0. Сам уязвимый пакет в образ не входит. Проверка на дереве promxy v0.0.93 с применёнными патчами 001, 004-007: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./cmd/promxy | grep -xE 'golang.org/x/crypto/(ssh|openpgp)' не даёт совпадений при 1069 пакетах в графе, тогда как 11 других подпакетов golang.org/x/crypto (bcrypt, blowfish, chacha20, chacha20poly1305, cryptobyte, hkdf, pkcs12 и их внутренние зависимости) в списке присутствуют — положительный контроль, подтверждающий работоспособность проверки. go tool nm по собранному /app/promxy даёт 0 символов golang.org/x/crypto/ssh и golang.org/x/crypto/openpgp при 23 символах golang.org/x/crypto/bcrypt. Promxy не является ни SSH-клиентом, ни SSH-сервером. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
     }
   ]
 }
