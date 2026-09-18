@@ -112,7 +112,8 @@ type CCM struct {
 	// +deckhouse:ru:description:value="Установите в `true`, если CCM не требуется. Оставьте включённым (`false`), если нужно управление облачными балансировщиками нагрузки."
 	// +kubebuilder:default=false
 	// +optional
-	Disabled bool `json:"disabled,omitempty"`
+	Disabled   bool          `json:"disabled,omitempty"`
+	Parameters CCMParameters `json:"parameters"`
 }
 
 // Contains settings to connect to the Zvirt API.
@@ -207,6 +208,11 @@ type CustomNetworkConfig struct {
 	// +optional
 	DNSServers []string `json:"dnsServers,omitempty"`
 }
+
+// Parameters of the CCM subsystem.
+// +deckhouse:ru:description:value="Параметры подсистемы CCM."
+// +deckhouse:DisableAdditionalProperties=true
+type CCMParameters struct{}
 
 // Parameters of the storage subsystem.
 // +deckhouse:ru:description:value="Параметры подсистемы хранения данных."

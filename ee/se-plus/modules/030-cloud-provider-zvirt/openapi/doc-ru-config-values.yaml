@@ -25,6 +25,7 @@ properties:
 
           Установите в `true`, если CCM не требуется. Оставьте включённым (`false`), если нужно управление облачными балансировщиками нагрузки.
         type: boolean
+      parameters: {}
     type: object
   nodes:
     description: |

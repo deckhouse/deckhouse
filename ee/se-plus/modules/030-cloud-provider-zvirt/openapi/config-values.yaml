@@ -29,6 +29,11 @@ properties:
 
           Set to `true` if CCM is not required. Leave enabled (`false`) when you need cloud load balancer management.
         type: boolean
+      parameters:
+        description: Parameters of the CCM subsystem.
+        type: object
+    required:
+    - parameters
     type: object
   nodes:
     additionalProperties: false

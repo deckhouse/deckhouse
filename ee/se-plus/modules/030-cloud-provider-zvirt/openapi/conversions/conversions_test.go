@@ -38,6 +38,7 @@ storage:
   parameters: {}
 ccm:
   disabled: false
+  parameters: {}
 `,
 			currentVersion:  1,
 			expectedVersion: 2,
@@ -62,6 +63,7 @@ storage:
       - slow-.*
 ccm:
   disabled: true
+  parameters: {}
 `,
 			expected: `
 provider:
@@ -81,6 +83,7 @@ storage:
       - slow-.*
 ccm:
   disabled: true
+  parameters: {}
 `,
 			currentVersion:  2,
 			expectedVersion: 2,

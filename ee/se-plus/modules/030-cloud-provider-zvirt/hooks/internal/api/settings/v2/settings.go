@@ -45,7 +45,8 @@ type Storage struct {
 }
 
 type CCM struct {
-	Disabled bool `json:"disabled,omitempty"`
+	Disabled   bool          `json:"disabled,omitempty"`
+	Parameters CCMParameters `json:"parameters"`
 }
 
 // ProviderParameters contains settings to connect to the zVirt API. The login ID and the
@@ -71,6 +72,8 @@ type CustomNetworkConfig struct {
 	NetworkInterfaceGateway   string   `json:"networkInterfaceGateway"`
 	DNSServers                []string `json:"dnsServers,omitempty"`
 }
+
+type CCMParameters struct{}
 
 type StorageParameters struct {
 	ExcludedStorageClasses []string `json:"excludedStorageClasses,omitempty"`
