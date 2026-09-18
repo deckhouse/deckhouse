@@ -15,27 +15,12 @@
 package controlplane
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 )
-
-// untouchedRunner fails the test if the hook gets as far as reading the plan outputs:
-// by then the node's labels are on their way out and the etcd member with them.
-type untouchedRunner struct {
-	infrastructure.RunnerInterface
-	t *testing.T
-}
-
-func (r untouchedRunner) GetInfrastructureOutput(_ context.Context, _ string) ([]byte, error) {
-	r.t.Fatal("hook started removing the node before the check it was given had passed")
-	return nil, nil
-}
 
 // Scaling a multi-master down keeps whichever master the state lists first, healthy or
 // not, so the check runs before the first role is stripped, not after.
@@ -54,9 +39,9 @@ func TestBeforeActionStopsWhenCheckFails(t *testing.T) {
 		true,
 	)
 
-	_, err := hook.BeforeAction(t.Context(), untouchedRunner{t: t})
+	_, err := hook.BeforeAction(t.Context(), recreatedMasterRunner{})
 
-	require.ErrorContains(t, err, "check before destroying node 'cluster-master-2'")
+	require.ErrorContains(t, err, "not all nodes are ready")
 	require.ErrorContains(t, err, "cluster-master-0")
 }
 

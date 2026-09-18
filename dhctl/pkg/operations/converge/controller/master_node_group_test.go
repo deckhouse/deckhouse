@@ -78,6 +78,25 @@ func TestNewHookForUpdatePipelineFailsWithoutSSHConfiguration(t *testing.T) {
 	require.Nil(t, hook)
 }
 
+func TestNewHookForDestroyPipelineFailsWithoutSSHConfiguration(t *testing.T) {
+	convergeCtx := context.NewContext(t.Context(), context.Params{})
+
+	controller := NewMasterNodeGroupController(
+		NewNodeGroupController("master", state.NodeGroupInfrastructureState{
+			State: map[string][]byte{
+				"cluster-master-0": nil,
+				"cluster-master-1": nil,
+			},
+		}, nil, nil),
+		false,
+	)
+
+	hook, err := controller.newHookForDestroyPipeline(convergeCtx, "cluster-master-1")
+
+	require.Error(t, err)
+	require.Nil(t, hook)
+}
+
 // The readiness gate asks one question per surviving master, and an answer of "no"
 // skips the check instead of failing it. With no terminal that answer defaulted to no,
 // so a master was retired with the others' readiness never looked at.
