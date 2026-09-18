@@ -138,6 +138,21 @@ Harnesses 3, 4, 5 and 8 of the threat model's plan need the third-party binaries
 under test in-process, so they live in the forks rather than here; see
 "Third-party forks" below and the section-6 matrix above for their state.
 
+## Fuzz images
+
+The dedicated CI fuzz build includes six images for the harnesses in this repository:
+`registry/hooks-fuzz`, `registry/library-fuzz`, `registry/nodeservices-manager-fuzz`,
+`registry/mirrorer-fuzz`, `registry/syncer-fuzz` and `registry/registry-proxy-fuzz`.
+They use the shared `fuzz image` template, like `user-authn`, and are only rendered
+when `FUZZ_S3_ENDPOINT` is set. All of them are intermediate images (`final: false`).
+
+Each image contains `Taskfile.yml` in its Go module directory and sets
+`FUZZ_PACKAGES` to the packages with harnesses. The tasks `fuzz:list`, `fuzz:run`,
+`fuzz:coverage` and `fuzz:replay` use the same interface as `user-authn`.
+The shared build restores the S3 corpus, replays every discovered target and
+removes the restored corpus before publishing the image. The third-party fork
+harnesses described below are not included in these images.
+
 ## Running
 
 Seed corpora run as ordinary unit tests:

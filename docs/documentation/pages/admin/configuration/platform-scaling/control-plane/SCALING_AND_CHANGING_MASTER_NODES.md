@@ -7,7 +7,7 @@ permalink: en/admin/configuration/platform-scaling/control-plane/scaling-and-cha
 
 ### Control plane operation modes
 
-Deckhouse Kubernetes Platform (DKP) supports two operation modes for the control plane:
+Deckhouse Platform (DP) supports two operation modes for the control plane:
 
 1. **Single-master**:
    - `kube-apiserver` uses only the local `etcd` instance.
@@ -22,7 +22,7 @@ Deckhouse Kubernetes Platform (DKP) supports two operation modes for the control
 
 ### Automatic scaling of master nodes
 
-DKP allows automatic addition and removal of master nodes using the label `node-role.kubernetes.io/control-plane=""`.
+DP allows automatic addition and removal of master nodes using the label `node-role.kubernetes.io/control-plane=""`.
 
 Automatic control of master nodes includes:
 
@@ -46,13 +46,13 @@ Transitioning from 2 to 1 master node requires manual etcd adjustment. All other
 For cluster stability, it is necessary to maintain an odd number of nodes with etcd to ensure quorum.
 {% endalert %}
 
-DKP supports both automatic and manual scaling of master nodes in cloud and bare-metal clusters:
+DP supports both automatic and manual scaling of master nodes in cloud and bare-metal clusters:
 
 1. **Single-master → Multi-master**:
 
    - Add one or more master nodes.
    - Apply the label `node-role.kubernetes.io/control-plane=""` to them.
-   - DKP will automatically:
+   - DP will automatically:
      - Deploy all control plane components.
      - Configure the nodes to work with the `etcd` cluster.
      - Synchronize certificates and configuration files.
@@ -145,7 +145,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Make sure there are no alerts in the cluster that could interfere with updating master nodes.
-1. Ensure the DKP queue is empty:
+1. Ensure the DP queue is empty:
 
    ```shell
    d8 system queue list
@@ -159,7 +159,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
 
 1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (change the container registry address if necessary):
 
@@ -296,7 +296,7 @@ To change the OS of a manually added master node, follow these steps:
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-1. Clean up the DKP data on the removed master node. This command irreversibly removes Kubernetes and DKP data from the node. Before running it, make sure you have selected the correct node and created the required backups:
+1. Clean up the DP data on the removed master node. This command irreversibly removes Kubernetes and DP data from the node. Before running it, make sure you have selected the correct node and created the required backups:
 
    ```shell
    bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
@@ -384,8 +384,8 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
-When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
-To avoid this "interception", after installing DKP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
+When installing Deckhouse Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
+To avoid this "interception", after installing DP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -460,7 +460,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
 
 1. On the **local machine**, run the Deckhouse installer container for the appropriate edition and version (change the container registry address if necessary):
 
@@ -524,7 +524,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
-1. Make sure the DKP queue is empty:
+1. Make sure the DP queue is empty:
 
    ```shell
    d8 system queue list
@@ -538,9 +538,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Platform license key.
 
-1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
+1. On the **local machine**, run the DP installer container for the corresponding edition and version (change the container registry address if needed):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -583,9 +583,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 system queue list
    ```
 
-### Accessing the DKP controller in a multi-master cluster
+### Accessing the DP controller in a multi-master cluster
 
-In clusters with multiple master nodes, DKP runs in high-availability mode (with multiple replicas). To access the active DKP controller, you can use the following command (example shown for the `deckhouse-controller queue list` command):
+In clusters with multiple master nodes, DP runs in high-availability mode (with multiple replicas). To access the active DP controller, you can use the following command (example shown for the `deckhouse-controller queue list` command):
 
 ```console
 d8 system queue list

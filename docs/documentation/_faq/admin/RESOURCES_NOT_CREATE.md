@@ -50,7 +50,7 @@ If the required resources do not appear after creating an object in the system (
 
    If there are many unprocessed or long-running tasks in the queue, this may indicate problems.
 
-1. Analyze DKP logs and events:
+1. Analyze DP logs and events:
 
    - To view logs in real time, use the command:
 

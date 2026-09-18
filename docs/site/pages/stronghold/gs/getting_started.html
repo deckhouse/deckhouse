@@ -11,14 +11,14 @@ toc: false
 
 <p>This getting started guide walks you through the step-by-step process of installing Deckhouse Stronghold.</p>
 
-<p>The installation process of Deckhouse Stronghold differs when installed in an existing Deckhouse Kubernetes Platform cluster and in the case of a fresh installation along with the Deckhouse Kubernetes Platform.</p>
+<p>The installation process of Deckhouse Stronghold differs when installed in an existing Deckhouse Platform cluster and in the case of a fresh installation along with the Deckhouse Platform.</p>
 
 <h2>Select the infrastructure type to install Deckhouse Stronghold in</h2>
 
 <div class="block" style="margin: 0;">
   <div class="block__columns block__columns_top">
     <div>
-      <h3>Installation of the Deckhouse Kubernetes Platform with Stronghold</h3>
+      <h3>Installation of the Deckhouse Platform with Stronghold</h3>
       <div class="button-group">
         {%- for provider in site.data.getting_started.stronghold.installTypes %}
         {%- if provider[1].type == 'existing-dkp' %}{% continue %}{% endif %}

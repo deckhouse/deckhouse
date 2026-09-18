@@ -3,7 +3,7 @@ title: Storage and load balancing in Amazon Web Services
 permalink: en/admin/integrations/public/amazon/storage.html
 ---
 
-This section covers the following additional aspects of integrating Deckhouse Kubernetes Platform (DKP) with AWS:
+This section covers the following additional aspects of integrating Deckhouse Platform (DP) with AWS:
 
 - Connecting cloud disks using CSI.
 - Automatic StorageClass creation.
@@ -13,7 +13,7 @@ This section covers the following additional aspects of integrating Deckhouse Ku
 
 ## Storage (CSI and StorageClass)
 
-DKP integrates with AWS storage via CSI.
+DP integrates with AWS storage via CSI.
 This allows the cluster to automatically provision and attach disks to its nodes.
 
 StorageClasses are created automatically for the following disk types:
@@ -64,7 +64,7 @@ To resize a volume (for example, when running low on disk space), follow these s
 
 ## Load balancing
 
-DKP supports LoadBalancer Services via AWS Load Balancer Controller.
+DP supports LoadBalancer Services via AWS Load Balancer Controller.
 
 To control how AWS resources are created, use annotations on the Service object:
 
@@ -107,7 +107,7 @@ metadata:
 
 This is especially important when manually configuring Ingress controllers or using non-standard node layout.
 
-To retrieve the current list of subnets used in your DKP setup, run the following:
+To retrieve the current list of subnets used in your DP setup, run the following:
 
 ```shell
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
@@ -117,7 +117,7 @@ kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
 
 ## Connecting CloudStatic nodes
 
-To connect manually created EC2 instances to a DKP cluster, follow these steps:
+To connect manually created EC2 instances to a DP cluster, follow these steps:
 
 1. Attach the IAM role `<prefix>-node`.
 1. Attach the security group `<prefix>-node`.

@@ -15,9 +15,10 @@
 package defaults
 
 import (
-	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-openapi/spec"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 // Apply traverses an object and apply default values from OpenAPI schema.

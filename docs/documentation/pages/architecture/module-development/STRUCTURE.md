@@ -2,7 +2,7 @@
 title: "Module structure"
 permalink: en/architecture/module-development/structure/
 lang: en
-description: Directory layout of a Deckhouse Kubernetes Platform module — charts, CRDs, docs, hooks, images, OpenAPI schemas, templates, and module.yaml metadata.
+description: Directory layout of a Deckhouse Platform module — charts, CRDs, docs, hooks, images, OpenAPI schemas, templates, and module.yaml metadata.
 ---
 
 The source code of the module and its assembly rules must be located in a directory with a certain structure. The best analog is a Helm chart.
@@ -109,7 +109,7 @@ Example module folder structure containing build and publish rules using GitHub 
 
 The `/charts` directory contains Helm helper charts used when rendering templates.
 
-Deckhouse Kubernetes Platform (DKP) has its own library for working with templates called [lib-helm](https://github.com/deckhouse/lib-helm). You can read about the library's features [in the lib-helm repository](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md). To add the library to the module, download the [tgz-archive](https://github.com/deckhouse/lib-helm/releases/) with the appropriate release and move it to the `/charts` directory of the module.
+Deckhouse Platform (DP) has its own library for working with templates called [lib-helm](https://github.com/deckhouse/lib-helm). You can read about the library's features [in the lib-helm repository](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md). To add the library to the module, download the [tgz-archive](https://github.com/deckhouse/lib-helm/releases/) with the appropriate release and move it to the `/charts` directory of the module.
 
 ## crds
 
@@ -130,7 +130,7 @@ To render CRDs from the `/crds` directory in the site documentation or documenta
 ## docs
 
 {% alert %}
-The module [lifecycle](../versioning/#module-lifecycle) is specified in [module.yaml](#moduleyaml). The availability of the module in the editions of the Deckhouse Kubernetes Platform is not determined by the module developer.
+The module [lifecycle](../versioning/#module-lifecycle) is specified in [module.yaml](#moduleyaml). The availability of the module in the editions of the Deckhouse Platform is not determined by the module developer.
 {% endalert %}
 
 The `/docs` directory contains the module documentation. The following nested directories aren't involved in the documentation building process:
@@ -289,7 +289,7 @@ There are two ways to define a container image:
 
 The image name matches the directory name for this module, written in *camelCase* notation starting with a small letter. For example, the directory `/images/echo-server` corresponds to the image name `echoServer`.
 
-The built images have content-based tags that can be used when building other images. To use content-based image tags, [enable the lib-helm](#charts) library. You can also use other features of the [helm_lib library](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) of Deckhouse Kubernetes Platform.
+The built images have content-based tags that can be used when building other images. To use content-based image tags, [enable the lib-helm](#charts) library. You can also use other features of the [helm_lib library](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) of Deckhouse Platform.
 
 Below is an example of using a content-based image tag in a Helm chart:
 
@@ -378,7 +378,7 @@ properties:
 
 #### Validations with x-deckhouse-validations
 
-When developing a module for the Deckhouse Kubernetes Platform, you can use the OpenAPI extension `x-deckhouse-validations` to describe complex validation rules for module parameters using Common Expression Language (`CEL`).
+When developing a module for the Deckhouse Platform, you can use the OpenAPI extension `x-deckhouse-validations` to describe complex validation rules for module parameters using Common Expression Language (`CEL`).
 
 When using these validation rules, keep the following features in mind:
 
@@ -537,7 +537,7 @@ You can find an example of an OpenAPI schema in [module template](https://github
 
 ## .helmignore
 
-`.helmignore` allows you to exclude files from the Helm release. In case of DKP modules, directories `/crds`, `/images`, `/hooks`, `/openapi` must be added to `.helmignore` to avoid exceeding 1 Mb limit of Helm release size.
+`.helmignore` allows you to exclude files from the Helm release. In case of DP modules, directories `/crds`, `/images`, `/hooks`, `/openapi` must be added to `.helmignore` to avoid exceeding 1 Mb limit of Helm release size.
 
 ## Chart.yaml
 
@@ -568,8 +568,8 @@ Parameters that can be used in `module.yaml`:
 | `namespace` | String | Namespace where the module components will be deployed |
 | `subsystems` | Array of strings | List of subsystems the module belongs to |
 | `accessibility` | Object | Module accessibility settings |
-| `accessibility.editions` | Object | Module operation settings in DKP editions |
-| `accessibility.editions.available` | Boolean | Defines whether the module is available in a DKP edition |
+| `accessibility.editions` | Object | Module operation settings in DP editions |
+| `accessibility.editions.available` | Boolean | Defines whether the module is available in a DP edition |
 | `accessibility.editions.enabledInBundles` | Array of strings | List of module bundles in which the module should be enabled by default |
 | `descriptions` | Object | Arbitrary text description of the module's purpose |
 | `descriptions.en` | String | Description in English |
@@ -586,8 +586,8 @@ Other `module.yaml` parameters:
 |---|---|---|
 | `name` | String, mandatory parameter | Name of the module in Kebab Case. For example, `echo-server` |
 | `exclusiveGroup` | String | If several modules share the same value of this parameter, only one of them can be active in the system at any given time. This prevents conflicts between modules performing similar or incompatible functions |
-| `requirements` | Object | [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to run the module |
-| `requirements.deckhouse` | String | Dependency on the [Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with |
+| `requirements` | Object | [Module dependencies](../dependencies/) — a set of conditions that must be met for Deckhouse Platform (DP) to run the module |
+| `requirements.deckhouse` | String | Dependency on the [Deckhouse Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the module is compatible with |
 | `requirements.kubernetes` | String | Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with |
 | `requirements.modules` | Object | Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules) |
 | `stage` | String | [Module lifecycle stage](../versioning/#definition-of-module-stability). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`. If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [corresponding parameter](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) to `true` |
@@ -624,9 +624,9 @@ disable:
   message: "Disabling this module will delete all resources created by the module."
 ```
 
-### Configuring module accessibility in DKP editions
+### Configuring module accessibility in DP editions
 
-The `accessibility` parameter lets you define the DKP editions and module bundles in which a module is available,
+The `accessibility` parameter lets you define the DP editions and module bundles in which a module is available,
 and whether it should be enabled by default.
 
 ```yaml
@@ -663,7 +663,7 @@ Parameter description:
 
     {% alert level="warning" %}
     Note that basic modules (such as the CNI module) are not included in this set.
-    Without basic modules, DKP can only operate in an already deployed cluster.
+    Without basic modules, DP can only operate in an already deployed cluster.
     The list of modules that must be enabled manually during installation is given in ["Things to keep in mind when working with the Minimal module set"](../../../admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set).
     {% endalert %}
 - Sections containing edition names. Define module behavior in specified editions.
@@ -679,8 +679,8 @@ The following diagram illustrates the logic for determining module accessibility
 
 #### Configuration examples
 
-In the following example, the module will be unavailable in all editions except DKP Enterprise Edition.
-In DKP Enterprise Edition, the module will be enabled by default in the `Managed` bundle.
+In the following example, the module will be unavailable in all editions except DP Enterprise Edition.
+In DP Enterprise Edition, the module will be enabled by default in the `Managed` bundle.
 
 ```yaml
 accessibility:
@@ -693,7 +693,7 @@ accessibility:
         - Managed
 ```
 
-In the next example, the module will be available in all DKP editions.
+In the next example, the module will be available in all DP editions.
 In the `Managed` and `Default` bundles, the module will be enabled by default.
 
 ```yaml
@@ -706,9 +706,9 @@ accessibility:
         - Default
 ```
 
-In the following example, the module will be available in all DKP editions.
+In the following example, the module will be available in all DP editions.
 It will be enabled in the `Default` and `Managed` bundles for all editions,
-except for DKP Basic Edition and DKP Community Edition.
+except for DP Basic Edition and DP Community Edition.
 
 ```yaml
 accessibility:

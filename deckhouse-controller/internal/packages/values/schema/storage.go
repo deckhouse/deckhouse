@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
@@ -32,6 +31,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/cel"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/transformers"
+	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 // Type identifies which schema variant is used for a given validation context.

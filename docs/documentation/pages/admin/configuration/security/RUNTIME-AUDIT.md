@@ -1,12 +1,12 @@
 ---
 title: Runtime audit
 permalink: en/admin/configuration/security/events/runtime-audit.html
-description: "Configuring runtime audit in Deckhouse Kubernetes Platform. Runtime monitoring, threat detection based on Linux kernel events and Kubernetes API audit."
+description: "Configuring runtime audit in Deckhouse Platform. Runtime monitoring, threat detection based on Linux kernel events and Kubernetes API audit."
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides built-in tools for detecting security threats
+Deckhouse Platform (DP) provides built-in tools for detecting security threats
 by analyzing Linux kernel events and auditing Kubernetes API events.
-With DKP, you can:
+With DP, you can:
 
 - Detect threats in environments by analyzing applications and containers.
 - Identify attempts to exploit vulnerabilities from the CVE database and signs of cryptocurrency miner activity.
@@ -18,7 +18,7 @@ With DKP, you can:
 
 ## Data sources for runtime audit
 
-DKP uses two main sources of events:
+DP uses two main sources of events:
 
 - Linux kernel events — via the eBPF driver for the [Falco](https://falco.org/) threat detection system.
 - [Kubernetes API audit](./kubernetes-api-audit.html) events — via integration with [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) and a webhook interface.
@@ -66,7 +66,7 @@ To enable the runtime audit, follow these steps:
      enabled: true
    ```
 
-1. (**Optional**) If the cluster control plane is not managed by DKP with [`control-plane-manager`](/modules/control-plane-manager/),
+1. (**Optional**) If the cluster control plane is not managed by DP with [`control-plane-manager`](/modules/control-plane-manager/),
    configure the [Kubernetes API audit webhook](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) manually.
 
 All available runtime audit parameters are listed in the [`runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html) module documentation.
@@ -110,7 +110,7 @@ To configure the webhook for receiving audit events from `kube-apiserver`:
 ## Working with audit rules
 
 Runtime audit event analysis is based on rules that define suspicious behavior criteria.
-DKP includes:
+DP includes:
 
 - **Built-in rules**, including:
   - Kubernetes audit rules (located in the `falco` container at `/etc/falco/k8s_audit_rules.yaml`).
@@ -160,7 +160,7 @@ For more rule examples, see:
 
 ### Applying a third-party rule
 
-Since Falco rule structure differs from DKP custom resource format,
+Since Falco rule structure differs from DP custom resource format,
 third-party rules from the internet must be converted to a [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) resource
 before applying them.
 
@@ -215,7 +215,7 @@ Example conversion result:
 
 ## Log collection and alerts
 
-DKP exports runtime audit events as Prometheus metrics,
+DP exports runtime audit events as Prometheus metrics,
 allowing you to set up log collection and alerts via resources of the [`log-shipper`](/modules/log-shipper/) and [`observability`](/modules/observability/) modules.
 This makes it possible to:
 
@@ -310,7 +310,7 @@ The event severity is carried by two labels: `priority` holds a numeric value, a
 
 ## Debugging and simulating events
 
-For debugging and simulating runtime audit events in DKP, you can use:
+For debugging and simulating runtime audit events in DP, you can use:
 
 - The `event-generator` utility.
 - The `/test` HTTP endpoint of the `falcosidekick` service.

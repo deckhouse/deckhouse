@@ -85,6 +85,7 @@ ca-bundle-checksum: {{ include (print .Template.BasePath "/ca-secret.yaml") . | 
 {{- $_ := set $csiNodeConfig "fullname" "csi-node-legacy" }}
 {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
 {{- $_ := set $csiNodeConfig "driverFQDN" "vsphere.csi.vmware.com" }}
+{{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
 {{- $_ := set $csiNodeConfig "securityPolicyExceptionEnabled" true }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_legacy_envs" . | fromYamlArray) }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}

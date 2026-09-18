@@ -1,18 +1,18 @@
 ---
 title: "Balancing with MetalLB"
 permalink: en/admin/configuration/network/ingress/nlb/metallb.html
-description: "Configure MetalLB load balancing in Deckhouse Kubernetes Platform for bare-metal and cloud environments. LoadBalancer service support and IP address management."
+description: "Configure MetalLB load balancing in Deckhouse Platform for bare-metal and cloud environments. LoadBalancer service support and IP address management."
 ---
 
 The [`metallb`](/modules/metallb/) module implements support for
-LoadBalancer-type services in Deckhouse Kubernetes Platform (DKP) clusters.
+LoadBalancer-type services in Deckhouse Platform (DP) clusters.
 It is suitable for both bare-metal clusters and cloud environments
 where built-in load balancers by providers are unavailable.
 
 Two operating modes are supported:
 
 - **Layer 2**: An enhanced version of the standard L2 mode in MetalLB, allowing multiple public addresses to be used for services.
-- **BGP**: Fully based on the [MetalLB](https://metallb.io/) solution and available only in DKP Enterprise Edition.
+- **BGP**: Fully based on the [MetalLB](https://metallb.io/) solution and available only in DP Enterprise Edition.
 
 ## Layer 2 mode
 
@@ -181,7 +181,7 @@ Example output:
 ## BGP mode
 
 {% alert level="info" %}
-Available in DKP Enterprise Edition only.
+Available in DP Enterprise Edition and DP Ultimate only.
 {% endalert %}
 
 In BGP mode, [`metallb`](/modules/metallb/) provides LoadBalancer-type services in Kubernetes clusters deployed on physical infrastructure.

@@ -363,7 +363,7 @@ Use [`spec.resourcesRequests`](cr.html#ingressistiocontroller-v1alpha1-spec-reso
         memory: 128Mi
   ```
 
-- `VPA` — a [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) adjusts requests within the configured `min`/`max` bounds. Starting from DKP version 1.75, the recommended VPA mode is `InPlaceOrRecreate`, which updates pod resources in place when the cluster supports it and falls back to recreating the pod otherwise (the legacy `Auto` mode always recreates the pod):
+- `VPA` — a [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) adjusts requests within the configured `min`/`max` bounds. Starting from DP version 1.75, the recommended VPA mode is `InPlaceOrRecreate`, which updates pod resources in place when the cluster supports it and falls back to recreating the pod otherwise (the legacy `Auto` mode always recreates the pod):
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -675,7 +675,7 @@ spec:
 
 ## Setting up federation for two clusters using the IstioFederation CR
 
-{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and DP Ultimate only.{% endalert %}
 
 {% alert level="warning" %}Federation covers sidecar-mode workloads only. For details, refer to [Ambient mesh limitations](./#ambient-mesh-limitations).{% endalert %}
 
@@ -705,7 +705,7 @@ spec:
 
 ## Setting up multicluster for two clusters using the IstioMulticluster CR
 
-{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and DP Ultimate only.{% endalert %}
 
 {% alert level="warning" %}Multicluster covers sidecar-mode workloads only. For details, refer to [Ambient mesh limitations](./#ambient-mesh-limitations).{% endalert %}
 
@@ -733,7 +733,7 @@ spec:
 
 ## Ambient mesh
 
-{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and DP Ultimate only.{% endalert %}
 
 {% alert level="warning" %}Ambient mesh support is experimental and not recommended for production use.{% endalert %}
 
@@ -819,7 +819,7 @@ d8 k -n myns label service myservice istio.io/use-waypoint=main
 ### Disabling ambient mesh
 
 {% alert level="warning" %}
-Before disabling ambient mode, delete all WaypointInstance resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. This leaves orphaned waypoints, which are reported by Deckhouse Kubernetes Platform (DKP) in the [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled) alert.
+Before disabling ambient mode, delete all WaypointInstance resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. This leaves orphaned waypoints, which are reported by Deckhouse Platform (DP) in the [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled) alert.
 {% endalert %}
 
 To disable the ambient mode, follow these steps:
@@ -1018,7 +1018,7 @@ spec:
 
 #### Example — disable span export for ingress-only namespaces
 
-In DKP, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
+In DP, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -1044,7 +1044,7 @@ The module-managed `Telemetry` objects for this mode disappear on the next sync;
 
 ## Debugging Istio with istioctl from the debug container
 
-The DKP debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
+The DP debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
 
 Before starting the debug container, create a dedicated ServiceAccount and grant it the permissions required by the `istioctl` commands you want to run. For example, the following manifest grants permissions that allow running the `istioctl proxy-config` commands for Pods in a single application namespace:
 
@@ -1146,7 +1146,7 @@ UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. Do not 
 
 ### Upgrading Istio control-plane
 
-* DKP allows you to install different control-plane versions simultaneously:
+* DP allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
   * Additional versions handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
@@ -1173,7 +1173,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x25" \
 
 ### Auto upgrading istio data-plane
 
-{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and DP Ultimate only.{% endalert %}
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
 

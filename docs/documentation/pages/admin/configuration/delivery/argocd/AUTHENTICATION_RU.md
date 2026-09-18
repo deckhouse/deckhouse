@@ -1,7 +1,7 @@
 ---
 title: "Настройка аутентификации и авторизации"
 permalink: ru/admin/configuration/delivery/argocd/authentication/
-description: "Настройка аутентификации и авторизации Argo CD в Deckhouse Kubernetes Platform."
+description: "Настройка аутентификации и авторизации Argo CD в Deckhouse Platform."
 lang: ru
 relatedLinks:
   - title: "Официальный сайт Argo CD"
@@ -10,8 +10,8 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-Argo CD поддерживает локальную аутентификацию, а также интегрирован с подсистемой идентификации и доступа Deckhouse Kubernetes Platform.
-В документации DKP можно подробнее узнать о настройке [аутентификации](../../../access/authentication/) и [авторизации](../../../access/authorization/).
+Argo CD поддерживает локальную аутентификацию, а также интегрирован с подсистемой идентификации и доступа Deckhouse Platform.
+В документации DP можно подробнее узнать о настройке [аутентификации](../../../access/authentication/) и [авторизации](../../../access/authorization/).
 
 {% alert level="warning" %}
 Если в объекте ArgoCD не заданы дополнительные настройки, по умолчанию активна локальная учётная запись `admin` с ролью `admin`.
@@ -116,7 +116,7 @@ argocd account generate-token --account <ACCOUNT>
 
 ## Аутентификация с помощью SSO
 
-Перед настройкой объекта ArgoCD создайте объект [DexClient](/modules/user-authn/cr.html#dexclient), который используется в качестве OAuth2-клиента. Он необходим для интеграции с Deckhouse Kubernetes Platform:
+Перед настройкой объекта ArgoCD создайте объект [DexClient](/modules/user-authn/cr.html#dexclient), который используется в качестве OAuth2-клиента. Он необходим для интеграции с Deckhouse Platform:
 
 ```bash
 d8 k create -f -<<EOF
@@ -134,13 +134,13 @@ EOF
 
 `<ARGOCD_DOMAIN>` — это полное доменное имя (Fully Qualified Domain Name, FQDN), заданное в секции [`.spec.server.host`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-host) ArgoCD.
 
-Дождитесь, пока Deckhouse Kubernetes Platform создаст Secret с секретным ключом для клиента:
+Дождитесь, пока Deckhouse Platform создаст Secret с секретным ключом для клиента:
 
 ```shell
 d8 k -n argocd get secret/dex-client-argocd
 ```
 
-Настройте объект ArgoCD на использование SSO в Deckhouse Kubernetes Platform:
+Настройте объект ArgoCD на использование SSO в Deckhouse Platform:
 
 ```yaml
 apiVersion: argoproj.io/v1beta1
@@ -205,7 +205,7 @@ time="2024-10-16T14:12:59Z" level=warning msg="Failed to verify token: failed to
 
 ### Использование самоподписного сертификата
 
-Предварительно получите самоподписанный сертификат, используемый подсистемой идентификации и доступа Deckhouse Kubernetes Platform:
+Предварительно получите самоподписанный сертификат, используемый подсистемой идентификации и доступа Deckhouse Platform:
 
 ```bash
 d8 k -n d8-user-authn get secret ingress-tls -o jsonpath='{.data.tls\.crt}' | base64 -d
@@ -262,7 +262,7 @@ Argo CD не позволяет выпускать бессрочные токе
 argocd login <ARGOCD_DOMAIN>:443 --sso
 ```
 
-При выполнении этой команды на рабочей станции администратора будет запущен веб-браузер с формой аутентификации в Deckhouse Kubernetes Platform.
+При выполнении этой команды на рабочей станции администратора будет запущен веб-браузер с формой аутентификации в Deckhouse Platform.
 
 {% alert level="info" %}
 Чтобы выпустить бессрочный токен, создайте локального пользователя Argo CD и укажите для него атрибут `apiKey`. В этом случае у пользователя будут права доступа только к Argo CD API.

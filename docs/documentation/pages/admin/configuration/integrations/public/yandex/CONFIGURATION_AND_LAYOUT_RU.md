@@ -97,7 +97,7 @@ dhcpOptions:
 В данной схеме размещения NAT (любого вида) не используется, а каждому узлу выдается публичный IP-адрес.
 
 {% alert level="warning" %}
-В DKP нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
+В DP нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
 {% endalert %}
 
 ![Схема размещения WithoutNAT в Yandex Cloud](../../../../images/cloud-provider-yandex/yandex-withoutnat.png)
@@ -242,9 +242,9 @@ NAT-инстанс не используется инсталлятором `dhc
 
 ## Назначение YandexClusterConfiguration
 
-Для интеграции Deckhouse Kubernetes Platform с Yandex Cloud необходимо описать инфраструктуру кластера с помощью ресурса YandexClusterConfiguration.
+Для интеграции Deckhouse Platform с Yandex Cloud необходимо описать инфраструктуру кластера с помощью ресурса YandexClusterConfiguration.
 
-[YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — это объект Custom Resource (CR), описывающий параметры интеграции с облаком Yandex Cloud. Он используется DKP для:
+[YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — это объект Custom Resource (CR), описывающий параметры интеграции с облаком Yandex Cloud. Он используется DP для:
 
 - размещения master и worker-узлов в облаке;
 - задания схемы сетевого взаимодействия;
@@ -326,7 +326,7 @@ provider:
 
 ## Сетевые параметры и безопасность
 
-Далее описаны настройки, связанные с адресацией, маршрутизацией, внешним трафиком и безопасностью сети в кластере Deckhouse Kubernetes Platform, развернутом в Yandex Cloud.
+Далее описаны настройки, связанные с адресацией, маршрутизацией, внешним трафиком и безопасностью сети в кластере Deckhouse Platform, развернутом в Yandex Cloud.
 
 ### Внутренняя адресация узлов кластера
 
@@ -371,7 +371,7 @@ externalSubnetIDs:
 
 ### Настройка DNS и DHCP для внутренних сетей
 
-[Параметр `dhcpOptions`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-dhcpoptions) позволяет задать настройки DHCP-сервера, которые будут применены ко всем подсетям, создаваемым в рамках кластера Deckhouse Kubernetes Platform в Yandex Cloud.
+[Параметр `dhcpOptions`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-dhcpoptions) позволяет задать настройки DHCP-сервера, которые будут применены ко всем подсетям, создаваемым в рамках кластера Deckhouse Platform в Yandex Cloud.
 
 Доступные поля:
 
@@ -407,7 +407,7 @@ netplan apply
 
 ### Использование заранее созданных подсетей
 
-[Параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) позволяет указать соответствия между зонами доступности и ранее созданными подсетями в Yandex Cloud. Это особенно важно, если вы не хотите, чтобы DKP автоматически создавал подсети, а хотите использовать существующие.
+[Параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) позволяет указать соответствия между зонами доступности и ранее созданными подсетями в Yandex Cloud. Это особенно важно, если вы не хотите, чтобы DP автоматически создавал подсети, а хотите использовать существующие.
 
 Пример использования:
 
@@ -419,12 +419,12 @@ existingZoneToSubnetIDMap:
 ```
 
 {% alert level="info" %}
-DKP автоматически создаёт таблицу маршрутизации и не привязывает её к подсетям — это необходимо сделать вручную через интерфейс Yandex Cloud.
+DP автоматически создаёт таблицу маршрутизации и не привязывает её к подсетям — это необходимо сделать вручную через интерфейс Yandex Cloud.
 {% endalert %}
 
 ### Дополнительные внешние сети
 
-DKP позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут интерпретироваться как публичные (External IP). Это задаётся в [параметре `settings.additionalExternalNetworkIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-additionalexternalnetworkids) в ресурсе ModuleConfig.
+DP позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут интерпретироваться как публичные (External IP). Это задаётся в [параметре `settings.additionalExternalNetworkIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-additionalexternalnetworkids) в ресурсе ModuleConfig.
 
 Эта настройка полезна, если:
 
@@ -447,11 +447,11 @@ spec:
       - enp6t4sno
 ```
 
-Если параметр не задан, DKP будет использовать только те подсети, что явно указаны в YandexClusterConfiguration (например, через `externalSubnetIDs`), чтобы определять публичность IP.
+Если параметр не задан, DP будет использовать только те подсети, что явно указаны в YandexClusterConfiguration (например, через `externalSubnetIDs`), чтобы определять публичность IP.
 
 ## Настройка групп безопасности в Yandex Cloud
 
-При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud добавляет [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех подключенных сетей, включая сеть кластера Deckhouse Kubernetes Platform. Эта группа безопасности по умолчанию содержит правила разрешающие любой входящий и исходящий трафик и применяется для всех подсетей облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности.
+При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud добавляет [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех подключенных сетей, включая сеть кластера Deckhouse Platform. Эта группа безопасности по умолчанию содержит правила разрешающие любой входящий и исходящий трафик и применяется для всех подсетей облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности.
 
 {% alert level="danger" %}
 Не удаляйте правила по умолчанию, разрешающие любой трафик, до того как закончите настройку правил группы безопасности. Это может нарушить работоспособность кластера.
@@ -461,7 +461,7 @@ spec:
 
 Если в кластере используется Cilium с туннелированием трафика подов через VXLAN, разрешите UDP-трафик между узлами на портах, которые перечислены в разделе [«Сетевое взаимодействие компонентов платформы»](../../../../reference/network_interaction.html).
 
-1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
+1. Определите облачную сеть, в которой работает кластер Deckhouse Platform.
 
    Название сети совпадает с параметром [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) ModuleConfig `global`.
    Его можно узнать с помощью команды:
@@ -493,7 +493,7 @@ spec:
 
 Для настройки доступа выполните следующие шаги:
 
-1. Выполните bootstrap базовой инфраструктуры. Перед созданием bastion-хоста необходимо выполнить начальную фазу установки DKP, которая подготовит сетевую инфраструктуру:
+1. Выполните bootstrap базовой инфраструктуры. Перед созданием bastion-хоста необходимо выполнить начальную фазу установки DP, которая подготовит сетевую инфраструктуру:
 
    ```shell
    dhctl bootstrap-phase base-infra --config config.yml
@@ -518,7 +518,7 @@ spec:
 
    Убедитесь, что IP-адрес из параметра `--public-address` доступен из вашей сети и указан корректно.
 
-1. Запустите основной bootstrap DKP через bastion-хост:
+1. Запустите основной bootstrap DP через bastion-хост:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
@@ -532,4 +532,4 @@ spec:
    - `--ssh-bastion-user` — пользователь для подключения к bastion-хосту;
    - `--ssh-user` — пользователь на целевых узлах кластера;
    - `--ssh-agent-private-keys` — путь до приватного SSH-ключа;
-   - `--config` — путь до конфигурационного файла DKP.
+   - `--config` — путь до конфигурационного файла DP.

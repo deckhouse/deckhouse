@@ -49,6 +49,18 @@
   - create
   - delete
 - apiGroups:
+  - ""
+  resources:
+  - services/status
+  verbs:
+  - get
+  - watch
+  - list
+  - update
+  - patch
+  - create
+  - delete
+- apiGroups:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
@@ -77,6 +89,18 @@
   - get
   - watch
   - list
+- apiGroups:
+  - security.istio.io
+  resources:
+  - authorizationpolicies/status
+  verbs:
+  - get
+  - watch
+  - list
+  - update
+  - patch
+  - create
+  - delete
 - apiGroups:
   - networking.istio.io
   resources:
@@ -256,6 +280,7 @@
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - backendtlspolicies
   - gatewayclasses
   - gateways
   - grpcroutes
@@ -271,6 +296,7 @@
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - backendtlspolicies/status
   - gatewayclasses/status
   - gateways/status
   - grpcroutes/status

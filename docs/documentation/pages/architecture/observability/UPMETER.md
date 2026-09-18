@@ -2,10 +2,10 @@
 title: Upmeter module
 permalink: en/architecture/observability/upmeter.html
 search: upmeter, availability, component health
-description: Architecture of the upmeter module in Deckhouse Kubernetes Platform.
+description: Architecture of the upmeter module in Deckhouse Platform.
 ---
 
-The [`upmeter`](/modules/upmeter/) module continuously checks Deckhouse Kubernetes Platform (DKP) availability and cluster component health. Probe results are displayed on dashboards.
+The [`upmeter`](/modules/upmeter/) module continuously checks Deckhouse Platform (DP) availability and cluster component health. Probe results are displayed on dashboards.
 
 To learn more about module settings and usage examples, see the [`upmeter` configuration page](/modules/upmeter/configuration.html).
 
@@ -19,7 +19,7 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica per Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`upmeter`](/modules/upmeter/) module and its interactions with other DKP components are shown below.
+The level-2 C4 architecture of the [`upmeter`](/modules/upmeter/) module and its interactions with other DP components are shown below.
 
 ![Architecture of the upmeter module](../../images/architecture/observability/c4-l2-upmeter.svg)
 
@@ -32,9 +32,9 @@ The module includes the following components:
 
 1. **Upmeter** (StatefulSet) is a controller that:
 
-   - Watches the custom resource [Downtime](/modules/upmeter/cr.html#downtime) and calculates DKP component availability excluding downtime intervals defined in this resource.
-   - Stores DKP component availability metrics in a local SQLite database.
-   - Receives and processes DKP component probe data.
+   - Watches the custom resource [Downtime](/modules/upmeter/cr.html#downtime) and calculates DP component availability excluding downtime intervals defined in this resource.
+   - Stores DP component availability metrics in a local SQLite database.
+   - Receives and processes DP component probe data.
    - Handles API requests for platform availability data.
    - Watches the custom resource [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) and sends probe results to the endpoint defined in that resource by using the [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) protocol.
 
@@ -47,7 +47,7 @@ The module includes the following components:
 1. **Upmeter-agent** (DaemonSet) runs on master nodes and regularly executes the following probe groups:
 
    - Control-plane: API server availability and controller health checks.
-   - Deckhouse: DKP cluster health and [`deckhouse`](/modules/deckhouse) module controller checks.
+   - Deckhouse: DP cluster health and [`deckhouse`](/modules/deckhouse) module controller checks.
    - Extensions: Checks that every extension has at least one `Ready` Pod.
    - Load-balancing: Checks availability of network load balancing services.
    - Monitoring-and-autoscaling: Checks that the Observability subsystem is healthy and gathers metrics from system components.
@@ -84,7 +84,7 @@ The module includes the following components:
 
    When the [`upmeter`](/modules/upmeter/) module is installed, the deckhouse controller from the [`deckhouse`](/modules/deckhouse) module registers a hook that distributes StatefulSet instances across different cluster nodes when possible. After that, it rebalances one StatefulSet every minute to another node.
 
-1. **Status** (Deployment) includes a single **status** container and serves a web page with the current availability status of all DKP components.
+1. **Status** (Deployment) includes a single **status** container and serves a web page with the current availability status of all DP components.
 
 1. **Webui** (Deployment) includes a single **webui** container and serves a dashboard with per-component availability history.
 

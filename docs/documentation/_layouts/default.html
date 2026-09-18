@@ -23,7 +23,7 @@
 <body>
   <div class="content">
     {%- if site.mode == 'module' %}
-    {% include header.html %}
+    {% if page.lang == 'ru' %}{% include header_ru.html %}{% else %}{% include header.html %}{% endif %}
     {%- else %}
      <!--#include virtual="/includes/header.html" -->
     {%- endif %}

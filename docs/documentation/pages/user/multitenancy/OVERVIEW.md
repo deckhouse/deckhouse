@@ -1,6 +1,6 @@
 ---
 title: "Using multitenancy"
-description: "Configuring multitenancy in Deckhouse Kubernetes Platform. Creating isolated projects with resource quotas, security policies, and network isolation. Using ProjectTemplate to manage environments."
+description: "Configuring multitenancy in Deckhouse Platform. Creating isolated projects with resource quotas, security policies, and network isolation. Using ProjectTemplate to manage environments."
 permalink: en/user/multitenancy/
 lang: en
 ---

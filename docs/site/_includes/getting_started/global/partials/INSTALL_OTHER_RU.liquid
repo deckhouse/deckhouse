@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Для установки **Deckhouse Kubernetes Platform** используется образ контейнера, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_ed25519` пользователя персонального компьютера, с которого выполняется установка){% endif %}.
+Для установки **Deckhouse Platform** используется образ контейнера, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_ed25519` пользователя персонального компьютера, с которого выполняется установка){% endif %}.
 
 {% if page.platform_code == 'bm-private' or page.platform_code == 'bm' %}
 **В операционных системах семейства Astra Linux**, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя, под которым будет выполняться установка. Для этого выполните **на будущем master-узле** команду, заменив `<USERNAME>` на имя пользователя:
@@ -101,7 +101,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash
 ```
 {%- if page.platform_code == "bm-private" %}
-> Если вы устанавливаете Deckhouse Kubernetes Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу. Пример (для DKP SE+):
+> Если вы устанавливаете Deckhouse Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу. Пример (для DP SE+):
 > ```text
 > docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" -v "$PWD/dhctl-tmp:/tmp/dhctl" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:stable bash
 > ```
@@ -117,7 +117,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_ed25519; bash"
 ```
 {%- if page.platform_code == "bm-private" %}
-> Если вы устанавливаете Deckhouse Kubernetes Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу. Пример (для DKP SE+):
+> Если вы устанавливаете Deckhouse Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу. Пример (для DP SE+):
 > ```text
 > docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" -v "%cd%\dhctl-tmp:/tmp/dhctl" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:stable bash
 > ```
@@ -216,10 +216,10 @@ kubectl -n d8-ingress-nginx get po
 
 Дождитесь перехода Pod'а Ingress-контроллера в статус `Ready`.
 
-Вы установили Deckhouse Kubernetes Platform в `kind`!
+Вы установили Deckhouse Platform в `kind`!
 {%- else %}
 
-Почти все готово для полноценной работы Deckhouse Kubernetes Platform!
+Почти все готово для полноценной работы Deckhouse Platform!
 {%- endif %}
 
 <!-- Troubleshooting in existing cluster //-->

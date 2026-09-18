@@ -3,7 +3,7 @@ title: Модуль operator-trivy
 permalink: ru/architecture/security/operator-trivy.html
 lang: ru
 search: operator-trivy, сканирование образов, сканирование на уязвимости
-description: Архитектура модуля operator-trivy в Deckhouse Kubernetes Platform.
+description: Архитектура модуля operator-trivy в Deckhouse Platform.
 ---
 
 Модуль [`operator-trivy`](/modules/operator-trivy/) обеспечивает сканирование пользовательских образов в рантайм на известные CVE (Common Vulnerabilities and Exposures), включая уязвимости Astra Linux, ALT Linux и РЕД ОС. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), обогащаемые базами Astra Linux, ALT Linux и РЕД ОС, а также [БДУ ФСТЭК (Банком данных угроз Федеральной службы по техническому и экспортному контролю)](https://bdu.fstec.ru/vul).
@@ -62,7 +62,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`operator-trivy`](/modules/operator-trivy/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`operator-trivy`](/modules/operator-trivy/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля operator-trivy](../../images/architecture/security/c4-l2-operator-trivy.ru.svg)
 

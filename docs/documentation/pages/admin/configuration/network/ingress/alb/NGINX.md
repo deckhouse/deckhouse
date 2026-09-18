@@ -1,7 +1,7 @@
 ---
 title: "ALB with Ingress NGINX Controller"
 permalink: en/admin/configuration/network/ingress/alb/nginx.html
-description: "Configure Application Load Balancer with Ingress NGINX Controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
+description: "Configure Application Load Balancer with Ingress NGINX Controller in Deckhouse Platform. High availability setup, SSL termination, and traffic routing configuration."
 extractedLinksMax: 4
 relatedLinks:
   - title: "Migrating from ingress-nginx to alb"
@@ -25,7 +25,7 @@ The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB u
 {% alert level="info" %}
 In 2025, Ingress NGINX was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
-This does not apply to the module as part of Deckhouse Kubernetes Platform (DKP): the module is maintained by the DKP team, including security updates. Details are in ["Module support and security"](#module-support-and-security).
+This does not apply to the module as part of Deckhouse Platform (DP): the module is maintained by the DP team, including security updates. Details are in ["Module support and security"](#module-support-and-security).
 
 Step-by-step migration to Gateway API is in [Migrating from ingress-nginx to alb](migration.html).
 {% endalert %}
@@ -93,7 +93,7 @@ and continue down the hierarchy.
 1. At the `log_by_lua_block` stage, the module calculates the necessary metrics for each request
    and stores them in a buffer (each NGINX worker has its own buffer).
 1. At the `init_by_lua_block` stage, each NGINX worker starts a process that sends data in `protobuf` format via TCP socket
-   to the `protobuf_exporter` every second (developed by Deckhouse Kubernetes Platform).
+   to the `protobuf_exporter` every second (developed by Deckhouse Platform).
 1. `protobuf_exporter` runs as a sidecar container in the Ingress controller pod, receives `protobuf` messages,
    parses and aggregates them, and exports metrics for Prometheus.
 1. Prometheus scrapes metrics every 30 seconds from both the Ingress controller and the `protobuf_exporter`.
@@ -276,7 +276,7 @@ spec:
 ### Example for bare metal (MetalLB in BGP LoadBalancer mode)
 
 {% alert level="info" %}
-Available in DKP Enterprise Edition only.
+Available in DP Enterprise Edition and DP Ultimate only.
 {% endalert %}
 
 IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet for use with MetalLB in BGP mode:
@@ -329,7 +329,7 @@ spec:
 ### Example for bare metal (MetalLB in L2 LoadBalancer mode)
 
 {% alert level="info" %}
-Available in DKP Enterprise Edition only.
+Available in DP Enterprise Edition and DP Ultimate only.
 {% endalert %}
 
 1. Enable the [`metallb`](/modules/metallb/) module:
@@ -396,7 +396,7 @@ If you need more than one address, also set `network.deckhouse.io/l2-load-balanc
 See ["Example of using annotations"](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the Service.
 {% endalert %}
 
-DKP will create a LoadBalancer Service with the specified number of IPs:
+DP will create a LoadBalancer Service with the specified number of IPs:
 
 ```shell
 d8 k -n d8-ingress-nginx get svc
@@ -575,6 +575,6 @@ spec:
 
 ## Module support and security
 
-The `ingress-nginx` module is covered by DKP maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The DKP team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases.
+The `ingress-nginx` module is covered by DP maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The DP team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases.
 
-For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. DKP certification with FSTEC of Russia also covers vulnerability management processes and the release of security updates.
+For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. DP certification with FSTEC of Russia also covers vulnerability management processes and the release of security updates.

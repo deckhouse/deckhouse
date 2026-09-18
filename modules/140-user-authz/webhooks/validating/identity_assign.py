@@ -41,6 +41,8 @@ CAN_ASSIGN_LABELS = (LABEL_BASIC_MAX, LABEL_SCOPE, LABEL_SUBSYSTEM, LABEL_MAX_LE
 CAR_SNAP = "d8-user-authz-assign-cluster-authorization-rules"
 AR_SNAP = "d8-user-authz-assign-authorization-rules"
 CRB_SNAP = "d8-user-authz-assign-cluster-role-bindings"
+CPRB_SNAP = "d8-user-authz-assign-cluster-project-role-bindings"
+PRB_SNAP = "d8-user-authz-assign-project-role-bindings"
 CROLE_SNAP = "d8-user-authz-assign-cluster-roles"
 
 SA_PREFIX = "system:serviceaccount:"
@@ -281,16 +283,23 @@ def collect_roles_for_identity(snapshots: Any, kind: str, name: str, *,
                 for role in _fr_role_names(fr, namespaced=namespaced):
                     add(role)
 
-    for fr in iter_filter_results(snapshots, CRB_SNAP):
-        subjects = _subjects(fr, key)
-        if kind == "user":
-            ok = _match_user_subject(subjects, name, lowercase_needle=lowercase_user)
-        else:
-            ok = name in subjects
-        if ok:
-            role = fr.get("role")
-            if isinstance(role, str):
-                add(role)
+    # The granular model grants roles through ClusterRoleBindings and, across the namespaces of a
+    # project, through ClusterProjectRoleBindings (cluster-wide) and ProjectRoleBindings (in the
+    # project): all three occupy the identity.
+    binding_sources = [CRB_SNAP, CPRB_SNAP]
+    if include_namespaced:
+        binding_sources.append(PRB_SNAP)
+    for snap_name in binding_sources:
+        for fr in iter_filter_results(snapshots, snap_name):
+            subjects = _subjects(fr, key)
+            if kind == "user":
+                ok = _match_user_subject(subjects, name, lowercase_needle=lowercase_user)
+            else:
+                ok = name in subjects
+            if ok:
+                role = fr.get("role")
+                if isinstance(role, str):
+                    add(role)
 
     return found
 
@@ -473,7 +482,18 @@ def actor_range(actor_role_names: Sequence[str], catalog: dict) -> AssignRange:
 
 def role_in_range(name: str, entry: Optional[CatalogEntry], rng: AssignRange) -> bool:
     if is_disaster(name, entry):
-        return rng.basic_max == "SuperAdmin" or rng.max_level == "superadmin"
+        # cluster-admin and user-authz:super-admin: any superadmin range reaches them. A granular
+        # superadmin role additionally has to sit inside the range's scope, so a subsystem
+        # superadmin does not hand out the superadmin role of another subsystem or of the system.
+        if name in DISASTER_NAMES:
+            return rng.basic_max == "SuperAdmin" or rng.max_level == "superadmin"
+        if rng.max_level != "superadmin":
+            return False
+        if rng.scope == "system":
+            return True
+        desc = describe_role(name, entry.labels if entry else None)
+        return bool(desc and rng.scope == "subsystem" and desc.scope == "subsystem"
+                    and desc.subsystem in rng.subsystems)
 
     basic = basic_level_of(name, entry)
     if basic and rng.basic_max:
@@ -716,6 +736,18 @@ CRB_JQ_FILTER = """
 }
 """
 
+# ClusterProjectRoleBinding and ProjectRoleBinding keep the subjects and the roleRef under spec.
+PROJECT_BINDING_JQ_FILTER = """
+{
+  "name": .metadata.name,
+  "namespace": (.metadata.namespace // ""),
+  "role": .spec.roleRef.name,
+  "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
+  "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name],
+  "saSubjects": [.spec.subjects[]? | select(.kind == "ServiceAccount") | "\\(.namespace):\\(.name)"]
+}
+"""
+
 CROLE_JQ_FILTER = """
 {
   "name": .metadata.name,
@@ -759,6 +791,22 @@ def kubernetes_snapshots() -> str:
   keepFullObjectsInMemory: false
   jqFilter: |-
 { _indent(CRB_JQ_FILTER.strip(), 4) }
+- name: {CPRB_SNAP}
+  apiVersion: deckhouse.io/v1alpha3
+  kind: ClusterProjectRoleBinding
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  jqFilter: |-
+{ _indent(PROJECT_BINDING_JQ_FILTER.strip(), 4) }
+- name: {PRB_SNAP}
+  apiVersion: deckhouse.io/v1alpha3
+  kind: ProjectRoleBinding
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  jqFilter: |-
+{ _indent(PROJECT_BINDING_JQ_FILTER.strip(), 4) }
 - name: {CROLE_SNAP}
   apiVersion: rbac.authorization.k8s.io/v1
   kind: ClusterRole

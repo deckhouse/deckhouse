@@ -1022,27 +1022,14 @@ jobs:
           echo "Building fuzz images:"
           echo "${FUZZ_IMAGES}"
 
-          # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
-          werf_minor="$(werf version | cut -d. -f2)"
-          werf_build_report_operations_arg=""
-          if (( werf_major >= 3 )); then
-            echo "Using build-report-operations, werf version >=3.0"
-            werf_build_report_operations_arg="--build-report-operations=true"
-          else
-            if (( werf_minor >= 78 )); then
-              echo "Using build-report-operations, werf version >=2.78"
-              werf_build_report_operations_arg="--build-report-operations=true"
-            fi
-          fi
+          export WERF_BUILD_REPORT_OPERATIONS=true
 
           # shellcheck disable=SC2086
           werf build ${FUZZ_IMAGES} \
             --insecure-registry \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --build-report-path images_fuzz_tags_werf.json \
-            ${werf_build_report_operations_arg}
+            --build-report-path images_fuzz_tags_werf.json
           command -v jq >/dev/null 2>&1 || {
             echo "jq is required"
             exit 1
@@ -1075,18 +1062,27 @@ jobs:
             > images_fuzz_tags_werf.tmp.json
           mv images_fuzz_tags_werf.tmp.json images_fuzz_tags_werf.json
 
-          MC=/tmp/mc
-          curl -fsSL -o "${MC}" https://dl.min.io/client/mc/release/linux-amd64/mc
-          chmod +x "${MC}"
+          if ! command -v aws >/dev/null 2>&1; then
+            AWS_CLI_DIR="$(mktemp -d "${RUNNER_TEMP}/fuzz-aws-cli.XXXXXX")"
+            curl -fsSL \
+              -o "${AWS_CLI_DIR}/awscliv2.zip" \
+              "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+            unzip -q "${AWS_CLI_DIR}/awscliv2.zip" -d "${AWS_CLI_DIR}"
+            "${AWS_CLI_DIR}/aws/install" \
+              --bin-dir "${AWS_CLI_DIR}/bin" \
+              --install-dir "${AWS_CLI_DIR}/cli"
+            export PATH="${AWS_CLI_DIR}/bin:${PATH}"
+            rm -rf "${AWS_CLI_DIR}/aws" "${AWS_CLI_DIR}/awscliv2.zip"
+          fi
 
-          "${MC}" alias set fuzz-s3 \
-            "${FUZZ_S3_ENDPOINT}" \
-            "${FUZZ_S3_ACCESS_KEY}" \
-            "${FUZZ_S3_SECRET_KEY}"
-
-          "${MC}" cp \
-            "images_fuzz_tags_werf.json" \
-            "fuzz-s3/anomaloys-materials/build-reports/${REPOSITORY}/${BRANCH_SLUG}/images_fuzz_tags_werf.json"
+          AWS_CA_BUNDLE="${AWS_CA_BUNDLE:-/etc/ssl/certs/ca-certificates.crt}" \
+          AWS_ACCESS_KEY_ID="${FUZZ_S3_ACCESS_KEY}" \
+          AWS_SECRET_ACCESS_KEY="${FUZZ_S3_SECRET_KEY}" \
+          aws --endpoint-url "${FUZZ_S3_ENDPOINT}" \
+            --region us-east-1 \
+            s3 cp "images_fuzz_tags_werf.json" \
+              "s3://anomaloys-materials/build-reports/${REPOSITORY}/${BRANCH_SLUG}/images_fuzz_tags_werf.json" \
+              --only-show-errors
 
     # </template: build_fuzz_template>
 
@@ -1609,7 +1605,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:2cedee70f5487ec89548960ebd8c2eb040853dec3a39e846138080d2ad126c18"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:cfa2c389d79fa8ea0784eee25b8d4149b3624f4a126e2113bf4ae563d139acdd"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

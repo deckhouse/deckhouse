@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package dictbindings grants the d8:use:dict ClusterRole to every subject that holds a use role.
+// Package dictbindings grants the d8:dict ClusterRole to every subject that holds a namespace role.
 //
-// Subjects are collected from RoleBindings of the experimental role model (roleRef d8:use:role:*,
-// not created by Deckhouse) and from the RoleBindings the module itself creates for the current
-// model's namespaced rules (roleRef user-authz:user|privileged-user|editor|admin). Each distinct
-// subject gets one ClusterRoleBinding d8:dict:*; bindings whose subject no longer holds any use
-// role, duplicates, and bindings that lost their roleRef or subject are removed. The whole set is
+// Subjects are collected from RoleBindings of the granular role model (roleRef d8:namespace:*, not
+// created by Deckhouse) and from the RoleBindings the module itself creates for the basic model's
+// namespaced rules (roleRef user-authz:user|privileged-user|editor|admin). Each distinct subject
+// gets one ClusterRoleBinding d8:dict:*; bindings whose subject no longer holds any namespace role,
+// duplicates, bindings to the former dict role name d8:use:dict, and bindings that lost their
+// roleRef or subject are removed (roleRef is immutable, so a renamed role means a recreated
+// binding). The whole set is
 // recomputed on every change, so the reconciler is keyed by a single constant request; the
 // contributing RoleBindings are read through a cache index, so a reconcile copies only them and
 // not every RoleBinding of the cluster.
@@ -48,13 +50,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"user-authz-controller/internal/metrics"
 )
 
 const (
 	// RequestName is the constant key every event is mapped to.
 	RequestName = "dict-bindings"
 
-	// SourceIndexField indexes the RoleBindings whose subjects must hold d8:use:dict.
+	// SourceIndexField indexes the RoleBindings whose subjects must hold d8:dict.
 	SourceIndexField = "user-authz.deckhouse.io/dict-source"
 	sourceIndexValue = "true"
 	// OwnedIndexField indexes the dict ClusterRoleBindings this reconciler owns: a plain label
@@ -62,7 +66,7 @@ const (
 	OwnedIndexField = "user-authz.deckhouse.io/dict-binding"
 	ownedIndexValue = "true"
 
-	DictRoleName      = "d8:use:dict"
+	DictRoleName      = "d8:dict"
 	NamePrefix        = "d8:dict:"
 	SubjectAnnotation = "rbac.deckhouse.io/subject"
 
@@ -70,7 +74,11 @@ const (
 	labelAutomated = "rbac.deckhouse.io/automated"
 	labelDict      = "rbac.deckhouse.io/dict"
 
-	useRolePrefix = "d8:use:role:"
+	useRolePrefix = "d8:namespace:"
+	// legacyUseRolePrefix is the previous name of the namespace roles, kept for one release as
+	// deprecated aliases (templates/rbacv2-compat); their holders keep the dictionary too. Remove
+	// together with the aliases.
+	legacyUseRolePrefix = "d8:use:role:"
 )
 
 // DictLabels mark the ClusterRoleBindings this reconciler owns.
@@ -80,7 +88,7 @@ var DictLabels = map[string]string{
 	labelDict:      "true",
 }
 
-// reservedRoleRefs are the current-model use roles bound by the module's own RoleBindings.
+// reservedRoleRefs are the basic-model roles bound by the module's own RoleBindings.
 var reservedRoleRefs = []string{
 	"user-authz:user",
 	"user-authz:privileged-user",
@@ -88,15 +96,16 @@ var reservedRoleRefs = []string{
 	"user-authz:admin",
 }
 
-// Reconciler keeps one d8:dict:* ClusterRoleBinding per subject holding a use role.
+// Reconciler keeps one d8:dict:* ClusterRoleBinding per subject holding a namespace role.
 type Reconciler struct {
-	client client.Client
-	log    logr.Logger
+	client  client.Client
+	metrics *metrics.Collector
+	log     logr.Logger
 }
 
 // New constructs a Reconciler.
-func New(c client.Client, log logr.Logger) *Reconciler {
-	return &Reconciler{client: c, log: log}
+func New(c client.Client, m *metrics.Collector, log logr.Logger) *Reconciler {
+	return &Reconciler{client: c, metrics: m, log: log}
 }
 
 // SourceIndexValue is the indexer of SourceIndexField.
@@ -125,7 +134,7 @@ func Register(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.ClusterRoleBinding{}, OwnedIndexField, OwnedIndexValue); err != nil {
 		return fmt.Errorf("index dict clusterrolebindings: %w", err)
 	}
-	r := New(mgr.GetClient(), mgr.GetLogger().WithName("dict-bindings"))
+	r := New(mgr.GetClient(), metrics.Default, mgr.GetLogger().WithName("dict-bindings"))
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup dict-bindings controller: %w", err)
 	}
@@ -194,7 +203,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		return reconcile.Result{}, fmt.Errorf("list dict clusterrolebindings: %w", err)
 	}
 
-	var errs []error
+	var (
+		errs  []error
+		drift metrics.Drift
+	)
+	desired := len(subjects)
 	granted := make(map[string]struct{}, len(existing.Items))
 	for i := range existing.Items {
 		crb := &existing.Items[i]
@@ -220,7 +233,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 					reason = "duplicate of another dict binding"
 				default:
 					if _, wanted := subjects[key]; !wanted {
-						reason = "subject holds no use role"
+						reason = "subject holds no namespace role"
 					} else {
 						granted[key] = struct{}{}
 						delete(subjects, key)
@@ -230,7 +243,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 			}
 		}
 
-		if err := r.client.Delete(ctx, crb); err != nil && !apierrors.IsNotFound(err) {
+		err := r.client.Delete(ctx, crb)
+		if apierrors.IsNotFound(err) {
+			err = nil
+		}
+		r.metrics.RecordApply(metrics.KindDict, metrics.OpDelete, err)
+		if err != nil {
+			drift.Extra++
 			errs = append(errs, fmt.Errorf("delete dict binding %s: %w", crb.Name, err))
 			continue
 		}
@@ -239,22 +258,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 
 	for _, key := range slices.Sorted(maps.Keys(subjects)) {
 		crb := Binding(key, subjects[key])
-		if err := r.client.Create(ctx, crb); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				continue
-			}
+		err := r.client.Create(ctx, crb)
+		if apierrors.IsAlreadyExists(err) {
+			err = nil
+		}
+		r.metrics.RecordApply(metrics.KindDict, metrics.OpCreate, err)
+		if err != nil {
+			drift.Missing++
 			errs = append(errs, fmt.Errorf("create dict binding for %s: %w", key, err))
 			continue
 		}
 		r.log.Info("dict binding created", "name", crb.Name, "subject", key)
 	}
 
+	// drift is what is still wrong after the writes: grants that could not be created and bindings
+	// that could not be removed.
+	r.metrics.Observe(metrics.KindDict, RequestName, metrics.Observation{Desired: desired, Actual: desired - drift.Missing, Drift: drift})
 	return reconcile.Result{}, errors.Join(errs...)
 }
 
-// contributesSubjects reports whether the RoleBinding's subjects must hold d8:use:dict: either a
-// user-created binding to an experimental use role, or a module-created binding of a namespaced
-// rule of the current model.
+// contributesSubjects reports whether the RoleBinding's subjects must hold d8:dict: either a
+// user-created binding to a namespace role of the granular model, or a module-created binding of a
+// namespaced rule of the basic model.
 func contributesSubjects(rb *rbacv1.RoleBinding) bool {
 	if rb.RoleRef.Kind != "ClusterRole" {
 		return false
@@ -262,7 +287,7 @@ func contributesSubjects(rb *rbacv1.RoleBinding) bool {
 
 	deckhouse := rb.Labels[labelHeritage] == "deckhouse"
 
-	if !deckhouse && strings.HasPrefix(rb.RoleRef.Name, useRolePrefix) {
+	if !deckhouse && (strings.HasPrefix(rb.RoleRef.Name, useRolePrefix) || strings.HasPrefix(rb.RoleRef.Name, legacyUseRolePrefix)) {
 		return true
 	}
 

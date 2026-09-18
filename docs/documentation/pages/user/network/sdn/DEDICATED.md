@@ -6,7 +6,7 @@ description: |
 search: additional networks, project network, cluster network, Network, NetworkClass
 ---
 
-DKP implements the ability to use additional software-defined networks (hereinafter referred to as additional networks) for application workloads (pods, virtual machines). You can use the following types of networks:
+DP implements the ability to use additional software-defined networks (hereinafter referred to as additional networks) for application workloads (pods, virtual machines). You can use the following types of networks:
 
 - Cluster (public) — a network that is publicly available in each project, configured and managed by the administrator. An example is a public WAN network or a shared network for traffic exchange between projects. To create such a network and use it for application pods, contact the cluster administrator.
 - Project network (user network) — a network accessible within a namespace, created and managed by the user using the NetworkClass manifest provided by the administrator.
@@ -106,9 +106,9 @@ The IPAM (IP Address Management) mechanism allows you to allocate IP addresses (
 
 The cluster administrator is responsible for allocating IP addresses for connection to cluster networks. They enable and configure IPAM for networks and define the IP address pool for them. Users can assign addresses and configure IPAM in project networks.
 
-### Features of using IPAM in a DKP cluster
+### Features of using IPAM in a DP cluster
 
-IPAM in a DKP cluster has the following usage features:
+IPAM in a DP cluster has the following usage features:
 
 - IPAM is enabled **at the network level** via the `spec.ipam.ipAddressPoolRef` parameter (for ClusterNetwork IPAM, the cluster administrator enables it).
 - IP address assignment to the pod interface is described in the annotation `network.deckhouse.io/networks-spec` added to the pod through the following fields:
@@ -171,7 +171,7 @@ After allocating a pool of IP addresses for the project network, they can be ass
 
 ### Assigning IP addresses to network interfaces of pods connected to an additional network
 
-DKP implements [automatic IP address assignment](#automatic-ip-address-assignment) for additional pod interfaces, as well as the ability to [manually assign specific static IP addresses](#manually-assigning-a-static-ip-address-to-an-additional-pod-interface) to additional pod interfaces.
+DP implements [automatic IP address assignment](#automatic-ip-address-assignment) for additional pod interfaces, as well as the ability to [manually assign specific static IP addresses](#manually-assigning-a-static-ip-address-to-an-additional-pod-interface) to additional pod interfaces.
 
 #### Automatic IP address assignment
 

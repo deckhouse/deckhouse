@@ -28,22 +28,6 @@
         </div>
       </div>
       <div class="footer__cols">
-        {%- if page.lang == "ru" %}
-          <div class="footer__col">
-            <div class="heading heading--sup">Контакты</div>
-            <ul class="nav footer__nav">
-              <li>
-                <a href="mailto:contact@deckhouse.ru">contact@deckhouse.ru</a>
-              </li>
-              <li>
-                <a href="tel:+74957211027">+7 (495) 721-10-27</a>
-              </li>
-<!--              <li class="button button&#45;&#45;primary menu-item">-->
-<!--                <a data-popup="callback">Заказать звонок</a>-->
-<!--              </li>-->
-            </ul>
-          </div>
-        {%- else %}
           <div class="footer__col">
             <div class="heading heading--sup">Contacts</div>
             <ul class="nav footer__nav">
@@ -58,7 +42,6 @@
 <!--              </li>-->
             </ul>
           </div>
-        {%- endif %}
         {%- for column in site.data.footer.columns[page.lang] %}
           <div class="footer__col">
             {%- if column.title %}

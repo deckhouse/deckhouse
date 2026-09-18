@@ -2,10 +2,10 @@
 title: Descheduler module
 permalink: en/architecture/kubernetes-and-scheduling/descheduler.html
 search: descheduler, rescheduling, balancing
-description: Architecture of the descheduler module in Deckhouse Kubernetes Platform.
+description: Architecture of the descheduler module in Deckhouse Platform.
 ---
 
-The [`descheduler`](/modules/descheduler/) module ensures operation of [Descheduler](https://github.com/kubernetes-sigs/descheduler) in Deckhouse Kubernetes Platform (DKP).
+The [`descheduler`](/modules/descheduler/) module ensures operation of [Descheduler](https://github.com/kubernetes-sigs/descheduler) in Deckhouse Platform (DP).
 
 The module analyzes the cluster state periodically and evicts pods that match conditions defined in [active strategies](/modules/descheduler/#strategies). Evicted pods are then scheduled again according to the current cluster state. This helps redistribute workloads in line with the selected strategy.
 
@@ -22,7 +22,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`descheduler`](/modules/descheduler/) module and its interactions with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`descheduler`](/modules/descheduler/) module and its interactions with other DP components are shown in the following diagram:
 
 ![Descheduler module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-descheduler.svg)
 

@@ -3,7 +3,7 @@ title: Импорт и загрузка образов и дисков ВМ
 permalink: ru/architecture/virtualization/import.html
 lang: ru
 search: image import, image upload, import image, upload image, disk import, disk upload, import disk, upload disk, импорт образа, импорт диска, загрузка образа, загрузка диска
-description: Описание импорта и загрузки образов и дисков ВМ в модуле virtualization в Deckhouse Kubernetes Platform.
+description: Описание импорта и загрузки образов и дисков ВМ в модуле virtualization в Deckhouse Platform.
 ---
 
 Virtualization-controller компонента [Virtualization-API](api.html) модуля [`virtualization`](/modules/virtualization/) позволяет импортировать образы и диски ВМ из различных источников в PVC-тома, используемые в качестве дисков ВМ, управляемых KubeVirt.

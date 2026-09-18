@@ -1,0 +1,37 @@
+# Codeql update job.
+.codeql-variables:
+  timeout: 6h
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: "1"
+
+codeql:
+  stage: validate
+  tags:
+    - k8s-intteam-cloud-d8-ssdlc-runner
+  image:
+    name: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/codeql:${CI_IMAGES_TAG}
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+      - codeql-db-$CODEQL_LANGUAGE
+  extends:
+    - .rules:on_schedule_codeql
+    - .codeql-variables
+    - .notify-failure
+  resource_group: codeql:$CODEQL_LANGUAGE
+  parallel:
+    matrix:
+      - CODEQL_LANGUAGE: [python, go]
+  script:
+    - codeql version
+    - codeql resolve languages --format=betterjson --extractor-options-verbosity=4 --extractor-include-aliases --filter-to-languages-with-queries
+    - codeql database create --language=$CODEQL_LANGUAGE --source-root . codeql-db-$CODEQL_LANGUAGE || true
+    - codeql database upgrade codeql-db-$CODEQL_LANGUAGE
+    - codeql database analyze codeql-db-$CODEQL_LANGUAGE --format=sarifv2.1.0 --output=results.sarif
+    - codeql database cleanup codeql-db-$CODEQL_LANGUAGE --cache-cleanup=overlay
+    - sarif-converter --version
+    - sarif-converter --type sast results.sarif gl-sast-report.json
+  artifacts:
+    reports:
+      sast: gl-sast-report.json

@@ -1,7 +1,7 @@
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 <!--noindex-->
 <div class='header-container {%- if site.mode == "module" %} header-container--module{%- endif %}'>
-  <header class="header {%- if page.lang == 'ru' %} header_float{%- endif %}">
+  <header class="header">
     <div class="header__content container">
       <div class="header__left-box">
         <div class="header__logo">
@@ -11,94 +11,6 @@
         <ul id="top-header-nav" class="nav header__nav header__nav--top">
           {%- unless site.mode == "module" %}
           <li class="header__navigation-item current-menu-parent menu-item-has-children menu-item-has-children--top">
-            {%- if page.lang == "ru" %}
-            <a href="#">Продукты</a>
-            <div class="sub-menu-container">
-            <ul class="sub-menu sub-menu_products">
-              <li>
-                <a href="/products/kubernetes-platform/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#kubernetes-platform-icon"></use>
-                  </svg>
-                  <span>Kubernetes Platform</span>
-                  <p>Создание идентичных Kubernetes-кластеров и&nbsp;управление ими</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/virtualization-platform/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#virtualization-platform-icon"></use>
-                  </svg>
-                  <span>Virtualization Platform</span>
-                  <p>Управление виртуальными машинами</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/observability-platform/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#observability-platform-icon"></use>
-                  </svg>
-                  <span>Observability Platform</span>
-                  <p>Мониторинг и&nbsp;журналирование инфраструктуры и&nbsp;приложений</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/stronghold/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#stronghold-icon"></use>
-                  </svg>
-                  <span>Stronghold</span>
-                  <p>Безопасное управление жизненным циклом секретов</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/delivery-kit/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#delivery-icon"></use>
-                  </svg>
-                  <span>Delivery Kit</span>
-                  <p>Сборка и&nbsp;доставка контейнеризованного ПО</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/commander/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#commander-icon"></use>
-                  </svg>
-                  <span>Commander</span>
-                  <p>Центр управления парком кластеров</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/prompp/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#prompp-icon"></use>
-                  </svg>
-                  <span>Prom++</span>
-                  <p>Open Source-система мониторинга</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/code/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#code-icon"></use>
-                  </svg>
-                  <span>Code</span>
-                  <p>Управление разработкой через&nbsp;единое окно</p>
-                </a>
-              </li>
-              <li>
-                <a href="/products/development-platform/">
-                  <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg?v2#development-platform-icon"></use>
-                  </svg>
-                  <span>Development Platform</span>
-                  <p>Непрерывная разработка и&nbsp;управление жизненным циклом ПО</p>
-                </a>
-              </li>
-            </ul>
-          </div>
-            {%- else %}
               <a href="#">Products</a>
               <div class="sub-menu-container">
                 <ul class="sub-menu sub-menu_products">
@@ -179,13 +91,12 @@
                       <svg class="products__icon">
                         <use xlink:href="/images/sprite.svg?v2#development-platform-icon"></use>
                       </svg>
-                      <span>Development Platform</span>
+                      <span>Development Portal</span>
                       <p>Centralized development workflow management</p>
                     </a>
                   </li>
                 </ul>
               </div>
-            {%- endif %}
           </li>
           {%- endunless %}
           {%- include header-menu-fill-items.html %}
@@ -199,22 +110,6 @@
           {%- endunless %}
         </div>
         {%- unless site.d8Revision == 'CSE' %}
-        {%- if page.lang == "ru" %}
-          <a class="lang-switcher" href="
-            {%- if site.mode == 'module' %}/en
-              {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
-            {%- else -%}
-              {%- if page.mode == 'ssi' -%}
-                {{ site.urls['en'] }}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
-              {%- else -%}
-                {{ site.urls['en'] }}/products{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
-              {%- endif %}
-            {%- endif %}"
-          >
-            <span>Ru</span>
-            <span>En</span>
-          </a>
-        {%- else %}
           <a class="lang-switcher" href="
             {%- if site.mode == 'module' %}/ru
               {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
@@ -229,7 +124,6 @@
             <span>En</span>
             <span>Ru</span>
           </a>
-        {%- endif %}
         {%- endunless %}
       </div>
       <div class="hamburger hamburger--collapse header__hamburger" type="button">
@@ -241,11 +135,7 @@
     {%- unless site.mode == "module" %}
     <!-- Start L2 Menu -->
     {%- assign l2MenuData = site.data.topnav-l2-products[page.lang] %}
-    {%- if page.lang == "en" %}
-      {%- assign l2MenuDataFallback = site.data.topnav-l2-products["ru"] %}
-    {%- else %}
-      {%- assign l2MenuDataFallback = site.data.topnav-l2-products["en"] %}
-    {%- endif %}
+    {%- assign l2MenuDataFallback = site.data.topnav-l2-products["ru"] %}
     {%- if l2MenuData %}
     {% include header-l2-menu.liquid %}
     {%- endif %}

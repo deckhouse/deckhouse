@@ -52,7 +52,7 @@ Perform the following steps to delete a cluster deployed with a cloud provider
    - `<USER>` — the user of the remote machine that ran the installation. If `<USER>` needs to perform actions via `sudo`, add the `--ask-become-pass` flag;
    - `<MASTER_IP>` — the IP address of the cluster's master node.
 
-The installer will then connect to the cluster, retrieve the necessary data, and delete all the resources and objects in the cloud that were created during the DKP installation and operation.
+The installer will then connect to the cluster, retrieve the necessary data, and delete all the resources and objects in the cloud that were created during the DP installation and operation.
 
 ## Deleting a hybrid cluster
 
@@ -105,7 +105,7 @@ Follow these steps to delete a hybrid cluster consisting of the nodes that were 
    - `<MASTER_IP>` — the IP address of the cluster's master node;
    - `<SSH_PRIVATE_KEY_FILE>`: Name of private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
 
-The installer will then connect to the cluster, retrieve the necessary data, and delete all the resources and objects in the cloud that were created during the DKP installation and operation.
+The installer will then connect to the cluster, retrieve the necessary data, and delete all the resources and objects in the cloud that were created during the DP installation and operation.
 
 ## Deleting a static cluster
 

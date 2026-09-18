@@ -1,7 +1,7 @@
 ---
-title: "Monitoring in Deckhouse Kubernetes Platform"
+title: "Monitoring in Deckhouse Platform"
 permalink: en/admin/configuration/monitoring/
-description: "Configure comprehensive monitoring for Deckhouse Kubernetes Platform with Prometheus and Grafana. Metrics collection, alerting, dashboards, and SLA monitoring for cluster health."
+description: "Configure comprehensive monitoring for Deckhouse Platform with Prometheus and Grafana. Metrics collection, alerting, dashboards, and SLA monitoring for cluster health."
 extractedLinksMax: 0
 relatedLinks:
   - title: "The list of alerts"
@@ -15,8 +15,8 @@ relatedLinks:
   - url: /modules/prometheus/
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides a Kubernetes monitoring solution based on **Prometheus** and **Grafana**.
-DKP automatically configures metrics collection in the cluster from nodes, pods, and key cluster components (etcd, kube-apiserver, CoreDNS), which enables preset dashboards for analyzing CPU, memory, disk, and network usage.
+Deckhouse Platform (DP) provides a Kubernetes monitoring solution based on **Prometheus** and **Grafana**.
+DP automatically configures metrics collection in the cluster from nodes, pods, and key cluster components (etcd, kube-apiserver, CoreDNS), which enables preset dashboards for analyzing CPU, memory, disk, and network usage.
 
 Cluster monitoring is enabled by default in the `Default` and `Managed` [module bundles](../#module-bundles).
 
@@ -24,7 +24,7 @@ All components, including Prometheus and Alertmanager, operate in a fault-tolera
 
 The principles of Prometheus operation is covered in [Configuring a system for collecting and storing metrics](./prometheus.html).
 
-Several types of monitoring are implemented in DKP:
+Several types of monitoring are implemented in DP:
 
 - [Hardware resource monitoring](#hardware-resource-monitoring)
 - [Kubernetes monitoring](#kubernetes-monitoring)
@@ -34,7 +34,7 @@ Several types of monitoring are implemented in DKP:
 - [Extended monitoring](#extended-monitoring-mode)
 - [Cluster SLA monitoring](#cluster-sla-monitoring)
 
-DKP includes an [alerting system](#alerts) that supports sending event notifications, including to [external systems](#sending-alerts-to-external-systems).
+DP includes an [alerting system](#alerts) that supports sending event notifications, including to [external systems](#sending-alerts-to-external-systems).
 
 ## Hardware resource monitoring
 
@@ -77,7 +77,7 @@ The module is enabled by default in the `Default` and `Managed` [module bundles]
 
 ### Disabling collection of detailed statistics from Ingress resources
 
-By default, DKP collects detailed statistics from all Ingress resources in the cluster, which generates a high load on the monitoring system.
+By default, DP collects detailed statistics from all Ingress resources in the cluster, which generates a high load on the monitoring system.
 
 To disable statistics collection, add the label `ingress.deckhouse.io/discard-metrics: "true"` to the corresponding namespace or Ingress resource.
 
@@ -104,11 +104,11 @@ Control plane monitoring is provided by the [`control-plane-manager`](/modules/c
 
 ## Cluster monitoring
 
-DKP securely collects monitoring metrics and configures rules.
+DP securely collects monitoring metrics and configures rules.
 
-DKP monitoring capabilities:
+DP monitoring capabilities:
 
-- Monitoring current container runtime version (containerd) on the node and its compliance with versions allowed for use in DKP.
+- Monitoring current container runtime version (containerd) on the node and its compliance with versions allowed for use in DP.
 - Monitoring cluster monitoring subsystem health ("Dead man's switch").
 - Monitoring available file descriptors, sockets, free space, and inodes.
 - Monitoring cluster node state (NotReady, drain, cordon).
@@ -121,7 +121,7 @@ DKP monitoring capabilities:
 
 ## Extended monitoring mode
 
-DKP supports an extended monitoring mode via the [`extended-monitoring`](/modules/extended-monitoring/) module, allowing you to configure:
+DP supports an extended monitoring mode via the [`extended-monitoring`](/modules/extended-monitoring/) module, allowing you to configure:
 
 - Monitoring secrets in the cluster (Secret objects) and TLS certificate expiration in them.
 - Collecting Kubernetes cluster events as metrics.
@@ -138,13 +138,13 @@ The module can send alerts based on the following metrics:
 
 ## Alerts
 
-Monitoring in DKP includes event notifications. The standard delivery includes a set of basic warnings covering cluster state and its components. There is also the ability to add custom alerts.
+Monitoring in DP includes event notifications. The standard delivery includes a set of basic warnings covering cluster state and its components. There is also the ability to add custom alerts.
 
-For the list of all available alerts in the DKP monitoring system, refer to the [corresponding documentation page](../../../reference/alerts.html).
+For the list of all available alerts in the DP monitoring system, refer to the [corresponding documentation page](../../../reference/alerts.html).
 
 ### Sending alerts to external systems
 
-DKP supports sending alerts using Alertmanager:
+DP supports sending alerts using Alertmanager:
 
 - Via SMTP protocol
 - To PagerDuty
@@ -153,11 +153,11 @@ DKP supports sending alerts using Alertmanager:
 - Via Webhook
 - Through any other channels supported in Alertmanager
 
-Examples of DKP monitoring integration with external systems are available in [Configuring integrations](alerts-integrations.html).
+Examples of DP monitoring integration with external systems are available in [Configuring integrations](alerts-integrations.html).
 
 ## Cluster SLA monitoring
 
-Availability assessment in DKP is performed by the [`upmeter`](/modules/upmeter/) module.
+Availability assessment in DP is performed by the [`upmeter`](/modules/upmeter/) module.
 
 Composition of the `upmeter` module:
 
@@ -168,4 +168,4 @@ Composition of the `upmeter` module:
   - **webui**: Shows a dashboard with statistics on probes and availability groups (requires authorization).
 - **smoke-mini**: Maintains continuous *smoke testing* using StatefulSet.
 
-The module sends about 100 metric readings every 5 minutes. This value depends on the number of enabled Deckhouse Kubernetes Platform modules.
+The module sends about 100 metric readings every 5 minutes. This value depends on the number of enabled Deckhouse Platform modules.
