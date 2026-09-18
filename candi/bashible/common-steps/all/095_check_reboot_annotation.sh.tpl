@@ -17,14 +17,11 @@ REBOOT_ANNOTATION="$( bb-curl-kube "/api/v1/nodes/$D8_NODE_HOSTNAME" |jq -r '.me
 
 if [[ $REBOOT_ANNOTATION != "null" ]]
   then
-    attempts=30
+    # The wait is deliberately unbounded. node-controller retries a failed drain
+    # until it succeeds, NodeStuckInDraining reports a node that keeps failing,
+    # and giving up here would only restart the same wait on the next bashible run.
     while true
       do
-        if [[ attempts == 0 ]]
-          then
-            >&2 echo "Reboot annotation is set but node did not drain in 30 attempts, giving up"
-            exit 1
-        fi
         DRAINING_ANNOTATION="$( bb-curl-kube "/api/v1/nodes/$D8_NODE_HOSTNAME" |jq -r '.metadata.annotations."update.node.deckhouse.io/draining"' )"
         DRAINED_ANNOTATION="$( bb-curl-kube "/api/v1/nodes/$D8_NODE_HOSTNAME" |jq -r '.metadata.annotations."update.node.deckhouse.io/drained"' )"
         if [[ $DRAINED_ANNOTATION != "null" ]]
@@ -42,7 +39,6 @@ if [[ $REBOOT_ANNOTATION != "null" ]]
             fi
         fi
         sleep 20
-        attempts=$(( attempts - 1 ))
     done
 fi
 {{- end }}
