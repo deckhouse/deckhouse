@@ -411,13 +411,6 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Conte
 			staticMachine.Status.FailureMessage = ptr.To(ErrStaticMachineBootstrapTimedOut.Error())
 			r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceBootstrapTimeoutReached", "Timed out waiting for StaticInstance to bootstrap")
 
-			// The reservation is held for the whole bootstrap window now that a failed ssh
-			// check no longer releases it, so the timeout is the only thing that can give the
-			// StaticInstance back. Without this the instance would stay Bootstrapping with a
-			// machineRef pointing at a StaticMachine that reconcileNormal has already given
-			// up on, and the pool would lose it until someone deletes that Machine by hand.
-			staticInstance.ToPending()
-
 			return ctrl.Result{}, ErrStaticMachineBootstrapTimedOut
 		}
 		return r.HostClient.Bootstrap(ctx, staticInstance, staticMachine, machine)

@@ -36,12 +36,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/ssh"
 	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
+
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
 const (
@@ -189,8 +190,15 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 
 	// The reservation is deliberately kept for the whole bootstrap window: a failed check is
 	// retried with the address backoff rather than released, so that a Pending write and the
-	// watch event it produces cannot re-enqueue this StaticMachine. Giving the instance back
-	// to the pool is the bootstrap timeout's job, in reconcileStaticInstancePhase.
+	// watch event it produces cannot re-enqueue this StaticMachine.
+	//
+	// The bootstrap timeout itself does not hand the instance back: it only marks the
+	// StaticMachine with CreateError, after which reconcileNormal stops reconciling it. The
+	// instance returns to the pool through the MachineHealthCheck the node-controller creates
+	// for static clusters (nodeStartupTimeoutSeconds: 1200) - remediation deletes the Machine,
+	// cleanup runs, and the cleanup timeout moves the instance to Pending. So a host that never
+	// answers costs about 20 + 10 minutes instead of the instant, and storming, re-pick it used
+	// to do.
 	if err := c.reserveStaticInstance(staticInstance, staticMachine); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reserve StaticInstance: %w", err)
 	}

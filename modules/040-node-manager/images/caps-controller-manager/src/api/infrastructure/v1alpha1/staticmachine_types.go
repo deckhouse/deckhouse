@@ -141,7 +141,7 @@ func (r *StaticMachine) SetConditions(conditions []metav1.Condition) {
 func (r *StaticMachine) StaticInstanceSelector() (labels.Selector, error) {
 	allowBootstrapRequirement, err := labels.NewRequirement(AllowBootstrapLabel, selection.NotIn, []string{"false"})
 	if err != nil {
-		panic(err.Error())
+		return nil, fmt.Errorf("unable to build the '%s' requirement: %w", AllowBootstrapLabel, err)
 	}
 
 	if r.Spec.LabelSelector == nil {

@@ -87,26 +87,33 @@ func TestReserveRefusesInstanceHeldByAnotherMachine(t *testing.T) {
 	require.Equal(t, reserved.Status, instance.Status)
 }
 
-// A host that keeps refusing ssh must not rewrite the StaticInstance on every attempt: the
-// failure condition is already there, so setting it again has to be a no-op for the API
-// server. Warning events are still emitted per attempt — those are separate objects, this
-// only bounds writes to the StaticInstance itself.
-func TestSSHCheckFailureConditionIsIdempotent(t *testing.T) {
+// A host that keeps refusing ssh must not rewrite the StaticInstance on every attempt. This
+// walks the status through what a repeated failed reconcile does to it — re-reserving the
+// instance the machine already holds and re-reporting the same failure — and requires the
+// result to be byte-identical, because any diff here is a write to etcd, a watch event and
+// an immediate re-reconcile, which is the loop this fix is about. Warning events are separate
+// objects and are still emitted per attempt; this only bounds writes to the instance itself.
+func TestRepeatedFailedAttemptProducesNoStatusDiff(t *testing.T) {
+	c := &Client{}
 	instance := pendingStaticInstance()
+	machine := staticMachine()
 
-	failed := metav1.Condition{
-		Type:               infrav1.StaticInstanceCheckSSHCondition,
-		Status:             metav1.ConditionFalse,
-		Reason:             infrav1.StaticInstanceCheckFailedReason,
-		Message:            "failed to connect via ssh with address 192.168.0.1:22: handshake failed",
-		LastTransitionTime: metav1.Now(),
+	failure := func(instance *deckhousev1.StaticInstance) {
+		require.NoError(t, c.reserveStaticInstance(instance, machine))
+
+		conditions.Set(instance, metav1.Condition{
+			Type:               infrav1.StaticInstanceCheckSSHCondition,
+			Status:             metav1.ConditionFalse,
+			Reason:             infrav1.StaticInstanceCheckFailedReason,
+			Message:            "failed to connect via ssh with address 192.168.0.1:22: handshake failed",
+			LastTransitionTime: metav1.Now(),
+		})
 	}
 
-	conditions.Set(instance, failed)
+	failure(instance)
 	settled := instance.DeepCopy()
 
-	failed.LastTransitionTime = metav1.NewTime(time.Now().Add(time.Minute))
-	conditions.Set(instance, failed)
+	failure(instance)
 
 	require.Equal(t, settled.Status, instance.Status)
 }
@@ -115,6 +122,8 @@ func TestSSHCheckFailureConditionIsIdempotent(t *testing.T) {
 // delay stays at the base value and the rate limiter never limits anything.
 func TestSSHCheckRateLimiterBacksOffUntilSuccess(t *testing.T) {
 	c := NewClient(nil, nil)
+	defer c.taskManagerCancel()
+
 	const address = "192.168.0.1:22"
 
 	first := c.sshCheckRateLimiter.When(address)
