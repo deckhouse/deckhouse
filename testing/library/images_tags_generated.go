@@ -410,7 +410,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubernetesCni191":                "imageHash-registrypackages-kubernetesCni191",
 		"kubernetesCniSysext191":          "imageHash-registrypackages-kubernetesCniSysext191",
 		"lsblk2402":                       "imageHash-registrypackages-lsblk2402",
-		"netcat110501":                    "imageHash-registrypackages-netcat110501",
+		"netcat":                          "imageHash-registrypackages-netcat",
 		"nfsMount282":                     "imageHash-registrypackages-nfsMount282",
 		"nodeletSysext":                   "imageHash-registrypackages-nodeletSysext",
 		"nvmeCli211":                      "imageHash-registrypackages-nvmeCli211",

@@ -1,7 +1,7 @@
 {{- $version := include "get_oss_version_by_id" (list "netcat" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
@@ -18,10 +18,10 @@ shell:
   - git clone --depth 1 --branch applied/{{ $version }} $(cat /run/secrets/SOURCE_REPO)/netcat /src/netcat
   - rm -rf /src/netcat/.git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
@@ -38,11 +38,11 @@ imageSpec:
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/alpine" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
