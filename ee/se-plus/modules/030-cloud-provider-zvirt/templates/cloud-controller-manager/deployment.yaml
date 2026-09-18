@@ -7,7 +7,7 @@
 {{- end -}}
 
 {{- define "zvirt_ccm_pdb_annotations" -}}
-checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
 {{- end -}}
 
 {{- define "zvirt_ccm_pod_annotations" -}}
