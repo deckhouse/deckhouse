@@ -667,5 +667,5 @@ func (c *MasterNodeGroupController) newHookForDestroyPipeline(ctx *context.Conte
 		ctx.CommanderMode(),
 		c.skipChecks,
 		c.immutable,
-	), nil
+	).WithConfirm(confirmOrProceed(ctx)), nil
 }

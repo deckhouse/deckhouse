@@ -74,6 +74,11 @@ func NewHookForDestroyPipeline(
 	}
 }
 
+func (h *HookForDestroyPipeline) WithConfirm(confirm func(msg string) bool) *HookForDestroyPipeline {
+	h.checkBefore.confirm = confirm
+	return h
+}
+
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
 	if h.checkBefore != nil {
 		if err := h.checkBefore.IsAllNodesReady(ctx); err != nil {
