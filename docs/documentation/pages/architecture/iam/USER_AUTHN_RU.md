@@ -70,7 +70,7 @@ description: Архитектура модуля user-authn в Deckhouse Platfor
    * **dex** — основной контейнер, реализующий функции Dex;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам провайдера. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-2. **Dex-authenticator** — [middleware](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/static/img/simplified-architecture.svg)-сервис для аутентификации запросов к приложениям через сервис аутентификации кластера DP.
+1. **Dex-authenticator** — [middleware](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/static/img/simplified-architecture.svg)-сервис для аутентификации запросов к приложениям через сервис аутентификации кластера DP.
 
    При соответствующей настройке Ingress-контроллера (через модуль `auth_request` NGINX) запросы сначала направляются в dex-authenticator для аутентификации.
 
@@ -119,9 +119,9 @@ description: Архитектура модуля user-authn в Deckhouse Platfor
 
 1. **Ingress-контроллер** — перенаправляет в dex-authenticator запросы на аутентификацию в служебных сервисах DP и в пользовательских приложениях.
 
-2. **Пользовательские приложения** — могут аутентифицироваться в dex напрямую (без dex-authenticator), если для приложения настроен OAuth2-клиент в Dex. Подробнее с настройкой клиента Dex можно ознакомиться в [документации модуля `user-authn`](/modules/user-authn/usage.html#настройка-oauth2-клиента-в-dex-для-подключения-приложения).
+1. **Пользовательские приложения** — могут аутентифицироваться в dex напрямую (без dex-authenticator), если для приложения настроен OAuth2-клиент в Dex. Подробнее с настройкой клиента Dex можно ознакомиться в [документации модуля `user-authn`](/modules/user-authn/usage.html#настройка-oauth2-клиента-в-dex-для-подключения-приложения).
 
-3. **Kube-apiserver** — обращается в dex при обработке запросов к API Kubernetes, выполняемых с использованием файла kubeconfig:
+1. **Kube-apiserver** — обращается в dex при обработке запросов к API Kubernetes, выполняемых с использованием файла kubeconfig:
 
    * при запуске kube-apiserver запрашивает конфигурационный эндпоинт OIDC-провайдера (в данном случае — Dex), чтобы получить информацию об `issuer` и параметры для проверки токенов через JWKS-эндпоинт;
    * при получении запроса с ID token kube-apiserver проверяет его подпись с использованием ключей, полученных с JWKS-эндпоинта, а затем проверяет значения claim'ов токена на соответствие конфигурации сервера.
