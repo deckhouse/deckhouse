@@ -103,7 +103,9 @@
     # scan ran full-scan regardless. `cve_scan.sh` (v2.0) reads this as
     # CS_ONLY_IMAGES; empty "[]" makes it fall back to full scan.
     only_images: ${{ needs.build_fe.outputs.changed_compact }}
+    only_images_enabled: "True"
 {!{- end }!}
+    target_tag: ${{ github.base_ref }}
 # </template: cve_scan_deckhouse_images>
 {!{- end -}!}
 
