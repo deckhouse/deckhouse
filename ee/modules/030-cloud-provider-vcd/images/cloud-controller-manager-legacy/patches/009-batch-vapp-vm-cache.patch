@@ -1,0 +1,154 @@
+diff --git a/pkg/ccm/vminfocache.go b/pkg/ccm/vminfocache.go
+index 74baf61..d4cc2c9 100644
+--- a/pkg/ccm/vminfocache.go
++++ b/pkg/ccm/vminfocache.go
+@@ -13,6 +13,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/vmware/go-vcloud-director/v2/govcd"
++	"github.com/vmware/go-vcloud-director/v2/types/v56"
+ 	v1 "k8s.io/api/core/v1"
+ 	v1helper "k8s.io/cloud-provider/node/helpers"
+ )
+@@ -90,6 +91,55 @@ func (vmic *VmInfoCache) vmToVMInfo(vm *govcd.VM, captureTime time.Time) (*VmInf
+ 	return vmInfo, nil
+ }
+ 
++// refresh fetches the vApp once and populates both indexes with every VM in it.
++//
++// Looking up one VM through FindVMByName/FindVMByUUID also downloads the whole
++// vApp. The cloud node controller initializes a burst of Nodes one by one, so
++// doing that lookup per Node turns one vApp download into N downloads while the
++// cache lock is held. Keep the lock (the VCD client is shared and mutable), but
++// use the data already returned by VCD to satisfy all VM lookups in the burst.
++func (vmic *VmInfoCache) refresh(captureTime time.Time) error {
++	if err := vmic.client.RefreshBearerToken(); err != nil {
++		return fmt.Errorf("error while obtaining access token: [%v]", err)
++	}
++	vdcManager, err := vcdsdk.NewVDCManager(vmic.client, vmic.client.ClusterOrgName, vmic.client.ClusterOVDCName)
++	if err != nil {
++		return fmt.Errorf("error creating VDCManager object: [%v]", err)
++	}
++	vms, err := vdcManager.FindAllVMsInVapp(vmic.clusterVAppName)
++	if err != nil {
++		return fmt.Errorf("unable to find VMs in vApp [%s]: [%v]", vmic.clusterVAppName, err)
++	}
++
++	nameMap := make(map[string]*VmInfo, len(vms))
++	uuidMap := make(map[string]*VmInfo, len(vms))
++	for _, vm := range vms {
++		vmInfo, err := vmic.vcdVMToVMInfo(vm, captureTime)
++		if err != nil {
++			return fmt.Errorf("unable to convert vm struct [%v] to vmInfo: [%v]", vm, err)
++		}
++		nameMap[vmInfo.Name] = vmInfo
++		uuidMap[vmInfo.UUID] = vmInfo
++	}
++
++	vmic.nameMap = nameMap
++	vmic.uuidMap = uuidMap
++	return nil
++}
++
++func (vmic *VmInfoCache) vcdVMToVMInfo(vcdVM *types.Vm, captureTime time.Time) (*VmInfo, error) {
++	if vcdVM == nil {
++		return nil, fmt.Errorf("vm parameter should not be nil")
++	}
++
++	// Keep a govcd VM wrapper for InstanceShutdownByProviderID. The vApp
++	// response already contains the VM data and its HREF, so no per-VM GET is
++	// needed merely to build the cache entry.
++	vm := govcd.NewVM(&vmic.client.VCDClient.Client)
++	vm.VM = vcdVM
++	return vmic.vmToVMInfo(vm, captureTime)
++}
++
+ func (vmic *VmInfoCache) GetByName(vmName string) (*VmInfo, error) {
+ 	vmic.rwLock.Lock()
+ 	defer vmic.rwLock.Unlock()
+@@ -105,36 +155,13 @@ func (vmic *VmInfoCache) GetByName(vmName string) (*VmInfo, error) {
+ 		delete(vmic.nameMap, vmName)
+ 	}
+ 
+-	captureTime := time.Now()
+-	if err := vmic.client.RefreshBearerToken(); err != nil {
+-		return nil, fmt.Errorf("error while obtaining access token: [%v]", err)
+-	}
+-	vdcManager, err := vcdsdk.NewVDCManager(vmic.client, vmic.client.ClusterOrgName, vmic.client.ClusterOVDCName)
+-	if err != nil {
+-		return nil, fmt.Errorf("error creating VDCManager object: [%v]", err)
+-	}
+-	vm, err := vdcManager.FindVMByName(vmic.clusterVAppName, vmName)
+-	if err != nil {
+-		if err == govcd.ErrorEntityNotFound {
+-			return nil, govcd.ErrorEntityNotFound
+-		}
+-
+-		if vdcManager.IsVmNotAvailable(err) {
+-			return nil, govcd.ErrorEntityNotFound
+-		}
+-
+-		return nil, fmt.Errorf("unable to find vm with name [%s]: [%v]", vmName, err)
++	if err := vmic.refresh(now); err != nil {
++		return nil, err
+ 	}
+-
+-	vmInfo, err := vmic.vmToVMInfo(vm, captureTime)
+-	if err != nil {
+-		return nil, fmt.Errorf("unable to convert vm struct [%v] to vmInfo: [%v]", vm, err)
++	if vmInfo, ok := vmic.nameMap[vmName]; ok {
++		return vmInfo, nil
+ 	}
+-
+-	vmic.nameMap[vmName] = vmInfo
+-	vmic.uuidMap[vm.VM.ID] = vmInfo
+-
+-	return vmInfo, nil
++	return nil, govcd.ErrorEntityNotFound
+ }
+ 
+ func (vmic *VmInfoCache) GetByUUID(vmUUID string) (*VmInfo, error) {
+@@ -149,37 +176,14 @@ func (vmic *VmInfoCache) GetByUUID(vmUUID string) (*VmInfo, error) {
+ 		}
+ 
+ 		// don't use old values
+-		delete(vmic.nameMap, vmUUID)
++		delete(vmic.uuidMap, vmUUID)
+ 	}
+ 
+-	captureTime := time.Now()
+-	if err := vmic.client.RefreshBearerToken(); err != nil {
+-		return nil, fmt.Errorf("error while obtaining access token: [%v]", err)
+-	}
+-	vdcManager, err := vcdsdk.NewVDCManager(vmic.client, vmic.client.ClusterOrgName, vmic.client.ClusterOVDCName)
+-	if err != nil {
+-		return nil, fmt.Errorf("error creating VDCManager object: [%v]", err)
++	if err := vmic.refresh(now); err != nil {
++		return nil, err
+ 	}
+-	vm, err := vdcManager.FindVMByUUID(vmic.clusterVAppName, vmUUID)
+-	if err != nil {
+-		if err == govcd.ErrorEntityNotFound {
+-			return nil, govcd.ErrorEntityNotFound
+-		}
+-
+-		if vdcManager.IsVmNotAvailable(err) {
+-			return nil, govcd.ErrorEntityNotFound
+-		}
+-
+-		return nil, fmt.Errorf("unable to find vm with uuid [%s]: [%v]", vmUUID, err)
+-	}
+-
+-	vmInfo, err := vmic.vmToVMInfo(vm, captureTime)
+-	if err != nil {
+-		return nil, fmt.Errorf("unable to convert vm struct [%v] to vmInfo: [%v]", vm, err)
++	if vmInfo, ok := vmic.uuidMap[vmUUID]; ok {
++		return vmInfo, nil
+ 	}
+-
+-	vmic.uuidMap[vmUUID] = vmInfo
+-	vmic.nameMap[vm.VM.Name] = vmInfo
+-
+-	return vmInfo, nil
++	return nil, govcd.ErrorEntityNotFound
+ }

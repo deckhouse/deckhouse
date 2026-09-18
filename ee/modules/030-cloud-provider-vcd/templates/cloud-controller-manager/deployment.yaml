@@ -4,6 +4,7 @@
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
 - --controllers={{ .controllers }}
+- --concurrent-node-syncs=10
 - --v=4
 {{- end -}}
 
