@@ -193,7 +193,7 @@ runcmd:
 	keys := []string{"ssh-ed25519 AAAAC3 test@example"}
 
 	render := func(t *testing.T, in string) map[string]any {
-		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(in)), keys, expire)
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(in)), keys, expire, "default")
 		require.NoError(t, err)
 
 		raw, err := base64.StdEncoding.DecodeString(out)
@@ -271,7 +271,7 @@ runcmd:
 		require.NoError(t, yaml.Unmarshal(payload, &before))
 		require.NotContains(t, before, "users")
 
-		out, err := withConvergeUser(base64.StdEncoding.EncodeToString(payload), keys, expire)
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString(payload), keys, expire, "default")
 		require.NoError(t, err)
 
 		raw, err := base64.StdEncoding.DecodeString(out)
@@ -289,7 +289,7 @@ runcmd:
 	// #cloud-config is a YAML comment: both end up in one document. A second users key
 	// there wins over ours and the account never reaches the node.
 	t.Run("the dvp templates keep the converge user", func(t *testing.T) {
-		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), keys, expire)
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), keys, expire, "default")
 		require.NoError(t, err)
 
 		rendered, err := base64.StdEncoding.DecodeString(out)
@@ -317,20 +317,20 @@ runcmd:
 	})
 
 	t.Run("applying twice changes nothing", func(t *testing.T) {
-		once, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), keys, expire)
+		once, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), keys, expire, "default")
 		require.NoError(t, err)
-		twice, err := withConvergeUser(once, keys, expire)
+		twice, err := withConvergeUser(once, keys, expire, "default")
 		require.NoError(t, err)
 		require.Equal(t, once, twice)
 	})
 
 	t.Run("a user with no keys is an error, not a locked door", func(t *testing.T) {
-		_, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), nil, expire)
+		_, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), nil, expire, "default")
 		require.Error(t, err)
 	})
 
 	t.Run("a payload that is not a cloud-config is an error", func(t *testing.T) {
-		_, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte("#cloud-config\n")), keys, expire)
+		_, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte("#cloud-config\n")), keys, expire, "default")
 		require.Error(t, err)
 	})
 
@@ -349,10 +349,10 @@ runcmd:
 	// The merge path rewrites the document, so applying it twice must still be a no-op.
 	t.Run("merging twice changes nothing", func(t *testing.T) {
 		once, err := withConvergeUser(
-			base64.StdEncoding.EncodeToString([]byte(base+"users:\n- name: user\n")), keys, expire)
+			base64.StdEncoding.EncodeToString([]byte(base+"users:\n- name: user\n")), keys, expire, "default")
 		require.NoError(t, err)
 
-		twice, err := withConvergeUser(once, keys, expire)
+		twice, err := withConvergeUser(once, keys, expire, "default")
 		require.NoError(t, err)
 		require.Equal(t, once, twice)
 	})
@@ -362,7 +362,7 @@ runcmd:
 	t.Run("a multi-line key stays one list element", func(t *testing.T) {
 		multiline := "ssh-ed25519 AAAAC3 first@example\nssh-ed25519 AAAAC4 second@example"
 
-		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), []string{multiline}, expire)
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), []string{multiline}, expire, "default")
 		require.NoError(t, err)
 
 		raw, err := base64.StdEncoding.DecodeString(out)
@@ -386,7 +386,7 @@ runcmd:
 		require.NoError(t, err)
 		require.Equal(t, []string{twoKeys}, authorized)
 
-		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), authorized, expire)
+		out, err := withConvergeUser(base64.StdEncoding.EncodeToString([]byte(base)), authorized, expire, "default")
 		require.NoError(t, err)
 
 		raw, err := base64.StdEncoding.DecodeString(out)

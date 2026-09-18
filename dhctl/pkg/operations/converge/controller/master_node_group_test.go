@@ -245,8 +245,48 @@ runcmd:
 		return user
 	}
 
+	// An image with no distro default user has nobody for cloud-init to hand the cluster
+	// key to, so its provider declares the account it does create. Writing "default" there
+	// would leave the node reachable by the converge user alone.
+	t.Run("the account a provider declares replaces the default marker", func(t *testing.T) {
+		got, err := masterCloudConfig(t.Context(), meta, nil, base,
+			&config.ProviderDefaultUser{Name: "user", Groups: []string{"users", "wheel"}})
+		require.NoError(t, err)
+
+		raw, err := base64.StdEncoding.DecodeString(got)
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+
+		users, ok := doc["users"].([]any)
+		require.True(t, ok)
+		require.Len(t, users, 2)
+
+		declared, ok := users[0].(map[string]any)
+		require.True(t, ok, "the first entry is the provider account, not the default marker")
+		require.Equal(t, "user", declared["name"])
+		require.Equal(t, []any{"users", "wheel"}, declared["groups"])
+		require.Equal(t, []any{pub}, declared["ssh_authorized_keys"],
+			"the cluster key lands on the account the image actually creates")
+		require.Equal(t, []any{"ALL=(ALL) NOPASSWD:ALL"}, declared["sudo"])
+	})
+
+	t.Run("no declaration keeps the default marker", func(t *testing.T) {
+		got, err := masterCloudConfig(t.Context(), meta, nil, base, nil)
+		require.NoError(t, err)
+
+		raw, err := base64.StdEncoding.DecodeString(got)
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+
+		require.Equal(t, "default", doc["users"].([]any)[0])
+	})
+
 	t.Run("mutable master gets the user", func(t *testing.T) {
-		got, err := masterCloudConfig(t.Context(), meta, nil, base)
+		got, err := masterCloudConfig(t.Context(), meta, nil, base, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, []any{pub}, convergeUser(t, got)["ssh_authorized_keys"])
@@ -258,7 +298,7 @@ runcmd:
 		keyPath := writeTestPrivateKey(t, "")
 
 		got, err := masterCloudConfig(t.Context(), meta,
-			[]sshconfig.AgentPrivateKey{{Key: keyPath, IsPath: true}}, base)
+			[]sshconfig.AgentPrivateKey{{Key: keyPath, IsPath: true}}, base, nil)
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -272,7 +312,7 @@ runcmd:
 		expiry := func() string { return time.Now().UTC().Add(48 * time.Hour).Format(time.DateOnly) }
 
 		before := expiry()
-		got, err := masterCloudConfig(t.Context(), meta, nil, base)
+		got, err := masterCloudConfig(t.Context(), meta, nil, base, nil)
 		require.NoError(t, err)
 
 		expiredate, ok := convergeUser(t, got)["expiredate"].(string)

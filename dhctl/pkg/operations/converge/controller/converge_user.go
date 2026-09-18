@@ -51,14 +51,40 @@ const (
 )
 
 // masterCloudConfig puts the converge user into a master's cloud-init payload. Its input
-// is the payload as the manual-bootstrap-for-master secret holds it.
-func masterCloudConfig(ctx gocontext.Context, metaConfig *config.MetaConfig, keys []sshconfig.AgentPrivateKey, cloudConfigB64 string) (string, error) {
+// is the payload as the manual-bootstrap-for-master secret holds it. imageUser is the
+// account the provider declared for its image, or nil for cloud-init's own default.
+func masterCloudConfig(ctx gocontext.Context, metaConfig *config.MetaConfig, keys []sshconfig.AgentPrivateKey, cloudConfigB64 string, imageUser *config.ProviderDefaultUser) (string, error) {
 	authorized, err := convergeAuthorizedKeys(ctx, metaConfig, keys)
 	if err != nil {
 		return "", err
 	}
 
-	return withConvergeUser(cloudConfigB64, authorized, time.Now().UTC().Add(convergeUserLifetime))
+	return withConvergeUser(cloudConfigB64, authorized, time.Now().UTC().Add(convergeUserLifetime),
+		imageAccount(metaConfig, imageUser))
+}
+
+// imageAccount is the first entry of the users list: the marker that tells cloud-init to
+// create the distro default user, or the account a provider declared instead, because its
+// image has no such user for the cluster key to land on.
+func imageAccount(metaConfig *config.MetaConfig, imageUser *config.ProviderDefaultUser) any {
+	if imageUser == nil {
+		return "default"
+	}
+
+	account := map[string]any{
+		"name": imageUser.Name,
+		"sudo": []string{"ALL=(ALL) NOPASSWD:ALL"},
+	}
+
+	if len(imageUser.Groups) > 0 {
+		account["groups"] = imageUser.Groups
+	}
+
+	if keys := clusterPublicKeys(metaConfig); len(keys) > 0 {
+		account["ssh_authorized_keys"] = keys
+	}
+
+	return account
 }
 
 // operatorPrivateKeys are the keys dhctl was started with, read from the connection config
@@ -78,22 +104,7 @@ func operatorPrivateKeys(ctx *context.Context) []sshconfig.AgentPrivateKey {
 // ten providers and sshKey for GCP, plus the public halves of the keys dhctl logs in with.
 func convergeAuthorizedKeys(ctx gocontext.Context, metaConfig *config.MetaConfig, keys []sshconfig.AgentPrivateKey) ([]string, error) {
 	collected := make([]string, 0, len(keys)+1)
-
-	for _, field := range slices.Sorted(maps.Keys(metaConfig.ProviderClusterConfig)) {
-		value := metaConfig.ProviderClusterConfig[field]
-
-		var publicKey string
-		if err := json.Unmarshal(value, &publicKey); err != nil {
-			continue
-		}
-
-		// The very check the x-rules: [sshPublicKey] schema mark runs on this field.
-		if err := config.ValidateSSHPublicKey(value); err != nil {
-			continue
-		}
-
-		collected = append(collected, publicKey)
-	}
+	collected = append(collected, clusterPublicKeys(metaConfig)...)
 
 	for _, key := range keys {
 		publicKey, err := publicKeyFromPrivateKey(key)
@@ -126,6 +137,30 @@ func convergeAuthorizedKeys(ctx gocontext.Context, metaConfig *config.MetaConfig
 	}
 
 	return authorized, nil
+}
+
+// clusterPublicKeys collects the keys the provider configuration carries, found by value
+// because the field is sshPublicKey for ten providers and sshKey for GCP.
+func clusterPublicKeys(metaConfig *config.MetaConfig) []string {
+	keys := make([]string, 0, 1)
+
+	for _, field := range slices.Sorted(maps.Keys(metaConfig.ProviderClusterConfig)) {
+		value := metaConfig.ProviderClusterConfig[field]
+
+		var publicKey string
+		if err := json.Unmarshal(value, &publicKey); err != nil {
+			continue
+		}
+
+		// The very check the x-rules: [sshPublicKey] schema mark runs on this field.
+		if err := config.ValidateSSHPublicKey(value); err != nil {
+			continue
+		}
+
+		keys = append(keys, publicKey)
+	}
+
+	return keys
 }
 
 // publicKeyFromPrivateKey takes the public half of an operator key. A key given by path
@@ -165,7 +200,7 @@ func publicKeyFromPrivateKey(key sshconfig.AgentPrivateKey) (string, error) {
 // its bytes and gets the block appended: re-rendering someone else's document would put
 // every scalar in it through yaml.v3, which reads YAML 1.2, while the consumer is
 // cloud-init's PyYAML, which reads 1.1.
-func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (string, error) {
+func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time, imageAccount any) (string, error) {
 	if len(keys) == 0 {
 		return "", errors.New("render cloud-config: the converge user has no authorized keys")
 	}
@@ -206,7 +241,7 @@ func withConvergeUser(cloudConfigB64 string, keys []string, expire time.Time) (s
 
 	// cloud-init keeps one users list per document and the distro default user (ubuntu,
 	// ec2-user) is skipped as soon as that list exists without "default" in it.
-	block, err := renderUsers("default", account)
+	block, err := renderUsers(imageAccount, account)
 	if err != nil {
 		return "", err
 	}

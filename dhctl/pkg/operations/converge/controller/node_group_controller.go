@@ -97,7 +97,14 @@ func (c *NodeGroupController) loadCloudConfig(ctx *context.Context, nodeInternal
 		return nil
 	}
 
-	cloudConfig, err := masterCloudConfig(ctx.Ctx(), metaConfig, operatorPrivateKeys(ctx), payload)
+	// The account this provider's image needs instead of cloud-init's own default. Ten
+	// providers out of eleven declare none, and that is not an error.
+	imageUser, err := config.LoadProviderDefaultUser(metaConfig, c.globalOptions)
+	if err != nil {
+		return err
+	}
+
+	cloudConfig, err := masterCloudConfig(ctx.Ctx(), metaConfig, operatorPrivateKeys(ctx), payload, imageUser)
 	if err != nil {
 		return err
 	}
