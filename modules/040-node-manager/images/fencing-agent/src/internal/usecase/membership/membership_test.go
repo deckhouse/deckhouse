@@ -77,28 +77,6 @@ func TestDeleteUnknownPeerIsNoop(t *testing.T) {
 	}
 }
 
-// ListNodeGroup adapts the snapshot to the join usecase's seed source; the
-// arguments only satisfy that interface.
-func TestListNodeGroupReturnsSnapshotCopy(t *testing.T) {
-	m := New(log.NewNop())
-	m.Upsert(domain.Peer{Name: "worker-1", IP: "10.0.0.1"})
-
-	peers, err := m.ListNodeGroup(t.Context(), "worker")
-	if err != nil {
-		t.Fatalf("list: %v", err)
-	}
-
-	if len(peers) != 1 || peers[0].Name != "worker-1" {
-		t.Fatalf("unexpected peers %v", peers)
-	}
-
-	peers[0].Name = "mutated"
-
-	if fresh, _, _ := m.Snapshot(); fresh[0].Name != "worker-1" {
-		t.Error("ListNodeGroup must return a copy, internal state was mutated")
-	}
-}
-
 func TestSnapshotIsSortedByName(t *testing.T) {
 	m := New(log.NewNop())
 	m.Upsert(domain.Peer{Name: "worker-2", IP: "10.0.0.2"})

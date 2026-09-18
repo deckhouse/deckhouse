@@ -25,9 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-
 const defaultIdentityCheckInterval = time.Second
-
 
 var errIdentityChanged = errors.New("own node was recreated with a different uid")
 

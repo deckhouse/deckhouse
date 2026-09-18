@@ -17,6 +17,7 @@ limitations under the License.
 package watchdog
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -153,6 +154,21 @@ func TestSelfStateFlagsANodeWithoutTheGroupLabel(t *testing.T) {
 
 	if !state.Snapshot().LeftNodeGroup {
 		t.Error("a Node with no group label is not a member of the group either")
+	}
+}
+
+func TestSelfStateAgreesWithTheSharedGroupRule(t *testing.T) {
+	for _, label := range []string{"worker", "", "worker-2", "Worker", " worker", "worker "} {
+		t.Run("label="+strconv.Quote(label), func(t *testing.T) {
+			state := newState()
+
+			state.Observe(domain.NodeSignals{UID: "uid-worker-1", NodeGroup: label})
+
+			want := !domain.InNodeGroup(label, testNodeGroup)
+			if got := state.Snapshot().LeftNodeGroup; got != want {
+				t.Errorf("LeftNodeGroup is %t for label %q, want %t as the shared group rule says", got, label, want)
+			}
+		})
 	}
 }
 

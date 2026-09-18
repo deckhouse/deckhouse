@@ -96,6 +96,7 @@ type Params struct {
 	MaxRetryInterval time.Duration
 	TakeoverDelay    time.Duration
 	FallbackTTL      time.Duration
+	StartedAt time.Time
 }
 
 type Deps struct {
@@ -108,10 +109,11 @@ type Deps struct {
 
 type incident struct {
 	detectedAt time.Time
+	clockFrom time.Time
+	restamp bool
+	sawRecord  bool
 	attempts   int
 	retryAfter time.Time
-	// warnedNoUID keeps a peer the informer has no UID for from filling the log
-	// once a second.
 	warnedNoUID bool
 }
 
@@ -143,6 +145,12 @@ type Writer struct {
 	startedAt      time.Time
 	warnedOwnState bool
 
+	ownUID   types.UID
+	ownSince time.Time
+
+	paused   bool
+	pausedAt time.Time
+
 	// What a pass derives from its two inputs is kept until one of them moves.
 	// On a large NodeGroup the maps and sorts behind the view are the whole cost
 	// of an idle pass, for inputs that change maybe hourly; and the rank of a
@@ -161,6 +169,11 @@ func New(params Params, deps Deps, logger *log.Logger) *Writer {
 		deps.Now = time.Now
 	}
 
+	startedAt := params.StartedAt
+	if startedAt.IsZero() {
+		startedAt = StartOfLife(deps.Now())
+	}
+
 	return &Writer{
 		params:    params,
 		deps:      deps,
@@ -169,7 +182,7 @@ func New(params Params, deps Deps, logger *log.Logger) *Writer {
 		waiting:   make(map[waitKey]time.Time),
 		deleted:   make(map[string]types.UID),
 		sightings: make(map[string]sighting),
-		startedAt: deps.Now().Truncate(time.Second),
+		startedAt: startedAt,
 	}
 }
 
@@ -216,6 +229,67 @@ func (w *Writer) clearOwnState(ctx context.Context, states []v1alpha1.FencingFai
 	}
 }
 
+func (w *Writer) trackPause(own *v1alpha1.FencingFailedNodeState) {
+	now := w.deps.Now()
+
+	if own == nil {
+		w.ownUID = ""
+		w.ownSince = time.Time{}
+
+		if w.paused {
+			w.resume(now)
+		}
+
+		return
+	}
+
+	if w.paused {
+		return
+	}
+
+	if w.ownSince.IsZero() || own.UID != w.ownUID {
+		w.ownUID = own.UID
+		w.ownSince = now
+
+		if w.params.TakeoverDelay > 0 {
+			w.logger.Debug("a peer recorded this node as failed, the fencing state writer pauses if the record stays",
+				"detected_by", own.Status.Failed.DetectedBy,
+				"pause_after", w.params.TakeoverDelay.String(),
+			)
+		}
+	}
+
+	if now.Before(w.ownSince.Add(w.params.TakeoverDelay)) {
+		return
+	}
+
+	w.paused = true
+	w.pausedAt = now
+
+	w.logger.Warn("a peer recorded this node as failed, the fencing state writer is paused",
+		"detected_by", own.Status.Failed.DetectedBy,
+		"detected_at", own.Status.Failed.DetectedAt.UTC().Format(metav1.RFC3339Micro),
+	)
+}
+
+func (w *Writer) resume(now time.Time) {
+	w.paused = false
+
+	for _, inc := range w.incidents {
+		inc.detectedAt = now
+		inc.clockFrom = now
+	}
+
+	w.logger.Info("no peer records this node as failed any more, the fencing state writer resumes",
+		"paused_for", now.Sub(w.pausedAt).Truncate(time.Millisecond).String(),
+		"open_incidents", len(w.incidents),
+	)
+}
+
+func (w *Writer) ownVerdictOnAlivePeer(view domain.View, state *v1alpha1.FencingFailedNodeState) bool {
+	return state.Status.Failed != nil && state.Status.Failed.DetectedBy == w.params.NodeName && view.IsAlive(state.Name)
+}
+
 func (w *Writer) reconcile(ctx context.Context) {
 	expected, gen := w.deps.Expected.Expected()
 	members := w.deps.Alive.Members()
@@ -235,6 +309,9 @@ func (w *Writer) reconcile(ctx context.Context) {
 
 	w.observe(states)
 	w.clearOwnState(ctx, states)
+
+	own := OwnFailedRecord(states, w.params.NodeName, w.startedAt)
+	w.trackPause(own)
 
 	if !view.HasQuorum() {
 		w.logger.Debug("no local quorum, fencing states are not written",
@@ -256,6 +333,7 @@ func (w *Writer) reconcile(ctx context.Context) {
 
 	for _, peer := range failed {
 		inc := w.incident(peer.Name)
+		w.trackRecord(inc, peer.Name, existing[peer.Name])
 
 		// Already on record, by this agent or by whoever held the role before
 		// it: nobody needs a rank for this peer any more. The rank costs a pass
@@ -268,12 +346,16 @@ func (w *Writer) reconcile(ctx context.Context) {
 			continue
 		}
 
+		if w.paused {
+			continue
+		}
+
 		// Backing off after failed writes: nothing to decide until then.
 		if w.deps.Now().Before(inc.retryAfter) {
 			continue
 		}
 
-		if !w.myTurn(w.rank(peer.Name), inc.detectedAt) {
+		if !w.myTurn(w.rank(peer.Name), inc.clockFrom) {
 			continue
 		}
 
@@ -281,6 +363,10 @@ func (w *Writer) reconcile(ctx context.Context) {
 	}
 
 	for i := range states {
+		if w.paused && !w.ownVerdictOnAlivePeer(view, &states[i]) {
+			continue
+		}
+
 		w.clear(ctx, view, &states[i])
 	}
 
@@ -379,8 +465,13 @@ func (w *Writer) report(
 		}
 	}
 
+	stamp := inc.detectedAt
+	if inc.restamp {
+		stamp = w.deps.Now()
+	}
+
 	failed := v1alpha1.FencingFailedNodeStateFailed{
-		DetectedAt: metav1.NewMicroTime(inc.detectedAt),
+		DetectedAt: metav1.NewMicroTime(stamp),
 		DetectedBy: w.params.NodeName,
 		Reason:     v1alpha1.FailedReasonMemberlistDead,
 		AliveCount: int32(view.AliveCount()),
@@ -395,6 +486,9 @@ func (w *Writer) report(
 	}
 
 	inc.recorded()
+	inc.detectedAt = stamp
+	inc.restamp = false
+	inc.sawRecord = true
 
 	if !created && !recorded {
 		return
@@ -402,7 +496,7 @@ func (w *Writer) report(
 
 	w.logger.Info("fencing state recorded",
 		"member", peer.Name,
-		"detected_at", failed.DetectedAt.UTC().Format(metav1.RFC3339Micro),
+		"detected_at", stamp.UTC().Format(metav1.RFC3339Micro),
 		"alive", view.AliveCount(),
 		"quorum", view.QuorumSize(),
 	)
@@ -525,12 +619,31 @@ func (w *Writer) incident(name string) *incident {
 		return known
 	}
 
-	known := &incident{detectedAt: w.deps.Now()}
+	now := w.deps.Now()
+	known := &incident{detectedAt: now, clockFrom: now}
 	w.incidents[name] = known
 
 	w.logger.Info("peer left the gossip network", "member", name)
 
 	return known
+}
+
+func (w *Writer) trackRecord(inc *incident, member string, state *v1alpha1.FencingFailedNodeState) {
+	if state != nil {
+		inc.sawRecord = true
+
+		return
+	}
+
+	if !inc.sawRecord {
+		return
+	}
+
+	inc.sawRecord = false
+	inc.clockFrom = w.deps.Now()
+	inc.restamp = true
+
+	w.logger.Debug("fencing state vanished during an open incident, the takeover clock restarts", "member", member)
 }
 
 func (w *Writer) forgetRecovered(failed []domain.Peer) {

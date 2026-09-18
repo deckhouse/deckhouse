@@ -98,7 +98,7 @@ spec:
                 memberlist:
                   type: object
                   description: |
-                    memberlist and Lifeguard parameters that control peer probing, suspicion and gossip.
+                    memberlist and Lifeguard parameters that control peer probing, suspicion and gossip. The agent derives the remaining memberlist timings (TCP timeout, push/pull interval, dead node reclaim time, leave timeout) from this profile.
                   required:
                     - probeInterval
                     - probeTimeout
@@ -148,18 +148,18 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        Interval at which gossip events are disseminated.
+                        Interval at which gossip events are disseminated. Together with `retransmitMult` it also sets how long a stopping agent waits for its leave message to be sent: `min(max(2 * retransmitMult * gossipInterval, 250ms), 4s)`.
                     retransmitMult:
                       type: integer
                       format: int32
                       minimum: 1
                       description: |
-                        Retransmit multiplier for gossip broadcasts: `retransmitMult * ceil(log10(N + 1))`.
+                        Retransmit multiplier for gossip broadcasts: `retransmitMult * ceil(log10(N + 1))`. Together with `gossipInterval` it also sets how long a stopping agent waits for its leave message to be sent: `min(max(2 * retransmitMult * gossipInterval, 250ms), 4s)`.
                     gossipToTheDeadTime:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        How long a dead node still receives gossip, giving it a chance to refute after recovery.
+                        How long a dead node still receives gossip, giving it a chance to refute after recovery. The agent also derives two memberlist timings from it: the full state push/pull interval, `max(gossipToTheDeadTime, 2 * TCP timeout)` with the TCP timeout equal to `max(fallback.kubernetesAPITimeout, 1s)` (memberlist stretches this interval further in node groups of more than 32 nodes), and the dead node reclaim time, equal to this value, after which peers accept a dead node that returns under the same name with a new address. A shorter value repairs diverged views and accepts a new address sooner, at the cost of more push/pull traffic.
                 fallback:
                   type: object
                   description: |
@@ -183,11 +183,11 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        Timeout of the Kubernetes API probe on the fallback path. Must be less than `ttl` so the API check does not block the decision.
+                        Timeout of each request the agent makes for `FencingFailedNodeState` objects, including the fallback heartbeat write, which is the API probe on the fallback path, and of each of the two Node reads of a join or rejoin attempt: the own Node first, then up to three candidate Nodes in parallel. It also sets the memberlist TCP timeout, `max(kubernetesAPITimeout, 1s)`, which bounds every gossip join and push/pull exchange. Must be less than `ttl` so the API check does not block the decision.
                 rejoin:
                   type: object
                   description: |
-                    Parameters of the rejoin loop that repeats `memberlist.Join(seedList)` after quorum loss or a long network partition.
+                    Parameters of the agent's join attempts: the startup join and the rejoin loop, which runs while the node has no gossip quorum or while a `FencingFailedNodeState` created after the agent started records this node as failed. An attempt reads the node's own Node object from the Kubernetes API, then up to three candidate Nodes, and runs one `memberlist.Join` per validated seed in parallel. Every failed attempt doubles the delay before the next one, from `interval` up to `maxInterval`; in the rejoin loop so does a successful attempt after which the node still has no gossip quorum or such a `FencingFailedNodeState` still exists.
                   required:
                     - interval
                     - maxInterval
@@ -196,12 +196,12 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        Initial interval between rejoin attempts. Backoff resets to this value after a successful rejoin.
+                        Initial delay between join and rejoin attempts. The backoff resets to this value only when the node has gossip quorum and no failed record of its own. It is also the initial retry delay of the agent's writes of `FencingFailedNodeState`.
                     maxInterval:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        Upper bound of the exponential backoff between rejoin attempts. Must be greater than or equal to `interval`.
+                        Upper bound of the exponential backoff between join and rejoin attempts. Must be greater than or equal to `interval`. The time between the starts of two attempts also includes the attempt itself: up to `fallback.kubernetesAPITimeout` for each of the two Node reads and about one to two memberlist TCP timeouts for the join. It is also the takeover step after which the next agent in line records a failed peer that the designated writer has not recorded, and how long a peer's failed record about the agent's own node must stay, without a break and under one UID, before the agent's fencing state writer pauses; while peers keep removing that record sooner than that and recreating it, the writer does not pause.
                 evacuation:
                   type: object
                   description: |

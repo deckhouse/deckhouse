@@ -14,19 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package agent
+package domain
 
-import (
-	"time"
+import "errors"
 
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-)
+var ErrNodeNotFound = errors.New("node not found")
 
-type Deps struct {
-	K8sClient     kubernetes.Interface
-	FencingClient client.Client
-	FencingCache  cache.Cache
-	StartedAt time.Time
+type NodeRecord struct {
+	Name      string
+	UID       string
+	IP        string
+	NodeGroup string
+}
+
+func InNodeGroup(label, nodeGroup string) bool {
+	return label == nodeGroup
 }
