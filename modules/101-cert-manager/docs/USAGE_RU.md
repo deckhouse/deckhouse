@@ -199,6 +199,72 @@ spec:
      - "*.domain.com"
    ```
 
+## Заказ wildcard-сертификата с DNS в Yandex Cloud DNS
+
+Чтобы выпустить wildcard-сертификат с проверкой DNS-01 в Yandex Cloud DNS,
+задайте параметры модуля и создайте Certificate со ссылкой на ClusterIssuer `yandex`.
+
+> Если ранее вы устанавливали upstream Helm-чарт `cert-manager-webhook-yandex` вручную,
+> удалите этот чарт и cluster-scoped APIService `v1alpha1.acme.cloud.yandex.com`
+> **до** включения параметров модуля ниже.
+> Встроенный вебхук регистрирует то же имя APIService; оставленная ручная установка
+> может сломать весь релиз `cert-manager` или тихо остановить продление сертификатов
+> у существующего пользовательского ClusterIssuer.
+> Встроенный ClusterIssuer `yandex` использует **production**-каталог Let's Encrypt
+> (как issuers Cloudflare, Route53 и CloudDNS в этом модуле).
+> Перед созданием Certificate убедитесь, что верны folder ID, роль сервисного аккаунта (`dns.editor`)
+> и публичная DNS-зона — иначе неудачные попытки расходуют production rate limit.
+> Чтобы сначала проверить настройку на staging, создайте временный ClusterIssuer с сервером
+> `https://acme-staging-v02.api.letsencrypt.org/directory` и тем же webhook-solver.
+
+1. Создайте [сервисный аккаунт](https://yandex.cloud/ru/docs/iam/operations/sa/create) в Yandex Cloud и назначьте ему роль `dns.editor` (или эквивалентную) на каталог, в котором находится публичная DNS-зона.
+
+1. Создайте [авторизованный ключ](https://yandex.cloud/ru/docs/iam/operations/authorized-key/create) для сервисного аккаунта и закодируйте полученный JSON-файл в **Base64**:
+
+   ```shell
+   base64 authorized_key.json
+   ```
+
+1. Укажите параметры модуля:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cert-manager
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       yandexFolderID: <FOLDER_ID>
+       yandexServiceAccountJSON: <AUTHORIZED_KEY_JSON_BASE64>
+   ```
+
+   После этого Deckhouse Kubernetes Platform автоматически развернёт ACME-вебхук для Yandex Cloud DNS
+   и создаст ClusterIssuer и Secret для Yandex в неймспейсе `d8-cert-manager`.
+
+   Где:
+
+   - `<FOLDER_ID>` — идентификатор каталога Yandex Cloud с публичной DNS-зоной;
+   - `<AUTHORIZED_KEY_JSON_BASE64>` — содержимое файла `authorized_key.json`, закодированное в Base64.
+
+1. Создайте Certificate с валидацией через Yandex Cloud DNS:
+
+   ```yaml
+   apiVersion: cert-manager.io/v1
+   kind: Certificate
+   metadata:
+     name: domain-wildcard
+     namespace: app-namespace
+   spec:
+     secretName: tls-wildcard
+     issuerRef:
+       name: yandex
+       kind: ClusterIssuer
+     dnsNames:
+     - "*.domain.com"
+   ```
+
 ## Заказ self-signed-сертификата
 
 Все еще проще, чем с LetsEncrypt. Просто меняем `letsencrypt` на `selfsigned`:
