@@ -254,6 +254,20 @@ func (h *Handler) resourceScope(requestedVersion string) decision.ResourceScopeF
 		}
 
 		namespaced, err := h.cache.Get(apiGroup, resource)
+		if err != nil && group != "" && namesAVersion(requestedVersion) {
+			// The request named a version the cluster no longer serves: a client with a stale
+			// discovery snapshot, or one generated against the previous version of a CRD, goes on
+			// asking about it long after that version is retired. Answering "absent" would be wrong
+			// twice over. What is being asked here is whether the resource is namespaced, and no
+			// two versions of a resource disagree about that. And the answer reaches the user as
+			// "you have no access" rather than "that version is gone" -- authorization runs on the
+			// request path before the version is resolved, so even a plain read of a retired
+			// version comes back as 403 instead of 404. Resolve the scope through the version the
+			// cluster serves; a resource the cluster has never heard of stays absent.
+			if preferred, preferredErr := h.cache.GetPreferredVersion(group, resource); preferredErr == nil && preferred != apiVersion {
+				namespaced, err = h.cache.Get(group+"/"+preferred, resource)
+			}
+		}
 		if err != nil {
 			if absent(err) {
 				return rules.ResourceScope{Absent: true}, nil
@@ -262,6 +276,12 @@ func (h *Handler) resourceScope(requestedVersion string) decision.ResourceScopeF
 		}
 		return rules.ResourceScope{Known: true, Namespaced: namespaced}, nil
 	}
+}
+
+// namesAVersion reports whether the request pinned an API version itself, rather than leaving the
+// webhook to resolve the preferred one.
+func namesAVersion(version string) bool {
+	return version != "" && version != "*"
 }
 
 // absent reports whether the error means discovery answered and the resource is not there: the API

@@ -1,0 +1,38 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: simple
+  labels:
+    heritage: deckhouse
+spec:
+  description: Minimal template that creates only the project namespace.
+  namespaceMetadata:
+    labels:
+      fromParam: namespace.labels
+    annotations:
+      fromParam: namespace.annotations
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties:
+        requiredRequests:
+          type: boolean
+          default: false
+          description: |
+            Whether workloads in the project must declare CPU and memory requests (a Deny-mode
+            OperationPolicy). Off by default: this template creates the namespace and nothing else.
+        namespace:
+          type: object
+          default: {}
+          description: |
+            Additional labels and annotations for the project namespace.
+          properties:
+            labels:
+              type: object
+              additionalProperties:
+                type: string
+            annotations:
+              type: object
+              additionalProperties:
+                type: string

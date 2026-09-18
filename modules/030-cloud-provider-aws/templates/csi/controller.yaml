@@ -47,6 +47,7 @@
   {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
   {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "node_args" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "driverFQDN" "ebs.csi.aws.com" }}
+  {{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
   {{- $_ := set $csiNodeConfig "securityPolicyExceptionEnabled" true }}

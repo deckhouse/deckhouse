@@ -23,7 +23,7 @@ docs-pdf-daily:
   cache: []
   dependencies: []
   tags:
-    - vm-intteam-cloud-d8-ssdlc-runner
+    - deckhouse
   variables:
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse

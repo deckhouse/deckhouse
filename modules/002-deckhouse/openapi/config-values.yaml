@@ -14,7 +14,7 @@ properties:
     enum: ["Default", "Minimal", "Managed"]
     x-examples: ["Default"]
     description: |
-      The [set of DKP modules](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles) that are enabled by default.
+      The [set of DP modules](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles) that are enabled by default.
 
       Changing the parameter value in an already deployed cluster is not possible.
 
@@ -24,7 +24,7 @@ properties:
       - `Managed`: Set of modules for managed clusters from cloud providers.
       - `Minimal`: Minimum possible set, which includes a single module (this one).
 
-        **Warning.** Several basic platform modules (for example, the CNI module) are not included in the `Minimal` module set. Without the basic modules, DKP can only operate in an already deployed cluster. Read the ["Things to keep in mind when working with the Minimal module set"](/products/kubernetes-platform/documentation/v1/admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set) section for more details.
+        **Warning.** Several basic platform modules (for example, the CNI module) are not included in the `Minimal` module set. Without the basic modules, DP can only operate in an already deployed cluster. Read the ["Things to keep in mind when working with the Minimal module set"](/products/kubernetes-platform/documentation/v1/admin/configuration/#things-to-keep-in-mind-when-working-with-the-minimal-module-set) section for more details.
     default: "Default"
 
   releaseChannel:
@@ -339,9 +339,9 @@ properties:
     default: {}
     x-doc-search: "reserved hostnames, ingress, httproute, public domain, multitenancy"
     description: |
-      Settings of the reservation that keeps the hostnames of the DKP web interfaces from being claimed by a workload.
+      Settings of the reservation that keeps the hostnames of the DP web interfaces from being claimed by a workload.
 
-      DKP renders those hostnames from the [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter and reserves them cluster-wide: an Ingress, or a Gateway, GRPCRoute, HTTPRoute, ListenerSet or TLSRoute of the Gateway API, created outside a system namespace cannot name one of them. Using the settings in `reservedPublicHosts`, you can expand the set of reserved names (using the `additionalHosts` parameter) or reduce it (using the `excludedServices` parameter).
+      DP renders those hostnames from the [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter and reserves them cluster-wide: an Ingress, or a Gateway, GRPCRoute, HTTPRoute, ListenerSet or TLSRoute of the Gateway API, created outside a system namespace cannot name one of them. Using the settings in `reservedPublicHosts`, you can expand the set of reserved names (using the `additionalHosts` parameter) or reduce it (using the `excludedServices` parameter).
 
       The reservation is per hostname and applies to every namespace. To exempt a whole namespace from the reservation instead, label the namespace with `security.deckhouse.io/reserved-hosts-bypass: "true"`.
     x-examples:
@@ -361,7 +361,7 @@ properties:
           Possible values:
 
           - `Template`: Every hostname [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) can render, plus its wildcard form where the template's `%s` is the whole first label. A module never has to ask to be covered, and a hostname is reserved as soon as the template can produce it, whether or not any Deckhouse module publishes it today. A hostname that a workload legitimately serves is given back with `excludedServices` below, or with the per-namespace label. The wildcard form is the exception: it is reserved by exact match and `excludedServices` cannot free it, so a workload that serves it needs the per-namespace label or `List` below.
-          - `List`: Only the hostnames of the services DKP knows it publishes. The hostnames in the list are hard-specified in the `reservedNames` parameter of the Helm template, which is included with the release and maintained manually. Any public domain not included in the list—which DKP will begin publishing later—remains unreserved until the list is updated in a DKP release.
+          - `List`: Only the hostnames of the services DP knows it publishes. The hostnames in the list are hard-specified in the `reservedNames` parameter of the Helm template, which is included with the release and maintained manually. Any public domain not included in the list—which DP will begin publishing later—remains unreserved until the list is updated in a DP release.
 
           `Template` applies when `%s` is the whole first label (`%s.example.com`) or a suffix of it (`kube-%s.example.com`). A template where `%s` is only a prefix of the first label (`%s-cluster.example.com`) is reserved as `List` instead: that shape can render every hostname sharing the rest of the label, including tenant Ingresses named the same way.
 
@@ -375,7 +375,7 @@ properties:
         type: array
         default: []
         description: |
-          Hostnames to reserve on top of the ones DKP publishes.
+          Hostnames to reserve on top of the ones DP publishes.
 
           Every entry is a complete hostname, matched exactly and case-insensitively, the same way the built-in ones are. Wildcards are not supported.
 
@@ -407,13 +407,13 @@ properties:
   license:
     type: object
     description: |
-      Edition settings of the Deckhouse Kubernetes Platform.
+      Edition settings of the Deckhouse Platform.
     properties:
       edition:
         type: string
         x-examples: ["CE"]
         description: |
-          Edition of the Deckhouse Kubernetes Platform:
+          Edition of the Deckhouse Platform:
 
           - `CE` — Community Edition.
           - `BE` - Basic edition.
@@ -430,7 +430,7 @@ properties:
     description: |
       Settings for accessing the container registry with Deckhouse images.
 
-      This parameter allows configuring how DKP connects to the container registry to pull its own component images.
+      This parameter allows configuring how DP connects to the container registry to pull its own component images.
       Settings are processed by the internal registry module. In clusters where this configuration is not supported, the registry connection setup is done manually using the `change-registry` helper script.
     x-examples:
       - mode: Unmanaged
@@ -454,10 +454,10 @@ properties:
         description: |
           The mode for accessing the container registry with Deckhouse images.
 
-          - `Unmanaged`: The default mode. In this mode, the `registry` module does not run an internal registry. To configure it, set the parameters in the `unmanaged` section. **Important.** Changing the registry in `Unmanaged` mode will result in a full restart of all DKP components.
-          - `Direct`: A mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart. **Important.** The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DKP components.
-          - `Proxy`: A proxy mode for the registry. It launches static pods with a caching proxy registry. This mode allows for reducing requests to the external registry by caching images. Cached data is stored on master nodes. Access to the proxy registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DKP components.
-          - `Local`: A local registry mode. It launches static pods with a local registry. This mode allows the cluster to operate in an isolated environment. Data storage is performed on master nodes. Access to the registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DKP components.
+          - `Unmanaged`: The default mode. In this mode, the `registry` module does not run an internal registry. To configure it, set the parameters in the `unmanaged` section. **Important.** Changing the registry in `Unmanaged` mode will result in a full restart of all DP components.
+          - `Direct`: A mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart. **Important.** The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DP components.
+          - `Proxy`: A proxy mode for the registry. It launches static pods with a caching proxy registry. This mode allows for reducing requests to the external registry by caching images. Cached data is stored on master nodes. Access to the proxy registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DP components.
+          - `Local`: A local registry mode. It launches static pods with a local registry. This mode allows the cluster to operate in an isolated environment. Data storage is performed on master nodes. Access to the registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DP components.
         enum: [Unmanaged, Direct, Proxy, Local]
         default: Unmanaged
       direct:

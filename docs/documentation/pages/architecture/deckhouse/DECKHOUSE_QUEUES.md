@@ -2,16 +2,16 @@
 title: Queuing mechanism
 permalink: en/architecture/deckhouse/queues.html
 search: deckhouse, deckhouse-controller, modules, queue
-description: Description of queue processing in the Deckhouse controller in Deckhouse Kubernetes Platform.
+description: Description of queue processing in the Deckhouse controller in Deckhouse Platform.
 ---
 
-The [`deckhouse`](/modules/deckhouse/) module implements the core of Deckhouse Kubernetes Platform (DKP), performing various platform management operations using a queueing mechanism. For more information about the module architecture, refer to the [corresponding documentation section](./deckhouse.html).
+The [`deckhouse`](/modules/deckhouse/) module implements the core of Deckhouse Platform (DP), performing various platform management operations using a queueing mechanism. For more information about the module architecture, refer to the [corresponding documentation section](./deckhouse.html).
 
 The Deckhouse controller implements addon-operator and marketplace queues.
 
 ## Addon-operator queues
 
-The **addon-operator queues** are the primary processing mechanism for built-in and external DKP modules. The queue is implemented in [shell-operator](https://github.com/flant/shell-operator) and extended with [addon-operator](https://github.com/flant/addon-operator) task types. The Deckhouse controller synchronizes [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resources and updates global or module values for addon-operator.
+The **addon-operator queues** are the primary processing mechanism for built-in and external DP modules. The queue is implemented in [shell-operator](https://github.com/flant/shell-operator) and extended with [addon-operator](https://github.com/flant/addon-operator) task types. The Deckhouse controller synchronizes [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resources and updates global or module values for addon-operator.
 
 Task types:
 

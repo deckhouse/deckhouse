@@ -138,7 +138,7 @@ def validate_delete(ctx: DotMap) -> tuple[Optional[str], list[str]]:
         for member in group.filterResult.members:
             if member.kind == "Group" and member.name == group_name:
                 warnings.append(
-                    f"groups.deckhouse.io \"{group.filterResult.name}\" contains groups.deckhouse.io \"{group_name}\"")
+                    f"groups.deckhouse.io \"{group.filterResult.groupName}\" contains groups.deckhouse.io \"{group_name}\"")
 
     return None, warnings
 
@@ -207,12 +207,13 @@ class GroupTree(list[Group]):
         Returns:
             GroupTree: A GroupTree instance containing root groups.
         """
-        name_to_group = {g.filterResult.name: Group(g.filterResult.name) for g in all_groups}
+        # Nested members and the token/RBAC identity use spec.name (groupName), not metadata.name.
+        name_to_group = {g.filterResult.groupName: Group(g.filterResult.groupName) for g in all_groups}
         name_to_group[target_group.name] = Group(target_group.name)
 
         # searching/adding all exists group's subgroups
         for obj in all_groups:
-            group = name_to_group[obj.filterResult.name]
+            group = name_to_group[obj.filterResult.groupName]
             for member in obj.filterResult.members:
                 if member.kind == "Group" and member.name in name_to_group:
                     group.add_subgroup(name_to_group[member.name])

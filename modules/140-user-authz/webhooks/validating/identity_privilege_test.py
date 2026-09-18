@@ -79,6 +79,8 @@ def default_croles():
         clusterrole("d8:system:superadmin", STAR_ALL),
         clusterrole("pwn", []),
         clusterrole("d8:custom:evil", []),
+        clusterrole("d8:project:admin", USERS_EDIT),
+        clusterrole("d8:namespace:admin", USERS_EDIT),
     ]
 
 
@@ -105,6 +107,8 @@ def snapshots(privileged_email=PRIVILEGED_EMAIL, privileged_group=PRIVILEGED_GRO
         ],
         assign.AR_SNAP: [],
         assign.CRB_SNAP: [],
+        assign.CPRB_SNAP: [],
+        assign.PRB_SNAP: [],
         assign.CROLE_SNAP: default_croles(),
     }
 
@@ -412,6 +416,47 @@ class TestIdentityAssignHook(unittest.TestCase):
             username=SECURITY, extra_snaps=extra))
         self.assertFalse(out.validations.data[0]["allowed"])
 
+    def test_helpdesk_cannot_recreate_user_holding_project_admin_via_cprb(self):
+        # a ClusterProjectRoleBinding occupies the email like a ClusterRoleBinding does
+        extra = {assign.CPRB_SNAP: [{"filterResult": {
+            "name": "team-admins",
+            "namespace": "",
+            "role": "d8:project:admin",
+            "userSubjects": ["padmin@corp"],
+            "groupSubjects": [],
+            "saSubjects": [],
+        }}]}
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "User", "CREATE", {"email": "padmin@corp"}, extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("d8:project:admin", out.validations.data[0]["message"])
+
+    def test_helpdesk_cannot_recreate_user_holding_namespace_admin_via_prb(self):
+        extra = {assign.PRB_SNAP: [{"filterResult": {
+            "name": "ns-admins",
+            "namespace": "team",
+            "role": "d8:namespace:admin",
+            "userSubjects": ["nadmin@corp"],
+            "groupSubjects": [],
+            "saSubjects": [],
+        }}]}
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "User", "CREATE", {"email": "nadmin@corp"}, extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_clusteradmin_can_recreate_user_holding_project_admin_via_cprb(self):
+        extra = {assign.CPRB_SNAP: [{"filterResult": {
+            "name": "team-admins",
+            "namespace": "",
+            "role": "d8:project:admin",
+            "userSubjects": ["padmin@corp"],
+            "groupSubjects": [],
+            "saSubjects": [],
+        }}]}
+        out = self.run_hook(ctx(
+            "User", "CREATE", {"email": "padmin@corp"}, username=CLUSTER_ADMIN, extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
     def test_group_occupied_name_denied_for_helpdesk(self):
         out = self.run_hook(isolated_helpdesk_ctx(
             "Group", "CREATE", {"name": PRIVILEGED_GROUP, "members": []}))
@@ -515,7 +560,7 @@ class TestIdentityAssignConfigContract(unittest.TestCase):
         kinds = [b["kind"] for b in self.config["kubernetes"]]
         self.assertEqual(kinds, [
             "ClusterAuthorizationRule", "AuthorizationRule",
-            "ClusterRoleBinding", "ClusterRole",
+            "ClusterRoleBinding", "ClusterProjectRoleBinding", "ProjectRoleBinding", "ClusterRole",
         ])
 
 
@@ -558,6 +603,25 @@ class TestAssignSnapshotJQFilters(unittest.TestCase):
         })
         self.assertEqual(out["role"], "d8:manage:security:manager")
         self.assertEqual(out["userSubjects"], ["sec@corp"])
+
+    def test_project_binding_filters_read_spec(self):
+        for snap in (assign.CPRB_SNAP, assign.PRB_SNAP):
+            out = self.run_filter(snap, {
+                "metadata": {"name": "team-admins", "namespace": "team"},
+                "spec": {
+                    "roleRef": {"kind": "ClusterRole", "name": "d8:project:admin"},
+                    "subjects": [
+                        {"kind": "User", "name": "padmin@corp"},
+                        {"kind": "Group", "name": "team-leads"},
+                        {"kind": "ServiceAccount", "name": "deployer", "namespace": "ci"},
+                    ],
+                },
+            })
+            self.assertEqual(out["role"], "d8:project:admin", snap)
+            self.assertEqual(out["namespace"], "team", snap)
+            self.assertEqual(out["userSubjects"], ["padmin@corp"], snap)
+            self.assertEqual(out["groupSubjects"], ["team-leads"], snap)
+            self.assertEqual(out["saSubjects"], ["ci:deployer"], snap)
 
     def test_clusterrole_filter_keeps_can_assign_labels(self):
         out = self.run_filter(assign.CROLE_SNAP, {

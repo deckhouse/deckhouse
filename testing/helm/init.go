@@ -24,7 +24,6 @@ import (
 	"sort"
 	"strings"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	addonvalidation "github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/kube-client/manifest/releaseutil"
 	"github.com/iancoleman/strcase"
@@ -33,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"

@@ -1,6 +1,6 @@
 ---
 title: "The secret-copier module"
-description: "Automatic copying of Secrets across namespaces in the Deckhouse Kubernetes Platform cluster."
+description: "Automatic copying of Secrets across namespaces in the Deckhouse Platform cluster."
 ---
 
 This module copies Secrets to all namespaces.

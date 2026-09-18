@@ -83,7 +83,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 {% alert level="info" %}
 Due to the variety of SSO providers connected to csi-vsphere, the steps for creating a user are not covered in this article.
 
-The role to be created below includes all possible privileges for all DKP components. For a detailed list of privileges, refer to the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges) documentation.
+The role to be created below includes all possible privileges for all DP components. For a detailed list of privileges, refer to the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges) documentation.
 {% endalert %}
 
 Create the role:

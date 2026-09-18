@@ -20,12 +20,12 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )

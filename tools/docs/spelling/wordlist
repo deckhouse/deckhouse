@@ -6,6 +6,7 @@ ACS
 AEAD
 AES
 AKS
+ALBInstance
 AMD
 AMIs
 ANDed
@@ -134,6 +135,7 @@ CloudProviderAWS
 CloudStatic
 CloudYuga
 Cloudflare
+ClusterALBInstance
 ClusterAlert
 ClusterAuthorizationRule
 ClusterAuthorizationRules
@@ -150,6 +152,7 @@ ClusterObservabilityAlert
 ClusterPodLoggingConfig
 ClusterRole
 ClusterRoleBinding
+ClusterRoles
 ClusterVirtualImage
 CoC
 Colocating
@@ -353,6 +356,7 @@ HPAs
 HPE
 HSTS
 HTML
+HTTPRoute
 HTTPS
 HWE
 Habr
@@ -420,6 +424,7 @@ JWK
 JWKS
 JWT
 K8s
+KDC
 KESL
 KLLRCODA
 KUMA
@@ -463,6 +468,7 @@ LVS
 Laravel
 LetsEncrypt
 Linstor
+ListenerSet
 LmRlY
 LoadBalanacer
 LoadBalancer
@@ -651,6 +657,8 @@ Prestable
 PrimaryIPFromEgressGatewayNodeInterface
 PriorityClass
 PriorityLevelConfiguration
+ProjectNamespace
+ProjectRoleBinding
 ProjectTemplate
 ProjectType
 PromQL
@@ -735,6 +743,7 @@ SLA
 SNAT
 SPE
 SPIFFE
+SPN
 SPNEGO
 SQL
 SQLite
@@ -1163,6 +1172,7 @@ de
 deckhouse
 defaultCRI
 defaultClusterStorageClass
+delegatable
 descheduled
 descheduler
 descheduling
@@ -1727,11 +1737,14 @@ tunnelMode
 txt
 uid
 un
+unboundedly
 unconfigured
 uncordoned
+unicode
 uninstall
 uninstalled
 uninstalling
+unioned
 unmarshalling
 unschedulable
 uploadproxy
@@ -2340,6 +2353,7 @@ zoneTagCategory
 незапрошенных
 незашифрованном
 неизменяем
+неизменяемо
 неинтерактивном
 неймспейс
 неймспейса
@@ -2461,6 +2475,7 @@ zoneTagCategory
 переиспользования
 переиспользовать
 переиспользоваться
+переиспользуемый
 перенаправление
 перенаправления
 перенаправлениям
@@ -2517,6 +2532,7 @@ zoneTagCategory
 подсетям
 подсетями
 подсетях
+подсистемные
 покоммитное
 помотрим
 превью
@@ -2563,6 +2579,7 @@ zoneTagCategory
 псевдоселектор
 пуллинга
 разблокировка
+разблокируется
 раннера
 рантайма
 рантайме
@@ -2596,6 +2613,7 @@ zoneTagCategory
 рендеринга
 рендеринге
 рендерится
+рендерятся
 репликационным
 реплицированного
 реплицированные
@@ -2743,6 +2761,7 @@ zoneTagCategory
 терминирования
 терминирующих
 тикет
+тикета
 тикету
 токен
 токена

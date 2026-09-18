@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting
 permalink: en/user/marketplace/troubleshooting.html
-description: "Diagnose and resolve problems with Marketplace applications in Deckhouse Kubernetes Platform. Verify CRD presence, read Application conditions and summary, inspect logs."
+description: "Diagnose and resolve problems with Marketplace applications in Deckhouse Platform. Verify CRD presence, read Application conditions and summary, inspect logs."
 lang: en
 search: Application troubleshooting, application conditions, diagnosing applications, application conditions, application logs
 ---
@@ -27,7 +27,7 @@ packagerepositoryoperations.deckhouse.io             2026-02-10T14:54:41Z
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-If any CRDs are missing, contact your cluster administrator. Marketplace requires DKP version 1.76 or later.
+If any CRDs are missing, contact your cluster administrator. Marketplace requires DP version 1.76 or later.
 
 ## Read the application summary
 
@@ -43,12 +43,12 @@ Example output:
 summary:
   state: Updating
   message: "Update is waiting for dependent modules to converge; previous version is still serving"
-  tip: "Waiting until DKP processes all dependent modules to start the update."
+  tip: "Waiting until DP processes all dependent modules to start the update."
 ```
 
 - **`state`** — current high-level state of the application.
 - **`message`** — explains why the application is in this state.
-- **`tip`** — what to do to resolve the issue or what DKP is waiting for.
+- **`tip`** — what to do to resolve the issue or what DP is waiting for.
 
 ## Read individual conditions
 
@@ -105,7 +105,7 @@ currentVersion:
 
 In this example, `Installed=True` (the application is running on v0.0.20), but `UpdateInstalled=False/Pending` means an update is queued and waiting for a module dependency to settle.
 
-## Check the DKP controller logs
+## Check the DP controller logs
 
 If the status conditions do not provide enough detail for diagnosis, check the controller logs:
 
@@ -137,7 +137,7 @@ d8 k logs -n <NAMESPACE> deployments/<APPLICATION_NAME>-<RESOURCE_NAME>
 
 | Condition | Status=False reason | What to check |
 |---|---|---|
-| `Installed` | `InstallFailed` | DKP controller logs, check settings against OpenAPI schema |
+| `Installed` | `InstallFailed` | DP controller logs, check settings against OpenAPI schema |
 | `UpdateInstalled` | `Pending` | Dependent module convergence — check `d8` module conditions |
 | `UpdateInstalled` | `UpdateFailed` | Specified `packageVersion` does not exist in the repository — verify with `d8 k get apv -l package=<name>` |
 | `ConfigurationApplied` | `ConfigurationFailed` | Settings validation error — check against [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) schema |

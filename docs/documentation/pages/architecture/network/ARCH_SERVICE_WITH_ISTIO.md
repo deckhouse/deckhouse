@@ -2,7 +2,7 @@
 title: "Application service architecture with Istio enabled"
 permalink: en/architecture/network/service-with-istio.html
 search: application architecture, istio
-description: Application service architecture with Istio enabled in Deckhouse Kubernetes Platform.
+description: Application service architecture with Istio enabled in Deckhouse Platform.
 ---
 
 {% alert level="info" %}

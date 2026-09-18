@@ -2,7 +2,7 @@
 title: "Common policy examples"
 permalink: en/admin/configuration/network/policy/examples.html
 description: |
-  Ready-to-use network policy recipes for Deckhouse Kubernetes Platform: deny external ingress, namespace and pod selectors, DNS egress, API server access, L7 and FQDN rules.
+  Ready-to-use network policy recipes for Deckhouse Platform: deny external ingress, namespace and pod selectors, DNS egress, API server access, L7 and FQDN rules.
 relatedLinks:
   - title: "Kubernetes NetworkPolicy"
     url: kubernetes_networkpolicy.html
@@ -194,7 +194,7 @@ spec:
 ```
 
 {% alert level="info" %}
-The DNS egress rule uses `toEntities: cluster` rather than a label selector targeting `kube-dns` pods. DKP deploys a `node-local-dns` DaemonSet alongside the main DNS service, so the actual DNS path from a pod may go through a `node-local-dns` instance. Using `toEntities: cluster` matches any cluster-internal DNS endpoint reliably.
+The DNS egress rule uses `toEntities: cluster` rather than a label selector targeting `kube-dns` pods. DP deploys a `node-local-dns` DaemonSet alongside the main DNS service, so the actual DNS path from a pod may go through a `node-local-dns` instance. Using `toEntities: cluster` matches any cluster-internal DNS endpoint reliably.
 {% endalert %}
 
 ## Deny access to the cloud metadata service

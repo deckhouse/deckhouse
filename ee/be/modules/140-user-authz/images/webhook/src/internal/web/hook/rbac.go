@@ -400,7 +400,9 @@ func subjectsMatch(subjects []rbacv1.Subject, spec *WebhookResourceSpec, default
 			if saNamespace == "" {
 				saNamespace = defaultNamespace
 			}
-			if fmt.Sprintf("system:serviceaccount:%s:%s", saNamespace, subject.Name) == spec.User {
+			// Concatenation, not Sprintf: this runs per subject of per binding
+			// on the authorization path.
+			if serviceAccountUsername(saNamespace, subject.Name) == spec.User {
 				return true
 			}
 		}
@@ -480,4 +482,9 @@ func resourceNameMatches(ruleNames []string, name string) bool {
 		}
 	}
 	return false
+}
+
+// serviceAccountUsername builds the username the API server puts on requests of a service account.
+func serviceAccountUsername(namespace, name string) string {
+	return "system:serviceaccount:" + namespace + ":" + name
 }

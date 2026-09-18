@@ -5,7 +5,7 @@ description: Управление проектами
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform есть набор шаблонов для создания проектов:
+В Deckhouse Platform есть набор шаблонов для создания проектов:
 
 - `default` — шаблон для базовых сценариев использования проектов:
   * ограничение ресурсов;
@@ -305,7 +305,7 @@ cluster-wide-ресурсы (например, StorageClass, ClusterIssuer, Clus
 
 В механизме участвуют четыре кастомных ресурса:
 
-- [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) — регистрирует тип cluster-wide-ресурсов, доступом к которому можно управлять. Такие ресурсы поставляются DKP или разработчиками модулей;
+- [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) — регистрирует тип cluster-wide-ресурсов, доступом к которому можно управлять. Такие ресурсы поставляются DP или разработчиками модулей;
 - [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) — определяет, где используется зарегистрированный cluster-wide-ресурс. Например, какое поле ресурса содержит ссылку на него. Такие ресурсы поставляются модулями;
 - [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) — задаёт правила доступа. Администратор кластера с помощью лейблов выбирает проекты, на которые распространяется политика, определяет разрешённые и запрещённые ресурсы, а также ресурс, используемый по умолчанию;
 - [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) — создаваемый контроллером список cluster-wide-ресурсов, доступных проекту, который предназначен только для чтения.

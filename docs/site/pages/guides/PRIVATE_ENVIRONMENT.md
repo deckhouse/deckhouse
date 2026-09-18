@@ -1,12 +1,12 @@
 ---
-title: Installing DKP in a private environment
+title: Installing DP in a private environment
 permalink: en/guides/private-environment.html
-description: A guide to installing the Deckhouse Kubernetes Platform in a private environment
+description: A guide to installing the Deckhouse Platform in a private environment
 lang: en
 layout: sidebar-guides
 ---
 
-This guide describes how to deploy a Deckhouse Kubernetes Platform (DKP) cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
+This guide describes how to deploy a Deckhouse Platform (DP) cluster in a private environment with no direct access to the DP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
 
 ## Private environment specifics
 
@@ -14,27 +14,27 @@ Deploying in a private environment is almost the same as deploying [on bare meta
 
 Key specifics:
 
-* Proxy server parameters set [in the cluster configuration](../documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) during installation are automatically propagated to the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables for **cluster nodes and DKP components**.
+* Proxy server parameters set [in the cluster configuration](../documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) during installation are automatically propagated to the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables for **cluster nodes and DP components**.
   User applications (pods) do not receive these variables from the cluster configuration automatically. To give them Internet access via a proxy, you must set the environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, and, if needed, `NO_PROXY`) explicitly in manifests. Depending on corporate policy, application access may be arranged in other ways—for example, by allowing direct egress from nodes.
-* A container registry with DKP images is deployed separately with access from inside the perimeter, and the cluster is configured to use it with the required permissions.
+* A container registry with DP images is deployed separately with access from inside the perimeter, and the cluster is configured to use it with the required permissions.
 
 Cluster nodes are usually accessed through a dedicated physical server or virtual machine called a bastion host. A proxy for access to external resources from the internal network is deployed according to your network policy and infrastructure architecture; depending on requirements, it may run on the bastion host or on a separate machine.
 A private container registry should preferably run on a separate VM or server in the internal network. Colocating the registry on the bastion host is not recommended for production. An exception may be lab or simplified stand-alone setups for limited use cases.
 
 {% alert level="info" %}
-Depending on your organization’s security policies, access to external resources may be fully disabled. In that case, no proxy is used for outbound access to external networks. Required external artifacts (for example, an archive of DKP container images) are brought into the perimeter onto the target VM by any permitted means—for example, removable media.
+Depending on your organization’s security policies, access to external resources may be fully disabled. In that case, no proxy is used for outbound access to external networks. Required external artifacts (for example, an archive of DP container images) are brought into the perimeter onto the target VM by any permitted means—for example, removable media.
 {% endalert %}
 
 Overall private environment diagram:
 
-<img src="/images/guides/install_to_private_environment/private_environment-scheme.png" alt="Deckhouse Kubernetes Platform deployment diagram in a private environment">
+<img src="/images/guides/install_to_private_environment/private_environment-scheme.png" alt="Deckhouse Platform deployment diagram in a private environment">
 
 {% alert level="info" %}
 The diagram also shows an internal OS package repository. It is used to install packages on nodes when access to official repositories is not available even through a proxy.
 Many private environments already run internal OS package mirrors, and installation uses them—in that case, a proxy for package traffic is not required.
 A proxy server is used for other kinds of traffic:
-- pulling container images from the public DKP registry to the bastion host
-- DKP components and nodes calling external resources (if allowed by policy)
+- pulling container images from the public DP registry to the bastion host
+- DP components and nodes calling external resources (if allowed by policy)
 - optionally, pod applications accessing external services.
 {% endalert %}
 
@@ -52,14 +52,14 @@ You will need:
 
 Server requirements:
 
-* **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. That much disk space is needed because the bastion host temporarily holds all DKP images used for installation. Images are downloaded from the public DKP registry to the bastion host before being pushed to the private container registry and packed into archives; these steps require substantial free space.
-* **VM for the private registry**: at least 4 CPU cores, 8 GB RAM, and at least 150 GB on fast storage for DKP images. Plan disk capacity with a margin, using the bundle size after `d8 mirror push` as a guide.
+* **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. That much disk space is needed because the bastion host temporarily holds all DP images used for installation. Images are downloaded from the public DP registry to the bastion host before being pushed to the private container registry and packed into archives; these steps require substantial free space.
+* **VM for the private registry**: at least 4 CPU cores, 8 GB RAM, and at least 150 GB on fast storage for DP images. Plan disk capacity with a margin, using the bundle size after `d8 mirror push` as a guide.
 * **Cluster nodes**: choose [resources for future cluster nodes](./hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores (_8 CPU cores recommended_), 8 GB RAM (_16 GB RAM recommended_), and 60 GB on fast storage (400+ IOPS) per node.
 
 ## Preparing a private container registry
 
 {% alert level="warning" %}
-DKP supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
+DP supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
 
 If a reverse proxy is placed in front of the registry, it must correctly forward the Registry API v2 header `Docker-Distribution-API-Version: registry/2.0`. Otherwise the Basic check may fail, and the subsequent Bearer attempt may fail with the error `couldn't find bearer realm parameter`.
 {% endalert %}
@@ -738,9 +738,9 @@ Harbor configuration is now complete! 🎉
 {% endtabs %}
 <br>
 
-## Copying DKP images to a private container registry
+## Copying DP images to a private container registry
 
-The next step is to copy DKP component images from the public Deckhouse Kubernetes Platform registry to Harbor.
+The next step is to copy DP component images from the public Deckhouse Platform registry to Harbor.
 
 {% alert level="info" %}
 The steps in this section require the Deckhouse CLI. Install it on the host from which you will mirror images to the private registry — in this guide, the bastion host. For installation instructions, see  [the Deckhouse CLI documentation](../documentation/v1/cli/d8/).
@@ -781,9 +781,9 @@ Downloading images takes a significant amount of time. To avoid losing progress 
 {% endofftopic %}
 {% endalert %}
 
-Download DKP images into a dedicated directory using `d8 mirror pull`.
+Download DP images into a dedicated directory using `d8 mirror pull`.
 
-By default, `d8 mirror pull` downloads current DKP releases, vulnerability scanner databases (if included in your edition), and officially shipped modules.
+By default, `d8 mirror pull` downloads current DP releases, vulnerability scanner databases (if included in your edition), and officially shipped modules.
 
 Run the following command to download current image versions. Replace the placeholders with your values: `<EDITION>`, `<LICENSE_KEY>`, and optionally the target directory path:
 
@@ -795,9 +795,9 @@ d8 mirror pull \
 
 where:
 
-- `--source` — DKP image registry address
-- `<EDITION>` — DKP edition code (for example, `ee`, `se`, `se-plus`). The default is `ee` (Enterprise Edition), so `--source` may be omitted
-- `--license` — DKP license key for authentication to the official registry
+- `--source` — DP image registry address
+- `<EDITION>` — DP edition code (for example, `ee`, `se`, `se-plus`). The default is `ee` (Enterprise Edition), so `--source` may be omitted
+- `--license` — DP license key for authentication to the official registry
 - `<LICENSE_KEY>` — your license key
 - `/home/ubuntu/d8-bundle` — directory for downloaded image bundles (created automatically if missing).
 
@@ -880,7 +880,7 @@ total 51G
 -rw-rw-r-- 1 user user 1.3G Feb 26 17:51 security.tar
 ```
 
-Push the downloaded images to the private registry. Substitute the DKP edition and Harbor robot account credentials:
+Push the downloaded images to the private registry. Substitute the DP edition and Harbor robot account credentials:
 
 - `<ROBOT_ACCOUNT_NAME>` — robot account name
 - `<PASSWORD>` — token issued when the robot account was created.
@@ -958,7 +958,7 @@ During installation, `ContainerdV2` is used as the default container runtime on 
 - systemd version `244`;
 - support for the `erofs` kernel module.
 
-Some distributions do not meet these requirements. Bring the node OS into compliance before installing Deckhouse Kubernetes Platform. For details, see the [documentation](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+Some distributions do not meet these requirements. Bring the node OS into compliance before installing Deckhouse Platform. For details, see the [documentation](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 {% endalert %}
 
 Servers intended for future cluster nodes must meet the following requirements:
@@ -1024,7 +1024,7 @@ There are two ways to connect:
 
 ### Configuring SSH access to the master node
 
-To install DKP, add the public part of your SSH key to `.ssh/authorized_keys` for the user on the future master node that will be used to install the platform.
+To install DP, add the public part of your SSH key to `.ssh/authorized_keys` for the user on the future master node that will be used to install the platform.
 
 Run the commands as `root` (substitute the public part of your SSH key):
 
@@ -1117,7 +1117,7 @@ If cluster nodes need outbound access via a proxy, deploy the proxy ahead of tim
 
 {% offtopic title="Example: Squid proxy in a container..." %}
 
-A proxy may be required for traffic such as pulling images from the public DKP registry to the bastion, or for DKP components and nodes to reach external URLs when policy allows. OS packages on nodes can still come from internal mirrors, in which case the proxy is not used for package traffic.
+A proxy may be required for traffic such as pulling images from the public DP registry to the bastion, or for DP components and nodes to reach external URLs when policy allows. OS packages on nodes can still come from internal mirrors, in which case the proxy is not used for package traffic.
 
 Deploy a proxy on a separate machine if your environment allows external access.
 
@@ -1170,7 +1170,7 @@ You should see a container named `squid` in the list.
   * In the `spec.settings.registry` section, specify access settings for the private container registry (Harbor in this guide):
 
     ```yaml
-    # Settings for accessing the container registry with DKP images.
+    # Settings for accessing the container registry with DP images.
     registry:
       mode: Unmanaged
       unmanaged:
@@ -1370,7 +1370,7 @@ internalNetworkCIDRs:
 
 The installation configuration file is ready.
 
-## Installing DKP
+## Installing DP
 
 Copy the prepared configuration file to the host from which you run the installation (for example, `~/deckhouse` on the bastion). Go to that directory and start the installer:
 
@@ -1392,7 +1392,7 @@ After the image is pulled and the container starts successfully, you will see a 
 [deckhouse] root@guide-bastion / #
 ```
 
-Start the DKP installation with the following command (specify the master node’s internal IP address):
+Start the DP installation with the following command (specify the master node’s internal IP address):
 
 ```bash
 dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
@@ -1514,7 +1514,7 @@ Perform the following steps:
   d8cluster-worker   Ready    worker                 10m   v1.34.10
   ```
 
-  It may take some time for all DKP components to start after the installation completes.
+  It may take some time for all DP components to start after the installation completes.
 
 ## Configuring the Ingress controller and creating a user
 
@@ -1561,7 +1561,7 @@ Apply it by running the following command on the master node:
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
 
-Starting the Ingress controller after DKP installation may take some time. Before you proceed, make sure the Ingress controller is running (run the following command on the master node):
+Starting the Ingress controller after DP installation may take some time. Before you proceed, make sure the Ingress controller is running (run the following command on the master node):
 
 <!-- markdownlint-disable MD031 -->
 ```console
@@ -1661,9 +1661,9 @@ To confirm the cluster is healthy, open Grafana (built from `publicDomainTemplat
 Everything is installed and running. You can use the web UIs to manage the cluster:
 
 * **Deckhouse Console** — cluster and core component management. URL: **console.test.local**. You can download the `d8` CLI from this UI.
-* **Documentation** — documentation for the DKP version running in the cluster. URL: **documentation.test.local**.
-* **Monitoring** — Grafana dashboards shipped with DKP. URL: **grafana.test.local** (Prometheus UI path: **/prometheus/**). More in the [monitoring documentation](../documentation/v1/admin/configuration/monitoring/).
-* **Status page** — overall DKP and component status. URL: **status.test.local**.
+* **Documentation** — documentation for the DP version running in the cluster. URL: **documentation.test.local**.
+* **Monitoring** — Grafana dashboards shipped with DP. URL: **grafana.test.local** (Prometheus UI path: **/prometheus/**). More in the [monitoring documentation](../documentation/v1/admin/configuration/monitoring/).
+* **Status page** — overall DP and component status. URL: **status.test.local**.
 * **Upmeter** — SLA tracking by component and period. URL: **upmeter.test.local**.
 * **Production readiness** — follow the [production preparation guide](./production.html) before taking real traffic.
 
@@ -1675,4 +1675,4 @@ Everything is installed and running. You can use the web UIs to manage the clust
 
 ### Learn more
 
-More about Deckhouse Kubernetes Platform is in the [documentation](../documentation/v1/). For questions, join the community on [Telegram](https://t.me/deckhouse).
+More about Deckhouse Platform is in the [documentation](../documentation/v1/). For questions, join the community on [Telegram](https://t.me/deckhouse).

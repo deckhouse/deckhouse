@@ -1,17 +1,17 @@
 ---
 title: Certificate management
 permalink: en/admin/configuration/security/certificates.html
-description: "Manage TLS certificates in Deckhouse Kubernetes Platform with Let's Encrypt, HashiCorp Vault, Venafi integration. Automatic renewal, monitoring, and certificate lifecycle management."
+description: "Manage TLS certificates in Deckhouse Platform with Let's Encrypt, HashiCorp Vault, Venafi integration. Automatic renewal, monitoring, and certificate lifecycle management."
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides built-in tools for managing TLS certificates in the cluster and supports:
+Deckhouse Platform (DP) provides built-in tools for managing TLS certificates in the cluster and supports:
 
 - Requesting certificates from all supported sources, such as [Let's Encrypt](https://letsencrypt.org/), [HashiCorp Vault](https://developer.hashicorp.com/vault), [Venafi](https://docs.venafi.com/).
 - Issuing self-signed certificates.
 - Automatic renewal and expiration monitoring.
 - Deploying `cm-acme-http-solver` on master nodes and dedicated nodes.
 
-This page describes the available certificate management features in DKP
+This page describes the available certificate management features in DP
 and the procedure for working with certificate issuers.
 
 {% alert level="info" %}
@@ -21,14 +21,14 @@ and secure handling of credentials are described in [Using TLS certificates](../
 
 ## Monitoring
 
-DKP exports metrics to Prometheus, allowing you to monitor:
+DP exports metrics to Prometheus, allowing you to monitor:
 
 - Certificate expiration dates
 - Certificate renewal status
 
 ## Access roles
 
-DKP provides several predefined roles for accessing resources:
+DP provides several predefined roles for accessing resources:
 
 | Role           | Permissions |
 |----------------|---------------|
@@ -40,7 +40,7 @@ DKP provides several predefined roles for accessing resources:
 
 ## Working with certificate issuers
 
-DKP supports the following default certificate issuers (ClusterIssuer):
+DP supports the following default certificate issuers (ClusterIssuer):
 
 - `letsencrypt`: Issues TLS certificates using the public CA Let's Encrypt and ACME HTTP validation.
   Suitable for automatically obtaining trusted certificates for most public services.
@@ -154,9 +154,9 @@ The following example is based on using Yandex Cloud DNS:
        secretName: internal-ca-key-pair    # Name of the created secret.
    ```
 
-You can now use the created ClusterIssuer to issue certificates for all DKP components or for a specific component.
+You can now use the created ClusterIssuer to issue certificates for all DP components or for a specific component.
 
-For example, to use this ClusterIssuer for issuing certificates for all DKP components,
+For example, to use this ClusterIssuer for issuing certificates for all DP components,
 set its name in the global parameter [`clusterIssuerName`](../../../reference/api/global.html#parameters-modules-https-certmanager-clusterissuername):
 
 ```yaml

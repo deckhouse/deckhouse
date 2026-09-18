@@ -3,10 +3,10 @@ title: Multitenancy
 permalink: en/architecture/iam/multitenancy.html
 lang: en
 search: multitenancy, ProjectTemplate, Project, project isolation
-description: How multitenancy works in Deckhouse Kubernetes Platform.
+description: How multitenancy works in Deckhouse Platform.
 ---
 
-The [`multitenancy-manager`](/modules/multitenancy-manager/) module allows you to create isolated projects within the Deckhouse Kubernetes Platform (DKP). Projects provide resource quotas, network isolation, and security features that go beyond standard namespaces.
+The [`multitenancy-manager`](/modules/multitenancy-manager/) module allows you to create isolated projects within the Deckhouse Platform (DP). Projects provide resource quotas, network isolation, and security features that go beyond standard namespaces.
 
 For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/multitenancy-manager/).
 
@@ -59,7 +59,7 @@ This mechanism works independently of RBAC. RBAC determines *who can create and 
 
 The following resources are used to manage access to cluster-wide resources:
 
-* [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by DKP or module developers.
+* [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by DP or module developers.
 * [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) defines where a registered cluster-wide resource is used, for example, which resource field contains a reference to it. These resources are provided by modules.
 * [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) defines access rules. Using labels, a cluster administrator selects the projects to which the policy applies and defines the allowed and denied resources, as well as the resource used by default.
 * Based on the policy, the controller creates an [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) in the namespace of each matching project. This resource contains the list of cluster-wide resources available to the project and is read-only.
@@ -79,7 +79,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The architecture of the [`multitenancy-manager`](/modules/multitenancy-manager/) module at Level 2 of the C4 model and its interactions with other DKP components are shown in the following diagram.
+The architecture of the [`multitenancy-manager`](/modules/multitenancy-manager/) module at Level 2 of the C4 model and its interactions with other DP components are shown in the following diagram.
 
 ![Multitenancy-manager module architecture](../../images/architecture/iam/c4-l2-multitenancy-manager.png)
 

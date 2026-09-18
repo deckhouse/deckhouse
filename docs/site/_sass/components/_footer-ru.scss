@@ -1,0 +1,250 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+// Footer redesign, Russian version only (_includes/footer_ru.html).
+// The English footer stays on _footer.scss; this file never touches it -
+// every rule is scoped under .footer--ru.
+//
+$bg-inverse: #000; // --bg-inverse
+$bg-inverse-surface: #1c1b1f; // --bg-inverse-surface
+$text-inverse-primary: #fff; // --text-inverse-primary - column titles
+$text-inverse-secondary: #cdced9; // --text-inverse-secondary - column links
+$text-inverse-tertiary: #868799; // --text-inverse-tertiary - legal line
+$text-inverse-brand: #33adff; // --text-inverse-brand - email
+
+$brand-height: 96px;
+$brand-line-height: 34px;
+$wordmark-width: 417px;
+
+.footer--ru {
+  padding: 32px 0;
+  // Clips the stripe that overflows past the left edge of the viewport.
+  overflow: hidden;
+  @include mixins.bg-color($bg-inverse);
+  @include mixins.color($text-inverse-primary);
+
+  @include breakpoints.min-w(m) {
+    padding: 60px 0;
+  }
+
+  // A single gap on the container drives the vertical rhythm:
+  // stripe -> columns -> legal line.
+  .footer__content {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+
+    @include breakpoints.min-w(m) {
+      gap: 80px;
+    }
+  }
+
+  // ----------- Brand stripe: segments + large wordmark -----------
+  .footer__brand {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 16px;
+
+    @include breakpoints.max-w(m) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .footer__brand-line {
+    position: relative;
+    height: $brand-line-height;
+
+    // The SVG is wider than its box (1567px): pin it to the right so the left
+    // end runs past the container and is clipped by overflow: hidden above.
+    svg {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: block;
+    }
+
+    // No stripe on mobile - the wordmark spans the full width instead.
+    @include breakpoints.max-w(m) {
+      display: none;
+    }
+  }
+
+  .footer__wordmark {
+    display: block;
+    width: $wordmark-width;
+    max-width: 100%;
+    line-height: 0;
+
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    @include breakpoints.max-w(m) {
+      width: 100%;
+    }
+  }
+
+  // ----------- Menu columns -----------
+  .footer__cols {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 0;
+    border-top: 0;
+
+    @include breakpoints.min-w(m) {
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 80px;
+    }
+  }
+
+  .footer__col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px 64px;
+
+    // Contacts stay on the left; the remaining columns group to the right.
+    &--contacts {
+      @include breakpoints.min-w(m) {
+        margin-right: auto;
+      }
+    }
+
+    // ul.nav defaults to display: none in _base.scss - turn it back on.
+    // font-size is set on the list itself: otherwise li inherits 16px from body
+    // and gets line-height 21px instead of 20px, making the pitch 33px, not 32px.
+    .footer__nav {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px 32px;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+      list-style: none;
+
+      a {
+        display: block;
+        font-size: 14px;
+        line-height: 20px;
+        text-decoration: none;
+        transition: color .15s ease;
+        @include mixins.color($text-inverse-secondary);
+
+        &:hover {
+          @include mixins.color($text-inverse-primary);
+        }
+      }
+
+      a.footer__link--accent {
+        @include mixins.color($text-inverse-brand);
+
+        &:hover {
+          @include mixins.color($text-inverse-primary);
+        }
+      }
+    }
+  }
+
+  .footer__col-title {
+    font-family: 'Onest', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 22px;
+    @include mixins.color($text-inverse-primary);
+
+    @include breakpoints.min-w(m) {
+      font-size: 20px;
+      line-height: 26px;
+    }
+  }
+
+  .footer__socials {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    @include mixins.color($text-inverse-primary);
+
+    a {
+      display: block;
+      width: 24px;
+      color: inherit;
+      transition: opacity .15s ease;
+
+      &:hover {
+        opacity: .7;
+      }
+    }
+
+    // The Habr mark is a file rather than an inline svg: its single path is 32KB, too
+    // much to repeat in the markup of every page. It carries its own white fill, so it
+    // does not follow "color: inherit" the way the inline marks do.
+    svg,
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+  }
+
+  // ----------- Legal line -----------
+  .footer__copyright {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 0;
+    font-size: 14px;
+    line-height: 20px;
+    @include mixins.color($text-inverse-tertiary);
+
+    @include breakpoints.min-w(m) {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer__legal {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 11.2px 20px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+
+      @include breakpoints.min-w(m) {
+        flex-direction: row;
+        align-items: center;
+      }
+
+      a {
+        font-size: 14px;
+        line-height: 21px;
+        text-decoration: none;
+        @include mixins.color($text-inverse-tertiary);
+
+        &:hover {
+          @include mixins.color($text-inverse-primary);
+        }
+      }
+
+      // The vertical separator between items is drawn by _footer.scss
+      // (.footer__copyright .nav li:not(:first-of-type):before) - only the colour here.
+      li:not(:first-of-type):before {
+        @include breakpoints.min-w(m) {
+          @include mixins.bg-color($text-inverse-tertiary);
+        }
+      }
+    }
+
+    span {
+      @include mixins.color($text-inverse-tertiary);
+    }
+  }
+}

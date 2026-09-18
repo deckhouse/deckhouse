@@ -36,6 +36,36 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
+	if err := s.AddGeneratedConversionFunc((*AccessCaveat)(nil), (*authorization.AccessCaveat)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_AccessCaveat_To_authorization_AccessCaveat(a.(*AccessCaveat), b.(*authorization.AccessCaveat), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.AccessCaveat)(nil), (*AccessCaveat)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_AccessCaveat_To_v1alpha1_AccessCaveat(a.(*authorization.AccessCaveat), b.(*AccessCaveat), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*AccessScope)(nil), (*authorization.AccessScope)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_AccessScope_To_authorization_AccessScope(a.(*AccessScope), b.(*authorization.AccessScope), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.AccessScope)(nil), (*AccessScope)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_AccessScope_To_v1alpha1_AccessScope(a.(*authorization.AccessScope), b.(*AccessScope), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*AccessSource)(nil), (*authorization.AccessSource)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_AccessSource_To_authorization_AccessSource(a.(*AccessSource), b.(*authorization.AccessSource), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.AccessSource)(nil), (*AccessSource)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_AccessSource_To_v1alpha1_AccessSource(a.(*authorization.AccessSource), b.(*AccessSource), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*AccessibleNamespace)(nil), (*authorization.AccessibleNamespace)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_AccessibleNamespace_To_authorization_AccessibleNamespace(a.(*AccessibleNamespace), b.(*authorization.AccessibleNamespace), scope)
 	}); err != nil {
@@ -86,6 +116,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*InventoryResource)(nil), (*authorization.InventoryResource)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_InventoryResource_To_authorization_InventoryResource(a.(*InventoryResource), b.(*authorization.InventoryResource), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.InventoryResource)(nil), (*InventoryResource)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_InventoryResource_To_v1alpha1_InventoryResource(a.(*authorization.InventoryResource), b.(*InventoryResource), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*NonResourceAccess)(nil), (*authorization.NonResourceAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_NonResourceAccess_To_authorization_NonResourceAccess(a.(*NonResourceAccess), b.(*authorization.NonResourceAccess), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.NonResourceAccess)(nil), (*NonResourceAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_NonResourceAccess_To_v1alpha1_NonResourceAccess(a.(*authorization.NonResourceAccess), b.(*NonResourceAccess), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*NonResourceAttributes)(nil), (*authorization.NonResourceAttributes)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_NonResourceAttributes_To_authorization_NonResourceAttributes(a.(*NonResourceAttributes), b.(*authorization.NonResourceAttributes), scope)
 	}); err != nil {
@@ -96,6 +146,46 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ReportSnapshot)(nil), (*authorization.ReportSnapshot)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ReportSnapshot_To_authorization_ReportSnapshot(a.(*ReportSnapshot), b.(*authorization.ReportSnapshot), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.ReportSnapshot)(nil), (*ReportSnapshot)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_ReportSnapshot_To_v1alpha1_ReportSnapshot(a.(*authorization.ReportSnapshot), b.(*ReportSnapshot), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ResolvedGroup)(nil), (*authorization.ResolvedGroup)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ResolvedGroup_To_authorization_ResolvedGroup(a.(*ResolvedGroup), b.(*authorization.ResolvedGroup), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.ResolvedGroup)(nil), (*ResolvedGroup)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_ResolvedGroup_To_v1alpha1_ResolvedGroup(a.(*authorization.ResolvedGroup), b.(*ResolvedGroup), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ResolvedSubject)(nil), (*authorization.ResolvedSubject)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ResolvedSubject_To_authorization_ResolvedSubject(a.(*ResolvedSubject), b.(*authorization.ResolvedSubject), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.ResolvedSubject)(nil), (*ResolvedSubject)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_ResolvedSubject_To_v1alpha1_ResolvedSubject(a.(*authorization.ResolvedSubject), b.(*ResolvedSubject), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ResourceAccess)(nil), (*authorization.ResourceAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ResourceAccess_To_authorization_ResourceAccess(a.(*ResourceAccess), b.(*authorization.ResourceAccess), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.ResourceAccess)(nil), (*ResourceAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_ResourceAccess_To_v1alpha1_ResourceAccess(a.(*authorization.ResourceAccess), b.(*ResourceAccess), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ResourceAttributes)(nil), (*authorization.ResourceAttributes)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_ResourceAttributes_To_authorization_ResourceAttributes(a.(*ResourceAttributes), b.(*authorization.ResourceAttributes), scope)
 	}); err != nil {
@@ -103,6 +193,126 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*authorization.ResourceAttributes)(nil), (*ResourceAttributes)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_authorization_ResourceAttributes_To_v1alpha1_ResourceAttributes(a.(*authorization.ResourceAttributes), b.(*ResourceAttributes), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RoleAccess)(nil), (*authorization.RoleAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RoleAccess_To_authorization_RoleAccess(a.(*RoleAccess), b.(*authorization.RoleAccess), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.RoleAccess)(nil), (*RoleAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_RoleAccess_To_v1alpha1_RoleAccess(a.(*authorization.RoleAccess), b.(*RoleAccess), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RoleAccessReport)(nil), (*authorization.RoleAccessReport)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RoleAccessReport_To_authorization_RoleAccessReport(a.(*RoleAccessReport), b.(*authorization.RoleAccessReport), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.RoleAccessReport)(nil), (*RoleAccessReport)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_RoleAccessReport_To_v1alpha1_RoleAccessReport(a.(*authorization.RoleAccessReport), b.(*RoleAccessReport), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RoleAccessReportSpec)(nil), (*authorization.RoleAccessReportSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RoleAccessReportSpec_To_authorization_RoleAccessReportSpec(a.(*RoleAccessReportSpec), b.(*authorization.RoleAccessReportSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.RoleAccessReportSpec)(nil), (*RoleAccessReportSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_RoleAccessReportSpec_To_v1alpha1_RoleAccessReportSpec(a.(*authorization.RoleAccessReportSpec), b.(*RoleAccessReportSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RoleAccessReportStatus)(nil), (*authorization.RoleAccessReportStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RoleAccessReportStatus_To_authorization_RoleAccessReportStatus(a.(*RoleAccessReportStatus), b.(*authorization.RoleAccessReportStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.RoleAccessReportStatus)(nil), (*RoleAccessReportStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_RoleAccessReportStatus_To_v1alpha1_RoleAccessReportStatus(a.(*authorization.RoleAccessReportStatus), b.(*RoleAccessReportStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RoleAssignment)(nil), (*authorization.RoleAssignment)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RoleAssignment_To_authorization_RoleAssignment(a.(*RoleAssignment), b.(*authorization.RoleAssignment), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.RoleAssignment)(nil), (*RoleAssignment)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_RoleAssignment_To_v1alpha1_RoleAssignment(a.(*authorization.RoleAssignment), b.(*RoleAssignment), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RoleComponent)(nil), (*authorization.RoleComponent)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RoleComponent_To_authorization_RoleComponent(a.(*RoleComponent), b.(*authorization.RoleComponent), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.RoleComponent)(nil), (*RoleComponent)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_RoleComponent_To_v1alpha1_RoleComponent(a.(*authorization.RoleComponent), b.(*RoleComponent), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RoleDescriptor)(nil), (*authorization.RoleDescriptor)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor(a.(*RoleDescriptor), b.(*authorization.RoleDescriptor), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.RoleDescriptor)(nil), (*RoleDescriptor)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor(a.(*authorization.RoleDescriptor), b.(*RoleDescriptor), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RoleSelection)(nil), (*authorization.RoleSelection)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RoleSelection_To_authorization_RoleSelection(a.(*RoleSelection), b.(*authorization.RoleSelection), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.RoleSelection)(nil), (*RoleSelection)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_RoleSelection_To_v1alpha1_RoleSelection(a.(*authorization.RoleSelection), b.(*RoleSelection), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ServiceAccountReference)(nil), (*authorization.ServiceAccountReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ServiceAccountReference_To_authorization_ServiceAccountReference(a.(*ServiceAccountReference), b.(*authorization.ServiceAccountReference), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.ServiceAccountReference)(nil), (*ServiceAccountReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_ServiceAccountReference_To_v1alpha1_ServiceAccountReference(a.(*authorization.ServiceAccountReference), b.(*ServiceAccountReference), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SubjectAccessReport)(nil), (*authorization.SubjectAccessReport)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SubjectAccessReport_To_authorization_SubjectAccessReport(a.(*SubjectAccessReport), b.(*authorization.SubjectAccessReport), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.SubjectAccessReport)(nil), (*SubjectAccessReport)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_SubjectAccessReport_To_v1alpha1_SubjectAccessReport(a.(*authorization.SubjectAccessReport), b.(*SubjectAccessReport), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SubjectAccessReportSpec)(nil), (*authorization.SubjectAccessReportSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SubjectAccessReportSpec_To_authorization_SubjectAccessReportSpec(a.(*SubjectAccessReportSpec), b.(*authorization.SubjectAccessReportSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.SubjectAccessReportSpec)(nil), (*SubjectAccessReportSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_SubjectAccessReportSpec_To_v1alpha1_SubjectAccessReportSpec(a.(*authorization.SubjectAccessReportSpec), b.(*SubjectAccessReportSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SubjectAccessReportStatus)(nil), (*authorization.SubjectAccessReportStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SubjectAccessReportStatus_To_authorization_SubjectAccessReportStatus(a.(*SubjectAccessReportStatus), b.(*authorization.SubjectAccessReportStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.SubjectAccessReportStatus)(nil), (*SubjectAccessReportStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_SubjectAccessReportStatus_To_v1alpha1_SubjectAccessReportStatus(a.(*authorization.SubjectAccessReportStatus), b.(*SubjectAccessReportStatus), scope)
 	}); err != nil {
 		return err
 	}
@@ -126,7 +336,159 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*SubjectMatch)(nil), (*authorization.SubjectMatch)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SubjectMatch_To_authorization_SubjectMatch(a.(*SubjectMatch), b.(*authorization.SubjectMatch), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.SubjectMatch)(nil), (*SubjectMatch)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_SubjectMatch_To_v1alpha1_SubjectMatch(a.(*authorization.SubjectMatch), b.(*SubjectMatch), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SubjectReference)(nil), (*authorization.SubjectReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SubjectReference_To_authorization_SubjectReference(a.(*SubjectReference), b.(*authorization.SubjectReference), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.SubjectReference)(nil), (*SubjectReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_SubjectReference_To_v1alpha1_SubjectReference(a.(*authorization.SubjectReference), b.(*SubjectReference), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*WhoCan)(nil), (*authorization.WhoCan)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_WhoCan_To_authorization_WhoCan(a.(*WhoCan), b.(*authorization.WhoCan), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.WhoCan)(nil), (*WhoCan)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_WhoCan_To_v1alpha1_WhoCan(a.(*authorization.WhoCan), b.(*WhoCan), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*WhoCanSpec)(nil), (*authorization.WhoCanSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_WhoCanSpec_To_authorization_WhoCanSpec(a.(*WhoCanSpec), b.(*authorization.WhoCanSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.WhoCanSpec)(nil), (*WhoCanSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_WhoCanSpec_To_v1alpha1_WhoCanSpec(a.(*authorization.WhoCanSpec), b.(*WhoCanSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*WhoCanStatus)(nil), (*authorization.WhoCanStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_WhoCanStatus_To_authorization_WhoCanStatus(a.(*WhoCanStatus), b.(*authorization.WhoCanStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*authorization.WhoCanStatus)(nil), (*WhoCanStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authorization_WhoCanStatus_To_v1alpha1_WhoCanStatus(a.(*authorization.WhoCanStatus), b.(*WhoCanStatus), scope)
+	}); err != nil {
+		return err
+	}
 	return nil
+}
+
+func autoConvert_v1alpha1_AccessCaveat_To_authorization_AccessCaveat(in *AccessCaveat, out *authorization.AccessCaveat, s conversion.Scope) error {
+	out.ProtectedVerbs = in.ProtectedVerbs
+	out.Superadmin = in.Superadmin
+	out.SuperadminNamespaces = *(*[]string)(unsafe.Pointer(&in.SuperadminNamespaces))
+	out.RestrictedNamespaces = *(*[]string)(unsafe.Pointer(&in.RestrictedNamespaces))
+	return nil
+}
+
+// Convert_v1alpha1_AccessCaveat_To_authorization_AccessCaveat is an autogenerated conversion function.
+func Convert_v1alpha1_AccessCaveat_To_authorization_AccessCaveat(in *AccessCaveat, out *authorization.AccessCaveat, s conversion.Scope) error {
+	return autoConvert_v1alpha1_AccessCaveat_To_authorization_AccessCaveat(in, out, s)
+}
+
+func autoConvert_authorization_AccessCaveat_To_v1alpha1_AccessCaveat(in *authorization.AccessCaveat, out *AccessCaveat, s conversion.Scope) error {
+	out.ProtectedVerbs = in.ProtectedVerbs
+	out.Superadmin = in.Superadmin
+	out.SuperadminNamespaces = *(*[]string)(unsafe.Pointer(&in.SuperadminNamespaces))
+	out.RestrictedNamespaces = *(*[]string)(unsafe.Pointer(&in.RestrictedNamespaces))
+	return nil
+}
+
+// Convert_authorization_AccessCaveat_To_v1alpha1_AccessCaveat is an autogenerated conversion function.
+func Convert_authorization_AccessCaveat_To_v1alpha1_AccessCaveat(in *authorization.AccessCaveat, out *AccessCaveat, s conversion.Scope) error {
+	return autoConvert_authorization_AccessCaveat_To_v1alpha1_AccessCaveat(in, out, s)
+}
+
+func autoConvert_v1alpha1_AccessScope_To_authorization_AccessScope(in *AccessScope, out *authorization.AccessScope, s conversion.Scope) error {
+	out.Cluster = in.Cluster
+	out.Namespaces = *(*[]string)(unsafe.Pointer(&in.Namespaces))
+	out.Resources = *(*[]authorization.ResourceAccess)(unsafe.Pointer(&in.Resources))
+	out.NonResourceRules = *(*[]authorization.NonResourceAccess)(unsafe.Pointer(&in.NonResourceRules))
+	if err := Convert_v1alpha1_AccessCaveat_To_authorization_AccessCaveat(&in.Caveat, &out.Caveat, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_AccessScope_To_authorization_AccessScope is an autogenerated conversion function.
+func Convert_v1alpha1_AccessScope_To_authorization_AccessScope(in *AccessScope, out *authorization.AccessScope, s conversion.Scope) error {
+	return autoConvert_v1alpha1_AccessScope_To_authorization_AccessScope(in, out, s)
+}
+
+func autoConvert_authorization_AccessScope_To_v1alpha1_AccessScope(in *authorization.AccessScope, out *AccessScope, s conversion.Scope) error {
+	out.Cluster = in.Cluster
+	out.Namespaces = *(*[]string)(unsafe.Pointer(&in.Namespaces))
+	out.Resources = *(*[]ResourceAccess)(unsafe.Pointer(&in.Resources))
+	out.NonResourceRules = *(*[]NonResourceAccess)(unsafe.Pointer(&in.NonResourceRules))
+	if err := Convert_authorization_AccessCaveat_To_v1alpha1_AccessCaveat(&in.Caveat, &out.Caveat, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_authorization_AccessScope_To_v1alpha1_AccessScope is an autogenerated conversion function.
+func Convert_authorization_AccessScope_To_v1alpha1_AccessScope(in *authorization.AccessScope, out *AccessScope, s conversion.Scope) error {
+	return autoConvert_authorization_AccessScope_To_v1alpha1_AccessScope(in, out, s)
+}
+
+func autoConvert_v1alpha1_AccessSource_To_authorization_AccessSource(in *AccessSource, out *authorization.AccessSource, s conversion.Scope) error {
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	out.BindingKind = in.BindingKind
+	out.BindingName = in.BindingName
+	out.BindingNamespace = in.BindingNamespace
+	out.RoleKind = in.RoleKind
+	out.RoleName = in.RoleName
+	if err := Convert_v1alpha1_SubjectMatch_To_authorization_SubjectMatch(&in.MatchedBy, &out.MatchedBy, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	out.ViaVerbWildcard = in.ViaVerbWildcard
+	return nil
+}
+
+// Convert_v1alpha1_AccessSource_To_authorization_AccessSource is an autogenerated conversion function.
+func Convert_v1alpha1_AccessSource_To_authorization_AccessSource(in *AccessSource, out *authorization.AccessSource, s conversion.Scope) error {
+	return autoConvert_v1alpha1_AccessSource_To_authorization_AccessSource(in, out, s)
+}
+
+func autoConvert_authorization_AccessSource_To_v1alpha1_AccessSource(in *authorization.AccessSource, out *AccessSource, s conversion.Scope) error {
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	out.BindingKind = in.BindingKind
+	out.BindingName = in.BindingName
+	out.BindingNamespace = in.BindingNamespace
+	out.RoleKind = in.RoleKind
+	out.RoleName = in.RoleName
+	if err := Convert_authorization_SubjectMatch_To_v1alpha1_SubjectMatch(&in.MatchedBy, &out.MatchedBy, s); err != nil {
+		return err
+	}
+	if err := Convert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	out.ViaVerbWildcard = in.ViaVerbWildcard
+	return nil
+}
+
+// Convert_authorization_AccessSource_To_v1alpha1_AccessSource is an autogenerated conversion function.
+func Convert_authorization_AccessSource_To_v1alpha1_AccessSource(in *authorization.AccessSource, out *AccessSource, s conversion.Scope) error {
+	return autoConvert_authorization_AccessSource_To_v1alpha1_AccessSource(in, out, s)
 }
 
 func autoConvert_v1alpha1_AccessibleNamespace_To_authorization_AccessibleNamespace(in *AccessibleNamespace, out *authorization.AccessibleNamespace, s conversion.Scope) error {
@@ -251,6 +613,66 @@ func Convert_authorization_BulkSubjectAccessReviewStatus_To_v1alpha1_BulkSubject
 	return autoConvert_authorization_BulkSubjectAccessReviewStatus_To_v1alpha1_BulkSubjectAccessReviewStatus(in, out, s)
 }
 
+func autoConvert_v1alpha1_InventoryResource_To_authorization_InventoryResource(in *InventoryResource, out *authorization.InventoryResource, s conversion.Scope) error {
+	out.Group = in.Group
+	out.Resource = in.Resource
+	out.Kind = in.Kind
+	out.Namespaced = in.Namespaced
+	out.Module = in.Module
+	out.Custom = in.Custom
+	out.ClusterConfig = in.ClusterConfig
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	return nil
+}
+
+// Convert_v1alpha1_InventoryResource_To_authorization_InventoryResource is an autogenerated conversion function.
+func Convert_v1alpha1_InventoryResource_To_authorization_InventoryResource(in *InventoryResource, out *authorization.InventoryResource, s conversion.Scope) error {
+	return autoConvert_v1alpha1_InventoryResource_To_authorization_InventoryResource(in, out, s)
+}
+
+func autoConvert_authorization_InventoryResource_To_v1alpha1_InventoryResource(in *authorization.InventoryResource, out *InventoryResource, s conversion.Scope) error {
+	out.Group = in.Group
+	out.Resource = in.Resource
+	out.Kind = in.Kind
+	out.Namespaced = in.Namespaced
+	out.Module = in.Module
+	out.Custom = in.Custom
+	out.ClusterConfig = in.ClusterConfig
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	return nil
+}
+
+// Convert_authorization_InventoryResource_To_v1alpha1_InventoryResource is an autogenerated conversion function.
+func Convert_authorization_InventoryResource_To_v1alpha1_InventoryResource(in *authorization.InventoryResource, out *InventoryResource, s conversion.Scope) error {
+	return autoConvert_authorization_InventoryResource_To_v1alpha1_InventoryResource(in, out, s)
+}
+
+func autoConvert_v1alpha1_NonResourceAccess_To_authorization_NonResourceAccess(in *NonResourceAccess, out *authorization.NonResourceAccess, s conversion.Scope) error {
+	out.Path = in.Path
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	out.Sources = *(*[]authorization.AccessSource)(unsafe.Pointer(&in.Sources))
+	out.ViaVerbWildcard = in.ViaVerbWildcard
+	return nil
+}
+
+// Convert_v1alpha1_NonResourceAccess_To_authorization_NonResourceAccess is an autogenerated conversion function.
+func Convert_v1alpha1_NonResourceAccess_To_authorization_NonResourceAccess(in *NonResourceAccess, out *authorization.NonResourceAccess, s conversion.Scope) error {
+	return autoConvert_v1alpha1_NonResourceAccess_To_authorization_NonResourceAccess(in, out, s)
+}
+
+func autoConvert_authorization_NonResourceAccess_To_v1alpha1_NonResourceAccess(in *authorization.NonResourceAccess, out *NonResourceAccess, s conversion.Scope) error {
+	out.Path = in.Path
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	out.Sources = *(*[]AccessSource)(unsafe.Pointer(&in.Sources))
+	out.ViaVerbWildcard = in.ViaVerbWildcard
+	return nil
+}
+
+// Convert_authorization_NonResourceAccess_To_v1alpha1_NonResourceAccess is an autogenerated conversion function.
+func Convert_authorization_NonResourceAccess_To_v1alpha1_NonResourceAccess(in *authorization.NonResourceAccess, out *NonResourceAccess, s conversion.Scope) error {
+	return autoConvert_authorization_NonResourceAccess_To_v1alpha1_NonResourceAccess(in, out, s)
+}
+
 func autoConvert_v1alpha1_NonResourceAttributes_To_authorization_NonResourceAttributes(in *NonResourceAttributes, out *authorization.NonResourceAttributes, s conversion.Scope) error {
 	out.Path = in.Path
 	out.Verb = in.Verb
@@ -271,6 +693,116 @@ func autoConvert_authorization_NonResourceAttributes_To_v1alpha1_NonResourceAttr
 // Convert_authorization_NonResourceAttributes_To_v1alpha1_NonResourceAttributes is an autogenerated conversion function.
 func Convert_authorization_NonResourceAttributes_To_v1alpha1_NonResourceAttributes(in *authorization.NonResourceAttributes, out *NonResourceAttributes, s conversion.Scope) error {
 	return autoConvert_authorization_NonResourceAttributes_To_v1alpha1_NonResourceAttributes(in, out, s)
+}
+
+func autoConvert_v1alpha1_ReportSnapshot_To_authorization_ReportSnapshot(in *ReportSnapshot, out *authorization.ReportSnapshot, s conversion.Scope) error {
+	out.Time = in.Time
+	out.Model = in.Model
+	out.ExpandedWildcards = in.ExpandedWildcards
+	out.DiscoveryResources = in.DiscoveryResources
+	out.Digest = in.Digest
+	return nil
+}
+
+// Convert_v1alpha1_ReportSnapshot_To_authorization_ReportSnapshot is an autogenerated conversion function.
+func Convert_v1alpha1_ReportSnapshot_To_authorization_ReportSnapshot(in *ReportSnapshot, out *authorization.ReportSnapshot, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ReportSnapshot_To_authorization_ReportSnapshot(in, out, s)
+}
+
+func autoConvert_authorization_ReportSnapshot_To_v1alpha1_ReportSnapshot(in *authorization.ReportSnapshot, out *ReportSnapshot, s conversion.Scope) error {
+	out.Time = in.Time
+	out.Model = in.Model
+	out.ExpandedWildcards = in.ExpandedWildcards
+	out.DiscoveryResources = in.DiscoveryResources
+	out.Digest = in.Digest
+	return nil
+}
+
+// Convert_authorization_ReportSnapshot_To_v1alpha1_ReportSnapshot is an autogenerated conversion function.
+func Convert_authorization_ReportSnapshot_To_v1alpha1_ReportSnapshot(in *authorization.ReportSnapshot, out *ReportSnapshot, s conversion.Scope) error {
+	return autoConvert_authorization_ReportSnapshot_To_v1alpha1_ReportSnapshot(in, out, s)
+}
+
+func autoConvert_v1alpha1_ResolvedGroup_To_authorization_ResolvedGroup(in *ResolvedGroup, out *authorization.ResolvedGroup, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Source = in.Source
+	out.Via = *(*[]string)(unsafe.Pointer(&in.Via))
+	return nil
+}
+
+// Convert_v1alpha1_ResolvedGroup_To_authorization_ResolvedGroup is an autogenerated conversion function.
+func Convert_v1alpha1_ResolvedGroup_To_authorization_ResolvedGroup(in *ResolvedGroup, out *authorization.ResolvedGroup, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ResolvedGroup_To_authorization_ResolvedGroup(in, out, s)
+}
+
+func autoConvert_authorization_ResolvedGroup_To_v1alpha1_ResolvedGroup(in *authorization.ResolvedGroup, out *ResolvedGroup, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Source = in.Source
+	out.Via = *(*[]string)(unsafe.Pointer(&in.Via))
+	return nil
+}
+
+// Convert_authorization_ResolvedGroup_To_v1alpha1_ResolvedGroup is an autogenerated conversion function.
+func Convert_authorization_ResolvedGroup_To_v1alpha1_ResolvedGroup(in *authorization.ResolvedGroup, out *ResolvedGroup, s conversion.Scope) error {
+	return autoConvert_authorization_ResolvedGroup_To_v1alpha1_ResolvedGroup(in, out, s)
+}
+
+func autoConvert_v1alpha1_ResolvedSubject_To_authorization_ResolvedSubject(in *ResolvedSubject, out *authorization.ResolvedSubject, s conversion.Scope) error {
+	out.Kind = in.Kind
+	out.Name = in.Name
+	out.Namespace = in.Namespace
+	out.Groups = *(*[]authorization.ResolvedGroup)(unsafe.Pointer(&in.Groups))
+	return nil
+}
+
+// Convert_v1alpha1_ResolvedSubject_To_authorization_ResolvedSubject is an autogenerated conversion function.
+func Convert_v1alpha1_ResolvedSubject_To_authorization_ResolvedSubject(in *ResolvedSubject, out *authorization.ResolvedSubject, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ResolvedSubject_To_authorization_ResolvedSubject(in, out, s)
+}
+
+func autoConvert_authorization_ResolvedSubject_To_v1alpha1_ResolvedSubject(in *authorization.ResolvedSubject, out *ResolvedSubject, s conversion.Scope) error {
+	out.Kind = in.Kind
+	out.Name = in.Name
+	out.Namespace = in.Namespace
+	out.Groups = *(*[]ResolvedGroup)(unsafe.Pointer(&in.Groups))
+	return nil
+}
+
+// Convert_authorization_ResolvedSubject_To_v1alpha1_ResolvedSubject is an autogenerated conversion function.
+func Convert_authorization_ResolvedSubject_To_v1alpha1_ResolvedSubject(in *authorization.ResolvedSubject, out *ResolvedSubject, s conversion.Scope) error {
+	return autoConvert_authorization_ResolvedSubject_To_v1alpha1_ResolvedSubject(in, out, s)
+}
+
+func autoConvert_v1alpha1_ResourceAccess_To_authorization_ResourceAccess(in *ResourceAccess, out *authorization.ResourceAccess, s conversion.Scope) error {
+	out.Group = in.Group
+	out.Resource = in.Resource
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	out.ViaWildcard = in.ViaWildcard
+	out.ResourceNames = *(*[]string)(unsafe.Pointer(&in.ResourceNames))
+	out.Sources = *(*[]authorization.AccessSource)(unsafe.Pointer(&in.Sources))
+	out.ViaVerbWildcard = in.ViaVerbWildcard
+	return nil
+}
+
+// Convert_v1alpha1_ResourceAccess_To_authorization_ResourceAccess is an autogenerated conversion function.
+func Convert_v1alpha1_ResourceAccess_To_authorization_ResourceAccess(in *ResourceAccess, out *authorization.ResourceAccess, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ResourceAccess_To_authorization_ResourceAccess(in, out, s)
+}
+
+func autoConvert_authorization_ResourceAccess_To_v1alpha1_ResourceAccess(in *authorization.ResourceAccess, out *ResourceAccess, s conversion.Scope) error {
+	out.Group = in.Group
+	out.Resource = in.Resource
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	out.ViaWildcard = in.ViaWildcard
+	out.ResourceNames = *(*[]string)(unsafe.Pointer(&in.ResourceNames))
+	out.Sources = *(*[]AccessSource)(unsafe.Pointer(&in.Sources))
+	out.ViaVerbWildcard = in.ViaVerbWildcard
+	return nil
+}
+
+// Convert_authorization_ResourceAccess_To_v1alpha1_ResourceAccess is an autogenerated conversion function.
+func Convert_authorization_ResourceAccess_To_v1alpha1_ResourceAccess(in *authorization.ResourceAccess, out *ResourceAccess, s conversion.Scope) error {
+	return autoConvert_authorization_ResourceAccess_To_v1alpha1_ResourceAccess(in, out, s)
 }
 
 func autoConvert_v1alpha1_ResourceAttributes_To_authorization_ResourceAttributes(in *ResourceAttributes, out *authorization.ResourceAttributes, s conversion.Scope) error {
@@ -303,6 +835,382 @@ func autoConvert_authorization_ResourceAttributes_To_v1alpha1_ResourceAttributes
 // Convert_authorization_ResourceAttributes_To_v1alpha1_ResourceAttributes is an autogenerated conversion function.
 func Convert_authorization_ResourceAttributes_To_v1alpha1_ResourceAttributes(in *authorization.ResourceAttributes, out *ResourceAttributes, s conversion.Scope) error {
 	return autoConvert_authorization_ResourceAttributes_To_v1alpha1_ResourceAttributes(in, out, s)
+}
+
+func autoConvert_v1alpha1_RoleAccess_To_authorization_RoleAccess(in *RoleAccess, out *authorization.RoleAccess, s conversion.Scope) error {
+	out.Name = in.Name
+	if err := Convert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	out.LegacyNames = *(*[]string)(unsafe.Pointer(&in.LegacyNames))
+	out.Namespaced = in.Namespaced
+	out.Composition = *(*[]authorization.RoleComponent)(unsafe.Pointer(&in.Composition))
+	out.Resources = *(*[]authorization.ResourceAccess)(unsafe.Pointer(&in.Resources))
+	out.NonResourceRules = *(*[]authorization.NonResourceAccess)(unsafe.Pointer(&in.NonResourceRules))
+	out.Truncated = in.Truncated
+	out.Notes = *(*[]string)(unsafe.Pointer(&in.Notes))
+	return nil
+}
+
+// Convert_v1alpha1_RoleAccess_To_authorization_RoleAccess is an autogenerated conversion function.
+func Convert_v1alpha1_RoleAccess_To_authorization_RoleAccess(in *RoleAccess, out *authorization.RoleAccess, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RoleAccess_To_authorization_RoleAccess(in, out, s)
+}
+
+func autoConvert_authorization_RoleAccess_To_v1alpha1_RoleAccess(in *authorization.RoleAccess, out *RoleAccess, s conversion.Scope) error {
+	out.Name = in.Name
+	if err := Convert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	out.LegacyNames = *(*[]string)(unsafe.Pointer(&in.LegacyNames))
+	out.Namespaced = in.Namespaced
+	out.Composition = *(*[]RoleComponent)(unsafe.Pointer(&in.Composition))
+	out.Resources = *(*[]ResourceAccess)(unsafe.Pointer(&in.Resources))
+	out.NonResourceRules = *(*[]NonResourceAccess)(unsafe.Pointer(&in.NonResourceRules))
+	out.Truncated = in.Truncated
+	out.Notes = *(*[]string)(unsafe.Pointer(&in.Notes))
+	return nil
+}
+
+// Convert_authorization_RoleAccess_To_v1alpha1_RoleAccess is an autogenerated conversion function.
+func Convert_authorization_RoleAccess_To_v1alpha1_RoleAccess(in *authorization.RoleAccess, out *RoleAccess, s conversion.Scope) error {
+	return autoConvert_authorization_RoleAccess_To_v1alpha1_RoleAccess(in, out, s)
+}
+
+func autoConvert_v1alpha1_RoleAccessReport_To_authorization_RoleAccessReport(in *RoleAccessReport, out *authorization.RoleAccessReport, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha1_RoleAccessReportSpec_To_authorization_RoleAccessReportSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_RoleAccessReportStatus_To_authorization_RoleAccessReportStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_RoleAccessReport_To_authorization_RoleAccessReport is an autogenerated conversion function.
+func Convert_v1alpha1_RoleAccessReport_To_authorization_RoleAccessReport(in *RoleAccessReport, out *authorization.RoleAccessReport, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RoleAccessReport_To_authorization_RoleAccessReport(in, out, s)
+}
+
+func autoConvert_authorization_RoleAccessReport_To_v1alpha1_RoleAccessReport(in *authorization.RoleAccessReport, out *RoleAccessReport, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_authorization_RoleAccessReportSpec_To_v1alpha1_RoleAccessReportSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_authorization_RoleAccessReportStatus_To_v1alpha1_RoleAccessReportStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_authorization_RoleAccessReport_To_v1alpha1_RoleAccessReport is an autogenerated conversion function.
+func Convert_authorization_RoleAccessReport_To_v1alpha1_RoleAccessReport(in *authorization.RoleAccessReport, out *RoleAccessReport, s conversion.Scope) error {
+	return autoConvert_authorization_RoleAccessReport_To_v1alpha1_RoleAccessReport(in, out, s)
+}
+
+func autoConvert_v1alpha1_RoleAccessReportSpec_To_authorization_RoleAccessReportSpec(in *RoleAccessReportSpec, out *authorization.RoleAccessReportSpec, s conversion.Scope) error {
+	out.Model = in.Model
+	if err := Convert_v1alpha1_RoleSelection_To_authorization_RoleSelection(&in.Roles, &out.Roles, s); err != nil {
+		return err
+	}
+	out.ExpandWildcards = (*bool)(unsafe.Pointer(in.ExpandWildcards))
+	out.IncludeComposition = (*bool)(unsafe.Pointer(in.IncludeComposition))
+	out.IncludeInventory = (*bool)(unsafe.Pointer(in.IncludeInventory))
+	return nil
+}
+
+// Convert_v1alpha1_RoleAccessReportSpec_To_authorization_RoleAccessReportSpec is an autogenerated conversion function.
+func Convert_v1alpha1_RoleAccessReportSpec_To_authorization_RoleAccessReportSpec(in *RoleAccessReportSpec, out *authorization.RoleAccessReportSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RoleAccessReportSpec_To_authorization_RoleAccessReportSpec(in, out, s)
+}
+
+func autoConvert_authorization_RoleAccessReportSpec_To_v1alpha1_RoleAccessReportSpec(in *authorization.RoleAccessReportSpec, out *RoleAccessReportSpec, s conversion.Scope) error {
+	out.Model = in.Model
+	if err := Convert_authorization_RoleSelection_To_v1alpha1_RoleSelection(&in.Roles, &out.Roles, s); err != nil {
+		return err
+	}
+	out.ExpandWildcards = (*bool)(unsafe.Pointer(in.ExpandWildcards))
+	out.IncludeComposition = (*bool)(unsafe.Pointer(in.IncludeComposition))
+	out.IncludeInventory = (*bool)(unsafe.Pointer(in.IncludeInventory))
+	return nil
+}
+
+// Convert_authorization_RoleAccessReportSpec_To_v1alpha1_RoleAccessReportSpec is an autogenerated conversion function.
+func Convert_authorization_RoleAccessReportSpec_To_v1alpha1_RoleAccessReportSpec(in *authorization.RoleAccessReportSpec, out *RoleAccessReportSpec, s conversion.Scope) error {
+	return autoConvert_authorization_RoleAccessReportSpec_To_v1alpha1_RoleAccessReportSpec(in, out, s)
+}
+
+func autoConvert_v1alpha1_RoleAccessReportStatus_To_authorization_RoleAccessReportStatus(in *RoleAccessReportStatus, out *authorization.RoleAccessReportStatus, s conversion.Scope) error {
+	if err := Convert_v1alpha1_ReportSnapshot_To_authorization_ReportSnapshot(&in.Snapshot, &out.Snapshot, s); err != nil {
+		return err
+	}
+	out.Roles = *(*[]authorization.RoleAccess)(unsafe.Pointer(&in.Roles))
+	out.Notes = *(*[]string)(unsafe.Pointer(&in.Notes))
+	out.Truncated = in.Truncated
+	out.Inventory = *(*[]authorization.InventoryResource)(unsafe.Pointer(&in.Inventory))
+	return nil
+}
+
+// Convert_v1alpha1_RoleAccessReportStatus_To_authorization_RoleAccessReportStatus is an autogenerated conversion function.
+func Convert_v1alpha1_RoleAccessReportStatus_To_authorization_RoleAccessReportStatus(in *RoleAccessReportStatus, out *authorization.RoleAccessReportStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RoleAccessReportStatus_To_authorization_RoleAccessReportStatus(in, out, s)
+}
+
+func autoConvert_authorization_RoleAccessReportStatus_To_v1alpha1_RoleAccessReportStatus(in *authorization.RoleAccessReportStatus, out *RoleAccessReportStatus, s conversion.Scope) error {
+	if err := Convert_authorization_ReportSnapshot_To_v1alpha1_ReportSnapshot(&in.Snapshot, &out.Snapshot, s); err != nil {
+		return err
+	}
+	out.Roles = *(*[]RoleAccess)(unsafe.Pointer(&in.Roles))
+	out.Notes = *(*[]string)(unsafe.Pointer(&in.Notes))
+	out.Truncated = in.Truncated
+	out.Inventory = *(*[]InventoryResource)(unsafe.Pointer(&in.Inventory))
+	return nil
+}
+
+// Convert_authorization_RoleAccessReportStatus_To_v1alpha1_RoleAccessReportStatus is an autogenerated conversion function.
+func Convert_authorization_RoleAccessReportStatus_To_v1alpha1_RoleAccessReportStatus(in *authorization.RoleAccessReportStatus, out *RoleAccessReportStatus, s conversion.Scope) error {
+	return autoConvert_authorization_RoleAccessReportStatus_To_v1alpha1_RoleAccessReportStatus(in, out, s)
+}
+
+func autoConvert_v1alpha1_RoleAssignment_To_authorization_RoleAssignment(in *RoleAssignment, out *authorization.RoleAssignment, s conversion.Scope) error {
+	out.BindingKind = in.BindingKind
+	out.BindingName = in.BindingName
+	out.Namespace = in.Namespace
+	out.RoleKind = in.RoleKind
+	out.RoleName = in.RoleName
+	if err := Convert_v1alpha1_SubjectMatch_To_authorization_SubjectMatch(&in.MatchedBy, &out.MatchedBy, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_RoleAssignment_To_authorization_RoleAssignment is an autogenerated conversion function.
+func Convert_v1alpha1_RoleAssignment_To_authorization_RoleAssignment(in *RoleAssignment, out *authorization.RoleAssignment, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RoleAssignment_To_authorization_RoleAssignment(in, out, s)
+}
+
+func autoConvert_authorization_RoleAssignment_To_v1alpha1_RoleAssignment(in *authorization.RoleAssignment, out *RoleAssignment, s conversion.Scope) error {
+	out.BindingKind = in.BindingKind
+	out.BindingName = in.BindingName
+	out.Namespace = in.Namespace
+	out.RoleKind = in.RoleKind
+	out.RoleName = in.RoleName
+	if err := Convert_authorization_SubjectMatch_To_v1alpha1_SubjectMatch(&in.MatchedBy, &out.MatchedBy, s); err != nil {
+		return err
+	}
+	if err := Convert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_authorization_RoleAssignment_To_v1alpha1_RoleAssignment is an autogenerated conversion function.
+func Convert_authorization_RoleAssignment_To_v1alpha1_RoleAssignment(in *authorization.RoleAssignment, out *RoleAssignment, s conversion.Scope) error {
+	return autoConvert_authorization_RoleAssignment_To_v1alpha1_RoleAssignment(in, out, s)
+}
+
+func autoConvert_v1alpha1_RoleComponent_To_authorization_RoleComponent(in *RoleComponent, out *authorization.RoleComponent, s conversion.Scope) error {
+	out.Name = in.Name
+	if err := Convert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_RoleComponent_To_authorization_RoleComponent is an autogenerated conversion function.
+func Convert_v1alpha1_RoleComponent_To_authorization_RoleComponent(in *RoleComponent, out *authorization.RoleComponent, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RoleComponent_To_authorization_RoleComponent(in, out, s)
+}
+
+func autoConvert_authorization_RoleComponent_To_v1alpha1_RoleComponent(in *authorization.RoleComponent, out *RoleComponent, s conversion.Scope) error {
+	out.Name = in.Name
+	if err := Convert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_authorization_RoleComponent_To_v1alpha1_RoleComponent is an autogenerated conversion function.
+func Convert_authorization_RoleComponent_To_v1alpha1_RoleComponent(in *authorization.RoleComponent, out *RoleComponent, s conversion.Scope) error {
+	return autoConvert_authorization_RoleComponent_To_v1alpha1_RoleComponent(in, out, s)
+}
+
+func autoConvert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor(in *RoleDescriptor, out *authorization.RoleDescriptor, s conversion.Scope) error {
+	out.Kind = in.Kind
+	out.Scope = in.Scope
+	out.Level = in.Level
+	out.Subsystem = in.Subsystem
+	out.Deprecated = in.Deprecated
+	out.Titles = *(*map[string]string)(unsafe.Pointer(&in.Titles))
+	out.Descriptions = *(*map[string]string)(unsafe.Pointer(&in.Descriptions))
+	return nil
+}
+
+// Convert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor is an autogenerated conversion function.
+func Convert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor(in *RoleDescriptor, out *authorization.RoleDescriptor, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor(in, out, s)
+}
+
+func autoConvert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor(in *authorization.RoleDescriptor, out *RoleDescriptor, s conversion.Scope) error {
+	out.Kind = in.Kind
+	out.Scope = in.Scope
+	out.Level = in.Level
+	out.Subsystem = in.Subsystem
+	out.Deprecated = in.Deprecated
+	out.Titles = *(*map[string]string)(unsafe.Pointer(&in.Titles))
+	out.Descriptions = *(*map[string]string)(unsafe.Pointer(&in.Descriptions))
+	return nil
+}
+
+// Convert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor is an autogenerated conversion function.
+func Convert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor(in *authorization.RoleDescriptor, out *RoleDescriptor, s conversion.Scope) error {
+	return autoConvert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor(in, out, s)
+}
+
+func autoConvert_v1alpha1_RoleSelection_To_authorization_RoleSelection(in *RoleSelection, out *authorization.RoleSelection, s conversion.Scope) error {
+	out.Names = *(*[]string)(unsafe.Pointer(&in.Names))
+	out.Scopes = *(*[]string)(unsafe.Pointer(&in.Scopes))
+	out.AccessLevels = *(*[]string)(unsafe.Pointer(&in.AccessLevels))
+	out.ExcludeCustom = in.ExcludeCustom
+	return nil
+}
+
+// Convert_v1alpha1_RoleSelection_To_authorization_RoleSelection is an autogenerated conversion function.
+func Convert_v1alpha1_RoleSelection_To_authorization_RoleSelection(in *RoleSelection, out *authorization.RoleSelection, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RoleSelection_To_authorization_RoleSelection(in, out, s)
+}
+
+func autoConvert_authorization_RoleSelection_To_v1alpha1_RoleSelection(in *authorization.RoleSelection, out *RoleSelection, s conversion.Scope) error {
+	out.Names = *(*[]string)(unsafe.Pointer(&in.Names))
+	out.Scopes = *(*[]string)(unsafe.Pointer(&in.Scopes))
+	out.AccessLevels = *(*[]string)(unsafe.Pointer(&in.AccessLevels))
+	out.ExcludeCustom = in.ExcludeCustom
+	return nil
+}
+
+// Convert_authorization_RoleSelection_To_v1alpha1_RoleSelection is an autogenerated conversion function.
+func Convert_authorization_RoleSelection_To_v1alpha1_RoleSelection(in *authorization.RoleSelection, out *RoleSelection, s conversion.Scope) error {
+	return autoConvert_authorization_RoleSelection_To_v1alpha1_RoleSelection(in, out, s)
+}
+
+func autoConvert_v1alpha1_ServiceAccountReference_To_authorization_ServiceAccountReference(in *ServiceAccountReference, out *authorization.ServiceAccountReference, s conversion.Scope) error {
+	out.Namespace = in.Namespace
+	out.Name = in.Name
+	return nil
+}
+
+// Convert_v1alpha1_ServiceAccountReference_To_authorization_ServiceAccountReference is an autogenerated conversion function.
+func Convert_v1alpha1_ServiceAccountReference_To_authorization_ServiceAccountReference(in *ServiceAccountReference, out *authorization.ServiceAccountReference, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ServiceAccountReference_To_authorization_ServiceAccountReference(in, out, s)
+}
+
+func autoConvert_authorization_ServiceAccountReference_To_v1alpha1_ServiceAccountReference(in *authorization.ServiceAccountReference, out *ServiceAccountReference, s conversion.Scope) error {
+	out.Namespace = in.Namespace
+	out.Name = in.Name
+	return nil
+}
+
+// Convert_authorization_ServiceAccountReference_To_v1alpha1_ServiceAccountReference is an autogenerated conversion function.
+func Convert_authorization_ServiceAccountReference_To_v1alpha1_ServiceAccountReference(in *authorization.ServiceAccountReference, out *ServiceAccountReference, s conversion.Scope) error {
+	return autoConvert_authorization_ServiceAccountReference_To_v1alpha1_ServiceAccountReference(in, out, s)
+}
+
+func autoConvert_v1alpha1_SubjectAccessReport_To_authorization_SubjectAccessReport(in *SubjectAccessReport, out *authorization.SubjectAccessReport, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha1_SubjectAccessReportSpec_To_authorization_SubjectAccessReportSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_SubjectAccessReportStatus_To_authorization_SubjectAccessReportStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_SubjectAccessReport_To_authorization_SubjectAccessReport is an autogenerated conversion function.
+func Convert_v1alpha1_SubjectAccessReport_To_authorization_SubjectAccessReport(in *SubjectAccessReport, out *authorization.SubjectAccessReport, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SubjectAccessReport_To_authorization_SubjectAccessReport(in, out, s)
+}
+
+func autoConvert_authorization_SubjectAccessReport_To_v1alpha1_SubjectAccessReport(in *authorization.SubjectAccessReport, out *SubjectAccessReport, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_authorization_SubjectAccessReportSpec_To_v1alpha1_SubjectAccessReportSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_authorization_SubjectAccessReportStatus_To_v1alpha1_SubjectAccessReportStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_authorization_SubjectAccessReport_To_v1alpha1_SubjectAccessReport is an autogenerated conversion function.
+func Convert_authorization_SubjectAccessReport_To_v1alpha1_SubjectAccessReport(in *authorization.SubjectAccessReport, out *SubjectAccessReport, s conversion.Scope) error {
+	return autoConvert_authorization_SubjectAccessReport_To_v1alpha1_SubjectAccessReport(in, out, s)
+}
+
+func autoConvert_v1alpha1_SubjectAccessReportSpec_To_authorization_SubjectAccessReportSpec(in *SubjectAccessReportSpec, out *authorization.SubjectAccessReportSpec, s conversion.Scope) error {
+	out.Subject = (*authorization.SubjectReference)(unsafe.Pointer(in.Subject))
+	out.Groups = *(*[]string)(unsafe.Pointer(&in.Groups))
+	out.ResolveGroups = (*bool)(unsafe.Pointer(in.ResolveGroups))
+	out.Namespaces = *(*[]string)(unsafe.Pointer(&in.Namespaces))
+	out.ExpandWildcards = (*bool)(unsafe.Pointer(in.ExpandWildcards))
+	return nil
+}
+
+// Convert_v1alpha1_SubjectAccessReportSpec_To_authorization_SubjectAccessReportSpec is an autogenerated conversion function.
+func Convert_v1alpha1_SubjectAccessReportSpec_To_authorization_SubjectAccessReportSpec(in *SubjectAccessReportSpec, out *authorization.SubjectAccessReportSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SubjectAccessReportSpec_To_authorization_SubjectAccessReportSpec(in, out, s)
+}
+
+func autoConvert_authorization_SubjectAccessReportSpec_To_v1alpha1_SubjectAccessReportSpec(in *authorization.SubjectAccessReportSpec, out *SubjectAccessReportSpec, s conversion.Scope) error {
+	out.Subject = (*SubjectReference)(unsafe.Pointer(in.Subject))
+	out.Groups = *(*[]string)(unsafe.Pointer(&in.Groups))
+	out.ResolveGroups = (*bool)(unsafe.Pointer(in.ResolveGroups))
+	out.Namespaces = *(*[]string)(unsafe.Pointer(&in.Namespaces))
+	out.ExpandWildcards = (*bool)(unsafe.Pointer(in.ExpandWildcards))
+	return nil
+}
+
+// Convert_authorization_SubjectAccessReportSpec_To_v1alpha1_SubjectAccessReportSpec is an autogenerated conversion function.
+func Convert_authorization_SubjectAccessReportSpec_To_v1alpha1_SubjectAccessReportSpec(in *authorization.SubjectAccessReportSpec, out *SubjectAccessReportSpec, s conversion.Scope) error {
+	return autoConvert_authorization_SubjectAccessReportSpec_To_v1alpha1_SubjectAccessReportSpec(in, out, s)
+}
+
+func autoConvert_v1alpha1_SubjectAccessReportStatus_To_authorization_SubjectAccessReportStatus(in *SubjectAccessReportStatus, out *authorization.SubjectAccessReportStatus, s conversion.Scope) error {
+	if err := Convert_v1alpha1_ResolvedSubject_To_authorization_ResolvedSubject(&in.Subject, &out.Subject, s); err != nil {
+		return err
+	}
+	out.RoleAssignments = *(*[]authorization.RoleAssignment)(unsafe.Pointer(&in.RoleAssignments))
+	out.Scopes = *(*[]authorization.AccessScope)(unsafe.Pointer(&in.Scopes))
+	out.Notes = *(*[]string)(unsafe.Pointer(&in.Notes))
+	out.EvaluationError = in.EvaluationError
+	out.Truncated = in.Truncated
+	return nil
+}
+
+// Convert_v1alpha1_SubjectAccessReportStatus_To_authorization_SubjectAccessReportStatus is an autogenerated conversion function.
+func Convert_v1alpha1_SubjectAccessReportStatus_To_authorization_SubjectAccessReportStatus(in *SubjectAccessReportStatus, out *authorization.SubjectAccessReportStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SubjectAccessReportStatus_To_authorization_SubjectAccessReportStatus(in, out, s)
+}
+
+func autoConvert_authorization_SubjectAccessReportStatus_To_v1alpha1_SubjectAccessReportStatus(in *authorization.SubjectAccessReportStatus, out *SubjectAccessReportStatus, s conversion.Scope) error {
+	if err := Convert_authorization_ResolvedSubject_To_v1alpha1_ResolvedSubject(&in.Subject, &out.Subject, s); err != nil {
+		return err
+	}
+	out.RoleAssignments = *(*[]RoleAssignment)(unsafe.Pointer(&in.RoleAssignments))
+	out.Scopes = *(*[]AccessScope)(unsafe.Pointer(&in.Scopes))
+	out.Notes = *(*[]string)(unsafe.Pointer(&in.Notes))
+	out.EvaluationError = in.EvaluationError
+	out.Truncated = in.Truncated
+	return nil
+}
+
+// Convert_authorization_SubjectAccessReportStatus_To_v1alpha1_SubjectAccessReportStatus is an autogenerated conversion function.
+func Convert_authorization_SubjectAccessReportStatus_To_v1alpha1_SubjectAccessReportStatus(in *authorization.SubjectAccessReportStatus, out *SubjectAccessReportStatus, s conversion.Scope) error {
+	return autoConvert_authorization_SubjectAccessReportStatus_To_v1alpha1_SubjectAccessReportStatus(in, out, s)
 }
 
 func autoConvert_v1alpha1_SubjectAccessReviewRequest_To_authorization_SubjectAccessReviewRequest(in *SubjectAccessReviewRequest, out *authorization.SubjectAccessReviewRequest, s conversion.Scope) error {
@@ -351,4 +1259,130 @@ func autoConvert_authorization_SubjectAccessReviewResult_To_v1alpha1_SubjectAcce
 // Convert_authorization_SubjectAccessReviewResult_To_v1alpha1_SubjectAccessReviewResult is an autogenerated conversion function.
 func Convert_authorization_SubjectAccessReviewResult_To_v1alpha1_SubjectAccessReviewResult(in *authorization.SubjectAccessReviewResult, out *SubjectAccessReviewResult, s conversion.Scope) error {
 	return autoConvert_authorization_SubjectAccessReviewResult_To_v1alpha1_SubjectAccessReviewResult(in, out, s)
+}
+
+func autoConvert_v1alpha1_SubjectMatch_To_authorization_SubjectMatch(in *SubjectMatch, out *authorization.SubjectMatch, s conversion.Scope) error {
+	out.Kind = in.Kind
+	out.Name = in.Name
+	return nil
+}
+
+// Convert_v1alpha1_SubjectMatch_To_authorization_SubjectMatch is an autogenerated conversion function.
+func Convert_v1alpha1_SubjectMatch_To_authorization_SubjectMatch(in *SubjectMatch, out *authorization.SubjectMatch, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SubjectMatch_To_authorization_SubjectMatch(in, out, s)
+}
+
+func autoConvert_authorization_SubjectMatch_To_v1alpha1_SubjectMatch(in *authorization.SubjectMatch, out *SubjectMatch, s conversion.Scope) error {
+	out.Kind = in.Kind
+	out.Name = in.Name
+	return nil
+}
+
+// Convert_authorization_SubjectMatch_To_v1alpha1_SubjectMatch is an autogenerated conversion function.
+func Convert_authorization_SubjectMatch_To_v1alpha1_SubjectMatch(in *authorization.SubjectMatch, out *SubjectMatch, s conversion.Scope) error {
+	return autoConvert_authorization_SubjectMatch_To_v1alpha1_SubjectMatch(in, out, s)
+}
+
+func autoConvert_v1alpha1_SubjectReference_To_authorization_SubjectReference(in *SubjectReference, out *authorization.SubjectReference, s conversion.Scope) error {
+	out.Kind = in.Kind
+	out.Name = in.Name
+	out.Namespace = in.Namespace
+	return nil
+}
+
+// Convert_v1alpha1_SubjectReference_To_authorization_SubjectReference is an autogenerated conversion function.
+func Convert_v1alpha1_SubjectReference_To_authorization_SubjectReference(in *SubjectReference, out *authorization.SubjectReference, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SubjectReference_To_authorization_SubjectReference(in, out, s)
+}
+
+func autoConvert_authorization_SubjectReference_To_v1alpha1_SubjectReference(in *authorization.SubjectReference, out *SubjectReference, s conversion.Scope) error {
+	out.Kind = in.Kind
+	out.Name = in.Name
+	out.Namespace = in.Namespace
+	return nil
+}
+
+// Convert_authorization_SubjectReference_To_v1alpha1_SubjectReference is an autogenerated conversion function.
+func Convert_authorization_SubjectReference_To_v1alpha1_SubjectReference(in *authorization.SubjectReference, out *SubjectReference, s conversion.Scope) error {
+	return autoConvert_authorization_SubjectReference_To_v1alpha1_SubjectReference(in, out, s)
+}
+
+func autoConvert_v1alpha1_WhoCan_To_authorization_WhoCan(in *WhoCan, out *authorization.WhoCan, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha1_WhoCanSpec_To_authorization_WhoCanSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_WhoCanStatus_To_authorization_WhoCanStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_WhoCan_To_authorization_WhoCan is an autogenerated conversion function.
+func Convert_v1alpha1_WhoCan_To_authorization_WhoCan(in *WhoCan, out *authorization.WhoCan, s conversion.Scope) error {
+	return autoConvert_v1alpha1_WhoCan_To_authorization_WhoCan(in, out, s)
+}
+
+func autoConvert_authorization_WhoCan_To_v1alpha1_WhoCan(in *authorization.WhoCan, out *WhoCan, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_authorization_WhoCanSpec_To_v1alpha1_WhoCanSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_authorization_WhoCanStatus_To_v1alpha1_WhoCanStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_authorization_WhoCan_To_v1alpha1_WhoCan is an autogenerated conversion function.
+func Convert_authorization_WhoCan_To_v1alpha1_WhoCan(in *authorization.WhoCan, out *WhoCan, s conversion.Scope) error {
+	return autoConvert_authorization_WhoCan_To_v1alpha1_WhoCan(in, out, s)
+}
+
+func autoConvert_v1alpha1_WhoCanSpec_To_authorization_WhoCanSpec(in *WhoCanSpec, out *authorization.WhoCanSpec, s conversion.Scope) error {
+	out.ResourceAttributes = (*authorization.ResourceAttributes)(unsafe.Pointer(in.ResourceAttributes))
+	out.NonResourceAttributes = (*authorization.NonResourceAttributes)(unsafe.Pointer(in.NonResourceAttributes))
+	return nil
+}
+
+// Convert_v1alpha1_WhoCanSpec_To_authorization_WhoCanSpec is an autogenerated conversion function.
+func Convert_v1alpha1_WhoCanSpec_To_authorization_WhoCanSpec(in *WhoCanSpec, out *authorization.WhoCanSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha1_WhoCanSpec_To_authorization_WhoCanSpec(in, out, s)
+}
+
+func autoConvert_authorization_WhoCanSpec_To_v1alpha1_WhoCanSpec(in *authorization.WhoCanSpec, out *WhoCanSpec, s conversion.Scope) error {
+	out.ResourceAttributes = (*ResourceAttributes)(unsafe.Pointer(in.ResourceAttributes))
+	out.NonResourceAttributes = (*NonResourceAttributes)(unsafe.Pointer(in.NonResourceAttributes))
+	return nil
+}
+
+// Convert_authorization_WhoCanSpec_To_v1alpha1_WhoCanSpec is an autogenerated conversion function.
+func Convert_authorization_WhoCanSpec_To_v1alpha1_WhoCanSpec(in *authorization.WhoCanSpec, out *WhoCanSpec, s conversion.Scope) error {
+	return autoConvert_authorization_WhoCanSpec_To_v1alpha1_WhoCanSpec(in, out, s)
+}
+
+func autoConvert_v1alpha1_WhoCanStatus_To_authorization_WhoCanStatus(in *WhoCanStatus, out *authorization.WhoCanStatus, s conversion.Scope) error {
+	out.Users = *(*[]string)(unsafe.Pointer(&in.Users))
+	out.Groups = *(*[]string)(unsafe.Pointer(&in.Groups))
+	out.ServiceAccounts = *(*[]authorization.ServiceAccountReference)(unsafe.Pointer(&in.ServiceAccounts))
+	out.EvaluationError = in.EvaluationError
+	return nil
+}
+
+// Convert_v1alpha1_WhoCanStatus_To_authorization_WhoCanStatus is an autogenerated conversion function.
+func Convert_v1alpha1_WhoCanStatus_To_authorization_WhoCanStatus(in *WhoCanStatus, out *authorization.WhoCanStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha1_WhoCanStatus_To_authorization_WhoCanStatus(in, out, s)
+}
+
+func autoConvert_authorization_WhoCanStatus_To_v1alpha1_WhoCanStatus(in *authorization.WhoCanStatus, out *WhoCanStatus, s conversion.Scope) error {
+	out.Users = *(*[]string)(unsafe.Pointer(&in.Users))
+	out.Groups = *(*[]string)(unsafe.Pointer(&in.Groups))
+	out.ServiceAccounts = *(*[]ServiceAccountReference)(unsafe.Pointer(&in.ServiceAccounts))
+	out.EvaluationError = in.EvaluationError
+	return nil
+}
+
+// Convert_authorization_WhoCanStatus_To_v1alpha1_WhoCanStatus is an autogenerated conversion function.
+func Convert_authorization_WhoCanStatus_To_v1alpha1_WhoCanStatus(in *authorization.WhoCanStatus, out *WhoCanStatus, s conversion.Scope) error {
+	return autoConvert_authorization_WhoCanStatus_To_v1alpha1_WhoCanStatus(in, out, s)
 }
