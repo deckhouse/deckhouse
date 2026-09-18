@@ -292,38 +292,27 @@ As with policy assignment, enforcement mode can be set:
 
 Namespaces named `d8-*` and `kube-*` hold the components of the platform itself.
 Policies apply to them differently from application namespaces, and that difference is not configurable.
-A namespace labeled `heritage: deckhouse` counts as one of them even if it is named differently:
-the platform sets that label on the namespaces it creates, and a policy written for application namespaces does not reach it.
+A namespace labeled `heritage: deckhouse` counts as one of them even if it is named differently: the platform sets that label on the namespaces it creates, and a policy written for application namespaces does not reach it.
 
 Every namespace named `d8-*` or `kube-*` is checked against the `restricted` standard in `warn` mode.
-The `security.deckhouse.io/pod-policy` label and the
-[`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter
-do not apply there.
-Violations are recorded in the audit and shown in Deckhouse Console,
-and a system component is never blocked from starting.
+The `security.deckhouse.io/pod-policy` label and the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter do not apply there.
+Violations are recorded in the audit and shown in Deckhouse Console, and a system component is never blocked from starting.
 
 These checks cannot be tuned from outside the platform.
-The labels that govern them, and the workloads they cover, belong to the module that owns the namespace,
-and Deckhouse returns both to their declared state the next time it applies the configuration.
+The labels that govern them, and the workloads they cover, belong to the module that owns the namespace, and Deckhouse returns both to their declared state the next time it applies the configuration.
 A module exempts a workload of its own where it has to, with a SecurityPolicyException it ships itself.
 
 OperationPolicy and SecurityPolicy resources reach system namespaces in `warn` mode as well.
-A policy with `enforcementAction: Deny` blocks workloads in application namespaces
-and only reports violations in a system namespace.
-No label of the namespace changes that:
-a module that hardens its own namespace raises the Pod Security Standards there,
-which says nothing about a policy you wrote for application workloads.
+A policy with `enforcementAction: Deny` blocks workloads in application namespaces and only reports violations in a system namespace.
+No label of the namespace changes that: a module that hardens its own namespace raises the Pod Security Standards there, which says nothing about a policy you wrote for application workloads.
 
-A denying policy that reaches system namespaces is therefore rendered as two Gatekeeper constraints,
-both visible in the audit and in Deckhouse Console:
+A denying policy that reaches system namespaces is therefore rendered as two Gatekeeper constraints, both visible in the audit and in Deckhouse Console:
 
 - The policy's own name: For application namespaces, with the action the policy asks for.
 - `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
 
-The `d8-system-default-`, `d8-system-excluded-` and `d8-pod-security-` prefixes are reserved:
-a policy whose name starts with one of them is rejected on creation.
-A policy name is limited to 234 characters for the same reason,
-so that the derived constraint names stay within the 253-character limit of a Kubernetes object name.
+The `d8-system-default-`, `d8-system-excluded-` and `d8-pod-security-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
+A policy name is limited to 234 characters for the same reason, so that the derived constraint names stay within the 253-character limit of a Kubernetes object name.
 
 A policy is rendered as a single constraint when the split would change nothing:
 
@@ -333,8 +322,7 @@ A policy is rendered as a single constraint when the split would change nothing:
 - The namespace list uses a leading glob, such as `*-system`, which cannot be intersected with `d8-*` exactly.
 
 Gatekeeper mutations do not apply in system namespaces, whatever labels the namespace carries.
-The platform sets the parameters of its own components,
-so an `Assign` or a `ModifySet` resource is not allowed to change them there.
+The platform sets the parameters of its own components, so an `Assign` or a `ModifySet` resource is not allowed to change them there.
 
 ### Extending a policy
 
