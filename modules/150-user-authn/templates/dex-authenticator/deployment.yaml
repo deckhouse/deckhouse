@@ -165,8 +165,10 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name) (dict "revisionScoped" true)) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+{{- if or (hasPrefix "d8-" $crd.namespace) (hasPrefix "kube-" $crd.namespace) }}
       imagePullSecrets:
-      - name: registry-dex-authenticator
+      - name: deckhouse-registry
+{{- end }}
       volumes:
       - name: tls
         emptyDir: {}
