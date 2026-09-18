@@ -8,8 +8,56 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- /* Converts a Kubernetes CPU quantity to millicores, rounding up. */ -}}
+{{- /* Unlike the helm_lib helper it accepts fractional values such as "0.5", which the CRD allows. */ -}}
+{{- define "dex_authenticator_cpu_to_millicores" -}}
+  {{- $units := . | toString -}}
+  {{- if hasSuffix "m" $units -}}
+    {{- $units | trimSuffix "m" | float64 | ceil | int64 -}}
+  {{- else -}}
+    {{- $units | float64 | mulf 1000.0 | ceil | int64 -}}
+  {{- end -}}
+{{- end }}
+
+{{- /* Converts a Kubernetes memory quantity to bytes, rounding up. */ -}}
+{{- /* Unlike the helm_lib helper it accepts fractional values such as "0.5Gi". */ -}}
+{{- define "dex_authenticator_memory_to_bytes" -}}
+  {{- $units := . | toString -}}
+  {{- $bytes := 0.0 -}}
+  {{- if hasSuffix "Ki" $units -}}
+    {{- $bytes = $units | trimSuffix "Ki" | float64 | mulf 1024.0 -}}
+  {{- else if hasSuffix "Mi" $units -}}
+    {{- $bytes = $units | trimSuffix "Mi" | float64 | mulf 1048576.0 -}}
+  {{- else if hasSuffix "Gi" $units -}}
+    {{- $bytes = $units | trimSuffix "Gi" | float64 | mulf 1073741824.0 -}}
+  {{- else if hasSuffix "Ti" $units -}}
+    {{- $bytes = $units | trimSuffix "Ti" | float64 | mulf 1099511627776.0 -}}
+  {{- else if hasSuffix "Pi" $units -}}
+    {{- $bytes = $units | trimSuffix "Pi" | float64 | mulf 1125899906842624.0 -}}
+  {{- else if hasSuffix "Ei" $units -}}
+    {{- $bytes = $units | trimSuffix "Ei" | float64 | mulf 1152921504606846976.0 -}}
+  {{- else if hasSuffix "k" $units -}}
+    {{- $bytes = $units | trimSuffix "k" | float64 | mulf 1000.0 -}}
+  {{- else if hasSuffix "M" $units -}}
+    {{- $bytes = $units | trimSuffix "M" | float64 | mulf 1000000.0 -}}
+  {{- else if hasSuffix "G" $units -}}
+    {{- $bytes = $units | trimSuffix "G" | float64 | mulf 1000000000.0 -}}
+  {{- else if hasSuffix "T" $units -}}
+    {{- $bytes = $units | trimSuffix "T" | float64 | mulf 1000000000000.0 -}}
+  {{- else if hasSuffix "P" $units -}}
+    {{- $bytes = $units | trimSuffix "P" | float64 | mulf 1000000000000000.0 -}}
+  {{- else if hasSuffix "E" $units -}}
+    {{- $bytes = $units | trimSuffix "E" | float64 | mulf 1000000000000000000.0 -}}
+  {{- else -}}
+    {{- $bytes = $units | float64 -}}
+  {{- end -}}
+  {{- $bytes | ceil | int64 -}}
+{{- end }}
+
 {{- /* Init limits = sum of main container limits when set in CR (ResourceQuota: max(init, sum(app))). */ -}}
 {{- /* Defaults 20m / 50Mi when resources are not set = sum of dex+redis default requests. */ -}}
+{{- /* The result never drops below the init container requests (10m / 10Mi): a lower limit makes the */ -}}
+{{- /* API server reject the Deployment. Staying under the sum is safe, the quota counts max(init, sum(app)). */ -}}
 {{- define "dex_authenticator_init_limits" -}}
   {{- $cpuMillicores := 20 -}}
   {{- $memBytes := 52428800 -}} {{- /* 50Mi */ -}}
@@ -30,17 +78,17 @@ memory: 25Mi
     {{- end -}}
     {{- if or $dexCpu $redisCpu }}
       {{- $cpuMillicores = 0 -}}
-      {{- if $dexCpu }}{{ $cpuMillicores = add $cpuMillicores (include "helm_lib_resources_management_cpu_units_to_millicores" $dexCpu | int) }}{{ end -}}
-      {{- if $redisCpu }}{{ $cpuMillicores = add $cpuMillicores (include "helm_lib_resources_management_cpu_units_to_millicores" $redisCpu | int) }}{{ end -}}
+      {{- if $dexCpu }}{{ $cpuMillicores = add $cpuMillicores (include "dex_authenticator_cpu_to_millicores" $dexCpu | int64) }}{{ end -}}
+      {{- if $redisCpu }}{{ $cpuMillicores = add $cpuMillicores (include "dex_authenticator_cpu_to_millicores" $redisCpu | int64) }}{{ end -}}
     {{- end -}}
     {{- if or $dexMem $redisMem }}
       {{- $memBytes = 0 -}}
-      {{- if $dexMem }}{{ $memBytes = add $memBytes (include "helm_lib_resources_management_memory_units_to_bytes" $dexMem | int) }}{{ end -}}
-      {{- if $redisMem }}{{ $memBytes = add $memBytes (include "helm_lib_resources_management_memory_units_to_bytes" $redisMem | int) }}{{ end -}}
+      {{- if $dexMem }}{{ $memBytes = add $memBytes (include "dex_authenticator_memory_to_bytes" $dexMem | int64) }}{{ end -}}
+      {{- if $redisMem }}{{ $memBytes = add $memBytes (include "dex_authenticator_memory_to_bytes" $redisMem | int64) }}{{ end -}}
     {{- end -}}
   {{- end -}}
-cpu: {{ printf "%dm" $cpuMillicores }}
-memory: {{ div $memBytes 1048576 }}Mi
+cpu: {{ printf "%dm" (max $cpuMillicores 10) }}
+memory: {{ printf "%dMi" (max (div $memBytes 1048576) 10) }}
 {{- end }}
 
 {{- $context := . }}
