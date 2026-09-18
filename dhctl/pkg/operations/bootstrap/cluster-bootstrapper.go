@@ -1657,11 +1657,18 @@ func bootstrapAdditionalNodesForCloudCluster(
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
 
-	// Nothing this node creates can boot before registry-packages-proxy answers: a machine
-	// fetches rpp-get from a master's bootstrap port as the first thing its cloud-init does,
-	// and that port is published by the module alone. The install phase before this one waits
-	// only for the Deckhouse pod, not for the module rollout behind it, so without this wait
-	// the machines race the rollout and lose - they give up after 150 seconds and stay empty.
+	// Machines this node builds cannot boot without registry-packages-proxy: rpp-get comes from
+	// a master's bootstrap port, that port is published by the module alone, and cloud-init
+	// gives up on it after 150 seconds. So the module is a precondition for building them.
+	//
+	// On the ordinary path the install phase has already waited for Deckhouse, and a critical
+	// module's pods are up by the time that wait returns - this costs nothing there. It is here
+	// for the path where that phase is skipped, which --skip-phase allows: nothing else stands
+	// between a skipped install and the machines.
+	//
+	// It deliberately proves only that the module runs, not that a machine's subnet can reach
+	// the port. Which of the two failed is a question for the node's own log; see
+	// bb-rpp-get-report in lib.sh.tpl.
 	if err := rpp.WaitForInClusterProxy(ctx, kubeCl.KubeClient); err != nil {
 		return err
 	}

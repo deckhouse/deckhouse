@@ -35,20 +35,23 @@ const (
 	inClusterProxyNamespace  = "d8-cloud-instance-manager"
 	inClusterProxyDeployment = "registry-packages-proxy"
 
-	// Ten minutes: the module rolls out as part of the first Deckhouse convergence, which
-	// dhctl does not otherwise wait for - the install phase only waits for the Deckhouse pod
-	// itself to become Ready.
+	// Ten minutes: room for a slow registry, and no more. The budget only bites where the module
+	// is not coming up at all, and a longer one buys nothing there - machines built against a
+	// proxy that never answers die on their own 150-second timer regardless.
 	inClusterProxyReadyAttempts = 120
 	inClusterProxyReadyInterval = 5 * time.Second
 )
 
-// WaitForInClusterProxy blocks until registry-packages-proxy serves the rpp-get bootstrap port
-// on at least one master.
+// WaitForInClusterProxy blocks until registry-packages-proxy has a ready replica, which is what
+// publishes the rpp-get bootstrap port on the masters' own addresses.
 //
-// Every machine dhctl creates from the cloud provider downloads rpp-get from that port before
-// it can run anything else, and its cloud-init gives up after 30 attempts five seconds apart.
-// Created any earlier, a machine burns its whole 150-second budget against a port nobody
-// listens on and stays empty forever, while the bootstrap phase sits out its own timeout.
+// Every machine dhctl creates from the cloud provider downloads rpp-get from that port before it
+// can run anything else, and its cloud-init gives up after 30 attempts five seconds apart. Built
+// against a proxy that is not up, a machine burns that budget and stays empty for good.
+//
+// A precondition check rather than a fix for a race: the ordinary bootstrap path has already
+// waited for Deckhouse by the time it runs. See the call site for the path it covers, and for
+// what it deliberately does not prove.
 func WaitForInClusterProxy(ctx context.Context, kubeCl client.KubeClient) error {
 	return waitForInClusterProxy(ctx, kubeCl, inClusterProxyReadyAttempts, inClusterProxyReadyInterval)
 }
