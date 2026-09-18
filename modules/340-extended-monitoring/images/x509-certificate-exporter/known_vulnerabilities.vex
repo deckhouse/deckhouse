@@ -1,0 +1,55 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://deckhouse.io/vex/extended-monitoring/x509-certificate-exporter",
+  "author": "Deckhouse Kubernetes Platform <contact@deckhouse.io>",
+  "timestamp": "2026-09-18T00:00:00Z",
+  "last_updated": "2026-09-18T00:00:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: отказ в обслуживании на заблокированном канале SSH"
+      },
+      "timestamp": "2026-09-18T00:00:00Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/crypto/ssh (взаимная блокировка на установленном или неопределившемся канале, приводящая к отказу в обслуживании). x509-certificate-exporter не является ни SSH-сервером, ни SSH-клиентом, и пакет golang.org/x/crypto/ssh в него не линкуется: `GOOS=linux GOARCH=amd64 go list -deps ./cmd/x509-certificate-exporter | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` на дереве v3.19.1 со всеми патчами — пусто (точное имя пакета, не префикс), `go tool nm x509-certificate-exporter | grep 'golang.org/x/crypto/ssh\\.'` — ни одного символа. Positive control: из golang.org/x/crypto в сборку попадают ровно два пакета — bcrypt и blowfish (`go list -deps ./cmd/x509-certificate-exporter | grep '^golang.org/x/crypto'`), и в бинарнике присутствует 111 символов golang.org/x/crypto/ — то есть отсутствие символов ssh есть следствие отсутствия пакета, а не неработающего поиска. Зависимость попадает в граф транзитивно ради basic-auth: `go mod why -m golang.org/x/crypto` даёт цепочку github.com/enix/x509-certificate-exporter/v3/internal -> github.com/prometheus/exporter-toolkit/web -> golang.org/x/crypto/bcrypt. Бамп до исправленной версии на этой ветке невозможен: исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0` (`curl -s https://proxy.golang.org/golang.org/x/crypto/@v/v0.56.0.mod`), а образ собирается билдером builder/golang-alpine, дающим Go 1.25.13 (candi/base_images.yml: ключи builder/golang-alpine и builder/golang-alpine-1.25 имеют один digest, ключей 1.26 в файле нет). Компонент поднят до максимально совместимой версии v0.55.0."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: отказ в обслуживании на заблокированном канале SSH"
+      },
+      "timestamp": "2026-09-18T00:00:00Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/crypto/ssh (взаимная блокировка на установленном или неопределившемся канале, приводящая к отказу в обслуживании). x509-certificate-exporter не является ни SSH-сервером, ни SSH-клиентом, и пакет golang.org/x/crypto/ssh в него не линкуется: `GOOS=linux GOARCH=amd64 go list -deps ./cmd/x509-certificate-exporter | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` на дереве v3.19.1 со всеми патчами — пусто (точное имя пакета, не префикс), `go tool nm x509-certificate-exporter | grep 'golang.org/x/crypto/ssh\\.'` — ни одного символа. Positive control: из golang.org/x/crypto в сборку попадают ровно два пакета — bcrypt и blowfish (`go list -deps ./cmd/x509-certificate-exporter | grep '^golang.org/x/crypto'`), и в бинарнике присутствует 111 символов golang.org/x/crypto/ — то есть отсутствие символов ssh есть следствие отсутствия пакета, а не неработающего поиска. Зависимость попадает в граф транзитивно ради basic-auth: `go mod why -m golang.org/x/crypto` даёт цепочку github.com/enix/x509-certificate-exporter/v3/internal -> github.com/prometheus/exporter-toolkit/web -> golang.org/x/crypto/bcrypt. Бамп до исправленной версии на этой ветке невозможен: исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0` (`curl -s https://proxy.golang.org/golang.org/x/crypto/@v/v0.56.0.mod`), а образ собирается билдером builder/golang-alpine, дающим Go 1.25.13 (candi/base_images.yml: ключи builder/golang-alpine и builder/golang-alpine-1.25 имеют один digest, ключей 1.26 в файле нет). Компонент поднят до максимально совместимой версии v0.55.0."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "description": "golang.org/x/crypto/openpgp не поддерживается и небезопасен по конструкции"
+      },
+      "timestamp": "2026-09-18T00:00:00Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 — это общее предупреждение о том, что пакет golang.org/x/crypto/openpgp не поддерживается и небезопасен по своей конструкции, а не уязвимость с конкретным вектором эксплуатации; исправленной версии не существует, поэтому обновление зависимости проблему не закрывает. Бинарный файл /x509-certificate-exporter не импортирует golang.org/x/crypto/openpgp ни напрямую, ни транзитивно: `GOOS=linux GOARCH=amd64 go list -deps ./cmd/x509-certificate-exporter | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` на дереве v3.19.1 со всеми патчами — пусто. Positive control: из golang.org/x/crypto в сборку попадают ровно два пакета — bcrypt и blowfish (`go list -deps ./cmd/x509-certificate-exporter | grep '^golang.org/x/crypto'`), и в бинарнике присутствует 111 символов golang.org/x/crypto/, то есть поиск по графу и по символам рабочий. Регистронезависимый поиск по символам бинарника (`go tool nm x509-certificate-exporter | grep -i openpgp`) не находит ни одного вхождения. Зависимость x/crypto попадает в граф транзитивно ради basic-auth: `go mod why -m golang.org/x/crypto` даёт цепочку github.com/enix/x509-certificate-exporter/v3/internal -> github.com/prometheus/exporter-toolkit/web -> golang.org/x/crypto/bcrypt. Уязвимый код физически не попадает в собранный бинарник и не может быть исполнен."
+    }
+  ]
+}

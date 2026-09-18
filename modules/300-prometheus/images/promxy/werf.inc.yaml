@@ -19,6 +19,10 @@ shell:
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
     - cd /src
     - git apply /patches/001-go-mod.patch --verbose
+    - git apply /patches/004-cve-grpc.patch --verbose
+    - git apply /patches/005-fix-cve-bump.patch --verbose
+    - git apply /patches/006-fix-cve-bump.patch --verbose
+    - git apply /patches/007-fix-cve-bump.patch --verbose
     - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact

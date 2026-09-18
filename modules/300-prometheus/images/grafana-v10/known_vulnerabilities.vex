@@ -2,8 +2,8 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-3be2531000161d4e4fb1227449100fdab929e9fa0624757fefc9f9a338029045",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2025-10-10T20:23:18.360168+03:00",
-  "version": 1,
+  "timestamp": "2026-09-18T12:55:27.087287Z",
+  "version": 16,
   "statements": [
     {
       "vulnerability": {
@@ -46,6 +46,216 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2025-30153 связана с обработкой ZIP-бомб в компоненте ZipFileBodyDecoder библиотеки kin-openapi при валидации multipart/form-data запросов через openapi3filter. Уязвимость позволяет атакующему загрузить специально созданный ZIP-файл, вызывающий исчерпание памяти сервера. Grafana v10 использует библиотеку kin-openapi для работы с OpenAPI спецификациями в контексте внутренних API и документации, но не использует компонент openapi3filter для валидации входящих HTTP запросов с multipart/form-data содержащих ZIP файлы. Grafana имеет собственные механизмы обработки загрузки файлов (например, для импорта дашбордов, загрузки изображений), которые не используют ZipFileBodyDecoder из kin-openapi. Уязвимый код в openapi3filter.ZipFileBodyDecoder, который автоматически регистрируется модулем для декодирования ZIP файлов, не вызывается в путях выполнения кода Grafana. Таким образом, механизм эксплуатации CVE-2025-30153 неприменим к Grafana."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "timestamp": "2026-09-18T12:55:26.466726Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который признан неподдерживаемым и небезопасным по своему дизайну (unmaintained, unsafe by design) и не имеет исправленной версии, поэтому не может быть устранена обновлением зависимости. Бинарный файл /usr/share/grafana/bin/grafana использует golang.org/x/crypto только как транзитивную зависимость и не импортирует подпакет openpgp. Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов): grep -xE 'golang.org/x/crypto/(ssh|openpgp)' не даёт совпадений, тогда как 23 других подпакета golang.org/x/crypto (bcrypt, blowfish, argon2, blake2b, cast5, chacha20, chacha20poly1305, cryptobyte, hkdf, md4, pbkdf2, pkcs12, salsa20, scrypt, sha3 и их внутренние зависимости) в списке присутствуют — положительный контроль, подтверждающий работоспособность проверки. В графе есть пакет golang.org/x/crypto/ssh/terminal, но это самостоятельный пакет-обёртка: go list -deps golang.org/x/crypto/ssh/terminal показывает, что из внешних зависимостей он тянет только golang.org/x/term и golang.org/x/sys/unix и не импортирует golang.org/x/crypto/ssh. Именно поэтому проверка сделана по точному имени пакета, а не по префиксу. Символьная проверка собранного бинарного файла подтверждает то же самое: go tool nm по /usr/share/grafana/bin/grafana (315888 символов) даёт 0 символов golang.org/x/crypto/openpgp и 0 символов с префиксом 'golang.org/x/crypto/ssh.'; все три найденных символа с подстрокой 'golang.org/x/crypto/ssh' принадлежат пакету-обёртке ssh/terminal (ssh/terminal..inittask, ssh/terminal.GetSize, ssh/terminal.init), при 30 символах golang.org/x/crypto/bcrypt как положительном контроле. Таким образом, уязвимый код отсутствует в образе и данная уязвимость не может быть эксплуатирована в контексте Grafana."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855"
+      },
+      "timestamp": "2026-09-18T12:55:26.508485Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-56855 (GO-2026-6355) — отказ в обслуживании на установленном канале SSH: вредоносный пир мог отправить сообщения, приводящие к взаимной блокировке соединения. По данным Go vulnerability database уязвимость локализована исключительно в пакете golang.org/x/crypto/ssh (символы Dial, NewClientConn, NewControlClientConn, NewServerConn, channel.handlePacket) и исправлена в golang.org/x/crypto v0.56.0. Поднять x/crypto до v0.56.0 в этом образе нельзя: v0.56.0 объявляет go 1.26.0, а сборочный образ builder/golang-alpine, зафиксированный в candi/base_images.yml, даёт Go 1.25.13 — образ перестал бы собираться. Патч 006-fix-cve-bump.patch поднимает x/crypto до максимально совместимой версии v0.55.0, закрывающей все остальные находки по этой библиотеке. Сам уязвимый пакет в образ не входит. Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов): grep -xE 'golang.org/x/crypto/(ssh|openpgp)' не даёт совпадений, тогда как 23 других подпакета golang.org/x/crypto (bcrypt, blowfish, argon2, blake2b, cast5, chacha20, chacha20poly1305, cryptobyte, hkdf, md4, pbkdf2, pkcs12, salsa20, scrypt, sha3 и их внутренние зависимости) в списке присутствуют — положительный контроль, подтверждающий работоспособность проверки. В графе есть пакет golang.org/x/crypto/ssh/terminal, но это самостоятельный пакет-обёртка: go list -deps golang.org/x/crypto/ssh/terminal показывает, что из внешних зависимостей он тянет только golang.org/x/term и golang.org/x/sys/unix и не импортирует golang.org/x/crypto/ssh. Именно поэтому проверка сделана по точному имени пакета, а не по префиксу. Grafana не является ни SSH-клиентом, ни SSH-сервером. Символьная проверка собранного бинарного файла подтверждает то же самое: go tool nm по /usr/share/grafana/bin/grafana (315888 символов) даёт 0 символов golang.org/x/crypto/openpgp и 0 символов с префиксом 'golang.org/x/crypto/ssh.'; все три найденных символа с подстрокой 'golang.org/x/crypto/ssh' принадлежат пакету-обёртке ssh/terminal (ssh/terminal..inittask, ssh/terminal.GetSize, ssh/terminal.init), при 30 символах golang.org/x/crypto/bcrypt как положительном контроле. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Grafana."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662"
+      },
+      "timestamp": "2026-09-18T12:55:26.549014Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-78662 (GO-2026-6354) — отказ в обслуживании на ещё не установленном канале SSH: вредоносный пир мог переполнить очередь incomingRequests канала и заблокировать соединение. По данным Go vulnerability database уязвимость локализована исключительно в пакете golang.org/x/crypto/ssh (символы Dial, NewClientConn, NewControlClientConn, NewServerConn, channel.Accept, channel.handlePacket, channel.responseMessageReceived) и исправлена в golang.org/x/crypto v0.56.0. Поднять x/crypto до v0.56.0 в этом образе нельзя: v0.56.0 объявляет go 1.26.0, а сборочный образ builder/golang-alpine, зафиксированный в candi/base_images.yml, даёт Go 1.25.13. Патч 006-fix-cve-bump.patch поднимает x/crypto до v0.55.0. Сам уязвимый пакет в образ не входит. Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов): grep -xE 'golang.org/x/crypto/(ssh|openpgp)' не даёт совпадений, тогда как 23 других подпакета golang.org/x/crypto (bcrypt, blowfish, argon2, blake2b, cast5, chacha20, chacha20poly1305, cryptobyte, hkdf, md4, pbkdf2, pkcs12, salsa20, scrypt, sha3 и их внутренние зависимости) в списке присутствуют — положительный контроль, подтверждающий работоспособность проверки. В графе есть пакет golang.org/x/crypto/ssh/terminal, но это самостоятельный пакет-обёртка: go list -deps golang.org/x/crypto/ssh/terminal показывает, что из внешних зависимостей он тянет только golang.org/x/term и golang.org/x/sys/unix и не импортирует golang.org/x/crypto/ssh. Именно поэтому проверка сделана по точному имени пакета, а не по префиксу. Grafana не является ни SSH-клиентом, ни SSH-сервером. Символьная проверка собранного бинарного файла подтверждает то же самое: go tool nm по /usr/share/grafana/bin/grafana (315888 символов) даёт 0 символов golang.org/x/crypto/openpgp и 0 символов с префиксом 'golang.org/x/crypto/ssh.'; все три найденных символа с подстрокой 'golang.org/x/crypto/ssh' принадлежат пакету-обёртке ssh/terminal (ssh/terminal..inittask, ssh/terminal.GetSize, ssh/terminal.init), при 30 символах golang.org/x/crypto/bcrypt как положительном контроле. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Grafana."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "timestamp": "2026-09-18T12:55:26.594243Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-40179 (GHSA-vffh-x6r8-xx99, GO-2026-5662, CWE-79) — stored XSS в веб-интерфейсе Prometheus: имена метрик и значения меток подставляются в innerHTML без экранирования в tooltip'ах графиков и в metrics explorer (Mantine UI и старый React UI). Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов) показывает, что из github.com/prometheus/prometheus в бинарный файл компилируются 37 пакетов — исключительно библиотечные: prompb и prompb/io/prometheus/client, model/*, promql и promql/parser, storage, tsdb/*, config, discovery, template и util/*. Ни одного пакета github.com/prometheus/prometheus/web в графе нет (0 совпадений по префиксу), то есть весь HTTP-слой сервера Prometheus, включая веб-интерфейс и API-хендлеры, в образ не попадает. Сам бинарный файл /usr/share/grafana/bin/grafana не запускает Prometheus-сервер и не обслуживает его endpoint'ы. Обновление недоступно: версия зафиксирована директивой replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v0.49.0 в go.mod Grafana 10.4, а исправленные версии (0.311.3 и новее) несовместимы с API, на которое опирается Grafana этой ветки. Grafana рендерит метрики собственным фронтендом, поэтому уязвимый код в образе отсутствует."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-44903"
+      },
+      "timestamp": "2026-09-18T12:55:26.639337Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-44903 (GHSA-fw8g-cg8f-9j28, GO-2026-5381, CWE-79) — stored XSS в legacy веб-интерфейсе Prometheus при отрисовке heatmap: значения меток le не экранируются при вставке в HTML в качестве подписей осей; путь активируется только флагом --enable-feature=old-ui. Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов) показывает, что из github.com/prometheus/prometheus в бинарный файл компилируются 37 пакетов — исключительно библиотечные: prompb и prompb/io/prometheus/client, model/*, promql и promql/parser, storage, tsdb/*, config, discovery, template и util/*. Ни одного пакета github.com/prometheus/prometheus/web в графе нет (0 совпадений по префиксу), то есть весь HTTP-слой сервера Prometheus, включая веб-интерфейс и API-хендлеры, в образ не попадает. Сам бинарный файл /usr/share/grafana/bin/grafana не запускает Prometheus-сервер и не обслуживает его endpoint'ы. Обновление недоступно: версия зафиксирована директивой replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v0.49.0 в go.mod Grafana 10.4, а исправленные версии (0.311.3 и новее) несовместимы с API, на которое опирается Grafana этой ветки. Флага --enable-feature=old-ui в образе нет, legacy web UI Prometheus не открывается."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42151"
+      },
+      "timestamp": "2026-09-18T12:55:26.684686Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42151 (GHSA-wg65-39gg-5wfj, GO-2026-5710, CWE-200) — поле client_secret в конфигурации Azure AD remote write (storage/remote/azuread) объявлено как string вместо Secret, из-за чего сервер Prometheus отдавал Azure OAuth client secret в открытом виде через HTTP-endpoint /-/config. Пакет github.com/prometheus/prometheus/storage/remote/azuread действительно попадает в граф импортов как транзитивная зависимость пакета config (Grafana использует его типы при разборе конфигурации), однако утечка происходит в HTTP-обработчике /-/config, который живёт в пакете github.com/prometheus/prometheus/web. Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов) показывает, что из github.com/prometheus/prometheus в бинарный файл компилируются 37 пакетов — исключительно библиотечные: prompb и prompb/io/prometheus/client, model/*, promql и promql/parser, storage, tsdb/*, config, discovery, template и util/*. Ни одного пакета github.com/prometheus/prometheus/web в графе нет (0 совпадений по префиксу), то есть весь HTTP-слой сервера Prometheus, включая веб-интерфейс и API-хендлеры, в образ не попадает. Сам бинарный файл /usr/share/grafana/bin/grafana не запускает Prometheus-сервер и не обслуживает его endpoint'ы. Обновление недоступно: версия зафиксирована директивой replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v0.49.0 в go.mod Grafana 10.4, а исправленные версии (0.311.3 и новее) несовместимы с API, на которое опирается Grafana этой ветки. Grafana не имеет конфигурации remote_write azuread и не экспонирует endpoint /-/config, поэтому уязвимый исполняемый путь не активируется."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42154"
+      },
+      "timestamp": "2026-09-18T12:55:26.731341Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42154 (GHSA-8rm2-7qqf-34qm, GO-2026-5264, CWE-400) относится к endpoint удалённого чтения /api/v1/read сервера Prometheus: объявленная длина snappy-payload не проверяется перед выделением памяти, и небольшой запрос вызывает огромную аллокацию в куче, что при параллельной нагрузке приводит к отказу в обслуживании. Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов) показывает, что из github.com/prometheus/prometheus в бинарный файл компилируются 37 пакетов — исключительно библиотечные: prompb и prompb/io/prometheus/client, model/*, promql и promql/parser, storage, tsdb/*, config, discovery, template и util/*. Ни одного пакета github.com/prometheus/prometheus/web в графе нет (0 совпадений по префиксу), то есть весь HTTP-слой сервера Prometheus, включая веб-интерфейс и API-хендлеры, в образ не попадает. Сам бинарный файл /usr/share/grafana/bin/grafana не запускает Prometheus-сервер и не обслуживает его endpoint'ы. Обновление недоступно: версия зафиксирована директивой replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v0.49.0 в go.mod Grafana 10.4, а исправленные версии (0.311.3 и новее) несовместимы с API, на которое опирается Grafana этой ветки. Обработчик /api/v1/read живёт в пакете github.com/prometheus/prometheus/web/api/v1, которого в графе нет, поэтому уязвимый исполняемый путь не активируется."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-21728"
+      },
+      "timestamp": "2026-09-18T12:55:26.777690Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/grafana/tempo@v1.5.1-0.20230524121406-1dc1bfe7085b"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-21728 (GHSA-p4r4-xvrq-gvmc, GO-2026-5528) — неконтролируемое потребление ресурсов в Grafana Tempo: запрос с большим значением limit вызывает массивную аллокацию памяти и может привести к отказу в обслуживании сервиса; штатная мера — настройка max_result_limit в search config сервера Tempo. Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов) показывает, что из github.com/grafana/tempo компилируются ровно пять пакетов, и все они — сгенерированные protobuf/gRPC-типы: github.com/grafana/tempo/pkg/tempopb, .../tempopb/pool, .../tempopb/common/v1, .../tempopb/resource/v1 и .../tempopb/trace/v1. Пакеты, в которых живёт уязвимый код, в замыкание не попадают вовсе: github.com/grafana/tempo/pkg/traceql, github.com/grafana/tempo/tempodb и github.com/grafana/tempo/modules/* (querier, ingester, distributor) дают 0 совпадений в выводе go list -deps. Роль Grafana здесь исключительно клиентская: единственное использование зависимости в исходниках — pkg/tsdb/tempo/grpc.go:52, где создаётся gRPC-клиент tempopb.NewStreamingQuerierClient(clientConn) для похода во внешний сервер Tempo; серверных регистраций (RegisterStreamingQuerierServer и подобных) в исходниках Grafana нет ни одной. Бинарный файл /usr/share/grafana/bin/grafana не запускает сервер Tempo и не инициализирует его HTTP/gRPC-обработчики. Обновление на исправленную версию неприменимо: фикс-версия — псевдоверсия v1.5.1-0.20260303204923-b13f74291d48, скачок почти на три года от запиненной v1.5.1-0.20230524121406-1dc1bfe7085b, который тянет за собой весь Kubernetes-стек (k8s.io/apimachinery v0.29.0 -> v0.35.1, k8s.io/client-go -> v0.34.1, sigs.k8s.io/structured-merge-diff v4 -> v6), тогда как Grafana 10.4 прибита к k8s.io/apiserver v0.29.0 и k8s.io/kube-aggregator v0.29.0."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27878"
+      },
+      "timestamp": "2026-09-18T12:55:26.824092Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/grafana/tempo@v1.5.1-0.20230524121406-1dc1bfe7085b"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-27878 (GHSA-6xff-cpcq-vpw2, GO-2026-6325) относится к серверной обработке TraceQL-запросов в Grafana Tempo: запрос с большим значением подсказки exemplars заставляет инстанс Tempo выделить чрезмерный объём памяти и приводит к аварийному завершению по OOM. Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов) показывает, что из github.com/grafana/tempo компилируются ровно пять пакетов, и все они — сгенерированные protobuf/gRPC-типы: github.com/grafana/tempo/pkg/tempopb, .../tempopb/pool, .../tempopb/common/v1, .../tempopb/resource/v1 и .../tempopb/trace/v1. Пакеты, в которых живёт уязвимый код, в замыкание не попадают вовсе: github.com/grafana/tempo/pkg/traceql, github.com/grafana/tempo/tempodb и github.com/grafana/tempo/modules/* (querier, ingester, distributor) дают 0 совпадений в выводе go list -deps. Роль Grafana здесь исключительно клиентская: единственное использование зависимости в исходниках — pkg/tsdb/tempo/grpc.go:52, где создаётся gRPC-клиент tempopb.NewStreamingQuerierClient(clientConn) для похода во внешний сервер Tempo; серверных регистраций (RegisterStreamingQuerierServer и подобных) в исходниках Grafana нет ни одной. Бинарный файл /usr/share/grafana/bin/grafana не запускает сервер Tempo и не инициализирует его HTTP/gRPC-обработчики. Обновление на исправленную версию неприменимо: фикс-версия — псевдоверсия v1.5.1-0.20260303204923-b13f74291d48, скачок почти на три года от запиненной v1.5.1-0.20230524121406-1dc1bfe7085b, который тянет за собой весь Kubernetes-стек (k8s.io/apimachinery v0.29.0 -> v0.35.1, k8s.io/client-go -> v0.34.1, sigs.k8s.io/structured-merge-diff v4 -> v6), тогда как Grafana 10.4 прибита к k8s.io/apiserver v0.29.0 и k8s.io/kube-aggregator v0.29.0."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-28377"
+      },
+      "timestamp": "2026-09-18T12:55:26.869092Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/grafana/tempo@v1.5.1-0.20230524121406-1dc1bfe7085b"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-28377 (GHSA-ffqx-q65f-36jf, GO-2026-5359) — сервер Grafana Tempo выдаёт ключ шифрования S3 SSE-C в открытом виде через endpoint /status/config. Проверка графа импортов на дереве grafana v10.4.19 с применёнными патчами 001, 003, 004, 005, 006, 007 (CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go list -deps -tags oss ./pkg/cmd/grafana, 3237 пакетов) показывает, что из github.com/grafana/tempo компилируются ровно пять пакетов, и все они — сгенерированные protobuf/gRPC-типы: github.com/grafana/tempo/pkg/tempopb, .../tempopb/pool, .../tempopb/common/v1, .../tempopb/resource/v1 и .../tempopb/trace/v1. Пакеты, в которых живёт уязвимый код, в замыкание не попадают вовсе: github.com/grafana/tempo/pkg/traceql, github.com/grafana/tempo/tempodb и github.com/grafana/tempo/modules/* (querier, ingester, distributor) дают 0 совпадений в выводе go list -deps. Роль Grafana здесь исключительно клиентская: единственное использование зависимости в исходниках — pkg/tsdb/tempo/grpc.go:52, где создаётся gRPC-клиент tempopb.NewStreamingQuerierClient(clientConn) для похода во внешний сервер Tempo; серверных регистраций (RegisterStreamingQuerierServer и подобных) в исходниках Grafana нет ни одной. Бинарный файл /usr/share/grafana/bin/grafana не запускает сервер Tempo и не инициализирует его HTTP/gRPC-обработчики. Обновление на исправленную версию неприменимо: фикс-версия — псевдоверсия v1.5.1-0.20260303204923-b13f74291d48, скачок почти на три года от запиненной v1.5.1-0.20230524121406-1dc1bfe7085b, который тянет за собой весь Kubernetes-стек (k8s.io/apimachinery v0.29.0 -> v0.35.1, k8s.io/client-go -> v0.34.1, sigs.k8s.io/structured-merge-diff v4 -> v6), тогда как Grafana 10.4 прибита к k8s.io/apiserver v0.29.0 и k8s.io/kube-aggregator v0.29.0. Образ не настраивает S3 SSE-C backend и не экспонирует endpoint /status/config."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27877"
+      },
+      "timestamp": "2026-09-18T12:55:26.914050Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/grafana/grafana@10.4.19"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Уязвимость CVE-2026-27877 (GHSA-3q27-7qjq-p9c5, GO-2026-5095, CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N) состоит в том, что при одновременном использовании public dashboards и data-source'ов в режиме прямого доступа (access: direct) пароли всех direct-data-source'ов раскрываются в публичной выдаче, даже если в самом дашборде они не используются. В тексте advisory прямо сказано, что пароли проксируемых data-source'ов (access: proxy) не раскрываются. В Deckhouse-сборке все провижионируемые data-source'ы заданы исключительно в режиме access: proxy — modules/300-prometheus/templates/grafana/secret-datasources-list.yaml содержит пять записей (main, main-old, longterm, main-uncached и производные) и во всех пяти стоит 'access: proxy'; ни одного 'access: direct' в шаблонах модуля нет. Все запросы к Prometheus/Trickster идут через grafana-server и аутентифицируются bearer-токеном из секрета. Поэтому в поставляемой конфигурации раскрывать нечего: множество direct-data-source'ов пусто, даже несмотря на то, что в Grafana 10.4.19 public dashboards включены по умолчанию (conf/defaults.ini, секция [public_dashboards], enabled = true). Режим access: direct доступен только если администратор кластера сам создаст ресурс GrafanaAdditionalDatasource с access: direct (значение разрешено enum'ом в crds/grafanaadditionaldatasources.yaml) — это осознанное действие оператора вне поставляемой конфигурации. Обновление недоступно: по данным OSV у ветки, к которой относится 10.4.19, исправленной версии нет вообще (диапазон 'introduced 9.3.0' без fixed), единственная фикс-версия — псевдоверсия ветки main v1.9.2-0.20260325055210-3522153e07b4, соответствующая Grafana 12.x; версия образа зафиксирована в werf.inc.yaml как 10.4.19 вместе с согласованными по тегу grafana-deps.git и grafana-plugins.git."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-68470"
+      },
+      "timestamp": "2026-09-18T12:55:26.959062Z",
+      "products": [
+        {
+          "@id": "pkg:npm/react-router@6.21.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2025-68470 в react-router позволяет через заголовок запроса повлиять на pre-render данные и внедрить контент в ответ SSR. Все перечисленные сценарии требуют, чтобы приложение действительно использовало маршрутизатор react-router 6.x. Плагин Tempo приезжает в образ уже собранным из grafana-deps.git в каталоге /usr/share/grafana/public и сам по себе react-router не использует: по 103 файлам .ts/.tsx каталога public/app/plugins/datasource/tempo дерева grafana v10.4.19 строка 'react-router' встречается ровно один раз — в public/app/plugins/datasource/tempo/package.json (строка 33), и ни в одном исходном файле не импортируется; вызовов useNavigate, useHistory, <Link>, redirect() и BrowserRouter в плагине нет вообще. Само ядро Grafana маршрутизируется на react-router 5.3.3 (package.json, строки 376-377), то есть на другой ветке библиотеки, которой находка не касается. Пакет react-router 6.21.3 попадает в образ только как запись в node_modules плагина и в исполняемый код фронтенда не входит. Обновление зависимости из этого репозитория невозможно: каталог public целиком приезжает готовым артефактом из grafana-deps.git по тегу v10.4.19 и в монорепозитории не пересобирается. Таким образом, уязвимый код не находится на исполняемом пути образа."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-53669"
+      },
+      "timestamp": "2026-09-18T12:55:27.003987Z",
+      "products": [
+        {
+          "@id": "pkg:npm/react-router@6.21.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-53669 — прямое продолжение CVE-2025-68470 в react-router: обход исправления, приводящий к тому же внедрению контента при серверном рендеринге. Все перечисленные сценарии требуют, чтобы приложение действительно использовало маршрутизатор react-router 6.x. Плагин Tempo приезжает в образ уже собранным из grafana-deps.git в каталоге /usr/share/grafana/public и сам по себе react-router не использует: по 103 файлам .ts/.tsx каталога public/app/plugins/datasource/tempo дерева grafana v10.4.19 строка 'react-router' встречается ровно один раз — в public/app/plugins/datasource/tempo/package.json (строка 33), и ни в одном исходном файле не импортируется; вызовов useNavigate, useHistory, <Link>, redirect() и BrowserRouter в плагине нет вообще. Само ядро Grafana маршрутизируется на react-router 5.3.3 (package.json, строки 376-377), то есть на другой ветке библиотеки, которой находка не касается. Пакет react-router 6.21.3 попадает в образ только как запись в node_modules плагина и в исполняемый код фронтенда не входит. Обновление зависимости из этого репозитория невозможно: каталог public целиком приезжает готовым артефактом из grafana-deps.git по тегу v10.4.19 и в монорепозитории не пересобирается. Таким образом, уязвимый код не находится на исполняемом пути образа."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-53666"
+      },
+      "timestamp": "2026-09-18T12:55:27.046501Z",
+      "products": [
+        {
+          "@id": "pkg:npm/react-router@6.21.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-53666 в react-router относится к обработке маршрутов при серверном рендеринге и приводит к раскрытию/подмене данных ответа. Все перечисленные сценарии требуют, чтобы приложение действительно использовало маршрутизатор react-router 6.x. Плагин Tempo приезжает в образ уже собранным из grafana-deps.git в каталоге /usr/share/grafana/public и сам по себе react-router не использует: по 103 файлам .ts/.tsx каталога public/app/plugins/datasource/tempo дерева grafana v10.4.19 строка 'react-router' встречается ровно один раз — в public/app/plugins/datasource/tempo/package.json (строка 33), и ни в одном исходном файле не импортируется; вызовов useNavigate, useHistory, <Link>, redirect() и BrowserRouter в плагине нет вообще. Само ядро Grafana маршрутизируется на react-router 5.3.3 (package.json, строки 376-377), то есть на другой ветке библиотеки, которой находка не касается. Пакет react-router 6.21.3 попадает в образ только как запись в node_modules плагина и в исполняемый код фронтенда не входит. Обновление зависимости из этого репозитория невозможно: каталог public целиком приезжает готовым артефактом из grafana-deps.git по тегу v10.4.19 и в монорепозитории не пересобирается. Таким образом, уязвимый код не находится на исполняемом пути образа."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40181"
+      },
+      "timestamp": "2026-09-18T12:55:27.087287Z",
+      "products": [
+        {
+          "@id": "pkg:npm/react-router@6.21.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-40181 в react-router относится к обработке данных маршрутизации и позволяет повлиять на формируемый ответ. Все перечисленные сценарии требуют, чтобы приложение действительно использовало маршрутизатор react-router 6.x. Плагин Tempo приезжает в образ уже собранным из grafana-deps.git в каталоге /usr/share/grafana/public и сам по себе react-router не использует: по 103 файлам .ts/.tsx каталога public/app/plugins/datasource/tempo дерева grafana v10.4.19 строка 'react-router' встречается ровно один раз — в public/app/plugins/datasource/tempo/package.json (строка 33), и ни в одном исходном файле не импортируется; вызовов useNavigate, useHistory, <Link>, redirect() и BrowserRouter в плагине нет вообще. Само ядро Grafana маршрутизируется на react-router 5.3.3 (package.json, строки 376-377), то есть на другой ветке библиотеки, которой находка не касается. Пакет react-router 6.21.3 попадает в образ только как запись в node_modules плагина и в исполняемый код фронтенда не входит. Обновление зависимости из этого репозитория невозможно: каталог public целиком приезжает готовым артефактом из grafana-deps.git по тегу v10.4.19 и в монорепозитории не пересобирается. Таким образом, уязвимый код не находится на исполняемом пути образа."
     }
   ]
 }

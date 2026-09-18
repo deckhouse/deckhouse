@@ -1,4 +1,4 @@
-{{- $version := "1.11.1" }}
+{{- $version := "1.11.3" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -62,4 +62,5 @@ imageSpec:
     entrypoint: ["/bin/pushgateway"]
     expose: ["9091"]
     workingDir: "/pushgateway"
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
 

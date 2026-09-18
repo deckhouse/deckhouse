@@ -1,0 +1,54 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-5f68fa66eb7d94ced7960d9c7852fe32de60e979f2445ee7fda825c66baab199",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-09-18T00:00:00.000000+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "description": "golang.org/x/crypto/openpgp: пакет не поддерживается и небезопасен по архитектуре"
+      },
+      "timestamp": "2026-09-18T00:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 не описывает конкретную уязвимую функцию, а помечает пакет golang.org/x/crypto/openpgp (и его субпакеты packet, armor, clearsign, elgamal, errors, s2k) как неподдерживаемый и небезопасный по архитектуре; апстрим рекомендует переход на github.com/ProtonMail/go-crypto/openpgp, фикс-версии в golang.org/x/crypto не существует (fix_available=False). node_exporter (/bin/node_exporter) не реализует и не использует функциональность OpenPGP. Проверено на чистом дереве node_exporter v1.9.1 с применённым patches/001-go-mod.patch (golang.org/x/crypto v0.55.0). `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./...` даёт 370 пакетов, из которых к golang.org/x/crypto относятся только golang.org/x/crypto/bcrypt, golang.org/x/crypto/blowfish и golang.org/x/crypto/pbkdf2; сверка точным именем `go list -deps ./... | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт ни одной строки (exit 1). Что список полон и grep рабочий, подтверждает положительный контроль: тот же grep по '^golang\\.org/x/crypto' находит bcrypt, blowfish и pbkdf2. `go tool nm` на несжатом (без -s -w) бинарнике node_exporter: 0 символов golang.org/x/crypto/ssh. и 0 символов golang.org/x/crypto/openpgp при 114 символах golang.org/x/crypto всего, из них 23 — golang.org/x/crypto/bcrypt. (контроль). `go mod why -m golang.org/x/crypto` даёт цепочку github.com/prometheus/node_exporter -> github.com/prometheus/exporter-toolkit/web -> golang.org/x/crypto/bcrypt, то есть x/crypto нужен только для bcrypt-хеширования пароля basic-auth в exporter-toolkit. `go mod why golang.org/x/crypto/ssh` и `go mod why golang.org/x/crypto/openpgp` отвечают \"main module does not need package\". Уязвимый код не компилируется в исполняемый путь и не может быть эксплуатирован."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: DoS из-за взаимоблокировки установленного канала"
+      },
+      "timestamp": "2026-09-18T00:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-56855 (GO-2026-6355) — DoS на установленном канале SSH: уязвимые символы объявлены исключительно в пакете golang.org/x/crypto/ssh (Dial, NewClientConn, NewControlClientConn, NewServerConn, channel.handlePacket). Исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine с Go 1.25 (candi/base_images.yml), поэтому подъём до v0.56.0 в этой ветке невозможен; зафиксирована максимально возможная v0.55.0. node_exporter (/bin/node_exporter) не использует SSH ни как клиент, ни как сервер. Проверено на чистом дереве node_exporter v1.9.1 с применённым patches/001-go-mod.patch (golang.org/x/crypto v0.55.0). `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./...` даёт 370 пакетов, из которых к golang.org/x/crypto относятся только golang.org/x/crypto/bcrypt, golang.org/x/crypto/blowfish и golang.org/x/crypto/pbkdf2; сверка точным именем `go list -deps ./... | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт ни одной строки (exit 1). Что список полон и grep рабочий, подтверждает положительный контроль: тот же grep по '^golang\\.org/x/crypto' находит bcrypt, blowfish и pbkdf2. `go tool nm` на несжатом (без -s -w) бинарнике node_exporter: 0 символов golang.org/x/crypto/ssh. и 0 символов golang.org/x/crypto/openpgp при 114 символах golang.org/x/crypto всего, из них 23 — golang.org/x/crypto/bcrypt. (контроль). `go mod why -m golang.org/x/crypto` даёт цепочку github.com/prometheus/node_exporter -> github.com/prometheus/exporter-toolkit/web -> golang.org/x/crypto/bcrypt, то есть x/crypto нужен только для bcrypt-хеширования пароля basic-auth в exporter-toolkit. `go mod why golang.org/x/crypto/ssh` и `go mod why golang.org/x/crypto/openpgp` отвечают \"main module does not need package\". Уязвимый код не компилируется в исполняемый путь и не может быть эксплуатирован."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: DoS из-за взаимоблокировки неопределившегося канала"
+      },
+      "timestamp": "2026-09-18T00:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-78662 (GO-2026-6354) — DoS на неопределившемся канале SSH: уязвимые символы объявлены исключительно в пакете golang.org/x/crypto/ssh (Dial, NewClientConn, NewControlClientConn, NewServerConn, channel.Accept, channel.handlePacket, channel.responseMessageReceived). Исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine с Go 1.25 (candi/base_images.yml), поэтому подъём до v0.56.0 в этой ветке невозможен; зафиксирована максимально возможная v0.55.0. node_exporter (/bin/node_exporter) не использует SSH ни как клиент, ни как сервер. Проверено на чистом дереве node_exporter v1.9.1 с применённым patches/001-go-mod.patch (golang.org/x/crypto v0.55.0). `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -deps ./...` даёт 370 пакетов, из которых к golang.org/x/crypto относятся только golang.org/x/crypto/bcrypt, golang.org/x/crypto/blowfish и golang.org/x/crypto/pbkdf2; сверка точным именем `go list -deps ./... | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт ни одной строки (exit 1). Что список полон и grep рабочий, подтверждает положительный контроль: тот же grep по '^golang\\.org/x/crypto' находит bcrypt, blowfish и pbkdf2. `go tool nm` на несжатом (без -s -w) бинарнике node_exporter: 0 символов golang.org/x/crypto/ssh. и 0 символов golang.org/x/crypto/openpgp при 114 символах golang.org/x/crypto всего, из них 23 — golang.org/x/crypto/bcrypt. (контроль). `go mod why -m golang.org/x/crypto` даёт цепочку github.com/prometheus/node_exporter -> github.com/prometheus/exporter-toolkit/web -> golang.org/x/crypto/bcrypt, то есть x/crypto нужен только для bcrypt-хеширования пароля basic-auth в exporter-toolkit. `go mod why golang.org/x/crypto/ssh` и `go mod why golang.org/x/crypto/openpgp` отвечают \"main module does not need package\". Уязвимый код не компилируется в исполняемый путь и не может быть эксплуатирован."
+    }
+  ]
+}

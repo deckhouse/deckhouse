@@ -1,0 +1,69 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-upmeter-image-upmeter",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-09-18T11:48:25.424689Z",
+  "version": 4,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42154",
+        "description": "Prometheus: DoS через неконтролируемое выделение памяти в обработчике remote read"
+      },
+      "timestamp": "2026-09-18T11:48:25.287625Z",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v2.5.0+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость находится в обработчике remote read HTTP-эндпоинта Prometheus (/api/v1/read): заявленная длина распакованных данных snappy-сжатого тела запроса не проверяется перед выделением памяти. Уязвимый код живёт в пакетах github.com/prometheus/prometheus/web/api/v1 и github.com/prometheus/prometheus/storage/remote. upmeter не является сервером Prometheus и эндпоинта /api/v1/read не отдаёт. Зависимость нужна ему только ради сгенерированных protobuf-типов remote-write из github.com/prometheus/prometheus/prompb (WriteRequest, TimeSeries, Label, Sample), которые использует pkg/server/remotewrite для отправки статистики эпизодов во внешний remote-write приёмник: `go mod why -m github.com/prometheus/prometheus` даёт цепочку d8.io/upmeter/pkg/server/remotewrite -> github.com/prometheus/prometheus/prompb. Проверка замыкания: `GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go list -deps ./cmd/upmeter | grep \"^github.com/prometheus/prometheus\"` возвращает ровно одну строку — prompb; ни web/api/v1, ни storage/remote в замыкание не входят. То же по символам собранного бинарника: `go tool nm upmeter | grep -E \"prometheus/(storage/remote|web/api)\"` — пусто, при том что символы пакета prompb присутствуют. Уязвимый код физически отсутствует в бинарнике и не может быть исполнен. Обновление не является бампом версии: исправленные версии (0.305.2, 0.311.3) лежат на линии модуля v0.3xx, где в prompb поле TimeSeries.Labels сменило тип с []*Label на []Label, то есть переход требует переписывания pkg/server/remotewrite и при этом не закрывает ни одного реально присутствующего в бинарнике пути кода. Продукт привязан к текущей собираемой версии, чтобы statement перестал действовать, если зависимость когда-нибудь переведут на линию v0.3xx."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "description": "golang.org/x/crypto/openpgp не поддерживается и небезопасен по конструкции"
+      },
+      "timestamp": "2026-09-18T11:48:25.334751Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 является общим предупреждением о том, что пакет golang.org/x/crypto/openpgp не поддерживается и небезопасен по своей конструкции, а не уязвимостью с конкретным вектором эксплуатации; исправленной версии не существует, поэтому обновление зависимости проблему не закрывает. В бинарник /upmeter из golang.org/x/crypto попадает ровно один пакет — ssh/terminal, тонкая обёртка над golang.org/x/term: `GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go list -deps ./cmd/upmeter | grep \"^golang.org/x/crypto\"` возвращает единственную строку golang.org/x/crypto/ssh/terminal. Зависимость приходит транзитивно: `go mod why -m golang.org/x/crypto` даёт цепочку d8.io/upmeter/pkg/kubernetes -> github.com/flant/kube-client/client -> k8s.io/client-go/tools/clientcmd -> golang.org/x/crypto/ssh/terminal. Пакет openpgp и его подпакеты не импортируются ни прямо, ни транзитивно, и в символах бинарника отсутствуют: `go tool nm upmeter | grep -i openpgp` — пусто. Уязвимый код физически не попадает в собранный бинарник и не может быть исполнен."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: отказ в обслуживании на заблокированном канале SSH"
+      },
+      "timestamp": "2026-09-18T11:48:25.380865Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/crypto/ssh (взаимная блокировка на установленном или неопределившемся канале, приводящая к отказу в обслуживании). upmeter не является SSH-сервером или клиентом. Из golang.org/x/crypto в бинарник попадает единственный пакет ssh/terminal — тонкая обёртка над golang.org/x/term, не имеющая отношения к реализации протокола SSH: `GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go list -deps ./cmd/upmeter | grep \"^golang.org/x/crypto\"` возвращает только golang.org/x/crypto/ssh/terminal, а `go list -deps ./cmd/upmeter | grep -x golang.org/x/crypto/ssh` — пусто. Имя пакета сверено точно, а не по префиксу. По символам собранного бинарника: `go tool nm upmeter | grep -E 'golang\\.org/x/crypto/ssh\\.'` — ни одного символа самого пакета ssh, при этом присутствуют 3 символа ssh/terminal. Зависимость приходит транзитивно: `go mod why -m golang.org/x/crypto` даёт цепочку d8.io/upmeter/pkg/kubernetes -> github.com/flant/kube-client/client -> k8s.io/client-go/tools/clientcmd -> golang.org/x/crypto/ssh/terminal. Бамп до исправленной версии невозможен на этой ветке: исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine, дающим Go 1.25 (в candi/base_images.yml ключи builder/golang-alpine и builder/golang-alpine-1.25 имеют один digest, ключей 1.26 в файле нет). Компонент поднят до максимально совместимой версии v0.55.0."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: отказ в обслуживании на заблокированном канале SSH"
+      },
+      "timestamp": "2026-09-18T11:48:25.424689Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/crypto/ssh (взаимная блокировка на установленном или неопределившемся канале, приводящая к отказу в обслуживании). upmeter не является SSH-сервером или клиентом. Из golang.org/x/crypto в бинарник попадает единственный пакет ssh/terminal — тонкая обёртка над golang.org/x/term, не имеющая отношения к реализации протокола SSH: `GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go list -deps ./cmd/upmeter | grep \"^golang.org/x/crypto\"` возвращает только golang.org/x/crypto/ssh/terminal, а `go list -deps ./cmd/upmeter | grep -x golang.org/x/crypto/ssh` — пусто. Имя пакета сверено точно, а не по префиксу. По символам собранного бинарника: `go tool nm upmeter | grep -E 'golang\\.org/x/crypto/ssh\\.'` — ни одного символа самого пакета ssh, при этом присутствуют 3 символа ssh/terminal. Зависимость приходит транзитивно: `go mod why -m golang.org/x/crypto` даёт цепочку d8.io/upmeter/pkg/kubernetes -> github.com/flant/kube-client/client -> k8s.io/client-go/tools/clientcmd -> golang.org/x/crypto/ssh/terminal. Бамп до исправленной версии невозможен на этой ветке: исправление доступно только в golang.org/x/crypto v0.56.0, которая объявляет `go 1.26.0`, а образ собирается билдером builder/golang-alpine, дающим Go 1.25 (в candi/base_images.yml ключи builder/golang-alpine и builder/golang-alpine-1.25 имеют один digest, ключей 1.26 в файле нет). Компонент поднят до максимально совместимой версии v0.55.0."
+    }
+  ]
+}
