@@ -644,7 +644,7 @@ You can read more about the available options in the [gatekeeper](https://open-p
 
 ## Availability of the module components
 
-The module is on the critical path of the cluster: while its admission webhook is unavailable, the API server rejects the requests the webhook intercepts. This section explains what depends on each component, why only the pods of the webhook are excluded from validation, and which alerts report an outage.
+The module is on the critical path of the cluster: while its admission webhook is unavailable, the API server rejects the requests the webhook intercepts. This section explains what that costs the cluster and why only the pods of the webhook are excluded from validation.
 
 ### Why the admission webhook is a critical component
 
@@ -666,17 +666,3 @@ The mutating webhook is configured differently: its `failurePolicy` is `Ignore`,
 One exclusion in the webhook configuration covers the pods of `gatekeeper-controller-manager` and nothing else: every webhook excludes objects carrying the `gatekeeper.sh/operation: webhook` label through its `objectSelector`. The exclusion exists to break a circular dependency, not to relax the policies for the module.
 
 A webhook that validates the pods serving it cannot recover from its own outage. Once the last replica is gone, the API server has nowhere to deliver the request, so it rejects the creation of the replacement pod and the deployment can never return to a running replica on its own. The label, which Gatekeeper sets on its own pods, is the narrowest exclusion that breaks the cycle: the deployment can always create a pod, while every other object of the namespace is validated as usual.
-
-The pods of `gatekeeper-audit` carry `gatekeeper.sh/operation: audit` and are deliberately not excluded. Admission does not depend on the audit, so the audit is not on the recovery path and the exclusion would widen the hole without making anything recoverable. The trade-off is that while the webhook is unavailable, the audit deployment cannot create a pod either, and the audit returns only after the webhook does.
-
-The label is not a way around the policies. Three ValidatingAdmissionPolicies reject an object carrying `gatekeeper.sh/operation: webhook` unless the request comes from a service account of a `d8-*` or `kube-*` namespace, or from `system:sudouser`: `deny-gatekeeper-webhook-operation-label` for pods, `deny-gatekeeper-webhook-operation-label-controllers` for the controllers that create them, and `deny-gatekeeper-webhook-operation-label-controllers-cronjobs` for CronJob. A user who labels a pod to skip validation is denied before the webhook is consulted, while the ReplicaSet controller of the platform is not, which is what keeps the recovery path open. The same policies deny `kubectl rollout restart` of the deployment to anyone else, because a restart rewrites the pod template that carries the label.
-
-Gatekeeper is also started with `--exempt-namespace=d8-admission-policy-engine`, which admits the objects of the module's own namespace without evaluating them. That exemption is applied by Gatekeeper itself, so it holds only while Gatekeeper is running and does not help during an outage. Recovery relies on the label alone.
-
-### Monitoring of the components
-
-Three alerts report the availability of the components:
-
-- `D8AdmissionPolicyEngineWebhookUnavailable`, severity 1, fires when the webhook has no available replicas. Admission in the cluster is blocked while it is active.
-- `D8AdmissionPolicyEngineWebhookDegraded`, severity 3, fires when part of the replicas is unavailable. A rollout raises it for a short time.
-- `D8AdmissionPolicyEngineAuditUnavailable`, severity 4, fires when the audit deployment has no available replicas. Violations among the objects that already run are not collected, and the policy violation alerts stop reporting.
