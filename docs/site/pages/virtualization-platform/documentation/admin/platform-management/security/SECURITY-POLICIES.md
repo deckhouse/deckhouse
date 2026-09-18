@@ -87,15 +87,17 @@ A module exempts a workload of its own where it has to, with a SecurityPolicyExc
 OperationPolicy and SecurityPolicy resources reach system namespaces in `warn` mode as well.
 A policy with `enforcementAction: Deny` blocks workloads in application namespaces
 and only reports violations in a system namespace.
-A module may opt its own namespace into enforcement, and there a denying policy blocks workloads as it does in an application namespace.
+No label of the namespace changes that:
+a module that hardens its own namespace raises the Pod Security Standards there,
+which says nothing about a policy you wrote for application workloads.
 
-A denying policy that reaches system namespaces is rendered as several Gatekeeper constraints,
-which are visible in the audit and in Deckhouse Console:
+A denying policy that reaches system namespaces is therefore rendered as two Gatekeeper constraints,
+both visible in the audit and in Deckhouse Console:
 
-- `d8-system-default-<policy>`: For the system namespaces that no module opted into enforcement.
-- `d8-system-enforce-<policy>`: For the system namespaces that a module opted into enforcement.
+- The policy's own name: For application namespaces, with the action the policy asks for.
+- `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
 
-The `d8-system-default-`, `d8-system-enforce-`, `d8-system-excluded-` and `d8-pod-security-` prefixes are reserved:
+The `d8-system-default-`, `d8-system-excluded-` and `d8-pod-security-` prefixes are reserved:
 a policy whose name starts with one of them is rejected on creation.
 A policy name is limited to 234 characters for the same reason,
 so that the derived constraint names stay within the 253-character limit of a Kubernetes object name.

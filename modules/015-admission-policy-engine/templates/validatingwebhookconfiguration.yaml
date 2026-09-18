@@ -136,9 +136,10 @@ webhooks:
   The webhook above skips every namespace named `d8-*` or `kube-*`, so without this one Gatekeeper
   never sees their workloads. The constraints that match here run in warn mode only: Pod Security
   Standards through `d8-pod-security-<standard>-system`, and user policies through their
-  `d8-system-default-<name>` variant. Namespaces whose
-  `security.deckhouse.io/enable-security-policy-check` label is `true` are handled by
-  `system-namespaces-enforce` below instead.
+  `d8-system-default-<name>` variant. A namespace whose
+  `security.deckhouse.io/enable-security-policy-check` label is `true` is routed by
+  `system-namespaces-enforce` below instead, where the standards are enforced and the user
+  policies still only warn.
 
   `failurePolicy: Ignore` is deliberate and follows from warn-only: an unavailable Gatekeeper must
   never stop a system component from starting, which would otherwise deadlock cluster bootstrap and
@@ -187,12 +188,15 @@ webhooks:
   Webhook for system namespaces that opted into policy enforcement.
 
   A namespace whose `security.deckhouse.io/enable-security-policy-check` label is `true` is served
-  by the enforcing constraints instead of the warn-only ones: Pod Security Standards through
+  by the enforcing Pod Security Standards instead of the warn-only ones: through
   `d8-pod-security-<standard>-<action>-d8-default` for the module's own enforcement action and
-  `d8-pod-security-<standard>-<action>-d8` for any other, and user policies through their
-  `d8-system-enforce-<name>` variant.
+  `d8-pod-security-<standard>-<action>-d8` for any other.
   The label is matched by value, exactly as those constraints match it, so a namespace labeled with
   anything else keeps the warn-only treatment of the webhook above rather than falling between them.
+
+  Only the platform's own standards are raised here. A user policy keeps warning in every system
+  namespace, through the same `d8-system-default-<name>` variant the webhook above serves, which
+  carries no label selector and is therefore evaluated on this path as well.
 
   `failurePolicy: Ignore` holds here as well. Opting a system namespace into enforcement hardens it
   while Gatekeeper is available; it must not turn an unavailable Gatekeeper into a cluster that

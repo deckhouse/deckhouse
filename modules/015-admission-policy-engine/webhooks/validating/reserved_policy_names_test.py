@@ -28,7 +28,6 @@ class TestCheckReservedName(unittest.TestCase):
     def test_reserved_prefixes_are_denied(self):
         for name in [
             "d8-system-default-foo",
-            "d8-system-enforce-foo",
             "d8-system-excluded-foo",
             "d8-pod-security-baseline-deny-default",
         ]:

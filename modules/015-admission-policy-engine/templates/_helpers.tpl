@@ -15,6 +15,8 @@
   `d8ExcludedNamespaces` into the copy of match it hands over. They are not part of the CR API —
   they select the namespace lists rendered here, so that one user policy can enforce in user
   namespaces, follow the module constant in system ones, and never block an excluded namespace.
+  The scopes are `user`, `system-all` and `system-excluded`; a CR with no scope is rendered as it
+  was written.
 */}}
 {{- define "constraint_selector" }}
     {{- $cr := index . 0 }}
@@ -30,7 +32,7 @@
       {{/* The policy's own excludeNames stay in force: the operator's list widens what is spared
            from enforcement, it does not drag back a namespace the policy author ruled out. */}}
       {{- $namespaces = $match.d8ExcludedNamespaces }}
-    {{- else if or (eq $scope "system-default") (eq $scope "system-enforce") (eq $scope "system-all") }}
+    {{- else if eq $scope "system-all" }}
       {{- $namespaces = $match.d8SystemNamespaces }}
       {{- $excluded = concat $excluded ($match.d8ExcludedNamespaces | default list) | uniq }}
     {{- end }}
@@ -58,13 +60,11 @@
            did when that label was the whole definition of a system namespace. */}}
       {{- $scopeExpressions = list
             (dict "key" "heritage" "operator" "NotIn" "values" (list "deckhouse")) }}
-    {{- else if eq $scope "system-default" }}
-      {{- $scopeExpressions = list
-            (dict "key" "security.deckhouse.io/enable-security-policy-check" "operator" "NotIn" "values" (list "true")) }}
-    {{- else if eq $scope "system-enforce" }}
-      {{- $scopeExpressions = list
-            (dict "key" "security.deckhouse.io/enable-security-policy-check" "operator" "In" "values" (list "true")) }}
     {{- end }}
+    {{- /* A system-scoped constraint carries no label of its own. The opt-in label a module puts on
+           its namespace raises the Pod Security Standards there, and a user policy is not one of
+           them: the module declares the namespace compliant with the platform's standards, not with
+           a rule a cluster operator wrote for application workloads. */}}
     {{- if $scopeExpressions }}
       {{- $_ := set $labelSelector "matchExpressions" (concat ($labelSelector.matchExpressions | default list) $scopeExpressions) }}
     {{- end }}
@@ -275,17 +275,18 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   namespace lists, so "deny in user namespaces, follow the module constant in system ones"
   needs more than one object. A policy with enforcementAction: Deny that spans both is split into:
     - the original name, with the system namespaces excluded;
-    - `d8-system-default-<name>`, for system namespaces no module opted into enforcement, with the
-      action from the `system_namespaces_action` constant — `warn`,
-      so a policy written for application namespaces cannot block a platform component by accident;
-    - `d8-system-enforce-<name>`, the policy's own action, for system namespaces labeled
-      `security.deckhouse.io/enable-security-policy-check: "true"`;
-    - `d8-system-excluded-<name>`, warn-only, for the namespaces named in
-      the `system_namespaces_excluded` constant, rendered only when that list is not empty. Those namespaces host application workloads the platform's standards would
-      block, and the exclusion has to outrank a module's opt-in label as well.
+    - `d8-system-default-<name>`, for every system namespace, with the action from the
+      `system_namespaces_action` constant — `warn`, so a policy written for application namespaces
+      cannot block a platform component by accident;
+    - `d8-system-excluded-<name>`, warn-only, for the namespaces named in the
+      `system_namespaces_excluded` constant, rendered only when the constant above is not `warn`
+      and the policy reaches one of those namespaces.
 
-  The first two collapse into one `d8-system-default-<name>` when the operator's action equals the
-  policy's own, since the label then changes nothing.
+  No label of the namespace changes any of this. A module opting its own namespace into
+  enforcement raises the Pod Security Standards there and nothing else: the platform declares its
+  own namespace compliant with its own standards, which says nothing about a policy a cluster
+  operator wrote for application workloads. A user policy therefore never blocks in a system
+  namespace unless the constant above says so, for every system namespace at once.
 
   The generated names carry a prefix rather than a suffix so that none can collide with another,
   and the validating webhook `reserved_policy_names.py` keeps the prefixes free by rejecting
@@ -323,30 +324,25 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
       {{- $variants = append $variants $userScoped }}
     {{- end }}
 
+    {{- /* The constraint matches the excluded namespaces the policy itself names, not the whole
+           constant: a policy is never evaluated outside the namespaces its author selected, and an
+           entry that is not a system namespace reaches no user namespace through this variant.
+           While the action is `warn` the exclusions change nothing, so they cost no object. */}}
+    {{- $excludedScope := list }}
+    {{- if ne $systemAction "warn" }}
+      {{- $excludedScope = include "namespace_globs_intersect" (list $scope.names $systemExclude) | fromYamlArray }}
+    {{- end }}
+
     {{- $systemDefault := deepCopy $policy }}
     {{- if $scope.userPossible }}
       {{- $_ := set $systemDefault.metadata "name" (printf "d8-system-default-%s" $policy.metadata.name) }}
     {{- end }}
     {{- $_ := set $systemDefault.spec "enforcementAction" $systemAction }}
-    {{- $_ := set $systemDefault.spec.match "d8NamespaceScope" (ternary "system-all" "system-default" (eq $systemAction $action)) }}
+    {{- $_ := set $systemDefault.spec.match "d8NamespaceScope" "system-all" }}
     {{- $_ := set $systemDefault.spec.match "d8SystemNamespaces" $scope.names }}
-    {{- $_ := set $systemDefault.spec.match "d8ExcludedNamespaces" $systemExclude }}
+    {{- $_ := set $systemDefault.spec.match "d8ExcludedNamespaces" $excludedScope }}
     {{- $variants = append $variants $systemDefault }}
 
-    {{- /* The opted-in namespaces already have the policy's action from the constraint above. */}}
-    {{- if ne $systemAction $action }}
-      {{- $systemEnforce := deepCopy $policy }}
-      {{- $_ := set $systemEnforce.metadata "name" (printf "d8-system-enforce-%s" $policy.metadata.name) }}
-      {{- $_ := set $systemEnforce.spec.match "d8NamespaceScope" "system-enforce" }}
-      {{- $_ := set $systemEnforce.spec.match "d8SystemNamespaces" $scope.names }}
-      {{- $_ := set $systemEnforce.spec.match "d8ExcludedNamespaces" $systemExclude }}
-      {{- $variants = append $variants $systemEnforce }}
-    {{- end }}
-
-    {{- /* The constraint matches the excluded namespaces the policy itself names, not the whole
-           constant: a policy is never evaluated outside the namespaces its author selected, and an
-           entry that is not a system namespace reaches no user namespace through this variant. */}}
-    {{- $excludedScope := include "namespace_globs_intersect" (list $scope.names $systemExclude) | fromYamlArray }}
     {{- if $excludedScope }}
       {{- $systemExcluded := deepCopy $policy }}
       {{- $_ := set $systemExcluded.metadata "name" (printf "d8-system-excluded-%s" $policy.metadata.name) }}
