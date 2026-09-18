@@ -58,6 +58,13 @@ spec:
                     name:
                       type: string
                       description: Node name.
+                nodeGroupRef:
+                  type: object
+                  description: Reference to the NodeGroup that ordered this instance. It is known before the node joins the cluster.
+                  properties:
+                    name:
+                      type: string
+                      description: NodeGroup name.
                 machineRef:
                   type: object
                   description: Reference to instance in the cloud.

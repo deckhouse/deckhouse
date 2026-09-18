@@ -264,7 +264,35 @@ func (r *InstanceController) reconcileMachineStatus(ctx context.Context, instanc
 		return err
 	}
 
+	if err := r.reconcileNodeGroupRef(ctx, instance, machineObj); err != nil {
+		return err
+	}
+
 	return instancecommon.SyncInstanceStatus(ctx, r.Client, instance, machineObj.GetStatus())
+}
+
+// reconcileNodeGroupRef writes the NodeGroup of an already fetched machine into the instance.
+// The group is known before the node joins, so consumers can group pending instances by it; it
+// never changes afterwards, hence the write happens once.
+func (r *InstanceController) reconcileNodeGroupRef(ctx context.Context, instance *deckhousev1alpha2.Instance, m machine.Machine) error {
+	if instance.Spec.NodeGroupRef.Name != "" {
+		return nil
+	}
+
+	nodeGroup := m.GetNodeGroup()
+	if nodeGroup == "" {
+		return nil
+	}
+
+	patch := client.MergeFrom(instance.DeepCopy())
+	instance.Spec.NodeGroupRef = deckhousev1alpha2.NodeGroupRef{Name: nodeGroup}
+
+	if err := r.Client.Patch(ctx, instance, patch); err != nil {
+		return fmt.Errorf("patch instance %q node group ref: %w", instance.Name, err)
+	}
+
+	log.FromContext(ctx).Info("instance node group ref set", "instance", instance.Name, "nodeGroup", nodeGroup)
+	return nil
 }
 
 func (r *InstanceController) findMachineForInstance(ctx context.Context, name string) (machine.Machine, bool, error) {
@@ -309,6 +337,10 @@ func (r *InstanceController) createInstanceFromMachine(ctx context.Context, m ma
 	spec := deckhousev1alpha2.InstanceSpec{}
 	if nodeName := m.GetNodeName(); nodeName != "" {
 		spec.NodeRef = deckhousev1alpha2.NodeRef{Name: nodeName}
+	}
+
+	if nodeGroup := m.GetNodeGroup(); nodeGroup != "" {
+		spec.NodeGroupRef = deckhousev1alpha2.NodeGroupRef{Name: nodeGroup}
 	}
 
 	if ref := m.GetMachineRef(); ref != nil {
