@@ -1,0 +1,10 @@
+docs:
+  features:
+    - summary: >-
+        Add user-authn-controller, user-api and basic-auth-proxy components to user-authn module architecture
+        section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23176
+service-with-healthchecks:
+  fixes:
+    - summary: Fixed metrics endpoints being reachable without going through kube-rbac-proxy authorization.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23166
