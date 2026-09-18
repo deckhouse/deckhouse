@@ -62,12 +62,29 @@ modules:
 `
 )
 
-func templateLibsDir() string {
+// moduleDir is the module directory this test file belongs to. Paths are derived from the file's
+// own location rather than from a fixed root, so the suite runs in any checkout of the repository,
+// a git worktree included, and renders the chart it was compiled from.
+func moduleDir() string {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		return ""
 	}
-	return filepath.Clean(filepath.Join(filepath.Dir(currentFile), "..", "charts", "constraint-templates", "templates", "libs"))
+	return filepath.Clean(filepath.Join(filepath.Dir(currentFile), ".."))
+}
+
+func templateLibsDir() string {
+	return filepath.Join(moduleDir(), "charts", "constraint-templates", "templates", "libs")
+}
+
+// ratifyTemplatesLink is where the chart expects the EE templates of ratify, and ratifyTemplatesDir
+// is where they are kept. The suite links one to the other for the duration of the run.
+func ratifyTemplatesLink() string {
+	return filepath.Join(moduleDir(), "templates", "ratify")
+}
+
+func ratifyTemplatesDir() string {
+	return filepath.Join(moduleDir(), "..", "..", "ee", "se-plus", "modules", "015-admission-policy-engine", "templates", "ratify")
 }
 
 func disableTemplateLibRegoTests() ([][2]string, error) {
@@ -261,7 +278,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	var movedTemplateRegoTests [][2]string
 
 	BeforeSuite(func() {
-		err := os.Symlink("/deckhouse/ee/se-plus/modules/015-admission-policy-engine/templates/ratify", "/deckhouse/modules/015-admission-policy-engine/templates/ratify")
+		err := os.Symlink(ratifyTemplatesDir(), ratifyTemplatesLink())
 		Expect(err).ShouldNot(HaveOccurred())
 
 		movedTemplateRegoTests, err = disableTemplateLibRegoTests()
@@ -272,7 +289,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 		err := restoreTemplateLibRegoTests(movedTemplateRegoTests)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		err = os.Remove("/deckhouse/modules/015-admission-policy-engine/templates/ratify")
+		err = os.Remove(ratifyTemplatesLink())
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
