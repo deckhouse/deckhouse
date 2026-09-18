@@ -29,6 +29,7 @@ const (
 	RollingUpdateAnnotation      = "update.node.deckhouse.io/rolling-update"
 	DrainingAnnotation           = "update.node.deckhouse.io/draining"
 	DrainedAnnotation            = "update.node.deckhouse.io/drained"
+	DrainFailedAnnotation        = "update.node.deckhouse.io/drain-failed"
 
 	// Node metadata annotations
 	ConfigurationChecksumAnnotation = "node.deckhouse.io/configuration-checksum"

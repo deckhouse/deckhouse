@@ -38,11 +38,6 @@ import (
 // wakeBuffer sizes the channel carrying finished drains back into the queue.
 const wakeBuffer = 128
 
-// errDrainDeadline marks a drain that ran out of its timeout rather than
-// failing. A failure is retried; a deadline is not, because its cause is
-// durable — a budget that never allows eviction, a pod that never terminates.
-var errDrainDeadline = errors.New("drain deadline exceeded")
-
 // drainer runs one drain per node in the background and hands the node back
 // to the workqueue when it is done. It is the only place that knows a drain
 // is a goroutine.
@@ -122,7 +117,7 @@ func (d *drainer) evict(ctx context.Context, nodeName string, timeout time.Durat
 
 	if err := kubedrain.RunNodeDrain(helper, nodeName); err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return fmt.Errorf("%w after %s: %w", errDrainDeadline, timeout, err)
+			return fmt.Errorf("drain deadline exceeded after %s: %w", timeout, err)
 		}
 		return err
 	}

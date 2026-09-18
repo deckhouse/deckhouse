@@ -5568,15 +5568,23 @@ alerts:
       description: |
         Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` is stuck in the draining process.
 
-        To get more details, run the following:
+        The Node has the error from the last attempt in the `update.node.deckhouse.io/drain-failed` annotation, truncated to 1 KB. To read it, run:
+
+        ```shell
+        d8 k get node {{ $labels.node }} -o json | jq -r '.metadata.annotations["update.node.deckhouse.io/drain-failed"]'
+        ```
+
+        The full error text is in the `DrainFailed` events on the Node:
 
         ```shell
         d8 k -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'
         ```
 
-        Error message: {{ $labels.message }}
+        The drain is retried until it succeeds, so the alert clears on its own once the cause is gone. Until then the Node holds the update slot of its NodeGroup, and no other Node in that group is updated.
+
+        The usual causes are a PodDisruptionBudget that never allows an eviction and a pod that never terminates. Fix the cause named in the error above.
       summary: |
-        Node {{ $labels.node }} is stuck in draining.
+        Node {{ $labels.node }} keeps failing to drain.
       severity: "6"
       markupFormat: markdown
     - name: NodeStuckInDrainingForDisruptionDuringUpdate
