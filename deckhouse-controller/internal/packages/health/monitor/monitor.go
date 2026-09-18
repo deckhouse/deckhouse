@@ -37,10 +37,11 @@ import (
 // workloads through the Service, not through the indexer directly.
 const indexName = "package"
 
-// DefaultResyncPeriod is how often the informers re-deliver their cached
-// workloads to the event handlers. It re-enqueues every known package key, so
-// a package whose key was dropped is reconciled again without waiting for its
-// workloads to change. A resync replays the local cache; it is not a LIST.
+// DefaultResyncPeriod is how often the informers replay their cached workloads
+// to the event handlers, re-reducing every package from cache. It replays the
+// local cache, not a LIST, and the reduction is deduped one layer up, so it
+// repairs nothing on its own — it bounds how long any future divergence
+// between the cache and the reduced state could last.
 const DefaultResyncPeriod = 5 * time.Minute
 
 // workloadKind is a stable map key for per-kind state (indexers, sync funcs).

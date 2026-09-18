@@ -107,9 +107,8 @@ func (s *Service) Stop() {
 
 // reconcile is the Monitor's Reconcile callback. It reduces the per-workload
 // statuses to a single State, dedupes against the last reported value, and
-// fires the user callback only on a real transition — including on an informer
-// resync, which therefore repairs this Service's view of the cache but never
-// republishes an unchanged State. Republishing is the status resync's job. The lock is held only
+// fires the user callback only on a real transition — an informer resync
+// included, so republishing an unchanged State is the status resync's job. The lock is held only
 // for the read-compare-write of one map entry; the user callback runs after
 // it drops, so a slow callback can't block other reconciles from updating
 // state — though it will still serialize with them on the worker goroutine.

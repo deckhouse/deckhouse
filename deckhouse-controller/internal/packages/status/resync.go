@@ -29,12 +29,9 @@ func WithResyncPeriod(period time.Duration) Option {
 	}
 }
 
-// StartResync launches the periodic re-enqueue of every registered package and
-// returns immediately. It is the level-triggered backstop under the
-// edge-triggered notifications: a status whose notification was lost, or whose
-// write to the resource failed for good, is republished on the next tick.
-// A zero resync period starts nothing. Called once, from Runtime.Run, and
-// paired with the Shutdown in Runtime.Stop.
+// StartResync launches the periodic re-enqueue of every registered package: the
+// level-triggered backstop that republishes a status whose notification was
+// lost. A zero period starts nothing. Called once, paired with Shutdown.
 func (s *Service) StartResync() {
 	if s.resyncPeriod <= 0 {
 		return
@@ -63,9 +60,9 @@ func (s *Service) runResync() {
 }
 
 // stopResync ends the resync goroutine and waits for it to exit, so no key can
-// reach a queue after the caller shuts it down. It reads the same immutable
-// period StartResync did, so the two always agree on whether a goroutine exists
-// and a disabled resync is not waited on.
+// reach a queue after the caller shuts it down. It branches on the same
+// immutable period StartResync did, so the two always agree on whether a
+// goroutine exists.
 func (s *Service) stopResync() {
 	if s.resyncPeriod <= 0 {
 		return

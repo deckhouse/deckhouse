@@ -548,8 +548,8 @@ func (r *Runtime) Run() error {
 	}
 
 	r.hookEventHandler.Start()
-	r.healthService.Start()
 	r.status.StartResync()
+	r.healthService.Start()
 
 	go func() {
 		for event := range r.scheduler.Ch() {
