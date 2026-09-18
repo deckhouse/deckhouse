@@ -576,7 +576,7 @@ spec:
 Для примера рассмотрим под, которому требуется:
 
 - разрешение на использование настройки [`hostNetwork`](/products/kubernetes-platform/documentation/v1/user/security/pod-settings.html#hostnetwork) всему поду;
-- разрешение на использование настройки [`privileged`](/products/kubernetes-platform/documentation/v1/user/security/pod-settings.html#privileged) только для контейнера `sample-init`.
+- разрешение на использование настройки [`privileged`](/products/kubernetes-platform/documentation/v1/user/security/pod-settings.html#privileged) только для контейнера `sample-init`.
 
 Без использования ресурса SecurityPolicyException для разрешения этих параметров потребовалось бы создать пользовательскую политику безопасности, допускающую их использование для всех подов в кластере.
 
