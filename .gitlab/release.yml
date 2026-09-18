@@ -112,7 +112,6 @@ promote:tag:
       token: $VAULT_ID_TOKEN
       file: false
   script:
-    - exit 0 #TODO remove this line!
     - bash .gitlab/scripts/check-release-operator.sh
 
 check_release_operator:early-access:
