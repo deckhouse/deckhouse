@@ -247,4 +247,40 @@ cloudProviderZvirt:
 `))
 		})
 	})
+
+	Context("migrateLegacyIsDefaultField", func() {
+		It("renames legacy 'IsDefault' storage domain key to 'isDefault'", func() {
+			raw := []byte(`{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "ZvirtCloudProviderDiscoveryData",
+  "storageDomains": [
+    {"name": "D1", "isEnabled": true, "IsDefault": true},
+    {"name": "D2", "isEnabled": false, "isDefault": false}
+  ]
+}`)
+
+			migrated := migrateLegacyIsDefaultField(raw)
+
+			Expect(migrated).To(MatchJSON(`{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "ZvirtCloudProviderDiscoveryData",
+  "storageDomains": [
+    {"name": "D1", "isEnabled": true, "isDefault": true},
+    {"name": "D2", "isEnabled": false, "isDefault": false}
+  ]
+}`))
+		})
+
+		It("leaves data without the legacy key unchanged", func() {
+			raw := []byte(`{"storageDomains": [{"name": "D1", "isDefault": true}]}`)
+
+			Expect(migrateLegacyIsDefaultField(raw)).To(Equal(raw))
+		})
+
+		It("passes through invalid JSON unchanged", func() {
+			raw := []byte(`not json`)
+
+			Expect(migrateLegacyIsDefaultField(raw)).To(Equal(raw))
+		})
+	})
 })
