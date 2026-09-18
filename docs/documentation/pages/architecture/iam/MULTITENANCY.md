@@ -81,7 +81,7 @@ The following simplifications are made in the diagram:
 
 The architecture of the [`multitenancy-manager`](/modules/multitenancy-manager/) module at Level 2 of the C4 model and its interactions with other DP components are shown in the following diagram.
 
-![Multitenancy-manager module architecture](../../images/architecture/iam/c4-l2-multitenancy-manager.png)
+![Multitenancy-manager module architecture](../../images/architecture/iam/c4-l2-multitenancy-manager.svg)
 
 ## Module components
 

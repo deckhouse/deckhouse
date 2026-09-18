@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`csi-nfs`](/modules/csi-nfs/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagrams:
 
-![csi-nfs module architecture](../../../images/architecture/storage/c4-l2-csi-nfs.png)
+![csi-nfs module architecture](../../../images/architecture/storage/c4-l2-csi-nfs.svg)
 
 ## Module components
 

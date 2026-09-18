@@ -21,7 +21,7 @@ description: Архитектура модуля cloud-provider-dvp в Deckhouse
 
 Архитектура модуля [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля cloud-provider-dvp](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dvp.ru.png)
+![Архитектура модуля cloud-provider-dvp](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dvp.ru.svg)
 
 ## Компоненты модуля
 

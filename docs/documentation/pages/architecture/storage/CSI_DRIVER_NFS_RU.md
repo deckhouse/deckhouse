@@ -19,7 +19,7 @@ CSI-драйвер `csi-nfs` — это реализация стандарта 
 
 Архитектура CSI-драйвера `csi-nfs` на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура CSI-драйвера csi-nfs](../../../images/architecture/storage/c4-l2-csi-driver-nfs.ru.png)
+![Архитектура CSI-драйвера csi-nfs](../../../images/architecture/storage/c4-l2-csi-driver-nfs.ru.svg)
 
 ## Компоненты драйвера
 

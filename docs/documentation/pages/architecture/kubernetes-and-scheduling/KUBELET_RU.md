@@ -28,7 +28,7 @@ Kubelet запускает компоненты control plane из манифе�
 
 Взаимодействия kubelet изображены на следующей диаграмме:
 
-![Взаимодействия kubelet](../../images/architecture/kubernetes-and-scheduling/c4-l2-kubelet.ru.png)
+![Взаимодействия kubelet](../../images/architecture/kubernetes-and-scheduling/c4-l2-kubelet.ru.svg)
 
 Kubelet контролирует состояние контейнеров всех подов, запущенных на узле, относящихся как к пользовательским приложениям, так и к компонентам DP, выполняя пробы Startup, Liveness и Readiness в соответствии со спецификацией пода. Подробнее о пробах можно узнать в [документации Kubernetes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes).
 

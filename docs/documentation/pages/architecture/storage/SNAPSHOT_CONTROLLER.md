@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`snapshot-controller`](/modules/snapshot-controller/) module and its interactions with other components of DP are shown in the following diagrams:
 
-![Snapshot-controller module architecture](../../images/architecture/storage/c4-l2-snapshot-controller.png)
+![Snapshot-controller module architecture](../../images/architecture/storage/c4-l2-snapshot-controller.svg)
 
 ## Module components
 

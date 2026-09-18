@@ -32,15 +32,15 @@ The Level 2 C4 architecture of the [`registry`](/modules/registry/) module and i
 
 The [`registry`](/modules/registry/) module in `Direct` mode:
 
-![Architecture of registry module in Direct mode](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-direct.png)
+![Architecture of registry module in Direct mode](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-direct.svg)
 
 The [`registry`](/modules/registry/) module in `Proxy` mode:
 
-![Architecture of registry module in Proxy mode](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-proxy.png)
+![Architecture of registry module in Proxy mode](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-proxy.svg)
 
 The [`registry`](/modules/registry/) module in `Local` mode:
 
-![Architecture of registry module in Local mode](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-local.png)
+![Architecture of registry module in Local mode](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-local.svg)
 
 ## Module components
 

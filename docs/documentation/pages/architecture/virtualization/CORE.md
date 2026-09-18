@@ -46,7 +46,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module core and its interactions with other components of DP are shown in the following diagrams:
 
-![Architecture of the virtualization module core](../../images/architecture/virtualization/c4-l2-virtualization-core.png)
+![Architecture of the virtualization module core](../../images/architecture/virtualization/c4-l2-virtualization-core.svg)
 
 ## Module core components
 

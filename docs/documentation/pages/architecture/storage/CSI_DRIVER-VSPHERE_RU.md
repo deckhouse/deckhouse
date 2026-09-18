@@ -23,7 +23,7 @@ description: Описание архитектуры CSI-драйвера для
 
 Архитектура CSI-драйвера [`csi-vsphere`](/modules/csi-vsphere/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура CSI-драйвера csi-vsphere](../../../images/architecture/storage/c4-l2-csi-driver-vsphere.ru.png)
+![Архитектура CSI-драйвера csi-vsphere](../../../images/architecture/storage/c4-l2-csi-driver-vsphere.ru.svg)
 
 ## Компоненты драйвера
 
