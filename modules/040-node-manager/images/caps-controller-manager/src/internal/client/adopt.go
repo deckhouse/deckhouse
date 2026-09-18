@@ -63,7 +63,7 @@ func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.I
 		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance MachineRef")
 	}
 
-	ok := c.adoptStaticInstance(instanceScope)
+	ok := c.adoptStaticInstance(ctx, instanceScope)
 	if !ok {
 		return ctrl.Result{}, nil
 	}
@@ -78,7 +78,11 @@ func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.I
 	return ctrl.Result{}, nil
 }
 
-func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) bool {
+func (c *Client) adoptStaticInstance(ctx context.Context, instanceScope *scope.InstanceScope) bool {
+	// The task outlives the reconcile that spawned it, so it must not inherit its
+	// cancellation. The ssh layer applies its own connect and command timeouts.
+	tCtx := context.WithoutCancel(ctx)
+
 	done := c.adoptTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
 		var sshCl ssh.SSH
 		var err error
@@ -94,7 +98,7 @@ func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) bool {
 			instanceScope.Logger.Error(err, "Failed to adopt StaticInstance: failed to create ssh client")
 			return false
 		}
-		data, err := sshCl.ExecSSHCommandToString(instanceScope,
+		data, err := sshCl.ExecSSHCommandToString(tCtx, instanceScope,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name",
 				instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name))
 		if err != nil {

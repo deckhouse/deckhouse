@@ -84,14 +84,14 @@ func (c *Client) cleanupFromBootstrappingOrRunningPhase(ctx context.Context, ins
 		return errors.Wrap(err, "failed to patch StaticInstance phase")
 	}
 
-	c.cleanup(instanceScope)
+	c.cleanup(ctx, instanceScope)
 
 	return nil
 }
 
 // cleanupFromCleaningPhase finishes the cleanup process by checking if the cleanup script was successfully executed and patching StaticInstance.
 func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	done := c.cleanup(instanceScope)
+	done := c.cleanup(ctx, instanceScope)
 	if !done {
 		return nil
 	}
@@ -104,7 +104,11 @@ func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *sc
 	return nil
 }
 
-func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
+func (c *Client) cleanup(ctx context.Context, instanceScope *scope.InstanceScope) bool {
+	// The task outlives the reconcile that spawned it, so it must not inherit its
+	// cancellation. The ssh layer applies its own connect and command timeouts.
+	tCtx := context.WithoutCancel(ctx)
+
 	done := c.cleanupTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
 		var sshCl ssh.SSH
 		var err error
@@ -119,7 +123,7 @@ func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
 			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to create ssh client")
 			return false
 		}
-		err = sshCl.ExecSSHCommand(instanceScope, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
+		err = sshCl.ExecSSHCommand(tCtx, instanceScope, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
 			return false

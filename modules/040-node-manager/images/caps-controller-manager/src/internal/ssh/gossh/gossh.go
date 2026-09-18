@@ -18,18 +18,57 @@ package gossh
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"strings"
+	"sync"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"caps-controller-manager/internal/scope"
+	capsssh "caps-controller-manager/internal/ssh"
 )
+
+// sudoPromptPollInterval is how often the sudo password prompt is polled for.
+const sudoPromptPollInterval = 100 * time.Millisecond
 
 type SSH struct {
 	sshClient *ssh.Client
+}
+
+// syncWriter forwards everything written to the underlying writer while keeping
+// its own copy, so that the prompt polling loop can inspect the output without
+// racing with the ssh session goroutines.
+type syncWriter struct {
+	mu  sync.Mutex
+	out io.Writer
+	buf bytes.Buffer
+}
+
+func (w *syncWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.buf.Write(p)
+
+	return w.out.Write(p)
+}
+
+func (w *syncWriter) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.buf.String()
+}
+
+func (w *syncWriter) Len() int {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.buf.Len()
 }
 
 func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
@@ -65,6 +104,7 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 		User:            instanceScope.Credentials.Spec.User,
 		Auth:            AuthMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         capsssh.ConnectTimeout,
 	}
 
 	addr := fmt.Sprintf("%s:%d", instanceScope.Instance.Spec.Address, instanceScope.Credentials.Spec.SSHPort)
@@ -78,7 +118,7 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 }
 
 // ExecSSHCommand executes a command on the StaticInstance.
-func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error {
+func (s *SSH) ExecSSHCommand(ctx context.Context, instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error {
 	var pass string
 	if len(instanceScope.Credentials.Spec.SudoPasswordEncoded) > 0 {
 		passBytes, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.SudoPasswordEncoded)
@@ -94,6 +134,9 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 
 	defer s.sshClient.Close()
 
+	ctx, cancel := context.WithTimeout(ctx, capsssh.CommandTimeout)
+	defer cancel()
+
 	session, err := s.sshClient.NewSession()
 	if err != nil {
 		return fmt.Errorf("cannot create session: %w", err)
@@ -108,8 +151,11 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		stderr = &bytes.Buffer{}
 	}
 
-	session.Stdout = stdout
-	session.Stderr = stderr
+	stdoutWriter := &syncWriter{out: stdout}
+	stderrWriter := &syncWriter{out: stderr}
+
+	session.Stdout = stdoutWriter
+	session.Stderr = stderrWriter
 
 	command = fmt.Sprintf(`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`, command)
 	// Set up a pipe to write to the session's stdin
@@ -123,36 +169,52 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		return fmt.Errorf("failed to start command: %w", err)
 	}
 
-	stderrBuf := stderr.(*bytes.Buffer)
-	stdoutBuf := stdout.(*bytes.Buffer)
+	// The session is closed by the deferred Close, which unblocks Wait below.
+	go func() {
+		<-ctx.Done()
+		_ = session.Close()
+	}()
 
-	passwordSent := false
-	for {
-		if len(stderrBuf.Bytes()) > 0 {
-			line := stderrBuf.String()
-			if strings.Contains(line, "SudoPassword") {
-				if !passwordSent {
-					passwordSent = true
-					if _, err := stdin.Write([]byte(pass + "\n")); err != nil {
-						return fmt.Errorf("failed to write password to stdin: %w", err)
-					}
-				}
-			}
-		}
-		if len(stdoutBuf.Bytes()) > 0 {
-			break
-		}
+	if err := answerSudoPrompt(ctx, stdin, pass, stdoutWriter, stderrWriter); err != nil {
+		return err
 	}
 
-	err = session.Wait()
-	return err
+	return session.Wait()
+}
+
+// answerSudoPrompt waits for the remote command to produce output, sending the sudo
+// password once the prompt shows up on stderr.
+func answerSudoPrompt(ctx context.Context, stdin io.Writer, pass string, stdout, stderr *syncWriter) error {
+	ticker := time.NewTicker(sudoPromptPollInterval)
+	defer ticker.Stop()
+
+	passwordSent := false
+
+	for {
+		if !passwordSent && strings.Contains(stderr.String(), "SudoPassword") {
+			passwordSent = true
+			if _, err := stdin.Write([]byte(pass + "\n")); err != nil {
+				return fmt.Errorf("failed to write password to stdin: %w", err)
+			}
+		}
+
+		if stdout.Len() > 0 {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timed out waiting for the command output: %w", ctx.Err())
+		case <-ticker.C:
+		}
+	}
 }
 
 // ExecSSHCommandToString executes a command on the StaticInstance and returns the output as a string.
-func (s *SSH) ExecSSHCommandToString(instanceScope *scope.InstanceScope, command string) (string, error) {
+func (s *SSH) ExecSSHCommandToString(ctx context.Context, instanceScope *scope.InstanceScope, command string) (string, error) {
 	stdout := bytes.Buffer{}
 	stderr := bytes.Buffer{}
-	err := s.ExecSSHCommand(instanceScope, command, &stdout, &stderr)
+	err := s.ExecSSHCommand(ctx, instanceScope, command, &stdout, &stderr)
 	if err != nil {
 		return stderr.String(), err
 	}

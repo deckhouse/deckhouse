@@ -46,7 +46,15 @@ import (
 	"caps-controller-manager/internal/ssh/gossh"
 )
 
-const RequeueForStaticInstanceBootstrapping = 60 * time.Second
+const (
+	RequeueForStaticInstanceBootstrapping = 60 * time.Second
+	// RequeueForCheckInProgress is how often a still running TCP/SSH check is polled.
+	RequeueForCheckInProgress = 5 * time.Second
+	// TCPCheckDialTimeout bounds a single TCP connectivity probe. It must not be derived
+	// from the rate limiter delay: the first attempt would then get the base backoff
+	// (a fraction of a second) as its dial timeout and fail on any real network.
+	TCPCheckDialTimeout = 5 * time.Second
+)
 
 // Bootstrap runs the bootstrap script on StaticInstance.
 func (c *Client) Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) (ctrl.Result, error) {
@@ -97,6 +105,10 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		}
 	}
 
+	// The task outlives the reconcile that spawned it, so it must not inherit its
+	// cancellation. The ssh layer applies its own connect and command timeouts.
+	bootstrapCtx := context.WithoutCancel(ctx)
+
 	done := c.bootstrapTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
 		var sshCl ssh.SSH
 		var err error
@@ -111,7 +123,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to create ssh client")
 			return false
 		}
-		data, err := sshCl.ExecSSHCommandToString(instanceScope,
+		data, err := sshCl.ExecSSHCommandToString(bootstrapCtx, instanceScope,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
 				instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)))
 		if err != nil {
@@ -157,6 +169,9 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		"address", instanceScope.Instance.Spec.Address,
 	)
 
+	// Snapshot the status as it was observed, so that a failed attempt can restore it.
+	observedStatus := instanceScope.Instance.Status.CurrentStatus.DeepCopy()
+
 	var err error
 
 	if err = c.reserveStaticInstance(ctx, instanceScope); err != nil {
@@ -180,29 +195,29 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 				"machine", instanceScope.MachineScope.StaticMachine.Name,
 				"error", err.Error(),
 			)
-			c.releaseStaticInstance(ctx, instanceScope)
+			c.releaseStaticInstance(ctx, instanceScope, observedStatus)
 		}
 	}()
 
 	address := net.JoinHostPort(instanceScope.Instance.Spec.Address, strconv.Itoa(instanceScope.Credentials.Spec.SSHPort))
 
-	delay := c.tcpCheckRateLimiter.When(address)
-	instanceScope.Logger.V(1).Info("Scheduling TCP check", "address", address, "timeout", delay)
-
 	tcpCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTCPConnection)
 	if tcpCondition == nil || tcpCondition.Status != metav1.ConditionTrue {
+		delay := c.tcpCheckRateLimiter.When(address)
+
 		tcpTaskID := address
 		instanceScope.Logger.V(1).Info("Scheduling TCP check",
 			"address", address,
-			"timeout", delay,
+			"timeout", TCPCheckDialTimeout,
+			"backoff", delay,
 			"taskID", tcpTaskID,
 			"machine", instanceScope.MachineScope.StaticMachine.Name,
 		)
 		done := c.tcpCheckTaskManager.spawn(taskID(tcpTaskID), func() bool {
 			start := time.Now()
 			status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTCPConnection)
-			instanceScope.Logger.V(1).Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
-			conn, err := net.DialTimeout("tcp", address, delay)
+			instanceScope.Logger.V(1).Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", TCPCheckDialTimeout.String())
+			conn, err := net.DialTimeout("tcp", address, TCPCheckDialTimeout)
 			if err != nil {
 				instanceScope.Logger.Error(err, "Failed to connect to instance by TCP", "address", address, "error", err.Error())
 				if status == nil || status.Status != metav1.ConditionFalse || status.Reason != err.Error() {
@@ -253,23 +268,38 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 			instanceScope.Logger.V(1).Info("TCP check still running, requeueing",
 				"address", address,
 				"machine", instanceScope.MachineScope.StaticMachine.Name,
-				"requeueAfter", delay,
+				"requeueAfter", RequeueForCheckInProgress,
 				"taskID", tcpTaskID,
 			)
-			return ctrl.Result{RequeueAfter: delay}, nil
+			return ctrl.Result{RequeueAfter: RequeueForCheckInProgress}, nil
 		}
 		if !*done {
-			err = errors.New("Failed to connect via tcp")
-			instanceScope.Logger.Error(err, "Failed to connect via tcp to StaticInstance address", "address", address)
-			return ctrl.Result{}, err
-		}
-	}
+			// A host that does not answer on the ssh port is a transient condition, not a
+			// reason to give the StaticInstance back to the pool: the release would write
+			// the Pending phase to etcd and the resulting watch event would re-enqueue this
+			// very StaticMachine immediately, which is the throttling loop itself. Keep the
+			// reservation and retry with the address backoff instead; the bootstrap timeout
+			// breaks the cycle if the host never comes back.
+			instanceScope.Logger.Error(errors.New("Failed to connect via tcp"),
+				"Failed to connect via tcp to StaticInstance address", "address", address, "requeueAfter", delay)
 
-	c.tcpCheckRateLimiter.Forget(address)
+			return ctrl.Result{RequeueAfter: delay}, nil
+		}
+
+		// Only a successful check resets the backoff. Forgetting unconditionally pins the
+		// delay to the base value forever, so the rate limiter never limits anything.
+		c.tcpCheckRateLimiter.Forget(address)
+	}
 
 	sshCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSSHCondition)
 	if sshCondition == nil || sshCondition.Status != metav1.ConditionTrue {
+		delay := c.sshCheckRateLimiter.When(address)
+
 		sshTaskID := address
+		// The task outlives the reconcile that spawned it, so it must not inherit its
+		// cancellation. The ssh layer applies its own connect and command timeouts.
+		sshCheckCtx := context.WithoutCancel(ctx)
+
 		check := c.checkTaskManager.spawn(taskID(sshTaskID), func() bool {
 			start := time.Now()
 			status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSSHCondition)
@@ -286,7 +316,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 				instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
 				return false
 			}
-			data, err := sshCl.ExecSSHCommandToString(instanceScope, "echo check_ssh")
+			data, err := sshCl.ExecSSHCommandToString(sshCheckCtx, instanceScope, "echo check_ssh")
 			if err != nil {
 				scanner := bufio.NewScanner(strings.NewReader(data))
 				for scanner.Scan() {
@@ -333,14 +363,25 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 			return true
 		})
 		if check == nil {
-			instanceScope.Logger.V(1).Info("SSH check still running, requeueing", "address", address, "requeueAfter", delay)
-			return ctrl.Result{RequeueAfter: delay}, nil
+			instanceScope.Logger.V(1).Info("SSH check still running, requeueing", "address", address, "requeueAfter", RequeueForCheckInProgress)
+			return ctrl.Result{RequeueAfter: RequeueForCheckInProgress}, nil
 		}
 		if !*check {
-			err = errors.New("Failed to connect via ssh")
-			instanceScope.Logger.Error(err, "Failed to connect via ssh to StaticInstance address", "address", address)
-			return ctrl.Result{}, err
+			// A host that does not answer over ssh is a transient condition, not a reason to
+			// give the StaticInstance back to the pool: the release would write the Pending
+			// phase to etcd and the resulting watch event would re-enqueue this very
+			// StaticMachine immediately, which is the throttling loop itself. Keep the
+			// reservation and retry with the address backoff instead; the bootstrap timeout
+			// breaks the cycle if the host never comes back.
+			instanceScope.Logger.Error(errors.New("Failed to connect via ssh"),
+				"Failed to connect via ssh to StaticInstance address", "address", address, "requeueAfter", delay)
+
+			return ctrl.Result{RequeueAfter: delay}, nil
 		}
+
+		// Only a successful check resets the backoff. Forgetting unconditionally pins the
+		// delay to the base value forever, so the rate limiter never limits anything.
+		c.sshCheckRateLimiter.Forget(address)
 	}
 
 	providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
@@ -393,7 +434,18 @@ func (c *Client) reserveStaticInstance(ctx context.Context, instanceScope *scope
 	return nil
 }
 
-func (c *Client) releaseStaticInstance(ctx context.Context, instanceScope *scope.InstanceScope) {
+// releaseStaticInstance returns the StaticInstance to the pool.
+//
+// observedStatus is the status the StaticInstance was fetched with. When it was already
+// Pending, it is restored as is: a reserve -> fail -> release round trip has to leave the
+// object exactly as it was found. Otherwise every failed attempt rewrites
+// status.currentStatus.lastUpdateTime, which is a real write to etcd, and the resulting
+// Pending watch event re-enqueues the StaticMachine immediately — a self-sustaining loop.
+func (c *Client) releaseStaticInstance(
+	ctx context.Context,
+	instanceScope *scope.InstanceScope,
+	observedStatus *deckhousev1.StaticInstanceStatusCurrentStatus,
+) {
 	if instanceScope.Instance.Status.MachineRef == nil {
 		return
 	}
@@ -402,7 +454,13 @@ func (c *Client) releaseStaticInstance(ctx context.Context, instanceScope *scope
 		return
 	}
 
-	if err := instanceScope.ToPending(ctx); err != nil {
+	instanceScope.SetPending()
+
+	if observedStatus != nil && observedStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
+		instanceScope.Instance.Status.CurrentStatus = observedStatus
+	}
+
+	if err := instanceScope.Patch(ctx); err != nil {
 		instanceScope.Logger.Error(err, "Failed to release StaticInstance reservation")
 	}
 }

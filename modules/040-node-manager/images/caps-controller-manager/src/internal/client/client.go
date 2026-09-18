@@ -34,6 +34,7 @@ type Client struct {
 	adoptTaskManager     *taskManager
 	tcpCheckTaskManager  *taskManager
 	tcpCheckRateLimiter  workqueue.TypedRateLimiter[string]
+	sshCheckRateLimiter  workqueue.TypedRateLimiter[string]
 
 	recorder *event.Recorder
 }
@@ -47,6 +48,7 @@ func NewClient(recorder *event.Recorder) *Client {
 		adoptTaskManager:     newTaskManager(ctrl.Log.WithName("adoptTaskManager")),
 		tcpCheckTaskManager:  newTaskManager(ctrl.Log.WithName("tcpCheckTaskManager")),
 		tcpCheckRateLimiter:  workqueue.NewTypedItemExponentialFailureRateLimiter[string](250*time.Millisecond, time.Minute),
+		sshCheckRateLimiter:  workqueue.NewTypedItemExponentialFailureRateLimiter[string](250*time.Millisecond, time.Minute),
 		recorder:             recorder,
 	}
 }

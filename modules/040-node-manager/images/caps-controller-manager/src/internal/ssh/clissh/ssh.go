@@ -18,6 +18,7 @@ package clissh
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -39,7 +40,10 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 }
 
 // ExecSSHCommand executes a command on the StaticInstance.
-func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error {
+func (s *SSH) ExecSSHCommand(ctx context.Context, instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error {
+	ctx, cancel := context.WithTimeout(ctx, genssh.CommandTimeout)
+	defer cancel()
+
 	privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode private ssh key")
@@ -76,6 +80,8 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		sshKey.Name(),
 		"-o",
 		"StrictHostKeyChecking=no",
+		"-o",
+		fmt.Sprintf("ConnectTimeout=%d", int(genssh.ConnectTimeout.Seconds())),
 		fmt.Sprintf("-p %d", instanceScope.Credentials.Spec.SSHPort),
 	}
 
@@ -110,7 +116,7 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		command,
 	}...)
 
-	cmd := exec.Command("ssh", args...)
+	cmd := exec.CommandContext(ctx, "ssh", args...)
 
 	cmd.Stdin = stdin
 
@@ -143,10 +149,10 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 }
 
 // ExecSSHCommandToString executes a command on the StaticInstance and returns the output as a string.
-func (s *SSH) ExecSSHCommandToString(instanceScope *scope.InstanceScope, command string) (string, error) {
+func (s *SSH) ExecSSHCommandToString(ctx context.Context, instanceScope *scope.InstanceScope, command string) (string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := s.ExecSSHCommand(instanceScope, command, stdout, stderr)
+	err := s.ExecSSHCommand(ctx, instanceScope, command, stdout, stderr)
 	if err != nil {
 		stderrBytes, err2 := io.ReadAll(stderr)
 		if err2 != nil {

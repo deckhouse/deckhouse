@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -245,9 +246,13 @@ func (r *StaticMachineReconciler) reconcileNormal(
 
 		_, shouldSkipBootstrap := instanceScope.Instance.Annotations[deckhousev1.SkipBootstrapPhaseAnnotation]
 		if shouldSkipBootstrap {
+			// The error has to reach the workqueue: swallowing it disables the exponential
+			// backoff and turns an unreachable host into a hot reconcile loop.
 			result, err := r.HostClient.AdoptStaticInstance(ctx, instanceScope)
 			if err != nil {
 				instanceScope.Logger.Error(err, "failed to adopt StaticInstance")
+
+				return result, errors.Wrap(err, "failed to adopt StaticInstance")
 			}
 
 			return result, nil
@@ -255,6 +260,8 @@ func (r *StaticMachineReconciler) reconcileNormal(
 			result, err := r.HostClient.Bootstrap(ctx, instanceScope)
 			if err != nil {
 				instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
+
+				return result, errors.Wrap(err, "failed to bootstrap StaticInstance")
 			}
 
 			return result, nil
@@ -309,7 +316,7 @@ func (r *StaticMachineReconciler) cleanup(
 	// Delete flow might observe an inconsistent state where phase is Pending (or empty),
 	// but refs are still set. Normalize it and allow StaticMachine deletion to proceed.
 	if phase == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
-		if instanceScope.Instance.Status.MachineRef != nil || instanceScope.Instance.Status.NodeRef != nil || instanceScope.Instance.Status.CurrentStatus != nil {
+		if instanceScope.Instance.Status.MachineRef != nil || instanceScope.Instance.Status.NodeRef != nil {
 			err := instanceScope.ToPending(ctx)
 			if err != nil {
 				return ctrl.Result{}, errors.Wrap(err, "failed to normalize StaticInstance to Pending phase")
@@ -422,9 +429,13 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, errors.New("timed out waiting to adopt StaticInstance")
 		}
 
+		// The error has to reach the workqueue: swallowing it disables the exponential
+		// backoff and turns an unreachable host into a hot reconcile loop.
 		result, err := r.HostClient.AdoptStaticInstance(ctx, instanceScope)
 		if err != nil {
 			instanceScope.Logger.Error(err, "failed to adopt StaticInstance")
+
+			return result, errors.Wrap(err, "failed to adopt StaticInstance")
 		}
 
 		return result, nil
@@ -447,9 +458,13 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, errors.New("timed out waiting to bootstrap StaticInstance")
 		}
 
+		// The error has to reach the workqueue: swallowing it disables the exponential
+		// backoff and turns an unreachable host into a hot reconcile loop.
 		result, err := r.HostClient.Bootstrap(ctx, instanceScope)
 		if err != nil {
 			instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
+
+			return result, errors.Wrap(err, "failed to bootstrap StaticInstance")
 		}
 
 		return result, nil
@@ -580,6 +595,7 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 				return nil
 			}
 
+			instanceLabels := labels.Set(staticInstance.GetLabels())
 			requests := make([]reconcile.Request, 0, len(machines.Items))
 
 			for _, machine := range machines.Items {
@@ -588,6 +604,19 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 				}
 
 				if machine.Status.Initialization.Provisioned != nil && *machine.Status.Initialization.Provisioned {
+					continue
+				}
+
+				// Only the StaticMachines that could actually pick this StaticInstance are
+				// interested in it becoming Pending. Enqueueing every non-ready StaticMachine
+				// multiplies a single release into a cluster-wide reconcile burst.
+				selector, err := machine.StaticInstanceSelector()
+				if err != nil {
+					logger.Error(err, "failed to get StaticMachine label selector", "staticMachine", machine.Name)
+					continue
+				}
+
+				if !selector.Matches(instanceLabels) {
 					continue
 				}
 
