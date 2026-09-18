@@ -401,6 +401,30 @@ alerts:
         The admission webhook of admission-policy-engine has unavailable replicas.
       severity: "3"
       markupFormat: markdown
+    - name: D8AdmissionPolicyEngineWebhookNotServing
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/availability.yaml
+      moduleUrl: 015-admission-policy-engine
+      module: admission-policy-engine
+      edition: ce
+      description: |-
+        The API server is rejecting requests because it fails to call a webhook of the `admission-policy-engine` module. The webhook has `failurePolicy: Fail`, so the cluster is blocked for everything the webhook intercepts.
+
+        The alert is independent of the replica counters: it fires while the pods are `Ready` as well. A replica that is running but unreachable to the API server produces the same outage, and only this alert reports it. Typical causes are a `gatekeeper-webhook-server-cert` that no longer matches the `caBundle` of the ValidatingWebhookConfiguration, an empty `gatekeeper-webhook-service` endpoint list, and a network policy that blocks the API server.
+
+        Read the reason the API server reports, then check the certificate and the endpoints:
+
+        ```bash
+        d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
+        d8 k -n d8-admission-policy-engine get endpoints gatekeeper-webhook-service
+        d8 k get validatingwebhookconfiguration d8-admission-policy-engine-config -o jsonpath='{.webhooks[*].clientConfig.caBundle}' | base64 -d | openssl x509 -noout -subject -dates
+        d8 k -n d8-admission-policy-engine get secret gatekeeper-webhook-server-cert -o jsonpath='{.data.ca\.crt}' | base64 -d | openssl x509 -noout -subject -dates
+        ```
+
+        The two certificates must match. Deckhouse reissues them through the module's hook, so deleting the secret makes it regenerate the pair.
+      summary: |
+        The API server cannot call the admission webhook of admission-policy-engine.
+      severity: "2"
+      markupFormat: markdown
     - name: D8AdmissionPolicyEngineWebhookUnavailable
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/availability.yaml
       moduleUrl: 015-admission-policy-engine
@@ -434,7 +458,7 @@ alerts:
         ```
       summary: |
         The admission webhook of admission-policy-engine has no available replicas.
-      severity: "1"
+      severity: "2"
       markupFormat: markdown
     - name: D8BashibleApiserverLocked
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml

@@ -665,6 +665,6 @@ Disabling the module unblocks the cluster, but the control goes with it: no poli
 
 ### Why only the webhook pods are excluded from validation
 
-One exclusion in the webhook configuration covers the pods of `gatekeeper-controller-manager` and nothing else: every webhook excludes objects carrying the `gatekeeper.sh/operation: webhook` label through its `objectSelector`. The exclusion exists to break a circular dependency, not to relax the policies for the module.
+One exclusion in the webhook configuration covers the pods of `gatekeeper-controller-manager` and nothing else: the webhooks that intercept the creation of objects exclude objects carrying the `gatekeeper.sh/operation: webhook` label through their `objectSelector`. The exclusion exists to break a circular dependency, not to relax the policies for the module. It does not extend to the webhook that intercepts `kubectl exec` and `kubectl attach`, which has no `objectSelector`, so exec into the pods of the module is blocked during an outage along with everything else.
 
 A webhook that validates the pods serving it cannot recover from its own outage. Once the last replica is gone, the API server has nowhere to deliver the request, so it rejects the creation of the replacement pod and the deployment can never return to a running replica on its own. The label, which Gatekeeper sets on its own pods, is the narrowest exclusion that breaks the cycle: the deployment can always create a pod, while every other object of the namespace is validated as usual.
