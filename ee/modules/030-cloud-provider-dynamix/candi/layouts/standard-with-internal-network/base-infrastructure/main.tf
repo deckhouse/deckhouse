@@ -2,7 +2,20 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 data "decort_account_list" "accounts" {
-   name = local.account
+  # The API filters by substring, so the list may also contain accounts whose
+  # name merely includes local.account. Exact matching is done below.
+  name = local.account
+
+  lifecycle {
+    postcondition {
+      condition     = length([for a in self.items : a if a.account_name == local.account]) == 1
+      error_message = <<-EOT
+        ERROR: expected exactly one Dynamix account named '${local.account}', found ${length([for a in self.items : a if a.account_name == local.account])} exact match(es) among ${length(self.items)} account(s) returned by the name filter.
+
+        Set DynamixClusterConfiguration.account to the exact name of an account the credentials have access to.
+      EOT
+    }
+  }
 }
 
 data "decort_locations_list" "locations" {
@@ -14,7 +27,7 @@ data "decort_extnet_list" "extnets" {
 }
 
 locals {
-  account_id = data.decort_account_list.accounts.items[0].account_id
+  account_id = one([for a in data.decort_account_list.accounts.items : a.account_id if a.account_name == local.account])
   gid = data.decort_locations_list.locations.items[0].gid
   extnet_id = data.decort_extnet_list.extnets.items[0].net_id
 }

@@ -19,6 +19,7 @@ package machinetemplate
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -56,6 +57,13 @@ const (
 	parityZone        = "zone-a"
 )
 
+// The three namespaces of a postV1Fields key — the axis the excluded path belongs to.
+const (
+	instanceClassNamespace = "instanceClass"
+	providerNamespace      = "provider"
+	renderedNamespace      = "rendered"
+)
+
 type providerFixture struct {
 	// name is the provider's cloud type, and also the testdata/v1 subdirectory.
 	name string
@@ -73,12 +81,32 @@ type providerFixture struct {
 	// with the reason as the value. Keep it empty unless the difference is understood and cannot
 	// roll an existing cluster.
 	rolloutExceptions map[string]string
+	// postV1Fields names the parts of the contract that did not exist when this provider's v1
+	// snapshot was taken, with the reason as the value. v1 has no answer about such a field — its
+	// template cannot render it and its checksum cannot hash it — so a comparison against v1 would
+	// report the feature itself as a difference. Keys are namespaced dot-paths:
+	//
+	//	instanceClass.<path> — an InstanceClass field: excluded from the rollout-parity loops
+	//	provider.<path>      — a cloud-provider config field: the same, on the provider axis
+	//	rendered.<path>      — a path in the rendered object: dropped from the v2 object before it
+	//	                       is compared with the v1 one
+	//
+	// Only the named path is excluded, so everything else about the provider is still compared, and
+	// TestPostV1FieldsAreReal fails on an entry that no longer names anything.
+	postV1Fields map[string]string
 	// manualRolloutIDIgnoredByV1 records that this provider's v1 checksum template never read
 	// manualRolloutID, so the operator's `manual-rollout-id` annotation did not roll its CAPI
 	// machines at all. v2 honours the lever for every provider, in node-controller rather than in
 	// each provider file; adoption stores the current id, so no migrating cluster rolls from it.
 	manualRolloutIDIgnoredByV1 bool
 }
+
+// dynamixStoragePolicyIsPostV1 is the reason behind the only postV1Fields entries so far. Dynamix
+// 4.6 made the storage policy the primary placement object and refuses to create a VM without one,
+// which is a change of the module's own contract rather than of the migration: the v1 template
+// rendered no such field and the v1 checksum hashed no such field, so there is nothing on the v1
+// side to compare with.
+const dynamixStoragePolicyIsPostV1 = "storagePolicy is new in Dynamix 4.6 — the v1 template and checksum predate it"
 
 func providerFixtures() []providerFixture {
 	return []providerFixture{
@@ -207,13 +235,21 @@ func providerFixtures() []providerFixture {
 
 			registrationPath: "../../../../../../../ee/modules/030-cloud-provider-dynamix/templates/registration.yaml",
 			contractPath:     "../../../../../../../ee/modules/030-cloud-provider-dynamix/capi/template.yaml",
-			providerConfig:   map[string]any{},
+			providerConfig: map[string]any{
+				"storagePolicy": "storage_policy01",
+			},
 			instanceClass: map[string]any{
 				"imageName":       "ubuntu-24-04",
 				"numCPUs":         float64(4),
 				"memory":          float64(8192),
 				"rootDiskSizeGb":  float64(40),
 				"externalNetwork": "extnet",
+				"storagePolicy":   "storage_policy02",
+			},
+			postV1Fields: map[string]string{
+				"instanceClass.storagePolicy":               dynamixStoragePolicyIsPostV1,
+				"provider.storagePolicy":                    dynamixStoragePolicyIsPostV1,
+				"rendered.spec.template.spec.storagePolicy": dynamixStoragePolicyIsPostV1,
 			},
 			manualRolloutIDIgnoredByV1: true,
 		},
@@ -258,6 +294,26 @@ func (f providerFixture) legacyPath(file string) string {
 	return filepath.Join("testdata", "v1", f.name, file)
 }
 
+// postV1Reason reports whether one path of one axis is a field the v1 snapshot predates.
+func (f providerFixture) postV1Reason(namespace, path string) (string, bool) {
+	reason, excluded := f.postV1Fields[namespace+"."+path]
+	return reason, excluded
+}
+
+// withoutPostV1Fields drops the paths v1 never rendered from a v2 object, so that everything else
+// about it is still compared with the v1 render.
+func (f providerFixture) withoutPostV1Fields(t *testing.T, object map[string]any) map[string]any {
+	t.Helper()
+
+	out := deepCopySpec(t, object)
+	for key := range f.postV1Fields {
+		if path, isRendered := strings.CutPrefix(key, renderedNamespace+"."); isRendered {
+			deletePath(out, path)
+		}
+	}
+	return out
+}
+
 // TestProviderRenderParity renders every migrated provider through both engines and requires the
 // resulting objects to be identical.
 func TestProviderRenderParity(t *testing.T) {
@@ -277,7 +333,7 @@ func TestProviderRenderParity(t *testing.T) {
 
 			v1Object := renderLegacyTemplate(t, fixture)
 
-			assert.Equal(t, v1Object, v2Object,
+			assert.Equal(t, v1Object, fixture.withoutPostV1Fields(t, v2Object),
 				"v2 must render exactly what v1 rendered: a different object here means the migration "+
 					"changes machines, not just the contract")
 		})
@@ -297,6 +353,10 @@ func TestProviderRolloutParity(t *testing.T) {
 
 			for _, path := range mutationPaths(fixture, contract) {
 				t.Run(path, func(t *testing.T) {
+					if reason, excluded := fixture.postV1Reason(instanceClassNamespace, path); excluded {
+						t.Skip(reason)
+					}
+
 					mutated := mutateSpec(t, fixture.instanceClass, path)
 
 					v1Rolls := renderLegacyChecksum(t, fixture, checksumTemplate, mutated, "") != baseChecksum
@@ -332,6 +392,10 @@ func TestProviderConfigRolloutParity(t *testing.T) {
 			for _, path := range providerMutationPaths(fixture, contract) {
 				t.Run(path, func(t *testing.T) {
 					if reason, documented := fixture.rolloutExceptions[path]; documented {
+						t.Skip(reason)
+					}
+
+					if reason, excluded := fixture.postV1Reason(providerNamespace, path); excluded {
 						t.Skip(reason)
 					}
 
@@ -373,7 +437,7 @@ func TestProviderConfigRenderParity(t *testing.T) {
 					v2Object, err := renderV2Spec(mutated, contract, fixture.instanceClass)
 					require.NoError(t, err, "v2 template must still render")
 
-					assert.Equal(t, v1Object, v2Object,
+					assert.Equal(t, v1Object, fixture.withoutPostV1Fields(t, v2Object),
 						"changing provider config %s renders differently under v2: the migrated template "+
 							"reads a different set of provider inputs than the v1 one", path)
 				})
@@ -432,6 +496,80 @@ func TestProviderRolloutFieldsResolveInTheConfig(t *testing.T) {
 	}
 }
 
+// TestPostV1FieldsAreReal is what keeps the postV1Fields escape hatch honest. Every entry both
+// narrows a comparison and makes a claim — "v1 has no answer about this path" — and the claim is
+// what is checked here, on the archived v1 files themselves: the checksum must ignore the field and
+// the v1 template must not render it. An entry about a field v1 does know would silently switch off
+// a real comparison, which is the one failure this hatch could cause.
+//
+// The path must also still name something on its own axis, so an entry cannot outlive the field it
+// excuses — a rename or a moved rendered path fails here rather than passing quietly.
+func TestPostV1FieldsAreReal(t *testing.T) {
+	for _, fixture := range providerFixtures() {
+		if len(fixture.postV1Fields) == 0 {
+			continue
+		}
+
+		t.Run(fixture.name, func(t *testing.T) {
+			contract := loadContract(t, fixture.contractPath)
+			checksumTemplate, err := os.ReadFile(fixture.legacyPath("instance-class.checksum"))
+			require.NoError(t, err)
+			baseChecksum := renderLegacyChecksum(t, fixture, checksumTemplate, fixture.instanceClass, "")
+
+			v1Object, err := renderLegacySpec(t, fixture, fixture.instanceClass)
+			require.NoError(t, err)
+			v2Object, err := renderV2Spec(fixture, contract, fixture.instanceClass)
+			require.NoError(t, err)
+			crdFields := crdSpecFields(t, fixture.crdPath)
+
+			for key, reason := range fixture.postV1Fields {
+				t.Run(key, func(t *testing.T) {
+					assert.NotEmpty(t, reason, "an exclusion must say why v1 has no answer about the field")
+
+					namespace, path, split := strings.Cut(key, ".")
+					require.True(t, split, "a postV1Fields key is <namespace>.<path>")
+					segments := strings.Split(path, ".")
+
+					switch namespace {
+					case instanceClassNamespace:
+						assert.True(t,
+							slices.ContainsFunc(crdFields, func(field crdField) bool { return field.path == path }),
+							"the provider InstanceClass CRD declares no %s", path)
+
+						mutated := mutateSpec(t, fixture.instanceClass, path)
+						assert.Equal(t, baseChecksum,
+							renderLegacyChecksum(t, fixture, checksumTemplate, mutated, ""),
+							"the v1 checksum does react to %s, so v1 does have an answer about it and the "+
+								"rollout comparison must not be excluded", path)
+					case providerNamespace:
+						_, found, err := unstructured.NestedFieldNoCopy(fixture.providerConfig, segments...)
+						require.NoError(t, err)
+						assert.True(t, found, "the provider config fixture publishes no %s", path)
+
+						mutated := mutateSpec(t, fixture.providerConfig, path)
+						assert.Equal(t, baseChecksum,
+							renderLegacyChecksumWithProvider(t, fixture, checksumTemplate, fixture.instanceClass, mutated, ""),
+							"the v1 checksum does react to provider config %s, so the rollout comparison "+
+								"must not be excluded", path)
+					case renderedNamespace:
+						_, found, err := unstructured.NestedFieldNoCopy(v2Object, segments...)
+						require.NoError(t, err)
+						assert.True(t, found, "the template renders no %s", path)
+
+						_, found, err = unstructured.NestedFieldNoCopy(v1Object, segments...)
+						require.NoError(t, err)
+						assert.False(t, found,
+							"the v1 template does render %s, so dropping it from the v2 object hides a real "+
+								"difference between the two engines", path)
+					default:
+						t.Fatalf("unknown postV1Fields namespace %q", namespace)
+					}
+				})
+			}
+		})
+	}
+}
+
 // TestProviderManualRolloutIDParity checks the operator's explicit lever separately: it does not
 // live in the InstanceClass, so the field-mutation loop cannot reach it.
 func TestProviderManualRolloutIDParity(t *testing.T) {
@@ -481,6 +619,135 @@ func TestYandexDefaultDiskSizeDivergence(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, changes, 1, "v2 sees an added field as a change")
 	assert.Equal(t, "diskSizeGB", changes[0].Path)
+}
+
+// TestDynamixStoragePolicyFallback pins the one thing about the dynamix template the parity harness
+// cannot ask v1 about, because v1 had no such field: where the storage policy comes from. Dynamix
+// 4.6 creates no VM without one and the DynamixMachineTemplate CRD requires the field, so the
+// template must prefer the InstanceClass override, fall back to the cluster-wide value the module
+// publishes into the provider config, and refuse to render at all with neither — rendering an
+// object the API server rejects, or one silently placed in the wrong policy, are both worse.
+func TestDynamixStoragePolicyFallback(t *testing.T) {
+	fixture := fixtureByName(t, "dynamix")
+	contract := loadContract(t, fixture.contractPath)
+
+	// The smallest InstanceClass a user can create: the three fields DynamixInstanceClass requires.
+	baseInstanceClass := map[string]any{
+		"imageName": "ubuntu-24-04",
+		"numCPUs":   float64(4),
+		"memory":    float64(8192),
+	}
+	renderedPolicy := func(t *testing.T, override, clusterWide map[string]any) (string, error) {
+		t.Helper()
+
+		instanceClass := deepCopySpec(t, baseInstanceClass)
+		for key, value := range override {
+			instanceClass[key] = value
+		}
+
+		object, err := Render(contract, RenderContext{
+			InstanceClass: instanceClass,
+			Provider:      clusterWide,
+			Zone:          parityZone,
+			NodeGroupName: parityNodeGroup,
+			ClusterUUID:   parityClusterUUID,
+			PodSubnet:     parityPodSubnet,
+		})
+		if err != nil {
+			return "", err
+		}
+		policy, found, err := unstructured.NestedString(object, "spec", "template", "spec", "storagePolicy")
+		require.NoError(t, err)
+		require.True(t, found, "the CRD requires storagePolicy, so the template must always render it")
+		return policy, nil
+	}
+
+	clusterWide := map[string]any{"storagePolicy": "cluster-wide"}
+
+	t.Run("the InstanceClass override wins", func(t *testing.T) {
+		policy, err := renderedPolicy(t, map[string]any{"storagePolicy": "per-instance-class"}, clusterWide)
+		require.NoError(t, err)
+		assert.Equal(t, "per-instance-class", policy)
+	})
+
+	t.Run("without an override the cluster-wide policy is used", func(t *testing.T) {
+		policy, err := renderedPolicy(t, nil, clusterWide)
+		require.NoError(t, err)
+		assert.Equal(t, "cluster-wide", policy)
+	})
+
+	t.Run("an empty override is not a policy", func(t *testing.T) {
+		policy, err := renderedPolicy(t, map[string]any{"storagePolicy": ""}, clusterWide)
+		require.NoError(t, err)
+		assert.Equal(t, "cluster-wide", policy)
+	})
+
+	t.Run("neither is an error naming the field", func(t *testing.T) {
+		_, err := renderedPolicy(t, nil, map[string]any{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "storagePolicy")
+	})
+}
+
+// TestDynamixStoragePolicyRolls is the other half of what postV1Fields excludes. The parity loops
+// can only ask "did v1 roll for this too?", and v1 has no answer here — but the answer v2 must give
+// is the whole point of the field: Dynamix places the boot disk when the VM is created and cannot
+// move it, so a policy change that did not recreate the node would leave a node running in a policy
+// its configuration no longer names, silently. So this asks v2 alone, on both axes the effective
+// policy can come from.
+func TestDynamixStoragePolicyRolls(t *testing.T) {
+	fixture := fixtureByName(t, "dynamix")
+	contract := loadContract(t, fixture.contractPath)
+
+	for _, axis := range []struct {
+		name   string
+		spec   map[string]any
+		fields []string
+	}{
+		{name: "InstanceClass override", spec: fixture.instanceClass, fields: contract.RolloutFields},
+		{name: "cluster-wide value", spec: fixture.providerConfig, fields: contract.ProviderRolloutFields},
+	} {
+		t.Run(axis.name, func(t *testing.T) {
+			require.Contains(t, axis.fields, "storagePolicy")
+
+			before := deepCopySpec(t, axis.spec)
+			require.Contains(t, before, "storagePolicy", "the fixture must set the policy on this axis")
+
+			after := deepCopySpec(t, before)
+			after["storagePolicy"] = "another-policy"
+
+			changes, err := Changes(before, after, axis.fields)
+			require.NoError(t, err)
+			require.Len(t, changes, 1)
+			assert.Equal(t, "storagePolicy", changes[0].Path,
+				"changing the storage policy must create a new generation, which is what recreates the machines")
+		})
+	}
+
+	// Dropping the override is the third way the effective policy changes, and the only one where
+	// the InstanceClass field ends up absent rather than different: the machine moves to the
+	// cluster-wide policy, so it has to be recreated for exactly the same reason.
+	t.Run("dropping the override rolls too", func(t *testing.T) {
+		contract := loadContract(t, fixture.contractPath)
+
+		withOverride := deepCopySpec(t, fixture.instanceClass)
+		require.Contains(t, withOverride, "storagePolicy")
+		withoutOverride := deepCopySpec(t, withOverride)
+		delete(withoutOverride, "storagePolicy")
+
+		changes, err := Changes(withOverride, withoutOverride, contract.RolloutFields)
+		require.NoError(t, err)
+		require.Len(t, changes, 1)
+		assert.Equal(t, "storagePolicy", changes[0].Path)
+
+		before, err := renderV2Spec(fixture, contract, withOverride)
+		require.NoError(t, err)
+		after, err := renderV2Spec(fixture, contract, withoutOverride)
+		require.NoError(t, err)
+		assert.NotEqual(t, before, after,
+			"the machine template must follow the effective policy: same object here would mean the "+
+				"cluster-wide value never reached the machine")
+	})
 }
 
 func fixtureByName(t *testing.T, name string) providerFixture {

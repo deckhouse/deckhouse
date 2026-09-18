@@ -3,6 +3,10 @@ title: "Cloud provider - Basis Dynamix: схемы размещения"
 description: "Описание схем размещения и взаимодействия ресурсов в Basis Dynamix при работе облачного провайдера Deckhouse."
 ---
 
+{% alert level="warning" %}
+Смена `storagePolicy` приводит к пересозданию узлов типа CloudEphemeral: платформа выбирает размещение диска при создании виртуальной машины, а модуль не переносит диск позже. Правка общего для кластера значения пересоздаёт узлы CloudEphemeral всех групп, включая те, что переопределяют политику в своём instanceClass.
+{% endalert %}
+
 ## Standard
 
 ![resources](images/dynamix-standard.png)
@@ -18,6 +22,7 @@ layout: Standard
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 location: dynamix
 account: acc_user
+storagePolicy: storage_policy01
 provider:
   controllerUrl: "<controller url>"
   oAuth2Url: "<oAuth2 url>"
@@ -31,8 +36,6 @@ masterNodeGroup:
     memory: 16384
     rootDiskSizeGb: 50
     imageName: "<image name>"
-    storageEndpoint: "<storage endpoint>"
-    pool: "<pool>"
     externalNetwork: "<external network>"
 ```
 
@@ -48,6 +51,7 @@ layout: StandardWithInternalNetwork
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 location: dynamix
 account: acc_user
+storagePolicy: storage_policy01
 nodeNetworkCIDR: "10.241.32.0/24"
 nameservers: ["10.0.0.10"]
 provider:
@@ -63,7 +67,5 @@ masterNodeGroup:
     memory: 16384
     rootDiskSizeGb: 50
     imageName: "<image name>"
-    storageEndpoint: "<storage endpoint>"
-    pool: "<pool>"
     externalNetwork: "<external network>"
 ```

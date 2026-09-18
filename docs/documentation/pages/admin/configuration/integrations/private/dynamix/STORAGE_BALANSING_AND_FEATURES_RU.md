@@ -6,27 +6,29 @@ lang: ru
 
 ## Хранилище
 
-Хранение данных в облаке Basis Dynamix осуществляется с использованием:
+Размещение дисков виртуальных машин в облаке Basis Dynamix задаётся именем storage policy:
 
-- [`storageEndpoint`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-storageendpoint) — имя хранилища, предоставленное провайдером;
-- [`pool`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-pool) — имя пула хранения внутри указанного хранилища;
+- [`storagePolicy`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy) — имя storage policy, используемой по умолчанию для дисков всех виртуальных машин кластера. Storage policy определяет набор доступных пар storage endpoint + pool и лимит IOPS; конкретное размещение внутри политики выбирает платформа. Задаётся в корне DynamixClusterConfiguration и может быть переопределена для отдельного instanceClass, в том числе в секции `masterNodeGroup.instanceClass`;
 - [`rootDiskSizeGb`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-rootdisksizegb) — размер корневого диска каждой виртуальной машины (в гигабайтах).
-
-Эти параметры задаются в секции instanceClass как для master-узлов, так и для рабочих групп узлов (NodeGroup).
 
 Пример настройки:
 
 ```yaml
+storagePolicy: storage_policy01
 masterNodeGroup:
   replicas: 1
   instanceClass:
     rootDiskSizeGb: 50
-    storageEndpoint: SharedTatlin_G1_SEP
-    pool: pool_a
 ```
 
 {% alert level="info" %}
-В текущей версии поддерживается только одно хранилище на группу узлов.
+Указывать `storagePolicy` в instanceClass нужно только для того, чтобы для конкретной группы узлов использовать storage policy, отличную от заданной в корне DynamixClusterConfiguration.
+{% endalert %}
+
+{% alert level="warning" %}
+Смена storage policy приводит к пересозданию узлов типа CloudEphemeral: платформа выбирает размещение диска при создании виртуальной машины, а модуль не переносит диск позже.
+
+Правка общей для кластера `storagePolicy` пересоздаёт узлы CloudEphemeral всех групп, включая те, что переопределяют политику в своём instanceClass и чья конфигурация тем самым не изменилась.
 {% endalert %}
 
 ## Балансировка нагрузки

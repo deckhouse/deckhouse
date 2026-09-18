@@ -23,6 +23,11 @@ spec:
                 imageName:
                   description: |
                     Имя образа ОС, используемое для развертывания ВМ.
+                storagePolicy:
+                  description: |
+                    Имя storage policy, которая будет использоваться для этого instance class вместо общей `storagePolicy` кластера.
+
+                    > **Внимание.** Изменение storage policy приводит к пересозданию узлов типа CloudEphemeral: платформа выбирает размещение диска при создании виртуальной машины, а модуль не переносит диск позже.
                 externalNetwork:
                   description: |
                     Имя внешней сети.

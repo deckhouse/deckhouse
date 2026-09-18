@@ -3,6 +3,10 @@ title: "Cloud provider - Basis Dynamix: Layouts"
 description: "Schemes of placement and interaction of resources in Basis Dynamix when working with the Deckhouse cloud provider."
 ---
 
+{% alert level="warning" %}
+Changing `storagePolicy` recreates CloudEphemeral nodes: the platform picks the disk placement when the virtual machine is created, and the module never moves a disk afterwards. Editing the cluster-wide value recreates the CloudEphemeral nodes of every node group, including those that override the policy in their own instanceClass.
+{% endalert %}
+
 ## Standard
 
 ![resources](images/dynamix-standard.png)
@@ -18,6 +22,7 @@ layout: Standard
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 location: dynamix
 account: acc_user
+storagePolicy: storage_policy01
 provider:
   controllerUrl: "<controller url>"
   oAuth2Url: "<oAuth2 url>"
@@ -31,8 +36,6 @@ masterNodeGroup:
     memory: 16384
     rootDiskSizeGb: 50
     imageName: "<image name>"
-    storageEndpoint: "<storage endpoint>"
-    pool: "<pool>"
     externalNetwork: "<external network>"
 ```
 
@@ -48,6 +51,7 @@ layout: StandardWithInternalNetwork
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 location: dynamix
 account: acc_user
+storagePolicy: storage_policy01
 nodeNetworkCIDR: "10.241.32.0/24"
 nameservers: ["10.0.0.10"]
 provider:
@@ -63,7 +67,5 @@ masterNodeGroup:
     memory: 16384
     rootDiskSizeGb: 50
     imageName: "<image name>"
-    storageEndpoint: "<storage endpoint>"
-    pool: "<pool>"
     externalNetwork: "<external network>"
 ```
