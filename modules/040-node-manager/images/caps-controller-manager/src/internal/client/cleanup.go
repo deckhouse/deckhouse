@@ -121,7 +121,7 @@ func (c *Client) cleanup(ctx context.Context,
 			tLogger.Error(err, "failed to create ssh client")
 			return fmt.Errorf("failed to create ssh client: %w", err)
 		}
-		err = sshCl.ExecSSHCommand("if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
+		err = sshCl.ExecSSHCommand(tCtx, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
 		if err != nil {
 			tLogger.Error(err, "failed to exec ssh command")
 			return fmt.Errorf("failed to exec ssh command: %w", err)

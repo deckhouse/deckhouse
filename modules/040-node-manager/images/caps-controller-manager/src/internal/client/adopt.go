@@ -98,7 +98,7 @@ func (c *Client) AdoptStaticInstance(ctx context.Context,
 			return fmt.Errorf("failed to create ssh client: %w", err)
 		}
 
-		data, err := sshCl.ExecSSHCommandToString(
+		data, err := sshCl.ExecSSHCommandToString(tCtx,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name",
 				t.providerID, t.machineName))
 		if err != nil {

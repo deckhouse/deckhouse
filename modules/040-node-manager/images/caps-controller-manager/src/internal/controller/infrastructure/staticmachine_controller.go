@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -409,6 +410,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Conte
 			staticMachine.Status.FailureReason = ptr.To("CreateError")
 			staticMachine.Status.FailureMessage = ptr.To(ErrStaticMachineBootstrapTimedOut.Error())
 			r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceBootstrapTimeoutReached", "Timed out waiting for StaticInstance to bootstrap")
+
 			return ctrl.Result{}, ErrStaticMachineBootstrapTimedOut
 		}
 		return r.HostClient.Bootstrap(ctx, staticInstance, staticMachine, machine)
@@ -497,6 +499,7 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 				return nil
 			}
 
+			instanceLabels := labels.Set(staticInstance.GetLabels())
 			requests := make([]reconcile.Request, 0, len(machines.Items))
 
 			for _, machine := range machines.Items {
@@ -505,6 +508,19 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 				}
 
 				if machine.Status.Initialization.Provisioned != nil && *machine.Status.Initialization.Provisioned {
+					continue
+				}
+
+				// Only the StaticMachines that could actually pick this StaticInstance are
+				// interested in it becoming Pending. Enqueueing every non-ready StaticMachine
+				// multiplies a single release into a cluster-wide reconcile burst.
+				selector, err := machine.StaticInstanceSelector()
+				if err != nil {
+					logger.Error(err, "failed to get StaticMachine label selector", "staticMachine", machine.Name)
+					continue
+				}
+
+				if !selector.Matches(instanceLabels) {
 					continue
 				}
 

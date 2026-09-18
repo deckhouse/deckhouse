@@ -133,9 +133,16 @@ func (r *StaticInstance) GetPhase() StaticInstanceStatusCurrentStatusPhase {
 }
 
 // SetPhase sets the current phase of the static instance.
+//
+// LastUpdateTime is refreshed only on a real phase transition: rewriting it on every
+// call makes the patch helper see a diff on every reconcile, which turns into a write
+// to etcd, a watch event and an immediate re-reconcile. It also keeps the phase
+// timeouts (bootstrap, cleanup) from ever being reached.
 func (r *StaticInstance) SetPhase(phase StaticInstanceStatusCurrentStatusPhase) {
 	if r.Status.CurrentStatus == nil {
 		r.Status.CurrentStatus = &StaticInstanceStatusCurrentStatus{}
+	} else if r.Status.CurrentStatus.Phase == phase {
+		return
 	}
 
 	r.Status.CurrentStatus.Phase = phase
@@ -145,7 +152,6 @@ func (r *StaticInstance) SetPhase(phase StaticInstanceStatusCurrentStatusPhase) 
 func (r *StaticInstance) ToPending() {
 	r.Status.MachineRef = nil
 	r.Status.NodeRef = nil
-	r.Status.CurrentStatus = nil
 
 	conditions.Set(r, metav1.Condition{
 		Type:               "BootstrapSucceeded",
