@@ -63,45 +63,20 @@ func NewHookForUpdatePipeline(
 	skipChecks bool,
 	immutableNode bool,
 ) *HookForUpdatePipeline {
-	checkers := []hook.NodeChecker{
-		hook.NewKubeNodeReadinessChecker(kubeGetter),
-	}
-
-	// An immutable node answers no sshd: the check would fail on every master, and
-	// what it proves — that the machine is alive and serving — the control plane
-	// checker below proves through the cluster.
-	if !commanderMode && !skipChecks && !immutableNode {
-		checkers = append(
-			checkers,
-			NewSSHChecker(
-				sshProvider,
-				nodeToHostForChecks,
-			),
-		)
-	}
-
-	checkers = append(checkers, NewManagerReadinessChecker(kubeGetter))
-	checkers = append(checkers, NewStrongholdReadinessChecker(kubeGetter))
-
-	checker := NewChecker(
-		nodeToHostForChecks,
-		checkers,
-		"",
-		DefaultConfirm,
-	)
-
 	return &HookForUpdatePipeline{
-		Checker:       checker,
+		Checker: NewControlPlaneChecker(
+			kubeGetter,
+			sshProvider,
+			nodeToHostForChecks,
+			commanderMode,
+			skipChecks,
+			immutableNode,
+		),
 		kubeGetter:    kubeGetter,
 		sshProvider:   sshProvider,
 		commanderMode: commanderMode,
 		immutableNode: immutableNode,
 	}
-}
-
-func (h *HookForUpdatePipeline) WithSourceCommandName(name string) *HookForUpdatePipeline {
-	h.sourceCommandName = name
-	return h
 }
 
 func (h *HookForUpdatePipeline) WithNodeToConverge(nodeToConverge string) *HookForUpdatePipeline {

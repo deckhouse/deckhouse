@@ -18,15 +18,16 @@ import (
 	"context"
 	"fmt"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 )
 
 type Checker struct {
 	nodeToHostForChecks map[string]string
 	checkers            []hook.NodeChecker
-	sourceCommandName   string
 	confirm             ConfirmFunc
 }
 
@@ -36,11 +37,10 @@ var DefaultConfirm = ConfirmFunc(func(msg string) bool {
 	return true
 })
 
-func NewChecker(nodeToHostForChecks map[string]string, checkers []hook.NodeChecker, sourceCommandName string, confirm ConfirmFunc) *Checker {
+func NewChecker(nodeToHostForChecks map[string]string, checkers []hook.NodeChecker, confirm ConfirmFunc) *Checker {
 	return &Checker{
 		nodeToHostForChecks: nodeToHostForChecks,
 		checkers:            checkers,
-		sourceCommandName:   sourceCommandName,
 		confirm:             confirm,
 	}
 }
@@ -61,7 +61,7 @@ func (c *Checker) IsAllNodesReady(ctx context.Context) error {
 			continue
 		}
 
-		ready, err := hook.IsNodeReady(ctx, c.checkers, nodeName, c.sourceCommandName)
+		ready, err := hook.IsNodeReady(ctx, c.checkers, nodeName)
 		if err != nil {
 			return err
 		}
@@ -72,4 +72,30 @@ func (c *Checker) IsAllNodesReady(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// NewControlPlaneChecker builds the gate that stands in front of every destructive action
+// on a master: the nodes named here are the ones that have to survive it.
+func NewControlPlaneChecker(
+	kubeClientProvider kubernetes.KubeClientProviderWithCtx,
+	sshProvider libcon.SSHProvider,
+	nodeToHostForChecks map[string]string,
+	commanderMode bool,
+	skipChecks bool,
+	immutableNode bool,
+) *Checker {
+	checkers := []hook.NodeChecker{
+		hook.NewKubeNodeReadinessChecker(kubeClientProvider),
+	}
+
+	// An immutable node answers no sshd: the check would fail on every master, and
+	// what it proves — that the machine is alive and serving — the control plane
+	// checker below proves through the cluster.
+	if !commanderMode && !skipChecks && !immutableNode {
+		checkers = append(checkers, NewSSHChecker(sshProvider, nodeToHostForChecks))
+	}
+	checkers = append(checkers, NewManagerReadinessChecker(kubeClientProvider))
+	checkers = append(checkers, NewStrongholdReadinessChecker(kubeClientProvider))
+
+	return NewChecker(nodeToHostForChecks, checkers, DefaultConfirm)
 }

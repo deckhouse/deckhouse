@@ -179,7 +179,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	ctx *context.Context,
 	settings []byte,
 	nodesToDeleteInfo []nodeToDeleteInfo,
-	getHookByNodeName func(nodeName string) infrastructure.InfraActionHook,
+	getHookByNodeName func(nodeName string) (infrastructure.InfraActionHook, error),
 	stopClientForNode func(nodeName string),
 ) error {
 	cfg, err := ctx.MetaConfig()
@@ -222,6 +222,12 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			nodeState = nodeToDeleteInfo.state
 		}
 
+		hook, err := getHookByNodeName(nodeToDeleteInfo.name)
+		if err != nil {
+			allErrs = multierror.Append(allErrs, fmt.Errorf("build control plane hook for node %s: %w", nodeToDeleteInfo.name, err))
+			return allErrs.ErrorOrNil()
+		}
+
 		nodeRunner, err := ctx.InfrastructureContext(cfg).GetConvergeNodeDeleteRunner(ctx.Ctx(), cfg, infrastructure.NodeDeleteRunnerOptions{
 			NodeName:        nodeToDeleteInfo.name,
 			NodeGroupName:   c.name,
@@ -234,10 +240,11 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
 				infrastructurestate.NewNodeStateSaver(ctx, nodeToDeleteInfo.name, c.name, nil),
 			},
-			Hook: getHookByNodeName(nodeToDeleteInfo.name),
+			Hook: hook,
 		}, ctx.ChangesSettings().AutomaticSettings)
 		if err != nil {
-			return err
+			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
+			return allErrs.ErrorOrNil()
 		}
 
 		if stopClientForNode != nil {
@@ -246,7 +253,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 
 		if err := infrastructure.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
-			continue
+			return allErrs.ErrorOrNil()
 		}
 
 		if tomb.IsInterrupted() {

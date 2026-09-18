@@ -529,37 +529,6 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
 }
 
-// newHookForUpdatePipeline reports its failures instead of returning a nil hook:
-// the runner substitutes a DummyHook for a nil one, and a master VM would then be
-// recreated without removing its control plane role, its Node object or its etcd
-// membership.
-func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string) (infrastructure.InfraActionHook, error) {
-	err := c.populateNodeToHost(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("collect master addresses: %w", err)
-	}
-
-	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, convergedNode)
-
-	sshProvider, err := c.sshProviderForHooks(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("get ssh provider: %w", err)
-	}
-
-	return controlplane.NewHookForUpdatePipeline(
-		ctx,
-		sshProvider,
-		nodesToCheck,
-		ctx.CommanderMode(),
-		c.skipChecks,
-		c.immutable,
-	).
-		WithSourceCommandName("converge").
-		WithNodeToConverge(convergedNode).
-		WithConfirm(confirmOrProceed(ctx)).
-		WithClientSwitcher(ctx.ClientSwitcher()), nil
-}
-
 func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	if c.desiredReplicas < 1 {
 		return fmt.Errorf(`Cannot delete ALL master nodes. If you want to remove the cluster, use the 'dhctl destroy' command`)
@@ -591,14 +560,8 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 			ctx,
 			c.state.Settings,
 			nodesToDeleteInfo,
-			func(nodeName string) infrastructure.InfraActionHook {
-				return controlplane.NewHookForDestroyPipeline(
-					ctx,
-					sshProvider,
-					nodeName,
-					ctx.CommanderMode(),
-					c.immutable,
-				)
+			func(nodeName string) (infrastructure.InfraActionHook, error) {
+				return c.newHookForDestroyPipeline(ctx, nodeName)
 			},
 			func(nodeName string) {
 				standaloneProvider, ok := sshProvider.(libcon.StandaloneClientProvider)
@@ -650,4 +613,57 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 
 func (c *MasterNodeGroupController) totalReplicas() int {
 	return len(c.state.State)
+}
+
+// newHookForUpdatePipeline reports its failures instead of returning a nil hook:
+// the runner substitutes a DummyHook for a nil one, and a master VM would then be
+// recreated without removing its control plane role, its Node object or its etcd
+// membership.
+func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string) (infrastructure.InfraActionHook, error) {
+	err := c.populateNodeToHost(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("collect master addresses: %w", err)
+	}
+
+	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, convergedNode)
+
+	sshProvider, err := c.sshProviderForHooks(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get ssh provider: %w", err)
+	}
+
+	return controlplane.NewHookForUpdatePipeline(
+		ctx,
+		sshProvider,
+		nodesToCheck,
+		ctx.CommanderMode(),
+		c.skipChecks,
+		c.immutable,
+	).WithNodeToConverge(convergedNode).
+		WithConfirm(confirmOrProceed(ctx)).
+		WithClientSwitcher(ctx.ClientSwitcher()), nil
+}
+
+func (c *MasterNodeGroupController) newHookForDestroyPipeline(ctx *context.Context, destroyNode string) (infrastructure.InfraActionHook, error) {
+	err := c.populateNodeToHost(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("collect master addresses: %w", err)
+	}
+
+	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, destroyNode)
+
+	sshProvider, err := c.sshProviderForHooks(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get ssh provider: %w", err)
+	}
+
+	return controlplane.NewHookForDestroyPipeline(
+		ctx,
+		sshProvider,
+		destroyNode,
+		nodesToCheck,
+		ctx.CommanderMode(),
+		c.skipChecks,
+		c.immutable,
+	).WithConfirm(confirmOrProceed(ctx)), nil
 }

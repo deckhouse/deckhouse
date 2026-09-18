@@ -127,7 +127,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 
 		checkers = append(checkers, controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)))
 
-		err = controlplane.NewChecker(nodeToHostForChecks, checkers, "test", controlplane.DefaultConfirm).
+		err = controlplane.NewChecker(nodeToHostForChecks, checkers, controlplane.DefaultConfirm).
 			IsAllNodesReady(ctx)
 		if err != nil {
 			return fmt.Errorf("control plane node is not ready: %v", err)
