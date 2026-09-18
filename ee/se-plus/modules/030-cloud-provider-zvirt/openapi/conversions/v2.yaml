@@ -17,6 +17,7 @@ conversions:
   - if .storage.disabled == null then .storage.disabled = false end
   # CCM section
   - if .ccm == null then .ccm = {} end
+  - if .ccm.parameters == null then .ccm.parameters = {} end
   - if .ccm.disabled == null then .ccm.disabled = false end
 description:
   ru: |
