@@ -7,10 +7,13 @@ package main
 
 import (
 	"context"
+	"crypto/sha1"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"slices"
@@ -45,6 +48,15 @@ type Discoverer struct {
 	cnsClient            *cns.Client
 	vsphereClient        vsphere.Client
 	vmFolderPath         string
+
+	// host + insecure + caBundle are kept for the leaf-cert fingerprint computation on
+	// every discovery cycle. The govmomi client already round-trips SOAP over the same
+	// TLS session, but its public API does not surface the peer certificate — a separate
+	// tls.Dial to host:443, using the same trust settings, is the cheapest way to read
+	// the leaf cert without a govmomi patch.
+	host         string
+	insecureFlag bool
+	caCertPool   *x509.CertPool
 }
 
 func NewDiscoverer(logger *log.Logger) *Discoverer {
@@ -159,6 +171,17 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 		logger.Fatal("Failed to create vSphere client", "error", err)
 	}
 
+	// Parse caBundle once, share the same pool with the leaf-cert dialer used by
+	// discoverThumbprint on every DiscoveryData cycle. Empty caBundle + insecure=false
+	// means "use system trust store" (nil pool → tls.Dial default).
+	var caCertPool *x509.CertPool
+	if caBundle != "" {
+		caCertPool = x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM([]byte(caBundle)) {
+			logger.Fatal("Failed to parse GOVMOMI_CA_BUNDLE as PEM")
+		}
+	}
+
 	return &Discoverer{
 		logger:               logger,
 		clusterUUID:          clusterUUID,
@@ -167,6 +190,9 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 		cnsClient:            cnsClient,
 		vsphereClient:        vc,
 		vmFolderPath:         vmFolderPath,
+		host:                 host,
+		insecureFlag:         insecureFlag,
+		caCertPool:           caCertPool,
 	}
 }
 
@@ -208,7 +234,36 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 	discoveryData.Datacenter = zonesDatastores.Datacenter
 	discoveryData.Zones = mergeZones(discoveryData.Zones, zonesDatastores.Zones)
 	discoveryData.Datastores = mergeDatastores(discoveryData.Datastores, zonesDatastores.ZonedDataStores)
+	discoveryData.ZoneComputeClusterPaths = zonesDatastores.ZoneComputeClusterPaths
 	discoveryData.VMFolderPath = d.vmFolderPath
+
+	// Ensure the "deckhouse-cluster-name" tag exists for this cluster and publish its URN,
+	// so capi/template.yaml can render VSphereMachineTemplate.spec.tagIDs and CAPV attaches
+	// the tag on clone. This is a partial parity with MCM: MCM also attached a
+	// "deckhouse-node-role/<ng>-<zone>" tag, which the CAPI path does not yet reproduce —
+	// see the module USAGE doc for the rationale.
+	//
+	// Any failure here is logged and swallowed: the rest of discovery data is independent
+	// of tagging, and losing the tag on new VMs is a UI regression, not a functional one.
+	// The previous TagURNs value in cloudProviderDiscoveryData is preserved on error via
+	// json.Unmarshal above — an operator that once had the tag will keep it until the next
+	// successful ensure.
+	if urn, err := d.vsphereClient.EnsureClusterTagURN(ctx, d.clusterUUID); err != nil {
+		d.logger.Warn("Failed to ensure cluster tag URN, VMs cloned in the meantime will not carry the tag", "error", err)
+	} else {
+		discoveryData.TagURNs = []string{urn}
+	}
+
+	// Publish the vCenter leaf-cert SHA-1 fingerprint. capi/cluster.yaml renders it into
+	// VSphereCluster.spec.thumbprint, which CAPV's session code uses to pin the leaf on
+	// every reconcile. Best-effort: on transport error the previously published thumbprint
+	// is retained (via the unmarshal at the top of DiscoveryData) — dropping the last-good
+	// value would flip CAPV to insecure for the whole cluster on any temporary DNS blip.
+	if tp, err := d.discoverThumbprint(ctx); err != nil {
+		d.logger.Warn("Failed to fetch vCenter leaf certificate for thumbprint", "error", err)
+	} else {
+		discoveryData.Thumbprint = tp
+	}
 
 	for i := range storagePolicies {
 		discoveryData.StoragePolicies = append(discoveryData.StoragePolicies, v1.VsphereStoragePolicy{
@@ -307,6 +362,51 @@ func vsphereZonedDataStoresToV1(in []vsphere.ZonedDataStore) []v1.VsphereDatasto
 		})
 	}
 	return result
+}
+
+// discoverThumbprint opens an independent TLS connection to the vCenter host and returns
+// the SHA-1 fingerprint of the peer's leaf certificate, formatted as colon-separated
+// upper-case hex (matching CAPV's expected shape, `AA:BB:CC:...:99`).
+//
+// The dial reuses the discoverer's trust settings (insecureFlag + caBundle-derived pool),
+// so the certificate is validated by the same rules the SOAP session uses — a MitM the
+// SOAP layer would reject cannot leak its fingerprint into VSphereCluster.spec.thumbprint.
+// When insecureFlag is true validation is skipped entirely; that is the "no chain to
+// verify against" case, and CAPV would in any event fall back to insecure without a
+// thumbprint. Read-only, side-effect free.
+func (d *Discoverer) discoverThumbprint(ctx context.Context) (string, error) {
+	addr := d.host
+	if _, _, err := net.SplitHostPort(addr); err != nil {
+		addr = net.JoinHostPort(addr, "443")
+	}
+	tlsCfg := &tls.Config{
+		ServerName:         d.host,
+		InsecureSkipVerify: d.insecureFlag, //nolint:gosec // matches session verification policy
+		RootCAs:            d.caCertPool,
+	}
+	// DialContext honors caller cancellation and the reconcile-loop timeout, so a hung
+	// vCenter cannot pin the discoverer goroutine forever. Timeout is set as a hard
+	// upper bound on top of ctx to protect against callers passing context.Background().
+	dialer := &tls.Dialer{
+		NetDialer: &net.Dialer{Timeout: 10 * time.Second},
+		Config:    tlsCfg,
+	}
+	rawConn, err := dialer.DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return "", fmt.Errorf("dial %s: %w", addr, err)
+	}
+	conn := rawConn.(*tls.Conn)
+	defer conn.Close()
+	certs := conn.ConnectionState().PeerCertificates
+	if len(certs) == 0 {
+		return "", errors.New("no peer certificates presented by vCenter")
+	}
+	sum := sha1.Sum(certs[0].Raw) //nolint:gosec // CAPV thumbprint format is SHA-1 by design
+	parts := make([]string, len(sum))
+	for i, b := range sum {
+		parts[i] = fmt.Sprintf("%02X", b)
+	}
+	return strings.Join(parts, ":"), nil
 }
 
 func setCABundleIfNeed(logger *log.Logger, soapClient *soap.Client, insecure bool, caBundle string) error {

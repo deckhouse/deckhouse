@@ -251,6 +251,54 @@ func providerFixtures() []providerFixture {
 			},
 			manualRolloutIDIgnoredByV1: true,
 		},
+		{
+			// vsphere renders the machine template through the v2 contract; the fixture keeps only
+			// the provider fields v1 already read (server / vmFolderPath / instanceClassDefaults),
+			// so mutation of any of them must render identically. v2-only inputs (datacenter,
+			// zoneComputeClusterPaths, instances.mainNetwork fallback) are exercised by the
+			// module's own template_tests — mixing them into the parity fixture would make v1 and
+			// v2 disagree on the baseline and hide real regressions.
+			name:    "vsphere",
+			crdPath: "../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/candi/openapi/instance_class.yaml",
+
+			registrationPath: "../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/templates/registration.yaml",
+			contractPath:     "../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/capi/template.yaml",
+			providerConfig: map[string]any{
+				"server":       "vcenter.example",
+				"vmFolderPath": "dev/test",
+				"instanceClassDefaults": map[string]any{
+					"template":         "vm-templates/redos-8",
+					"datastore":        "vsanDatastore",
+					"resourcePoolPath": "e2e-rp",
+					"disableTimesync":  true,
+				},
+			},
+			instanceClass: map[string]any{
+				"numCPUs":      float64(4),
+				"memory":       float64(8192),
+				"rootDiskSize": float64(40),
+				"mainNetwork":  "VM Network",
+			},
+			rolloutExceptions: map[string]string{
+				// Both resourcePool and datastore live in rolloutFields now: the
+				// ensure_failure_domains hook creates a per-NG VSphereDeploymentZone whenever
+				// either is set on the InstanceClass, and CAPV's overrideFunc reads both from
+				// PlacementConstraint (the datastore branch requires the images/capv-
+				// controller-manager/patches/003-datastore-on-deployment-zone.patch downstream
+				// patch — upstream only reads datastore from FD topology).
+				//
+				// Optional string/list fields: v1 checksum wrapped them in `if $ic.<field>`
+				// (truthy guards), so an empty-string / empty-list mutation left the checksum
+				// unchanged. v2 declares them in rolloutFields and treats any mutation as a
+				// change, which is stricter and safer — but the strictness is a deliberate
+				// contract shift, not a regression, so the individual empty-mutations are
+				// pinned as exceptions here.
+				"template/empty":           "v1 checksum skipped empty template via `if $ic.template`; v2 rolls on any mutation",
+				"additionalNetworks/empty": "v1 checksum skipped empty list via `if $ic.additionalNetworks`; v2 rolls on any mutation",
+				"resourcePool/empty":       "v1 checksum skipped empty via `or $ic.resourcePool $defaults.resourcePoolPath`; v2 rolls on any mutation because the hook uses the key presence to select DZ",
+				"datastore/empty":          "v1 checksum skipped empty via `or $ic.datastore $defaults.datastore`; v2 rolls on any mutation because the hook uses the key presence to select DZ",
+			},
+		},
 	}
 }
 

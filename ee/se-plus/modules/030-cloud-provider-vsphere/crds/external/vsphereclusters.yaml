@@ -1,0 +1,939 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vsphere
+    cluster.x-k8s.io/provider: vsphere
+    cluster.x-k8s.io/v1beta1: v1beta1
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: vsphereclusters.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: VSphereCluster
+    listKind: VSphereClusterList
+    plural: vsphereclusters
+    singular: vspherecluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Cluster infrastructure is ready for VSphereMachine
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: Server is the address of the vSphere endpoint
+      jsonPath: .spec.server
+      name: Server
+      type: string
+    - description: API Endpoint
+      jsonPath: .spec.controlPlaneEndpoint.host
+      name: ControlPlaneEndpoint
+      priority: 1
+      type: string
+    - description: Time duration since creation of Machine
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    deprecated: true
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        description: |-
+          VSphereCluster is the Schema for the vsphereclusters API
+
+          Deprecated: This type will be removed in one of the next releases.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereClusterSpec defines the desired state of VSphereCluster.
+            properties:
+              cloudProviderConfiguration:
+                description: |-
+                  CloudProviderConfiguration holds the cluster-wide configuration for the vSphere cloud provider.
+
+                  Deprecated: will be removed in v1alpha4.
+                properties:
+                  disk:
+                    description: Disk is the vSphere cloud provider's disk configuration.
+                    properties:
+                      scsiControllerType:
+                        description: SCSIControllerType defines SCSI controller to
+                          be used.
+                        type: string
+                    type: object
+                  global:
+                    description: Global is the vSphere cloud provider's global configuration.
+                    properties:
+                      apiBindPort:
+                        description: |-
+                          APIBindPort configures the vSphere cloud controller manager API port.
+                          Defaults to 43001.
+                        type: string
+                      apiDisable:
+                        description: |-
+                          APIDisable disables the vSphere cloud controller manager API.
+                          Defaults to true.
+                        type: boolean
+                      caFile:
+                        description: |-
+                          CAFile Specifies the path to a CA certificate in PEM format.
+                          If not configured, the system's CA certificates will be used.
+                        type: string
+                      datacenters:
+                        description: Datacenters is a CSV string of the datacenters
+                          in which VMs are located.
+                        type: string
+                      insecure:
+                        description: Insecure is a flag that disables TLS peer verification.
+                        type: boolean
+                      password:
+                        description: Password is the password used to access a vSphere
+                          endpoint.
+                        type: string
+                      port:
+                        description: |-
+                          Port is the port on which the vSphere endpoint is listening.
+                          Defaults to 443.
+                        type: string
+                      roundTripperCount:
+                        description: |-
+                          RoundTripperCount specifies the SOAP round tripper count
+                          (retries = RoundTripper - 1)
+                        format: int32
+                        type: integer
+                      secretName:
+                        description: |-
+                          SecretName is the name of the Kubernetes secret in which the vSphere
+                          credentials are located.
+                        type: string
+                      secretNamespace:
+                        description: SecretNamespace is the namespace for SecretName.
+                        type: string
+                      secretsDirectory:
+                        description: |-
+                          SecretsDirectory is a directory in which secrets may be found. This
+                          may used in the event that:
+                          1. It is not desirable to use the K8s API to watch changes to secrets
+                          2. The cloud controller manager is not running in a K8s environment,
+                             such as DC/OS. For example, the container storage interface (CSI) is
+                             container orcehstrator (CO) agnostic, and should support non-K8s COs.
+                          Defaults to /etc/cloud/credentials.
+                        type: string
+                      serviceAccount:
+                        description: |-
+                          ServiceAccount is the Kubernetes service account used to launch the cloud
+                          controller manager.
+                          Defaults to cloud-controller-manager.
+                        type: string
+                      thumbprint:
+                        description: |-
+                          Thumbprint is the cryptographic thumbprint of the vSphere endpoint's
+                          certificate.
+                        type: string
+                      username:
+                        description: Username is the username used to access a vSphere
+                          endpoint.
+                        type: string
+                    type: object
+                  labels:
+                    description: Labels is the vSphere cloud provider's zone and region
+                      configuration.
+                    properties:
+                      region:
+                        description: Region is the region in which VMs are created/located.
+                        type: string
+                      zone:
+                        description: Zone is the zone in which VMs are created/located.
+                        type: string
+                    type: object
+                  network:
+                    description: Network is the vSphere cloud provider's network configuration.
+                    properties:
+                      name:
+                        description: Name is the name of the network to which VMs
+                          are connected.
+                        type: string
+                    type: object
+                  providerConfig:
+                    description: |-
+                      CPIProviderConfig contains extra information used to configure the
+                      vSphere cloud provider.
+                    properties:
+                      cloud:
+                        properties:
+                          controllerImage:
+                            type: string
+                          extraArgs:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              ExtraArgs passes through extra arguments to the cloud provider.
+                              The arguments here are passed to the cloud provider daemonset specification
+                            type: object
+                        type: object
+                      storage:
+                        properties:
+                          attacherImage:
+                            type: string
+                          controllerImage:
+                            type: string
+                          livenessProbeImage:
+                            type: string
+                          metadataSyncerImage:
+                            type: string
+                          nodeDriverImage:
+                            type: string
+                          provisionerImage:
+                            type: string
+                          registrarImage:
+                            type: string
+                        type: object
+                    type: object
+                  virtualCenter:
+                    additionalProperties:
+                      description: CPIVCenterConfig is a vSphere cloud provider's
+                        vCenter configuration.
+                      properties:
+                        datacenters:
+                          description: Datacenters is a CSV string of the datacenters
+                            in which VMs are located.
+                          type: string
+                        password:
+                          description: Password is the password used to access a vSphere
+                            endpoint.
+                          type: string
+                        port:
+                          description: |-
+                            Port is the port on which the vSphere endpoint is listening.
+                            Defaults to 443.
+                          type: string
+                        roundTripperCount:
+                          description: |-
+                            RoundTripperCount specifies the SOAP round tripper count
+                            (retries = RoundTripper - 1)
+                          format: int32
+                          type: integer
+                        thumbprint:
+                          description: |-
+                            Thumbprint is the cryptographic thumbprint of the vSphere endpoint's
+                            certificate.
+                          type: string
+                        username:
+                          description: Username is the username used to access a vSphere
+                            endpoint.
+                          type: string
+                      type: object
+                    description: VCenter is a list of vCenter configurations.
+                    type: object
+                  workspace:
+                    description: Workspace is the vSphere cloud provider's workspace
+                      configuration.
+                    properties:
+                      datacenter:
+                        description: Datacenter is the datacenter in which VMs are
+                          created/located.
+                        type: string
+                      datastore:
+                        description: Datastore is the datastore in which VMs are created/located.
+                        type: string
+                      folder:
+                        description: Folder is the folder in which VMs are created/located.
+                        type: string
+                      resourcePool:
+                        description: ResourcePool is the resource pool in which VMs
+                          are created/located.
+                        type: string
+                      server:
+                        description: Server is the IP address or FQDN of the vSphere
+                          endpoint.
+                        type: string
+                    type: object
+                type: object
+              controlPlaneEndpoint:
+                description: ControlPlaneEndpoint represents the endpoint used to
+                  communicate with the control plane.
+                properties:
+                  host:
+                    description: The hostname on which the API server is serving.
+                    type: string
+                  port:
+                    description: The port on which the API server is serving.
+                    format: int32
+                    type: integer
+                required:
+                - host
+                - port
+                type: object
+              identityRef:
+                description: |-
+                  IdentityRef is a reference to either a Secret or VSphereClusterIdentity that contains
+                  the identity to use when reconciling the cluster.
+                properties:
+                  kind:
+                    description: Kind of the identity. Can either be VSphereClusterIdentity
+                      or Secret
+                    enum:
+                    - VSphereClusterIdentity
+                    - Secret
+                    type: string
+                  name:
+                    description: Name of the identity.
+                    minLength: 1
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+              insecure:
+                description: |-
+                  Insecure is a flag that controls whether to validate the
+                  vSphere server's certificate.
+
+                  Deprecated: will be removed in v1alpha4.
+                type: boolean
+              loadBalancerRef:
+                description: |-
+                  LoadBalancerRef may be used to enable a control plane load balancer
+                  for this cluster.
+                  When a LoadBalancerRef is provided, the VSphereCluster.Status.Ready field
+                  will not be true until the referenced resource is Status.Ready and has a
+                  non-empty Status.Address value.
+
+                  Deprecated: will be removed in v1alpha4.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              server:
+                description: Server is the address of the vSphere endpoint.
+                type: string
+              thumbprint:
+                description: |-
+                  Thumbprint is the colon-separated SHA-1 checksum of the given vCenter server's host certificate
+                  When provided, Insecure should not be set to true
+                type: string
+            type: object
+          status:
+            description: VSphereClusterStatus defines the observed state of VSphereClusterSpec.
+            properties:
+              conditions:
+                description: Conditions defines current service state of the VSphereCluster.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureDomains:
+                additionalProperties:
+                  description: |-
+                    FailureDomainSpec is the Schema for Cluster API failure domains.
+                    It allows controllers to understand how many failure domains a cluster can optionally span across.
+                  properties:
+                    attributes:
+                      additionalProperties:
+                        type: string
+                      description: Attributes is a free form map of attributes an
+                        infrastructure provider might use or require.
+                      type: object
+                    controlPlane:
+                      description: ControlPlane determines if this failure domain
+                        is suitable for use by control plane machines.
+                      type: boolean
+                  type: object
+                description: FailureDomains is a list of failure domain objects synced
+                  from the infrastructure provider.
+                type: object
+              ready:
+                type: boolean
+            type: object
+        type: object
+    served: false
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Cluster infrastructure is ready for VSphereMachine
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: Server is the address of the vSphere endpoint
+      jsonPath: .spec.server
+      name: Server
+      type: string
+    - description: API Endpoint
+      jsonPath: .spec.controlPlaneEndpoint.host
+      name: ControlPlaneEndpoint
+      priority: 1
+      type: string
+    - description: Time duration since creation of Machine
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    deprecated: true
+    name: v1alpha4
+    schema:
+      openAPIV3Schema:
+        description: |-
+          VSphereCluster is the Schema for the vsphereclusters API
+
+          Deprecated: This type will be removed in one of the next releases.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereClusterSpec defines the desired state of VSphereCluster
+            properties:
+              controlPlaneEndpoint:
+                description: ControlPlaneEndpoint represents the endpoint used to
+                  communicate with the control plane.
+                properties:
+                  host:
+                    description: The hostname on which the API server is serving.
+                    type: string
+                  port:
+                    description: The port on which the API server is serving.
+                    format: int32
+                    type: integer
+                required:
+                - host
+                - port
+                type: object
+              identityRef:
+                description: |-
+                  IdentityRef is a reference to either a Secret or VSphereClusterIdentity that contains
+                  the identity to use when reconciling the cluster.
+                properties:
+                  kind:
+                    description: Kind of the identity. Can either be VSphereClusterIdentity
+                      or Secret
+                    enum:
+                    - VSphereClusterIdentity
+                    - Secret
+                    type: string
+                  name:
+                    description: Name of the identity.
+                    minLength: 1
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+              server:
+                description: Server is the address of the vSphere endpoint.
+                type: string
+              thumbprint:
+                description: Thumbprint is the colon-separated SHA-1 checksum of the
+                  given vCenter server's host certificate
+                type: string
+            type: object
+          status:
+            description: VSphereClusterStatus defines the observed state of VSphereClusterSpec
+            properties:
+              conditions:
+                description: Conditions defines current service state of the VSphereCluster.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureDomains:
+                additionalProperties:
+                  description: |-
+                    FailureDomainSpec is the Schema for Cluster API failure domains.
+                    It allows controllers to understand how many failure domains a cluster can optionally span across.
+                  properties:
+                    attributes:
+                      additionalProperties:
+                        type: string
+                      description: Attributes is a free form map of attributes an
+                        infrastructure provider might use or require.
+                      type: object
+                    controlPlane:
+                      description: ControlPlane determines if this failure domain
+                        is suitable for use by control plane machines.
+                      type: boolean
+                  type: object
+                description: FailureDomains is a list of failure domain objects synced
+                  from the infrastructure provider.
+                type: object
+              ready:
+                type: boolean
+            type: object
+        type: object
+    served: false
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Cluster infrastructure is ready for VSphereMachine
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: Server is the address of the vSphere endpoint.
+      jsonPath: .spec.server
+      name: Server
+      type: string
+    - description: API Endpoint
+      jsonPath: .spec.controlPlaneEndpoint.host
+      name: ControlPlaneEndpoint
+      priority: 1
+      type: string
+    - description: Time duration since creation of Machine
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: VSphereCluster is the Schema for the vsphereclusters API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereClusterSpec defines the desired state of VSphereCluster.
+            properties:
+              clusterModules:
+                description: |-
+                  ClusterModules hosts information regarding the anti-affinity vSphere constructs
+                  for each of the objects responsible for creation of VM objects belonging to the cluster.
+                items:
+                  description: |-
+                    ClusterModule holds the anti affinity construct `ClusterModule` identifier
+                    in use by the VMs owned by the object referred by the TargetObjectName field.
+                  properties:
+                    controlPlane:
+                      description: |-
+                        ControlPlane indicates whether the referred object is responsible for control plane nodes.
+                        Currently, only the KubeadmControlPlane objects have this flag set to true.
+                        Only a single object in the slice can have this value set to true.
+                      type: boolean
+                    moduleUUID:
+                      description: ModuleUUID is the unique identifier of the `ClusterModule`
+                        used by the object.
+                      type: string
+                    targetObjectName:
+                      description: |-
+                        TargetObjectName points to the object that uses the Cluster Module information to enforce
+                        anti-affinity amongst its descendant VM objects.
+                      type: string
+                  required:
+                  - controlPlane
+                  - moduleUUID
+                  - targetObjectName
+                  type: object
+                type: array
+              controlPlaneEndpoint:
+                description: ControlPlaneEndpoint represents the endpoint used to
+                  communicate with the control plane.
+                properties:
+                  host:
+                    description: The hostname on which the API server is serving.
+                    type: string
+                  port:
+                    description: The port on which the API server is serving.
+                    format: int32
+                    type: integer
+                type: object
+              disableClusterModule:
+                description: |-
+                  DisableClusterModule is used to explicitly turn off the ClusterModule feature.
+                  This should work along side NodeAntiAffinity feature flag.
+                  If the NodeAntiAffinity feature flag is turned off, this will be disregarded.
+                type: boolean
+              failureDomainSelector:
+                description: |-
+                  FailureDomainSelector is the label selector to use for failure domain selection
+                  for the control plane nodes of the cluster.
+                  If not set (`nil`), selecting failure domains will be disabled.
+                  An empty value (`{}`) selects all existing failure domains.
+                  A valid selector will select all failure domains which match the selector.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              identityRef:
+                description: |-
+                  IdentityRef is a reference to either a Secret or VSphereClusterIdentity that contains
+                  the identity to use when reconciling the cluster.
+                properties:
+                  kind:
+                    description: Kind of the identity. Can either be VSphereClusterIdentity
+                      or Secret
+                    enum:
+                    - VSphereClusterIdentity
+                    - Secret
+                    type: string
+                  name:
+                    description: Name of the identity.
+                    minLength: 1
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+              server:
+                description: Server is the address of the vSphere endpoint.
+                type: string
+              thumbprint:
+                description: Thumbprint is the colon-separated SHA-1 checksum of the
+                  given vCenter server's host certificate
+                type: string
+            type: object
+          status:
+            description: VSphereClusterStatus defines the observed state of VSphereClusterSpec.
+            properties:
+              conditions:
+                description: Conditions defines current service state of the VSphereCluster.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This field may be empty.
+                      maxLength: 10240
+                      minLength: 1
+                      type: string
+                    reason:
+                      description: |-
+                        reason is the reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may be empty.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                    severity:
+                      description: |-
+                        severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      maxLength: 32
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureDomains:
+                additionalProperties:
+                  description: |-
+                    FailureDomainSpec is the Schema for Cluster API failure domains.
+                    It allows controllers to understand how many failure domains a cluster can optionally span across.
+                  properties:
+                    attributes:
+                      additionalProperties:
+                        type: string
+                      description: attributes is a free form map of attributes an
+                        infrastructure provider might use or require.
+                      type: object
+                    controlPlane:
+                      description: controlPlane determines if this failure domain
+                        is suitable for use by control plane machines.
+                      type: boolean
+                  type: object
+                description: FailureDomains is a list of failure domain objects synced
+                  from the infrastructure provider.
+                type: object
+              ready:
+                type: boolean
+              v1beta2:
+                description: v1beta2 groups all the fields that will be added or modified
+                  in VSphereCluster's status with the V1Beta2 version.
+                properties:
+                  conditions:
+                    description: |-
+                      conditions represents the observations of a VSphereCluster's current state.
+                      Known condition types are Ready, FailureDomainsReady, VCenterAvailable, ClusterModulesReady and Paused.
+                    items:
+                      description: Condition contains details for one aspect of the
+                        current state of this API Resource.
+                      properties:
+                        lastTransitionTime:
+                          description: |-
+                            lastTransitionTime is the last time the condition transitioned from one status to another.
+                            This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                          format: date-time
+                          type: string
+                        message:
+                          description: |-
+                            message is a human readable message indicating details about the transition.
+                            This may be an empty string.
+                          maxLength: 32768
+                          type: string
+                        observedGeneration:
+                          description: |-
+                            observedGeneration represents the .metadata.generation that the condition was set based upon.
+                            For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                            with respect to the current state of the instance.
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        reason:
+                          description: |-
+                            reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                            Producers of specific condition types may define expected values and meanings for this field,
+                            and whether the values are considered a guaranteed API.
+                            The value should be a CamelCase string.
+                            This field may not be empty.
+                          maxLength: 1024
+                          minLength: 1
+                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                          type: string
+                        status:
+                          description: status of the condition, one of True, False,
+                            Unknown.
+                          enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                          type: string
+                        type:
+                          description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                          maxLength: 316
+                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                          type: string
+                      required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                      type: object
+                    maxItems: 32
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
+                type: object
+              vCenterVersion:
+                description: VCenterVersion defines the version of the vCenter server
+                  defined in the spec.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
