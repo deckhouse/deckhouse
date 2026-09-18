@@ -1,4 +1,4 @@
-2869
+2888
 1GB
 2GB
 5XX
@@ -468,6 +468,7 @@ LVMthin
 LVS
 Laravel
 LetsEncrypt
+LimitRange
 Linstor
 ListenerSet
 LmRlY
@@ -743,6 +744,7 @@ SIGTERM
 SLA
 SNAT
 SPE
+SPEs
 SPIFFE
 SPN
 SPNEGO
@@ -904,6 +906,7 @@ VXLAN
 ValidatingAdmissionPolicies
 ValidatingAdmissionPolicy
 ValidatingAdmissionPolicyBinding
+ValidatingWebhookConfiguration
 ValidationWebhook
 Venafi
 VersionItems
@@ -2012,6 +2015,7 @@ zoneTagCategory
 валидироваться
 валидирует
 валидируется
+валидируют
 валидируются
 валидирующим
 валидная
@@ -2031,6 +2035,8 @@ zoneTagCategory
 версионирования
 версионированной
 версионировать
+верхнеуровневые
+верхнеуровневых
 визуализированы
 визуализируются
 виртуализацией
@@ -2057,6 +2063,7 @@ zoneTagCategory
 высокодоступный
 высокодоступных
 высокоуровневой
+высокоуровневые
 высокоуровневыми
 высокоуровневых
 г
@@ -2226,6 +2233,7 @@ zoneTagCategory
 контеинеризации
 контеинеризация
 контейнер
+контейнера
 контейнеризации
 контейнеризация
 контейнеризированных
@@ -2332,6 +2340,8 @@ zoneTagCategory
 мультитенантности
 мультитенантность
 мусорку
+мутатор
+мутатора
 мэтчем
 наблюдаемости
 наблюдаемость
