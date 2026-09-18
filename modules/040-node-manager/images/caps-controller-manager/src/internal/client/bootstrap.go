@@ -36,13 +36,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/ssh"
 	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
-
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
 const (
