@@ -330,6 +330,31 @@ alerts:
         Orphaned EgressGatewayPolicy with an irrelevant EgressGateway name has been found.
       severity: "4"
       markupFormat: markdown
+    - name: D8AdmissionPolicyEngineAuditUnavailable
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/availability.yaml
+      moduleUrl: 015-admission-policy-engine
+      module: admission-policy-engine
+      edition: ce
+      description: |-
+        The `gatekeeper-audit` deployment in the `d8-admission-policy-engine` namespace has no available replicas.
+
+        Admission of new objects is not affected, but two things silently stop:
+
+        - Violations among objects that already run are no longer collected. The `PodSecurityStandardsViolation`, `OperationPolicyViolation` and `SecurityPolicyViolation` alerts are built on the metrics of this deployment, so they stop firing and report nothing rather than reporting that all is well.
+        - The `constraint-exporter` container stops updating the `constraint-exporter` ConfigMap, from which Deckhouse builds the `rules` section of the webhook configuration. Resources that only new policies match are not added to the webhook, so those policies are not enforced on admission.
+
+        Find out why the replica is gone:
+
+        ```bash
+        d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=audit-controller
+        d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=audit-controller
+        d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-audit -c manager --tail=200
+        d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-audit -c constraint-exporter --tail=200
+        ```
+      summary: |
+        The audit controller of admission-policy-engine has no available replicas.
+      severity: "4"
+      markupFormat: markdown
     - name: D8AdmissionPolicyEngineNotBootstrapped
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/bootstrap.yaml
       moduleUrl: 015-admission-policy-engine
@@ -354,6 +379,69 @@ alerts:
       summary: |
         Admission-policy-engine module hasn't been bootstrapped for 10 minutes.
       severity: "7"
+      markupFormat: markdown
+    - name: D8AdmissionPolicyEngineWebhookDegraded
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/availability.yaml
+      moduleUrl: 015-admission-policy-engine
+      module: admission-policy-engine
+      edition: ce
+      description: |-
+        The `gatekeeper-controller-manager` deployment in the `d8-admission-policy-engine` namespace has unavailable replicas, and the remaining ones still serve admission requests.
+
+        The webhook has no redundancy left. Losing the last replica rejects every request the webhook intercepts, cluster-wide, because its `failurePolicy` is `Fail`.
+
+        A rollout of the deployment raises this alert for a short time and needs no action. If the alert holds, find out why the replica does not start:
+
+        ```bash
+        d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=controller-manager -o wide
+        d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=controller-manager
+        ```
+
+        The replicas are spread over nodes by a `requiredDuringSchedulingIgnoredDuringExecution` anti-affinity rule and run on system or control-plane nodes only, so a pod stays `Pending` when the cluster has fewer such nodes than replicas.
+      summary: |
+        The admission webhook of admission-policy-engine has unavailable replicas.
+      severity: "3"
+      markupFormat: markdown
+    - name: D8AdmissionPolicyEngineWebhookUnavailable
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/availability.yaml
+      moduleUrl: 015-admission-policy-engine
+      module: admission-policy-engine
+      edition: ce
+      description: |-
+        The `gatekeeper-controller-manager` deployment in the `d8-admission-policy-engine` namespace has no available replicas.
+
+        The deployment serves the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration, whose main webhook has `failurePolicy: Fail`. While no replica is available, the API server cannot reach the webhook and rejects every request it intercepts. The cluster is degraded cluster-wide:
+
+        - Pods, Deployments, StatefulSets, DaemonSets, Jobs and CronJobs are not created or updated in namespaces the webhook covers.
+        - Deletion of those resources is rejected as well, because policies must be able to forbid it.
+        - Roles, RoleBindings and Gatekeeper constraints are not applied.
+        - `kubectl exec` and `kubectl attach` into pods of `d8-*` and `kube-*` namespaces are blocked, which limits the ways to diagnose the failure.
+
+        Deckhouse itself keeps working: the pods of `gatekeeper-controller-manager` carry the `gatekeeper.sh/operation: webhook` label and are excluded from validation, so the deployment can always be restarted.
+
+        Find out why the replicas are gone:
+
+        ```bash
+        d8 k -n d8-admission-policy-engine get deploy gatekeeper-controller-manager
+        d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=controller-manager -o wide
+        d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=controller-manager
+        d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
+        ```
+
+        If the cause cannot be fixed quickly, unblock the cluster by disabling the module. This removes the webhook configuration along with the rest of the module's objects:
+
+        ```bash
+        d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":false}}'
+        ```
+
+        Policies stop being enforced while the module is disabled, so return it as soon as the cause is fixed:
+
+        ```bash
+        d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":true}}'
+        ```
+      summary: |
+        The admission webhook of admission-policy-engine has no available replicas.
+      severity: "1"
       markupFormat: markdown
     - name: D8BashibleApiserverLocked
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml

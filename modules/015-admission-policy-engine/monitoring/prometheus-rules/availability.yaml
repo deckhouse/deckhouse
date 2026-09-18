@@ -1,0 +1,151 @@
+- name: admission-policy-engine.availability
+  rules:
+    - alert: D8AdmissionPolicyEngineWebhookUnavailable
+      expr: |
+        (
+          kube_deployment_status_replicas_available{
+            namespace="d8-admission-policy-engine",
+            deployment="gatekeeper-controller-manager"
+          } == 0
+        )
+        and
+        (
+          kube_deployment_spec_replicas{
+            namespace="d8-admission-policy-engine",
+            deployment="gatekeeper-controller-manager"
+          } > 0
+        )
+      for: 2m
+      labels:
+        severity_level: "1"
+        tier: cluster
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__d8_admission_policy_engine_unavailable: "D8AdmissionPolicyEngineUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_admission_policy_engine_unavailable: "D8AdmissionPolicyEngineUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The admission webhook of admission-policy-engine has no available replicas.
+        description: |-
+          The `gatekeeper-controller-manager` deployment in the `d8-admission-policy-engine` namespace has no available replicas.
+
+          The deployment serves the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration, whose main webhook has `failurePolicy: Fail`. While no replica is available, the API server cannot reach the webhook and rejects every request it intercepts. The cluster is degraded cluster-wide:
+
+          - Pods, Deployments, StatefulSets, DaemonSets, Jobs and CronJobs are not created or updated in namespaces the webhook covers.
+          - Deletion of those resources is rejected as well, because policies must be able to forbid it.
+          - Roles, RoleBindings and Gatekeeper constraints are not applied.
+          - `kubectl exec` and `kubectl attach` into pods of `d8-*` and `kube-*` namespaces are blocked, which limits the ways to diagnose the failure.
+
+          Deckhouse itself keeps working: the pods of `gatekeeper-controller-manager` carry the `gatekeeper.sh/operation: webhook` label and are excluded from validation, so the deployment can always be restarted.
+
+          Find out why the replicas are gone:
+
+          ```bash
+          d8 k -n d8-admission-policy-engine get deploy gatekeeper-controller-manager
+          d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=controller-manager -o wide
+          d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=controller-manager
+          d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
+          ```
+
+          If the cause cannot be fixed quickly, unblock the cluster by disabling the module. This removes the webhook configuration along with the rest of the module's objects:
+
+          ```bash
+          d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":false}}'
+          ```
+
+          Policies stop being enforced while the module is disabled, so return it as soon as the cause is fixed:
+
+          ```bash
+          d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":true}}'
+          ```
+
+    - alert: D8AdmissionPolicyEngineWebhookDegraded
+      expr: |
+        (
+          kube_deployment_spec_replicas{
+            namespace="d8-admission-policy-engine",
+            deployment="gatekeeper-controller-manager"
+          }
+          -
+          kube_deployment_status_replicas_available{
+            namespace="d8-admission-policy-engine",
+            deployment="gatekeeper-controller-manager"
+          }
+        ) > 0
+        and
+        (
+          kube_deployment_status_replicas_available{
+            namespace="d8-admission-policy-engine",
+            deployment="gatekeeper-controller-manager"
+          } > 0
+        )
+      for: 10m
+      labels:
+        severity_level: "3"
+        tier: cluster
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__d8_admission_policy_engine_unavailable: "D8AdmissionPolicyEngineUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_admission_policy_engine_unavailable: "D8AdmissionPolicyEngineUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The admission webhook of admission-policy-engine has unavailable replicas.
+        description: |-
+          The `gatekeeper-controller-manager` deployment in the `d8-admission-policy-engine` namespace has unavailable replicas, and the remaining ones still serve admission requests.
+
+          The webhook has no redundancy left. Losing the last replica rejects every request the webhook intercepts, cluster-wide, because its `failurePolicy` is `Fail`.
+
+          A rollout of the deployment raises this alert for a short time and needs no action. If the alert holds, find out why the replica does not start:
+
+          ```bash
+          d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=controller-manager -o wide
+          d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=controller-manager
+          ```
+
+          The replicas are spread over nodes by a `requiredDuringSchedulingIgnoredDuringExecution` anti-affinity rule and run on system or control-plane nodes only, so a pod stays `Pending` when the cluster has fewer such nodes than replicas.
+
+    - alert: D8AdmissionPolicyEngineAuditUnavailable
+      expr: |
+        (
+          kube_deployment_status_replicas_available{
+            namespace="d8-admission-policy-engine",
+            deployment="gatekeeper-audit"
+          } == 0
+        )
+        and
+        (
+          kube_deployment_spec_replicas{
+            namespace="d8-admission-policy-engine",
+            deployment="gatekeeper-audit"
+          } > 0
+        )
+      for: 20m
+      labels:
+        severity_level: "4"
+        tier: cluster
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__d8_admission_policy_engine_unavailable: "D8AdmissionPolicyEngineUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_admission_policy_engine_unavailable: "D8AdmissionPolicyEngineUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The audit controller of admission-policy-engine has no available replicas.
+        description: |-
+          The `gatekeeper-audit` deployment in the `d8-admission-policy-engine` namespace has no available replicas.
+
+          Admission of new objects is not affected, but two things silently stop:
+
+          - Violations among objects that already run are no longer collected. The `PodSecurityStandardsViolation`, `OperationPolicyViolation` and `SecurityPolicyViolation` alerts are built on the metrics of this deployment, so they stop firing and report nothing rather than reporting that all is well.
+          - The `constraint-exporter` container stops updating the `constraint-exporter` ConfigMap, from which Deckhouse builds the `rules` section of the webhook configuration. Resources that only new policies match are not added to the webhook, so those policies are not enforced on admission.
+
+          Find out why the replica is gone:
+
+          ```bash
+          d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=audit-controller
+          d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=audit-controller
+          d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-audit -c manager --tail=200
+          d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-audit -c constraint-exporter --tail=200
+          ```
