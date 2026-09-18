@@ -11,4 +11,5 @@
   description: ACME DNS-01 webhook for Yandex Cloud DNS.
   license: Apache License 2.0
   id: cert-manager-webhook-yandex
+  # 3p mirror: yandex-cloud/cert-manager-webhook-yandex
   version: 1a7dd500a97e9206fa5cfebb102decd3889e3544
