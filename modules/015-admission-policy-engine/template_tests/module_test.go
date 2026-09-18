@@ -356,9 +356,12 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(vw.Field("webhooks.1.name").String()).To(Equal("system-namespaces.admission-policy-engine.deckhouse.io"))
 			Expect(vw.Field("webhooks.1.matchConditions.0.expression").String()).To(Equal(systemNamespacesExpr))
 			// The enforce webhook routes by the opt-in label alone, with no name condition, so a
-			// namespace a module opted in reaches Gatekeeper even if it is not named `d8-*`.
+			// namespace a module opted in reaches Gatekeeper even if it is not named `d8-*`. It does
+			// carry the namespaced-only condition: a namespaceSelector never keeps a cluster-scoped
+			// object out, and the main webhook already validates those.
 			Expect(vw.Field("webhooks.2.name").String()).To(Equal("system-namespaces-enforce.admission-policy-engine.deckhouse.io"))
-			Expect(vw.Field("webhooks.2.matchConditions.0.name").String()).To(Equal("exclude-virtualization"))
+			Expect(vw.Field("webhooks.2.matchConditions.0.expression").String()).To(Equal("has(request.namespace)"))
+			Expect(vw.Field("webhooks.2.matchConditions.1.name").String()).To(Equal("exclude-virtualization"))
 
 			// Neither system-namespace webhook may block a workload while Gatekeeper is unavailable,
 			// nor hold up a pod create for long while Gatekeeper is running but hung.
@@ -409,6 +412,38 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 				`[{"key":"heritage","operator":"NotIn","values":["deckhouse"]}]`))
 			Expect(mw.Field("webhooks.0.matchConditions.0.expression").String()).To(Equal(
 				`!(has(request.namespace) && (request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-")))`))
+		})
+	})
+
+	Context("Cluster running a dev build", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.deckhouseVersion", "dev")
+			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[{"apiGroups":[""],"resources":["pods"]}]`)
+			f.HelmRender()
+		})
+
+		AfterEach(func() {
+			f.ValuesSet("global.deckhouseVersion", "test")
+		})
+
+		It("Leaves out the exec webhook, and only that one", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// A dev build ships no `deny-exec-heritage`, which is a development convenience and
+			// predates the system-namespace webhooks. The two of them must still be rendered, or a
+			// dev cluster would lose the checks in its own namespaces along with the exec one.
+			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			Expect(vw.Exists()).To(BeTrue())
+			names := []string{}
+			for _, webhook := range vw.Field("webhooks").Array() {
+				names = append(names, webhook.Get("name").String())
+			}
+			Expect(names).To(Equal([]string{
+				"admission-policy-engine.deckhouse.io",
+				"system-namespaces.admission-policy-engine.deckhouse.io",
+				"system-namespaces-enforce.admission-policy-engine.deckhouse.io",
+			}))
 		})
 	})
 

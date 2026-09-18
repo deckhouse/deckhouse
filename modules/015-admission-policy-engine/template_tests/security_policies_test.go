@@ -433,10 +433,13 @@ admissionPolicyEngine:
 			// would match nothing and are not rendered at all.
 			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-default-minpolicy").Exists()).To(BeFalse())
 
+			// The one constraint left still denies, so it is scoped to user namespaces all the same.
 			userScoped := f.KubernetesGlobalResource("D8PrivilegedContainer", "minpolicy")
 			Expect(userScoped.Exists()).To(BeTrue())
 			Expect(userScoped.Field("spec.match.namespaces").String()).To(MatchJSON(`["default"]`))
-			Expect(userScoped.Field("spec.match.excludedNamespaces").Exists()).To(BeFalse())
+			Expect(userScoped.Field("spec.match.excludedNamespaces").String()).To(MatchJSON(`["d8-*","kube-*"]`))
+			Expect(userScoped.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"heritage","operator":"NotIn","values":["deckhouse"]}]`))
 		})
 
 		It("A denying policy limited to system namespaces keeps its name and only warns", func() {
@@ -470,34 +473,38 @@ admissionPolicyEngine:
 			Expect(constraint.Field("spec.match.excludedNamespaces").String()).To(MatchJSON(`["d8-*","kube-*"]`))
 		})
 
-		It("A denying policy whose namespace list cannot be intersected is left alone", func() {
+		It("A denying policy whose namespace list cannot be intersected keeps out of system namespaces", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			// A suffix glob intersects `d8-*` in a set no Gatekeeper glob describes, so the policy
 			// keeps the single constraint it had rather than matching wider or narrower than asked.
 			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-default-globpolicy").Exists()).To(BeFalse())
 
+			// `*-system` covers `kube-system`, and the constraint still denies, so without the
+			// exclusions a policy written for application namespaces would block there — which is
+			// exactly what this change promises it never does.
 			constraint := f.KubernetesGlobalResource("D8PrivilegedContainer", "globpolicy")
 			Expect(constraint.Exists()).To(BeTrue())
 			Expect(constraint.Field("spec.match.namespaces").String()).To(MatchJSON(`["*-system"]`))
-			Expect(constraint.Field("spec.match.excludedNamespaces").Exists()).To(BeFalse())
+			Expect(constraint.Field("spec.match.excludedNamespaces").String()).To(MatchJSON(`["d8-*","kube-*"]`))
+			Expect(constraint.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"heritage","operator":"NotIn","values":["deckhouse"]}]`))
 		})
 
 		It("Treats system namespaces as the module constants say", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			// How a user policy behaves in a system namespace is decided in the chart, not in the
-			// ModuleConfig: `system_namespaces_action` warns, and `system_namespaces_excluded`
-			// spares nothing. Changing either constant changes the two expectations below, which
-			// is the point of pinning them here.
+			// ModuleConfig: the `system_namespaces_action` constant warns. Changing it changes the
+			// expectation below, which is the point of pinning it here.
 			systemDefault := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-default-exprpolicy")
 			Expect(systemDefault.Exists()).To(BeTrue())
 			Expect(systemDefault.Field("spec.enforcementAction").String()).To(Equal("warn"))
 			Expect(systemDefault.Field("spec.match.excludedNamespaces").Exists()).To(BeFalse())
 
-			// The third variant is rendered only once the action is raised above `warn`, where
-			// sparing a namespace from it starts to mean something.
+			// Two constraints and no more: a split policy never grows a third.
 			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-excluded-exprpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-enforce-exprpolicy").Exists()).To(BeFalse())
 		})
 
 		It("Keeps a namespace the platform labels as its own out of user policies", func() {

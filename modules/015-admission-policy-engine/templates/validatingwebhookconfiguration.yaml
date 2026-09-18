@@ -1,7 +1,7 @@
 {{/*
   validating.webhook.config renders the fields every webhook of this configuration shares.
   Usage: include "validating.webhook.config" (list $context) — failurePolicy defaults to Fail;
-  pass it explicitly as the second element to override, as the warn-only webhook does.
+  pass it explicitly as the second element to override, as the two warn-only webhooks do.
 */}}
 {{- define "validating.webhook.config" }}
 {{- $context := index . 0 }}
@@ -120,8 +120,9 @@ webhooks:
     resources: ["pods/ephemeralcontainers"]
     operations: ["UPDATE"]
   matchConditions:
-    {{/* System namespaces are routed to the webhooks below instead. The condition holds for
-         cluster-scoped resources too, whose request.namespace is empty. */}}
+    {{/* System namespaces are routed to the webhooks below instead. The condition holds for a
+         cluster-scoped resource as well: its request carries no `namespace` key, so the guarded
+         expression is false and the negation here is true. */}}
     - name: 'exclude-system-namespaces'
       expression: '!({{ include "system_namespaces_cel" . }})'
     - name: 'exclude-virtualization'
@@ -150,15 +151,14 @@ webhooks:
 */}}
 {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: system-namespaces.admission-policy-engine.deckhouse.io
+  {{/* No `trivy-provider` exclusion here, unlike the webhook below: this is the path every system
+       namespace falls back to, and taking one out of it would leave that namespace with no
+       admission at all — the main webhook skips it by name. */}}
   namespaceSelector:
     matchExpressions:
     - key: security.deckhouse.io/enable-security-policy-check
       operator: NotIn
       values: ["true"]
-  {{- if include "trivy.provider.enabled" . }}
-    - key: security.deckhouse.io/trivy-provider
-      operator: DoesNotExist
-  {{- end }} # If trivy-provider is disabled, namespaces with the label should also be checked
   objectSelector:
     matchExpressions:
     - key: gatekeeper.sh/operation
@@ -230,6 +230,11 @@ webhooks:
     resources: ["pods/ephemeralcontainers"]
     operations: ["UPDATE"]
   matchConditions:
+    {{/* A namespaceSelector never excludes a cluster-scoped object, and the `constraints.gatekeeper.sh`
+         rule above matches those with `scope: '*'`. Without this condition every Gatekeeper
+         constraint would be evaluated twice, here and on the main webhook. */}}
+    - name: 'namespaced-only'
+      expression: 'has(request.namespace)'
     {{/* No name condition: the opt-in label is written by the module that owns the namespace and
          appears nowhere else, and routing by it alone is what the webhook this one replaces did.
          A namespace that opted in keeps being enforced even if it is not called `d8-*`.
@@ -250,6 +255,10 @@ webhooks:
 
   This is the only path that keeps `failurePolicy: Fail` in a system namespace: denying exec and
   attach cannot stop a component from starting, so failing closed costs nothing at bootstrap.
+
+  A `dev` build renders no webhook here, as it did before this change, so exec and attach in a
+  system namespace reach no webhook there at all — the two webhooks above deliberately leave those
+  subresources to this one. That is a development convenience, not a cluster configuration.
 */}}
 {{- if ne .Values.global.deckhouseVersion "dev" }}
 - name: deny-exec-heritage.admission-policy-engine.deckhouse.io

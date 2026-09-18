@@ -292,7 +292,7 @@ As with policy assignment, enforcement mode can be set:
 
 Namespaces named `d8-*` and `kube-*` hold the components of the platform itself.
 Policies apply to them differently from application namespaces, and that difference is not configurable.
-A namespace labeled `heritage: deckhouse` counts as one of them even if it is named differently: the platform sets that label on the namespaces it creates, and a policy written for application namespaces does not reach it.
+The platform also labels the namespaces it creates with `heritage: deckhouse`. A namespace that carries the label but is named otherwise is left out of policies and mutations written for application namespaces; the Pod Security Standards below follow the names.
 
 Every namespace named `d8-*` or `kube-*` is checked against the `restricted` standard.
 The `security.deckhouse.io/pod-policy` label and the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter do not apply there.
@@ -312,7 +312,7 @@ A denying policy that reaches system namespaces is therefore rendered as two Gat
 - The policy's own name: For application namespaces, with the action the policy asks for.
 - `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
 
-The `d8-system-default-`, `d8-system-excluded-` and `d8-pod-security-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
+The `d8-system-default-` and `d8-pod-security-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
 A policy name is limited to 234 characters for the same reason, so that the derived constraint names stay within the 253-character limit of a Kubernetes object name.
 
 A policy is rendered as a single constraint when the split would change nothing:
@@ -320,7 +320,7 @@ A policy is rendered as a single constraint when the split would change nothing:
 - The policy uses the `Warn` or the `Dryrun` action.
 - The namespaces the policy selects include no system namespace.
 - The policy already excludes every system namespace it selects.
-- The namespace list uses a leading glob, such as `*-system`, which cannot be intersected with `d8-*` exactly.
+- The namespace list uses a leading glob, such as `*-system`, which cannot be intersected with `d8-*` exactly. The single constraint then keeps the policy's action and excludes system namespaces outright.
 - The policy selects system namespaces only, in which case the single constraint keeps the policy's name and warns.
 
 Gatekeeper mutations do not apply in system namespaces, whatever labels the namespace carries.

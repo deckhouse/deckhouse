@@ -26,7 +26,6 @@ from dotmap import DotMap
 
 RESERVED_NAME_PREFIXES = (
     "d8-system-default-",
-    "d8-system-excluded-",
     # Pod Security Standards render their own constraints under this prefix.
     "d8-pod-security-",
 )

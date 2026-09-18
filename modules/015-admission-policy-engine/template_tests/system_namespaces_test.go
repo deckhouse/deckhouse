@@ -157,11 +157,10 @@ internal:
 	}
 
 	// How the platform treats its own namespaces is decided in the chart, by the
-	// `system_namespaces_action` and `system_namespaces_excluded` constants, and not in the
-	// ModuleConfig: raising the action blocks the converge of every module that does not yet
-	// comply, which is a decision to ship with a release rather than to leave to a cluster
-	// operator. The specs below pin the values those constants have now, so that changing one
-	// shows up here.
+	// `system_namespaces_action` constant, and not in the ModuleConfig: raising the action blocks
+	// the converge of every module that does not yet comply, which is a decision to ship with a
+	// release rather than to leave to a cluster operator. The spec below pins the value the
+	// constant has now, so that changing it shows up here.
 	Context("With the constants the module ships", func() {
 		BeforeEach(func() {
 			renderWith("Baseline", "Deny", "deny")
@@ -180,12 +179,6 @@ internal:
 			}
 		})
 
-		It("Renders no excluded-namespace constraint while nothing is excluded", func() {
-			// The constraint appears as soon as `system_namespaces_excluded` names a namespace,
-			// and warns there whatever the other two constraints would do.
-			Expect(f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-system-excluded").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("D8HostNetwork", "d8-pod-security-baseline-system-excluded").Exists()).To(BeFalse())
-		})
 	})
 
 	Context("With a default policy that reaches non-system namespaces", func() {

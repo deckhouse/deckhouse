@@ -11,12 +11,11 @@
   a workload will stop exempting at the controller level.
 
   NOTE on the namespace scope:
-  scoped_policy_variants injects the internal keys `d8NamespaceScope`, `d8SystemNamespaces` and
-  `d8ExcludedNamespaces` into the copy of match it hands over. They are not part of the CR API —
-  they select the namespace lists rendered here, so that one user policy can enforce in user
-  namespaces, follow the module constant in system ones, and never block an excluded namespace.
-  The scopes are `user`, `system-all` and `system-excluded`; a CR with no scope is rendered as it
-  was written.
+  scoped_policy_variants injects the internal keys `d8NamespaceScope` and `d8SystemNamespaces`
+  into the copy of match it hands over. They are not part of the CR API — they select the namespace
+  lists rendered here, so that one user policy can enforce in user namespaces and follow the module
+  constant in system ones. The scopes are `user` and `system-all`; a CR with no scope is rendered as
+  it was written.
 */}}
 {{- define "constraint_selector" }}
     {{- $cr := index . 0 }}
@@ -28,13 +27,8 @@
 
     {{- if eq $scope "user" }}
       {{- $excluded = concat $excluded (include "system_namespaces" . | fromYamlArray) | uniq }}
-    {{- else if eq $scope "system-excluded" }}
-      {{/* The policy's own excludeNames stay in force: the operator's list widens what is spared
-           from enforcement, it does not drag back a namespace the policy author ruled out. */}}
-      {{- $namespaces = $match.d8ExcludedNamespaces }}
     {{- else if eq $scope "system-all" }}
       {{- $namespaces = $match.d8SystemNamespaces }}
-      {{- $excluded = concat $excluded ($match.d8ExcludedNamespaces | default list) | uniq }}
     {{- end }}
 
     {{- if $namespaces }}
@@ -102,18 +96,6 @@
 */}}
 {{- define "system_namespaces_action" -}}
 warn
-{{- end }}
-
-{{/*
-  system_namespaces_excluded are the system namespaces a violation is only ever reported in,
-  whatever `system_namespaces_action` says and whatever label a module puts on them.
-
-  It exists for a system namespace that legitimately hosts application workloads. Empty while the
-  action stays `warn`, since nothing is blocked anywhere; it is the lever to reach for first if the
-  action is ever raised.
-*/}}
-{{- define "system_namespaces_excluded" }}
-[]
 {{- end }}
 
 {{/*
@@ -230,44 +212,6 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
 {{- end }}
 
 {{/*
-  namespace_globs_intersect intersects two namespace lists and returns the names both describe.
-
-  A constraint cannot AND two include lists, so an intersection the module needs has to be
-  resolved before rendering. Both lists hold either a literal name or a trailing glob, which is
-  what `system_namespaces_excluded` and the output of `system_namespace_scope` are limited to.
-
-  Usage: include "namespace_globs_intersect" (list $first $second) | fromYamlArray
-*/}}
-{{- define "namespace_globs_intersect" }}
-  {{- $first := index . 0 }}
-  {{- $second := index . 1 }}
-  {{- $result := list }}
-  {{- range $a := $first }}
-    {{- range $b := $second }}
-      {{- if and (hasSuffix "*" $a) (hasSuffix "*" $b) }}
-        {{/* The narrower glob is the intersection, and only while one extends the other. */}}
-        {{- if hasPrefix (trimSuffix "*" $b) (trimSuffix "*" $a) }}
-          {{- $result = append $result $a }}
-        {{- else if hasPrefix (trimSuffix "*" $a) (trimSuffix "*" $b) }}
-          {{- $result = append $result $b }}
-        {{- end }}
-      {{- else if hasSuffix "*" $a }}
-        {{- if hasPrefix (trimSuffix "*" $a) $b }}
-          {{- $result = append $result $b }}
-        {{- end }}
-      {{- else if hasSuffix "*" $b }}
-        {{- if hasPrefix (trimSuffix "*" $b) $a }}
-          {{- $result = append $result $a }}
-        {{- end }}
-      {{- else if eq $a $b }}
-        {{- $result = append $result $a }}
-      {{- end }}
-    {{- end }}
-  {{- end }}
-  {{- $result | uniq | toYaml }}
-{{- end }}
-
-{{/*
   scoped_policy_variants expands one SecurityPolicy or OperationPolicy into the set of CRs
   the constraint templates must render.
 
@@ -278,9 +222,6 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
     - `d8-system-default-<name>`, for every system namespace, with the action from the
       `system_namespaces_action` constant — `warn`, so a policy written for application namespaces
       cannot block a platform component by accident;
-    - `d8-system-excluded-<name>`, warn-only, for the namespaces named in the
-      `system_namespaces_excluded` constant, rendered only when the constant above is not `warn`
-      and the policy reaches one of those namespaces.
 
   No label of the namespace changes any of this. A module opting its own namespace into
   enforcement raises the Pod Security Standards there and nothing else: the platform declares its
@@ -296,11 +237,11 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   Nothing is split that does not have to be, because every extra constraint costs an audit pass:
     - a policy that only warns or only runs in dryrun keeps one CR, its action being already
       harmless in system namespaces;
-    - a policy that names no system namespace, or that already excludes every system namespace
-      it names, keeps one CR, and so does a policy whose namespace list cannot be
-      intersected exactly;
-    - a policy that names only system namespaces drops the user-scoped CR, and the enforcing one
-      keeps the original name.
+    - a denying policy that names no system namespace, that already excludes every system namespace
+      it names, or whose namespace list cannot be intersected exactly keeps one CR, scoped to user
+      namespaces — a system namespace has to stay out of a constraint that still denies;
+    - a policy that names only system namespaces drops the user-scoped CR, and the remaining one
+      keeps the original name and the action of the constant.
 
   Usage: include "scoped_policy_variants" (list $context $policy) | fromYamlArray
 */}}
@@ -312,25 +253,25 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   {{- $nsSelector := $match.namespaceSelector | default dict }}
   {{- $scope := include "system_namespace_scope" (list ($nsSelector.matchNames | default list) ($nsSelector.excludeNames | default list)) | fromYaml }}
   {{- $systemAction := include "system_namespaces_action" . | trim | lower }}
-  {{- $systemExclude := include "system_namespaces_excluded" . | fromYamlArray }}
 
-  {{- if or (ne $action "deny") (not $scope.decidable) (not $scope.names) }}
+  {{- if ne $action "deny" }}
+    {{- /* Warn and dryrun block nothing anywhere, so the policy keeps the single constraint it was
+           written as, system namespaces included. */}}
     {{- list $policy | toYaml }}
+  {{- else if or (not $scope.decidable) (not $scope.names) }}
+    {{- /* The intersection with the system namespaces is empty, or is a set no Gatekeeper glob
+           describes. Either way there is nothing to split off, and the one constraint left still
+           denies — so it is scoped to user namespaces, or a policy that names `*-system` would
+           block in `kube-system` while the documentation promises it only warns there. */}}
+    {{- $userScoped := deepCopy $policy }}
+    {{- $_ := set $userScoped.spec.match "d8NamespaceScope" "user" }}
+    {{- list $userScoped | toYaml }}
   {{- else }}
     {{- $variants := list }}
     {{- if $scope.userPossible }}
       {{- $userScoped := deepCopy $policy }}
       {{- $_ := set $userScoped.spec.match "d8NamespaceScope" "user" }}
       {{- $variants = append $variants $userScoped }}
-    {{- end }}
-
-    {{- /* The constraint matches the excluded namespaces the policy itself names, not the whole
-           constant: a policy is never evaluated outside the namespaces its author selected, and an
-           entry that is not a system namespace reaches no user namespace through this variant.
-           While the action is `warn` the exclusions change nothing, so they cost no object. */}}
-    {{- $excludedScope := list }}
-    {{- if ne $systemAction "warn" }}
-      {{- $excludedScope = include "namespace_globs_intersect" (list $scope.names $systemExclude) | fromYamlArray }}
     {{- end }}
 
     {{- $systemDefault := deepCopy $policy }}
@@ -340,17 +281,7 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
     {{- $_ := set $systemDefault.spec "enforcementAction" $systemAction }}
     {{- $_ := set $systemDefault.spec.match "d8NamespaceScope" "system-all" }}
     {{- $_ := set $systemDefault.spec.match "d8SystemNamespaces" $scope.names }}
-    {{- $_ := set $systemDefault.spec.match "d8ExcludedNamespaces" $excludedScope }}
     {{- $variants = append $variants $systemDefault }}
-
-    {{- if $excludedScope }}
-      {{- $systemExcluded := deepCopy $policy }}
-      {{- $_ := set $systemExcluded.metadata "name" (printf "d8-system-excluded-%s" $policy.metadata.name) }}
-      {{- $_ := set $systemExcluded.spec "enforcementAction" "warn" }}
-      {{- $_ := set $systemExcluded.spec.match "d8NamespaceScope" "system-excluded" }}
-      {{- $_ := set $systemExcluded.spec.match "d8ExcludedNamespaces" $excludedScope }}
-      {{- $variants = append $variants $systemExcluded }}
-    {{- end }}
 
     {{- $variants | toYaml }}
   {{- end }}
@@ -389,10 +320,6 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "privileged" | lower) }}
   {{/* System namespaces are governed by their own settings, not by defaultPolicy/enforcementAction. */}}
   {{- $systemAction := include "system_namespaces_action" . | trim | lower }}
-  {{/* Only the system namespaces: an entry outside them would otherwise render a warn constraint
-       over a namespace the platform does not own. */}}
-  {{- $systemExclude := include "namespace_globs_intersect"
-        (list (include "system_namespaces" . | fromYamlArray) (include "system_namespaces_excluded" . | fromYamlArray)) | fromYamlArray }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
@@ -472,7 +399,7 @@ spec:
   Neither is a module setting: how the platform treats its own namespaces is decided in the module,
   not by a cluster operator.
 
-  Excluded namespaces, and namespaces a module opted into enforcement, are left to the two blocks below.
+  The namespaces a module opted into enforcement are left to the block below.
 
   The block does not depend on the module's own enforcement action, so it is rendered on the
   iteration of the default action, which is always present in
@@ -494,10 +421,6 @@ spec:
 {{- include "workload_kinds" . }}
     namespaces:
       {{- include "system_namespaces" . | fromYamlArray | toYaml | nindent 6 }}
-  {{- if $systemExclude }}
-    excludedNamespaces:
-      {{- $systemExclude | toYaml | nindent 6 }}
-  {{- end }}
     labelSelector:
       matchExpressions:
         - key: security.deckhouse.io/skip-pss-check
@@ -509,44 +432,6 @@ spec:
     namespaceSelector:
       matchExpressions:
         - { key: security.deckhouse.io/enable-security-policy-check, operator: NotIn, values: [ "true" ] }
-  {{- if $parameters }}
-  parameters:
-    {{ $parameters | toYaml | nindent 4 }}
-  {{- end }}
-{{- end }}
-{{/*
-  Pod Security Standards in warn mode for the excluded system namespaces.
-
-  The `system_namespaces_excluded` constant names the system namespaces that host application
-  workloads the platform's own standards would otherwise block. They are warned about and never
-  blocked, whatever the two blocks around this one would do to them, a namespace a module opted
-  into enforcement included.
-
-  Rendered once per standard, like the block above, and only when that list is not empty.
-*/}}
-{{- if and $systemExclude (eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower)) }}
----
-apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: {{ $policyCRDName }}
-metadata:
-  name: d8-pod-security-{{$standard}}-system-excluded
-  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
-spec:
-  enforcementAction: warn
-  match:
-    scope: Namespaced
-    kinds:
-{{- include "workload_kinds" . }}
-    namespaces:
-      {{- $systemExclude | toYaml | nindent 6 }}
-    labelSelector:
-      matchExpressions:
-        - key: security.deckhouse.io/skip-pss-check
-          operator: NotIn
-          values: ["true"]
-        - key: gatekeeper.sh/operation
-          operator: NotIn
-          values: ["webhook"]
   {{- if $parameters }}
   parameters:
     {{ $parameters | toYaml | nindent 4 }}
@@ -583,11 +468,6 @@ spec:
     scope: Namespaced
     kinds:
 {{- include "workload_kinds" . }}
-  {{- if $systemExclude }}
-    # An excluded namespace is warned about by the block above, never enforced here.
-    excludedNamespaces:
-      {{- $systemExclude | toYaml | nindent 6 }}
-  {{- end }}
     labelSelector:
       matchExpressions:
         - key: security.deckhouse.io/skip-pss-check

@@ -39,6 +39,8 @@ spec:
                     - `Deny` — Deny action.
                     - `Dryrun` — No action. It is used when debugging. Information about the event can be viewed in Deckhouse Console.
                     - `Warn` — Same as `Dryrun`. In addition to the event information, it provides some info on why that constraint would have been denied if you had set `Deny` instead of `Warn`.
+
+                    `Deny` holds in application namespaces. In a namespace named `d8-*` or `kube-*` the policy always warns, whatever action is set here.
                   enum:
                     - Warn
                     - Deny
