@@ -137,29 +137,55 @@ func TestMapPCCInstanceClassToSpecKeepsExplicitSizes(t *testing.T) {
 	}
 }
 
-// The legacy configuration stores DNS servers as one space-separated string; the InstanceClass
-// takes a list.
-func TestMapPCCInstanceClassToSpecSplitsDNSServers(t *testing.T) {
-	instanceClass := testPCC().MasterNodeGroup.InstanceClass.ZvirtInstanceClass
-	instanceClass.CustomNetworkConfig = &zpccv1.ZvirtNetworkConfig{
-		NetworkInterfaceName: "enp1s0",
-		DNSServers:           "8.8.8.8 8.8.4.4",
+// The legacy configuration attaches the static network configuration to a node group's
+// InstanceClass and stores DNS servers as one space-separated string; the settings key the
+// configuration by NodeGroup name and take a DNS list.
+func TestBuildModuleConfigSettingsV2CustomNetworkConfigs(t *testing.T) {
+	pcc := testPCC()
+	pcc.MasterNodeGroup.InstanceClass.CustomNetworkConfig = &zpccv1.ZvirtNetworkConfig{
+		NetworkInterfaceName:    "enp1s0",
+		NetworkInterfaceAddress: []string{"192.168.1.10", "192.168.1.11"},
+		NetworkInterfaceNetmask: "255.255.255.0",
+		NetworkInterfaceGateway: "192.168.1.1",
+		DNSServers:              "8.8.8.8 8.8.4.4",
 	}
 
-	spec := MapPCCInstanceClassToSpec(instanceClass, nil, false)
+	configs := BuildModuleConfigSettingsV2(pcc).Nodes.Parameters.CustomNetworkConfigs
 
-	if spec.CustomNetworkConfig.NetworkInterfaceName != "enp1s0" {
-		t.Fatalf("customNetworkConfig must be carried over, got %+v", spec.CustomNetworkConfig)
+	config, ok := configs[masterNodeGroupName]
+	if !ok {
+		t.Fatalf("customNetworkConfigs must be keyed by NodeGroup name, got %+v", configs)
 	}
 
-	want := []string{"8.8.8.8", "8.8.4.4"}
-	got := spec.CustomNetworkConfig.DNSServers
+	if config.NetworkInterfaceName != "enp1s0" {
+		t.Fatalf("customNetworkConfig must be carried over, got %+v", config)
+	}
+
+	// The legacy field is singular and the settings one is plural, but the values are indexed by
+	// node index on both sides — the terraform projection asserts the same thing, and the two must
+	// not drift apart.
+	assertStrings(t, "networkInterfaceAddresses", config.NetworkInterfaceAddresses, []string{"192.168.1.10", "192.168.1.11"})
+	assertStrings(t, "dnsServers", config.DNSServers, []string{"8.8.8.8", "8.8.4.4"})
+}
+
+// A node group that declares no static configuration must not gain an empty entry: the hook omits
+// the key entirely, and the terraform projection has to match that or terraform sees drift.
+func TestBuildModuleConfigSettingsV2OmitsAbsentCustomNetworkConfigs(t *testing.T) {
+	if configs := BuildModuleConfigSettingsV2(testPCC()).Nodes.Parameters.CustomNetworkConfigs; configs != nil {
+		t.Errorf("customNetworkConfigs = %+v, want nil", configs)
+	}
+}
+
+func assertStrings(t *testing.T, name string, got, want []string) {
+	t.Helper()
+
 	if len(got) != len(want) {
-		t.Fatalf("dnsServers = %v, want %v", got, want)
+		t.Fatalf("%s = %v, want %v", name, got, want)
 	}
+
 	for i := range want {
 		if got[i] != want[i] {
-			t.Fatalf("dnsServers[%d] = %q, want %q", i, got[i], want[i])
+			t.Fatalf("%s[%d] = %q, want %q", name, i, got[i], want[i])
 		}
 	}
 }

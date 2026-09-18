@@ -160,6 +160,52 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="[Подробнее](https://deckhouse.ru/modules/cloud-provider-zvirt/layouts.html) о возможных схемах размещения провайдера."
 	// +kubebuilder:validation:Enum=Standard
 	Layout string `json:"layout"`
+	// Static network configuration of the cluster nodes, keyed by CloudPermanent NodeGroup name.
+	//
+	// Addresses are assigned by node index: the first address of `networkInterfaceAddresses` goes
+	// to the node with index 0, the second to the node with index 1, and so on. The list must
+	// therefore hold at least as many addresses as the NodeGroup has replicas.
+	//
+	// Nodes of a NodeGroup that is not listed here are configured over DHCP.
+	// +deckhouse:ru:description:value="Статическая настройка сети узлов кластера. Ключ — имя группы узлов (NodeGroup) с типом CloudPermanent."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Адреса назначаются по порядковому номеру узла: первый адрес `networkInterfaceAddresses` получит узел с индексом 0, второй — узел с индексом 1 и так далее. Поэтому в списке должно быть не меньше адресов, чем реплик в группе узлов."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Узлы группы, не указанной в этом параметре, настраиваются по DHCP."
+	// +optional
+	CustomNetworkConfigs map[string]CustomNetworkConfig `json:"customNetworkConfigs,omitempty"`
+}
+
+// CustomNetworkConfig describes a static network configuration of the node group interfaces.
+// +deckhouse:ru:description:value="Описывает статическую настройку сетевых интерфейсов группы узлов."
+// +deckhouse:DisableAdditionalProperties=true
+type CustomNetworkConfig struct {
+	// Name of the network interface to apply the static configuration to.
+	// +deckhouse:ru:description:value="Имя сетевого интерфейса, для которого будет применена статическая настройка."
+	// +deckhouse:XDocExamples:value="enp1s0"
+	NetworkInterfaceName string `json:"networkInterfaceName"`
+
+	// List of IP addresses to assign to the interface (one IP address per node).
+	// +deckhouse:ru:description:value="Список IP-адресов, которые нужно назначить интерфейсам (по адресу для каждого узла)."
+	// +deckhouse:XDocExamples:value={"192.168.1.10","192.168.1.11"}
+	// +kubebuilder:validation:MinItems=1
+	NetworkInterfaceAddresses []string `json:"networkInterfaceAddresses"`
+
+	// Subnet mask for the interface.
+	// +deckhouse:ru:description:value="Маска подсети для интерфейса."
+	// +deckhouse:XDocExamples:value="255.255.255.0"
+	NetworkInterfaceNetmask string `json:"networkInterfaceNetmask"`
+
+	// Default network gateway.
+	// +deckhouse:ru:description:value="Шлюз по умолчанию."
+	// +deckhouse:XDocExamples:value="192.168.1.1"
+	NetworkInterfaceGateway string `json:"networkInterfaceGateway"`
+
+	// List of DNS servers.
+	// +deckhouse:ru:description:value="Список DNS-серверов."
+	// +deckhouse:XDocExamples:value={"8.8.8.8","8.8.4.4"}
+	// +optional
+	DNSServers []string `json:"dnsServers,omitempty"`
 }
 
 // Parameters of the storage subsystem.

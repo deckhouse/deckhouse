@@ -58,8 +58,18 @@ type ProviderParameters struct {
 }
 
 type NodesParameters struct {
-	SSHPublicKey string `json:"sshPublicKey"`
-	Layout       string `json:"layout"`
+	SSHPublicKey         string                         `json:"sshPublicKey"`
+	Layout               string                         `json:"layout"`
+	CustomNetworkConfigs map[string]CustomNetworkConfig `json:"customNetworkConfigs,omitempty"`
+}
+
+// CustomNetworkConfig describes a static network configuration of the node group interfaces.
+type CustomNetworkConfig struct {
+	NetworkInterfaceName      string   `json:"networkInterfaceName"`
+	NetworkInterfaceAddresses []string `json:"networkInterfaceAddresses"`
+	NetworkInterfaceNetmask   string   `json:"networkInterfaceNetmask"`
+	NetworkInterfaceGateway   string   `json:"networkInterfaceGateway"`
+	DNSServers                []string `json:"dnsServers,omitempty"`
 }
 
 type StorageParameters struct {

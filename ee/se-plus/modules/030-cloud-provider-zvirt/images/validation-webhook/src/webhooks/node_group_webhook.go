@@ -93,7 +93,8 @@ func (v *NodeGroupValidator) validate(
 	if operation != admissionv1.Delete {
 		builder = builder.
 			SetNodeGroup(ctx, obj).
-			AddAssociatedInstanceClasses(ctx, name)
+			AddAssociatedInstanceClasses(ctx, name).
+			AddModuleConfig(ctx)
 	}
 
 	state, err := builder.Build(ctx)

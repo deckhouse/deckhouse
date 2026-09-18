@@ -84,10 +84,9 @@ func (v *ModuleConfigValidator) validate(
 		"name", name,
 	)
 
-	// The reviewed object is the ModuleConfig itself, so it goes into the state directly rather
-	// than being read back from the cluster — the stored copy is still the old one.
 	state, err := v.factory.CreateBuilder().
 		SetModuleConfig(ctx, obj).
+		AddNodeGroups(ctx).
 		Build(ctx)
 	if err != nil {
 		moduleConfigLog.Error(err, "failed to build validation state", "name", name)

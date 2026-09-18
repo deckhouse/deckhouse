@@ -259,14 +259,58 @@ run "custom_network_config_is_projected_and_dns_servers_are_split" {
     }
   }
 
+  # The legacy configuration hangs the static network configuration off a node group's
+  # InstanceClass; the settings key it by NodeGroup name.
   assert {
-    condition     = output.instanceClasses["master-fc613b4dfd67"].spec.customNetworkConfig.networkInterfaceName == "enp1s0"
-    error_message = "customNetworkConfig must be carried over"
+    condition     = output.settings.spec.settings.nodes.parameters.customNetworkConfigs["master"].networkInterfaceName == "enp1s0"
+    error_message = "customNetworkConfig must be carried over, keyed by NodeGroup name"
   }
 
   assert {
-    condition     = jsonencode(output.instanceClasses["master-fc613b4dfd67"].spec.customNetworkConfig.dnsServers) == jsonencode(["8.8.8.8", "8.8.4.4"])
+    condition     = jsonencode(output.settings.spec.settings.nodes.parameters.customNetworkConfigs["master"].dnsServers) == jsonencode(["8.8.8.8", "8.8.4.4"])
     error_message = "dnsServers must be split into a list"
+  }
+
+  assert {
+    condition     = !can(output.instanceClasses["master-fc613b4dfd67"].spec.customNetworkConfig)
+    error_message = "the InstanceClass must no longer carry customNetworkConfig"
+  }
+}
+
+# A node group that declares no static network configuration must not gain an empty entry: the
+# hook omits the key, and a key here would be drift the moment the in-cluster migration completes.
+run "custom_network_configs_are_omitted_when_no_node_group_declares_one" {
+  command = plan
+
+  variables {
+    providerClusterConfiguration = {
+      apiVersion   = "deckhouse.io/v1"
+      kind         = "ZvirtClusterConfiguration"
+      layout       = "Standard"
+      sshPublicKey = "ssh-rsa AAAA"
+      clusterID    = "b46372e7-0d52-40c7-9bbf-fda31e187088"
+      masterNodeGroup = {
+        replicas = 1
+        instanceClass = {
+          numCPUs         = 4
+          memory          = 8192
+          template        = "debian-bookworm"
+          vnicProfileID   = "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+          storageDomainID = "c4bf82a5-b803-40c3-9f6c-b9398378f424"
+        }
+      }
+      provider = {
+        server   = "https://zvirt.example.com/ovirt-engine/api"
+        username = "admin@internal"
+        password = "s3cret"
+        insecure = true
+      }
+    }
+  }
+
+  assert {
+    condition     = !can(output.settings.spec.settings.nodes.parameters.customNetworkConfigs)
+    error_message = "customNetworkConfigs must be absent when the legacy configuration declares none"
   }
 }
 
@@ -594,19 +638,19 @@ run "consumer_values_match_the_pre_migration_terraform" {
   }
 
   # The pre-migration code handed initialization_dns the raw string, so joining the list back has
-  # to reproduce it exactly.
+  # to reproduce it exactly. The configuration now lives on the ModuleConfig, keyed by NodeGroup.
   assert {
-    condition     = join(" ", output.instanceClasses["master-fc613b4dfd67"].spec.customNetworkConfig.dnsServers) == "8.8.8.8 8.8.4.4"
+    condition     = join(" ", output.settings.spec.settings.nodes.parameters.customNetworkConfigs["master"].dnsServers) == "8.8.8.8 8.8.4.4"
     error_message = "joining dnsServers back must reproduce the string the pre-migration code used"
   }
 
   # Addresses are indexed by node index, so their order has to survive the projection.
   assert {
-    condition     = output.instanceClasses["master-fc613b4dfd67"].spec.customNetworkConfig.networkInterfaceAddress[1] == "192.168.1.11"
-    error_message = "networkInterfaceAddress is indexed by node index and must keep its order"
+    condition     = output.settings.spec.settings.nodes.parameters.customNetworkConfigs["master"].networkInterfaceAddresses[1] == "192.168.1.11"
+    error_message = "networkInterfaceAddresses is indexed by node index and must keep its order"
   }
 
-  # static-node: an explicit rootDiskSizeGb and a node group without customNetworkConfig.
+  # static-node: an explicit rootDiskSizeGb; only the master declares a custom network config.
   assert {
     condition = (
       output.instanceClasses["worker-87eba76e7f31"].spec.numCPUs == 2 &&
@@ -617,7 +661,7 @@ run "consumer_values_match_the_pre_migration_terraform" {
   }
 
   assert {
-    condition     = output.instanceClasses["worker-87eba76e7f31"].spec.customNetworkConfig == null
+    condition     = lookup(output.settings.spec.settings.nodes.parameters.customNetworkConfigs, "worker", null) == null
     error_message = "a node group without customNetworkConfig must not gain one"
   }
 

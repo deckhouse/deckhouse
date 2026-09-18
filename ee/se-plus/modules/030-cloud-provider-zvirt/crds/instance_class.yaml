@@ -55,48 +55,6 @@ spec:
           spec:
             description: InstanceClassSpec defines the desired state of the ZvirtInstanceClass.
             properties:
-              customNetworkConfig:
-                description: |-
-                  Enables a custom static network configuration for nodes in this NodeGroup.
-
-                  If specified, you must set `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
-                properties:
-                  dnsServers:
-                    description: List of DNS servers.
-                    items:
-                      type: string
-                    type: array
-                    uniqueItems: true
-                    x-doc-examples:
-                    - - 8.8.8.8
-                      - 8.8.4.4
-                  networkInterfaceAddress:
-                    description: List of IP addresses to assign to the interface (one
-                      IP address per node).
-                    items:
-                      type: string
-                    type: array
-                    uniqueItems: true
-                    x-doc-examples:
-                    - - 192.168.1.10
-                      - 192.168.1.11
-                  networkInterfaceGateway:
-                    description: Default network gateway.
-                    type: string
-                    x-doc-examples:
-                    - 192.168.1.1
-                  networkInterfaceName:
-                    description: Name of the network interface to apply the static
-                      configuration to.
-                    type: string
-                    x-doc-examples:
-                    - enp1s0
-                  networkInterfaceNetmask:
-                    description: Subnet mask for the interface.
-                    type: string
-                    x-doc-examples:
-                    - 255.255.255.0
-                type: object
               etcdDiskSizeGb:
                 description: |-
                   Etcd disk size in GiB.

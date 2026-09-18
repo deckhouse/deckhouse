@@ -64,29 +64,6 @@ type InstanceClassSpec struct {
 
 	// Storage domain id which contains the shared resources that must be available to all datacenter hosts.
 	StorageDomainID string `json:"storageDomainID,omitempty"`
-
-	// Enables a custom static network configuration for nodes in this NodeGroup.
-	//
-	// If specified, you must set `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
-	CustomNetworkConfig CustomNetworkConfig `json:"customNetworkConfig,omitempty"`
-}
-
-// CustomNetworkConfig describes a static network configuration of the node group interfaces.
-type CustomNetworkConfig struct {
-	// Name of the network interface to apply the static configuration to.
-	NetworkInterfaceName string `json:"networkInterfaceName,omitempty"`
-
-	// List of IP addresses to assign to the interface (one IP address per node).
-	NetworkInterfaceAddress []string `json:"networkInterfaceAddress,omitempty"`
-
-	// Subnet mask for the interface.
-	NetworkInterfaceNetmask string `json:"networkInterfaceNetmask,omitempty"`
-
-	// Default network gateway.
-	NetworkInterfaceGateway string `json:"networkInterfaceGateway,omitempty"`
-
-	// List of DNS servers.
-	DNSServers []string `json:"dnsServers,omitempty"`
 }
 
 // InstanceClassStatus stores information about the ZvirtInstanceClass resource.

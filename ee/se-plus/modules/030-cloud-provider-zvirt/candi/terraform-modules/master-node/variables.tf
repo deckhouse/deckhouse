@@ -79,10 +79,10 @@ locals {
   master_root_disk_size = try(local._instance_class.rootDiskSizeGb, 50) * 1024 * 1024 * 1024
   master_etcd_disk_size = try(local._instance_class.etcdDiskSizeGb, 10) * 1024 * 1024 * 1024
 
-  _custom_network        = try(local._instance_class.customNetworkConfig, null)
+  _custom_network        = try(local._node_params.customNetworkConfigs["master"], null)
   custom_network_config  = local._custom_network == null ? [] : [1]
   custom_network_name    = try(local._custom_network.networkInterfaceName, "")
-  custom_network_address = try(local._custom_network.networkInterfaceAddress[var.nodeIndex], "")
+  custom_network_address = try(local._custom_network.networkInterfaceAddresses[var.nodeIndex], "")
   custom_network_netmask = try(local._custom_network.networkInterfaceNetmask, "")
   custom_network_gateway = try(local._custom_network.networkInterfaceGateway, "")
   custom_network_dns     = join(" ", try(tolist(local._custom_network.dnsServers), []))

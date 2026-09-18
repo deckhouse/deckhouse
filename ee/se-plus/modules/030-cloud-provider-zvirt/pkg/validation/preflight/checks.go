@@ -24,6 +24,8 @@ func ValidatePreflight(state *zval.State) cpvalapi.Result {
 	if state.HasProviderClusterConfig() {
 		result.Merge(
 			zval.ValidateLegacyProviderConnection(state.ProviderClusterConfig),
+			zval.ValidateLegacyCustomNetworkConfigParameters(state.ProviderClusterConfig),
+			zval.ValidateLegacyCustomNetworkConfigsCoverNodeGroupReplicas(state.ProviderClusterConfig),
 		)
 	}
 
@@ -39,6 +41,8 @@ func ValidatePreflight(state *zval.State) cpvalapi.Result {
 		cpval.ValidateNodeGroupsClassReference(state, true),
 		cpval.ValidateInstanceClassesEtcdDisk(state),
 		zval.ValidateProviderConnection(state),
+		zval.ValidateCustomNetworkConfigParameters(state),
+		zval.ValidateCustomNetworkConfigsCoverNodeGroupReplicas(state, true),
 	)
 
 	return result
