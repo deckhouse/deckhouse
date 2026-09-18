@@ -369,6 +369,25 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     - domain: test-without-resources.example.com
       ingressClassName: test
       ingressSecretName: test
+- name: test-fractional-resources
+  encodedName: testFractionalResources
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    applications:
+    - domain: test-fractional-resources.example.com
+      ingressClassName: test
+      ingressSecretName: test
+    resources:
+      limits:
+        cpu: "0.5"
+        memory: "0.5Gi"
+      redis:
+        limits:
+          cpu: "0.5"
+          memory: "512Mi"
 - name: test-tiny-resources
   encodedName: testTinyResources
   namespace: d8-test
@@ -420,6 +439,18 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
   ingressNames:
     "0":
       name: "test-without-resources-dex-authenticator"
+      truncated: false
+      hash: ""
+"test-fractional-resources@d8-test":
+  name: "test-fractional-resources-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-fractional-resources"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-fractional-resources-dex-authenticator"
       truncated: false
       hash: ""
 "test-tiny-resources@d8-test":
@@ -493,6 +524,24 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			// CPU/Memory should not be set when VPA is enabled and redis resources not specified
 			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.cpu").Exists()).To(BeFalse())
 			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.memory").Exists()).To(BeFalse())
+		})
+
+		It("Should sum fractional limits into the init container limits", func() {
+			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-fractional-resources-dex-authenticator")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			// Fractional quantities are valid for the CRD schema, so 0.5 + 0.5 must give 1000m,
+			// not 0m, which would be below the init container requests and rejected by the API server.
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("1000m"))
+
+			// 0.5Gi + 512Mi = 1024Mi.
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.memory").String()).To(Equal("10Mi"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("1024Mi"))
+
+			// Main container limits are passed through untouched.
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.limits.cpu").String()).To(Equal("0.5"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.limits.cpu").String()).To(Equal("0.5"))
 		})
 
 		It("Should keep the init container limits at or above its requests", func() {

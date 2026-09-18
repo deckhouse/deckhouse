@@ -94,46 +94,63 @@ updatePolicy:
 
 {{- /* Usage: {{ include "helm_lib_resources_management_cpu_units_to_millicores" <cpu units> }} */ -}}
 {{- /* helper for converting cpu units to millicores */ -}}
+{{- /* Accepts any Kubernetes CPU quantity, including a fractional one such as "0.5". */ -}}
+{{- /* A fractional result is rounded up, so a limit is never smaller than the value asked for. */ -}}
 {{- define "helm_lib_resources_management_cpu_units_to_millicores" -}}
   {{- $units := . | toString -}}
+  {{- $mantissa := $units -}}
+  {{- $factor := 1000 -}}
   {{- if hasSuffix "m" $units -}}
-    {{- trimSuffix "m" $units -}}
+    {{- $mantissa = trimSuffix "m" $units -}}
+    {{- $factor = 1 -}}
+  {{- end -}}
+  {{- if regexMatch "^[0-9]+$" $mantissa -}}
+    {{- $mantissa | atoi | mul $factor -}}
+  {{- else if regexMatch "^[0-9]*[.]?[0-9]+([eE][+-]?[0-9]+)?$" $mantissa -}}
+    {{- $mantissa | float64 | mulf (float64 $factor) | ceil | int64 -}}
   {{- else -}}
-    {{- atoi $units | mul 1000 -}}
+    {{- cat "ERROR: unknown cpu format:" $units | fail -}}
   {{- end }}
 {{- end }}
 
 
 {{- /* Usage: {{ include "helm_lib_resources_management_memory_units_to_bytes" <memory units> }} */ -}}
 {{- /* helper for converting memory units to bytes */ -}}
+{{- /* Accepts any Kubernetes memory quantity, including a fractional one such as "0.5Gi". */ -}}
+{{- /* A fractional result is rounded up, so a limit is never smaller than the value asked for. */ -}}
 {{- define "helm_lib_resources_management_memory_units_to_bytes" }}
   {{- $units := . | toString -}}
-  {{- if hasSuffix "k" $units -}}
-    {{- trimSuffix "k" $units  | atoi | mul 1000 -}}
-  {{- else if hasSuffix "M" $units -}}
-    {{- trimSuffix "M" $units  | atoi | mul 1000000 -}}
-  {{- else if hasSuffix "G" $units -}}
-    {{- trimSuffix "G" $units  | atoi | mul 1000000000 -}}
-  {{- else if hasSuffix "T" $units -}}
-    {{- trimSuffix "T" $units  | atoi | mul 1000000000000 -}}
-  {{- else if hasSuffix "P" $units -}}
-    {{- trimSuffix "P" $units  | atoi | mul 1000000000000000 -}}
-  {{- else if hasSuffix "E" $units -}}
-    {{- trimSuffix "E" $units  | atoi | mul 1000000000000000000 -}}
-  {{- else if hasSuffix "Ki" $units -}}
-    {{- trimSuffix "Ki" $units | atoi | mul 1024 -}}
+  {{- $mantissa := $units -}}
+  {{- $factor := 1 -}}
+  {{- if hasSuffix "Ki" $units -}}
+    {{- $mantissa = trimSuffix "Ki" $units -}}{{- $factor = 1024 -}}
   {{- else if hasSuffix "Mi" $units -}}
-    {{- trimSuffix "Mi" $units | atoi | mul 1024 | mul 1024 -}}
+    {{- $mantissa = trimSuffix "Mi" $units -}}{{- $factor = 1048576 -}}
   {{- else if hasSuffix "Gi" $units -}}
-    {{- trimSuffix "Gi" $units | atoi | mul 1024 | mul 1024 | mul 1024 -}}
+    {{- $mantissa = trimSuffix "Gi" $units -}}{{- $factor = 1073741824 -}}
   {{- else if hasSuffix "Ti" $units -}}
-    {{- trimSuffix "Ti" $units | atoi | mul 1024 | mul 1024 | mul 1024 | mul 1024 -}}
+    {{- $mantissa = trimSuffix "Ti" $units -}}{{- $factor = 1099511627776 -}}
   {{- else if hasSuffix "Pi" $units -}}
-    {{- trimSuffix "Pi" $units | atoi | mul 1024 | mul 1024 | mul 1024 | mul 1024 | mul 1024 -}}
+    {{- $mantissa = trimSuffix "Pi" $units -}}{{- $factor = 1125899906842624 -}}
   {{- else if hasSuffix "Ei" $units -}}
-    {{- trimSuffix "Ei" $units | atoi | mul 1024 | mul 1024 | mul 1024 | mul 1024 | mul 1024 | mul 1024 -}}
-  {{- else if regexMatch "^[0-9]+$" $units -}}
-    {{- $units -}}
+    {{- $mantissa = trimSuffix "Ei" $units -}}{{- $factor = 1152921504606846976 -}}
+  {{- else if hasSuffix "k" $units -}}
+    {{- $mantissa = trimSuffix "k" $units -}}{{- $factor = 1000 -}}
+  {{- else if hasSuffix "M" $units -}}
+    {{- $mantissa = trimSuffix "M" $units -}}{{- $factor = 1000000 -}}
+  {{- else if hasSuffix "G" $units -}}
+    {{- $mantissa = trimSuffix "G" $units -}}{{- $factor = 1000000000 -}}
+  {{- else if hasSuffix "T" $units -}}
+    {{- $mantissa = trimSuffix "T" $units -}}{{- $factor = 1000000000000 -}}
+  {{- else if hasSuffix "P" $units -}}
+    {{- $mantissa = trimSuffix "P" $units -}}{{- $factor = 1000000000000000 -}}
+  {{- else if hasSuffix "E" $units -}}
+    {{- $mantissa = trimSuffix "E" $units -}}{{- $factor = 1000000000000000000 -}}
+  {{- end -}}
+  {{- if regexMatch "^[0-9]+$" $mantissa -}}
+    {{- $mantissa | atoi | mul $factor -}}
+  {{- else if regexMatch "^[0-9]*[.]?[0-9]+([eE][+-]?[0-9]+)?$" $mantissa -}}
+    {{- $mantissa | float64 | mulf (float64 $factor) | ceil | int64 -}}
   {{- else -}}
     {{- cat "ERROR: unknown memory format:" $units | fail -}}
   {{- end }}
