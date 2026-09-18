@@ -197,6 +197,167 @@ properties:
                   type: string
             x-examples:
             - [{"operator": "Exists"}]
+      ambientGateway:
+        type: object
+        description: |
+          Ambient east-west gateway settings.
+
+          A workload of its own, separate from [`ingressGateway`](#parameters-alliance-ingressgateway) and with its own inlet Service: peer clusters reach it with double HBONE rather than mTLS/SNI, and one Service cannot carry both protocols. Placement, inlet and advertised addresses are configured here independently, so the two gateways can sit behind different load balancers — or behind one, by repeating its address in both `advertise` lists at each gateway's port.
+
+          Only used when [`ambient.multicluster.enabled`](#parameters-ambient-multicluster-enabled) is set; nothing here has any effect otherwise.
+        x-doc-d8Editions:
+          - ee
+          - cse-pro
+        x-doc-skip: true
+        x-experimental: true
+        default: {}
+        properties:
+          advertise:
+            type: array
+            description: |
+              The actual addresses that will be announced to remote clusters as this cluster's ambient east-west gateway. If not specified, the addresses will be discovered automatically from the gateway's own Service.
+
+              Independent from [`ingressGateway.advertise`](#parameters-alliance-ingressgateway-advertise), which describes the sidecar east-west gateway. Where a single load balancer fronts both gateways, name its address in both lists and give each its own `port`.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            x-experimental: true
+            default: []
+            x-examples: [[{"address": "172.16.0.5", "port": 15008}],[{"address": "2001:db8::1", "port": 15008}],[{"address": "somehost.example.com", "port": 15008}]]
+            items:
+              type: object
+              required: ["address", "port"]
+              properties:
+                address:
+                  description: |
+                    The IP address (IPv4 or IPv6) or DNS name peer clusters dial to reach the ambient east-west gateway.
+                  anyOf:
+                  - type: string
+                    format: ipv4
+                    pattern: '^[0-9.]+$'
+                    example: "172.16.0.5"
+                  - type: string
+                    format: ipv6
+                    pattern: '^[0-9A-Fa-f:]+$'
+                    example: "2001:db8::1"
+                  - type: string
+                    pattern: '^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}\.?$'
+                    maxLength: 253
+                    example: "somehost.example.com"
+                port:
+                  type: integer
+                  description: The port peer clusters should dial at this address to reach the ambient east-west gateway.
+                  minimum: 1024
+                  maximum: 65535
+          inlet:
+            type: string
+            enum: [LoadBalancer, NodePort]
+            x-examples: [LoadBalancer]
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            x-experimental: true
+            description: |
+              The method for exposing the ambient east-west gateway. Exactly one address carries all cross-cluster ambient traffic either way.
+
+              - `LoadBalancer` — the recommended method.
+              - `NodePort` — for installations that do not have the LB.
+            default: LoadBalancer
+          nodePort:
+            type: object
+            description: Special settings for NodePort inlet.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            x-experimental: true
+            default: {}
+            x-examples: [{}, {"port": 30002}]
+            properties:
+              port:
+                type: integer
+                description: |
+                  Static port number for NodePort-type Service. Must be in range, set by kube-apiserver --service-node-port-range argument (default is 30000-32767).
+
+                  Node ports are allocated cluster-wide, so this must differ from [`ingressGateway.nodePort.port`](#parameters-alliance-ingressgateway-nodeport-port).
+                minimum: 1024
+                maximum: 65535
+          serviceAnnotations:
+            type: object
+            additionalProperties:
+              type: string
+            description: |
+              Additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
+
+              Set independently from [`ingressGateway.serviceAnnotations`](#parameters-alliance-ingressgateway-serviceannotations): an annotation that pins one external resource — a static IP, an address pool, an existing load balancer — cannot be honoured by two Services at once.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            x-experimental: true
+            example:
+              yandex.cpi.flant.com/listener-subnet-id: xyz-123
+          loadBalancerClass:
+            type: string
+            description: |
+              Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+
+              Applies only when `inlet` is `LoadBalancer`.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            x-experimental: true
+          gatewayPodAnnotations:
+            type: object
+            additionalProperties:
+              type: string
+            description: |
+              Additional annotations for the ambient east-west gateway DaemonSet pods.
+
+              Annotations the module sets itself take precedence.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            x-experimental: true
+            example:
+              checksum/config: xyz-123
+          nodeSelector:
+            type: object
+            additionalProperties:
+              type: string
+            x-examples: [{"type":"ingress"}]
+            description: |
+              Ambient east-west gateway DaemonSet nodeSelector.
+
+              The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            x-experimental: true
+          tolerations:
+            type: array
+            description: |
+              Ambient east-west gateway DaemonSet tolerations.
+
+              The same as `spec.tolerations` for the Kubernetes pod.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            x-experimental: true
+            items:
+              type: object
+              properties:
+                effect:
+                  type: string
+                key:
+                  type: string
+                operator:
+                  type: string
+                tolerationSeconds:
+                  type: integer
+                  format: int64
+                value:
+                  type: string
+            x-examples:
+            - [{"operator": "Exists"}]
   tracing:
     type: object
     description: |
@@ -1199,6 +1360,29 @@ properties:
           Ambient-mode workloads cannot take part in [federation](./#federation) or [multicluster](./#multicluster). Both remain functional for sidecar-mode workloads. See [ambient mesh limitations](./#ambient-mesh-limitations).
         x-experimental: true
         x-examples: [true]
+      multicluster:
+        type: object
+        description: |
+          Native ambient multicluster: let ambient-mode workloads reach services in
+          peer clusters through an ambient east-west gateway (double HBONE).
+
+          Requires [`ambient.enabled`](#parameters-ambient-enabled) and
+          [`multicluster.enabled`](#parameters-multicluster-enabled). The gateway itself
+          is configured under [`alliance.ambientGateway`](#parameters-alliance-ambientgateway).
+        x-doc-d8Editions:
+        - ee
+        - cse-pro
+        x-doc-skip: true
+        x-experimental: true
+        default: {"enabled": false}
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            description: |
+              Enable native ambient multicluster.
+            x-experimental: true
+            x-examples: [true]
       waypointController:
         type: object
         description: |
@@ -1514,6 +1698,43 @@ properties:
 
           If used together with the whitelistSourceRanges parameter, it authorizes all the users from above networks (no need to enter a username and password).
 allOf:
+# ambient.multicluster.enabled=true requires both ambient.enabled=true and
+# multicluster.enabled=true.
+- oneOf:
+  # ambient.multicluster.enabled is NOT true (or absent)
+  - not:
+      required: ["ambient"]
+      properties:
+        ambient:
+          type: object
+          required: ["multicluster"]
+          properties:
+            multicluster:
+              type: object
+              required: ["enabled"]
+              properties:
+                enabled:
+                  enum: [true]
+  - required: ["ambient", "multicluster"]
+    properties:
+      ambient:
+        type: object
+        required: ["enabled", "multicluster"]
+        properties:
+          enabled:
+            enum: [true]
+          multicluster:
+            type: object
+            required: ["enabled"]
+            properties:
+              enabled:
+                enum: [true]
+      multicluster:
+        type: object
+        required: ["enabled"]
+        properties:
+          enabled:
+            enum: [true]
 - oneOf:
   # ambient.enabled is NOT true (or ambient is absent)
   - not:
@@ -1525,6 +1746,7 @@ allOf:
           properties:
             enabled:
               enum: [true]
+
   # ambient.enabled=true requires dataPlane.trafficRedirectionSetupMode=CNIPlugin
   - required: ["ambient", "dataPlane"]
     properties:

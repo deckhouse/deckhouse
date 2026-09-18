@@ -38,6 +38,182 @@ positive:
         enabled: true
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: false
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # One external load balancer in front of both gateways: its address is named
+  # in both advertise lists, each at that gateway's own port.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ingressGateway:
+          advertise:
+          - address: 172.16.0.5
+            port: 15443
+        ambientGateway:
+          advertise:
+          - address: 172.16.0.5
+            port: 15008
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # ... and two independent load balancers, which one shared advertise list
+  # could not have expressed.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ingressGateway:
+          advertise:
+          - address: 172.16.0.5
+            port: 15443
+        ambientGateway:
+          advertise:
+          - address: 172.16.0.6
+            port: 15008
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # An IPv6 address for the ambient gateway.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ambientGateway:
+          advertise:
+          - address: "2001:db8::1"
+            port: 15008
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # A DNS name for the ambient gateway, which is what a load balancer class that
+  # hands out names gives you. Peer ztunnels resolve it themselves.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ambientGateway:
+          advertise:
+          - address: somehost.example.com
+            port: 15008
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # The same name as an operator is liable to write it: the spelling is normalised
+  # on the way out, so neither the case nor the root dot has to be got right here.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ambientGateway:
+          advertise:
+          - address: SomeHost.Example.COM.
+            port: 15008
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # ... and one load balancer fronting both gateways under a single name, each at
+  # its own port.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ingressGateway:
+          advertise:
+          - address: istio-ew.example.com
+            port: 15443
+        ambientGateway:
+          advertise:
+          - address: istio-ew.example.com
+            port: 15008
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # ambient multicluster with the NodePort inlet: each east-west gateway gets a
+  # static node port of its own.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ingressGateway:
+          inlet: NodePort
+          nodePort:
+            port: 30001
+        ambientGateway:
+          inlet: NodePort
+          nodePort:
+            port: 30002
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # Different inlets per gateway: the sidecar gateway on node ports, the
+  # ambient one on a load balancer.
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+      alliance:
+        ingressGateway:
+          inlet: NodePort
+          nodePort:
+            port: 30001
+        ambientGateway:
+          inlet: LoadBalancer
+          serviceAnnotations:
+            service.beta.kubernetes.io/aws-load-balancer-type: nlb
+          loadBalancerClass: service.k8s.aws/nlb
+          nodeSelector:
+            node-role.deckhouse.io/istio-ambient-gateway: ""
+          tolerations:
+          - operator: Exists
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # sidecar multicluster keeps honouring advertise on its own.
+    - multicluster:
+        enabled: true
+      alliance:
+        ingressGateway:
+          advertise:
+          - address: 172.16.0.5
+            port: 15443
+
     - telemetryAPI:
         enabled: true
     - configAnalysis:
@@ -94,6 +270,102 @@ negative:
         enabled: true
       dataPlane:
         trafficRedirectionSetupMode: InitContainer
+
+  # ambient.multicluster.enabled=true without ambient.enabled
+    - ambient:
+        enabled: false
+        multicluster:
+          enabled: true
+      multicluster:
+        enabled: true
+
+  # ambient.multicluster.enabled=true without multicluster.enabled
+    - ambient:
+        enabled: true
+        multicluster:
+          enabled: true
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # ambientGateway.nodePort.port out of range
+    - alliance:
+        ambientGateway:
+          inlet: NodePort
+          nodePort:
+            port: 70000
+
+  # ambientGateway.advertise[].port out of range
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: 172.16.0.5
+            port: 70000
+
+  # ambientGateway.advertise[] without a port, which has no Service port to fall back on
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: 172.16.0.5
+
+  # A DNS name has to be a fully qualified one - a peer resolves it with its own
+  # resolver, where a short name means something else or nothing - and has to be a
+  # name the Gateway object carrying it can hold.
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: somehost
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: lb_1.example.com
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: "*.example.com"
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: -somehost.example.com
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: somehost..example.com
+            port: 15008
+
+  # The IPv4-in-IPv6 notation cannot be advertised: write the plain IPv4 address instead.
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: "::ffff:172.16.0.5"
+            port: 15008
+
+  # Address-shaped but not an address. Each of these is what a hand-written regex
+  # lets through and `format: ipv4|ipv6` does not.
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: "999.999.999.999"
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: "::::"
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: "ffff"
+            port: 15008
+    - alliance:
+        ambientGateway:
+          advertise:
+          - address: "172.16.0.5/32"
+            port: 15008
+
     - dataPlane:
         extensionProviders:
         - name: authservice-grpc

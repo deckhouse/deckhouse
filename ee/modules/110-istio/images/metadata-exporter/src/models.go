@@ -5,7 +5,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package main
 
-type IngressGateway struct {
+type Gateway struct {
 	Address string `json:"address,omitempty"`
 	Port    int32  `json:"port,omitempty"`
 }
@@ -58,15 +58,16 @@ type PublicMetadataAllianceRef struct {
 }
 
 type FederationPrivateMetadata struct {
-	IngressGateways *[]IngressGateway `json:"ingressGateways,omitempty"`
-	PublicServices  *[]PublicService  `json:"publicServices,omitempty"`
+	IngressGateways *[]Gateway       `json:"ingressGateways,omitempty"`
+	PublicServices  *[]PublicService `json:"publicServices,omitempty"`
 }
 
 type MulticlusterPrivateMetadata struct {
-	IngressGateways *[]IngressGateway `json:"ingressGateways,omitempty"`
-	APIHost         string            `json:"apiHost,omitempty"`
-	ClusterID       string            `json:"clusterID,omitempty"`
-	NetworkName     string            `json:"networkName,omitempty"`
+	IngressGateways *[]Gateway `json:"ingressGateways,omitempty"`
+	AmbientGateways *[]Gateway `json:"ambientGateways,omitempty"`
+	APIHost         string     `json:"apiHost,omitempty"`
+	ClusterID       string     `json:"clusterID,omitempty"`
+	NetworkName     string     `json:"networkName,omitempty"`
 }
 
 // map[custerUUID]publicMetadata

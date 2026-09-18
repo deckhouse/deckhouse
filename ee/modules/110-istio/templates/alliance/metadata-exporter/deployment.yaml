@@ -68,6 +68,10 @@ spec:
           value: {{ $.Values.global.discovery.clusterDomain | quote }}
         - name: INLET
           value: {{ $.Values.istio.alliance.ingressGateway.inlet | quote }}
+  {{- if include "istioAmbientMulticlusterEnabled" . }}
+        - name: AMBIENT_INLET
+          value: {{ $.Values.istio.alliance.ambientGateway.inlet | quote }}
+  {{- end }}
   {{- if .Values.istio.federation.enabled }}
         - name: FEDERATION_ENABLED
           value: "true"
