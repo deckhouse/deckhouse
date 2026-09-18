@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -147,8 +148,18 @@ while related language file '%s' is absent.`, otherName))
 	}
 	defer file.Close()
 
+	// A translation shared by several editions is a symlink, so the changed file carries the path
+	// of the target rather than the path expected here. Compare what the paths resolve to as well,
+	// or such a file would be reported as a translation left behind while it is the same file.
+	otherTarget, otherTargetErr := filepath.EvalSymlinks(otherName)
 	for _, fileInfo := range diffInfo.Files {
 		if fileInfo.NewFileName == otherName {
+			return NewOK(origName)
+		}
+		if otherTargetErr != nil {
+			continue
+		}
+		if target, err := filepath.EvalSymlinks(fileInfo.NewFileName); err == nil && target == otherTarget {
 			return NewOK(origName)
 		}
 	}
