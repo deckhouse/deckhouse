@@ -20,6 +20,8 @@ spec:
     relabelings:
     - targetLabel: tier
       replacement: cluster
+    - targetLabel: d8_source
+      replacement: dkp
   selector:
     matchLabels:
       app: gatekeeper
@@ -48,6 +50,8 @@ spec:
       relabelings:
         - targetLabel: tier
           replacement: cluster
+        - targetLabel: d8_source
+          replacement: dkp
     - port: https-metrics
       scheme: https
       path: /exporter-metrics
@@ -60,6 +64,8 @@ spec:
       relabelings:
         - targetLabel: tier
           replacement: cluster
+        - targetLabel: d8_source
+          replacement: dkp
   selector:
     matchLabels:
       app: gatekeeper

@@ -24,6 +24,8 @@ spec:
       action: keep
     - regex: endpoint
       action: labeldrop
+    - targetLabel: d8_source
+      replacement: dkp
   selector:
     matchLabels:
       app: terraform-state-exporter
