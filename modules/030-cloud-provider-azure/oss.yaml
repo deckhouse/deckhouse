@@ -19,7 +19,7 @@
       version: v1.34.3
     - condition:
         k8s: "1.36"
-      version: v1.36.1
+      version: v1.36.5
 
 - name: Microsoft Azure CSI driver
   link: https://github.com/kubernetes-sigs/azuredisk-csi-driver
@@ -33,16 +33,16 @@
       version: v1.32.12
     - condition:
         k8s: "1.33"
-      version: v1.33.8
+      version: v1.33.12
     - condition:
         k8s: "1.34"
-      version: v1.34.2
+      version: v1.34.6
     - condition:
         k8s: "1.35"
-      version: v1.34.2
+      version: v1.34.6
     - condition:
         k8s: "1.36"
-      version: v1.34.2
+      version: v1.34.6
 
 - name: Microsoft Azure Terraform provider
   link: https://github.com/hashicorp/terraform-provider-azurerm
