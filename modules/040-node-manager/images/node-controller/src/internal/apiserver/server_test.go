@@ -32,9 +32,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	utilcompatibility "k8s.io/apiserver/pkg/util/compatibility"
 	restclient "k8s.io/client-go/rest"
@@ -59,6 +61,19 @@ func (stubStorage) Get(_ context.Context, name string, _ *metav1.GetOptions) (ru
 		Group:    templatesv1alpha1.GroupVersion.Group,
 		Resource: templatesv1alpha1.NodeConfigTemplateResource,
 	}, name)
+}
+
+func (stubStorage) NewList() runtime.Object { return &templatesv1alpha1.NodeConfigTemplateList{} }
+
+func (stubStorage) List(_ context.Context, _ *metainternalversion.ListOptions) (runtime.Object, error) {
+	return &templatesv1alpha1.NodeConfigTemplateList{}, nil
+}
+
+func (stubStorage) ConvertToTable(ctx context.Context, object runtime.Object, tableOptions runtime.Object) (*metav1.Table, error) {
+	return rest.NewDefaultTableConvertor(schema.GroupResource{
+		Group:    templatesv1alpha1.GroupVersion.Group,
+		Resource: templatesv1alpha1.NodeConfigTemplateResource,
+	}).ConvertToTable(ctx, object, tableOptions)
 }
 
 // newPreparedServer builds the aggregated server the way Run does, minus the
@@ -121,6 +136,32 @@ func TestServesAnOpenAPIV3DocumentForTheGroup(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, "null", strings.TrimSpace(string(body)), "the group serves no schema at all")
 	require.Contains(t, string(body), templatesv1alpha1.NodeConfigTemplateResource)
+}
+
+// kube-aggregator downloads /openapi/v2 from every APIService it routes to. A
+// 404 there is not skipped: the download error is wrapped, the kube-apiserver
+// fails the "err == ErrAPIServiceNotFound" comparison that would forget the
+// item, and re-queues the download for this group for the lifetime of the
+// process, logging it every time.
+func TestServesAnOpenAPIV2Document(t *testing.T) {
+	srv := newPreparedServer(t)
+
+	ts := httptest.NewServer(srv.Handler)
+	t.Cleanup(ts.Close)
+
+	resp, err := http.Get(ts.URL + "/openapi/v2")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var swagger struct {
+		Paths map[string]any `json:"paths"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&swagger))
+	resourcePath := "/apis/" + templatesv1alpha1.GroupVersion.Group + "/" +
+		templatesv1alpha1.GroupVersion.Version + "/" + templatesv1alpha1.NodeConfigTemplateResource
+	require.Contains(t, swagger.Paths, resourcePath)
+	require.Contains(t, swagger.Paths, resourcePath+"/{name}")
 }
 
 // The delegated-authentication lookup dials the kube-apiserver once, and the pod
