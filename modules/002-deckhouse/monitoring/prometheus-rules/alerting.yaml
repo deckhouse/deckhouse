@@ -346,18 +346,38 @@
         To resolve this issue, specify the correct source in the module configuration.
 
   - alert: ModuleConfigObsoleteVersion
-    expr: max by (name) (d8_module_config_obsolete_version) >= 1
+    expr: max by (name, version, latest) (d8_module_config_obsolete_version) >= 1
     labels:
       severity_level: "4"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       summary: |
-        ModuleConfig `{{ $labels.name }}` is outdated.
+        ModuleConfig `{{ $labels.name }}` uses obsolete settings version {{ $labels.version }}, the latest one is {{ $labels.latest }}.
       description: |
-        Deckhouse has detected that ModuleConfig `{{ $labels.name }}` is outdated.
+        Deckhouse has detected that ModuleConfig `{{ $labels.name }}` has `spec.version: {{ $labels.version }}`, while the latest settings schema version of the `{{ $labels.name }}` module is {{ $labels.latest }}.
 
-        To resolve this issue, update ModuleConfig `{{ $labels.name }}` to the latest version.
+        Deckhouse converts `spec.settings` from version {{ $labels.version }} to version {{ $labels.latest }} on the fly, so the module keeps working, but the stored configuration remains outdated. Support for version {{ $labels.version }} may be dropped in a future release.
+
+        To resolve this issue, follow these steps:
+
+        1. Review the changes required to migrate to version {{ $labels.latest }}:
+
+           ```bash
+           d8 k get modulesettingsdefinition {{ $labels.name }} -o jsonpath='{range .spec.versions[*].conversions[*]}{.descriptions.en}{"\n"}{end}'
+           ```
+
+        2. Migrate `spec.settings` accordingly and set `spec.version` to {{ $labels.latest }}:
+
+           ```bash
+           d8 k edit moduleconfig {{ $labels.name }}
+           ```
+
+        3. Verify that the version has been updated and no warnings are left:
+
+           ```bash
+           d8 k get moduleconfig {{ $labels.name }} -o jsonpath='{.spec.version}{"\t"}{.status.message}{"\n"}'
+           ```
 
   - alert: ModuleHasDeprecatedUpdatePolicy
     expr: max by (module, updatePolicy) (d8_deprecated_update_policy) >= 1
