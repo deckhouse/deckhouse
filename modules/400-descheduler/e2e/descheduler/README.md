@@ -96,6 +96,8 @@ descheduler/
     │   └── ...
     ├── statefulset-single-replica-eviction/
     │   └── ...
+    ├── protected-storage-class-blocks-eviction/
+    │   └── ...
     └── descheduler-minreplicas-not-supported/
         └── ...
 ```
@@ -114,6 +116,7 @@ Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/README
 | `task statefulset-pdb-blocks-eviction:run` | `tests/statefulset-pdb-blocks-eviction/` | StatefulSet + PDB `maxUnavailable: 0`: every eviction is blocked, pods stay in place |
 | `task statefulset-pdb-allows-one-disruption:run` | `tests/statefulset-pdb-allows-one-disruption/` | StatefulSet + PDB `maxUnavailable: 1`: evictions are serialized, StatefulSet stays available |
 | `task statefulset-single-replica-eviction:run` | `tests/statefulset-single-replica-eviction/` | Single-replica StatefulSet is evicted — no `minReplicas` protection exists in Deckhouse |
+| `task protected-storage-class-blocks-eviction:run` | `tests/protected-storage-class-blocks-eviction/` | `spec.protectedStorageClasses` blocks eviction of a pod using a PVC from the listed StorageClass; dropping the protection evicts the same pod |
 | `task descheduler-minreplicas-not-supported:run` | `tests/descheduler-minreplicas-not-supported/` | `spec.minReplicas` cannot be persisted in the CR; manual ConfigMap edits are overwritten |
 
 ## Running Tests

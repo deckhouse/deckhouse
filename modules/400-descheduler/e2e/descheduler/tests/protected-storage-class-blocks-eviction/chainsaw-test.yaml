@@ -1,0 +1,332 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: descheduler-protected-storage-class-blocks-eviction
+spec:
+  description: >-
+    spec.protectedStorageClasses forbids evicting a pod that uses a PersistentVolumeClaim
+    from a listed StorageClass. The same deterministic inter-pod anti-affinity violation
+    that the single-replica test uses as an eviction trigger is applied here: with the
+    StorageClass protected the pod must stay in place, and after the protection is removed
+    from the CR the very same pod must be evicted. The second phase is the control that
+    keeps the negative assertion honest.
+  concurrent: false
+  timeouts:
+    apply: 30s
+    assert: 120s
+    delete: 60s
+
+  bindings:
+    - name: stsTestLabel
+      value: protected-sc
+    - name: conflictLabel
+      value: protected-sc-conflict
+    - name: workerNodes
+      value: >-
+        (x_k8s_list($client, 'v1', 'Node').items[?spec.unschedulable != `true`
+        && metadata.labels."node-role.kubernetes.io/control-plane" == `null`
+        && length(status.conditions[?type == 'Ready' && status == 'True']) > `0`])
+    - name: defaultStorageClasses
+      value: >-
+        (x_k8s_list($client, 'storage.k8s.io/v1', 'StorageClass').items[?metadata.annotations."storageclass.kubernetes.io/is-default-class" == 'true'])
+    - name: storageClass
+      value: ($defaultStorageClasses[0].metadata.name)
+
+  catch:
+    - description: Show pods in the test namespace on failure
+      get:
+        apiVersion: v1
+        kind: Pod
+    - description: Show PersistentVolumeClaims in the test namespace on failure
+      get:
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+    - description: Show events in the test namespace on failure
+      events: {}
+    - description: Show descheduler pod logs on failure
+      podLogs:
+        namespace: d8-descheduler
+        selector: app=descheduler
+        container: descheduler
+        tail: 200
+
+  steps:
+    - name: assert-module-installed
+      description: Verify that the descheduler module is installed in the cluster
+      try:
+        - description: Assert the Descheduler CRD exists
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: deschedulers.deckhouse.io
+
+    - name: check-minimum-nodes
+      description: >-
+        Verify that the cluster has at least 2 eligible worker nodes, so nodeFit would
+        allow the eviction and only the StorageClass protection stands in the way
+      try:
+        - description: Assert at least 2 Ready, schedulable, non-control-plane worker nodes exist
+          assert:
+            resource:
+              (length($workerNodes) >= `2`): true
+
+    - name: check-default-storage-class
+      description: Verify that the cluster has a default StorageClass to provision the test volume from
+      try:
+        - description: Assert exactly one default StorageClass exists
+          assert:
+            resource:
+              (length($defaultStorageClasses) == `1`): true
+
+    - name: create-statefulset
+      description: >-
+        Create a single-replica StatefulSet with a volumeClaimTemplate backed by the default
+        StorageClass. The pod is placed by the scheduler (no nodeName, no nodeSelector) so that
+        WaitForFirstConsumer volumes bind and so that nodeFit sees no node constraint on the
+        live pod. Its required podAntiAffinity against the conflict label is inert for now,
+        because no such pod exists yet
+      try:
+        - description: Create the StatefulSet with a PersistentVolumeClaim template
+          create:
+            file: manifests/sts-with-pvc.yaml
+            template: true
+
+    - name: wait-statefulset-ready
+      description: Wait until the single replica is Running and its PersistentVolumeClaim is bound
+      try:
+        - description: Assert pod test-sts-pvc-0 is Running
+          assert:
+            timeout: 300s
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: test-sts-pvc-0
+              status:
+                phase: Running
+        - description: Assert the PersistentVolumeClaim is bound to the default StorageClass
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: data-test-sts-pvc-0
+              spec:
+                storageClassName: ($storageClass)
+              status:
+                phase: Bound
+        - description: Assert the StatefulSet reports 1 ready replica
+          assert:
+            resource:
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: test-sts-pvc
+              status:
+                readyReplicas: 1
+
+    - name: create-conflict-pod
+      description: >-
+        Force-place a bare pod carrying the repelled label onto the node the StatefulSet pod
+        landed on (kubelet admission does not enforce inter-pod anti-affinity), making
+        test-sts-pvc-0 violate its own required podAntiAffinity. Kept as one step because the
+        captured node name (operation outputs) is not visible across step boundaries
+      try:
+        - description: Capture the node the StatefulSet pod runs on
+          patch:
+            resource:
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: test-sts-pvc
+                annotations:
+                  e2e.descheduler.deckhouse.io/node-capture: pre-conflict
+            outputs:
+              - name: pvcPodNode
+                value: (x_k8s_get($client, 'v1', 'Pod', $namespace, 'test-sts-pvc-0').spec.nodeName)
+        - description: Create the conflict pod on that node
+          create:
+            file: manifests/conflict-pod.yaml
+            template: true
+        - description: Assert the conflict pod is Running next to test-sts-pvc-0
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: conflict-pod
+              spec:
+                nodeName: ($pvcPodNode)
+              status:
+                phase: Running
+
+    - name: verify-protected-pod-is-not-evicted
+      description: >-
+        Apply the Descheduler CR that protects the default StorageClass and verify the pod
+        survives a full descheduling cycle despite violating its anti-affinity. Kept as one
+        step because the captured pod UID (operation outputs) is not visible across step
+        boundaries
+      try:
+        - description: Apply the Descheduler CR with protectedStorageClasses
+          apply:
+            file: manifests/descheduler-cr-protected.yaml
+            template: true
+        - description: >-
+            Assert the rendered policy carries the profile, the PodsWithPVC protection and the
+            protected StorageClass name, and no longer carries the deprecated ignorePvcPods flag
+            for this profile (mixing the two makes the descheduler reject the policy)
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                (contains("policy.yaml", 'e2e-protected-sc')): true
+                (contains("policy.yaml", 'podProtections')): true
+                (contains("policy.yaml", 'PodsWithPVC')): true
+                (contains("policy.yaml", $storageClass)): true
+        - description: >-
+            Assert the descheduler deployment finished rolling out and its single pod runs with
+            the current policy checksum, so the cycle below really runs against the new policy
+            (a descheduling cycle runs at pod startup)
+          assert:
+            timeout: 300s
+            file: ../common/asserts/assert-descheduler-rollout-complete.yaml
+        - description: Capture the UID of test-sts-pvc-0 before the descheduling cycle
+          patch:
+            resource:
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: test-sts-pvc
+                annotations:
+                  e2e.descheduler.deckhouse.io/uid-capture: pre-cycle
+            outputs:
+              - name: protectedPodUid
+                value: (x_k8s_get($client, 'v1', 'Pod', $namespace, 'test-sts-pvc-0').metadata.uid)
+        - description: Sleep through a full descheduling cycle running against the new policy
+          sleep:
+            duration: 300s
+        - description: Assert no anti-affinity eviction event was recorded for the protected pod
+          error:
+            timeout: 30s
+            resource:
+              apiVersion: v1
+              kind: Event
+              reason: RemovePodsViolatingInterPodAntiAffinity
+              involvedObject:
+                name: test-sts-pvc-0
+        - description: Assert the pod was never recreated (same UID) and still runs on the conflicting node
+          assert:
+            timeout: 30s
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: test-sts-pvc-0
+              (metadata.uid == $protectedPodUid): true
+              spec:
+                nodeName: ($pvcPodNode)
+              status:
+                phase: Running
+      catch:
+        - description: Show ConfigMap content on failure
+          get:
+            apiVersion: v1
+            kind: ConfigMap
+            name: descheduler-policy
+            namespace: d8-descheduler
+        - description: Show Descheduler CRs on failure
+          get:
+            apiVersion: deckhouse.io/v1alpha2
+            kind: Descheduler
+        - description: Show events in the descheduler namespace on failure
+          events:
+            namespace: d8-descheduler
+
+    - name: verify-pod-is-evicted-without-protection
+      description: >-
+        Control phase that keeps the negative assertion above honest: drop
+        protectedStorageClasses from the very same CR and verify the very same pod is now
+        evicted. Kept as one step because the captured pod UID is not visible across step
+        boundaries
+      try:
+        - description: Capture the UID of test-sts-pvc-0 before the protection is dropped
+          patch:
+            resource:
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: test-sts-pvc
+                annotations:
+                  e2e.descheduler.deckhouse.io/uid-capture: pre-control
+            outputs:
+              - name: unprotectedPodUid
+                value: (x_k8s_get($client, 'v1', 'Pod', $namespace, 'test-sts-pvc-0').metadata.uid)
+        - description: Update the Descheduler CR, removing protectedStorageClasses
+          apply:
+            file: manifests/descheduler-cr-unprotected.yaml
+        - description: Assert the rendered policy no longer carries the PodsWithPVC protection
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                (contains("policy.yaml", 'e2e-protected-sc')): true
+                (contains("policy.yaml", 'PodsWithPVC')): false
+        - description: Assert the descheduler deployment finished rolling out with the updated policy
+          assert:
+            timeout: 300s
+            file: ../common/asserts/assert-descheduler-rollout-complete.yaml
+        - description: Assert test-sts-pvc-0 was evicted and recreated with a new UID
+          assert:
+            timeout: 420s
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: test-sts-pvc-0
+              (metadata.uid != $unprotectedPodUid): true
+        - description: >-
+            Assert an eviction event was recorded for test-sts-pvc-0
+            (event reason is the strategy name; 'Descheduled' is the event action)
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: v1
+              kind: Event
+              reason: RemovePodsViolatingInterPodAntiAffinity
+              involvedObject:
+                name: test-sts-pvc-0
+      cleanup:
+        - description: Delete the Descheduler CR
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: Descheduler
+              name: e2e-protected-sc
+      catch:
+        - description: Show ConfigMap content on failure
+          get:
+            apiVersion: v1
+            kind: ConfigMap
+            name: descheduler-policy
+            namespace: d8-descheduler
+        - description: Show Descheduler CRs on failure
+          get:
+            apiVersion: deckhouse.io/v1alpha2
+            kind: Descheduler
+        - description: Show events in the descheduler namespace on failure
+          events:
+            namespace: d8-descheduler

@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -428,6 +429,133 @@ profiles:
       enabled:
       - DefaultEvictor
 `))
+		})
+	})
+
+	Context("With protectedStorageClasses set", func() {
+		BeforeEach(func() {
+			moduleValues := `
+internal:
+  deschedulers:
+  - name: test1
+    evictLocalStoragePods: true
+    protectedStorageClasses:
+    - local-path
+    - ceph-rbd
+    strategies:
+      removeDuplicates:
+        enabled: true
+  - name: test2
+    protectedStorageClasses:
+    - local-path
+    strategies:
+      removeDuplicates:
+        enabled: true
+  - name: test3
+    strategies:
+      removeDuplicates:
+        enabled: true
+`
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("descheduler", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render podProtections instead of the deprecated flags", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy")
+			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`---
+apiVersion: descheduler/v1alpha2
+kind: DeschedulerPolicy
+profiles:
+- name: test1
+  pluginConfig:
+  - args:
+      nodeFit: true
+      podProtections:
+        defaultDisabled:
+        - FailedBarePods
+        - PodsWithLocalStorage
+        extraEnabled:
+        - PodsWithPVC
+        config:
+          PodsWithPVC:
+            protectedStorageClasses:
+            - name: local-path
+            - name: ceph-rbd
+    name: DefaultEvictor
+  - name: RemoveDuplicates
+  plugins:
+    balance:
+      enabled:
+      - RemoveDuplicates
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+- name: test2
+  pluginConfig:
+  - args:
+      nodeFit: true
+      podProtections:
+        defaultDisabled:
+        - FailedBarePods
+        extraEnabled:
+        - PodsWithPVC
+        config:
+          PodsWithPVC:
+            protectedStorageClasses:
+            - name: local-path
+    name: DefaultEvictor
+  - name: RemoveDuplicates
+  plugins:
+    balance:
+      enabled:
+      - RemoveDuplicates
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+- name: test3
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: false
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      nodeFit: true
+    name: DefaultEvictor
+  - name: RemoveDuplicates
+  plugins:
+    balance:
+      enabled:
+      - RemoveDuplicates
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+`))
+		})
+
+		It("Should not mix the deprecated evictor flags with podProtections", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy")
+			policy := cm.Field(`data.policy\.yaml`).String()
+			// Upstream DefaultEvictor validation rejects a policy that sets both,
+			// and the descheduler refuses to start in that case.
+			Expect(strings.Count(policy, "podProtections:")).To(Equal(2))
+			// Only the legacy profile (test3) keeps the deprecated flags.
+			Expect(strings.Count(policy, "evictFailedBarePods:")).To(Equal(1))
+			Expect(strings.Count(policy, "evictLocalStoragePods:")).To(Equal(1))
+			Expect(strings.Count(policy, "evictSystemCriticalPods:")).To(Equal(1))
+			Expect(strings.Count(policy, "ignorePvcPods:")).To(Equal(1))
 		})
 	})
 })

@@ -74,7 +74,9 @@ type InternalValuesDeschedulerSpec struct {
 	NamespaceLabelSelector *metav1.LabelSelector              `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`
 	PriorityClassThreshold *dsv1alpha2.PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
 	EvictLocalStoragePods  *dsv1alpha2.EvictLocalStoragePods  `json:"evictLocalStoragePods,omitempty" yaml:"evictLocalStoragePods,omitempty"`
-	Strategies             dsv1alpha2.Strategies              `json:"strategies" yaml:"strategies"`
+	// ProtectedStorageClasses lists StorageClass names whose Pods must not be evicted.
+	ProtectedStorageClasses []string              `json:"protectedStorageClasses,omitempty" yaml:"protectedStorageClasses,omitempty"`
+	Strategies              dsv1alpha2.Strategies `json:"strategies" yaml:"strategies"`
 }
 
 func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
@@ -105,6 +107,9 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		}
 		if item.Spec.EvictLocalStoragePods != nil {
 			ds.EvictLocalStoragePods = item.Spec.EvictLocalStoragePods
+		}
+		if len(item.Spec.ProtectedStorageClasses) > 0 {
+			ds.ProtectedStorageClasses = item.Spec.ProtectedStorageClasses
 		}
 
 		if !item.Spec.Strategies.HasValidStrategies() {
