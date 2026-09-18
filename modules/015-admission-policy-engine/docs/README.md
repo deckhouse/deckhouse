@@ -337,8 +337,8 @@ Configuring PSS policies for namespaces is done by setting a special label `secu
 The default policy can be overridden globally ([in the module settings](configuration.html#parameters-podsecuritystandards-defaultpolicy)).
 
 {% alert level="info" %}
-In namespaces named `d8-*` and `kube-*`, the `restricted` standard applies in `warn` mode regardless of the default policy.
-Violations are recorded in the audit and shown in Deckhouse Console, and a system component is never blocked from starting.
+In namespaces named `d8-*` and `kube-*`, the `restricted` standard applies regardless of the default policy.
+A violation is recorded in the audit and shown in Deckhouse Console, and the workload still starts, unless the module that owns the namespace has hardened it.
 {% endalert %}
 
 {% alert level="info" %}

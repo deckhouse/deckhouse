@@ -71,9 +71,10 @@ Namespaces named `d8-*` and `kube-*` hold the components of the platform itself.
 Policies apply to them differently from application namespaces, and that difference is not configurable.
 A namespace labeled `heritage: deckhouse` counts as one of them even if it is named differently: the platform sets that label on the namespaces it creates, and a policy written for application namespaces does not reach it.
 
-Every namespace named `d8-*` or `kube-*` is checked against the `restricted` standard in `warn` mode.
+Every namespace named `d8-*` or `kube-*` is checked against the `restricted` standard.
 The `security.deckhouse.io/pod-policy` label and the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter do not apply there.
-Violations are recorded in the audit and shown in Deckhouse Console, and a system component is never blocked from starting.
+A violation is recorded in the audit and shown in Deckhouse Console, and the workload still starts.
+The exception is a namespace whose module has hardened it: there the standards are enforced and a violating workload is denied.
 
 These checks cannot be tuned from outside the platform.
 The labels that govern them, and the workloads they cover, belong to the module that owns the namespace, and Deckhouse returns both to their declared state the next time it applies the configuration.
@@ -97,6 +98,7 @@ A policy is rendered as a single constraint when the split would change nothing:
 - The namespaces the policy selects include no system namespace.
 - The policy already excludes every system namespace it selects.
 - The namespace list uses a leading glob, such as `*-system`, which cannot be intersected with `d8-*` exactly.
+- The policy selects system namespaces only, in which case the single constraint keeps the policy's name and warns.
 
 Gatekeeper mutations do not apply in system namespaces, whatever labels the namespace carries.
 The platform sets the parameters of its own components, so an `Assign` or a `ModifySet` resource is not allowed to change them there.
