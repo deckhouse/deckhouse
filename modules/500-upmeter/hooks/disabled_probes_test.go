@@ -194,8 +194,30 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(disabledProbes).NotTo(ContainElement("extensions/grafana"))
 				Expect(disabledProbes).NotTo(ContainElement("extensions/label-enforcer"))
 				Expect(disabledProbes).NotTo(ContainElement("extensions/observability-webhook"))
-				Expect(disabledProbes).NotTo(ContainElement("monitoring-and-autoscaling/alertmanager"))
 				Expect(disabledProbes).NotTo(ContainElement("monitoring-and-autoscaling/observability-recording"))
+			})
+
+			It("monitoring-and-autoscaling/alertmanager probe is disabled by default", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("monitoring-and-autoscaling/alertmanager"))
+			})
+
+			It("monitoring-and-autoscaling/alertmanager probe is enabled when turned on explicitly", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("upmeter.alertmanagerProbe.enabled", true)
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).NotTo(ContainElement("monitoring-and-autoscaling/alertmanager"))
 			})
 		})
 	})
@@ -300,9 +322,10 @@ func allModules() set.Set {
 
 func Test_calcDisabledProbes(t *testing.T) {
 	type args struct {
-		presence         appPresence
-		manuallyDisabled set.Set
-		enabledModules   set.Set
+		presence                 appPresence
+		manuallyDisabled         set.Set
+		enabledModules           set.Set
+		alertmanagerProbeEnabled bool
 	}
 	cases := []struct {
 		name              string
@@ -438,13 +461,35 @@ func Test_calcDisabledProbes(t *testing.T) {
 			),
 		},
 		{
-			name: "MAA/alertmanager and observability-recording on",
+			name: "MAA/observability-recording on, MAA/alertmanager stays off until enabled",
 			args: args{
 				enabledModules: set.New("prometheus", "observability"),
 			},
+			expectDisabled: set.New(
+				"monitoring-and-autoscaling/alertmanager",
+			),
+			expectNotDisabled: set.New(
+				"monitoring-and-autoscaling/observability-recording",
+			),
+		},
+		{
+			name: "MAA/alertmanager on when enabled explicitly",
+			args: args{
+				enabledModules:           set.New("prometheus", "observability"),
+				alertmanagerProbeEnabled: true,
+			},
 			expectNotDisabled: set.New(
 				"monitoring-and-autoscaling/alertmanager",
-				"monitoring-and-autoscaling/observability-recording",
+			),
+		},
+		{
+			name: "MAA/alertmanager off when enabled explicitly without observability",
+			args: args{
+				enabledModules:           set.New("prometheus"),
+				alertmanagerProbeEnabled: true,
+			},
+			expectDisabled: set.New(
+				"monitoring-and-autoscaling/alertmanager",
 			),
 		},
 		// Metallb -> load-balancing/metallb
@@ -667,7 +712,12 @@ func Test_calcDisabledProbes(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			disabled := calcDisabledProbes(tt.args.presence, tt.args.enabledModules, tt.args.manuallyDisabled)
+			disabled := calcDisabledProbes(
+				tt.args.presence,
+				tt.args.enabledModules,
+				tt.args.manuallyDisabled,
+				tt.args.alertmanagerProbeEnabled,
+			)
 
 			if tt.expectDisabled != nil {
 				for _, x := range tt.expectDisabled.Slice() {

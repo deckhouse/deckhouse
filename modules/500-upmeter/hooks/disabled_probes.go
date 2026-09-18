@@ -102,21 +102,25 @@ func collectDisabledProbes(_ context.Context, input *go_hook.HookInput) error {
 	}
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	manuallyDisabledProbes := set.NewFromValues(input.Values, "upmeter.disabledProbes")
+	// The probe is opt-in: its alert lifecycle check fires a synthetic alert that
+	// escapes to notification channels connected to Prometheus directly, past the
+	// silence the check creates in the alertmanager of the observability module.
+	alertmanagerProbeEnabled := input.Values.Get("upmeter.alertmanagerProbe.enabled").Bool()
 
 	// Calculation
-	disabledProbes := calcDisabledProbes(presence, enabledModules, manuallyDisabledProbes)
+	disabledProbes := calcDisabledProbes(presence, enabledModules, manuallyDisabledProbes, alertmanagerProbeEnabled)
 
 	// Output
 	input.Values.Set("upmeter.internal.disabledProbes", disabledProbes.Slice())
 	return nil
 }
 
-func calcDisabledProbes(presence appPresence, enabledModules, disabledManually set.Set) set.Set {
+func calcDisabledProbes(presence appPresence, enabledModules, disabledManually set.Set, alertmanagerProbeEnabled bool) set.Set {
 	disabledProbes := set.New().AddSet(disabledManually)
 
 	// `disabledProbes` is modified in the following calls
 	disableSyntheticProbes(presence, disabledProbes)
-	disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes)
+	disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes, alertmanagerProbeEnabled)
 	disableExtensionsProbes(presence, enabledModules, disabledProbes)
 	disableLoadBalancingProbes(presence, enabledModules, disabledProbes)
 	disableControlPlaneProbes(enabledModules, disabledProbes)
@@ -193,7 +197,7 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 	}
 }
 
-func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Set) {
+func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Set, alertmanagerProbeEnabled bool) {
 	// Disabling the whole group to simplify the env value for humans.
 	if !enabledModules.Has("prometheus") {
 		disabledProbes.Add("monitoring-and-autoscaling/")
@@ -211,8 +215,10 @@ func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Se
 		disabledProbes.Add("monitoring-and-autoscaling/key-metrics-present")
 	}
 	if !enabledModules.Has("observability") {
-		disabledProbes.Add("monitoring-and-autoscaling/alertmanager")
 		disabledProbes.Add("monitoring-and-autoscaling/observability-recording")
+	}
+	if !enabledModules.Has("observability") || !alertmanagerProbeEnabled {
+		disabledProbes.Add("monitoring-and-autoscaling/alertmanager")
 	}
 }
 

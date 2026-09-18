@@ -243,6 +243,17 @@ properties:
 
                   This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
                 default: "false"
+  alertmanagerProbe:
+    type: object
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Enables the `monitoring-and-autoscaling/alertmanager` probe. The `observability` module must be enabled as well.
+
+          The probe is disabled by default because its `observability-rules-group-alert` check fires a synthetic `UpmeterObservabilityMiniE2EAlert`. The check silences that alert with an `ObservabilityNotificationSilence`, but the silence only applies to the alertmanager of the `observability` module: notification channels connected to Prometheus directly, such as an external Alertmanager from a `CustomAlertmanager` resource, receive the alert anyway.
   disabledProbes:
     type: array
     default: []
