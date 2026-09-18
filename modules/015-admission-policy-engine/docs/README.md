@@ -661,6 +661,8 @@ While no replica of `gatekeeper-controller-manager` is available, the following 
 
 The mutating webhook is configured differently: its `failurePolicy` is `Ignore`, and an unavailable deployment only means that mutations are not applied.
 
+Disabling the module unblocks the cluster, but the control goes with it: no policy is enforced any more, and an object a policy used to forbid is created without hindrance. The FAQ describes [what to do](faq.html#what-to-do-if-the-admission-webhook-is-unavailable) while the webhook is unavailable.
+
 ### Why only the webhook pods are excluded from validation
 
 One exclusion in the webhook configuration covers the pods of `gatekeeper-controller-manager` and nothing else: every webhook excludes objects carrying the `gatekeeper.sh/operation: webhook` label through its `objectSelector`. The exclusion exists to break a circular dependency, not to relax the policies for the module.
