@@ -645,7 +645,7 @@ You can read more about the available options in the [gatekeeper](https://open-p
 
 ## Availability of the module components
 
-The module is on the critical path of the cluster: while its admission webhook is unavailable, the API server rejects the requests the webhook intercepts. This section explains what depends on each component and how the components are placed so that they stay available.
+The module is on the critical path of the cluster: while its admission webhook is unavailable, the API server rejects the requests the webhook intercepts. This section explains what depends on each component, why only the pods of the webhook are excluded from validation, and which alerts report an outage.
 
 ### Why the admission webhook is a critical component
 
@@ -662,35 +662,17 @@ While no replica of `gatekeeper-controller-manager` is available, the following 
 
 The mutating webhook is configured differently: its `failurePolicy` is `Ignore`, and an unavailable deployment only means that mutations are not applied.
 
-### How the module keeps control over itself
+### Why only the webhook pods are excluded from validation
 
-The module is able to restart its own webhook during an outage, because two exclusions apply before the request reaches Gatekeeper:
+One exclusion in the webhook configuration covers the pods of `gatekeeper-controller-manager` and nothing else: every webhook excludes objects carrying the `gatekeeper.sh/operation: webhook` label through its `objectSelector`. The exclusion exists to break a circular dependency, not to relax the policies for the module.
 
-- The pods of `gatekeeper-controller-manager` carry the `gatekeeper.sh/operation: webhook` label, and every webhook of the configuration excludes objects with that label through `objectSelector`.
-- Gatekeeper is started with `--exempt-namespace=d8-admission-policy-engine`, so the objects of the module's own namespace are admitted without evaluation.
+A webhook that validates the pods serving it cannot recover from its own outage. Once the last replica is gone, the API server has nowhere to deliver the request, so it rejects the creation of the replacement pod, and the deployment stays at zero replicas until an operator removes the webhook configuration by hand. The label, which Gatekeeper sets on its own pods, is the narrowest exclusion that breaks the cycle: the deployment can always create a pod, while every other object of the namespace is validated as usual.
 
-The second exclusion works only while Gatekeeper is running. When it is not, requests for the namespace are rejected on delivery, which affects the pods of `gatekeeper-audit`: they carry `gatekeeper.sh/operation: audit` and are not excluded by `objectSelector`. The audit deployment therefore cannot create a new pod until the webhook is restored.
+The pods of `gatekeeper-audit` carry `gatekeeper.sh/operation: audit` and are deliberately not excluded. Admission does not depend on the audit, so the audit is not on the recovery path and the exclusion would widen the hole without making anything recoverable. The trade-off is that while the webhook is unavailable, the audit deployment cannot create a pod either, and the audit returns only after the webhook does.
 
-### Placement of the components
+The label is not a way around the policies. Three ValidatingAdmissionPolicies reject an object carrying `gatekeeper.sh/operation: webhook` unless the request comes from a service account of a `d8-*` or `kube-*` namespace, or from `system:sudouser`: `deny-gatekeeper-webhook-operation-label` for pods, `deny-gatekeeper-webhook-operation-label-controllers` for the controllers that create them, and `deny-gatekeeper-webhook-operation-label-controllers-cronjobs` for CronJob. A user who labels a pod to skip validation is denied before the webhook is consulted, while the ReplicaSet controller of the platform is not, which is what keeps the recovery path open. The same policies deny `kubectl rollout restart` of the deployment to anyone else, because a restart rewrites the pod template that carries the label.
 
-Both deployments run with the `system-cluster-critical` priority class, which places them above any workload during preemption and protects them from eviction under node pressure.
-
-The following table summarizes the parameters that determine how many replicas survive a failure.
-
-| Parameter | gatekeeper-controller-manager | gatekeeper-audit |
-| --- | --- | --- |
-| Replicas | 2 in HA mode, 1 otherwise | 1 always |
-| Update strategy | `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1` in HA mode, Kubernetes defaults otherwise | Kubernetes defaults |
-| Anti-affinity | required, by `kubernetes.io/hostname`, in HA mode | — |
-| Nodes | required node affinity: nodes of the module, system nodes, control-plane nodes | node selector: nodes of the module or system nodes, when such nodes exist |
-| Tolerations | any node | system nodes |
-| PodDisruptionBudget | `minAvailable: 1` in HA mode, `minAvailable: 0` otherwise | `minAvailable: 0` |
-| Priority class | `system-cluster-critical` | `system-cluster-critical` |
-
-Two consequences follow from the table:
-
-- Outside HA mode the webhook runs in a single replica whose PodDisruptionBudget allows its eviction. Draining the node that carries it blocks admission in the cluster until the pod is scheduled elsewhere and becomes ready. Enable HA mode for the cluster to get a second replica on another node.
-- In HA mode an update of the deployment leaves a single replica serving, because the strategy combines `maxSurge: 0` with `maxUnavailable: 1`. The anti-affinity rule is `requiredDuringSchedulingIgnoredDuringExecution`, so a cluster with fewer eligible nodes than replicas keeps a pod in the `Pending` state permanently.
+Gatekeeper is also started with `--exempt-namespace=d8-admission-policy-engine`, which admits the objects of the module's own namespace without evaluating them. That exemption is applied by Gatekeeper itself, so it holds only while Gatekeeper is running and does not help during an outage. Recovery relies on the label alone.
 
 ### Monitoring of the components
 

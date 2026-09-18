@@ -417,7 +417,7 @@ alerts:
         - Roles, RoleBindings and Gatekeeper constraints are not applied.
         - `kubectl exec` and `kubectl attach` into pods of `d8-*` and `kube-*` namespaces are blocked, which limits the ways to diagnose the failure.
 
-        Deckhouse itself keeps working: the pods of `gatekeeper-controller-manager` carry the `gatekeeper.sh/operation: webhook` label and are excluded from validation, so the deployment can always be restarted.
+        The module keeps the ability to recover on its own: the pods of `gatekeeper-controller-manager` carry the `gatekeeper.sh/operation: webhook` label and are excluded from validation, so the ReplicaSet creates a replacement pod even while no replica serves the webhook. A deployment that stays at zero replicas therefore points at scheduling, the image or the node, not at admission.
 
         Find out why the replicas are gone:
 
@@ -428,16 +428,12 @@ alerts:
         d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
         ```
 
-        If the cause cannot be fixed quickly, unblock the cluster by disabling the module. This removes the webhook configuration along with the rest of the module's objects:
+        A pod that stays `Pending` points at the nodes rather than at the component: the replicas run on the nodes of the module, on system nodes or on control-plane nodes, and in HA mode an anti-affinity rule requires a separate node for each replica. Check the events of the namespace and the nodes the replicas can be scheduled on:
 
         ```bash
-        d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":false}}'
-        ```
-
-        Policies stop being enforced while the module is disabled, so return it as soon as the cause is fixed:
-
-        ```bash
-        d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":true}}'
+        d8 k -n d8-admission-policy-engine get events --sort-by=.lastTimestamp | tail -30
+        d8 k get nodes -l node-role.deckhouse.io/system
+        d8 k get nodes -l node-role.kubernetes.io/control-plane
         ```
       summary: |
         The admission webhook of admission-policy-engine has no available replicas.

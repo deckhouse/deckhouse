@@ -734,22 +734,24 @@ d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane
 d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
 ```
 
-The pods of this deployment are excluded from validation by their `gatekeeper.sh/operation: webhook` label, so a restart is possible at any time:
+The pods of this deployment are excluded from validation by their `gatekeeper.sh/operation: webhook` label, so the ReplicaSet creates a replacement pod even while the webhook is down. To get a fresh pod, delete the current one:
 
 ```bash
-d8 k -n d8-admission-policy-engine rollout restart deploy/gatekeeper-controller-manager
+d8 k -n d8-admission-policy-engine delete pod -l app=gatekeeper,control-plane=controller-manager
 ```
 
-If the cause cannot be fixed quickly, disable the module. Deckhouse removes the webhook configuration along with the rest of the module's objects and keeps it removed, so the cluster stays unblocked for the whole investigation:
+Restarting the deployment with `kubectl rollout restart` does not work here. The same label is guarded by the `deny-gatekeeper-webhook-operation-label-controllers` ValidatingAdmissionPolicy, which rejects a change to a pod template carrying it unless the request comes from a service account of a `d8-*` or `kube-*` namespace, or from `system:sudouser`.
+
+Look for the cause first. Disabling the module unblocks the cluster, but it also removes every policy the cluster relies on, so treat it as a last resort rather than as the first step:
 
 ```bash
-d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":false}}'
+d8 platform module disable admission-policy-engine
 ```
 
-Return the module as soon as the cause is fixed, since no policy is enforced while it is disabled:
+Deckhouse removes the webhook configuration along with the rest of the module's objects and keeps it removed, so the cluster stays unblocked for as long as the module is off. Return the module as soon as the cause is fixed, since no policy is enforced while it is disabled:
 
 ```bash
-d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":true}}'
+d8 platform module enable admission-policy-engine
 ```
 
 {% alert level="warning" %}

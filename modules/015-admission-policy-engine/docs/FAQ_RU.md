@@ -735,22 +735,24 @@ d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane
 d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
 ```
 
-Поды этого деплоймента исключены из проверки по лейблу `gatekeeper.sh/operation: webhook`, поэтому перезапуск возможен в любой момент:
+Поды этого деплоймента исключены из проверки по лейблу `gatekeeper.sh/operation: webhook`, поэтому ReplicaSet создаёт замещающий под даже при неработающем вебхуке. Чтобы получить новый под, удалите текущий:
 
 ```bash
-d8 k -n d8-admission-policy-engine rollout restart deploy/gatekeeper-controller-manager
+d8 k -n d8-admission-policy-engine delete pod -l app=gatekeeper,control-plane=controller-manager
 ```
 
-Если причину не удаётся устранить быстро, отключите модуль. Deckhouse удалит конфигурацию вебхуков вместе с остальными объектами модуля и будет удерживать её удалённой, поэтому кластер останется разблокированным на всё время разбирательства:
+Перезапуск деплоймента командой `kubectl rollout restart` здесь не работает. Тот же лейбл защищён политикой `deny-gatekeeper-webhook-operation-label-controllers` типа ValidatingAdmissionPolicy, которая отклоняет изменение шаблона пода с этим лейблом, если запрос пришёл не от сервисного аккаунта неймспейса `d8-*` или `kube-*` и не от `system:sudouser`.
+
+В первую очередь ищите причину. Отключение модуля разблокирует кластер, но вместе с тем снимает все политики, на которые кластер опирается, поэтому рассматривайте его как крайнюю меру, а не как первый шаг:
 
 ```bash
-d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":false}}'
+d8 platform module disable admission-policy-engine
 ```
 
-Верните модуль сразу после устранения причины, поскольку при отключённом модуле политики не применяются:
+Deckhouse удалит конфигурацию вебхуков вместе с остальными объектами модуля и будет удерживать её удалённой, поэтому кластер останется разблокированным на всё время, пока модуль выключен. Верните модуль сразу после устранения причины, поскольку при отключённом модуле политики не применяются:
 
 ```bash
-d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":true}}'
+d8 platform module enable admission-policy-engine
 ```
 
 {% alert level="warning" %}
