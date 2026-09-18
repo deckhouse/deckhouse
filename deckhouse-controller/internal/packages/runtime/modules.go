@@ -190,7 +190,7 @@ func (r *Runtime) enqueueModules(wg *sync.WaitGroup, mods []Module) {
 
 		r.global.SetConfigEnabled(name, module.Enabled)
 
-		ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, false)
+		ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, nil, false)
 		if ctx == nil {
 			r.scheduler.Reschedule(name, reasonSettingsChanged)
 			continue
@@ -240,7 +240,7 @@ func (r *Runtime) UpdateModule(module Module, force bool) {
 	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
 
 	// A forced update skips change detection it would fail anyway.
-	if !force && !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
+	if !force && !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance, nil) {
 		if enabledChanged {
 			r.scheduler.Reschedule(name, reasonEnabledChanged)
 		}
@@ -248,7 +248,7 @@ func (r *Runtime) UpdateModule(module Module, force bool) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, force)
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, nil, force)
 	if ctx == nil {
 		r.scheduler.Reschedule(name, reasonSettingsChanged)
 		return
@@ -298,7 +298,7 @@ func (r *Runtime) UpdateEmbeddedModule(module Module) {
 	version := app.EmbeddedPackageVersion(r.edition.Version)
 	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
 
-	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
+	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance, nil) {
 		if enabledChanged {
 			r.scheduler.Reschedule(name, reasonEnabledChanged)
 		}
@@ -306,7 +306,7 @@ func (r *Runtime) UpdateEmbeddedModule(module Module) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, false)
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, nil, false)
 	if ctx == nil {
 		r.scheduler.Reschedule(name, reasonSettingsChanged)
 		return

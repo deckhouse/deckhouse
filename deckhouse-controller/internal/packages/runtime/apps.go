@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
@@ -44,8 +45,8 @@ const (
 )
 
 // App represents an application instance as received from the Application controller.
-// It carries the user-specified package identity, version constraints, settings, and
-// maintenance mode.
+// It carries the user-specified package identity, version constraints, settings,
+// maintenance mode, and per-workload resource overrides.
 type App struct {
 	Name            string
 	Namespace       string
@@ -54,6 +55,11 @@ type App struct {
 	SettingsVersion int // schema version from Application.Spec.Version (reserved for future use)
 	Maintenance     string
 	Repository      registry.Remote
+
+	// ResourceRequests are the per-workload replicas and container resources from
+	// Application.spec.resourceRequests. Honoured only behind the resource-requests
+	// feature gate, which the nelm layer reads.
+	ResourceRequests []resourcerequests.Request
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.
@@ -85,14 +91,25 @@ func (r *Runtime) UpdateApp(app App) {
 	version := app.Definition.Version
 	packageName := app.Definition.Name
 
-	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.SettingsVersion, app.Maintenance) {
+	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.SettingsVersion, app.Maintenance, app.ResourceRequests) {
 		return
 	}
 
+	// Captured before Update overwrites it, so the reschedule below can name the
+	// specific signal. When settings and overrides move together the overrides win
+	// the label; both reschedule the same way, so the label is only a breadcrumb.
+	resourcesChanged := !resourcerequests.Equal(r.packages.GetPendingResourceRequests(name), app.ResourceRequests)
+
 	// applications have immutable tags, so a version change is the only invalidation
-	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance, false)
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance, app.ResourceRequests, false)
 	if ctx == nil {
-		r.scheduler.Reschedule(name, reasonSettingsChanged)
+		reason := reasonSettingsChanged
+		if resourcesChanged {
+			reason = reasonResourcesChanged
+		}
+
+		r.scheduler.Reschedule(name, reason)
+
 		return
 	}
 
