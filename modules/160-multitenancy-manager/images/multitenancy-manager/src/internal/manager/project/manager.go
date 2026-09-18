@@ -21,14 +21,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -36,13 +33,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
 	namespacemanager "controller/internal/manager/namespace"
 	"controller/internal/render"
-	rolebinding "controller/internal/rolebinding"
 	"controller/internal/startup"
 	"controller/internal/validate"
 )
@@ -51,10 +46,7 @@ import (
 // interface rather than the concrete client lets Handle/upgradeResources be unit-tested with a fake
 // (the concrete *helm.Client satisfies it).
 type helmClient interface {
-	Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (helm.ReleaseOutcome, error)
-	UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string) (helm.ReleaseOutcome, error)
-	AnalyzeRendered(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (helm.ReleaseOutcome, error)
-	AnalyzeManifests(project *v1alpha3.Project, manifests string) (helm.ReleaseOutcome, error)
+	UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string) error
 	Delete(ctx context.Context, projectName string) error
 }
 
@@ -218,11 +210,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		project.Status.Usage = usage
 	}
 
-	if project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRolesAllowed) {
-		project.SetState(v1alpha3.ProjectStateError)
-	} else {
-		project.SetState(v1alpha3.ProjectStateDeployed)
-	}
+	project.SetState(v1alpha3.ProjectStateDeployed)
 	if err := m.updateProjectStatus(ctx, project); err != nil {
 		m.logger.Error(err, "failed to update the project status", "project", project.Name)
 		return ctrl.Result{}, err
@@ -269,8 +257,31 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
 	project.SetTemplateGeneration(projectTemplate.Generation)
 
+	// A template stored as v1alpha1 with a Helm resourcesTemplate comes up marked and without the
+	// string (see the conversion webhook). Rendering it as the empty structured template it now looks
+	// like would upgrade the release to a lone Namespace and delete every object the Helm string used
+	// to produce, so the project is parked in Error until an administrator rewrites the template and
+	// removes the mark. The release is left exactly as it is.
+	if projectTemplate.Annotations[v1alpha2.TemplateAnnotationLegacyHelm] == "true" {
+		m.logger.Info("the project template carries the legacy Helm template mark, refusing to render", "project", project.Name, "template", projectTemplate.Name)
+		project.SetState(v1alpha3.ProjectStateError)
+		msg := fmt.Sprintf(
+			"The '%s' project template was a Helm resourcesTemplate in v1alpha1, which v1alpha2 does not carry. "+
+				"Rewrite the template with structured fields and remove the %q annotation; the project release is left untouched until then.",
+			projectTemplate.Name, v1alpha2.TemplateAnnotationLegacyHelm)
+		if _, ok := projectTemplate.Annotations[v1alpha2.TemplateAnnotationLegacyHelmBody]; ok {
+			msg += fmt.Sprintf(" The template it used to render is kept in the %q annotation.", v1alpha2.TemplateAnnotationLegacyHelmBody)
+		}
+		project.SetConditionFalse(v1alpha3.ProjectConditionProjectTemplateUsable, msg)
+		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+			return true, updateErr
+		}
+		return true, nil
+	}
+	project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateUsable)
+
 	m.logger.Info("validate the project spec", "project", project.Name, "template", projectTemplate.Name)
-	if err = validate.Project(project, LegacyTemplate(projectTemplate)); err != nil {
+	if err = validate.Project(project, projectTemplate); err != nil {
 		m.logger.Error(err, "failed to validate the project spec", "project", project.Name, "template", projectTemplate.Name)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectValidated, err.Error())
@@ -283,127 +294,23 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
 
 	m.logger.Info("upgrade resources for the project", "project", project.Name, "template", projectTemplate.Name)
-	filtered, refs, err := m.upgradeResources(ctx, project, projectTemplate)
-	if err != nil {
+	if err = m.upgradeResources(ctx, project, projectTemplate); err != nil {
 		return m.failAndRequeue(ctx, project, v1alpha3.ProjectConditionProjectResourcesUpgraded,
 			fmt.Errorf("upgrade project resources: %w", err))
 	}
 
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectResourcesUpgraded)
-	if filtered {
-		project.SetConditionFalse(v1alpha3.ProjectConditionTemplateResourcesFiltered,
-			"The template renders ResourceQuota or AuthorizationRule objects that are now managed via the Project spec.quota/spec.administrators fields; such objects were filtered out.")
-	} else {
-		project.SetConditionTrue(v1alpha3.ProjectConditionTemplateResourcesFiltered)
-	}
-
-	if err := m.applyTemplateRolesCondition(ctx, project, refs); err != nil {
-		return m.failAndRequeue(ctx, project, v1alpha3.ProjectConditionTemplateRolesAllowed, err)
-	}
 	return false, nil
 }
 
-// upgradeResources installs/upgrades the project release and returns the binding roleRefs the template
-// renders (for the TemplateRolesAllowed check). A schema-based template is rendered natively from its
-// structured fields and applied via UpgradeManifests; a template that still carries a resourcesTemplate
-// string is rendered through the legacy helm engine. The bool reports whether controller-managed kinds
-// (ResourceQuota/AuthorizationRule) were filtered out.
-func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) (bool, []helm.BindingRoleRef, error) {
-	if isStructured(template) {
-		manifests, err := render.Manifests(template, project)
-		if err != nil {
-			return false, nil, fmt.Errorf("render the project template: %w", err)
-		}
-		outcome, err := m.helmClient.UpgradeManifests(ctx, project, manifests)
-		if err != nil {
-			return false, nil, err
-		}
-		if !outcome.Applied {
-			// The release was already up to date, so the apply short-circuited without post-rendering.
-			// Recompute the filtered flag and role refs from the manifests (both pure functions of the
-			// manifests) so the conditions stay accurate on no-op reconciles.
-			outcome, err = m.helmClient.AnalyzeManifests(project, manifests)
-			if err != nil {
-				// The release is already applied; an analysis hiccup must not fail the reconcile.
-				m.logger.Error(err, "failed to analyze the project manifests", "project", project.Name, "template", template.Name)
-				return false, nil, nil
-			}
-		}
-		return outcome.Filtered, outcome.RoleRefs, nil
-	}
-
-	legacy := LegacyTemplate(template)
-	outcome, err := m.helmClient.Upgrade(ctx, project, legacy)
+// upgradeResources renders the template natively from its structured fields and installs/upgrades
+// the project release from the result. An unchanged render is a no-op on the Helm side.
+func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) error {
+	manifests, err := render.Manifests(template, project)
 	if err != nil {
-		return false, nil, err
+		return fmt.Errorf("render the project template: %w", err)
 	}
-	if !outcome.Applied {
-		outcome, err = m.helmClient.AnalyzeRendered(project, legacy)
-		if err != nil {
-			m.logger.Error(err, "failed to analyze the project template", "project", project.Name, "template", template.Name)
-			return false, nil, nil
-		}
-	}
-	return outcome.Filtered, outcome.RoleRefs, nil
-}
-
-// applyTemplateRolesCondition evaluates the roleRefs rendered by a template and sets the
-// TemplateRolesAllowed condition: False (naming every offending binding/role) when a binding grants
-// a forbidden role, True otherwise.
-func (m *Manager) applyTemplateRolesCondition(ctx context.Context, project *v1alpha3.Project, refs []helm.BindingRoleRef) error {
-	var offending []string
-	for _, ref := range refs {
-		// The disabled annotation and the allow-list only concern ClusterRole references.
-		if ref.RoleKind != "ClusterRole" {
-			continue
-		}
-		projectBinding := ref.BindingKind == v1alpha3.ProjectRoleBindingKind || ref.BindingKind == v1alpha3.ClusterProjectRoleBindingKind
-		reason, err := m.roleViolation(ctx, ref.RoleName, projectBinding)
-		if err != nil {
-			// Fail closed: a transient API error must not let a possibly-forbidden role pass as allowed.
-			// Returning the error requeues the reconcile and leaves the previous condition untouched.
-			return fmt.Errorf("verify template role %q: %w", ref.RoleName, err)
-		}
-		if reason != "" {
-			offending = append(offending, fmt.Sprintf("%s %q grants ClusterRole %q (%s)", ref.BindingKind, ref.BindingName, ref.RoleName, reason))
-		}
-	}
-
-	if len(offending) > 0 {
-		// The render order is non-deterministic; sort so the condition message is stable across reconciles.
-		slices.Sort(offending)
-		project.SetConditionFalse(v1alpha3.ProjectConditionTemplateRolesAllowed,
-			fmt.Sprintf("The template renders bindings that grant roles forbidden in projects: %s.", strings.Join(offending, "; ")))
-		return nil
-	}
-	project.SetConditionTrue(v1alpha3.ProjectConditionTemplateRolesAllowed)
-	return nil
-}
-
-// roleViolation returns a non-empty reason when a ClusterRole must not be granted via a project
-// binding. enforceAllowList is set for ProjectRoleBinding/ClusterProjectRoleBinding references,
-// which are restricted to the PRB/CPRB allow-list; native RoleBinding/ClusterRoleBinding references
-// are only checked for the disabled annotation.
-func (m *Manager) roleViolation(ctx context.Context, name string, enforceAllowList bool) (string, error) {
-	if enforceAllowList && !rolebinding.IsRoleAllowed(name) {
-		return "not in the allowed project role list: d8:project:*, d8:namespace:*, their capabilities and d8:custom:*", nil
-	}
-
-	clusterRole := &rbacv1.ClusterRole{}
-	if err := m.client.Get(ctx, client.ObjectKey{Name: name}, clusterRole); err != nil {
-		if apierrors.IsNotFound(err) {
-			// A missing role cannot be granted; existence is enforced by the binding webhook, not here.
-			return "", nil
-		}
-		// Fail closed: propagate transient errors so the caller requeues instead of reporting the
-		// role as allowed (the previous behaviour silently masked API-server hiccups).
-		return "", fmt.Errorf("get cluster role %q: %w", name, err)
-	}
-
-	if clusterRole.Annotations[rolebinding.AnnotationDisabledForProjects] == "true" {
-		return "disabled for direct use in projects", nil
-	}
-	return "", nil
+	return m.helmClient.UpgradeManifests(ctx, project, manifests)
 }
 
 // HandleVirtual inventories unowned namespaces onto a virtual project. It does

@@ -30,7 +30,7 @@ import (
 // typed literal values, and any individual leaf may instead defer its value to a per-project
 // parameter (declared and validated by spec.parametersSchema). The built-in templates use fromParam
 // for every overridable field so they keep exactly the per-project surface they had as v1alpha1
-// resourcesTemplate; bespoke templates can mix literals and fromParam freely.
+// Helm templates; bespoke templates can mix literals and fromParam freely.
 //
 // The custom UnmarshalJSON is deliberately tolerant: a typed client Get on a ProjectTemplate must
 // succeed whether a field holds a literal or a {fromParam} object, so neither form may error during

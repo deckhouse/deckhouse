@@ -78,6 +78,11 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			}
 		}
 
+		// the legacy-Helm mark may not be dropped while the template still renders nothing
+		if resp := legacyMarkRemoval(req, template); !resp.Allowed {
+			return resp
+		}
+
 		// grantPolicies must reference existing library policies (without a projectSelector)
 		if resp := v.validateGrantPolicies(ctx, template); !resp.Allowed {
 			return resp
@@ -105,6 +110,36 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		}
 	}
 	return admission.Allowed("")
+}
+
+// legacyMarkRemoval refuses an update that takes the legacy-Helm mark off a template that still
+// renders nothing.
+//
+// The mark is the only thing standing between such a template and a Helm upgrade that prunes
+// everything the old Helm string produced, and the condition message asks the administrator to
+// "rewrite the template with structured fields and remove the annotation" -- two steps, in an order
+// nothing enforced. Doing the removal first persists a structurally empty template with no mark, and
+// the next reconcile renders a lone Namespace over the existing release. One request that both
+// rewrites and unmarks is accepted, which is what kubectl edit and kubectl apply send.
+func legacyMarkRemoval(req admission.Request, template *v1alpha2.ProjectTemplate) admission.Response {
+	if req.Operation != admissionv1.Update {
+		return admission.Allowed("")
+	}
+	old := new(v1alpha2.ProjectTemplate)
+	if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	if old.Annotations[v1alpha2.TemplateAnnotationLegacyHelm] != "true" {
+		return admission.Allowed("")
+	}
+	if template.Annotations[v1alpha2.TemplateAnnotationLegacyHelm] == "true" || template.Spec.RendersObjects() {
+		return admission.Allowed("")
+	}
+	return admission.Denied(fmt.Sprintf(
+		"The '%s' project template still has no structured fields, so removing the %q annotation would render its projects "+
+			"as a bare namespace and delete every object the Helm template used to produce. Rewrite the template and remove "+
+			"the annotation in one request, or move the projects to another template first.",
+		template.Name, v1alpha2.TemplateAnnotationLegacyHelm))
 }
 
 // validateGrantPolicies enforces the library convention for spec.grantPolicies: every referenced

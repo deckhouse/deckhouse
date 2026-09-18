@@ -278,3 +278,110 @@ func TestHandle_DeleteInUseTemplate(t *testing.T) {
 	require.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "cannot be deleted")
 }
+
+func updateRequest(t *testing.T, oldTmpl, newTmpl *v1alpha2.ProjectTemplate) admission.Request {
+	t.Helper()
+	for _, tmpl := range []*v1alpha2.ProjectTemplate{oldTmpl, newTmpl} {
+		tmpl.TypeMeta = metav1.TypeMeta{APIVersion: v1alpha2.SchemeGroupVersion.String(), Kind: v1alpha2.ProjectTemplateKind}
+	}
+	oldRaw, err := json.Marshal(oldTmpl)
+	require.NoError(t, err)
+	newRaw, err := json.Marshal(newTmpl)
+	require.NoError(t, err)
+	return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+		Operation: admissionv1.Update,
+		Object:    runtime.RawExtension{Raw: newRaw},
+		OldObject: runtime.RawExtension{Raw: oldRaw},
+	}}
+}
+
+func markedEmptyTemplate(name string) *v1alpha2.ProjectTemplate {
+	return &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Annotations: map[string]string{v1alpha2.TemplateAnnotationLegacyHelm: "true"},
+		},
+	}
+}
+
+// TestHandle_LegacyMarkRemoval: taking the mark off a template that renders nothing is the two-step
+// order the condition message invites, and it costs the projects every object their Helm template
+// produced. Only the request that also rewrites the template is accepted.
+func TestHandle_LegacyMarkRemoval(t *testing.T) {
+	ctx := context.Background()
+	v := newValidator(t)
+
+	t.Run("removing the mark alone is refused", func(t *testing.T) {
+		unmarked := markedEmptyTemplate("legacy")
+		unmarked.Annotations = nil
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), unmarked))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "delete every object")
+	})
+
+	t.Run("rewriting and unmarking in one request is allowed", func(t *testing.T) {
+		rewritten := structuredTemplate("legacy")
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), rewritten))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("editing a marked template without touching the mark is allowed", func(t *testing.T) {
+		edited := markedEmptyTemplate("legacy")
+		edited.Spec.Description = "parked, waiting for a rewrite"
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), edited))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("a template that never carried the mark is untouched by the guard", func(t *testing.T) {
+		resp := v.Handle(ctx, updateRequest(t, &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "plain"}},
+			&v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "plain"}}))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+}
+
+// TestHandle_LegacyMarkRemoval_EmptyStanzas: an optional stanza with nothing in it renders nothing,
+// so it must not pass for a rewrite. Otherwise `networkPolicy: {}` plus an unmark in one request --
+// the shape the guard is built to accept -- still leaves the projects with a bare namespace.
+func TestHandle_LegacyMarkRemoval_EmptyStanzas(t *testing.T) {
+	ctx := context.Background()
+	v := newValidator(t)
+
+	empty := func(mutate func(*v1alpha2.ProjectTemplateSpec)) *v1alpha2.ProjectTemplate {
+		tmpl := &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "legacy"}}
+		mutate(&tmpl.Spec)
+		return tmpl
+	}
+
+	for name, mutate := range map[string]func(*v1alpha2.ProjectTemplateSpec){
+		"networkPolicy":     func(s *v1alpha2.ProjectTemplateSpec) { s.NetworkPolicy = &v1alpha2.NetworkPolicySpec{} },
+		"namespaceMetadata": func(s *v1alpha2.ProjectTemplateSpec) { s.NamespaceMetadata = &v1alpha2.NamespaceMetadata{} },
+		"features":          func(s *v1alpha2.ProjectTemplateSpec) { s.Features = &v1alpha2.FeaturesSpec{} },
+		"logShipping":       func(s *v1alpha2.ProjectTemplateSpec) { s.LogShipping = &v1alpha2.LogShippingSpec{} },
+		"runtimeAudit":      func(s *v1alpha2.ProjectTemplateSpec) { s.RuntimeAudit = &v1alpha2.RuntimeAuditSpec{} },
+	} {
+		t.Run("an empty "+name+" stanza does not count as a rewrite", func(t *testing.T) {
+			resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), empty(mutate)))
+			assert.False(t, resp.Allowed)
+			assert.Contains(t, resp.Result.Message, "delete every object")
+		})
+	}
+
+	t.Run("a stanza with a value counts", func(t *testing.T) {
+		filled := empty(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.NetworkPolicy = &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.LiteralParam(v1alpha2.NetworkPolicyModeIsolated)}
+		})
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), filled))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("a fromParam reference counts", func(t *testing.T) {
+		ref := empty(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.NetworkPolicy = &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.FromParamRef[string]("mode")}
+			s.ParametersSchema = v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+				"type": "object", "properties": map[string]any{"mode": map[string]any{"type": "string"}},
+			}}
+		})
+		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), ref))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+}

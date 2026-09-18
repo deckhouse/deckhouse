@@ -119,7 +119,12 @@ function __on_conversion::v1alpha2_to_v1alpha3() {
             | from_entries
           )
         else . end) |
-       (if .spec.parameters then del(.spec.parameters.administrators) | del(.spec.parameters.resourceQuota) else . end)
+       (if .spec.parameters then del(.spec.parameters.administrators) | del(.spec.parameters.resourceQuota) else . end) |
+       (if (((.status // {}).namespaces) | type) == "array" then
+          .metadata.name as $main |
+          .status.namespaces = (.status.namespaces | map(
+            if type == "string" then {name: ., kind: (if . == $main then "Main" else "Additional" end)} else . end))
+        else . end)
      else . end
   )')
   then
@@ -134,7 +139,10 @@ EOF
 }
 
 # v1alpha3 -> v1alpha2 pushes administrators and quota back into spec.parameters so that older
-# clients reading v1alpha2 keep seeing the legacy layout.
+# clients reading v1alpha2 keep seeing the legacy layout. status.namespaces is a list of names in
+# v1alpha2 and a list of {name, kind} objects in v1alpha3; it is converted in both directions so a
+# view at either version validates against its own schema (the kind on the way up is Main for the
+# namespace named after the project and Additional for the rest).
 # Only a "requests."/"limits." prefix means nesting; the remainder of the key is kept intact so that
 # "requests.nvidia.com/gpu" lands under requests as "nvidia.com/gpu". Every other key ("pods",
 # "count/deployments.apps") stays flat next to requests/limits instead of being dropped or split at an
@@ -164,7 +172,10 @@ function __on_conversion::v1alpha3_to_v1alpha2() {
           )})
         else . end) |
        del(.spec.administrators) |
-       del(.spec.quota)
+       del(.spec.quota) |
+       (if (((.status // {}).namespaces) | type) == "array" then
+          .status.namespaces = (.status.namespaces | map(if type == "object" then .name else . end) | map(select(type == "string")))
+        else . end)
      else . end
   )')
   then

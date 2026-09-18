@@ -36,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	grantsv1alpha1 "controller/api/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	namespacecontroller "controller/internal/controller/namespace"
@@ -61,7 +60,6 @@ import (
 
 var (
 	// path to helm templates
-	helmTemplatesPath = "helmlib"
 	// path to default project templates
 	templatesPath = "templates"
 	// helm release namespace (same value Helm later writes on adopted objects)
@@ -89,7 +87,7 @@ func main() {
 	}
 
 	// initialize helm client
-	helmClient, err := helm.New(helmNamespace, helmTemplatesPath, logger)
+	helmClient, err := helm.New(helmNamespace, logger)
 	if err != nil {
 		fatal(logger, err, "initialize helm client")
 	}
@@ -121,7 +119,7 @@ func main() {
 	}
 
 	// register project webhook
-	projectwebhook.Register(runtimeManager, helmClient)
+	projectwebhook.Register(runtimeManager)
 
 	// register template webhook
 	templatewebhook.Register(runtimeManager, serviceAccount)
@@ -180,7 +178,6 @@ func fatal(logger logr.Logger, err error, msg string) {
 
 func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
-		v1alpha1.AddToScheme,
 		deckhousev1alpha2.AddToScheme,
 		v1alpha3.AddToScheme,
 		grantsv1alpha1.AddToScheme,

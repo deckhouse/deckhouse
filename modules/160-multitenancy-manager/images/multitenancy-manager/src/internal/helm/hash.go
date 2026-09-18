@@ -19,10 +19,6 @@ package helm
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
-	"hash"
-	"maps"
-	"slices"
 )
 
 // hashString hashes natively rendered manifests for release change detection. The manifests already
@@ -30,66 +26,4 @@ import (
 func hashString(s string) string {
 	sum := md5.Sum([]byte(s))
 	return hex.EncodeToString(sum[:])
-}
-
-func hashMD5(templates map[string][]byte, values map[string]any) string {
-	tmp := make(map[string]any, len(templates))
-	for k, v := range templates {
-		tmp[k] = v
-	}
-	sum := make(map[string]any)
-	maps.Copy(sum, tmp)
-	for k, v := range values {
-		sum[k] = v
-	}
-	hash := md5.New()
-	hashObject(sum, &hash)
-	return hex.EncodeToString(hash.Sum(nil))
-}
-
-func hashObject(sum map[string]any, hash *hash.Hash) {
-	keys := sortedKeys(sum)
-	for _, key := range keys {
-		v := sum[key]
-		escapeKey(key, hash)
-		switch o := v.(type) {
-		case map[string]any:
-			hashObject(o, hash)
-		case []any:
-			hashArray(o, hash)
-		default:
-			escapeValue(o, hash)
-		}
-	}
-}
-
-func hashArray(array []any, hash *hash.Hash) {
-	for _, v := range array {
-		switch o := v.(type) {
-		case map[string]any:
-			hashObject(o, hash)
-		case []any:
-			hashArray(o, hash)
-		default:
-			escapeValue(o, hash)
-		}
-	}
-}
-
-func escapeKey(key string, writer *hash.Hash) {
-	(*writer).Write([]byte(key))
-}
-
-func escapeValue(value any, writer *hash.Hash) {
-	fmt.Fprintf(*writer, `%T`, value)
-	fmt.Fprintf(*writer, "%v", value)
-}
-
-func sortedKeys(sum map[string]any) []string {
-	keys := make([]string, 0, len(sum))
-	for k := range sum {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	return keys
 }

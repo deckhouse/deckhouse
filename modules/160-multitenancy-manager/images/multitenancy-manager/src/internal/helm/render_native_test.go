@@ -36,10 +36,9 @@ import (
 	renderpkg "controller/internal/render"
 )
 
-// TestNativeRender proves the schema-based (v1alpha2) built-in templates, rendered natively from
-// their structured fields (controller/internal/render) and run through the same post-renderer as the
-// legacy helm path, produce the objects the legacy resourcesTemplate path produced — the golden
-// testdata resources.yaml. This is the no-regression guarantee for the native-render rewrite.
+// TestNativeRender proves the built-in templates, rendered natively from their structured fields
+// (controller/internal/render) and run through the release post-renderer, produce the golden objects
+// under testdata -- which are the objects the Helm-string versions of these templates once produced.
 //
 // String leaves are whitespace-normalized before comparison: the helm folded-scalar render of the
 // Falco rule condition carries template-induced blank lines that a native render does not (and should
@@ -49,6 +48,7 @@ func TestNativeRender(t *testing.T) {
 		tmplFile string
 		caseDir  string
 	}{
+		{"simple.yaml", "simple_case"},
 		{"default.yaml", "default_case"},
 		{"secure.yaml", "secure_case"},
 		{"secure-with-dedicated-nodes.yaml", "secure_with_dedicated_node_case"},
@@ -58,8 +58,6 @@ func TestNativeRender(t *testing.T) {
 		t.Run(c.caseDir, func(t *testing.T) {
 			tmpl, err := read[v1alpha2.ProjectTemplate](filepath.Join("../../templates", c.tmplFile))
 			require.NoError(t, err)
-			require.Empty(t, tmpl.Spec.ResourcesTemplate, "built-in templates must be structured, not helm strings")
-
 			base := filepath.Join("./testdata", c.caseDir)
 			project, err := read[v1alpha3.Project](filepath.Join(base, "project.yaml"))
 			require.NoError(t, err)
@@ -67,8 +65,9 @@ func TestNativeRender(t *testing.T) {
 			manifests, err := renderpkg.Manifests(tmpl, project)
 			require.NoError(t, err)
 
-			post := newPostRenderer(project, nil, ctrl.Log.WithName("test"), true)
-			out, err := post.Run(bytes.NewBufferString(manifests))
+			post := newPostRenderer(project, nil, ctrl.Log.WithName("test"))
+			post.manifests = manifests
+			out, err := post.Run(bytes.NewBuffer(nil))
 			require.NoError(t, err)
 
 			rawExpected, err := os.ReadFile(filepath.Join(base, "resources.yaml"))

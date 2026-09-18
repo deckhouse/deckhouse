@@ -51,8 +51,7 @@ func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPa
 			return fmt.Errorf("read the '%s' project template file: %w", file.Name(), err)
 		}
 
-		// Parse as v1alpha2 (the storage version) so the structured fields of the built-in templates are
-		// preserved; v1alpha1 helm-string templates remain valid as a subset.
+		// Parse as v1alpha2, the storage version and the only shape a built-in template has.
 		projectTemplate := new(v1alpha2.ProjectTemplate)
 		if err = yaml.Unmarshal(projectTemplateBytes, projectTemplate); err != nil {
 			return fmt.Errorf("unmarshal the '%s' project template file: %w", file.Name(), err)
