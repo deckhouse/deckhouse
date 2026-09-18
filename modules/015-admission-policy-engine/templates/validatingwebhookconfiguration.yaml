@@ -135,9 +135,10 @@ webhooks:
 
   The webhook above skips every namespace named `d8-*` or `kube-*`, so without this one Gatekeeper
   never sees their workloads. The constraints that match here run in warn mode only: Pod Security
-  Standards through `d8-pod-security-*-system`, and user policies through their `-system-warn`
-  variant. Namespaces whose `security.deckhouse.io/enable-security-policy-check` label is `true`
-  are handled by `system-namespaces-enforce` below instead.
+  Standards through `d8-pod-security-<standard>-system`, and user policies through their
+  `d8-system-default-<name>` variant. Namespaces whose
+  `security.deckhouse.io/enable-security-policy-check` label is `true` are handled by
+  `system-namespaces-enforce` below instead.
 
   `failurePolicy: Ignore` is deliberate and follows from warn-only: an unavailable Gatekeeper must
   never stop a system component from starting, which would otherwise deadlock cluster bootstrap and
@@ -175,7 +176,10 @@ webhooks:
       expression: '{{ include "system_namespaces_cel" . }}'
     - name: 'exclude-virtualization'
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
-  timeoutSeconds: 15
+  {{/* Shorter than the webhooks that block: nothing here can deny a workload, so a Gatekeeper
+       that is running but hung must give the pod back quickly rather than hold every create in
+       the platform's own namespaces. */}}
+  timeoutSeconds: 5
   {{- include "validating.webhook.config" (list . "Ignore") | nindent 2 }}
 {{- end }}
 
@@ -184,7 +188,9 @@ webhooks:
 
   A namespace whose `security.deckhouse.io/enable-security-policy-check` label is `true` is served
   by the enforcing constraints instead of the warn-only ones: Pod Security Standards through
-  `d8-pod-security-*-d8-default`, and user policies through their `d8-system-enforce-*` variant when a module opted the namespace in.
+  `d8-pod-security-<standard>-<action>-d8-default` for the module's own enforcement action and
+  `d8-pod-security-<standard>-<action>-d8` for any other, and user policies through their
+  `d8-system-enforce-<name>` variant.
   The label is matched by value, exactly as those constraints match it, so a namespace labeled with
   anything else keeps the warn-only treatment of the webhook above rather than falling between them.
 
@@ -228,7 +234,10 @@ webhooks:
          every platform namespace is named `d8-*` or `kube-*`. */}}
     - name: 'exclude-virtualization'
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
-  timeoutSeconds: 15
+  {{/* Shorter than the webhooks that block: nothing here can deny a workload, so a Gatekeeper
+       that is running but hung must give the pod back quickly rather than hold every create in
+       the platform's own namespaces. */}}
+  timeoutSeconds: 5
   {{- include "validating.webhook.config" (list . "Ignore") | nindent 2 }}
 {{- end }}
 

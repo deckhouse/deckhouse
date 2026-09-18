@@ -37,6 +37,21 @@ class TestCheckReservedName(unittest.TestCase):
                 self.assertIsNotNone(error)
                 self.assertIn(name, error)
 
+    def test_a_name_that_leaves_room_for_the_prefix_is_allowed(self):
+        self.assertIsNone(reserved.check_name_length("a" * reserved.MAX_NAME_LENGTH))
+
+    def test_a_name_that_overflows_the_derived_constraint_is_denied(self):
+        name = "a" * (reserved.MAX_NAME_LENGTH + 1)
+        error = reserved.check_name_length(name)
+        self.assertIsNotNone(error)
+        self.assertIn(str(reserved.MAX_NAME_LENGTH), error)
+
+    def test_every_derived_name_fits_the_object_name_limit(self):
+        longest = "a" * reserved.MAX_NAME_LENGTH
+        for prefix in reserved.RESERVED_NAME_PREFIXES:
+            with self.subTest(prefix=prefix):
+                self.assertLessEqual(len(prefix + longest), 253)
+
     def test_no_prefix_contains_another(self):
         # The prefixes exist so that the constraints derived from any two policies stay
         # distinct, which holds only while no prefix is a prefix of another.

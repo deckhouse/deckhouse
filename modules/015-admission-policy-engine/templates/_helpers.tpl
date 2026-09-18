@@ -230,6 +230,44 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
 {{- end }}
 
 {{/*
+  namespace_globs_intersect intersects two namespace lists and returns the names both describe.
+
+  A constraint cannot AND two include lists, so an intersection the module needs has to be
+  resolved before rendering. Both lists hold either a literal name or a trailing glob, which is
+  what `system_namespaces_excluded` and the output of `system_namespace_scope` are limited to.
+
+  Usage: include "namespace_globs_intersect" (list $first $second) | fromYamlArray
+*/}}
+{{- define "namespace_globs_intersect" }}
+  {{- $first := index . 0 }}
+  {{- $second := index . 1 }}
+  {{- $result := list }}
+  {{- range $a := $first }}
+    {{- range $b := $second }}
+      {{- if and (hasSuffix "*" $a) (hasSuffix "*" $b) }}
+        {{/* The narrower glob is the intersection, and only while one extends the other. */}}
+        {{- if hasPrefix (trimSuffix "*" $b) (trimSuffix "*" $a) }}
+          {{- $result = append $result $a }}
+        {{- else if hasPrefix (trimSuffix "*" $a) (trimSuffix "*" $b) }}
+          {{- $result = append $result $b }}
+        {{- end }}
+      {{- else if hasSuffix "*" $a }}
+        {{- if hasPrefix (trimSuffix "*" $a) $b }}
+          {{- $result = append $result $b }}
+        {{- end }}
+      {{- else if hasSuffix "*" $b }}
+        {{- if hasPrefix (trimSuffix "*" $b) $a }}
+          {{- $result = append $result $a }}
+        {{- end }}
+      {{- else if eq $a $b }}
+        {{- $result = append $result $a }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- $result | uniq | toYaml }}
+{{- end }}
+
+{{/*
   scoped_policy_variants expands one SecurityPolicy or OperationPolicy into the set of CRs
   the constraint templates must render.
 
@@ -305,12 +343,16 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
       {{- $variants = append $variants $systemEnforce }}
     {{- end }}
 
-    {{- if $systemExclude }}
+    {{- /* The constraint matches the excluded namespaces the policy itself names, not the whole
+           constant: a policy is never evaluated outside the namespaces its author selected, and an
+           entry that is not a system namespace reaches no user namespace through this variant. */}}
+    {{- $excludedScope := include "namespace_globs_intersect" (list $scope.names $systemExclude) | fromYamlArray }}
+    {{- if $excludedScope }}
       {{- $systemExcluded := deepCopy $policy }}
       {{- $_ := set $systemExcluded.metadata "name" (printf "d8-system-excluded-%s" $policy.metadata.name) }}
       {{- $_ := set $systemExcluded.spec "enforcementAction" "warn" }}
       {{- $_ := set $systemExcluded.spec.match "d8NamespaceScope" "system-excluded" }}
-      {{- $_ := set $systemExcluded.spec.match "d8ExcludedNamespaces" $systemExclude }}
+      {{- $_ := set $systemExcluded.spec.match "d8ExcludedNamespaces" $excludedScope }}
       {{- $variants = append $variants $systemExcluded }}
     {{- end }}
 
@@ -351,7 +393,10 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "privileged" | lower) }}
   {{/* System namespaces are governed by their own settings, not by defaultPolicy/enforcementAction. */}}
   {{- $systemAction := include "system_namespaces_action" . | trim | lower }}
-  {{- $systemExclude := include "system_namespaces_excluded" . | fromYamlArray }}
+  {{/* Only the system namespaces: an entry outside them would otherwise render a warn constraint
+       over a namespace the platform does not own. */}}
+  {{- $systemExclude := include "namespace_globs_intersect"
+        (list (include "system_namespaces" . | fromYamlArray) (include "system_namespaces_excluded" . | fromYamlArray)) | fromYamlArray }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---

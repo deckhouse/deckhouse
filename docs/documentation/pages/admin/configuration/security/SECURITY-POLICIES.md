@@ -300,10 +300,10 @@ do not apply there.
 Violations are recorded in the audit and shown in Deckhouse Console,
 and a system component is never blocked from starting.
 
-The labels that tune these checks belong to the module that owns the namespace,
-and Deckhouse restores them at the next converge, so editing them has no lasting effect.
-To exempt a single workload, use the `security.deckhouse.io/skip-pss-check` label on the Pod or on its controller,
-or a SecurityPolicyException in that namespace.
+These checks cannot be tuned from outside the platform.
+The labels that govern them, and the workloads they cover, belong to the module that owns the namespace,
+and Deckhouse returns both to their declared state the next time it applies the configuration.
+A module exempts a workload of its own where it has to, with a SecurityPolicyException it ships itself.
 
 OperationPolicy and SecurityPolicy resources reach system namespaces in `warn` mode as well.
 A policy with `enforcementAction: Deny` blocks workloads in the namespaces of your applications
@@ -317,6 +317,8 @@ Such a policy is rendered as several Gatekeeper constraints, which are visible i
 
 The `d8-system-default-`, `d8-system-enforce-`, `d8-system-excluded-` and `d8-pod-security-` prefixes are reserved:
 a policy whose name starts with one of them is rejected on creation.
+A policy name is limited to 234 characters for the same reason,
+so that the derived constraint names stay within the 253-character limit of a Kubernetes object name.
 
 A policy is rendered as a single constraint when the split would change nothing:
 

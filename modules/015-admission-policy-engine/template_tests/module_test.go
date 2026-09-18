@@ -360,9 +360,12 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(vw.Field("webhooks.2.name").String()).To(Equal("system-namespaces-enforce.admission-policy-engine.deckhouse.io"))
 			Expect(vw.Field("webhooks.2.matchConditions.0.name").String()).To(Equal("exclude-virtualization"))
 
-			// Neither system-namespace webhook may block a workload while Gatekeeper is unavailable.
+			// Neither system-namespace webhook may block a workload while Gatekeeper is unavailable,
+			// nor hold up a pod create for long while Gatekeeper is running but hung.
 			Expect(vw.Field("webhooks.1.failurePolicy").String()).To(Equal("Ignore"))
 			Expect(vw.Field("webhooks.2.failurePolicy").String()).To(Equal("Ignore"))
+			Expect(vw.Field("webhooks.1.timeoutSeconds").Int()).To(BeNumerically("<=", 5))
+			Expect(vw.Field("webhooks.2.timeoutSeconds").Int()).To(BeNumerically("<=", 5))
 
 			// Both select on the label VALUE, exactly as the constraints they serve do, so a
 			// namespace labeled with anything but "true" cannot fall between them.

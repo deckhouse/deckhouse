@@ -32,6 +32,11 @@ RESERVED_NAME_PREFIXES = (
     "d8-pod-security-",
 )
 
+# A Kubernetes object name is limited to 253 characters, and a derived constraint carries the
+# longest of the prefixes above on top of the policy name. Without this check the policy is
+# admitted and the release breaks at the next converge instead.
+MAX_NAME_LENGTH = 253 - max(len(prefix) for prefix in RESERVED_NAME_PREFIXES)
+
 config = """
 configVersion: v1
 kubernetesValidating:
@@ -55,10 +60,12 @@ def main(ctx: hook.Context):
 
 
 def validate(ctx: DotMap, output: hook.ValidationsCollector):
-    error = check_reserved_name(ctx.review.request.object.metadata.name)
-    if error is not None:
-        output.deny(error)
-        return
+    name = ctx.review.request.object.metadata.name
+    for check in (check_reserved_name, check_name_length):
+        error = check(name)
+        if error is not None:
+            output.deny(error)
+            return
 
     output.allow()
 
@@ -71,6 +78,17 @@ def check_reserved_name(name: str) -> Optional[str]:
                 "The module uses this prefix for the constraints it derives from a policy "
                 "that applies to system namespaces. Choose another name."
             )
+
+    return None
+
+
+def check_name_length(name: str) -> Optional[str]:
+    if len(name) > MAX_NAME_LENGTH:
+        return (
+            f"Name \"{name}\" is {len(name)} characters long, which leaves no room for the "
+            "prefix the module adds to the constraints it derives from a policy. "
+            f"Use a name of at most {MAX_NAME_LENGTH} characters."
+        )
 
     return None
 
