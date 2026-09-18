@@ -234,14 +234,14 @@ func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.Kubernete
 	if err != nil {
 		return nil, fmt.Errorf("get ModuleConfig %q: %w", name, err)
 	}
-	return moduleConfigFromUnstructured(obj, schemaStore)
+	return moduleConfigFromUnstructured(ctx, obj, schemaStore)
 }
 
 // moduleConfigFromUnstructured deserialises a ModuleConfig fetched from the
 // cluster and validates it against its registered schema, so a kubectl-patched
 // invalid ModuleConfig fails fast here instead of as a confusing downstream
 // validation error. A module without a registered schema is accepted.
-func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *SchemaStore) (*ModuleConfig, error) {
+func moduleConfigFromUnstructured(ctx context.Context, obj *unstructured.Unstructured, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	raw, err := json.Marshal(obj.Object)
 	if err != nil {
 		return nil, fmt.Errorf("marshal ModuleConfig: %w", err)
@@ -251,7 +251,7 @@ func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *S
 	if err != nil {
 		return nil, fmt.Errorf("convert ModuleConfig to YAML: %w", err)
 	}
-	if _, err := schemaStore.Validate(&yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
+	if _, err := schemaStore.Validate(ctx, &yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
 		return nil, fmt.Errorf("validate ModuleConfig %q: %w", obj.GetName(), err)
 	}
 
@@ -270,15 +270,15 @@ func loadLegacyProviderClusterConfig(ctx context.Context, kubeCl *client.Kuberne
 	if err != nil {
 		return nil, fmt.Errorf("get Secret %q: %w", LegacyProviderClusterConfigSecret, err)
 	}
-	return parseLegacyProviderClusterConfig(secret, schemaStore)
+	return parseLegacyProviderClusterConfig(ctx, secret, schemaStore)
 }
 
-func parseLegacyProviderClusterConfig(secret *corev1.Secret, schemaStore *SchemaStore) (map[string]json.RawMessage, error) {
+func parseLegacyProviderClusterConfig(ctx context.Context, secret *corev1.Secret, schemaStore *SchemaStore) (map[string]json.RawMessage, error) {
 	data, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]
 	if !ok || len(data) == 0 {
 		return nil, fmt.Errorf("cloud-provider-cluster-configuration.yaml not found in Secret or empty")
 	}
-	if _, err := schemaStore.Validate(&data); err != nil {
+	if _, err := schemaStore.Validate(ctx, &data); err != nil {
 		return nil, fmt.Errorf("validate provider cluster configuration: %w", err)
 	}
 	var parsed map[string]json.RawMessage
@@ -303,7 +303,7 @@ func (f *fromClusterMetaConfigFiller) Static(ctx context.Context, metaConfig *Me
 		return nil, nil
 	}
 
-	if _, err := f.schemaStore.Validate(&staticClusterConfigData); err != nil {
+	if _, err := f.schemaStore.Validate(ctx, &staticClusterConfigData); err != nil {
 		return nil, fmt.Errorf("validate static cluster configuration: %w", err)
 	}
 

@@ -17,6 +17,8 @@ limitations under the License.
 package config
 
 import (
+	"context"
+
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -55,6 +57,7 @@ type ModuleConfigSpec struct {
 }
 
 func buildModuleConfig(
+	ctx context.Context,
 	schemasStore *SchemaStore,
 	moduleName string,
 	isEnabled bool,
@@ -84,7 +87,7 @@ func buildModuleConfig(
 		return nil, err
 	}
 
-	_, err = schemasStore.Validate(&doc)
+	_, err = schemasStore.Validate(ctx, &doc)
 	if err != nil {
 		return nil, err
 	}

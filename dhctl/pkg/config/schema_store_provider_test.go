@@ -58,7 +58,7 @@ func TestLoadProviderDirAddsAndReplacesSchemas(t *testing.T) {
 	require.NotNil(t, store.Get(index))
 
 	doc := []byte("apiVersion: deckhouse.io/v1\nkind: TestProviderConfiguration\nlayout: Standard\n")
-	_, err := store.Validate(&doc)
+	_, err := store.Validate(t.Context(), &doc)
 	require.NoError(t, err)
 
 	// Same digest: no-op even though the dir is gone.
@@ -91,7 +91,7 @@ func TestLoadProviderDirConcurrentWithValidate(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < 200; j++ {
 				doc := []byte("apiVersion: deckhouse.io/v1\nkind: TestProviderConfiguration\nlayout: Standard\n")
-				_, _ = store.Validate(&doc)
+				_, _ = store.Validate(t.Context(), &doc)
 			}
 		}()
 	}
