@@ -1,4 +1,3 @@
 dirs:
   - /etc/cloud
   - /etc/cloud/ca
-  - /etc/kubernetes/zvirt/basic-auth

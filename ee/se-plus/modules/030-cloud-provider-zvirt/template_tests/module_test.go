@@ -212,7 +212,7 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 
 			// The login and the password come from the managed credential Secret, not from the
 			// legacy provider cluster configuration.
-			for _, secretName := range []string{"zvirt-credentials", "ccm-zvirt-credentials", "cdd-zvirt-credentials", "capi-zvirt-credentials"} {
+			for _, secretName := range []string{"ccm-zvirt-credentials", "cdd-zvirt-credentials", "capi-zvirt-credentials"} {
 				credentialsSecret := f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", secretName)
 				Expect(credentialsSecret.Exists()).To(BeTrue(), secretName)
 				Expect(credentialsSecret.Field("data.username").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("user"))), secretName)
@@ -220,13 +220,23 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 				Expect(credentialsSecret.Field("data.server").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("https://zvirt.example.com/api"))), secretName)
 			}
 
+			// The credentials reach the CSI driver only through the cloud-config of
+			// csi-controller-manager. No copy of them is mounted anywhere else, least of all into
+			// the DaemonSet that runs on every node of the cluster.
+			Expect(f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", "zvirt-credentials").Exists()).To(BeFalse())
+
 			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "csi-controller")
 			Expect(csiControllerDeployment.Exists()).To(BeTrue())
 			Expect(csiControllerDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(csiControllerDeployment.Field("spec.template.spec.volumes").String()).NotTo(ContainSubstring("zvirt-credentials"))
+			// A credential rotation has to roll the driver: it reads the cloud-config once, at start.
+			Expect(csiControllerDeployment.Field("spec.template.metadata.annotations.checksum/config").String()).NotTo(BeEmpty())
 
 			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-zvirt", "csi-node")
 			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
 			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(csiNodeDaemonSet.Field("spec.template.spec.volumes").String()).NotTo(ContainSubstring("zvirt-credentials"))
+			Expect(csiNodeDaemonSet.Field("spec.template.metadata.annotations.checksum/config").String()).NotTo(BeEmpty())
 
 			cddDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-data-discoverer")
 			Expect(cddDeployment.Exists()).To(BeTrue())
@@ -393,6 +403,7 @@ storage:
   parameters: {}
 ccm:
   disabled: true
+  parameters: {}
 internal:
   validationWebhookCert:
     crt: dGVzdC1jcnQ=
