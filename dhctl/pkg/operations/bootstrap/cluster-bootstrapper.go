@@ -51,6 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -1655,6 +1656,22 @@ func bootstrapAdditionalNodesForCloudCluster(
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
+
+	// Machines this node builds cannot boot without registry-packages-proxy: rpp-get comes from
+	// a master's bootstrap port, that port is published by the module alone, and cloud-init
+	// gives up on it after 150 seconds. So the module is a precondition for building them.
+	//
+	// On the ordinary path the install phase has already waited for Deckhouse, and a critical
+	// module's pods are up by the time that wait returns - this costs nothing there. It is here
+	// for the path where that phase is skipped, which --skip-phase allows: nothing else stands
+	// between a skipped install and the machines.
+	//
+	// It deliberately proves only that the module runs, not that a machine's subnet can reach
+	// the port. Which of the two failed is a question for the node's own log; see
+	// bb-rpp-get-report in lib.sh.tpl.
+	if err := rpp.WaitForInClusterProxy(ctx, kubeCl.KubeClient); err != nil {
+		return err
+	}
 
 	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions, buildMasterPayload); err != nil {
 		return err
