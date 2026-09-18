@@ -217,9 +217,6 @@ admissionPolicyEngine:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			// Specs that exercise the system-namespace settings write them into the shared
-			// config, so every spec starts from the defaults rather than from what ran before it.
-			f.ValuesSetFromYaml("admissionPolicyEngine.podSecurityStandards.systemNamespaces", `{}`)
 			f.HelmRender()
 		})
 
@@ -334,28 +331,28 @@ admissionPolicyEngine:
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			expectedSelector := constraintSelectorExpectation{
-				namespaces: mustParseYaml("- default"),
+				namespaces:         mustParseYaml("- default"),
 				excludedNamespaces: mustParseYaml("- kube-system"),
-				namespaceSelector: mustParseYaml("matchLabels:\n  security-policy.deckhouse.io/enabled: \"true\""),
-				labelSelector: mustParseYaml("matchLabels:\n  security-policy.deckhouse.io/enabled: \"true\""),
+				namespaceSelector:  mustParseYaml("matchLabels:\n  security-policy.deckhouse.io/enabled: \"true\""),
+				labelSelector:      mustParseYaml("matchLabels:\n  security-policy.deckhouse.io/enabled: \"true\""),
 			}
 			expectedAction := "warn"
 
 			expectedParameters := map[string]interface{}{
-				"D8AllowedCapabilities": mustParseYaml("requiredDropCapabilities:\n  - ALL"),
-				"D8AllowedFlexVolumes": mustParseYaml("allowedFlexVolumes:\n  - driver: vmware"),
-				"D8AllowedHostPaths": mustParseYaml("allowedHostPaths:\n  - pathPrefix: /dev\n    readOnly: true"),
-				"D8AllowedProcMount": mustParseYaml("allowedProcMount: default"),
+				"D8AllowedCapabilities":    mustParseYaml("requiredDropCapabilities:\n  - ALL"),
+				"D8AllowedFlexVolumes":     mustParseYaml("allowedFlexVolumes:\n  - driver: vmware"),
+				"D8AllowedHostPaths":       mustParseYaml("allowedHostPaths:\n  - pathPrefix: /dev\n    readOnly: true"),
+				"D8AllowedProcMount":       mustParseYaml("allowedProcMount: default"),
 				"D8AllowedSeccompProfiles": mustParseYaml("allowedProfiles:\n  - RuntimeDefault\n  - Localhost\nallowedLocalhostFiles:\n  - \"*\""),
-				"D8AllowedSysctls": mustParseYaml("allowedSysctls:\n  - \"*\"\nforbiddenSysctls:\n  - user/example"),
-				"D8AllowedUsers": mustParseYaml("runAsUser:\n  ranges:\n    - min: 300\n      max: 500\n  rule: MustRunAs\nsupplementalGroups:\n  ranges:\n    - min: 500\n      max: 1000\n  rule: MustRunAs"),
-				"D8AllowedVolumeTypes": mustParseYaml("volumes:\n  - csi"),
-				"D8HostNetwork": mustParseYaml("allowHostNetwork: false\nranges:\n  - min: 10\n    max: 100"),
-				"D8HostProcesses": mustParseYaml("allowHostPID: false\nallowHostIPC: true"),
-				"D8AllowedClusterRoles": mustParseYaml("allowedClusterRoles:\n  - \"*\""),
-				"D8SeLinux": mustParseYaml("allowedSELinuxOptions:\n  - role: role\n    user: user\n  - level: level\n    type: type"),
-				"D8AppArmor": mustParseYaml("allowedProfiles:\n  - unconfined"),
-				"D8VerifyImageSignatures": mustParseYaml("references:\n  - \"^.*$\""),
+				"D8AllowedSysctls":         mustParseYaml("allowedSysctls:\n  - \"*\"\nforbiddenSysctls:\n  - user/example"),
+				"D8AllowedUsers":           mustParseYaml("runAsUser:\n  ranges:\n    - min: 300\n      max: 500\n  rule: MustRunAs\nsupplementalGroups:\n  ranges:\n    - min: 500\n      max: 1000\n  rule: MustRunAs"),
+				"D8AllowedVolumeTypes":     mustParseYaml("volumes:\n  - csi"),
+				"D8HostNetwork":            mustParseYaml("allowHostNetwork: false\nranges:\n  - min: 10\n    max: 100"),
+				"D8HostProcesses":          mustParseYaml("allowHostPID: false\nallowHostIPC: true"),
+				"D8AllowedClusterRoles":    mustParseYaml("allowedClusterRoles:\n  - \"*\""),
+				"D8SeLinux":                mustParseYaml("allowedSELinuxOptions:\n  - role: role\n    user: user\n  - level: level\n    type: type"),
+				"D8AppArmor":               mustParseYaml("allowedProfiles:\n  - unconfined"),
+				"D8VerifyImageSignatures":  mustParseYaml("references:\n  - \"^.*$\""),
 			}
 
 			constraintsWithoutParameters := []string{
@@ -499,39 +496,33 @@ admissionPolicyEngine:
 			Expect(constraint.Field("spec.match.excludedNamespaces").Exists()).To(BeFalse())
 		})
 
-		It("Follows the operator's setting in system namespaces", func() {
-			// The settings that govern system namespaces have to reach user policies too, or an
-			// operator who turned enforcement on would still see only warnings from them.
-			f.ValuesSetFromYaml("admissionPolicyEngine.podSecurityStandards.systemNamespaces",
-				`{enforcementAction: Deny}`)
-			f.HelmRender()
+		It("Treats system namespaces as the module constants say", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
+			// How a user policy behaves in a system namespace is decided in the chart, not in the
+			// ModuleConfig: `system_namespaces_action` warns, and `system_namespaces_excluded`
+			// spares nothing. Changing either constant changes the two expectations below, which
+			// is the point of pinning them here.
 			systemDefault := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-default-exprpolicy")
 			Expect(systemDefault.Exists()).To(BeTrue())
-			Expect(systemDefault.Field("spec.enforcementAction").String()).To(Equal("deny"))
+			Expect(systemDefault.Field("spec.enforcementAction").String()).To(Equal("warn"))
+			Expect(systemDefault.Field("spec.match.excludedNamespaces").Exists()).To(BeFalse())
 
-			// The operator's action equals the policy's own, so the label changes nothing and the
-			// opted-in constraint is not rendered at all.
-			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-enforce-exprpolicy").Exists()).To(BeFalse())
-			Expect(systemDefault.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
-				`[{"key":"env","operator":"In","values":["prod"]}]`))
+			// The fourth variant is rendered only for a non-empty exclusion list.
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-excluded-exprpolicy").Exists()).To(BeFalse())
 		})
 
-		It("Never blocks in the system namespaces the operator excluded", func() {
-			f.ValuesSetFromYaml("admissionPolicyEngine.podSecurityStandards.systemNamespaces",
-				`{enforcementAction: Deny, excludeNamespaces: [d8-monitoring]}`)
-			f.HelmRender()
+		It("Keeps a namespace the platform labels as its own out of user policies", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			excluded := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-excluded-exprpolicy")
-			Expect(excluded.Exists()).To(BeTrue())
-			Expect(excluded.Field("spec.enforcementAction").String()).To(Equal("warn"))
-			Expect(excluded.Field("spec.match.namespaces").String()).To(MatchJSON(`["d8-monitoring"]`))
-
-			// Whatever would otherwise block there has to step aside, the module's opt-in included.
-			systemDefault := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-system-default-exprpolicy")
-			Expect(systemDefault.Field("spec.match.excludedNamespaces").String()).To(MatchJSON(`["d8-monitoring"]`))
+			// The name globs cover `d8-*` and `kube-*`; the label covers a platform namespace
+			// named anything else, which is how a system namespace was recognized before the
+			// names took over. Both have to hold, or such a namespace would start being blocked
+			// by a user policy that never reached it before.
+			userScoped := f.KubernetesGlobalResource("D8PrivilegedContainer", "exprpolicy")
+			Expect(userScoped.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"env","operator":"In","values":["prod"]},
+				  {"key":"heritage","operator":"NotIn","values":["deckhouse"]}]`))
 		})
 
 		It("Every variant keeps the parameters of the policy it came from", func() {

@@ -345,15 +345,20 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			systemNamespacesExpr := `has(request.namespace) && (request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-"))`
 
-			// The main webhook must leave the system namespaces to the two below it.
-			Expect(vw.Field("webhooks.0.namespaceSelector").Exists()).To(BeFalse())
+			// The main webhook must leave the system namespaces to the two below it: those named
+			// `d8-*` or `kube-*` by the match condition, and one the platform labels as its own
+			// whatever it is called by the namespace selector.
+			Expect(vw.Field("webhooks.0.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"heritage","operator":"NotIn","values":["deckhouse"]}]`))
 			Expect(vw.Field("webhooks.0.matchConditions.0.expression").String()).To(Equal("!(" + systemNamespacesExpr + ")"))
 			Expect(vw.Field("webhooks.0.failurePolicy").String()).To(Equal("Fail"))
 
 			Expect(vw.Field("webhooks.1.name").String()).To(Equal("system-namespaces.admission-policy-engine.deckhouse.io"))
 			Expect(vw.Field("webhooks.1.matchConditions.0.expression").String()).To(Equal(systemNamespacesExpr))
+			// The enforce webhook routes by the opt-in label alone, with no name condition, so a
+			// namespace a module opted in reaches Gatekeeper even if it is not named `d8-*`.
 			Expect(vw.Field("webhooks.2.name").String()).To(Equal("system-namespaces-enforce.admission-policy-engine.deckhouse.io"))
-			Expect(vw.Field("webhooks.2.matchConditions.0.expression").String()).To(Equal(systemNamespacesExpr))
+			Expect(vw.Field("webhooks.2.matchConditions.0.name").String()).To(Equal("exclude-virtualization"))
 
 			// Neither system-namespace webhook may block a workload while Gatekeeper is unavailable.
 			Expect(vw.Field("webhooks.1.failurePolicy").String()).To(Equal("Ignore"))
@@ -396,7 +401,9 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 		It("Renders MutatingWebhookConfiguration that skips system namespaces", func() {
 			mw := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			Expect(mw.Exists()).To(BeTrue())
-			Expect(mw.Field("webhooks.0.namespaceSelector").Exists()).To(BeFalse())
+			// By name, and by the label that marked a platform namespace before the names took over.
+			Expect(mw.Field("webhooks.0.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"heritage","operator":"NotIn","values":["deckhouse"]}]`))
 			Expect(mw.Field("webhooks.0.matchConditions.0.expression").String()).To(Equal(
 				`!(has(request.namespace) && (request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-")))`))
 		})

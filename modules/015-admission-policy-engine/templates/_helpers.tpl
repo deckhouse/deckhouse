@@ -14,8 +14,7 @@
   scoped_policy_variants injects the internal keys `d8NamespaceScope`, `d8SystemNamespaces` and
   `d8ExcludedNamespaces` into the copy of match it hands over. They are not part of the CR API —
   they select the namespace lists rendered here, so that one user policy can enforce in user
-  namespaces, follow the operator's setting in system ones, and never block what the operator
-  excluded.
+  namespaces, follow the module constant in system ones, and never block an excluded namespace.
 */}}
 {{- define "constraint_selector" }}
     {{- $cr := index . 0 }}
@@ -50,7 +49,13 @@
       {{- $labelSelector = deepCopy $nsSelector.labelSelector }}
     {{- end }}
     {{- $scopeExpressions := list }}
-    {{- if eq $scope "system-default" }}
+    {{- if eq $scope "user" }}
+      {{/* Excluding the system namespaces by name is not enough: a namespace the platform labels
+           as its own stays outside user policies whatever it is called, as it did when that label
+           was the whole definition of a system namespace. */}}
+      {{- $scopeExpressions = list
+            (dict "key" "heritage" "operator" "NotIn" "values" (list "deckhouse")) }}
+    {{- else if eq $scope "system-default" }}
       {{- $scopeExpressions = list
             (dict "key" "security.deckhouse.io/enable-security-policy-check" "operator" "NotIn" "values" (list "true")) }}
     {{- else if eq $scope "system-enforce" }}
@@ -80,6 +85,32 @@
 {{- define "system_namespaces" }}
 - "d8-*"
 - "kube-*"
+{{- end }}
+
+{{/*
+  system_namespaces_action is what happens to a violation in a system namespace that no module
+  opted into enforcement.
+
+  It is a constant rather than a module setting on purpose. How the platform treats its own
+  namespaces is not a cluster operator's decision: raising it to `deny` blocks the converge of
+  every module whose workloads do not yet comply, and lowering it would hide violations the
+  platform wants to see. Change it here, together with the exclusions below, and ship the two as
+  one release.
+*/}}
+{{- define "system_namespaces_action" -}}
+warn
+{{- end }}
+
+{{/*
+  system_namespaces_excluded are the system namespaces a violation is only ever reported in,
+  whatever `system_namespaces_action` says and whatever label a module puts on them.
+
+  It exists for a system namespace that legitimately hosts application workloads. Empty while the
+  action stays `warn`, since nothing is blocked anywhere; it is the lever to reach for first if the
+  action is ever raised.
+*/}}
+{{- define "system_namespaces_excluded" }}
+[]
 {{- end }}
 
 {{/*
@@ -200,17 +231,16 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   the constraint templates must render.
 
   A Gatekeeper constraint carries a single enforcementAction, and a constraint cannot OR two
-  namespace lists, so "deny in user namespaces, follow the operator's setting in system ones"
+  namespace lists, so "deny in user namespaces, follow the module constant in system ones"
   needs more than one object. A policy with enforcementAction: Deny that spans both is split into:
     - the original name, with the system namespaces excluded;
     - `d8-system-default-<name>`, for system namespaces no module opted into enforcement, with the
-      action from `podSecurityStandards.systemNamespaces.enforcementAction` — `warn` by default,
+      action from the `system_namespaces_action` constant — `warn`,
       so a policy written for application namespaces cannot block a platform component by accident;
     - `d8-system-enforce-<name>`, the policy's own action, for system namespaces labeled
       `security.deckhouse.io/enable-security-policy-check: "true"`;
     - `d8-system-excluded-<name>`, warn-only, for the namespaces named in
-      `podSecurityStandards.systemNamespaces.excludeNamespaces`, rendered only when the operator
-      named something. Those namespaces host application workloads the platform's standards would
+      the `system_namespaces_excluded` constant, rendered only when that list is not empty. Those namespaces host application workloads the platform's standards would
       block, and the exclusion has to outrank a module's opt-in label as well.
 
   The first two collapse into one `d8-system-default-<name>` when the operator's action equals the
@@ -239,9 +269,8 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   {{- $match := $policy.spec.match | default dict }}
   {{- $nsSelector := $match.namespaceSelector | default dict }}
   {{- $scope := include "system_namespace_scope" (list ($nsSelector.matchNames | default list) ($nsSelector.excludeNames | default list)) | fromYaml }}
-  {{- $systemNamespaces := ($context.Values.admissionPolicyEngine.podSecurityStandards.systemNamespaces | default dict) }}
-  {{- $systemAction := ($systemNamespaces.enforcementAction | default "warn" | lower) }}
-  {{- $systemExclude := ($systemNamespaces.excludeNamespaces | default list) }}
+  {{- $systemAction := include "system_namespaces_action" . | trim | lower }}
+  {{- $systemExclude := include "system_namespaces_excluded" . | fromYamlArray }}
 
   {{- if or (ne $action "deny") (not $scope.decidable) (not $scope.names) }}
     {{- list $policy | toYaml }}
@@ -318,9 +347,8 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   {{- $parameters := index . 4 }}
   {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "privileged" | lower) }}
   {{/* System namespaces are governed by their own settings, not by defaultPolicy/enforcementAction. */}}
-  {{- $systemNamespaces := ($context.Values.admissionPolicyEngine.podSecurityStandards.systemNamespaces | default dict) }}
-  {{- $systemAction := ($systemNamespaces.enforcementAction | default "warn" | lower) }}
-  {{- $systemExclude := ($systemNamespaces.excludeNamespaces | default list) }}
+  {{- $systemAction := include "system_namespaces_action" . | trim | lower }}
+  {{- $systemExclude := include "system_namespaces_excluded" . | fromYamlArray }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
@@ -352,6 +380,10 @@ spec:
           values: ["webhook"]
     namespaceSelector:
       matchExpressions:
+        # A namespace the platform labels as its own is never a user namespace, whatever it is
+        # called. The label was the whole definition of "system" before the names took over, and
+        # honouring it keeps a namespace that carries it outside user policies, as it was.
+        - { key: heritage, operator: NotIn, values: [ deckhouse ] }
       {{- if eq $standard "baseline" }}
         {{- if eq $defaultPolicy "privileged" }}
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ baseline, restricted ] }
@@ -389,13 +421,12 @@ spec:
   non-system namespaces only. The block runs for both standards, so the two together give system
   namespaces the full `restricted` set of checks.
 
-  The action comes from `podSecurityStandards.systemNamespaces.enforcementAction` and defaults to
-  `warn`, which reports violations in the audit and in Deckhouse Console without blocking a system component.
-  It is the only lever a cluster operator has here: the labels that tune the constraints below are
-  written by the module that owns the namespace and cannot be edited from outside it.
+  The action comes from the `system_namespaces_action` constant and is `warn`, which reports
+  violations in the audit and in Deckhouse Console without blocking a system component.
+  Neither is a module setting: how the platform treats its own namespaces is decided in the module,
+  not by a cluster operator.
 
-  Namespaces the operator excluded, and namespaces a module opted into enforcement, are left to the
-  two blocks below.
+  Excluded namespaces, and namespaces a module opted into enforcement, are left to the two blocks below.
 
   The block does not depend on the module's own enforcement action, so it is rendered on the
   iteration of the default action, which is always present in
@@ -438,15 +469,14 @@ spec:
   {{- end }}
 {{- end }}
 {{/*
-  Pod Security Standards in warn mode for the system namespaces the operator excluded.
+  Pod Security Standards in warn mode for the excluded system namespaces.
 
-  `podSecurityStandards.systemNamespaces.excludeNamespaces` names the system namespaces that host
-  application workloads the platform's own standards would otherwise block. They are warned about
-  and never blocked, whatever the two blocks around this one would do to them — including a
-  namespace a module opted into enforcement, because that label belongs to the module and the
-  operator has no way to change it.
+  The `system_namespaces_excluded` constant names the system namespaces that host application
+  workloads the platform's own standards would otherwise block. They are warned about and never
+  blocked, whatever the two blocks around this one would do to them, a namespace a module opted
+  into enforcement included.
 
-  Rendered once per standard, like the block above, and only when the operator named something.
+  Rendered once per standard, like the block above, and only when that list is not empty.
 */}}
 {{- if and $systemExclude (eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower)) }}
 ---
@@ -507,10 +537,8 @@ spec:
     scope: Namespaced
     kinds:
 {{- include "workload_kinds" . }}
-    namespaces:
-      {{- include "system_namespaces" . | fromYamlArray | toYaml | nindent 6 }}
   {{- if $systemExclude }}
-    # What the operator excluded is warned about by the block above, never enforced here.
+    # An excluded namespace is warned about by the block above, never enforced here.
     excludedNamespaces:
       {{- $systemExclude | toYaml | nindent 6 }}
   {{- end }}
@@ -524,6 +552,11 @@ spec:
           values: ["webhook"]
     namespaceSelector:
       matchExpressions:
+        # Selected by the two labels alone, without the name list the block above uses. Both are
+        # written by the module that owns the namespace, and this is the selector the constraint
+        # carried before names entered the picture, so a namespace that opted in keeps being
+        # enforced even if it is not called `d8-*` or `kube-*`.
+        - { key: heritage, operator: In, values: [ deckhouse ] }
         - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
       # matches default enforcement action
       {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}

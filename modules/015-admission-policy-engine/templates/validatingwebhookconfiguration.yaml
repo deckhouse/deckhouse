@@ -90,6 +90,15 @@ metadata:
 webhooks:
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    # The name condition below leaves out `d8-*` and `kube-*`; this leaves out a namespace the
+    # platform labels as its own whatever it is called, which is how a system namespace was
+    # recognised before the names took over.
+    - key: heritage
+      operator: NotIn
+      values:
+        - deckhouse
   objectSelector:
     matchExpressions:
     - key: gatekeeper.sh/operation
@@ -209,8 +218,9 @@ webhooks:
     resources: ["pods/ephemeralcontainers"]
     operations: ["UPDATE"]
   matchConditions:
-    - name: 'system-namespaces'
-      expression: '{{ include "system_namespaces_cel" . }}'
+    {{/* No name condition: the opt-in label is written by the module that owns the namespace and
+         appears nowhere else, and routing by it alone is what the webhook this one replaces did.
+         A namespace that opted in keeps being enforced even if it is not called `d8-*`. */}}
     - name: 'exclude-virtualization'
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
   timeoutSeconds: 15

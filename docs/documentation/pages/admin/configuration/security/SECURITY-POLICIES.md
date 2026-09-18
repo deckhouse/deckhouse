@@ -291,7 +291,7 @@ As with policy assignment, enforcement mode can be set:
 ### Policies in system namespaces
 
 Namespaces named `d8-*` and `kube-*` hold the components of the platform itself.
-The policies that apply to them are configured separately from the settings above.
+Policies apply to them differently from the namespaces of your applications, and that difference is not configurable.
 
 Every such namespace is checked against the `restricted` standard in `warn` mode.
 The `security.deckhouse.io/pod-policy` label and the
@@ -300,58 +300,23 @@ do not apply there.
 Violations are recorded in the audit and shown in Deckhouse Console,
 and a system component is never blocked from starting.
 
-To block violations instead of recording them, set
-[`settings.podSecurityStandards.systemNamespaces.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction):
-
-```yaml
-settings:
-  podSecurityStandards:
-    systemNamespaces:
-      enforcementAction: Deny
-```
-
-After that, a workload that violates the standard is not started in a system namespace.
-
-This parameter is the only way to change how policies are applied to system namespaces.
-The labels that tune the constraints belong to the module that owns the namespace,
+The labels that tune these checks belong to the module that owns the namespace,
 and Deckhouse restores them at the next converge, so editing them has no lasting effect.
+To exempt a single workload, use the `security.deckhouse.io/skip-pss-check` label on the Pod or on its controller,
+or a SecurityPolicyException in that namespace.
 
-A system namespace may host application workloads that the standards of the platform would block.
-To keep such a namespace in `warn` mode, list it in
-[`excludeNamespaces`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces):
-
-```yaml
-settings:
-  podSecurityStandards:
-    systemNamespaces:
-      enforcementAction: Deny
-      excludeNamespaces:
-        - d8-monitoring
-        - d8-team-*
-```
-
-The list supports a prefix or a suffix glob.
-It takes precedence over the `security.deckhouse.io/enable-security-policy-check` label,
-which otherwise makes the namespace of a module block violations even in `warn` mode.
-
-To exempt a single workload instead of a whole namespace, use the `security.deckhouse.io/skip-pss-check` label
-on the Pod or on its controller, or a SecurityPolicyException in that namespace.
-
-OperationPolicy and SecurityPolicy resources follow the same settings.
-A policy with `enforcementAction: Deny` blocks workloads in ordinary namespaces.
-In a system namespace its action is taken from `systemNamespaces.enforcementAction`, with two exceptions:
-in a namespace labeled `security.deckhouse.io/enable-security-policy-check` the policy keeps its own action,
-and in a namespace listed in `excludeNamespaces` the policy only warns.
+OperationPolicy and SecurityPolicy resources reach system namespaces in `warn` mode as well.
+A policy with `enforcementAction: Deny` blocks workloads in the namespaces of your applications
+and only reports violations in a system namespace.
+A module may opt its own namespace into enforcement, and there such a policy keeps its own action.
 
 Such a policy is rendered as several Gatekeeper constraints, which are visible in the audit and in Deckhouse Console:
 
 - `d8-system-default-<policy>`: For the system namespaces that no module opted into enforcement.
 - `d8-system-enforce-<policy>`: For the system namespaces that a module opted into enforcement.
-- `d8-system-excluded-<policy>`: For the namespaces listed in `excludeNamespaces`.
 
-The first two are rendered as a single constraint
-when `systemNamespaces.enforcementAction` matches the action of the policy.
-All three prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
+The `d8-system-default-`, `d8-system-enforce-`, `d8-system-excluded-` and `d8-pod-security-` prefixes are reserved:
+a policy whose name starts with one of them is rejected on creation.
 
 A policy is rendered as a single constraint when the split would change nothing:
 

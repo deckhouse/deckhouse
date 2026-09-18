@@ -338,7 +338,7 @@ The default policy can be overridden globally ([in the module settings](configur
 
 {% alert level="info" %}
 In namespaces named `d8-*` and `kube-*`, the `restricted` standard applies in `warn` mode regardless of the default policy.
-To block violations instead of recording them, set [`settings.podSecurityStandards.systemNamespaces.enforcementAction`](configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction) to `Deny`. To keep a system namespace that hosts application workloads at `warn`, list it in [`excludeNamespaces`](configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces).
+Violations are recorded in the audit and shown in Deckhouse Console, and a system component is never blocked from starting.
 {% endalert %}
 
 {% alert level="info" %}

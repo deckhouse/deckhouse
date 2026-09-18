@@ -343,7 +343,7 @@ status:
 
 {% alert level="info" %}
 В неймспейсах с именами `d8-*` и `kube-*` стандарт `restricted` применяется в режиме `warn` независимо от политики по умолчанию.
-Чтобы нарушения блокировались, а не только фиксировались, задайте [`settings.podSecurityStandards.systemNamespaces.enforcementAction`](configuration.html#parameters-podsecuritystandards-systemnamespaces-enforcementaction) со значением `Deny`. Чтобы оставить в режиме `warn` системный неймспейс с прикладной нагрузкой, перечислите его в [`excludeNamespaces`](configuration.html#parameters-podsecuritystandards-systemnamespaces-excludenamespaces).
+Нарушения фиксируются в отчётах безопасности и отображаются в веб-интерфейсе Deckhouse, запуск системного компонента при этом не блокируется.
 {% endalert %}
 
 {% alert level="info" %}

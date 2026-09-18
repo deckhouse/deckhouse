@@ -36,9 +36,6 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: system nam
 		enforcementNotEnabled = `[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"NotIn","values":["true"]}]`
 	)
 
-	// systemNamespaces settings, rendered into the podSecurityStandards section by renderWith.
-	systemSettings := ""
-
 	renderWith := func(defaultPolicy, enforcementAction string, enforcementActions ...string) {
 		actions := ""
 		for _, action := range enforcementActions {
@@ -47,7 +44,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: system nam
 		f.ValuesSetFromYaml("admissionPolicyEngine", fmt.Sprintf(`
 podSecurityStandards:
   defaultPolicy: %s
-  enforcementAction: %s%s
+  enforcementAction: %s
 internal:
   bootstrapped: true
   podSecurityStandards:
@@ -63,16 +60,12 @@ internal:
     key: test-key
   trackedConstraintResources: []
   trackedMutateResources: []
-`, defaultPolicy, enforcementAction, systemSettings, actions))
+`, defaultPolicy, enforcementAction, actions))
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.HelmRender()
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 	}
-
-	BeforeEach(func() {
-		systemSettings = ""
-	})
 
 	Context("With the default policy set to Baseline and enforcement set to Deny", func() {
 		BeforeEach(func() {
@@ -136,9 +129,13 @@ internal:
 					enforcing := f.KubernetesGlobalResource(c.kind, fmt.Sprintf("d8-pod-security-%s-deny-d8-default", c.standard))
 					Expect(enforcing.Exists()).To(BeTrue(), c.standard)
 					Expect(enforcing.Field("spec.enforcementAction").String()).To(Equal("deny"), c.standard)
-					Expect(enforcing.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces), c.standard)
+					// Selected by labels alone, with no name list: a namespace the platform owns
+					// and a module opted in stays enforced even if it is not named `d8-*`, which
+					// is how this constraint behaved before the names entered the picture.
+					Expect(enforcing.Field("spec.match.namespaces").Exists()).To(BeFalse(), c.standard)
 					Expect(enforcing.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
-						`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"In","values":["true"]}]`), c.standard)
+						`[{"key":"heritage","operator":"In","values":["deckhouse"]},
+						  {"key":"security.deckhouse.io/enable-security-policy-check","operator":"In","values":["true"]}]`), c.standard)
 				}
 			})
 
@@ -159,72 +156,35 @@ internal:
 		})
 	}
 
-	// The only lever a cluster operator has over system namespaces: the labels that tune the
-	// constraints are written by the module that owns the namespace and cannot be edited from
-	// outside it, so everything an operator can decide lives in the ModuleConfig.
-	Context("With enforcement in system namespaces turned on", func() {
+	// How the platform treats its own namespaces is decided in the chart, by the
+	// `system_namespaces_action` and `system_namespaces_excluded` constants, and not in the
+	// ModuleConfig: raising the action blocks the converge of every module that does not yet
+	// comply, which is a decision to ship with a release rather than to leave to a cluster
+	// operator. The specs below pin the values those constants have now, so that changing one
+	// shows up here.
+	Context("With the constants the module ships", func() {
 		BeforeEach(func() {
-			systemSettings = `
-  systemNamespaces:
-    enforcementAction: Deny`
 			renderWith("Baseline", "Deny", "deny")
 		})
 
-		It("Denies in the system namespaces no module opted in", func() {
+		It("Warns in the system namespaces no module opted in", func() {
 			for _, c := range []struct{ kind, standard string }{
 				{"D8HostNetwork", "baseline"},
 				{"D8AllowedUsers", "restricted"},
 			} {
 				constraint := f.KubernetesGlobalResource(c.kind, fmt.Sprintf("d8-pod-security-%s-system", c.standard))
 				Expect(constraint.Exists()).To(BeTrue(), c.standard)
-				Expect(constraint.Field("spec.enforcementAction").String()).To(Equal("deny"), c.standard)
-				Expect(constraint.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces), c.standard)
-			}
-		})
-
-		It("Renders no excluded-namespace constraint when nothing is excluded", func() {
-			Expect(f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-system-excluded").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("With system namespaces excluded from enforcement", func() {
-		BeforeEach(func() {
-			systemSettings = `
-  systemNamespaces:
-    enforcementAction: Deny
-    excludeNamespaces:
-      - d8-monitoring
-      - d8-team-*`
-			renderWith("Baseline", "Deny", "deny")
-		})
-
-		const excluded = `["d8-monitoring","d8-team-*"]`
-
-		It("Warns in the excluded namespaces instead of denying", func() {
-			for _, c := range []struct{ kind, standard string }{
-				{"D8HostNetwork", "baseline"},
-				{"D8AllowedUsers", "restricted"},
-			} {
-				constraint := f.KubernetesGlobalResource(c.kind, fmt.Sprintf("d8-pod-security-%s-system-excluded", c.standard))
-				Expect(constraint.Exists()).To(BeTrue(), c.standard)
 				Expect(constraint.Field("spec.enforcementAction").String()).To(Equal("warn"), c.standard)
-				Expect(constraint.Field("spec.match.namespaces").String()).To(MatchJSON(excluded), c.standard)
-				// No namespaceSelector: the exclusion holds whatever labels the namespace carries.
-				Expect(constraint.Field("spec.match.namespaceSelector").Exists()).To(BeFalse(), c.standard)
+				Expect(constraint.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces), c.standard)
+				Expect(constraint.Field("spec.match.excludedNamespaces").Exists()).To(BeFalse(), c.standard)
 			}
 		})
 
-		It("Keeps both enforcing constraints away from the excluded namespaces", func() {
-			// The operator's exclusion outranks the module's opt-in label, which the operator
-			// cannot edit, so the label-keyed constraint has to honour it too.
-			for _, name := range []string{
-				"d8-pod-security-restricted-system",
-				"d8-pod-security-restricted-deny-d8-default",
-			} {
-				constraint := f.KubernetesGlobalResource("D8AllowedUsers", name)
-				Expect(constraint.Exists()).To(BeTrue(), name)
-				Expect(constraint.Field("spec.match.excludedNamespaces").String()).To(MatchJSON(excluded), name)
-			}
+		It("Renders no excluded-namespace constraint while nothing is excluded", func() {
+			// The constraint appears as soon as `system_namespaces_excluded` names a namespace,
+			// and warns there whatever the other two constraints would do.
+			Expect(f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-system-excluded").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8HostNetwork", "d8-pod-security-baseline-system-excluded").Exists()).To(BeFalse())
 		})
 	})
 
@@ -241,7 +201,8 @@ internal:
 			Expect(constraint.Exists()).To(BeTrue())
 			Expect(constraint.Field("spec.match.excludedNamespaces").String()).To(MatchJSON(systemNamespaces))
 			Expect(constraint.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
-				`[{"key":"security.deckhouse.io/pod-policy","operator":"In","values":["baseline","restricted"]}]`))
+				`[{"key":"heritage","operator":"NotIn","values":["deckhouse"]},
+				  {"key":"security.deckhouse.io/pod-policy","operator":"In","values":["baseline","restricted"]}]`))
 		})
 	})
 })
