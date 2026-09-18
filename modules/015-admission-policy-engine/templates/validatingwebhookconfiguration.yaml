@@ -92,6 +92,8 @@ webhooks:
 - name: admission-policy-engine.deckhouse.io
   namespaceSelector:
     matchExpressions:
+    # #### TODO: Backward compatibility, remove this selector once every platform namespace is
+    # named `d8-*` or `kube-*` and the match condition below covers all of them.
     # The name condition below leaves out `d8-*` and `kube-*`; this leaves out a namespace the
     # platform labels as its own whatever it is called, which is how a system namespace was
     # recognised before the names took over.
@@ -220,7 +222,10 @@ webhooks:
   matchConditions:
     {{/* No name condition: the opt-in label is written by the module that owns the namespace and
          appears nowhere else, and routing by it alone is what the webhook this one replaces did.
-         A namespace that opted in keeps being enforced even if it is not called `d8-*`. */}}
+         A namespace that opted in keeps being enforced even if it is not called `d8-*`.
+
+         #### TODO: Backward compatibility, add the `system_namespaces_cel` condition here once
+         every platform namespace is named `d8-*` or `kube-*`. */}}
     - name: 'exclude-virtualization'
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
   timeoutSeconds: 15

@@ -50,9 +50,12 @@
     {{- end }}
     {{- $scopeExpressions := list }}
     {{- if eq $scope "user" }}
-      {{/* Excluding the system namespaces by name is not enough: a namespace the platform labels
-           as its own stays outside user policies whatever it is called, as it did when that label
-           was the whole definition of a system namespace. */}}
+      {{/* #### TODO: Backward compatibility, remove once every platform namespace is named
+           `d8-*` or `kube-*` and the name lists alone define a system namespace.
+
+           Excluding the system namespaces by name is not enough while a namespace the platform
+           labels as its own may be called something else: it stays outside user policies, as it
+           did when that label was the whole definition of a system namespace. */}}
       {{- $scopeExpressions = list
             (dict "key" "heritage" "operator" "NotIn" "values" (list "deckhouse")) }}
     {{- else if eq $scope "system-default" }}
@@ -380,6 +383,8 @@ spec:
           values: ["webhook"]
     namespaceSelector:
       matchExpressions:
+        # #### TODO: Backward compatibility, remove once every platform namespace is named `d8-*`
+        # or `kube-*` and the name list above alone keeps them out of this constraint.
         # A namespace the platform labels as its own is never a user namespace, whatever it is
         # called. The label was the whole definition of "system" before the names took over, and
         # honouring it keeps a namespace that carries it outside user policies, as it was.
@@ -556,6 +561,8 @@ spec:
         # written by the module that owns the namespace, and this is the selector the constraint
         # carried before names entered the picture, so a namespace that opted in keeps being
         # enforced even if it is not called `d8-*` or `kube-*`.
+        # #### TODO: Backward compatibility, drop the `heritage` expression and match this
+        # constraint by name once every platform namespace is named `d8-*` or `kube-*`.
         - { key: heritage, operator: In, values: [ deckhouse ] }
         - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
       # matches default enforcement action

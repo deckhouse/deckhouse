@@ -25,6 +25,9 @@ webhooks:
     platform itself is never mutated. The name condition adds `kube-*`, which the label below
     misses because the platform sets it on its own namespaces only; the label is kept so that a
     platform namespace named anything else stays out, as it was before the names took over.
+
+    #### TODO: Backward compatibility, remove the namespaceSelector below once every platform
+    namespace is named `d8-*` or `kube-*` and the match condition covers all of them.
   */}}
   namespaceSelector:
     matchExpressions:
