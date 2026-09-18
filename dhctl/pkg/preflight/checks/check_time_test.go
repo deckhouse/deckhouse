@@ -54,7 +54,7 @@ func TestCheckTimeDrift(t *testing.T) {
 					[]byte(strconv.FormatInt(remoteTime, 10)+"\n"), []byte(""), nil)
 				mni.On("Command", "date", []string{"+%s"}).Return(mc)
 			},
-			expectedError: "time drift between local",
+			expectedError: "apart",
 		},
 		{
 			name: "time drift exceeds acceptable range - remote behind",
@@ -65,15 +65,18 @@ func TestCheckTimeDrift(t *testing.T) {
 					[]byte(strconv.FormatInt(remoteTime, 10)+"\n"), []byte(""), nil)
 				mni.On("Command", "date", []string{"+%s"}).Return(mc)
 			},
-			expectedError: "time drift between local",
+			expectedError: "apart",
 		},
 		{
+			// The error used to be discarded and the check reported as passed, which made a node
+			// whose clock could not be read at all look like a node whose clock is correct.
 			name: "error getting remote timestamp",
 			setupMock: func(mni *mocks.MockNodeInterface, mc *mocks.MockCommand) {
 				mc.On("Output", mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })).Return(
 					[]byte(""), []byte(""), errors.New("command failed"))
 				mni.On("Command", "date", []string{"+%s"}).Return(mc)
 			},
+			expectedError: "cannot read the clock",
 		},
 		{
 			name: "invalid timestamp format",
@@ -82,6 +85,7 @@ func TestCheckTimeDrift(t *testing.T) {
 					[]byte("invalid-timestamp\n"), []byte(""), nil)
 				mni.On("Command", "date", []string{"+%s"}).Return(mc)
 			},
+			expectedError: "cannot read the clock",
 		},
 	}
 
@@ -91,8 +95,8 @@ func TestCheckTimeDrift(t *testing.T) {
 			mockCmd := &mocks.MockCommand{}
 			tt.setupMock(mockNode, mockCmd)
 
-			check := TimeDriftCheck{NodeInterface: mockNode}
-			err := check.Run(t.Context())
+			check := TimeDriftCheck{NodeInterface: FixedNodeInterface(mockNode)}
+			_, err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

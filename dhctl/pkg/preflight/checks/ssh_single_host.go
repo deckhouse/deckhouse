@@ -17,16 +17,16 @@ package checks
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type SingleSSHHostCheck struct {
-	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	// NodeInterface resolves the connection at the moment the check runs — see NodeInterfaceFunc.
+	NodeInterface NodeInterfaceFunc
 }
 
 const SingleSSHHostCheckName preflight.CheckName = "static-single-ssh-host"
@@ -40,26 +40,42 @@ func (SingleSSHHostCheck) Phase() preflight.Phase {
 }
 
 func (SingleSSHHostCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.RetryPolicy{Attempts: 1}
+	return preflight.NoRetry
 }
 
-func (c SingleSSHHostCheck) Run(ctx context.Context) error {
-	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
+func (c SingleSSHHostCheck) Run(ctx context.Context) (string, error) {
+	nodeInterface, err := c.NodeInterface(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
-		return nil
+		return "", preflight.NotApplicable("dhctl was given no SSH host")
 	}
-	if len(wrapper.Client().Session().AvailableHosts()) > 1 {
-		return fmt.Errorf("during the bootstrap of the first static master node, only one --ssh-host parameter is allowed")
+
+	hosts := wrapper.Client().Session().AvailableHosts()
+	if len(hosts) > 1 {
+		addresses := make([]string, 0, len(hosts))
+		for _, host := range hosts {
+			addresses = append(addresses, host.Host)
+		}
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  "the --ssh-host arguments (or the SSHHost resources of --connection-config)",
+			Observed: fmt.Sprintf("%d hosts were given: %s", len(hosts), strings.Join(addresses, ", ")),
+			Expected: "one host, the machine the first master will be bootstrapped on",
+			Fix: "pass a single --ssh-host for the bootstrap; the other masters are added afterwards " +
+				"by `dhctl converge` once the first one is up",
+		})
 	}
-	return nil
+
+	if len(hosts) == 0 {
+		return "", preflight.NotApplicable("dhctl was given no SSH host")
+	}
+	return fmt.Sprintf("one ssh host was given: %s", hosts[0].Host), nil
 }
 
-func SingleSSHHost(sshProvider *providerinitializer.SSHProviderInitializer) preflight.Check {
-	check := SingleSSHHostCheck{SSHProviderInitializer: sshProvider}
+func SingleSSHHost(nodeInterface NodeInterfaceFunc) preflight.Check {
+	check := SingleSSHHostCheck{NodeInterface: nodeInterface}
 	return preflight.Check{
 		Name:        SingleSSHHostCheckName,
 		Description: check.Description(),

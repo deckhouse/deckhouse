@@ -58,6 +58,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineSanityFlags(cmd, &opts.Global)
 	app.DefineDestroyResourcesFlags(cmd, &opts.Destroy)
+	app.DefinePreflight(cmd, &opts.Preflight)
 	app.DefineTFResourceManagementTimeout(cmd, &opts.Cache)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
@@ -93,14 +94,15 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		destroyerParams := &destroy.Params{
-			SSHProvider:   sshProvider,
-			KubeProvider:  kubeProvider,
-			StateCache:    cache.Global(),
-			SkipResources: opts.Destroy.SkipResources,
-			Logger:        logger.FromContext(ctx),
-			IsDebug:       opts.Global.IsDebug,
-			TmpDir:        opts.Global.TmpDir,
-			Options:       opts,
+			SSHProvider:            sshProvider,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
+			StateCache:             cache.Global(),
+			SkipResources:          opts.Destroy.SkipResources,
+			Logger:                 logger.FromContext(ctx),
+			IsDebug:                opts.Global.IsDebug,
+			TmpDir:                 opts.Global.TmpDir,
+			Options:                opts,
 		}
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {

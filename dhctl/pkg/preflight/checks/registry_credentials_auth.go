@@ -14,16 +14,19 @@
 
 package checks
 
+// Basic-then-bearer authentication against a container registry, as run by the
+// registry-credentials check in registry_credentials.go.
+
 import (
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
 
@@ -32,56 +35,42 @@ func prepareAuthHTTPClient(ctx context.Context, metaConfig *config.MetaConfig) (
 	return registryutil.NewRegistryClient(ctx, string(registry.Scheme), registry.CA)
 }
 
-type registryAuthCheck struct {
-	MetaConfig *config.MetaConfig
-}
-
-const RegistryAuthCheckName preflight.CheckName = "registry-auth"
-
-func (registryAuthCheck) Description() string {
-	return "registry credentials are valid"
-}
-
-func (registryAuthCheck) Phase() preflight.Phase {
-	return preflight.PhasePreInfra
-}
-
-func (registryAuthCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
-}
-
 var ErrAuthRegistryFailed = errors.New("authentication failed")
 
-func (c registryAuthCheck) Run(ctx context.Context) error {
-	if c.MetaConfig == nil {
-		return fmt.Errorf("meta config is required")
-	}
+// The two answers that mean something other than "wrong password", and which the operator has to
+// be told apart: credentials that are accepted but carry no pull right on the repository, and a
+// registry that offers basic authentication only.
+var (
+	ErrRegistryPullDenied        = errors.New("pull denied for the configured repository")
+	ErrRegistryBearerUnsupported = errors.New("the registry offers basic authentication only")
+)
 
-	client, err := prepareAuthHTTPClient(ctx, c.MetaConfig)
-	if err != nil {
-		return err
-	}
+// realmRe and serviceRe pull the bearer parameters out of a WWW-Authenticate header. They live
+// here, next to their only caller, rather than in registry_proxy.go where they used to sit.
+//
+// The URL character class is deliberately wide: the previous one accepted lower-case letters and
+// a handful of punctuation only, so a registry whose realm contained an upper-case letter or an
+// underscore — both legal in a URL — matched nothing, and the operator was told to "consider
+// enabling bearer token auth" on a registry that already had it.
+var (
+	realmRe   = regexp.MustCompile(`realm="(https?://[^"]+)"`)
+	serviceRe = regexp.MustCompile(`service="(.*?)"`)
+)
 
-	authData := c.MetaConfig.Registry.Settings.RemoteData.AuthBase64()
-
-	if err := checkBasicRegistryAuth(ctx, c.MetaConfig, authData, client); err == nil {
-		return nil
-	} else if !errors.Is(err, ErrAuthRegistryFailed) {
-		return err
-	}
-
-	return checkTokenRegistryAuth(ctx, c.MetaConfig, authData, client)
-}
-
-func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig, authData string) (*http.Request, error) {
+// registryV2URL is the /v2/ endpoint of the configured registry.
+func registryV2URL(metaConfig *config.MetaConfig) *url.URL {
 	registry := metaConfig.Registry.Settings.RemoteData
 	registryAddress, _ := registry.AddressAndPath()
 
-	registryURL := &url.URL{
+	return &url.URL{
 		Scheme: strings.ToLower(string(registry.Scheme)),
 		Host:   registryAddress,
 		Path:   registryPath,
 	}
+}
+
+func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig, authData string) (*http.Request, error) {
+	registryURL := registryV2URL(metaConfig)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
 	if err != nil {
@@ -140,7 +129,10 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 
 	realmMatches := realmRe.FindStringSubmatch(wwwAuthHeader)
 	if len(realmMatches) == 0 {
-		return authURL, registryService, fmt.Errorf("couldn't find the bearer realm parameter; consider enabling bearer token auth in your registry. Returned header: %s. %w", wwwAuthHeader, ErrAuthRegistryFailed)
+		// No bearer realm: the registry wants Basic, and the Basic attempt has already failed —
+		// so the credentials are wrong. Saying "enable bearer token auth" here, as the old text
+		// did, sends the operator to change a registry that is working as designed.
+		return authURL, registryService, fmt.Errorf("%w (WWW-Authenticate: %s). %w", ErrRegistryBearerUnsupported, wwwAuthHeader, ErrAuthRegistryFailed)
 	}
 	authURL = realmMatches[1]
 
@@ -153,15 +145,18 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 }
 
 func checkResponseError(resp *http.Response) error {
-	if resp.StatusCode == http.StatusUnauthorized {
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+	case http.StatusUnauthorized:
 		return ErrAuthRegistryFailed
-	}
-
-	if resp.StatusCode != http.StatusOK {
+	case http.StatusForbidden:
+		// The credentials were accepted and the repository was refused; that is a permission on
+		// the registry side, not a wrong password.
+		return fmt.Errorf("%w. %w", ErrRegistryPullDenied, ErrAuthRegistryFailed)
+	default:
 		return fmt.Errorf("unexpected response status code %d, %w", resp.StatusCode, ErrAuthRegistryFailed)
 	}
-
-	return nil
 }
 
 func checkBasicRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string, client *http.Client) error {
@@ -200,15 +195,4 @@ func checkTokenRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, 
 	defer resp.Body.Close()
 
 	return checkResponseError(resp)
-}
-
-func RegistryProxyAuth(meta *config.MetaConfig) preflight.Check {
-	check := registryAuthCheck{MetaConfig: meta}
-	return preflight.Check{
-		Name:        RegistryAuthCheckName,
-		Description: check.Description(),
-		Phase:       check.Phase(),
-		Retry:       check.RetryPolicy(),
-		Run:         check.Run,
-	}
 }

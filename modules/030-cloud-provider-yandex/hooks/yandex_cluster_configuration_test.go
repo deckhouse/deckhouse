@@ -217,7 +217,9 @@ ru-central1-c: test
 		It("All values should be gathered from discovered data", func() {
 			Expect(d).To(Not(ExecuteSuccessfully()))
 
-			Expect(d.GoHookError.Error()).To(ContainSubstring(`validate cloud-provider-cluster-configuration.yaml: Config document validation failed: Document validation failed`))
+			// The failing document is named now: a config with several documents in it used to
+			// report "Document validation failed" without saying which one.
+			Expect(d.GoHookError.Error()).To(ContainSubstring(`validate cloud-provider-cluster-configuration.yaml: Config document validation failed: "YandexClusterConfiguration, deckhouse.io/v1" document validation failed`))
 			Expect(d.GoHookError.Error()).Should(ContainSubstring(`must validate one and only one schema (oneOf). Found none valid`))
 			Expect(d.GoHookError.Error()).Should(ContainSubstring(`layout in body should be one of [Standard WithoutNAT]`))
 			// Expect(d.GoHookError.Error()).Should(ContainSubstring(`.masterNodeGroup is required`))

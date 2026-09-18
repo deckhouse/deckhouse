@@ -55,9 +55,10 @@ const immutableProviderDVP = "dvp"
 func ImmutableInstallerImages(metaConfig *config.MetaConfig) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableInstallerImagesCheckName,
+		Retry:       preflight.NetworkRetry,
 		Description: "installer image carries the system extensions and the control plane of the requested Kubernetes version",
 		Phase:       preflight.PhasePreInfra,
-		Run: func(ctx context.Context) error {
+		Run: preflight.Detailless(func(ctx context.Context) error {
 			if metaConfig == nil {
 				return errors.New("meta config is nil")
 			}
@@ -66,19 +67,26 @@ func ImmutableInstallerImages(metaConfig *config.MetaConfig) preflight.Check {
 			}
 			_, err := immutable.ResolveControlPlaneImages(ctx, metaConfig)
 			return err
-		},
+		}),
 	}
 }
 
 // ImmutableRegistryMode rejects the registry modes an immutable master cannot
 // use: it pulls from the registry directly, with no in-cluster proxy to route
 // through while it is still bringing the cluster up.
+//
+// Not skippable: this is not a check that might be wrong about the cluster, it is the shape of
+// the bootstrap dhctl is about to run. Skipping it does not let the run proceed — it lets it
+// proceed into a state the immutable path has no code for.
 func ImmutableRegistryMode(metaConfig *config.MetaConfig) preflight.Check {
 	return preflight.Check{
-		Name:        ImmutableRegistryModeCheckName,
-		Description: "registry runs in Unmanaged mode",
-		Phase:       preflight.PhasePreInfra,
-		Run: func(_ context.Context) error {
+		Name:            ImmutableRegistryModeCheckName,
+		Retry:           preflight.NoRetry,
+		Cacheable:       true,
+		CannotBeSkipped: true,
+		Description:     "registry runs in Unmanaged mode",
+		Phase:           preflight.PhasePreInfra,
+		Run: preflight.Detailless(func(_ context.Context) error {
 			mode := metaConfig.Registry.Settings.Mode
 			if mode != constant.ModeUnmanaged {
 				return fmt.Errorf(
@@ -87,7 +95,7 @@ func ImmutableRegistryMode(metaConfig *config.MetaConfig) preflight.Check {
 				)
 			}
 			return nil
-		},
+		}),
 	}
 }
 
@@ -97,9 +105,11 @@ func ImmutableRegistryMode(metaConfig *config.MetaConfig) preflight.Check {
 func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.GlobalOptions) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableSignatureModeCheckName,
+		Retry:       preflight.NoRetry,
+		Cacheable:   true,
 		Description: "control-plane signature mode is off",
 		Phase:       preflight.PhasePreInfra,
-		Run: func(ctx context.Context) error {
+		Run: preflight.Detailless(func(ctx context.Context) error {
 			extractor := controlplane.NewSettingsExtractor(
 				metaConfig,
 				config.NewSchemaStore(globalOpts),
@@ -120,7 +130,7 @@ func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.G
 					"the signing keys and the encryption provider config are uploaded to the node over SSH, and an immutable node runs no sshd",
 				mode,
 			)
-		},
+		}),
 	}
 }
 
@@ -130,23 +140,30 @@ func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.G
 func ImmutableKubeconfigKept(bootstrapOpts *options.BootstrapOptions, globalOpts *options.GlobalOptions) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableKubeconfigKeptCheckName,
+		Retry:       preflight.NoRetry,
 		Description: "the admin kubeconfig is written somewhere dhctl will not delete",
 		Phase:       preflight.PhasePreInfra,
-		Run: func(ctx context.Context) error {
+		Run: preflight.Detailless(func(ctx context.Context) error {
 			return immutable.CheckKubeconfigOutSurvivesCleanup(ctx, bootstrapOpts.KubeconfigOut, globalOpts.TmpDir)
-		},
+		}),
 	}
 }
 
 // ImmutableSupportedProvider keeps an immutable master on the platforms it has
 // actually been tried on. The limit is temporary and lifts once the remaining
 // clouds are tested.
+//
+// Not skippable, for the same reason as ImmutableRegistryMode: the answer is about what dhctl
+// supports, not about the operator's cluster, and there is nothing behind the flag to reach.
 func ImmutableSupportedProvider(metaConfig *config.MetaConfig) preflight.Check {
 	return preflight.Check{
-		Name:        ImmutableSupportedProviderCheckName,
-		Description: "the platform is one an immutable master has been tested on",
-		Phase:       preflight.PhasePreInfra,
-		Run: func(_ context.Context) error {
+		Name:            ImmutableSupportedProviderCheckName,
+		CannotBeSkipped: true,
+		Retry:           preflight.NoRetry,
+		Cacheable:       true,
+		Description:     "the platform is one an immutable master has been tested on",
+		Phase:           preflight.PhasePreInfra,
+		Run: preflight.Detailless(func(_ context.Context) error {
 			if metaConfig.ClusterType == config.StaticClusterType {
 				return nil
 			}
@@ -159,7 +176,7 @@ func ImmutableSupportedProvider(metaConfig *config.MetaConfig) preflight.Check {
 					"and in a %s cluster only, and the limit lifts once the remaining clouds are tested as well",
 				metaConfig.ProviderName, config.StaticClusterType,
 			)
-		},
+		}),
 	}
 }
 
@@ -170,14 +187,15 @@ func ImmutableSupportedProvider(metaConfig *config.MetaConfig) preflight.Check {
 func ImmutableKubeconfigOut(bootstrapOpts *options.BootstrapOptions, commanderMode bool) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableKubeconfigOutCheckName,
+		Retry:       preflight.NoRetry,
 		Description: "the admin kubeconfig has somewhere to be written",
 		Phase:       preflight.PhasePreInfra,
-		Run: func(_ context.Context) error {
+		Run: preflight.Detailless(func(_ context.Context) error {
 			if !commanderMode || bootstrapOpts.KubeconfigOut != "" {
 				return nil
 			}
 			return immutable.ErrKubeconfigOutRequired
-		},
+		}),
 	}
 }
 
@@ -186,9 +204,10 @@ func ImmutableKubeconfigOut(bootstrapOpts *options.BootstrapOptions, commanderMo
 func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutablePostBootstrapScriptCheckName,
+		Retry:       preflight.NoRetry,
 		Description: "no post-bootstrap script is requested",
 		Phase:       preflight.PhasePreInfra,
-		Run: func(_ context.Context) error {
+		Run: preflight.Detailless(func(_ context.Context) error {
 			if bootstrapOpts.PostBootstrapScriptPath == "" {
 				return nil
 			}
@@ -196,7 +215,7 @@ func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) prefl
 				"--post-bootstrap-script-path (%s) is not supported for an immutable master: the script is executed over SSH and an immutable node runs no sshd",
 				bootstrapOpts.PostBootstrapScriptPath,
 			)
-		},
+		}),
 	}
 }
 
@@ -204,19 +223,21 @@ func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) prefl
 // --master-host answers its maintenance port, and the hardware it reports is
 // the hardware its document describes. Both come from one inventory read.
 //
-// The work lives in the bootstrapper — it owns the tunnel and the documents —
-// and arrives here as run. A cloud bootstrap names no machines and passes it
-// with nothing to do.
+// The work lives in the bootstrapper — it owns the tunnel and the documents — and arrives here
+// as run, which is also where the "no machines were named" verdict is decided, because that is
+// where the host list is. The nil guard below is for a suite built without one at all.
 func ImmutableMachinesAvailability(run func(context.Context) error) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableMachinesAvailabilityCheckName,
+		Retry:       preflight.NoRetry,
+		Timeout:     preflight.LongCheckTimeout,
 		Description: "the machines named with --master-host answer and match the configuration written for them",
 		Phase:       preflight.PhasePreInfra,
-		Run: func(ctx context.Context) error {
+		Run: preflight.Detailless(func(ctx context.Context) error {
 			if run == nil {
-				return nil
+				return preflight.NotApplicable("this bootstrap names no machines with --master-host; the provider creates the masters")
 			}
 			return run(ctx)
-		},
+		}),
 	}
 }

@@ -32,10 +32,14 @@ type VSphereProvider struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Insecure bool   `json:"insecure"`
+	CABundle string `json:"caBundle"`
 }
 
 type CloudAPIConfig struct {
 	URL      *url.URL
 	Insecure bool
 	CACert   string
+	// Field is the configuration path the endpoint came from, so a failure can point the reader
+	// at what to edit rather than only at the address that did not answer.
+	Field string
 }

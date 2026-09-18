@@ -134,6 +134,21 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
 		}
+
+		// Everything about the cluster's address space that the documents alone decide. It lives
+		// here rather than in preflight because preflight does not run for `dhctl config`, does
+		// not run for converge, and is turned off wholesale by --preflight-skip-all-checks — and
+		// none of these parameters can be changed after the cluster is created.
+		if err := validateClusterNetworking(ctx, m); err != nil {
+			return nil, err
+		}
+
+		warnAboutKubernetesVersion(ctx, m)
+	}
+
+	// The documents against each other, rather than each against its own schema.
+	if err := validateClusterDocuments(ctx, m); err != nil {
+		return nil, err
 	}
 
 	if len(m.InitClusterConfig) > 0 {
@@ -158,7 +173,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 	if err != nil {
 		return nil, err
 	}
-	m.ClusterPrefix = m.effectiveClusterPrefix(cloudSpec.Prefix)
+	m.ClusterPrefix, err = m.effectiveClusterPrefix(cloudSpec.Prefix)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
@@ -1179,15 +1197,38 @@ func (m *MetaConfig) LoadImagesDigests() error {
 // new home for this value and takes precedence over the deprecated
 // ClusterConfiguration.cloud.prefix, which is being removed together with the
 // whole cloud section. Falls back to cloudPrefix during the transition.
-func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) string {
+// effectiveClusterPrefix picks the prefix the installer names cloud objects with. The two places
+// it can be written must agree: the ModuleConfig value is what in-cluster consumers read, the
+// ClusterConfiguration value is what the Terraform layouts read, and a cluster whose objects are
+// named by one while its modules expect the other is a cluster nobody can reason about.
+//
+// The mismatch used to be resolved silently in favour of the ModuleConfig. The operator learned
+// about it from the cloud rejecting a resource name, or from bashible ten minutes in with
+// "FAIL Hostname '<prefix>-master-0'".
+func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) (string, error) {
+	modulePrefix := ""
 	if mc := m.FindModuleConfig("global"); mc != nil {
 		if raw, ok := mc.Spec.Settings["prefix"]; ok {
-			if p, ok := raw.(string); ok && p != "" {
-				return p
+			if p, ok := raw.(string); ok {
+				modulePrefix = p
 			}
 		}
 	}
-	return cloudPrefix
+
+	switch {
+	case modulePrefix == "":
+		return cloudPrefix, nil
+	case cloudPrefix == "":
+		return modulePrefix, nil
+	case modulePrefix != cloudPrefix:
+		return "", fmt.Errorf(
+			"ClusterConfiguration.cloud.prefix is %q and spec.settings.prefix in the \"global\" ModuleConfig is %q. "+
+				"They name the same cluster and must match: the installer names cloud objects from the first, "+
+				"and the modules in the cluster read the second",
+			cloudPrefix, modulePrefix)
+	default:
+		return modulePrefix, nil
+	}
 }
 
 // clusterConfigForInfrastructure returns the ClusterConfiguration to feed to the

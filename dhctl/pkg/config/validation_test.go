@@ -508,7 +508,7 @@ kind: StaticClusterConfiguration
 internalNetworkCIDRs:
 - 192.168.199.0/24test`,
 			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=StaticClusterConfiguration: "StaticClusterConfiguration, deckhouse.io/v1" document validation failed: 1 error occurred:
-	* internalNetworkCIDRs should match '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+	* internalNetworkCIDRs has the wrong form; it should look like "10.244.0.0/16"
 
 `,
 		},

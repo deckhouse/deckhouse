@@ -28,11 +28,36 @@ type GlobalDeps struct {
 }
 
 func NewGlobalSuite(deps GlobalDeps) preflight.Suite {
+	// The image config is fetched once, by deckhouse-image-available, and read by every check
+	// that only needs to look at a label on it.
+	image := checks.NewDeckhouseImage()
+
+	// The registry is reached, then authenticated to, then asked for the image — each step
+	// declaring the one before it, so a registry that is simply unreachable produces one failure
+	// instead of four.
+	//
+	// The CIDR and publicDomainTemplate checks that used to lead this suite are now part of
+	// loading the configuration (pkg/config): they read nothing but the documents, and as
+	// preflight checks they did not run for `dhctl config` or converge and were turned off by
+	// --preflight-skip-all-checks.
 	return preflight.NewSuite(
-		checks.PublicDomainTemplate(deps.MetaConfig),
-		checks.RegistryCredentials(deps.MetaConfig, deps.InstallConfig),
-		checks.DhctlEdition(deps.MetaConfig, deps.InstallConfig, deps.BuildInfo),
-		checks.CidrIntersection(deps.MetaConfig),
+		checks.RegistryReachable(deps.MetaConfig),
+		checks.RegistryCredentials(deps.MetaConfig, deps.InstallConfig).
+			After(checks.RegistryReachableCheckName),
+		checks.DeckhouseImageAvailable(deps.MetaConfig, deps.InstallConfig, image).
+			After(checks.RegistryReachableCheckName, checks.RegistryCredentialsCheckName),
+		checks.DhctlEdition(deps.BuildInfo, image).
+			After(checks.DeckhouseImageAvailableCheckName),
+		checks.DhctlVersion(deps.BuildInfo, image).
+			After(checks.DeckhouseImageAvailableCheckName),
+		// The tag being there says nothing about what is behind it: a registry filled by copying
+		// the tag holds the Deckhouse image and none of the images it refers to.
+		checks.RegistryRequiredImages(deps.MetaConfig).
+			After(checks.RegistryReachableCheckName, checks.RegistryCredentialsCheckName),
+		// Reads the documents and nothing else, so by the rule above it belongs in pkg/config
+		// rather than here. Left where #22688 put it: relocating another team's check is not a
+		// merge's business, and it is the one thing standing between a half-migrated
+		// ClusterConfiguration/ModuleConfig pair and a silently picked winner.
 		checks.NetworkSingleSource(deps.MetaConfig),
 	)
 }

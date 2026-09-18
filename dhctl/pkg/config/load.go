@@ -22,6 +22,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -412,6 +414,17 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			dhlog.FromContext(ctx).DebugContext(ctx,
 				fmt.Sprintf("Module %s wasn't found. It is probably a module from modulesources. Skipping it", mc.GetName()),
 			)
+			// A module that comes from a ModuleSource is legitimately unknown here, so this
+			// cannot be an error. A typo in the name is indistinguishable from one — except that
+			// a typo is usually one letter away from a module that does exist, and the document
+			// is otherwise silently filed away as a plain resource and configures nothing.
+			if suggestion, ok := s.closestModuleName(mcName); ok {
+				dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+					"ModuleConfig %q does not match any module in this installer image; it will be created as a plain "+
+						"resource after bootstrap and will not configure anything. Did you mean %q? "+
+						"If the module comes from a ModuleSource, ignore this.",
+					mcName, suggestion))
+			}
 			return ErrSchemaNotFound
 		}
 
@@ -604,6 +617,69 @@ func (s *SchemaStore) LoadProviderDir(provider, digest, dir string) error {
 	return nil
 }
 
+// patternErrorRe matches what go-openapi says about a value that does not match a schema pattern:
+// the field, and then the regular expression itself. The " in body" half is present for some
+// schemas and not others, so it is optional here.
+var patternErrorRe = regexp.MustCompile(`^(.+?)(?: in body)? should match '(.+)'$`)
+
+// readableSchemaError turns a go-openapi message into one an operator can act on.
+//
+// The pattern messages are the worst of them. A mistyped CIDR produces
+//
+//	internalNetworkCIDRs.0 in body should match '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}…'
+//
+// which states the rule exactly and communicates nothing: the reader has to decode a regular
+// expression to find out that a prefix length is missing. The schemas carry x-examples for this
+// reason, and showing one of them says the same thing in a form the reader can copy.
+func readableSchemaError(err error, schema *spec.Schema) error {
+	matches := patternErrorRe.FindStringSubmatch(err.Error())
+	if matches == nil {
+		return err
+	}
+
+	field := matches[1]
+	example := schemaExampleFor(schema, field)
+	if example == "" {
+		return err
+	}
+
+	return fmt.Errorf("%s has the wrong form; it should look like %q", field, example)
+}
+
+// schemaExampleFor finds a value to show for a field, from the x-examples of the document or from
+// the example on the property itself. The field path go-openapi reports carries array indices
+// ("internalNetworkCIDRs.0"), which are dropped: the example belongs to the property.
+func schemaExampleFor(schema *spec.Schema, field string) string {
+	name := field
+	if at := strings.LastIndex(name, "."); at >= 0 {
+		if _, err := strconv.Atoi(name[at+1:]); err == nil {
+			name = name[:at]
+		}
+	}
+	name = name[strings.LastIndex(name, ".")+1:]
+
+	examples, ok := schema.Extensions["x-examples"].([]any)
+	if !ok || len(examples) == 0 {
+		return ""
+	}
+	document, ok := examples[0].(map[string]any)
+	if !ok {
+		return ""
+	}
+
+	switch value := document[name].(type) {
+	case string:
+		return value
+	case []any:
+		if len(value) > 0 {
+			if first, ok := value[0].(string); ok {
+				return first
+			}
+		}
+	}
+	return ""
+}
+
 func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (bool, error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
@@ -624,7 +700,9 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptio
 	result := validator.Validate(blank)
 	if !result.IsValid() {
 		var allErrs *multierror.Error
-		allErrs = multierror.Append(allErrs, result.Errors...)
+		for _, err := range result.Errors {
+			allErrs = multierror.Append(allErrs, readableSchemaError(err, schema))
+		}
 
 		return false, allErrs.ErrorOrNil()
 	}
@@ -684,4 +762,48 @@ func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
 
 	doc, err := yaml.Marshal(conversed)
 	return doc, err
+}
+
+// closestModuleName returns the known module name nearest to what was written, and only when it
+// really is near: a module from a ModuleSource is legitimately unknown here, and suggesting a
+// random name for one would be worse than saying nothing.
+func (s *SchemaStore) closestModuleName(name string) (string, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	best, bestDistance := "", -1
+	for candidate := range s.modulesCache {
+		distance := moduleNameDistance(name, candidate)
+		if bestDistance < 0 || distance < bestDistance {
+			best, bestDistance = candidate, distance
+		}
+	}
+
+	// Two edits: enough for a transposed or a dropped letter ("cni-cillium" for "cni-cilium"),
+	// not enough to reach an unrelated module.
+	if bestDistance < 0 || bestDistance > 2 {
+		return "", false
+	}
+	return best, true
+}
+
+// moduleNameDistance is Levenshtein over two rows.
+func moduleNameDistance(a, b string) int {
+	prev := make([]int, len(b)+1)
+	curr := make([]int, len(b)+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		curr[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			curr[j] = min(prev[j]+1, curr[j-1]+1, prev[j-1]+cost)
+		}
+		prev, curr = curr, prev
+	}
+	return prev[len(b)]
 }

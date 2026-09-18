@@ -69,9 +69,15 @@ func CheckPreventBreakAnotherBootstrappedCluster(
 		}
 
 		if uuidInCluster != config.UUID {
-			return fmt.Errorf(`Cluster UUIDs are not equal in the cluster (%s) and in this installation (%s).
-You are probably trying to bootstrap a cluster on a node with a previously created cluster.
-Please check the hostname.`, uuidInCluster, config.UUID)
+			// The old advice was "Please check the hostname", which is about a cloud node being
+			// recreated under a name that already exists. On a static cluster — where this is
+			// usually hit — the hostname has nothing to do with it: the node simply carries a
+			// previous Deckhouse install, which static-node-leftovers now reports before
+			// anything is touched.
+			return fmt.Errorf(`Cluster UUIDs are not equal: the cluster on this node reports %s, and this installation is %s.
+The node already belongs to a cluster. Either point dhctl at the right cluster, or clean the node
+(remove /var/lib/bashible, /var/lib/kubelet, /var/lib/containerd and /etc/kubernetes) and bootstrap it again.`,
+				uuidInCluster, config.UUID)
 		}
 
 		return nil

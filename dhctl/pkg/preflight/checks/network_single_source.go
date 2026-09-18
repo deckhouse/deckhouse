@@ -28,7 +28,9 @@ type NetworkSingleSourceCheck struct {
 const NetworkSingleSourceCheckName preflight.CheckName = "network-single-source"
 
 func (NetworkSingleSourceCheck) Description() string {
-	return "cluster network parameters are declared in only one of ClusterConfiguration or ModuleConfig control-plane-manager"
+	// Short enough to share the result line with the check name; the failure itself names both
+	// documents.
+	return "the cluster network parameters are declared in one document, not two"
 }
 
 func (NetworkSingleSourceCheck) Phase() preflight.Phase {
@@ -36,7 +38,8 @@ func (NetworkSingleSourceCheck) Phase() preflight.Phase {
 }
 
 func (NetworkSingleSourceCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.RetryPolicy{Attempts: 1}
+	// Nothing here can change between attempts: it reads two documents.
+	return preflight.NoRetry
 }
 
 func (c NetworkSingleSourceCheck) Run(ctx context.Context) error {
@@ -54,6 +57,7 @@ func NetworkSingleSource(meta *config.MetaConfig) preflight.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Run:         check.Run,
+		// Detailless: the check has nothing to report on success beyond its own description.
+		Run: preflight.Detailless(check.Run),
 	}
 }

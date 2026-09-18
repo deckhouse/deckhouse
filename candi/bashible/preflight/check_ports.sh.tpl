@@ -88,29 +88,52 @@ function check_port() {
 
 has_error=false
 
-check_python
-
-echo -n "Checking if kubernetes API port is open (6443) "
-check_port 6443
-if [ $? -ne 0 ]; then
-    echo "Port 6443 is closed but required for the Kubernetes API server. The control-plane node is likely behind firewall rules or another tool (such as an antivirus) that blocks incoming connections."
-    has_error=true
-fi
-echo "SUCCESS"
-
-echo -n "Checking if Etcd ports are available (2379, 2380) "
-check_port 2379
-if [ $? -ne 0 ]; then
-    echo "Port 2379 is closed but required for etcd client connections. The control-plane node is likely behind firewall rules or another tool (such as an antivirus) that blocks incoming connections."
-    has_error=true
+# Without a python there is nothing to open a socket with, so every port below would be reported
+# as unavailable. Saying "port 6443 is closed" when the truth is "this node has no python" sends
+# the reader to the firewall for a problem that is not there.
+if ! check_python; then
+    exit 1
 fi
 
-check_port 2380
-if [ $? -ne 0 ]; then
-    echo "Port 2380 is closed but required for etcd peer communication. The control-plane node is likely behind firewall rules or another tool (such as an antivirus) that blocks incoming connections."
-    has_error=true
-fi
-echo "SUCCESS"
+firewall_note="The control-plane node is likely behind firewall rules or another tool (such as an antivirus) that blocks incoming connections."
+
+# The ports the control plane binds on the node, and who binds each one. A port already held is
+# not a firewall problem at all — it is another process, usually a previous install that was
+# never cleaned — so the two cases get different advice.
+#
+# One group per line: a label, then "port=what needs it" pairs.
+#
+# 4282 is deliberately absent: registry-packages-proxy listens on it inside a pod, not on the
+# node, so nothing on the host competes for it.
+port_groups=(
+  "kubernetes API (6443)|6443=the Kubernetes API server"
+  "Etcd (2379, 2380)|2379=etcd client connections|2380=etcd peer communication"
+  "kubelet (10250)|10250=kubelet"
+  "kubernetes-api-proxy (6445, 6480)|6445=kubernetes-api-proxy|6480=the kubernetes-api-proxy health endpoint"
+  "registry (5001, 5444)|5001=the in-cluster registry|5444=the registry packages proxy dhctl brings up during the bootstrap"
+)
+
+for group in "${port_groups[@]}"; do
+    IFS='|' read -r -a fields <<< "$group"
+    echo -n "Checking if ${fields[0]} ports are available "
+
+    group_ok=true
+    for entry in "${fields[@]:1}"; do
+        port="${entry%%=*}"
+        purpose="${entry#*=}"
+
+        if ! check_port "$port"; then
+            echo "Port ${port} is not available but is required by ${purpose}. ${firewall_note} If a previous installation is still running on this node, clean it up first; \`ss -lntp | grep :${port}\` names the process holding it."
+            group_ok=false
+        fi
+    done
+
+    if [ "$group_ok" == true ]; then
+        echo "SUCCESS"
+    else
+        has_error=true
+    fi
+done
 
 if [ "$has_error" == true ]; then
   exit 1

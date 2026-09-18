@@ -1,4 +1,4 @@
-2869
+2879
 1GB
 2GB
 5XX
@@ -959,6 +959,7 @@ WithNAT
 WithNATInstance
 WithNatInstance
 WithoutNAT
+XFS
 YC
 YCC
 YCloud

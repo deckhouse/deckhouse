@@ -34,7 +34,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type externalPhasedContext interface {
@@ -42,7 +44,12 @@ type externalPhasedContext interface {
 }
 
 type Params struct {
-	KubeProvider   libcon.KubeProvider
+	KubeProvider libcon.KubeProvider
+	// SSHProviderInitializer is the connection to the machines, where the cluster is reached
+	// through one. nil, or carrying no hosts, on a kubeconfig run — and then there is nothing
+	// for the node preflights to ask.
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+
 	StateCache     dhctlstate.Cache
 	OnPhaseFunc    phases.DefaultOnPhaseFunc
 	OnProgressFunc phases.OnProgressFunc
@@ -102,6 +109,14 @@ func (c *Checker) SetExternalPhasedContext(pec externalPhasedContext) {
 func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	cleaner := func() error {
 		return nil
+	}
+
+	// Ahead of the kube client, which is what the bad credential would otherwise surface as:
+	// a key the node does not accept spent about four minutes on "Try to connect to host", and
+	// a user without sudo reached "Timeout while \"Get Kubernetes API client\"" — because the
+	// client is a kubectl proxy started on the master with sudo.
+	if err := suites.RunNodeAccessPreflights(ctx, c.SSHProviderInitializer, &c.Options.Preflight, "Preflight checks: check"); err != nil {
+		return nil, cleaner, err
 	}
 
 	kubeCl, err := c.GetKubeClient(ctx)
