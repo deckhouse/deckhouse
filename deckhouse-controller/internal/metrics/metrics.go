@@ -69,6 +69,18 @@ const (
 	// ============================================================================
 	// Module Release Controller Metrics
 	// ============================================================================
+	// ============================================================================
+	// Licensing Controller Metrics
+	// ============================================================================
+	D8LicenseComplianceState        = "d8_license_compliance_state"
+	D8LicenseEffectiveLimit         = "d8_license_effective_limit"
+	D8LicenseConsumption            = "d8_license_consumption"
+	D8LicenseWithinLimits           = "d8_license_within_limits"
+	D8LicenseNextReductionSeconds   = "d8_license_next_reduction_seconds"
+	D8LicenseLimitAfterReduction    = "d8_license_limit_after_reduction"
+	D8LicenseRecordExpiresInSeconds = "d8_license_record_expires_in_seconds"
+	D8LicenseRecords                = "d8_license_records"
+
 	ModulePullSecondsTotal     = "deckhouse_module_pull_seconds_total"
 	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
 	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
@@ -84,6 +96,10 @@ const (
 	D8Updating                       = "d8_updating"
 	D8ModuleUpdatingGroup            = "d8_module_updating_group"
 	ModuleReleaseGroup               = "module_release_group"
+	// LicensingGroup holds every licensing gauge, so that a series for a record
+	// or a resource that disappeared from the policy expires with the group
+	// instead of being exported forever at its last value.
+	LicensingGroup = "d8_licensing"
 )
 
 // Group templates for dynamic metric names using fmt.Sprintf
@@ -126,6 +142,38 @@ func RegisterDeckhouseControllerMetrics(metricStorage metricsstorage.Storage) er
 
 	if err := RegisterModuleControllerMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register module controller metrics: %w", err)
+	}
+
+	if err := RegisterLicensingMetrics(metricStorage); err != nil {
+		return fmt.Errorf("register licensing metrics: %w", err)
+	}
+
+	return nil
+}
+
+// RegisterLicensingMetrics registers the gauges published by the licensing
+// controller. The names are the contract of the licensing alerts in
+// modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml.
+func RegisterLicensingMetrics(metricStorage metricsstorage.Storage) error {
+	gauges := []struct {
+		name   string
+		labels []string
+		help   string
+	}{
+		{D8LicenseComplianceState, []string{LabelReason}, "Compliance state of the license policy (0 = Valid, 1 = Warning, 2 = Grace, 3 = Violation, 4 = NoUpdateRight); reason carries the check that produced it, empty while Valid"},
+		{D8LicenseEffectiveLimit, []string{LabelResource}, "Effective quota of a resource; the series is absent while the resource is unlimited"},
+		{D8LicenseConsumption, []string{LabelResource, LabelKind}, "Observed consumption of a resource, by kind (instant, avg_7d, extrapolated)"},
+		{D8LicenseWithinLimits, nil, "Whether every observed resource stays within its effective limit (1.0 = yes)"},
+		{D8LicenseNextReductionSeconds, nil, "Seconds until the effective limits shrink"},
+		{D8LicenseLimitAfterReduction, []string{LabelResource}, "Quota of a resource after the next reduction"},
+		{D8LicenseRecordExpiresInSeconds, []string{LabelRecordID, LabelLicense}, "Seconds until an active license record expires"},
+		{D8LicenseRecords, []string{LabelType, LabelStatus}, "Number of license records by type and status (accepted or the rejection reason)"},
+	}
+
+	for _, g := range gauges {
+		if _, err := metricStorage.RegisterGauge(g.name, g.labels, options.WithHelp(g.help)); err != nil {
+			return fmt.Errorf("failed to register %s: %w", g.name, err)
+		}
 	}
 
 	return nil
