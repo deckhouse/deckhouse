@@ -291,7 +291,7 @@ As with policy assignment, enforcement mode can be set:
 ### Policies in system namespaces
 
 Namespaces named `d8-*` and `kube-*` hold the components of the platform itself.
-Policies apply to them differently from the namespaces of your applications, and that difference is not configurable.
+Policies apply to them differently from application namespaces, and that difference is not configurable.
 
 Every such namespace is checked against the `restricted` standard in `warn` mode.
 The `security.deckhouse.io/pod-policy` label and the
@@ -306,7 +306,7 @@ and Deckhouse returns both to their declared state the next time it applies the 
 A module exempts a workload of its own where it has to, with a SecurityPolicyException it ships itself.
 
 OperationPolicy and SecurityPolicy resources reach system namespaces in `warn` mode as well.
-A policy with `enforcementAction: Deny` blocks workloads in the namespaces of your applications
+A policy with `enforcementAction: Deny` blocks workloads in application namespaces
 and only reports violations in a system namespace.
 A module may opt its own namespace into enforcement, and there such a policy keeps its own action.
 
