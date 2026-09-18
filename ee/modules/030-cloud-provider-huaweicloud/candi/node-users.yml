@@ -1,0 +1,7 @@
+schemaVersion: 1
+# dhctl assembles the users list of every node's cloud-config, and this file is where the
+# provider says what belongs in it. The image carries a distro user (ubuntu, debian,
+# ec2-user), so cloud-init's "default" marker reaches it and no account is declared here.
+# A terraform module must not add a users key of its own: cloud-init keeps one such key
+# per document and drops the rest, taking the account converge logs in with.
+defaultUser: default

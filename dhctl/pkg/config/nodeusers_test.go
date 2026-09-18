@@ -33,15 +33,37 @@ func writeNodeUsers(t *testing.T, provider, body string) string {
 	return dir
 }
 
-// Ten providers out of eleven ship no node-users.yml. Reporting that as an error would
-// stop every converge of every one of them.
-func TestLoadProviderDefaultUserWithoutFile(t *testing.T) {
+// The file is the contract, so every cloud provider ships one. A provider without it says
+// nothing about the users list dhctl assembles, and silence is what this whole file exists
+// to prevent.
+func TestLoadProviderDefaultUserRequiresTheFile(t *testing.T) {
 	m := &MetaConfig{ClusterType: CloudClusterType, ProviderName: "demo"}
 
-	user, err := LoadProviderDefaultUser(m, candiDirOptions(t.TempDir()))
+	_, err := LoadProviderDefaultUser(m, candiDirOptions(t.TempDir()))
+
+	require.ErrorContains(t, err, "read node users file")
+}
+
+// The marker is what ten providers out of eleven write: their images carry a distro user.
+func TestLoadProviderDefaultUserWithDistroMarker(t *testing.T) {
+	dir := writeNodeUsers(t, "demo", "schemaVersion: 1\ndefaultUser: default\n")
+
+	m := &MetaConfig{ClusterType: CloudClusterType, ProviderName: "demo"}
+
+	user, err := LoadProviderDefaultUser(m, candiDirOptions(dir))
 
 	require.NoError(t, err)
-	require.Nil(t, user, "no file means cloud-init's own default user, not a failure")
+	require.Nil(t, user, "the marker means cloud-init's own default user")
+}
+
+func TestLoadProviderDefaultUserRejectsAnUnknownMarker(t *testing.T) {
+	dir := writeNodeUsers(t, "demo", "schemaVersion: 1\ndefaultUser: whoever\n")
+
+	m := &MetaConfig{ClusterType: CloudClusterType, ProviderName: "demo"}
+
+	_, err := LoadProviderDefaultUser(m, candiDirOptions(dir))
+
+	require.ErrorContains(t, err, `defaultUser is "whoever"`)
 }
 
 func TestLoadProviderDefaultUserFromFile(t *testing.T) {
@@ -89,16 +111,16 @@ defaultUser:
 	require.ErrorContains(t, err, "defaultUser has no name")
 }
 
-// A file that declares nothing is the same answer as no file: keep cloud-init's default.
-func TestLoadProviderDefaultUserWithEmptyDeclaration(t *testing.T) {
+// A file that declares nothing leaves the reader guessing, which is the state this file
+// replaces. The marker has to be written out.
+func TestLoadProviderDefaultUserRequiresADeclaration(t *testing.T) {
 	dir := writeNodeUsers(t, "demo", "schemaVersion: 1\n")
 
 	m := &MetaConfig{ClusterType: CloudClusterType, ProviderName: "demo"}
 
-	user, err := LoadProviderDefaultUser(m, candiDirOptions(dir))
+	_, err := LoadProviderDefaultUser(m, candiDirOptions(dir))
 
-	require.NoError(t, err)
-	require.Nil(t, user)
+	require.ErrorContains(t, err, "defaultUser is required")
 }
 
 // A static cluster has no provider tree to read the file from.

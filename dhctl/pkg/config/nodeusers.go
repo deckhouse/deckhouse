@@ -15,6 +15,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,9 +31,9 @@ const (
 	nodeUsersSupportedV = 1
 )
 
-// ProviderDefaultUser is the account a provider declares for its image, standing in for
-// cloud-init's "default". An image with no distro default user has nobody for cloud-init
-// to hand the cluster ssh key to, so the provider names the account it does create.
+// ProviderDefaultUser is the account a provider declares for its image. A nil value means
+// the file named cloud-init's "default" marker: the image carries a distro user (ubuntu,
+// debian, ec2-user) and cloud-init hands the cluster ssh key to it.
 type ProviderDefaultUser struct {
 	Name   string   `json:"name"`
 	Groups []string `json:"groups"`
@@ -41,13 +42,19 @@ type ProviderDefaultUser struct {
 // sigs.k8s.io/yaml parses by converting YAML to JSON and unmarshalling with
 // encoding/json, so these structs use json tags, not yaml tags.
 type nodeUsers struct {
-	SchemaVersion int                  `json:"schemaVersion"`
-	DefaultUser   *ProviderDefaultUser `json:"defaultUser"`
+	SchemaVersion int             `json:"schemaVersion"`
+	DefaultUser   json.RawMessage `json:"defaultUser"`
 }
 
-// LoadProviderDefaultUser reads the account a provider declares in node-users.yml. Ten
-// providers out of eleven ship no such file, and that is the answer rather than an error:
-// their images carry a distro default user and cloud-init's "default" reaches it.
+// distroDefaultMarker is what a provider whose image has its own user writes in the file.
+// It is cloud-init's own marker, spelled out so that the file says something in every
+// provider rather than existing only where an account had to be declared.
+const distroDefaultMarker = "default"
+
+// LoadProviderDefaultUser reads the account a provider declares in node-users.yml. The file
+// is mandatory for a cloud provider, the way cni-bootstrap.yml is: dhctl assembles the users
+// list of every node's cloud-config, and this file is where a provider says what belongs in
+// it. A nil user means the file named the distro default.
 func LoadProviderDefaultUser(m *MetaConfig, globalOptions *options.GlobalOptions) (*ProviderDefaultUser, error) {
 	if m == nil || m.ClusterType != CloudClusterType || m.ProviderName == "" {
 		return nil, nil
@@ -57,10 +64,6 @@ func LoadProviderDefaultUser(m *MetaConfig, globalOptions *options.GlobalOptions
 
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-
 		return nil, fmt.Errorf("read node users file %s: %w", path, err)
 	}
 
@@ -74,15 +77,36 @@ func LoadProviderDefaultUser(m *MetaConfig, globalOptions *options.GlobalOptions
 			path, declared.SchemaVersion, nodeUsersSupportedV)
 	}
 
-	if declared.DefaultUser == nil {
+	return parseDefaultUser(path, declared.DefaultUser)
+}
+
+func parseDefaultUser(path string, raw json.RawMessage) (*ProviderDefaultUser, error) {
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("node users file %s: defaultUser is required, write %q when the image has its own user",
+			path, distroDefaultMarker)
+	}
+
+	var marker string
+	if err := json.Unmarshal(raw, &marker); err == nil {
+		if marker != distroDefaultMarker {
+			return nil, fmt.Errorf("node users file %s: defaultUser is %q, want %q or an account with a name",
+				path, marker, distroDefaultMarker)
+		}
+
 		return nil, nil
 	}
 
-	if declared.DefaultUser.Name == "" {
+	var user ProviderDefaultUser
+	if err := json.Unmarshal(raw, &user); err != nil {
+		return nil, fmt.Errorf("node users file %s: defaultUser is neither %q nor an account: %w",
+			path, distroDefaultMarker, err)
+	}
+
+	if user.Name == "" {
 		return nil, fmt.Errorf("node users file %s: defaultUser has no name", path)
 	}
 
-	return declared.DefaultUser, nil
+	return &user, nil
 }
 
 // nodeUsersPath prefers the bundled candi tree and falls back to the unpacked provider
