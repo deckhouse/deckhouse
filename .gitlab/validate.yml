@@ -50,6 +50,39 @@ tests_node_controller:
     - cd modules/040-node-manager/images/node-controller/src
     - make test LOCALBIN="${HOME}/envtest-assets"
 
+# --- registry images unit tests ---
+#
+# Every binary of the registry module lives under its own go.mod, so `make tests-modules`
+# (TESTS_PATH = ./modules/...) never reaches them: the pattern stops at a nested module
+# boundary. This job is the only thing that runs them.
+#
+# docker-distribution/wrapper is this module's own code around the upstream registry, which
+# comes in as a dependency: what is tested here is the mapping of repository paths, the token
+# proxy, the trust decision about a forwarded client address, the derivation of the write
+# endpoint's configuration and the sweep. Upstream's own suite is upstream's to run.
+tests_registry_images:
+  extends:
+    - .validate_base
+    - .rules:on_merge_request_registry_images
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  variables:
+    # -race needs cgo, as in the `tests` job above.
+    CGO_ENABLED: "1"
+    TEST_TIMEOUT: 15m
+    # The tests need no git stamp, so go does not shell out to git.
+    GOFLAGS: -buildvcs=false
+    GOCACHE: ${HOME}/go-build-cache-registry
+    GOMODCACHE: ${HOME}/go-mod-cache-registry
+  script:
+    - mkdir -p "${GOCACHE}" "${GOMODCACHE}"
+    - |
+      # Paths, not module names: the wrapper keeps its go.mod at the image root, the rest under src/.
+      for module in registry-agent/src registry-controller/src registry-syncer/src docker-distribution/wrapper; do
+        echo -e "\e[0Ksection_start:$(date +%s):${module//\//_}\r\e[0K${module}"
+        ( cd "${CI_PROJECT_DIR}/modules/038-registry/images/${module}" && go test -race -timeout "${TEST_TIMEOUT}" ./... ) || exit 1
+        echo -e "\e[0Ksection_end:$(date +%s):${module//\//_}\r\e[0K"
+      done
+
 # --- python webhook tests ---
 tests_python_webhooks:
   extends:

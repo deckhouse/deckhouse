@@ -209,7 +209,14 @@ func (hec *Config) HelmRender(options ...Option) {
 	}
 
 	// set some common values
-	hec.values.SetByPath("global.modulesImages.registry.base", "registry.example.com")
+	//
+	// A default rather than an override: set unconditionally, this silently replaced whatever
+	// the test had put there, so a spec that varied the registry images render from asserted
+	// against a value it never actually set — and passed or failed for reasons unrelated to
+	// what it was about.
+	if !hec.values.Get("global.modulesImages.registry.base").Exists() {
+		hec.values.SetByPath("global.modulesImages.registry.base", "registry.example.com")
+	}
 	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.cert", "test")
 	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.key", "test")
 	hec.values.SetByPathFromYAML("global.modules.placement", []byte("{}"))

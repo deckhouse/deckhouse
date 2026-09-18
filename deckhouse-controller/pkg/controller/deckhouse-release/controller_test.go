@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/tidwall/sjson"
@@ -1652,4 +1653,61 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 		require.Contains(suite.T(), httpBody, `"version":"1.25.1"`)
 		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
+}
+
+// TestImageAtVersionKeepsTheRegistry is why a release bump composes from the running image
+// rather than from an address in the registry secret.
+//
+// Image references are rendered from `global.modulesImages.registry.base`, which the registry
+// module may point at the in-cluster registry, while the secret describes the registry as seen
+// from outside the cluster. Recomposing from the secret would apply an address that whatever
+// rendered the Deployment does not use, and the two field managers would take turns
+// overwriting each other on every reconciliation.
+func TestImageAtVersionKeepsTheRegistry(t *testing.T) {
+	tests := []struct {
+		name    string
+		current string
+		version string
+		want    string
+		wantErr bool
+	}{{
+		name:    "the in-cluster address the registry module publishes",
+		current: "registry.d8-system.svc:5001/system/deckhouse:v1.70.1",
+		version: "v1.70.2",
+		want:    "registry.d8-system.svc:5001/system/deckhouse:v1.70.2",
+	}, {
+		name:    "an upstream registry, which is every unmanaged cluster",
+		current: "registry.deckhouse.io/deckhouse/ee:v1.70.1",
+		version: "v1.70.2",
+		want:    "registry.deckhouse.io/deckhouse/ee:v1.70.2",
+	}, {
+		// A port in the host is what makes splitting on the last colon insufficient on its
+		// own: the colon before the port is not the one that separates the tag.
+		name:    "a registry with a port and no tag",
+		current: "registry.example.com:5000/deckhouse",
+		version: "v1.70.2",
+		want:    "registry.example.com:5000/deckhouse:v1.70.2",
+	}, {
+		name:    "pinned by digest, as a rendered pod spec names it",
+		current: "registry.d8-system.svc:5001/system/deckhouse@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+		version: "v1.70.2",
+		want:    "registry.d8-system.svc:5001/system/deckhouse:v1.70.2",
+	}, {
+		name:    "nothing to go on",
+		current: "",
+		version: "v1.70.2",
+		wantErr: true,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := imageAtVersion(tt.current, tt.version)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }

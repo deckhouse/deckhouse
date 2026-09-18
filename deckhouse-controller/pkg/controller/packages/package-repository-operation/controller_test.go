@@ -268,9 +268,13 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("registry client creation failed", func() {
-		// The repository carries a malformed dockerCfg, so the real service manager
-		// fails to build the registry client (bad auth config) and NewService returns
-		// a "create package service" error before any listing happens.
+		// The repository carries a malformed dockerCfg, so the real service manager fails to build the
+		// registry client (bad auth config) and NewService returns a "create package service" error
+		// before any listing happens.
+		//
+		// MISSING credentials are deliberately not this case: the node agent asks for none, so a
+		// registry with none is dialled anonymously (see internal/registry/service). This case had to
+		// be re-pointed at an unparsable config to keep covering the creation-failure branch.
 		psm := registryService.NewPackageServiceManager(log.NewNop())
 
 		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(psm))
