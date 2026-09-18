@@ -67,6 +67,12 @@ class TestCheckReservedName(unittest.TestCase):
                 self.assertIsNotNone(error)
                 self.assertIn(name, error)
 
+    def test_the_documented_limit_is_the_one_in_force(self):
+        # The security policy pages quote this number. Deriving it from the prefixes, as the
+        # webhook does, hides a change of the list from the documentation — which is how the
+        # pages came to promise 234 while the code allowed 235.
+        self.assertEqual(reserved.MAX_NAME_LENGTH, 235)
+
     def test_a_name_that_leaves_room_for_the_prefix_is_allowed(self):
         self.assertIsNone(reserved.check_name_length("a" * reserved.MAX_NAME_LENGTH))
 

@@ -313,7 +313,7 @@ A denying policy that reaches system namespaces is therefore rendered as two Gat
 - `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
 
 The `d8-system-default-` and `d8-pod-security-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
-A policy name is limited to 234 characters for the same reason, so that the derived constraint names stay within the 253-character limit of a Kubernetes object name.
+A policy name is limited to 235 characters for the same reason, so that the derived constraint names stay within the 253-character limit of a Kubernetes object name.
 
 A policy is rendered as a single constraint when the split would change nothing:
 

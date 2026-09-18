@@ -207,15 +207,13 @@ webhooks:
 */}}
 {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: system-namespaces-enforce.admission-policy-engine.deckhouse.io
+  {{/* No `trivy-provider` exclusion here either: a system namespace carrying that label and the
+       opt-in one would otherwise match no webhook at all. */}}
   namespaceSelector:
     matchExpressions:
     - key: security.deckhouse.io/enable-security-policy-check
       operator: In
       values: ["true"]
-  {{- if include "trivy.provider.enabled" . }}
-    - key: security.deckhouse.io/trivy-provider
-      operator: DoesNotExist
-  {{- end }} # If trivy-provider is disabled, namespaces with the label should also be checked
   objectSelector:
     matchExpressions:
     - key: gatekeeper.sh/operation
