@@ -37,12 +37,12 @@ import (
 // workloads through the Service, not through the indexer directly.
 const indexName = "package"
 
-// DefaultResyncPeriod is how often the informers replay their cached workloads
+// defaultResyncPeriod is how often the informers replay their cached workloads
 // to the event handlers, re-reducing every package from cache. It replays the
 // local cache, not a LIST, and the reduction is deduped one layer up, so it
 // repairs nothing on its own — it bounds how long any future divergence
 // between the cache and the reduced state could last.
-const DefaultResyncPeriod = 5 * time.Minute
+const defaultResyncPeriod = 5 * time.Minute
 
 // workloadKind is a stable map key for per-kind state (indexers, sync funcs).
 // It is intentionally a string so the value can be used directly in log
@@ -68,9 +68,6 @@ type Monitor struct {
 	reconcile Reconcile
 	labelKey  string
 
-	// resyncPeriod is the informer resync; zero disables periodic resync.
-	resyncPeriod time.Duration
-
 	logger *log.Logger
 
 	// once guards Run against accidental re-entry.
@@ -86,16 +83,6 @@ type Monitor struct {
 // known WorkloadStatus for the given package.
 type Reconcile func(name string, status []WorkloadStatus)
 
-// Option overrides a Monitor default at construction.
-type Option func(*Monitor)
-
-// WithResyncPeriod sets the informer resync period; zero disables resync.
-func WithResyncPeriod(period time.Duration) Option {
-	return func(m *Monitor) {
-		m.resyncPeriod = period
-	}
-}
-
 // NewMonitor constructs a Monitor. It wires up the shared informer
 // factory, the typed informers, and the per-package indexer, but does
 // not start any goroutines or perform any I/O; that happens in Start.
@@ -105,7 +92,7 @@ func WithResyncPeriod(period time.Duration) Option {
 // API server only sends workloads that carry the package label. This
 // matches what the local indexer requires anyway and avoids caching every
 // Deployment/StatefulSet in the cluster.
-func NewMonitor(client kubernetes.Interface, reconcile Reconcile, labelKey string, logger *log.Logger, opts ...Option) (*Monitor, error) {
+func NewMonitor(client kubernetes.Interface, reconcile Reconcile, labelKey string, logger *log.Logger) (*Monitor, error) {
 	s := &Monitor{
 		indexers: make(map[workloadKind]cache.Indexer, 2),
 		syncs:    make(map[workloadKind]cache.InformerSynced, 2),
@@ -114,19 +101,13 @@ func NewMonitor(client kubernetes.Interface, reconcile Reconcile, labelKey strin
 			workqueue.TypedRateLimitingQueueConfig[string]{Name: "health"},
 		),
 
-		reconcile:    reconcile,
-		labelKey:     labelKey,
-		resyncPeriod: DefaultResyncPeriod,
-		logger:       logger,
-		done:         make(chan struct{}),
+		reconcile: reconcile,
+		labelKey:  labelKey,
+		logger:    logger,
+		done:      make(chan struct{}),
 	}
 
-	for _, opt := range opts {
-		opt(s)
-	}
-
-	// The factory carries the resync period, so it is built after the options.
-	s.factory = informers.NewSharedInformerFactoryWithOptions(client, s.resyncPeriod,
+	s.factory = informers.NewSharedInformerFactoryWithOptions(client, defaultResyncPeriod,
 		informers.WithTransform(stripUnusedFields),
 		informers.WithTweakListOptions(func(o *metav1.ListOptions) {
 			o.LabelSelector = labelKey
