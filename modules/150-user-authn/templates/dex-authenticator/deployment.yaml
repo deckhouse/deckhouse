@@ -10,6 +10,8 @@ memory: 25Mi
 
 {{- /* Init limits = sum of main container limits when set in CR (ResourceQuota: max(init, sum(app))). */ -}}
 {{- /* Defaults 20m / 50Mi when resources are not set = sum of dex+redis default requests. */ -}}
+{{- /* The result never drops below the init container requests (10m / 10Mi): a lower limit makes the */ -}}
+{{- /* API server reject the Deployment. Staying under the sum is safe, a quota counts max(init, sum(app)). */ -}}
 {{- define "dex_authenticator_init_limits" -}}
   {{- $cpuMillicores := 20 -}}
   {{- $memBytes := 52428800 -}} {{- /* 50Mi */ -}}
@@ -39,8 +41,8 @@ memory: 25Mi
       {{- if $redisMem }}{{ $memBytes = add $memBytes (include "helm_lib_resources_management_memory_units_to_bytes" $redisMem | int) }}{{ end -}}
     {{- end -}}
   {{- end -}}
-cpu: {{ printf "%dm" $cpuMillicores }}
-memory: {{ div $memBytes 1048576 }}Mi
+cpu: {{ printf "%dm" (max $cpuMillicores 10) }}
+memory: {{ printf "%dMi" (max (div $memBytes 1048576) 10) }}
 {{- end }}
 
 {{- $context := . }}
