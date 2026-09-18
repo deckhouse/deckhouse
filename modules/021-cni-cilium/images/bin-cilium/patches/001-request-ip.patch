@@ -12,7 +12,7 @@ index 48a4d48c00..23642426d6 100644
  }
  
 diff --git a/pkg/ipam/hostscope.go b/pkg/ipam/hostscope.go
-index cf8db5e2af..7ed413ee4a 100644
+index cf8db5e2af..0beae10488 100644
 --- a/pkg/ipam/hostscope.go
 +++ b/pkg/ipam/hostscope.go
 @@ -4,23 +4,36 @@
@@ -40,17 +40,15 @@ index cf8db5e2af..7ed413ee4a 100644
  	allocCIDR *net.IPNet
  	allocator *ipallocator.Range
 +
-+	// for k8s lister
 +	k8swatcher *watchers.K8sWatcher
  }
  
 -func newHostScopeAllocator(n *net.IPNet) Allocator {
 +func newHostScopeAllocator(n *net.IPNet, k8sEventReg K8sEventRegister) Allocator {
  	return &hostScopeAllocator{
--		allocCIDR: n,
--		allocator: ipallocator.NewCIDRRange(n),
-+		allocCIDR:  n,
-+		allocator:  ipallocator.NewCIDRRange(n),
+ 		allocCIDR: n,
+ 		allocator: ipallocator.NewCIDRRange(n),
++
 +		k8swatcher: k8sEventReg.(*watchers.K8sWatcher),
  	}
  }
@@ -75,7 +73,7 @@ index cf8db5e2af..7ed413ee4a 100644
 +					return nil, fmt.Errorf("invalid %s annotation: %w", networksSpecAnnotation, err)
 +				}
 +				for _, n := range networks {
-+					if n.Type == ClusterNetworkPrimaryCNIType && n.IPAddress != "" {
++					if n.Type == clusterNetworkPrimaryCNIType && n.IPAddress != "" {
 +						result.IP = net.ParseIP(n.IPAddress)
 +						if result.IP == nil {
 +							return nil, fmt.Errorf("customer invalid ip: %s. ", n.IPAddress)
@@ -173,7 +171,7 @@ index 063e9b5875..d62ec0841b 100644
  }
  
 diff --git a/pkg/ipam/types.go b/pkg/ipam/types.go
-index 6abe6fee6e..1a065a7cb0 100644
+index 6abe6fee6e..fce7b2fb4c 100644
 --- a/pkg/ipam/types.go
 +++ b/pkg/ipam/types.go
 @@ -17,6 +17,13 @@ import (
@@ -185,7 +183,7 @@ index 6abe6fee6e..1a065a7cb0 100644
 +	networksSpecAnnotation = "network.deckhouse.io/networks-spec"
 +)
 +
-+const ClusterNetworkPrimaryCNIType = "Main"
++const clusterNetworkPrimaryCNIType = "Main"
 +
  // AllocationResult is the result of an allocation
  type AllocationResult struct {
