@@ -17,7 +17,7 @@ import:
   - usr/bin/mkdir
   - usr/bin/sleep
   - usr/bin/true
-  - usr/bin/nc
+  # - usr/bin/nc
   - usr/bin/busybox
 - image: registrypackages/netcat-artifact 
   add: /nc
@@ -28,6 +28,6 @@ import:
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/distroless" }}
 final: false
-shell:
-  beforeInstall:
-  - pm install netcat
+# shell:
+#   beforeInstall:
+#   - pm install netcat
