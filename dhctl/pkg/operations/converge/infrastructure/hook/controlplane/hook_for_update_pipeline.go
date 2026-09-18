@@ -79,11 +79,6 @@ func NewHookForUpdatePipeline(
 	}
 }
 
-func (h *HookForUpdatePipeline) WithSourceCommandName(name string) *HookForUpdatePipeline {
-	h.sourceCommandName = name
-	return h
-}
-
 func (h *HookForUpdatePipeline) WithNodeToConverge(nodeToConverge string) *HookForUpdatePipeline {
 	h.nodeToConverge = nodeToConverge
 	return h

@@ -35,8 +35,7 @@ type NodeChecker interface {
 	Name() string
 }
 
-func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName, sourceCommandName string) (bool, error) {
-	_ = sourceCommandName
+func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName string) (bool, error) {
 	title := fmt.Sprintf("Node %s readiness check", nodeName)
 	var lastErr error
 

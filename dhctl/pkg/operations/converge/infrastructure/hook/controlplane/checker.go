@@ -28,7 +28,6 @@ import (
 type Checker struct {
 	nodeToHostForChecks map[string]string
 	checkers            []hook.NodeChecker
-	sourceCommandName   string
 	confirm             ConfirmFunc
 }
 
@@ -38,11 +37,10 @@ var DefaultConfirm = ConfirmFunc(func(msg string) bool {
 	return true
 })
 
-func NewChecker(nodeToHostForChecks map[string]string, checkers []hook.NodeChecker, sourceCommandName string, confirm ConfirmFunc) *Checker {
+func NewChecker(nodeToHostForChecks map[string]string, checkers []hook.NodeChecker, confirm ConfirmFunc) *Checker {
 	return &Checker{
 		nodeToHostForChecks: nodeToHostForChecks,
 		checkers:            checkers,
-		sourceCommandName:   sourceCommandName,
 		confirm:             confirm,
 	}
 }
@@ -63,7 +61,7 @@ func (c *Checker) IsAllNodesReady(ctx context.Context) error {
 			continue
 		}
 
-		ready, err := hook.IsNodeReady(ctx, c.checkers, nodeName, c.sourceCommandName)
+		ready, err := hook.IsNodeReady(ctx, c.checkers, nodeName)
 		if err != nil {
 			return err
 		}
@@ -99,5 +97,5 @@ func NewControlPlaneChecker(
 	checkers = append(checkers, NewManagerReadinessChecker(kubeClientProvider))
 	checkers = append(checkers, NewStrongholdReadinessChecker(kubeClientProvider))
 
-	return NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
+	return NewChecker(nodeToHostForChecks, checkers, DefaultConfirm)
 }

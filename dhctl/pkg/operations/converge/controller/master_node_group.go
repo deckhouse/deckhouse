@@ -639,9 +639,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		ctx.CommanderMode(),
 		c.skipChecks,
 		c.immutable,
-	).
-		WithSourceCommandName("converge").
-		WithNodeToConverge(convergedNode).
+	).WithNodeToConverge(convergedNode).
 		WithConfirm(confirmOrProceed(ctx)).
 		WithClientSwitcher(ctx.ClientSwitcher()), nil
 }
