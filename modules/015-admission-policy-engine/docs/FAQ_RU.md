@@ -721,3 +721,38 @@ init-контейнеров и ephemeral-контейнеров пода. Рес
 Устройства, запрошенные через механизм [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)
 в поле `spec.resourceClaims`, не являются extended-ресурсами, и политика их не проверяет.
 {% endalert %}
+
+## Что делать, если валидирующий вебхук недоступен?
+
+Пока у деплоймента `gatekeeper-controller-manager` нет доступных реплик, API-сервер отклоняет все запросы, которые перехватывает его вебхук, и кластер не может создавать и удалять нагрузку. Об этом состоянии сообщает алерт `D8AdmissionPolicyEngineWebhookUnavailable`. Перечень того, что перестаёт работать, приведён в разделе [о критичности компонента](./#почему-валидирующий-вебхук-критичен-для-кластера).
+
+Убедитесь, что причина в этом деплойменте, и соберите диагностику:
+
+```bash
+d8 k -n d8-admission-policy-engine get deploy gatekeeper-controller-manager
+d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=controller-manager -o wide
+d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=controller-manager
+d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
+```
+
+Поды этого деплоймента исключены из проверки по лейблу `gatekeeper.sh/operation: webhook`, поэтому перезапуск возможен в любой момент:
+
+```bash
+d8 k -n d8-admission-policy-engine rollout restart deploy/gatekeeper-controller-manager
+```
+
+Если причину не удаётся устранить быстро, отключите модуль. Deckhouse удалит конфигурацию вебхуков вместе с остальными объектами модуля и будет удерживать её удалённой, поэтому кластер останется разблокированным на всё время разбирательства:
+
+```bash
+d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":false}}'
+```
+
+Верните модуль сразу после устранения причины, поскольку при отключённом модуле политики не применяются:
+
+```bash
+d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":true}}'
+```
+
+{% alert level="warning" %}
+Удаление ValidatingWebhookConfiguration `d8-admission-policy-engine-config` вручную также разблокирует кластер, но Deckhouse восстановит объект при ближайшей сверке модуля. Используйте этот способ только как временную меру и учитывайте, что блокировка вернётся.
+{% endalert %}

@@ -720,3 +720,38 @@ the policy denies the pods that request GPU resources in that namespace.
 The devices requested through [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)
 in the `spec.resourceClaims` field are not extended resources, and the policy does not check them.
 {% endalert %}
+
+## What to do if the admission webhook is unavailable?
+
+While the `gatekeeper-controller-manager` deployment has no available replicas, the API server rejects every request its webhook intercepts, and the cluster cannot create or delete workloads. The `D8AdmissionPolicyEngineWebhookUnavailable` alert reports this state. Read [why the component is critical](./#why-the-admission-webhook-is-a-critical-component) for the list of what stops working.
+
+Confirm that the deployment is the cause and collect the reason:
+
+```bash
+d8 k -n d8-admission-policy-engine get deploy gatekeeper-controller-manager
+d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=controller-manager -o wide
+d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=controller-manager
+d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
+```
+
+The pods of this deployment are excluded from validation by their `gatekeeper.sh/operation: webhook` label, so a restart is possible at any time:
+
+```bash
+d8 k -n d8-admission-policy-engine rollout restart deploy/gatekeeper-controller-manager
+```
+
+If the cause cannot be fixed quickly, disable the module. Deckhouse removes the webhook configuration along with the rest of the module's objects and keeps it removed, so the cluster stays unblocked for the whole investigation:
+
+```bash
+d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":false}}'
+```
+
+Return the module as soon as the cause is fixed, since no policy is enforced while it is disabled:
+
+```bash
+d8 k patch moduleconfig admission-policy-engine --type=merge -p '{"spec":{"enabled":true}}'
+```
+
+{% alert level="warning" %}
+Deleting the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration by hand unblocks the cluster as well, but Deckhouse restores the object at the next reconciliation of the module. Use this only as a temporary measure and expect the block to return.
+{% endalert %}

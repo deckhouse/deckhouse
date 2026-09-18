@@ -642,3 +642,60 @@ The module allows you to use the [Gatekeeper Custom Resources](gatekeeper-cr.htm
 - [AssignImage](gatekeeper-cr.html#assignimage) — to change the `image` parameter of the resource.
 
 You can read more about the available options in the [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/) documentation.
+
+## Availability of the module components
+
+The module is on the critical path of the cluster: while its admission webhook is unavailable, the API server rejects the requests the webhook intercepts. This section explains what depends on each component and how the components are placed so that they stay available.
+
+### Why the admission webhook is a critical component
+
+The `gatekeeper-controller-manager` deployment serves the ValidatingWebhookConfiguration named `d8-admission-policy-engine-config`. Its main webhook is configured with `failurePolicy: Fail`, which means that a request the API server cannot deliver to the webhook is rejected rather than admitted.
+
+The choice is deliberate. A policy that is skipped whenever the webhook is down is not a policy: an object that violates it would be admitted exactly at the moment the enforcement is missing. The cost of that guarantee is that the availability of the webhook becomes the availability of admission in the cluster.
+
+While no replica of `gatekeeper-controller-manager` is available, the following stops working in the namespaces the webhook covers:
+
+- Creation and modification of pods and of the controllers that create them: Deployment, StatefulSet, DaemonSet, ReplicationController, Job and CronJob.
+- Deletion of those same resources. The webhook intercepts the `DELETE` operation as well, because a policy must be able to forbid deleting an object; a rejected `DELETE` is the same failure mode as a rejected `CREATE`.
+- Creation and modification of Role, RoleBinding and Gatekeeper constraints.
+- `kubectl exec` and `kubectl attach` in namespaces whose names start with `d8-` and `kube-`. These are intercepted by a separate webhook that also has `failurePolicy: Fail`, so the outage narrows the ways to diagnose itself.
+
+The mutating webhook is configured differently: its `failurePolicy` is `Ignore`, and an unavailable deployment only means that mutations are not applied.
+
+### How the module keeps control over itself
+
+The module is able to restart its own webhook during an outage, because two exclusions apply before the request reaches Gatekeeper:
+
+- The pods of `gatekeeper-controller-manager` carry the `gatekeeper.sh/operation: webhook` label, and every webhook of the configuration excludes objects with that label through `objectSelector`.
+- Gatekeeper is started with `--exempt-namespace=d8-admission-policy-engine`, so the objects of the module's own namespace are admitted without evaluation.
+
+The second exclusion works only while Gatekeeper is running. When it is not, requests for the namespace are rejected on delivery, which affects the pods of `gatekeeper-audit`: they carry `gatekeeper.sh/operation: audit` and are not excluded by `objectSelector`. The audit deployment therefore cannot create a new pod until the webhook is restored.
+
+### Placement of the components
+
+Both deployments run with the `system-cluster-critical` priority class, which places them above any workload during preemption and protects them from eviction under node pressure.
+
+The following table summarizes the parameters that determine how many replicas survive a failure.
+
+| Parameter | gatekeeper-controller-manager | gatekeeper-audit |
+| --- | --- | --- |
+| Replicas | 2 in HA mode, 1 otherwise | 1 always |
+| Update strategy | `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1` in HA mode, Kubernetes defaults otherwise | Kubernetes defaults |
+| Anti-affinity | required, by `kubernetes.io/hostname`, in HA mode | — |
+| Nodes | required node affinity: nodes of the module, system nodes, control-plane nodes | node selector: nodes of the module or system nodes, when such nodes exist |
+| Tolerations | any node | system nodes |
+| PodDisruptionBudget | `minAvailable: 1` in HA mode, `minAvailable: 0` otherwise | `minAvailable: 0` |
+| Priority class | `system-cluster-critical` | `system-cluster-critical` |
+
+Two consequences follow from the table:
+
+- Outside HA mode the webhook runs in a single replica whose PodDisruptionBudget allows its eviction. Draining the node that carries it blocks admission in the cluster until the pod is scheduled elsewhere and becomes ready. Enable HA mode for the cluster to get a second replica on another node.
+- In HA mode an update of the deployment leaves a single replica serving, because the strategy combines `maxSurge: 0` with `maxUnavailable: 1`. The anti-affinity rule is `requiredDuringSchedulingIgnoredDuringExecution`, so a cluster with fewer eligible nodes than replicas keeps a pod in the `Pending` state permanently.
+
+### Monitoring of the components
+
+Three alerts report the availability of the components:
+
+- `D8AdmissionPolicyEngineWebhookUnavailable`, severity 1, fires when the webhook has no available replicas. Admission in the cluster is blocked while it is active.
+- `D8AdmissionPolicyEngineWebhookDegraded`, severity 3, fires when part of the replicas is unavailable. A rollout raises it for a short time.
+- `D8AdmissionPolicyEngineAuditUnavailable`, severity 4, fires when the audit deployment has no available replicas. Violations among the objects that already run are not collected, and the policy violation alerts stop reporting.
