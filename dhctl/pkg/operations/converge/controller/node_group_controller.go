@@ -246,7 +246,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 
 		if err := infrastructure.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
-			continue
+			return allErrs.ErrorOrNil()
 		}
 
 		if tomb.IsInterrupted() {
