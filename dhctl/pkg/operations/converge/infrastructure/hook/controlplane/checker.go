@@ -18,8 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 )
 
@@ -72,4 +74,30 @@ func (c *Checker) IsAllNodesReady(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// NewControlPlaneChecker builds the gate that stands in front of every destructive action
+// on a master: the nodes named here are the ones that have to survive it.
+func NewControlPlaneChecker(
+	kubeClientProvider kubernetes.KubeClientProviderWithCtx,
+	sshProvider libcon.SSHProvider,
+	nodeToHostForChecks map[string]string,
+	commanderMode bool,
+	skipChecks bool,
+	immutableNode bool,
+) *Checker {
+	checkers := []hook.NodeChecker{
+		hook.NewKubeNodeReadinessChecker(kubeClientProvider),
+	}
+
+	// An immutable node answers no sshd: the check would fail on every master, and
+	// what it proves — that the machine is alive and serving — the control plane
+	// checker below proves through the cluster.
+	if !commanderMode && !skipChecks && !immutableNode {
+		checkers = append(checkers, NewSSHChecker(sshProvider, nodeToHostForChecks))
+	}
+	checkers = append(checkers, NewManagerReadinessChecker(kubeClientProvider))
+	checkers = append(checkers, NewStrongholdReadinessChecker(kubeClientProvider))
+
+	return NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
 }

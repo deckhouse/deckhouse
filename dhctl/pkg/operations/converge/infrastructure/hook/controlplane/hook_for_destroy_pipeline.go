@@ -44,19 +44,35 @@ type HookForDestroyPipeline struct {
 	oldMasterIPForSSH string
 	commanderMode     bool
 	immutableNode     bool
+
+	checkBefore *Checker
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshProvider libcon.SSHProvider, nodeToDestroy string, commanderMode, immutableNode bool) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(
+	getter kubernetes.KubeClientProviderWithCtx,
+	sshProvider libcon.SSHProvider,
+	nodeToDestroy string,
+	commanderMode bool,
+	immutableNode bool,
+	checkBefore *Checker,
+) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
 		sshProvider:   sshProvider,
 		nodeToDestroy: nodeToDestroy,
 		commanderMode: commanderMode,
 		immutableNode: immutableNode,
+		checkBefore:   checkBefore,
 	}
 }
 
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
+	if h.checkBefore != nil {
+		if err := h.checkBefore.IsAllNodesReady(ctx); err != nil {
+			return false, fmt.Errorf("check before destroying node '%s': %w", h.nodeToDestroy, err)
+		}
+	}
+
 	// use no strict because we can have situation when vm was destroyed
 	// in previous run, but all resources not deleted. in this situation
 	// we cannot have ssh ip and internal ip in state because infra util

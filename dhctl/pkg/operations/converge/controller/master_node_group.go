@@ -582,6 +582,11 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 			nodesToDelete = append(nodesToDelete, nodeInfo.name)
 		}
 
+		if err := c.populateNodeToHost(ctx); err != nil {
+			return fmt.Errorf("collect master addresses: %w", err)
+		}
+		nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, nodesToDelete...)
+
 		sshProvider, err := c.sshProviderForHooks(ctx)
 		if err != nil {
 			return err
@@ -598,6 +603,14 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 					nodeName,
 					ctx.CommanderMode(),
 					c.immutable,
+					controlplane.NewControlPlaneChecker(
+						ctx,
+						sshProvider,
+						nodesToCheck,
+						ctx.CommanderMode(),
+						c.skipChecks,
+						c.immutable,
+					),
 				)
 			},
 			func(nodeName string) {
