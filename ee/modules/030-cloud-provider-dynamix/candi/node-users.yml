@@ -1,0 +1,7 @@
+schemaVersion: 1
+# The image carries no distro default user, so cloud-init's "default" marker has nobody to
+# hand the cluster ssh key to. This account is created instead, and dhctl renders it as the
+# first entry of the users list it assembles.
+defaultUser:
+  name: user
+  groups: [users, wheel]

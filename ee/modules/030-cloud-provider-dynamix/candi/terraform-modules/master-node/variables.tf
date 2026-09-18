@@ -44,27 +44,18 @@ locals {
   net_type_vins             = "VINS"
   net_type_extnet           = "EXTNET"
 
-  cloud_config = length(var.cloudConfig) > 0 ? try(jsondecode(base64decode(var.cloudConfig)), yamldecode(base64decode(var.cloudConfig))) : tomap({})
-
-  base_users = [
-    {
-      "name" : "user",
-      "ssh_authorized_keys" : [local.ssh_pubkey],
-      "groups" : "users, wheel",
-      "sudo" : "ALL=(ALL) NOPASSWD:ALL"
-    }
-  ]
-
-  # merge is shallow, so an incoming users key would replace base_users wholesale.
-  # The "default" marker is filtered out: this node already declares its own user,
-  # and cloud-init would turn the marker into a second key-carrying sudo account.
-  master_cloud_init_script = jsonencode(merge({
-    "hostname" : local.master_node_name,
-    "create_hostname_file" : true,
-    "ssh_deletekeys" : true,
-    "ssh_genkeytypes" : ["rsa", "ecdsa", "ed25519"],
-    "ssh_authorized_keys" : [local.ssh_pubkey]
-  }, local.cloud_config, {
-    "users" : concat(local.base_users, [for u in try(local.cloud_config["users"], []) : u if u != "default"])
-  }))
+  # The cloud-config of a node is assembled by dhctl, users list included: the account this
+  # image needs is declared in candi/node-users.yml. The payload is appended to, never
+  # decoded — the "#cloud-config" it starts with is a YAML comment for everything below it,
+  # so a key repeated here would override the same key in the payload.
+  master_cloud_init_script = join("\n", [
+    length(var.cloudConfig) > 0 ? base64decode(var.cloudConfig) : "#cloud-config",
+    yamlencode({
+      "hostname" : local.master_node_name,
+      "create_hostname_file" : true,
+      "ssh_deletekeys" : true,
+      "ssh_genkeytypes" : ["rsa", "ecdsa", "ed25519"],
+      "ssh_authorized_keys" : [local.ssh_pubkey]
+    })
+  ])
 }
