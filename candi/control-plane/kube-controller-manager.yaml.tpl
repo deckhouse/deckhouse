@@ -76,6 +76,15 @@ spec:
     - --node-monitor-period={{ .arguments.nodeMonitorPeriod }}s
     - --node-monitor-grace-period={{ .arguments.nodeMonitorGracePeriod }}s
       {{- end }}
+      {{- if hasKey .arguments "concurrentDeploymentSyncs" }}
+    - --concurrent-deployment-syncs={{ .arguments.concurrentDeploymentSyncs }}
+      {{- end }}
+      {{- if hasKey .arguments "concurrentReplicaSetSyncs" }}
+    - --concurrent-replicaset-syncs={{ .arguments.concurrentReplicaSetSyncs }}
+      {{- end }}
+      {{- if hasKey .arguments "concurrentHorizontalPodAutoscalerSyncs" }}
+    - --concurrent-horizontal-pod-autoscaler-syncs={{ .arguments.concurrentHorizontalPodAutoscalerSyncs }}
+      {{- end }}
     {{- end }}
     {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     - --cloud-provider=external

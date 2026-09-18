@@ -16,6 +16,12 @@ positive:
     - resourcesRequests:
         cpu: "1000m"
         memory: "500Mi"
+    - controllerManager:
+        concurrentDeploymentSyncs: 20
+        concurrentReplicaSetSyncs: 20
+        concurrentHorizontalPodAutoscalerSyncs: 10
+    - controllerManager:
+        concurrentDeploymentSyncs: 1
     - kubernetesVersion: "1.32"
     - kubernetesVersion: "1.36"
     # Default is the only sentinel this setting accepts.
@@ -29,6 +35,13 @@ positive:
         kubeSchedulerExtenders: []
 negative:
   configValues:
+    # Worker counts are bounded: zero would stop the controller, hundreds is a typo.
+    - controllerManager:
+        concurrentDeploymentSyncs: 0
+    - controllerManager:
+        concurrentHorizontalPodAutoscalerSyncs: 101
+    - controllerManager:
+        concurrentReplicaSetSyncs: "20"
     # Outside the supported window for this edition.
     - kubernetesVersion: "1.31"
     - kubernetesVersion: "1.37"

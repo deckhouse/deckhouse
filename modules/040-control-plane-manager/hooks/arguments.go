@@ -30,10 +30,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleArguments)
 
 type arguments struct {
-	NodeMonitorGracePeriodSeconds       int64   `json:"nodeMonitorGracePeriod,omitempty"`
-	NodeMonitorPeriod                   float64 `json:"nodeMonitorPeriod,omitempty"`
-	PodEvictionTimeout                  int64   `json:"podEvictionTimeout,omitempty"`
-	DefaultUnreachableTolerationSeconds int64   `json:"defaultUnreachableTolerationSeconds,omitempty"`
+	NodeMonitorGracePeriodSeconds          int64   `json:"nodeMonitorGracePeriod,omitempty"`
+	NodeMonitorPeriod                      float64 `json:"nodeMonitorPeriod,omitempty"`
+	PodEvictionTimeout                     int64   `json:"podEvictionTimeout,omitempty"`
+	DefaultUnreachableTolerationSeconds    int64   `json:"defaultUnreachableTolerationSeconds,omitempty"`
+	ConcurrentDeploymentSyncs              int64   `json:"concurrentDeploymentSyncs,omitempty"`
+	ConcurrentReplicaSetSyncs              int64   `json:"concurrentReplicaSetSyncs,omitempty"`
+	ConcurrentHorizontalPodAutoscalerSyncs int64   `json:"concurrentHorizontalPodAutoscalerSyncs,omitempty"`
 }
 
 func handleArguments(_ context.Context, input *go_hook.HookInput) error {
@@ -50,6 +53,19 @@ func handleArguments(_ context.Context, input *go_hook.HookInput) error {
 		podEvictionTimeout := failedNodePodEvictionTimeout.Int()
 		arg.PodEvictionTimeout = podEvictionTimeout
 		arg.DefaultUnreachableTolerationSeconds = podEvictionTimeout
+	}
+
+	// kube-controller-manager worker counts. Passed through as-is; the
+	// template only renders a flag when the value is set, so an unset
+	// parameter keeps the upstream default (5).
+	if v, ok := input.Values.GetOk("controlPlaneManager.controllerManager.concurrentDeploymentSyncs"); ok {
+		arg.ConcurrentDeploymentSyncs = v.Int()
+	}
+	if v, ok := input.Values.GetOk("controlPlaneManager.controllerManager.concurrentReplicaSetSyncs"); ok {
+		arg.ConcurrentReplicaSetSyncs = v.Int()
+	}
+	if v, ok := input.Values.GetOk("controlPlaneManager.controllerManager.concurrentHorizontalPodAutoscalerSyncs"); ok {
+		arg.ConcurrentHorizontalPodAutoscalerSyncs = v.Int()
 	}
 
 	if (arg == arguments{}) {

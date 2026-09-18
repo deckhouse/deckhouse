@@ -328,6 +328,23 @@ properties:
     description: |
       Количество секунд, по прошествии которых с узла в статусе `Unreachable` будут удалены поды.
       > **Важно!** При изменении этого параметра потребуется перезапуск подов.
+  controllerManager:
+    description: |
+      Настройки `kube-controller-manager`.
+
+      Количество воркеров по умолчанию соответствует значениям самого `kube-controller-manager` (по 5). В кластерах, где одновременно выкатывается много Deployment (например, потенантный деплой, перезапускающий сотни Deployment одной волной), или с большим числом объектов HorizontalPodAutoscaler пяти воркеров не хватает: соответствующая очередь постоянно заполнена, каждый Deployment ждёт в очереди перед изменением своих ReplicaSet/подов, а каждый HPA пересчитывается реже своего периода синхронизации. Увеличьте значение для нужного контроллера, если `workqueue_depth{name="<controller>"}` не опускается до нуля между волнами или p90 `workqueue_queue_duration_seconds` измеряется секундами.
+
+      > Изменение любого из этих параметров перезапускает `kube-controller-manager` на каждом master-узле (по одному).
+    properties:
+      concurrentDeploymentSyncs:
+        description: |
+          Количество объектов Deployment, обрабатываемых одновременно (`--concurrent-deployment-syncs`). Значение по умолчанию в Kubernetes: 5.
+      concurrentReplicaSetSyncs:
+        description: |
+          Количество объектов ReplicaSet, обрабатываемых одновременно (`--concurrent-replicaset-syncs`). Значение по умолчанию в Kubernetes: 5.
+      concurrentHorizontalPodAutoscalerSyncs:
+        description: |
+          Количество объектов HorizontalPodAutoscaler, обрабатываемых одновременно (`--concurrent-horizontal-pod-autoscaler-syncs`). Значение по умолчанию в Kubernetes: 5.
   enabledFeatureGates:
     description: |
       Список включенных в control plane экспериментальных функций (feature gates).
