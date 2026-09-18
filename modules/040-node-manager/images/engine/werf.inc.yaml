@@ -10,17 +10,7 @@
 # efi.img is deliberately left behind: an update replaces the root, not the ESP,
 # and nothing in this repository reads it.
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "builder/scratch" }}
-import:
-- from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}
-  add: /
-  to: /
-  includePaths:
-  - rootfs.erofs
-  - rootfs.verity
-  - rootfs.roothash
-  - rootfs.roothash.p7s
-  before: setup
+from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}
 imageSpec:
   config:
     labels: { "distro": "deckhouse-engine", "version": "{{ $version }}", "type": "rootfs" }
@@ -31,12 +21,7 @@ imageSpec:
     removeEnv: ["/.*/"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-nocloud-qcow2
-from: {{ index $.Images "builder/scratch" }}
-import:
-- from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}-nocloud-qcow2
-  add: /disk
-  to: /disk
-  before: setup
+from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}-nocloud-qcow2
 imageSpec:
   config:
     labels: { "distro": "deckhouse-engine", "version": "{{ $version }}", "type": "nocloud-qcow2" }
@@ -47,12 +32,7 @@ imageSpec:
     removeEnv: ["/.*/"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-metal-iso
-from: {{ index $.Images "builder/scratch" }}
-import:
-- from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}-metal-iso
-  add: /disk
-  to: /disk
-  before: setup
+from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}-metal-iso
 imageSpec:
   config:
     labels: { "distro": "deckhouse-engine", "version": "{{ $version }}", "type": "metal-iso" }
@@ -63,12 +43,7 @@ imageSpec:
     removeEnv: ["/.*/"]
 ---
 image: {{ .ModuleName }}/kernel-{{$kernelVersion}}-devel
-from: {{ index $.Images "builder/scratch" }}
-import:
-- from: dev-registry.deckhouse.io/container-factory/kernel:{{$kernelVersion}}-devel
-  add: /src
-  to: /src
-  before: setup
+from: dev-registry.deckhouse.io/container-factory/kernel:{{$kernelVersion}}-devel
 imageSpec:
   config:
     labels: { "distro": "deckhouse-engine", "version": "{{ $version }}", "type": "kernel-devel" }
