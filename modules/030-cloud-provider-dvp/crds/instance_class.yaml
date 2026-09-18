@@ -176,6 +176,40 @@ spec:
                     required:
                     - cores
                     type: object
+                  gpus:
+                    description: |-
+                      List of GPU devices to attach to the virtual machine.
+
+                      Each entry references a GPUClass by name; list order is not significant. To attach several devices of the same class, repeat the entry.
+
+                      Requires the GPU feature gate enabled in the `virtualization` module of the cluster hosting the virtual machines. A virtual machine with an attached GPU cannot be live migrated.
+
+                      Changing the parameter of an existing class affects nodes differently, depending on the type of the NodeGroup that references the class:
+
+                      * `CloudEphemeral`: the nodes are recreated.
+                      * `CloudPermanent` and master nodes: the change is applied during converge to the existing virtual machines. Such a virtual machine is updated in place rather than recreated, and since `disruptions.restartApprovalMode: Automatic` is set for it, the change is applied by restarting the virtual machine without additional confirmation. Perform the converge one node at a time, keeping the control plane quorum in mind.
+
+                      > Attaching a device only passes the card through to the virtual machine. It does not turn the node into a GPU node on its own: the NVIDIA driver must be installed on the node and the NodeGroup must define the [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) section. Without them the node never exposes the `nvidia.com/gpu` resource and no workload can request the GPU.
+
+                      > The cluster autoscaler builds the template node of an empty NodeGroup from CPU and memory only, GPU resources are not part of it. A NodeGroup with GPUs and `cloudInstances.minPerZone: 0` is therefore never scaled up by pods that request a GPU. Set `minPerZone` to 1 or higher for such NodeGroups.
+                    items:
+                      description: A GPU device attached to the virtual machine.
+                      properties:
+                        gpuClassName:
+                          description: |-
+                            Name of the GPUClass that selects the GPU to attach, for example nvidia-h100.
+
+                            The GPUClass must already exist in the cluster hosting the virtual machines.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                          x-doc-example: nvidia-h100
+                      required:
+                      - gpuClassName
+                      type: object
+                    maxItems: 16
+                    type: array
                   liveMigrationPolicy:
                     default: PreferForced
                     description: |-

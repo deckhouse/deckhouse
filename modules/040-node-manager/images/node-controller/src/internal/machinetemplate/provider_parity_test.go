@@ -113,6 +113,9 @@ func providerFixtures() []providerFixture {
 			rolloutExceptions: map[string]string{
 				"additionalVMLabels":                "additionalVMLabels is a new provider-config field introduced with the v2 contract; v1 did not hash it, but changing VM labels must create a new template generation.",
 				"additionalVMLabels.network-access": "additionalVMLabels is a new provider-config field introduced with the v2 contract; v1 did not hash it, but changing VM labels must create a new template generation.",
+				"virtualMachine.gpus":               "virtualMachine.gpus is a new InstanceClass field introduced after the v1 checksum was frozen; DVP cannot attach or detach a GPU on a live VM, so the change must roll the machines.",
+				"virtualMachine.gpus/set":           "virtualMachine.gpus is a new InstanceClass field introduced after the v1 checksum was frozen; DVP cannot attach or detach a GPU on a live VM, so the change must roll the machines.",
+				"virtualMachine.gpus/empty":         "virtualMachine.gpus is a new InstanceClass field introduced after the v1 checksum was frozen; DVP cannot attach or detach a GPU on a live VM, so the change must roll the machines.",
 			},
 			manualRolloutIDIgnoredByV1: true,
 		},
@@ -297,6 +300,14 @@ func TestProviderRolloutParity(t *testing.T) {
 
 			for _, path := range mutationPaths(fixture, contract) {
 				t.Run(path, func(t *testing.T) {
+					// An InstanceClass field added after the v1 checksum was frozen has no v1
+					// counterpart to agree with: v1 cannot hash a field it never knew. Such a
+					// field states its reason in rolloutExceptions, the same way provider-config
+					// fields introduced with the v2 contract do.
+					if reason, documented := fixture.rolloutExceptions[path]; documented {
+						t.Skip(reason)
+					}
+
 					mutated := mutateSpec(t, fixture.instanceClass, path)
 
 					v1Rolls := renderLegacyChecksum(t, fixture, checksumTemplate, mutated, "") != baseChecksum
