@@ -334,14 +334,27 @@ runcmd:
 		require.Error(t, err)
 	})
 
-	// Merging into a list somebody else wrote cannot be done safely: which users key of
-	// the finished document survives is decided by whoever appends last, and on DVP that
-	// is the provider template. A payload that brings its own list is refused out loud.
-	t.Run("a payload with a users list of its own is refused", func(t *testing.T) {
-		_, err := withConvergeUser(
-			base64.StdEncoding.EncodeToString([]byte(base+"users:\n- name: user\n")), keys, expire)
+	// A payload that brings its own list gets our account added to it. Two users keys in
+	// one document would not do: cloud-init keeps the last and drops the rest.
+	t.Run("cloud-config users of the provider survive", func(t *testing.T) {
+		doc := render(t, base+"users:\n- name: user\n  sudo: 'ALL=(ALL) NOPASSWD:ALL'\n")
 
-		require.ErrorContains(t, err, "lists 1 users of its own")
+		users, ok := doc["users"].([]any)
+		require.True(t, ok)
+		require.Len(t, users, 2)
+		require.Equal(t, "user", users[0].(map[string]any)["name"])
+		require.Equal(t, global.ConvergeUserName, users[1].(map[string]any)["name"])
+	})
+
+	// The merge path rewrites the document, so applying it twice must still be a no-op.
+	t.Run("merging twice changes nothing", func(t *testing.T) {
+		once, err := withConvergeUser(
+			base64.StdEncoding.EncodeToString([]byte(base+"users:\n- name: user\n")), keys, expire)
+		require.NoError(t, err)
+
+		twice, err := withConvergeUser(once, keys, expire)
+		require.NoError(t, err)
+		require.Equal(t, once, twice)
 	})
 
 	// A sshPublicKey field may hold several keys separated by newlines, so an
