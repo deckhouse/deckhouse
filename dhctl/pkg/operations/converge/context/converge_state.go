@@ -26,7 +26,6 @@ import (
 
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
-	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
@@ -43,8 +42,17 @@ const (
 var errConvergeStateTransient = fmt.Errorf("converge state: transient error, may succeed on retry")
 
 type State struct {
-	Phase               phases.OperationPhase   `json:"phase"`
-	NodeUserCredentials *v1.NodeUserCredentials `json:"nodeUserCredentials"`
+	Phase phases.OperationPhase `json:"phase"`
+
+	// ConvergeUserNodes names the masters this converge created or recreated. They boot
+	// with the converge user in their cloud-init payload, the masters already in the
+	// cluster do not. Names only: this state is kept in a Secret in the cluster.
+	ConvergeUserNodes []string `json:"convergeUserNodes,omitempty"`
+
+	// ConvergeUserExpiry is when the accounts on those masters stop accepting logins. A
+	// name carries no age of its own, and a cleanup skipped in commander or sshless mode
+	// never prunes the list. A zero value is an expired one: it predates this field.
+	ConvergeUserExpiry time.Time `json:"convergeUserExpiry,omitzero"`
 }
 
 type stateStore interface {
@@ -73,7 +81,9 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 		retry.WithWhitelist(errConvergeStateTransient),
 	)
 
-	err = retry.NewLoopWithParams(loopParams).RunContext(ctx.Ctx(), func() error {
+	// Silent: every switch, every credentials pick and the deletion at the end of converge
+	// read this state, and a process block each would bury the converge's own output.
+	err = retry.NewSilentLoopWithParams(loopParams).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 

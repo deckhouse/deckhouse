@@ -16,7 +16,9 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
@@ -36,6 +38,67 @@ func SaveMasterHostsToCache(ctx context.Context, cache Cache, hosts map[string]s
 	if err := SaveMasterHosts(ctx, cache, hosts); err != nil {
 		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot save ssh hosts %v", err))
 	}
+}
+
+// MergeMasterHosts joins host lists by node name, a later list winning over an earlier one:
+// the hosts cache is rewritten every time a master is created or recreated, while the
+// session and the infrastructure state may still hold the address of a replaced machine.
+func MergeMasterHosts(lists ...[]session.Host) []session.Host {
+	byName := make(map[string]string)
+
+	// An entry without an address says nothing about where the node is. One writer of the
+	// cache stores a master whose SSH address came back empty, and letting that win would
+	// hide the address the session still has.
+	for _, host := range slices.Concat(lists...) {
+		if host.Host == "" {
+			continue
+		}
+
+		byName[host.Name] = host.Host
+	}
+
+	merged := make([]session.Host, 0, len(byName))
+	for name, address := range byName {
+		merged = append(merged, session.Host{Host: address, Name: name})
+	}
+
+	sort.Sort(session.SortByName(merged))
+
+	return merged
+}
+
+// masterNodeState reads the one output every master carries: the address it answers SSH on.
+type masterNodeState struct {
+	Outputs struct {
+		MasterIPForSSH struct {
+			Value string `json:"value"`
+		} `json:"master_ip_address_for_ssh"`
+	} `json:"outputs"`
+}
+
+// MasterHostsFromState names each master by the address in its own infrastructure state.
+// The addresses of --ssh-host carry no node name, so the node-to-host mapping is built from
+// what converge itself wrote when it created the machine. A state that parses to no address
+// is not an error here: an immutable or half-created master simply has none.
+func MasterHostsFromState(nodesState map[string][]byte) []session.Host {
+	hosts := make([]session.Host, 0, len(nodesState))
+
+	for nodeName, nodeState := range nodesState {
+		parsed := masterNodeState{}
+		if err := json.Unmarshal(nodeState, &parsed); err != nil {
+			continue
+		}
+
+		if parsed.Outputs.MasterIPForSSH.Value == "" {
+			continue
+		}
+
+		hosts = append(hosts, session.Host{Host: parsed.Outputs.MasterIPForSSH.Value, Name: nodeName})
+	}
+
+	sort.Sort(session.SortByName(hosts))
+
+	return hosts
 }
 
 func GetMasterHostsIPs(ctx context.Context, cache Cache) ([]session.Host, error) {

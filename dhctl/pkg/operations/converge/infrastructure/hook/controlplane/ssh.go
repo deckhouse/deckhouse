@@ -22,18 +22,26 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 )
 
+// SessionForNode builds the session that reaches one master: the settings of the session
+// it is given, pointed at that host, under the user the node answers to. A master rebuilt
+// by this converge answers to another user than the one dhctl started with.
+type SessionForNode func(base *session.Session, host session.Host) (*session.Session, error)
+
 type SSHChecker struct {
 	sshProvider      libcon.SSHProvider
 	nodesExternalIPs map[string]string
+	sessionForNode   SessionForNode
 }
 
 func NewSSHChecker(
 	sshProvider libcon.SSHProvider,
 	nodesExternalIPs map[string]string,
+	sessionForNode SessionForNode,
 ) *SSHChecker {
 	return &SSHChecker{
 		sshProvider:      sshProvider,
 		nodesExternalIPs: nodesExternalIPs,
+		sessionForNode:   sessionForNode,
 	}
 }
 
@@ -90,13 +98,14 @@ func (c *SSHChecker) clientForNode(
 		return nil, fmt.Errorf("source SSH session is nil")
 	}
 
-	checkSession := sourceSession.Copy()
-	checkSession.SetAvailableHosts([]session.Host{
-		{
-			Host: address,
-			Name: nodeName,
-		},
-	})
+	if c.sessionForNode == nil {
+		return nil, fmt.Errorf("SSH checker has no way to pick the user for node %s", nodeName)
+	}
+
+	checkSession, err := c.sessionForNode(sourceSession, session.Host{Host: address, Name: nodeName})
+	if err != nil {
+		return nil, fmt.Errorf("build a session for node %s: %w", nodeName, err)
+	}
 
 	standaloneProvider, ok := c.sshProvider.(libcon.StandaloneClientProvider)
 	if !ok {
@@ -124,4 +133,38 @@ func (c *SSHChecker) clientForNode(
 
 func SSHCheckerClientKey(nodeName string) string {
 	return "controlplane-readiness/" + nodeName
+}
+
+// sessionForHost points the live settings at one host under one user and its own sudo
+// password: everything the operator configured about how to reach a node stays as it is.
+// becomePass belongs to user, not to the session — the accounts do not share one.
+func sessionForHost(live *session.Session, user, becomePass string, host session.Host) *session.Session {
+	return session.NewSession(session.Input{
+		User:            user,
+		Port:            live.Port,
+		BastionHost:     live.BastionHost,
+		BastionPort:     live.BastionPort,
+		BastionUser:     live.BastionUser,
+		BastionPassword: live.BastionPassword,
+		ExtraArgs:       live.ExtraArgs,
+		BecomePass:      becomePass,
+		AvailableHosts:  []session.Host{host},
+	})
+}
+
+// switchAndCheck switches the clients and runs one command on them. That command is the
+// only failure signal the legacy backend gives: it starts a local agent and nothing else,
+// so a user the node does not know surfaces on the first command, not on the switch.
+func switchAndCheck(ctx context.Context, sshProvider libcon.SSHProvider, sess *session.Session, keys []session.AgentPrivateKey) error {
+	client, err := sshProvider.SwitchClient(ctx, sess, keys)
+	if err != nil {
+		return err
+	}
+
+	cmd := client.Command("true")
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf("run a command as %s: %w; stderr: %s", sess.User, err, string(cmd.StderrBytes()))
+	}
+
+	return nil
 }

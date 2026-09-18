@@ -1,10 +1,11 @@
 ${user_data}
 
+# The lines below continue the document above: the second "#cloud-config" is a YAML
+# comment, not a new document. A key repeated here overrides the same key in user_data,
+# so "users" belongs to user_data alone -- it carries "default" plus the account dhctl
+# converge logs in as (dhctl/pkg/operations/converge/controller/converge_user.go).
 #cloud-config
 hostname: ${host_name}
 prefer_fqdn_over_hostname: false
 ssh_authorized_keys:
   - "${ssh_public_key}"
-
-users:
-- default

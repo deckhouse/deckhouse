@@ -30,6 +30,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -59,6 +60,7 @@ func NewHookForUpdatePipeline(
 	kubeGetter kubernetes.KubeClientProviderWithCtx,
 	sshProvider libcon.SSHProvider,
 	nodeToHostForChecks map[string]string,
+	sessionForNode SessionForNode,
 	commanderMode bool,
 	skipChecks bool,
 	immutableNode bool,
@@ -76,6 +78,7 @@ func NewHookForUpdatePipeline(
 			NewSSHChecker(
 				sshProvider,
 				nodeToHostForChecks,
+				sessionForNode,
 			),
 		)
 	}
@@ -197,6 +200,89 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	return false, nil
 }
 
+// moveSessionToRecreatedNode puts the rebuilt master back in reach, under the converge user
+// a rebuilt machine boots with. The state naming that node is written only after a
+// successful apply, so the generation is not read from it but proven on the connection.
+func (h *HookForUpdatePipeline) moveSessionToRecreatedNode(ctx context.Context, cl libcon.SSHClient, host session.Host) error {
+	live := cl.Session()
+
+	if h.oldMasterIPForSSH != "" {
+		live.RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
+	}
+
+	// The machine behind the name changed, and a keyed client built for the old one keeps
+	// reporting itself alive on the legacy backend. Node deletion drops it the same way.
+	if standalone, ok := h.sshProvider.(libcon.StandaloneClientProvider); ok {
+		standalone.StopStandaloneClientFor(ctx, SSHCheckerClientKey(h.nodeToConverge))
+	}
+
+	if live.User == global.ConvergeUserName {
+		live.AddAvailableHosts(host)
+		return nil
+	}
+
+	if len(live.AvailableHosts()) > 0 {
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+			"Rebuilt node %s answers to %s while the clients run as %s. It joins when they move to its generation",
+			h.nodeToConverge, global.ConvergeUserName, live.User))
+
+		return nil
+	}
+
+	// No host of the current generation is left to talk to, so the clients follow the
+	// rebuilt master instead of running out of hosts.
+	if err := h.followRecreatedNode(ctx, cl, live, host); err != nil {
+		return fmt.Errorf("move the clients to the recreated node %s: %w", h.nodeToConverge, err)
+	}
+
+	return nil
+}
+
+// A machine the provider reports as running is not a machine that finished booting:
+// sshd and cloud-init land seconds to minutes later, and until then every account is
+// refused. Budget matches the control-plane readiness one, ~4 minutes.
+const (
+	recreatedNodeAttempts = 250
+	recreatedNodeWait     = 1 * time.Second
+)
+
+// followRecreatedNode moves the clients onto the rebuilt master as the converge user and
+// proves that account answers, falling back to the user dhctl started with. A node whose
+// provider dropped the account from its cloud-config still answers to that one. Both are
+// tried on every attempt: a booting node refuses the two alike, so neither failure proves
+// the account missing.
+func (h *HookForUpdatePipeline) followRecreatedNode(ctx context.Context, cl libcon.SSHClient, live *session.Session, host session.Host) error {
+	// The converge user's sudo is NOPASSWD, so no password is sent to that account.
+	convergeUser := sessionForHost(live, global.ConvergeUserName, "", host)
+	// The operator's account is the one the sudo password was given for.
+	operator := sessionForHost(live, live.User, live.BecomePass, host)
+
+	loop := retry.NewLoop(
+		fmt.Sprintf("Waiting for the rebuilt node %s to answer", h.nodeToConverge),
+		recreatedNodeAttempts,
+		recreatedNodeWait,
+	)
+
+	return loop.RunContext(ctx, func() error {
+		convergeErr := switchAndCheck(ctx, h.sshProvider, convergeUser, cl.PrivateKeys())
+		if convergeErr == nil {
+			return nil
+		}
+
+		operatorErr := switchAndCheck(ctx, h.sshProvider, operator, cl.PrivateKeys())
+		if operatorErr == nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+				"Rebuilt node %s answers to %s, not to %s: %v",
+				h.nodeToConverge, live.User, global.ConvergeUserName, convergeErr))
+
+			return nil
+		}
+
+		return fmt.Errorf("connect as %s (%v), then as %s: %w",
+			global.ConvergeUserName, convergeErr, live.User, operatorErr)
+	})
+}
+
 func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	if runner.GetChangesInPlan() != plan.HasDestructiveChanges {
 		return nil
@@ -219,10 +305,10 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 			return fmt.Errorf("get ssh client to move the session to the recreated node: %w", err)
 		}
 
-		if h.oldMasterIPForSSH != "" {
-			cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
+		host := session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge}
+		if err := h.moveSessionToRecreatedNode(ctx, cl, host); err != nil {
+			return err
 		}
-		cl.Session().AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
 	}
 
 	// Before waiting for the master node to be listed as a member of the etcd cluster,
