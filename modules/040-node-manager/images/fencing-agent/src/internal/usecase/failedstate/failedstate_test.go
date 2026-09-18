@@ -74,6 +74,7 @@ type stubStore struct {
 	states   []v1alpha1.FencingFailedNodeState
 	calls    []string
 	recorded map[string]v1alpha1.FencingFailedNodeStateFailed
+	marks    []v1alpha1.FencingFailedNodeStateFailed
 	// invisible names exist in the API but not in the informer cache yet, the
 	// window right after another agent created an object.
 	invisible map[string]bool
@@ -85,6 +86,8 @@ type stubStore struct {
 	// keepAfterDelete models an informer that still serves an object the API has
 	// already removed.
 	keepAfterDelete bool
+	uniqueUIDs      bool
+	creates         int
 }
 
 func newStore(states ...v1alpha1.FencingFailedNodeState) *stubStore {
@@ -124,14 +127,21 @@ func (s *stubStore) Create(_ context.Context, peer domain.Peer) (bool, error) {
 		}
 	}
 
+	uid := types.UID("cr-" + peer.Name)
+	if s.uniqueUIDs {
+		s.creates++
+		uid = types.UID(fmt.Sprintf("cr-%s-%d", peer.Name, s.creates))
+	}
+
 	s.states = append(s.states, v1alpha1.FencingFailedNodeState{
-		ObjectMeta: metav1.ObjectMeta{Name: peer.Name, UID: types.UID("cr-" + peer.Name)},
+		ObjectMeta: metav1.ObjectMeta{Name: peer.Name, UID: uid},
 	})
 
 	return true, nil
 }
 
 func (s *stubStore) MarkFailed(_ context.Context, name string, failed v1alpha1.FencingFailedNodeStateFailed) (bool, error) {
+	s.marks = append(s.marks, failed)
 	s.calls = append(s.calls, "mark:"+name)
 
 	if s.failMark != nil {
@@ -248,12 +258,63 @@ func newHarness(t *testing.T, nodeName string, store *stubStore) *harness {
 func newHarnessOfSize(t *testing.T, size int, nodeName string, store *stubStore) *harness {
 	t.Helper()
 
+	return newHarnessWith(t, size, nodeName, store)
+}
+
+type harnessConfig struct {
+	now           time.Time
+	clock         *clock
+	startedAt     time.Time
+	logger        *log.Logger
+	takeoverDelay time.Duration
+}
+
+type harnessOption func(*harnessConfig)
+
+func withClockAt(now time.Time) harnessOption {
+	return func(c *harnessConfig) { c.now = now }
+}
+
+func withClock(shared *clock) harnessOption {
+	return func(c *harnessConfig) { c.clock = shared }
+}
+
+func withStartedAt(startedAt time.Time) harnessOption {
+	return func(c *harnessConfig) { c.startedAt = startedAt }
+}
+
+func withLogger(logger *log.Logger) harnessOption {
+	return func(c *harnessConfig) { c.logger = logger }
+}
+
+func withTakeoverDelay(delay time.Duration) harnessOption {
+	return func(c *harnessConfig) { c.takeoverDelay = delay }
+}
+
+func newHarnessWith(t *testing.T, size int, nodeName string, store *stubStore, opts ...harnessOption) *harness {
+	t.Helper()
+
+	config := harnessConfig{now: time.Date(2026, 6, 2, 15, 0, 0, 0, time.UTC), takeoverDelay: takeoverDelay}
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	logger := config.logger
+	if logger == nil {
+		logger = log.NewNop()
+	}
+
+	clk := config.clock
+	if clk == nil {
+		clk = &clock{now: config.now}
+	}
+
 	h := &harness{
 		alive:    &stubAlive{},
 		expected: &stubExpected{peers: peers(groupNames(size)...)},
 		store:    store,
 		events:   &stubEvents{},
-		clock:    &clock{now: time.Date(2026, 6, 2, 15, 0, 0, 0, time.UTC)},
+		clock:    clk,
 		size:     size,
 	}
 
@@ -262,8 +323,9 @@ func newHarnessOfSize(t *testing.T, size int, nodeName string, store *stubStore)
 			NodeName:         nodeName,
 			RetryInterval:    500 * time.Millisecond,
 			MaxRetryInterval: 3 * time.Second,
-			TakeoverDelay:    takeoverDelay,
+			TakeoverDelay:    config.takeoverDelay,
 			FallbackTTL:      fallbackTTL,
+			StartedAt:        config.startedAt,
 		},
 		Deps{
 			Alive:    h.alive,
@@ -272,7 +334,7 @@ func newHarnessOfSize(t *testing.T, size int, nodeName string, store *stubStore)
 			Events:   h.events,
 			Now:      h.clock.Now,
 		},
-		log.NewNop(),
+		logger,
 	)
 
 	return h
@@ -631,6 +693,14 @@ func TestDetectedAtIsTheFirstSighting(t *testing.T) {
 
 	firstSighting := h.clock.now
 
+	if !slices.Contains(store.calls, "create:"+failed) {
+		t.Fatalf("no create was attempted for %s, calls: %v", failed, store.calls)
+	}
+
+	if slices.ContainsFunc(store.states, func(state v1alpha1.FencingFailedNodeState) bool { return state.Name == failed }) {
+		t.Fatalf("a failed create left a record of %s behind, calls: %v", failed, store.calls)
+	}
+
 	h.clock.advance(time.Minute)
 	store.failCreate = nil
 	h.failPeer(t.Context(), failed)
@@ -645,6 +715,7 @@ func TestRecordedLogCarriesTheStoredDetectedAt(t *testing.T) {
 
 	logs := &bytes.Buffer{}
 	store := newStore()
+	store.failCreate = errors.New("api server is unavailable")
 	h := newHarness(t, writerFor(failed), store)
 	h.writer.logger = log.NewLogger(log.WithOutput(logs), log.WithHandlerType(log.JSONHandlerType))
 
@@ -652,7 +723,20 @@ func TestRecordedLogCarriesTheStoredDetectedAt(t *testing.T) {
 	h.clock.advance(630134567 * time.Nanosecond)
 	h.failPeer(t.Context(), failed)
 
-	want, err := json.Marshal(store.recorded[failed].DetectedAt)
+	h.clock.advance(time.Minute)
+	store.failCreate = nil
+	h.failPeer(t.Context(), failed)
+
+	stored, ok := store.recorded[failed]
+	if !ok {
+		t.Fatalf("no failed state was recorded for %s, calls: %v", failed, store.calls)
+	}
+
+	if !stored.DetectedAt.Time.Before(h.clock.now) {
+		t.Fatalf("detectedAt = %s, want it before the moment of the write %s", stored.DetectedAt, h.clock.now)
+	}
+
+	want, err := json.Marshal(stored.DetectedAt)
 	if err != nil {
 		t.Fatalf("detectedAt does not serialize: %v", err)
 	}
@@ -1055,8 +1139,14 @@ func TestNextInLineAlsoTakesOverTheRemoval(t *testing.T) {
 func TestOwnRecordWrittenAfterThisProcessStartedIsLeftAlone(t *testing.T) {
 	// A record younger than the agent means a peer considers this node dead right
 	// now. That is a live disagreement for the fallback path to settle: deleting
-	// it would only start a delete-and-create war with the quorate side.
-	const self = "worker-1"
+	const (
+		self   = "worker-1"
+		failed = "worker-3"
+	)
+
+	if writer := writerFor(failed); writer != self {
+		t.Fatalf("the test needs %s to be the designated writer for %s, got %s", self, failed, writer)
+	}
 
 	store := newStore()
 	h := newHarness(t, self, store)
@@ -1076,7 +1166,24 @@ func TestOwnRecordWrittenAfterThisProcessStartedIsLeftAlone(t *testing.T) {
 	h.settle(t.Context())
 
 	if len(store.calls) != 0 {
-		t.Errorf("calls = %v, want none: the record is younger than this process", store.calls)
+		t.Fatalf("calls = %v, want none: the record is younger than this process", store.calls)
+	}
+
+	h.clock.advance(takeoverDelay)
+	h.settle(t.Context())
+
+	if !h.writer.paused {
+		t.Fatalf("the writer is not paused, want the own failed record to pause it after %s", takeoverDelay)
+	}
+
+	h.failPeer(t.Context(), failed)
+
+	if len(store.calls) != 0 {
+		t.Errorf("calls = %v, want none: the own record stays and %s is not recorded while it stands", store.calls, failed)
+	}
+
+	if !slices.ContainsFunc(store.states, func(state v1alpha1.FencingFailedNodeState) bool { return state.Name == self }) {
+		t.Errorf("the record of %s is gone, want it left alone", self)
 	}
 }
 

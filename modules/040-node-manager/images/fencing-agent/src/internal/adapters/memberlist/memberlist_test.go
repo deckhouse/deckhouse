@@ -53,6 +53,7 @@ func TestBuildConfigAppliesProfileTuning(t *testing.T) {
 		AdvertiseAddr: "10.0.0.1",
 		Port:          8500,
 		Tuning:        tuning,
+		APITimeout:    1500 * time.Millisecond,
 	}, log.NewNop(), newEventDelegate(log.NewNop()))
 
 	if cfg.ProbeInterval != tuning.ProbeInterval.Duration || cfg.ProbeTimeout != tuning.ProbeTimeout.Duration {
@@ -71,15 +72,30 @@ func TestBuildConfigAppliesProfileTuning(t *testing.T) {
 		t.Errorf("gossip tuning not applied: interval=%s retransmit=%d deadTime=%s",
 			cfg.GossipInterval, cfg.RetransmitMult, cfg.GossipToTheDeadTime)
 	}
+
+	if cfg.TCPTimeout != 1500*time.Millisecond {
+		t.Errorf("TCPTimeout is %s, want the API timeout 1.5s", cfg.TCPTimeout)
+	}
+
+	if cfg.PushPullInterval != 3*time.Second {
+		t.Errorf("PushPullInterval is %s, want 3s", cfg.PushPullInterval)
+	}
+
+	if cfg.DeadNodeReclaimTime != tuning.GossipToTheDeadTime.Duration {
+		t.Errorf("DeadNodeReclaimTime is %s, want gossipToTheDeadTime %s",
+			cfg.DeadNodeReclaimTime, tuning.GossipToTheDeadTime.Duration)
+	}
 }
 
 func TestBuildConfigAdvertisesTheNodeAddress(t *testing.T) {
+	tuning := testTuning()
+
 	cfg := buildConfig(Config{
 		NodeName:      "worker-1",
 		NodeGroup:     "worker",
 		AdvertiseAddr: "10.0.0.1",
 		Port:          8500,
-		Tuning:        testTuning(),
+		Tuning:        tuning,
 	}, log.NewNop(), newEventDelegate(log.NewNop()))
 
 	if cfg.Name != "worker-1" {
@@ -105,10 +121,9 @@ func TestBuildConfigAdvertisesTheNodeAddress(t *testing.T) {
 		t.Errorf("Label is %q, want the node group name", cfg.Label)
 	}
 
-	// Zero would make peers refuse a fenced node that comes back under the
-	// same name with a new address.
-	if cfg.DeadNodeReclaimTime <= 0 {
-		t.Error("DeadNodeReclaimTime must be positive")
+	if cfg.DeadNodeReclaimTime != tuning.GossipToTheDeadTime.Duration {
+		t.Errorf("DeadNodeReclaimTime is %s, want gossipToTheDeadTime %s",
+			cfg.DeadNodeReclaimTime, tuning.GossipToTheDeadTime.Duration)
 	}
 
 	if cfg.Logger == nil || cfg.Events == nil {

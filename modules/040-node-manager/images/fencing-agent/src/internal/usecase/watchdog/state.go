@@ -32,8 +32,8 @@ type Snapshot struct {
 	Observed bool
 	// UIDMismatch means the Node was recreated under the same name, so the identity
 	// and profile the agent started with are stale.
-	UIDMismatch bool
-	NodeGroup string
+	UIDMismatch   bool
+	NodeGroup     string
 	LeftNodeGroup bool
 	// Maintenance is true while any maintenance annotation is present.
 	Maintenance        bool

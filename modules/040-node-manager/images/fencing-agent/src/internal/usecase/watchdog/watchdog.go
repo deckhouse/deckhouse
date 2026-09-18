@@ -180,10 +180,15 @@ func (m *Manager) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			m.Close()
 			m.logger.Info("watchdog feed loop stopped")
 
 			return nil
 		case <-ticker.C:
+			if ctx.Err() != nil {
+				continue
+			}
+
 			if err := m.tick(); err != nil {
 				return err
 			}
@@ -194,7 +199,6 @@ func (m *Manager) Run(ctx context.Context) error {
 // Close disarms on a graceful shutdown. A DaemonSet rollout stops every agent of
 // the NodeGroup at once and the nodes run with kernel.panic=0, so a missed disarm
 // would panic the whole group. A crash does not disarm on purpose: the kernel
-// keeps counting and fences the Node, which is the point.
 func (m *Manager) Close() {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -14,19 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package agent
+package failedstate
 
 import (
 	"time"
 
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
-type Deps struct {
-	K8sClient     kubernetes.Interface
-	FencingClient client.Client
-	FencingCache  cache.Cache
-	StartedAt time.Time
+func StartOfLife(now time.Time) time.Time {
+	return now.Truncate(time.Second)
+}
+
+func OwnFailedRecord(states []v1alpha1.FencingFailedNodeState, node string, startedAt time.Time) *v1alpha1.FencingFailedNodeState {
+	for i := range states {
+		state := &states[i]
+		if state.Name == node && state.Status.Failed != nil && !state.CreationTimestamp.Time.Before(startedAt) {
+			return state
+		}
+	}
+
+	return nil
 }

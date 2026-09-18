@@ -25,7 +25,6 @@ limitations under the License.
 package membership
 
 import (
-	"context"
 	"slices"
 	"strings"
 	"sync"
@@ -134,12 +133,4 @@ func (m *Membership) Snapshot() ([]domain.Peer, int, int) {
 	peers, _ := m.Expected()
 
 	return slices.Clone(peers), len(peers), domain.QuorumSize(len(peers))
-}
-
-// ListNodeGroup serves the join usecase from the informer cache instead of a
-// direct API LIST. The arguments only satisfy the NodeLister interface.
-func (m *Membership) ListNodeGroup(_ context.Context, _ string) ([]domain.Peer, error) {
-	peers, _, _ := m.Snapshot()
-
-	return peers, nil
 }

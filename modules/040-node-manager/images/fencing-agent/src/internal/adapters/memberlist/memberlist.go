@@ -20,8 +20,10 @@ import (
 	"errors"
 	"fmt"
 	stdlog "log"
+	"sync"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	hcml "github.com/hashicorp/memberlist"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -30,12 +32,11 @@ import (
 )
 
 const (
-	bindAddress  = "0.0.0.0"
-	leaveTimeout = 3 * time.Second
+	bindAddress = "0.0.0.0"
 
-	// deadNodeReclaimTime lets a dead node rejoin under the same name with a new
-	// address. The zero default makes peers refuse it forever.
-	deadNodeReclaimTime = 10 * time.Second
+	minTCPTimeout   = time.Second
+	minLeaveTimeout = 250 * time.Millisecond
+	maxLeaveTimeout = 4 * time.Second
 )
 
 type Config struct {
@@ -47,14 +48,47 @@ type Config struct {
 	Port          int
 	// Tuning carries the SLA profile timings. It is required: the zero value
 	// disables probing.
-	Tuning v1alpha1.FencingSLAProfileMemberlist
+	Tuning     v1alpha1.FencingSLAProfileMemberlist
+	APITimeout time.Duration
+}
+
+type Timings struct {
+	TCPTimeout          time.Duration
+	PushPullInterval    time.Duration
+	DeadNodeReclaimTime time.Duration
+	LeaveTimeout        time.Duration
+}
+
+func DeriveTimings(tuning v1alpha1.FencingSLAProfileMemberlist, apiTimeout time.Duration) Timings {
+	tcpTimeout := max(apiTimeout, minTCPTimeout)
+
+	return Timings{
+		TCPTimeout:          tcpTimeout,
+		PushPullInterval:    max(tuning.GossipToTheDeadTime.Duration, 2*tcpTimeout),
+		DeadNodeReclaimTime: tuning.GossipToTheDeadTime.Duration,
+		LeaveTimeout:        leaveTimeout(tuning),
+	}
+}
+
+func leaveTimeout(tuning v1alpha1.FencingSLAProfileMemberlist) time.Duration {
+	gi := tuning.GossipInterval.Duration
+	rm := int64(tuning.RetransmitMult)
+	if rm <= 0 || gi <= 0 {
+		return minLeaveTimeout
+	}
+	if gi > maxLeaveTimeout/time.Duration(2*rm) {
+		return maxLeaveTimeout
+	}
+	return min(max(time.Duration(2*rm)*gi, minLeaveTimeout), maxLeaveTimeout)
 }
 
 type Cluster struct {
-	list   *hcml.Memberlist
-	logger *log.Logger
-	stop   chan struct{}
-	events *eventDelegate
+	list         *hcml.Memberlist
+	logger       *log.Logger
+	stop         chan struct{}
+	events       *eventDelegate
+	leaveTimeout time.Duration
+	joinSeed     func(seed string) (int, error)
 }
 
 func New(cfg Config, logger *log.Logger) (*Cluster, error) {
@@ -74,10 +108,18 @@ func New(cfg Config, logger *log.Logger) (*Cluster, error) {
 	stop := make(chan struct{})
 	go events.run(stop)
 
-	return &Cluster{list: list, logger: logger, stop: stop, events: events}, nil
+	return &Cluster{
+		list:         list,
+		logger:       logger,
+		stop:         stop,
+		events:       events,
+		leaveTimeout: DeriveTimings(cfg.Tuning, cfg.APITimeout).LeaveTimeout,
+		joinSeed:     func(seed string) (int, error) { return list.Join([]string{seed}) },
+	}, nil
 }
 
 func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcml.Config {
+	timings := DeriveTimings(cfg.Tuning, cfg.APITimeout)
 	mlCfg := hcml.DefaultLANConfig()
 
 	mlCfg.Name = cfg.NodeName
@@ -87,7 +129,9 @@ func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcm
 	mlCfg.AdvertisePort = cfg.Port
 	// Label keeps each NodeGroup a separate gossip network; foreign packets are dropped.
 	mlCfg.Label = cfg.NodeGroup
-	mlCfg.DeadNodeReclaimTime = deadNodeReclaimTime
+	mlCfg.TCPTimeout = timings.TCPTimeout
+	mlCfg.PushPullInterval = timings.PushPullInterval
+	mlCfg.DeadNodeReclaimTime = timings.DeadNodeReclaimTime
 	mlCfg.ProbeInterval = cfg.Tuning.ProbeInterval.Duration
 	mlCfg.ProbeTimeout = cfg.Tuning.ProbeTimeout.Duration
 	mlCfg.SuspicionMult = int(cfg.Tuning.SuspicionMult)
@@ -104,7 +148,27 @@ func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcm
 }
 
 func (c *Cluster) Join(seeds []string) (int, error) {
-	return c.list.Join(seeds)
+	joined := make([]int, len(seeds))
+	errs := make([]error, len(seeds))
+
+	var wg sync.WaitGroup
+	for i, seed := range seeds {
+		wg.Go(func() { joined[i], errs[i] = c.joinSeed(seed) })
+	}
+	wg.Wait()
+
+	total := 0
+	var merged *multierror.Error
+	for i := range seeds {
+		total += joined[i]
+		merged = multierror.Append(merged, errs[i])
+	}
+
+	if total > 0 {
+		return total, nil
+	}
+
+	return 0, merged.ErrorOrNil()
 }
 
 func (c *Cluster) NumMembers() int {
@@ -129,7 +193,7 @@ func (c *Cluster) Changed() <-chan struct{} {
 func (c *Cluster) Shutdown() error {
 	defer close(c.stop)
 
-	if err := c.list.Leave(leaveTimeout); err != nil {
+	if err := c.list.Leave(c.leaveTimeout); err != nil {
 		c.logger.Warn("memberlist leave failed, forcing shutdown", "error", err)
 	}
 

@@ -74,6 +74,7 @@ func (a *Agent) memberlistConfig() memberlist.Config {
 		AdvertiseAddr: a.identity.IP,
 		Port:          a.cfg.MemberlistPort,
 		Tuning:        a.sla.Memberlist,
+		APITimeout:    a.sla.Fallback.KubernetesAPITimeout.Duration,
 	}
 }
 
@@ -142,11 +143,28 @@ func closed(barrier <-chan struct{}) func() bool {
 	}
 }
 
-func (a *Agent) Run(ctx context.Context) error {
-	if a.deps.K8sClient == nil || a.deps.FencingClient == nil || a.deps.FencingCache == nil {
-		return errors.New("agent dependencies are not wired: K8sClient, FencingClient and FencingCache are required")
-	}
+func ownFailedRecord(
+	list func(ctx context.Context) ([]v1alpha1.FencingFailedNodeState, error),
+	synced func() bool,
+	node string,
+	startedAt time.Time,
+) func(ctx context.Context) bool {
+	return func(ctx context.Context) bool {
+		if !synced() {
+			return false
+		}
 
+
+		states, err := list(ctx)
+		if err != nil {
+			return false
+		}
+
+		return failedstate.OwnFailedRecord(states, node, startedAt) != nil
+	}
+}
+
+func (a *Agent) logStart(timings memberlist.Timings) {
 	a.logger.Info("fencing-agent starting",
 		"node", a.identity.Name,
 		"node_uid", a.identity.UID,
@@ -159,9 +177,24 @@ func (a *Agent) Run(ctx context.Context) error {
 		"watchdog_feed_interval", a.sla.Watchdog.FeedInterval.Duration.String(),
 		"watchdog_timeout", a.sla.Watchdog.Timeout.Duration.String(),
 		"api_socket_path", a.cfg.APISocketPath,
+		"tcp_timeout", timings.TCPTimeout.String(),
+		"push_pull_interval", timings.PushPullInterval.String(),
+		"dead_node_reclaim_time", timings.DeadNodeReclaimTime.String(),
+		"leave_timeout", timings.LeaveTimeout.String(),
 	)
+}
 
-	cluster, err := memberlist.New(a.memberlistConfig(), a.logger)
+func (a *Agent) Run(ctx context.Context) error {
+	if a.deps.K8sClient == nil || a.deps.FencingClient == nil || a.deps.FencingCache == nil || a.deps.StartedAt.IsZero() {
+		return errors.New("agent dependencies are not wired: K8sClient, FencingClient, FencingCache and StartedAt are required")
+	}
+
+	startedAt := failedstate.StartOfLife(a.deps.StartedAt)
+
+	mlConfig := a.memberlistConfig()
+	a.logStart(memberlist.DeriveTimings(mlConfig.Tuning, mlConfig.APITimeout))
+
+	cluster, err := memberlist.New(mlConfig, a.logger)
 	if err != nil {
 		return fmt.Errorf("create gossip network: %w", err)
 	}
@@ -175,8 +208,6 @@ func (a *Agent) Run(ctx context.Context) error {
 	recorder := events.New(a.deps.K8sClient, a.identity, a.logger)
 	defer recorder.Shutdown()
 
-	// Every Node labeled into the NodeGroup, from the informer cache. The seed list
-	// and the quorum size read the same view, so they cannot diverge.
 	members := membership.New(a.logger)
 
 	watcher, err := kubeclient.NewNodeWatcher(a.deps.K8sClient, a.cfg.NodeGroup, members, a.logger)
@@ -227,25 +258,25 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	defer watchdogManager.Close()
 
-	joiner := join.New(members, cluster, a.joinParams(), a.logger)
+	joiner := join.New(kubeclient.NewNodes(a.deps.K8sClient), members, cluster, a.joinParams(), a.logger)
 
 	rejoiner := rejoin.New(a.rejoinParams(), rejoin.Deps{
-		Attempt:   joiner.Attempt,
-		NotMember: func(err error) bool { return errors.Is(err, join.ErrNotMember) },
+		Attempt:        joiner.Attempt,
+		EpisodeStarted: joiner.StartEpisode,
+		NotMember:      func(err error) bool { return errors.Is(err, join.ErrNotMember) },
 		HasQuorum: func() bool {
 			expected, _, _ := members.Snapshot()
 
 			return domain.NewView(expected, cluster.Members()).HasQuorum()
 		},
-		APIReachable: func() bool {
-			s := monitor.Snapshot()
-
-			return !s.Observed || s.APIReachable
-		},
-		Changed: cluster.Changed(),
+		OwnFailedRecord: ownFailedRecord(states.List, closed(synced), a.identity.Name, startedAt),
+		Changed:         cluster.Changed(),
 	}, a.logger)
 
-	writer := failedstate.New(a.failedStateParams(), failedstate.Deps{
+	params := a.failedStateParams()
+	params.StartedAt = startedAt
+
+	writer := failedstate.New(params, failedstate.Deps{
 		Alive:    cluster,
 		Expected: members,
 		States:   states,

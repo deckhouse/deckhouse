@@ -133,7 +133,7 @@ spec:
                       format: date-time
                       pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}(Z|[+-][0-9]{2}:[0-9]{2})$'
                       description: |
-                        Time the failure was detected, with microsecond precision. The evacuation delay of the profile is counted from this moment.
+                        Time the failure was detected by the writer of this record, with microsecond precision. It is the first moment the writer, while holding local quorum, saw the node drop out of gossip, except in the two cases below; waiting for its turn in the takeover order and retrying failed writes do not move it, so a late record can appear with the evacuation delay already elapsed. A record that a writer re-creates after an earlier record of this failure disappeared while the failure persisted, where that writer had written the earlier record itself or had already observed it, carries the time of the successful write that re-created it. Otherwise, if the writer was paused at any time between the detection and the write, the value is the moment the last such pause ended, when the writer found no record of itself as failed any more. The writer pauses only after a peer's record of the writer itself as failed has stayed for one takeover step (the profile's rejoin.maxInterval) as the writer observed it; a record about the writer that went away sooner does not move the value. The evacuation delay of the profile is counted from this moment.
                     detectedBy:
                       type: string
                       description: |
