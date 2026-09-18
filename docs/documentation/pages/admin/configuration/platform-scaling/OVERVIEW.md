@@ -1,10 +1,10 @@
 ---
 title: "Platform scaling and node management"
 permalink: en/admin/configuration/platform-scaling/overview.html
-description: "Scale and manage Deckhouse Kubernetes Platform infrastructure with control plane and node management. High availability, auto-scaling, and cluster architecture optimization."
+description: "Scale and manage Deckhouse Platform infrastructure with control plane and node management. High availability, auto-scaling, and cluster architecture optimization."
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides built-in mechanisms for comprehensive management of cluster architecture — both at the control plane level and at the node level.
+Deckhouse Platform (DP) provides built-in mechanisms for comprehensive management of cluster architecture — both at the control plane level and at the node level.
 
 Management capabilities include:
 
@@ -13,4 +13,6 @@ Management capabilities include:
 
 These capabilities allow the creation of reliable, scalable, and self-healing clusters, adapting them to any requirements for performance, high availability, and infrastructure constraints.
 
-The following sections provide detailed descriptions of features, configuration examples, and best practices for effective control plane and node management in Deckhouse Kubernetes Platform.
+The following sections provide detailed descriptions of features, configuration examples, and best practices for effective control plane and node management in Deckhouse Platform.
+
+If a cluster runs virtual machines, taking a node out for maintenance affects them as well. How to move machines to other nodes, what limits the migration, and what to do with machines that can't be migrated is described in [Maintenance of nodes running virtual machines](./node/vm-node-maintenance.html).

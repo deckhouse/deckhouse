@@ -5,9 +5,16 @@ metadata:
   labels:
     heritage: deckhouse
     module: multitenancy-manager
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:multitenancy-manager:view
+    rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.multitenancy-manager.view"
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:multitenancy-manager:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module multitenancy-manager: view"
+    ru.meta.deckhouse.io/title: "Модуль multitenancy-manager: просмотр"
+    en.meta.deckhouse.io/description: "Read-only access to multitenancy-manager resources in a namespace."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к ресурсам модуля multitenancy-manager в пространстве имён."
 rules:
 # Tenants discover what their project may use (the read-only catalog).
 - apiGroups:

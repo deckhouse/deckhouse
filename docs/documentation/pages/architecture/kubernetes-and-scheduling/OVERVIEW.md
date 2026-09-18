@@ -2,12 +2,12 @@
 title: Kubernetes & Scheduling subsystem
 permalink: en/architecture/kubernetes-and-scheduling/
 search: Kubernetes subsystem, scheduling, control-plane-manager, descheduler, VPA, kubelet
-description: Architecture of the Kubernetes & Scheduling subsystem in Deckhouse Kubernetes Platform.
+description: Architecture of the Kubernetes & Scheduling subsystem in Deckhouse Platform.
 extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-This subsection describes the architecture of the modules that are part of the Kubernetes & Scheduling subsystem of Deckhouse Kubernetes Platform (DKP).
+This subsection describes the architecture of the modules that are part of the Kubernetes & Scheduling subsystem of Deckhouse Platform (DP).
 
 The Kubernetes & Scheduling subsystem includes the following modules:
 

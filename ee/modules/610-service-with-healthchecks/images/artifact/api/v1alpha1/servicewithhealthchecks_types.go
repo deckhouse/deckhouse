@@ -28,8 +28,17 @@ type ServiceWithHealthchecksStatus struct {
 	// LoadBalancer contains the current status of the load-balancer,
 	// if one is present.
 	// +optional
-	LoadBalancer         corev1.LoadBalancerStatus `json:"loadBalancer,omitempty" protobuf:"bytes,1,opt,name=loadBalancer"`
-	HealthcheckCondition HealthcheckCondition      `json:"healthcheckCondition,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=healthcheckCondition"`
+	LoadBalancer corev1.LoadBalancerStatus `json:"loadBalancer,omitempty" protobuf:"bytes,1,opt,name=loadBalancer"`
+	// ClusterIP is the address of the child Service: the one requested in the spec, or the one
+	// the cluster allocated. The address is never written back into the spec, because a
+	// controller can only do that as a second write, after the Service already exists.
+	// +optional
+	ClusterIP string `json:"clusterIP,omitempty"`
+	// ClusterIPs holds all the addresses of the child Service, one per IP family.
+	// +optional
+	// +listType=atomic
+	ClusterIPs           []string             `json:"clusterIPs,omitempty"`
+	HealthcheckCondition HealthcheckCondition `json:"healthcheckCondition,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=healthcheckCondition"`
 	// Current service state
 	// +optional
 	// +patchMergeKey=type

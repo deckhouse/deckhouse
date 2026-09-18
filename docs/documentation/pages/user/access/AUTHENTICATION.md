@@ -1,32 +1,32 @@
 ---
 title: "Configuring authentication for applications"
-description: "Configuring authentication for user applications in Deckhouse Kubernetes Platform. Integration with external authentication providers LDAP, GitLab, GitHub..."
+description: "Configuring authentication for user applications in Deckhouse Platform. Integration with external authentication providers LDAP, GitLab, GitHub..."
 permalink: en/user/access/authentication.html
 ---
 
 ## Overview
 
-Authentication is the process of verifying a user's identity. In Deckhouse Kubernetes Platform (DKP), end-to-end authentication is implemented, allowing user verification when accessing any DKP interface or cluster resources. Cluster users can also use DKP to enable authentication for their applications.
+Authentication is the process of verifying a user's identity. In Deckhouse Platform (DP), end-to-end authentication is implemented, allowing user verification when accessing any DP interface or cluster resources. Cluster users can also use DP to enable authentication for their applications.
 
-Depending on the DKP configuration, authentication can use either an internal user database or external authentication providers. Connecting an external provider allows the use of existing credentials (e.g., LDAP, GitLab, GitHub, etc.) for access. It also enables using the same credentials to authenticate in multiple DKP clusters.
+Depending on the DP configuration, authentication can use either an internal user database or external authentication providers. Connecting an external provider allows the use of existing credentials (e.g., LDAP, GitLab, GitHub, etc.) for access. It also enables using the same credentials to authenticate in multiple DP clusters.
 
-From the perspective of a cluster user or an application developer, it does not matter how the DKP administrator configured authentication — the user interface and authentication methods for applications will be the same.
+From the perspective of a cluster user or an application developer, it does not matter how the DP administrator configured authentication — the user interface and authentication methods for applications will be the same.
 
 {% alert level="info" %}
-To use authentication in DKP, [configuration is required](../../admin/configuration/access/authentication/).
+To use authentication in DP, [configuration is required](../../admin/configuration/access/authentication/).
 {% endalert %}
 
 ## Interface
 
-The authentication interface appears upon the first request to a resource for which authentication is enabled — DKP redirects the user to the authentication page. If the user is already authenticated (e.g., via an external identity provider), DKP will redirect the request back to the original resource, enriched with authentication data. If authentication has not yet occurred, the user will see the authentication interface.
+The authentication interface appears upon the first request to a resource for which authentication is enabled — DP redirects the user to the authentication page. If the user is already authenticated (e.g., via an external identity provider), DP will redirect the request back to the original resource, enriched with authentication data. If authentication has not yet occurred, the user will see the authentication interface.
 
-Example of DKP authentication interface:
+Example of DP authentication interface:
 
 ![Example authentication interface](../../images/user/access/authentication/web-auth-example.png)
 
-The authentication interface allows users to choose an authentication method if multiple methods are configured. If only one external provider is configured, the user is redirected directly to that provider's login page. If [local users](../../admin/configuration/access/authentication/local.html) are defined in DKP, the user will be prompted to enter a username and password.
+The authentication interface allows users to choose an authentication method if multiple methods are configured. If only one external provider is configured, the user is redirected directly to that provider's login page. If [local users](../../admin/configuration/access/authentication/local.html) are defined in DP, the user will be prompted to enter a username and password.
 
-Example of DKP authentication interface with username and password input:
+Example of DP authentication interface with username and password input:
 
 ![Example login/password interface](../../images/user/access/authentication/web-auth-example2.png)
 
@@ -36,7 +36,7 @@ If [local authentication](../../admin/configuration/access/authentication/local.
 
 ### Password change required by policy or administrator
 
-During login, DKP may redirect a local user to the password change form if:
+During login, DP may redirect a local user to the password change form if:
 
 - The password complexity does not meet the [configured policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy).
 - The password has expired according to the [configured policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy).
@@ -46,7 +46,7 @@ The form requires the current password, a new password, and confirmation. The ne
 
 ### Self-service password reset
 
-A local user can reset their password in the DKP authentication interface. The operation is performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource with `initiatorType: self`.
+A local user can reset their password in the DP authentication interface. The operation is performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource with `initiatorType: self`.
 
 Self-service reset is available only for local accounts. If you sign in through LDAP, GitHub, or another external provider, contact the administrator of that system.
 
@@ -54,24 +54,24 @@ After a password reset, active sessions are terminated and you must sign in agai
 
 ## Enabling Authentication in a Web Application
 
-> To enable authentication in an application, authentication must first be configured at the Deckhouse Kubernetes Platform level.
+> To enable authentication in an application, authentication must first be configured at the Deckhouse Platform level.
 
-DKP supports two ways of enabling authentication for an application, depending on whether the application is capable of handling authentication requests (i.e., acting as an OIDC client) or not. Both approaches are described below.
+DP supports two ways of enabling authentication for an application, depending on whether the application is capable of handling authentication requests (i.e., acting as an OIDC client) or not. Both approaches are described below.
 
 ### Authentication via proxy (for applications without OIDC support)
 
 Authentication for applications that cannot independently handle authentication requests is implemented via a special proxy server. This proxy handles both authentication and authorization, hiding the details of these processes from the application.
 
-To enable authentication for an application deployed in DKP, follow these steps:
+To enable authentication for an application deployed in DP, follow these steps:
 
 1. Create a [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) object in the application's namespace.
 
-   After the DexAuthenticator object is created, DKP will automatically deploy a set of components required for authentication:
+   After the DexAuthenticator object is created, DP will automatically deploy a set of components required for authentication:
 
    - A Deployment with containers running the authentication/authorization proxy and a Redis data store;
    - A Service pointing to the authentication/authorization proxy;
    - An Ingress resource that handles requests at `https://<applicationDomain>/dex-authenticator` and forwards them to the proxy Service;
-   - Secrets required for integration with the DKP authentication system.
+   - Secrets required for integration with the DP authentication system.
 
    Example DexAuthenticator manifest:
 
@@ -145,7 +145,7 @@ nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Re
 
 ### Authentication for applications with OIDC support
 
-Applications that can handle authentication requests on their own and act as OIDC clients can directly integrate with the DKP authentication system. In this case, the application independently redirects the user to the login page and processes the received OIDC tokens.
+Applications that can handle authentication requests on their own and act as OIDC clients can directly integrate with the DP authentication system. In this case, the application independently redirects the user to the login page and processes the received OIDC tokens.
 
 To enable authentication for such an application, follow these steps:
 
@@ -153,7 +153,7 @@ To enable authentication for such an application, follow these steps:
 
    After the DexClient object is created, Deckhouse will perform the following:
 
-   - An OIDC client will be registered in the DKP authentication system with an identifier (`clientID`) in the format:  
+   - An OIDC client will be registered in the DP authentication system with an identifier (`clientID`) in the format:  
      `dex-client-<NAME>@<NAMESPACE>`  
      where `<NAME>` and `<NAMESPACE>` are `metadata.name` and `metadata.namespace` from the DexClient resource;
    - A `clientSecret` will be automatically generated and saved in a Kubernetes Secret named `dex-client-<NAME>` in the same namespace;

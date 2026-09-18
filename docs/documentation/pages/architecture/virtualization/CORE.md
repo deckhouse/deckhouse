@@ -2,7 +2,7 @@
 title: The virtualization core
 permalink: en/architecture/virtualization/core.html
 search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, kubevirt, virt-operator, core
-description: Architecture of the virtualization module core in Deckhouse Kubernetes Platform.
+description: Architecture of the virtualization module core in Deckhouse Platform.
 ---
 
 The [`Virtualization`](/modules/virtualization/) module core is directly responsible for working with virtual machines (VMs). The core is based on the KubeVirt project. [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage VMs using Kubernetes as an orchestration platform. It enables a cooperation between traditional VMs and container workloads in the same Kubernetes cluster, providing a single control plane. A [fork](https://github.com/deckhouse/3p-kubevirt) of KubeVirt from the company "Flant" is used in the [`virtualization`](/modules/virtualization/) module.
@@ -44,7 +44,7 @@ The following simplifications are made in the diagram:
 - Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module core and its interactions with other components of DKP are shown in the following diagrams:
+The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module core and its interactions with other components of DP are shown in the following diagrams:
 
 ![Architecture of the virtualization module core](../../images/architecture/virtualization/c4-l2-virtualization-core.png)
 

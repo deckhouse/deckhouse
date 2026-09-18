@@ -71,7 +71,7 @@ There are three options to limit the automatic update of Deckhouse:
 
   In this case, Deckhouse holds on a current version and will automatically update to patch versions of the current release (taking into account the update windows). To apply a minor version update, a [manual action](usage.html#manual-update-confirmation) will need to be performed.
   
-  For example: the current version of DKP is `v1.70.1`, after setting the automatic update mode for patch versions, Deckhouse can be updated to version `v1.70.2`, but will not update to version `v1.71.*` or higher.
+  For example: the current version of DP is `v1.70.1`, after setting the automatic update mode for patch versions, Deckhouse can be updated to version `v1.70.2`, but will not update to version `v1.71.*` or higher.
 
   To set the automatic update mode for patch versions, you need to set the parameter [settings.update.mode](configuration.html#parameters-update-mode) to `AutoPatch` in the ModuleConfig `deckhouse`:
 
@@ -81,9 +81,9 @@ There are three options to limit the automatic update of Deckhouse:
 
 - Set a specified image tag for Deployment `deckhouse` and remove [releaseChannel](configuration.html#parameters-releasechannel) parameter from `deckhouse` module configuration.
 
-  In that case, DKP holds on a current version, and no information about new available versions in the cluster (DeckhouseRelease objects) will be received.
+  In that case, DP holds on a current version, and no information about new available versions in the cluster (DeckhouseRelease objects) will be received.
 
-  An example of installing version `v1.66.3` for DKP EE and removing the `releaseChannel` parameter from the configuration of the `deckhouse` module:
+  An example of installing version `v1.66.3` for DP EE and removing the `releaseChannel` parameter from the configuration of the `deckhouse` module:
   
   ```shell
   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3
@@ -125,27 +125,27 @@ Below is the list of priority classes set by the module (sorted by the priority 
 
 ## Monitoring
 
-The module provides monitoring and observability for Deckhouse Kubernetes Platform (DKP). It collects platform performance metrics, provides pre-configured alerting rules and dashboards for DKP status monitoring.
+The module provides monitoring and observability for Deckhouse Platform (DP). It collects platform performance metrics, provides pre-configured alerting rules and dashboards for DP status monitoring.
 
 The module uses features provided by [`prometheus`](/modules/prometheus/) and [`observability`](/modules/observability/) modules for collecting and storing metrics.
 
 It deploys monitoring resources that:
 
-- **Collect DKP metrics**: Collects metrics from the `deckhouse` Pod using a PodMonitor resource, including:
+- **Collect DP metrics**: Collects metrics from the `deckhouse` Pod using a PodMonitor resource, including:
   - Self metrics on port `4222` via the `/metrics` endpoint.
   - Custom hook-generated metrics via the `/metrics/hooks` endpoint.
   - Module execution metrics, hook performance, and system health indicators.
 
 - **Define alerting rules**: Provides Prometheus alerting rules organized into several categories:
-  - **DKP availability**: Monitors Pod health, readiness, and uptime.
-  - **DKP malfunctioning**: Detects excessive restarts, registry access issues, and hung processes.
+  - **DP availability**: Monitors Pod health, readiness, and uptime.
+  - **DP malfunctioning**: Detects excessive restarts, registry access issues, and hung processes.
   - **Release management**: Tracks release channel subscriptions, pending updates, and manual approvals.
   - **Module management**: Monitors module state, validation errors, and deprecated configurations.
   - **CNI checks**: Detects multiple CNI configurations and misconfigurations.
   - **OS requirements**: Identifies nodes running deprecated operating system versions.
 
 - **Provide Grafana dashboards**: Includes pre-built Grafana dashboards for visualizing:
-  - DKP performance metrics.
+  - DP performance metrics.
   - Module execution statistics.
   - Hook run times and resource usage.
   - Queue processing and convergence status.
@@ -154,14 +154,14 @@ It deploys monitoring resources that:
 
 A [PodMonitor](/modules/operator-prometheus/cr.html#podmonitor) scrapes two endpoints from the `deckhouse` Pod:
 
-1. **DKP metrics** (`/metrics`): Core DKP operational metrics, including the following:
+1. **DP metrics** (`/metrics`): Core DP operational metrics, including the following:
    - `deckhouse_live_ticks`: Health indicator incrementing every 10 seconds.
    - `deckhouse_registry_errors`: Registry connectivity issues.
    - `deckhouse_module_hook_run_seconds`: Module hook execution duration.
    - `deckhouse_tasks_queue_action_duration_seconds`: Task queue processing times.
    - Other operational metrics.
 
-1. **Hook metrics** (`/metrics/hooks`): Custom metrics generated by DKP hooks with `honorLabels: true` to preserve hook-specific labels.
+1. **Hook metrics** (`/metrics/hooks`): Custom metrics generated by DP hooks with `honorLabels: true` to preserve hook-specific labels.
 
 The PodMonitor is created only when the [`operator-prometheus`](/modules/operator-prometheus/) module is enabled, and the alerting rules and dashboards are processed by the [`prometheus`](/modules/prometheus/) module.
 

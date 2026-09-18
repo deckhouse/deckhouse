@@ -2107,6 +2107,16 @@ MY_VAR: "myvalue"
 			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
 			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies/status"))
 		})
+
+		It("renders istiod ClusterRole with ambient status writer permissions", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istiodClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x29")
+			Expect(istiodClusterRole.Exists()).To(BeTrue())
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("services/status"))
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("serviceentries/status"))
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("authorizationpolicies/status"))
+		})
 	})
 
 	Context("joint install of operator-backed 1.25 and operator-free 1.29", func() {
@@ -2152,11 +2162,11 @@ MY_VAR: "myvalue"
 
 			istiodClusterRoleV29 := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x29")
 			Expect(istiodClusterRoleV29.Exists()).To(BeTrue())
-			Expect(istiodClusterRoleV29.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
+			Expect(istiodClusterRoleV29.Field("rules").String()).To(ContainSubstring("poddisruptionbudgets"))
 
 			istiodClusterRoleV25 := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x25")
 			Expect(istiodClusterRoleV25.Exists()).To(BeTrue())
-			Expect(istiodClusterRoleV25.Field("rules").String()).NotTo(ContainSubstring("backendtlspolicies"))
+			Expect(istiodClusterRoleV25.Field("rules").String()).NotTo(ContainSubstring("poddisruptionbudgets"))
 		})
 	})
 

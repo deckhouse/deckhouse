@@ -1,6 +1,6 @@
 ---
 title: "Публикация приложений средствами Ingress NGINX Controller"
-description: "Публикация приложений с Ingress NGINX Controller в Deckhouse Kubernetes Platform. Примеры ресурса Ingress, HTTPS, gRPC и проверка."
+description: "Публикация приложений с Ingress NGINX Controller в Deckhouse Platform. Примеры ресурса Ingress, HTTPS, gRPC и проверка."
 permalink: ru/user/network/ingress/alb/nginx.html
 lang: ru
 extractedLinksMax: 0

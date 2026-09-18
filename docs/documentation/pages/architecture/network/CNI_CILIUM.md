@@ -2,7 +2,7 @@
 title: Cni-cilium module
 permalink: en/architecture/network/cni-cilium.html
 search: cni-cilium, cilium, ebpf
-description: Architecture of the cni-cilium module in Deckhouse Kubernetes Platform.
+description: Architecture of the cni-cilium module in Deckhouse Platform.
 ---
 
 The `cni-cilium` module provides a network in a cluster. It is based on the [Cilium](https://github.com/cilium/cilium) project.
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`cni-cilium`](/modules/cni-cilium/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`cni-cilium`](/modules/cni-cilium/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Cni-cilium module architecture](../../images/architecture/network/c4-l2-cni-cilium.png)
 
@@ -75,7 +75,7 @@ The module consists of the following components:
 
 1. **Cilium-cni**: Executable file run by the containerd component that passes certain commands as an argument in accordance with the [CNI specification](https://www.cni.dev/docs/spec/#cni-operations ), for example, ADD when starting the container and DEL when deleting it. Cilium-cni executable interacts with the Cilium agent API via a Unix socket and initiates a datapath configuration to provide network connectivity, load balancing, and network policies for pod. Datapath in Cilium is a component that runs in the Linux kernel and is responsible for real low-level processing of network packets in a Kubernetes cluster. Simply put, this is the "road" along which data travels: how packets travel from one pod to another, how they are routed, how network policies and load balancing are applied.
 
-1. **Safe-agent-updater** (DaemonSet): A special application designed to eliminate disruptive situations that may occur when updating the version of the Cilium agent and lead to problems with the network availability of DKP components.
+1. **Safe-agent-updater** (DaemonSet): A special application designed to eliminate disruptive situations that may occur when updating the version of the Cilium agent and lead to problems with the network availability of DP components.
 
    It consists of the following containers:
 

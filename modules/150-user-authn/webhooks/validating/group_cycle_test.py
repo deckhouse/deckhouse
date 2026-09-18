@@ -544,6 +544,36 @@ class TestGroupCycleValidationWebhook(unittest.TestCase):
                 'Groups must form a tree without circular references.')
         tests.assert_validation_deny(self, out, err_msg)
 
+    def test_update_detects_cycle_when_metadata_name_differs_from_spec_name(self):
+        # members[].name for kind Group is spec.name; metadata.name must not be the tree key.
+        snapshots = {
+            "groups": [
+                {
+                    "filterResult": {
+                        "name": "obj-a",
+                        "groupName": "real-a",
+                        "members": [{"kind": "Group", "name": "real-b"}],
+                    }
+                },
+                {
+                    "filterResult": {
+                        "name": "obj-b",
+                        "groupName": "real-b",
+                        "members": [{"kind": "User", "name": "test"}],
+                    }
+                },
+            ],
+            "users": [{"filterResult": {"userName": "test"}}],
+        }
+        ctx = _prepare_update_binding_context({
+            "name": "real-b",
+            "members": [{"kind": "Group", "name": "real-a"}],
+        }, snapshots)
+        out = hook.testrun(main, [ctx])
+        err_msg = ('Invalid group hierarchy: cycle detected! Path: groups.deckhouse.io("real-a" -> "real-b" -> '
+                   '"real-a"). Groups must form a tree without circular references.')
+        tests.assert_validation_deny(self, out, err_msg)
+
     def test_should_create_group(self):
         ctx = _prepare_create_binding_context({
             "members": [

@@ -2,12 +2,12 @@
 title: Storage subsystem
 permalink: en/architecture/storage/
 search: storage, storage subsystem
-description: Architecture of the Storage subsystem in Deckhouse Kubernetes Platform.
+description: Architecture of the Storage subsystem in Deckhouse Platform.
 extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-This subsection describes the architecture of the Storage subsystem of Deckhouse Kubernetes Platform (DKP).
+This subsection describes the architecture of the Storage subsystem of Deckhouse Platform (DP).
 
 The Storage subsystem includes the following modules:
 

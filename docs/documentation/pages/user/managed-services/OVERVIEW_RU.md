@@ -1,7 +1,7 @@
 ---
 title: "Обзор"
 permalink: ru/user/managed-services/
-description: "Использование managed-сервисов в Deckhouse Kubernetes Platform"
+description: "Использование managed-сервисов в Deckhouse Platform"
 lang: ru
 ---
 

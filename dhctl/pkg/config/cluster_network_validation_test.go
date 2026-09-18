@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -176,4 +177,50 @@ func TestValidatePublicDomainTemplate(t *testing.T) {
 			assert.Contains(t, err.Error(), "is inside clusterDomain")
 		})
 	}
+}
+
+// #22688 moved podSubnetCIDR, serviceSubnetCIDR and podSubnetNodeCIDRPrefix to ModuleConfig
+// control-plane-manager, leaving the ClusterConfiguration fields as a deprecated fallback. This
+// validation read the document directly, so for every cluster that had migrated it found no
+// values, returned early and validated nothing — silently, which is the part that matters: a pod
+// subnet overlapping the service subnet cannot be changed after the cluster is created.
+func TestValidateClusterNetworkingReadsTheModuleConfig(t *testing.T) {
+	networkModuleConfig := func(network map[string]interface{}) *MetaConfig {
+		return &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"clusterType": json.RawMessage(`"Static"`)},
+			ModuleConfigs: []*ModuleConfig{{
+				ObjectMeta: metav1.ObjectMeta{Name: "control-plane-manager"},
+				Spec:       ModuleConfigSpec{Settings: SettingsValues{"network": network}},
+			}},
+		}
+	}
+
+	t.Run("overlapping subnets are still refused", func(t *testing.T) {
+		err := validateClusterNetworking(context.Background(), networkModuleConfig(map[string]interface{}{
+			"podSubnetCIDR":     "10.111.0.0/16",
+			"serviceSubnetCIDR": "10.111.128.0/17",
+		}))
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "overlaps")
+		require.Contains(t, err.Error(), "ModuleConfig control-plane-manager",
+			"the message must name the document the value actually came from")
+	})
+
+	t.Run("a bad per-node prefix is still refused", func(t *testing.T) {
+		err := validateClusterNetworking(context.Background(), networkModuleConfig(map[string]interface{}{
+			"podSubnetCIDR":           "10.111.0.0/16",
+			"serviceSubnetCIDR":       "10.222.0.0/16",
+			"podSubnetNodeCIDRPrefix": "16",
+		}))
+
+		require.ErrorContains(t, err, "must be larger than the prefix of podSubnetCIDR")
+	})
+
+	t.Run("disjoint subnets pass", func(t *testing.T) {
+		require.NoError(t, validateClusterNetworking(context.Background(), networkModuleConfig(map[string]interface{}{
+			"podSubnetCIDR":     "10.111.0.0/16",
+			"serviceSubnetCIDR": "10.222.0.0/16",
+		})))
+	})
 }

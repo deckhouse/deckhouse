@@ -54,5 +54,10 @@ func NewGlobalSuite(deps GlobalDeps) preflight.Suite {
 		// the tag holds the Deckhouse image and none of the images it refers to.
 		checks.RegistryRequiredImages(deps.MetaConfig).
 			After(checks.RegistryReachableCheckName, checks.RegistryCredentialsCheckName),
+		// Reads the documents and nothing else, so by the rule above it belongs in pkg/config
+		// rather than here. Left where #22688 put it: relocating another team's check is not a
+		// merge's business, and it is the one thing standing between a half-migrated
+		// ClusterConfiguration/ModuleConfig pair and a silently picked winner.
+		checks.NetworkSingleSource(deps.MetaConfig),
 	)
 }

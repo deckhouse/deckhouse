@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO: This hook is to be removed when cluster-configuration is deprecated/removed.
+
 package hooks
 
 import (
@@ -127,9 +129,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-cluster-configuration"},
 			},
+			// kube-system, where the Secret actually lives. It said d8-system from the day this hook
+			// was rewritten in Go (cb68663b07, 2021), so the "configuration exists → return" guard
+			// below had never once fired: the subnets discovered from the live control plane always
+			// won. Harmless while the two agreed — but cluster_configuration.go now publishes a value
+			// resolved from ModuleConfig, which the deprecated ClusterConfiguration field may no longer
+			// match, and any kube-controller-manager Pod event would overwrite it.
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-system"},
+					MatchNames: []string{"kube-system"},
 				},
 			},
 			FilterFunc: applyClusterConfigurationFilter,

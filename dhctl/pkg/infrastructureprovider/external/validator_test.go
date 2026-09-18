@@ -16,78 +16,105 @@ package external
 
 import (
 	"context"
-	"encoding/json"
 	"os"
-	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/require"
-
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-func fixtureValidator(t *testing.T, script string) string {
-	t.Helper()
-	bin := filepath.Join(t.TempDir(), "validator")
-	require.NoError(t, os.WriteFile(bin, []byte("#!/bin/sh\n"+script+"\n"), 0o755))
-	return bin
-}
-
-func TestValidate_EmptyStdoutFailsClosed(t *testing.T) {
-	// A broken binary that exits 0 but prints nothing must NOT be treated as
-	// validated (fail closed).
-	p := NewBinaryValidator(fixtureValidator(t, "exit 0"))
-	err := p.Validate(context.Background(), config.ProviderInput{ProviderName: "dvp", Operation: "converge"})
-	require.Error(t, err, "empty validator stdout must fail closed")
-}
-
-func TestValidate_EmptyObjectPasses(t *testing.T) {
-	// A conformant binary emits "{}" on success.
-	p := NewBinaryValidator(fixtureValidator(t, "echo '{}'"))
-	require.NoError(t, p.Validate(context.Background(), config.ProviderInput{ProviderName: "dvp", Operation: "converge"}))
-}
-
-func TestValidate_ErrorResponsePropagates(t *testing.T) {
-	p := NewBinaryValidator(fixtureValidator(t, `echo '{"error":"bad layout"}'`))
-	err := p.Validate(context.Background(), config.ProviderInput{ProviderName: "dvp", Operation: "converge"})
-	require.ErrorContains(t, err, "bad layout")
-}
-
-func TestToWireInput_VarsTravelStructurally(t *testing.T) {
-	cv := &proto.CloudProviderVars{
-		Settings: map[string]interface{}{"zone": "a"},
-		NodeGroups: map[string]map[string]interface{}{
-			"worker": {"apiVersion": "deckhouse.io/v1", "kind": "NodeGroup", "metadata": map[string]interface{}{"name": "worker"}},
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		opts    []fakeOption
+		input   config.ProviderInput
+		wantErr []string
+	}{
+		{
+			name:  "passes a valid configuration",
+			input: convergeInput(),
 		},
-		InstanceClasses: map[string]map[string]interface{}{
-			"m": {"apiVersion": "deckhouse.io/v1", "kind": "DVPInstanceClass", "metadata": map[string]interface{}{"name": "m"}},
+		{
+			// The caller waits for the announcement rather than dialling early.
+			name:  "waits for a validator that takes a while to listen",
+			opts:  []fakeOption{withListenAfter(300 * time.Millisecond)},
+			input: convergeInput(),
 		},
-		Secrets: map[string]map[string]interface{}{
-			"d8-x/cloud-credentials": {"apiVersion": "v1", "kind": "Secret", "type": "cloud-provider.deckhouse.io/credentials"},
+		{
+			name:    "reports violations as the error text",
+			opts:    []fakeOption{withViolations()},
+			input:   convergeInput(),
+			wantErr: []string{"Secret/d8-credentials: credential Secret is required"},
+		},
+		{
+			// Warnings are for the operator to read; only errors block.
+			name:  "a warning alone does not block the operation",
+			opts:  []fakeOption{withWarnings()},
+			input: convergeInput(),
+		},
+		{
+			// Fail closed: the violation being there at all is what blocks, not the
+			// text it renders to.
+			name:    "fails closed on a violation with no detail",
+			opts:    []fakeOption{withBlankViolation()},
+			input:   convergeInput(),
+			wantErr: []string{`provider "dvp" validation failed`},
+		},
+		{
+			// Fail closed: a binary that predates the protocol exits on the unknown
+			// subcommand, and the caller learns that rather than waiting out the
+			// announcement timeout.
+			name:    "fails closed on a binary without the serve subcommand",
+			opts:    []fakeOption{withUnknownSubcommand()},
+			input:   convergeInput(),
+			wantErr: []string{"validator exited: exit status 1"},
+		},
+		{
+			// Fail closed: the endpoint arrived, but the validator was gone before it
+			// could answer, and the error says how it went.
+			name: "fails closed on a validator that dies after announcing",
+			opts: []fakeOption{
+				withAnnouncedAddress(unservedAddress(t)),
+				withExitAfter(500*time.Millisecond, 3),
+			},
+			input: convergeInput(),
+			wantErr: []string{
+				"call validator on",
+				"validator exited: exit status 3",
+			},
 		},
 	}
-	input := config.ProviderInput{
-		ProviderName:      "dvp",
-		Operation:         "converge",
-		CloudProviderVars: cv,
-	}
 
-	wire, err := toWireInput(input)
-	require.NoError(t, err)
-	require.Same(t, cv, wire.CloudProviderVars, "vars must be passed through, not re-encoded")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setFakeConfig(t, test.opts...)
+
+			err := Validate(context.Background(), os.Args[0], test.input)
+
+			if len(test.wantErr) == 0 {
+				if err != nil {
+					t.Fatalf("Validate() = %v, want nil", err)
+				}
+
+				return
+			}
+
+			if err == nil {
+				t.Fatalf("Validate() = nil, want an error mentioning %q", test.wantErr)
+			}
+
+			for _, want := range test.wantErr {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("Validate() = %q, want it to mention %q", err, want)
+				}
+			}
+		})
+	}
 }
 
-func TestToWireInput_ProviderClusterConfigJSONConverted(t *testing.T) {
-	input := config.ProviderInput{
-		ProviderName: "dvp",
-		ProviderClusterConfig: map[string]json.RawMessage{
-			"layout": json.RawMessage(`{"foo":"bar"}`),
-		},
-	}
-
-	wire, err := toWireInput(input)
-	require.NoError(t, err)
-	require.Equal(t, map[string]interface{}{"foo": "bar"}, wire.ProviderClusterConfig["layout"])
+func convergeInput() config.ProviderInput {
+	return config.ProviderInput{ProviderName: "dvp", Operation: string(validatev1.OperationConverge)}
 }

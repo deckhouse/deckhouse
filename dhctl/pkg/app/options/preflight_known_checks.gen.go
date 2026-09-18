@@ -25,6 +25,7 @@ var generatedPreflightChecks = []string{
 	"immutable-signature-mode",
 	"immutable-supported-provider",
 	"instance-class-provider",
+	"network-single-source",
 	"node-cri-requirements",
 	"node-disk-space",
 	"node-hostname",

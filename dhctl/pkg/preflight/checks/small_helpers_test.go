@@ -107,7 +107,10 @@ func TestInvalidCIDRFailure(t *testing.T) {
 
 	var failure *preflight.Failure
 	require.ErrorAs(t, err, &failure)
-	assert.Equal(t, "ClusterConfiguration.podSubnetCIDR", failure.Checked)
+	// Bare, not qualified with a document: #22688 lets it be declared in either, and the fix
+	// below is what names them.
+	assert.Equal(t, "podSubnetCIDR", failure.Checked)
+	assert.Contains(t, failure.Fix, "control-plane-manager")
 	assert.Contains(t, failure.Observed, `"10.111.0.0" is not a CIDR`)
 	assert.Contains(t, failure.Expected, "10.111.0.0/16")
 	// A malformed CIDR does not become well formed on a second read.

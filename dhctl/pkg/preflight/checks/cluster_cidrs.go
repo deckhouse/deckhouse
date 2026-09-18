@@ -24,33 +24,39 @@ package checks
 // the nodes on.
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
+// getCIDRs reads the resolved pair, wherever the operator declared it.
+//
+// Through MetaConfig.Network(), not out of ClusterConfig: #22688 moved these parameters to
+// ModuleConfig control-plane-manager and left the ClusterConfiguration fields as a deprecated
+// fallback, so reading the document directly returns "" for every cluster that has migrated —
+// and an empty string compares against a node's networks without overlapping anything, which is
+// a check that passes by finding nothing.
 func getCIDRs(meta *config.MetaConfig) (string, string, error) {
-	var podCIDR string
-	var serviceCIDR string
+	network := meta.Network()
 
-	if err := json.Unmarshal(meta.ClusterConfig["podSubnetCIDR"], &podCIDR); err != nil {
-		return "", "", fmt.Errorf("missing podSubnetCIDR field in ClusterConfiguration")
+	if network.PodSubnetCIDR == "" || network.ServiceSubnetCIDR == "" {
+		return "", "", fmt.Errorf(
+			"podSubnetCIDR and serviceSubnetCIDR must be set either in ModuleConfig " +
+				"control-plane-manager (spec.settings.network) or in ClusterConfiguration (deprecated)")
 	}
 
-	if err := json.Unmarshal(meta.ClusterConfig["serviceSubnetCIDR"], &serviceCIDR); err != nil {
-		return "", "", fmt.Errorf("missing serviceSubnetCIDR field in ClusterConfiguration")
-	}
-
-	return podCIDR, serviceCIDR, nil
+	return network.PodSubnetCIDR, network.ServiceSubnetCIDR, nil
 }
 
+// The parameter is named bare rather than qualified with a document: since #22688 it may be
+// declared in either, and the fix names both so the reader edits the one they actually have.
 func invalidCIDRFailure(name, cidr string) error {
 	return preflight.Permanent(&preflight.Failure{
-		Checked:  fmt.Sprintf("ClusterConfiguration.%s", name),
+		Checked:  name,
 		Observed: fmt.Sprintf("%q is not a CIDR", cidr),
 		Expected: "an address and a prefix length, for example 10.111.0.0/16",
-		Fix:      fmt.Sprintf("correct ClusterConfiguration.%s", name),
+		Fix: fmt.Sprintf("correct %s in ModuleConfig control-plane-manager (spec.settings.network), "+
+			"or in ClusterConfiguration if it is still declared there", name),
 	})
 }

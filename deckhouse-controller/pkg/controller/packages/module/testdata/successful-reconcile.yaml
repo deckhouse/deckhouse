@@ -1,0 +1,41 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+spec:
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+  settingsVersion: 2
+  maintenance: NoResourceReconciliation
+  enabled: true
+  settings:
+    replicas: 2
+    ingress:
+      host: module.example.com
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: test-module
+  uid: package-uid
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: deckhouse-test-module-v1.0.1
+  uid: version-uid
+spec:
+  packageName: test-module
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCfg: test-docker-cfg
+    ca: test-ca

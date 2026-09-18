@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 )
 
 // The state cache gob-encodes MetaConfig via SaveStruct. For mc-flow / DVP its
@@ -32,7 +32,7 @@ import (
 // "gob: type not registered for interface: map[string]string". The config
 // init() registers these; this round-trips the exact failing shape.
 func TestGobEncodeCloudProviderVars(t *testing.T) {
-	cv := &proto.CloudProviderVars{
+	cv := &validatev1.CloudProviderVars{
 		Settings: map[string]interface{}{
 			"nested": map[string]interface{}{"list": []interface{}{"a", float64(1)}},
 		},
@@ -47,7 +47,7 @@ func TestGobEncodeCloudProviderVars(t *testing.T) {
 	require.NoError(t, gob.NewEncoder(&buf).Encode(cv),
 		"gob must encode CloudProviderVars carrying a map[string]string secret value")
 
-	var out proto.CloudProviderVars
+	var out validatev1.CloudProviderVars
 	require.NoError(t, gob.NewDecoder(&buf).Decode(&out))
 	require.Equal(t, cv.Secrets, out.Secrets)
 	require.Equal(t, cv.Settings, out.Settings)

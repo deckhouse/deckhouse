@@ -139,7 +139,7 @@ DexAuthenticator does not have a built-in system for managing authentication bas
 
 ## How to pass the user's login and groups to an application?
 
-By default DexAuthenticator passes only two headers to the application: `X-Auth-Request-User` (based on the opaque `sub` claim) and `X-Auth-Request-Email`. The user's groups are not passed as a header. It grows unboundedly with the number of groups, so it is disabled in DKP, and it cannot be enabled.
+By default DexAuthenticator passes only two headers to the application: `X-Auth-Request-User` (based on the opaque `sub` claim) and `X-Auth-Request-Email`. The user's groups are not passed as a header. It grows unboundedly with the number of groups, so it is disabled in DP, and it cannot be enabled.
 
 To give the application full information about the user, including groups, enable [`sendAuthorizationHeader`](cr.html#dexauthenticator-v1-spec-sendauthorizationheader):
 
@@ -274,7 +274,7 @@ Make sure your application Ingress has TLS configured before integrating with De
 
 ## How to generate a kubeconfig and access Kubernetes API?
 
-`kubeconfig` for remote access to the cluster via `kubectl` can be generated in the [`kubeconfigurator` web interface](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
+`kubeconfig` for remote access to the cluster via `kubectl` can be generated in the [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).
 
 Configure the [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter:
 
@@ -291,11 +291,9 @@ Configure the [`publishAPI`](/modules/user-authn/configuration.html#parameters-p
     enabled: true
   ```
 
-The name `kubeconfig` is reserved for the kubeconfig generation web interface. The URL depends on the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter (for example, for the template that looks like `%s.kube.my`, the kubeconfig generation web interface will be available at `kubeconfig.kube.my`, and for `%s-kube.company.my` — at `kubeconfig-kube.company.my`).
-
 ### Configuring kube-apiserver
 
-Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DKP automatically configures `kube-apiserver` with the following flags so that the `dashboard` and `kubeconfig-generator` modules can work in the cluster.
+Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DP automatically configures `kube-apiserver` with the following flags so that OIDC authentication works in the cluster.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 
@@ -335,7 +333,7 @@ To rotate the secret, do the following:
    d8 k -n d8-user-authn patch secret kubernetes-dex-client-app-secret --type merge -p '{"data":{"secret":""}}'
    ```
 
-1. Restart DKP so that the hook picks the empty field up and generates a new value:
+1. Restart DP so that the hook picks the empty field up and generates a new value:
 
    ```shell
    d8 k -n d8-system rollout restart deployment/deckhouse
@@ -347,7 +345,7 @@ To rotate the secret, do the following:
    d8 k -n d8-user-authn get secret kubernetes-dex-client-app-secret -o jsonpath='{.data.secret}'
    ```
 
-   If it did not, repeat the steps 2 and 3. The module may have restored the previous before DKP was restarted.
+   If it did not, repeat the steps 2 and 3. The module may have restored the previous before DP was restarted.
 
 One the secret has been rotated, the configuration of components that use it will be updated automatically and the corresponding pods will be restarted.
 

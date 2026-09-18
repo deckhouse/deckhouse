@@ -277,6 +277,11 @@ func applyJoinToSpec(spec *nodeSpec, join *joinInput) {
 // maxPods mirrors the ladder bashible computes in
 // candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl — the scheduler
 // believes it as capacity, so a master off the fleet's number skews placement.
+//
+// clusterConfig comes from ClusterConfigMap, so the prefix here is the resolved
+// one (ModuleConfig spec.settings.network, else the deprecated field, else 24) —
+// the same value that reaches --node-cidr-mask-size. The two must not diverge:
+// the scheduler treats this number as capacity.
 func maxPods(metaConfig *config.MetaConfig) (int, error) {
 	clusterConfig, err := metaConfig.ClusterConfigMap()
 	if err != nil {

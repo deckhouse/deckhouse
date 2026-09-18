@@ -3,17 +3,17 @@ title: Гибридный кластер с Yandex Cloud
 permalink: ru/admin/integrations/hybrid/yandex-hybrid.html
 lang: ru
 search: гибрид с Yandex Cloud
-description: Подготовка к гибридной интеграции с Yandex Cloud в Deckhouse Kubernetes Platform.
+description: Подготовка к гибридной интеграции с Yandex Cloud в Deckhouse Platform.
 ---
 
-Далее описан процесс добавления узлов из Yandex Cloud в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
+Далее описан процесс добавления узлов из Yandex Cloud в существующий статический кластер Deckhouse Platform (DP).
 
-Для интеграции с Yandex Cloud используется модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Он обеспечивает взаимодействие DKP с API Yandex Cloud, получение информации об облачной инфраструктуре, создание виртуальных машин, работу с сетевыми параметрами и подключение узлов к существующему кластеру.
+Для интеграции с Yandex Cloud используется модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Он обеспечивает взаимодействие DP с API Yandex Cloud, получение информации об облачной инфраструктуре, создание виртуальных машин, работу с сетевыми параметрами и подключение узлов к существующему кластеру.
 
 В разделе описаны два способа добавления узлов:
 
-- **Автоматическое создание узлов в Yandex Cloud**. DKP создаёт виртуальные машины через API Yandex Cloud. Параметры ВМ задаются ресурсом [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudEphemeral`.
-- **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DKP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudStatic`.
+- **Автоматическое создание узлов в Yandex Cloud**. DP создаёт виртуальные машины через API Yandex Cloud. Параметры ВМ задаются ресурсом [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudEphemeral`.
+- **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudStatic`.
 
 ## Предварительные требования
 
@@ -295,7 +295,7 @@ description: Подготовка к гибридной интеграции с 
 
    - YandexInstanceClass описывает параметры виртуальной машины, которая будет создана в Yandex Cloud;
    - `mainSubnet` — ID подсети, из которой создаваемые узлы должны иметь доступ к статическим узлам кластера;
-   - NodeGroup описывает группу узлов, которую DKP должен поддерживать в кластере;
+   - NodeGroup описывает группу узлов, которую DP должен поддерживать в кластере;
    - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через облачного провайдера;
    - `cloudInstances.zones` должен содержать зоны из списка `zones` в `cloud-provider-discovery-data.json`.
 
@@ -305,7 +305,7 @@ description: Подготовка к гибридной интеграции с 
    d8 k apply -f yandex-instanceclass-nodegroup.yaml
    ```
 
-   После применения DKP начнёт создавать виртуальную машину в Yandex Cloud через machine-controller-manager.
+   После применения DP начнёт создавать виртуальную машину в Yandex Cloud через machine-controller-manager.
 
 1. Проверьте появление узла в кластере:
 

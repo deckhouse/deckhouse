@@ -3,10 +3,10 @@ title: Модуль prometheus
 permalink: ru/architecture/observability/prometheus.html
 lang: ru
 search: prometheus module, monitoring architecture, monitoring components, monitoring, metrics, архитектура мониторинга, компоненты мониторинга, мониторинг, метрики
-description: Архитектура модуля prometheus в Deckhouse Kubernetes Platform.
+description: Архитектура модуля prometheus в Deckhouse Platform.
 ---
 
-Модуль `prometheus` разворачивает стек мониторинга с предустановленными параметрами для Deckhouse Kubernetes Platform (DKP) и обеспечивает сбор, хранение и обработку метрик кластера и приложений.
+Модуль `prometheus` разворачивает стек мониторинга с предустановленными параметрами для Deckhouse Platform (DP) и обеспечивает сбор, хранение и обработку метрик кластера и приложений.
 
 Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/prometheus/).
 
@@ -19,7 +19,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`prometheus`](/modules/prometheus/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`prometheus`](/modules/prometheus/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля prometheus](../../images/architecture/observability/c4-l2-prometheus.ru.svg)
 
@@ -60,10 +60,10 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 
    В prometheus-longterm также может использоваться оригинальный Prometheus или Deckhouse Prom++. Состав контейнеров и принцип их работы у prometheus-longterm совпадает с prometheus-main.
 
-1. **Grafana-v10** — необязательный компонент Grafana, предоставляющий веб-интерфейс для визуализации данных мониторинга. Grafana отображает дашборды, поставляемые вместе с модулями DKP. Grafana умеет работать в режиме высокой доступности, не хранит состояние и настраивается с помощью [кастомных ресурсов](/modules/prometheus/cr.html#grafanaadditionaldatasource). Компонент включён по умолчанию, но при желании его можно отключить с помощью [параметра `settings.grafana.enabled`](/modules/prometheus/configuration.html#parameters-grafana-enabled).
+1. **Grafana-v10** — необязательный компонент Grafana, предоставляющий веб-интерфейс для визуализации данных мониторинга. Grafana отображает дашборды, поставляемые вместе с модулями DP. Grafana умеет работать в режиме высокой доступности, не хранит состояние и настраивается с помощью [кастомных ресурсов](/modules/prometheus/cr.html#grafanaadditionaldatasource). Компонент включён по умолчанию, но при желании его можно отключить с помощью [параметра `settings.grafana.enabled`](/modules/prometheus/configuration.html#parameters-grafana-enabled).
 
    {% alert level="info" %}
-   Grafana-v10 будет отключена в будущих релизах DKP. Для просмотра дашбордов мониторинга используйте [веб-интерфейс Deckhouse](/modules/console/).
+   Grafana-v10 будет отключена в будущих релизах DP. Для просмотра дашбордов мониторинга используйте [веб-интерфейс Deckhouse](/modules/console/).
    {% endalert %}
 
    Состоит из следующих контейнеров:
@@ -88,7 +88,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
    * **memcached** — основной контейнер. Является [Open Source-проектом](https://github.com/memcached/memcached);
    * **exporter** — сайдкар-контейнер, экспортирующий метрики контейнера memcached. Exporter собирает метрики контейнера memcached через сетевое подключение, а также из PID-файла процесса memcached. Является [Open Source-проектом](https://github.com/prometheus/memcached_exporter).
 
-1. **Trickster** — кеширующий прокси-сервер, снижающий нагрузку на Prometheus. Используется для кеширования и проксирования запросов к prometheus-longterm. В будущих релизах DKP ожидается, что компонент будет признан устаревшим и перестанет поддерживаться.
+1. **Trickster** — кеширующий прокси-сервер, снижающий нагрузку на Prometheus. Используется для кеширования и проксирования запросов к prometheus-longterm. В будущих релизах DP ожидается, что компонент будет признан устаревшим и перестанет поддерживаться.
 
    Состоит из следующих контейнеров:
 
@@ -96,10 +96,10 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
    * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступ к прокси-серверу и его метрикам. Подробно описан выше.
 
    {% alert level="info" %}
-   В будущих релизах DKP alerts-receiver будет удалён из модуля [`prometheus`](/modules/prometheus/). Для приема всех алертов будет использоваться компонент Alertmanager модуля [`observability`](/modules/observability/).
+   В будущих релизах DP alerts-receiver будет удалён из модуля [`prometheus`](/modules/prometheus/). Для приема всех алертов будет использоваться компонент Alertmanager модуля [`observability`](/modules/observability/).
    {% endalert %}
 
-1. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создаёт на их основе кастомные ресурсы [ClusterAlert](/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlert используются для информирования пользователей DKP об активных алертах и отображаются в веб-интерфейсе Deckhouse. Является разработкой компании «Флант». Состоит из одного контейнера.
+1. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создаёт на их основе кастомные ресурсы [ClusterAlert](/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlert используются для информирования пользователей DP об активных алертах и отображаются в веб-интерфейсе Deckhouse. Является разработкой компании «Флант». Состоит из одного контейнера.
 
 ## Взаимодействия модуля
 
@@ -113,7 +113,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 
 2. **Alertmanager** — отправка кастомных алертов.
 
-Экземпляр Prometheus, входящий в состав модуля, собирает метрики со всех компонентов DKP:
+Экземпляр Prometheus, входящий в состав модуля, собирает метрики со всех компонентов DP:
 
 * компоненты модулей;
 * компоненты control plane кластера;
@@ -121,7 +121,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 * экспортеры, собирающие метрики ресурсов Kubernetes;
 * пользовательские приложения (требуется дополнительная настройка).
 
-Взаимодействия Prometheus с компонентами DKP, связанные со сбором метрик, не показаны на схеме, чтобы не усложнять её большим количеством связей.
+Взаимодействия Prometheus с компонентами DP, связанные со сбором метрик, не показаны на схеме, чтобы не усложнять её большим количеством связей.
 
 С модулем взаимодействуют следующие внешние компоненты:
 

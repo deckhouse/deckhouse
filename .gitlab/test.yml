@@ -115,7 +115,7 @@ validators:
 .security_scan_base:
   stage: test
   tags:
-    - vm-intteam-cloud-d8-ssdlc-runner
+    - deckhouse
   timeout: 2h
   variables:
     GIT_DEPTH: "0"

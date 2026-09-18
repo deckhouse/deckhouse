@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -44,6 +45,7 @@ import (
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
+	"github.com/deckhouse/node-controller/internal/network"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -118,6 +120,52 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 			return obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == imagesDigestsConfigMapName
 		},
 	)))
+	// podSubnetNodeCIDRPrefix (network.FromModuleConfig, read fresh every pass in
+	// readClusterConfiguration) otherwise has nothing enqueuing a pass at all: an
+	// operator editing it touches neither a NodeGroup nor a Node, so without this
+	// watch the new value would only reach DefaultMaxPods whenever some unrelated
+	// trigger next fires. Narrowed to spec.settings.network so an unrelated CPM
+	// settings edit (apiserver, etcd, ...) does not re-render the whole fleet.
+	moduleConfigGVK := network.ModuleConfigGVK()
+	watchedModuleConfig := &unstructured.Unstructured{}
+	watchedModuleConfig.SetGroupVersionKind(moduleConfigGVK)
+	w.Watches(watchedModuleConfig, allMapper, builder.WithPredicates(predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return e.Object.GetName() == network.ModuleConfigName
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return e.Object.GetName() == network.ModuleConfigName
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return e.ObjectNew.GetName() == network.ModuleConfigName && moduleConfigNetworkGroupChanged(e.ObjectOld, e.ObjectNew)
+		},
+	}))
+}
+
+// moduleConfigNetworkGroupChanged reports whether spec.settings.network differs between the two
+// ModuleConfig revisions. Both objects come off an unstructured-backed informer (see cache.go); a
+// type assertion failure, or spec/spec.settings existing but not being a map (NestedFieldNoCopy's
+// error case), is a "cannot tell" that must not silently drop the event, so it answers true rather
+// than comparing two nils that both came from a walk that never actually completed.
+func moduleConfigNetworkGroupChanged(oldObj, newObj client.Object) bool {
+	oldU, ok := oldObj.(*unstructured.Unstructured)
+	if !ok {
+		return true
+	}
+	newU, ok := newObj.(*unstructured.Unstructured)
+	if !ok {
+		return true
+	}
+
+	oldNetwork, _, err := unstructured.NestedFieldNoCopy(oldU.UnstructuredContent(), "spec", "settings", "network")
+	if err != nil {
+		return true
+	}
+	newNetwork, _, err := unstructured.NestedFieldNoCopy(newU.UnstructuredContent(), "spec", "settings", "network")
+	if err != nil {
+		return true
+	}
+	return !apiequality.Semantic.DeepEqual(oldNetwork, newNetwork)
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
