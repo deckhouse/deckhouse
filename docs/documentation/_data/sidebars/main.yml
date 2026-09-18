@@ -1783,6 +1783,10 @@ entries:
                 en: User-authn module
                 ru: Модуль user-authn
               url: /architecture/iam/user-authn.html
+            - title:
+                en: User-authz module
+                ru: Модуль user-authz
+              url: /architecture/iam/user-authz.html
         - title:
             en: Security subsystem
             ru: Подсистема Security
