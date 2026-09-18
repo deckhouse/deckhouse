@@ -48,9 +48,10 @@ func TestBeforeActionStopsWhenCheckFails(t *testing.T) {
 		unreachableKubeGetter{},
 		nil,
 		"cluster-master-2",
+		map[string]string{"cluster-master-0": ""},
 		false,
 		true,
-		NewControlPlaneChecker(unreachableKubeGetter{}, nil, map[string]string{"cluster-master-0": ""}, false, true, true),
+		true,
 	)
 
 	_, err := hook.BeforeAction(t.Context(), untouchedRunner{t: t})
@@ -60,14 +61,7 @@ func TestBeforeActionStopsWhenCheckFails(t *testing.T) {
 }
 
 func TestBeforeActionRunsWithoutCheck(t *testing.T) {
-	hook := NewHookForDestroyPipeline(
-		unreachableKubeGetter{},
-		nil,
-		"cluster-master-2",
-		false,
-		false,
-		nil,
-	)
+	hook := &HookForDestroyPipeline{nodeToDestroy: "cluster-master-2"}
 
 	_, err := hook.BeforeAction(t.Context(), destroyedMasterRunner{})
 

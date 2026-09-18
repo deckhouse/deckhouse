@@ -198,12 +198,12 @@ func (c *CloudPermanentNodeGroupController) deleteNodes(
 				ctx,
 				c.state.Settings,
 				nodesToDeleteInfo,
-				func(nodeName string) infrastructure.InfraActionHook {
+				func(nodeName string) (infrastructure.InfraActionHook, error) {
 					return NewHookForDestroyPipeline(
 						ctx,
 						nodeName,
 						ctx.CommanderMode(),
-					)
+					), nil
 				},
 				nil,
 			)

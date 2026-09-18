@@ -52,24 +52,32 @@ func NewHookForDestroyPipeline(
 	getter kubernetes.KubeClientProviderWithCtx,
 	sshProvider libcon.SSHProvider,
 	nodeToDestroy string,
+	nodeToHostForChecks map[string]string,
 	commanderMode bool,
+	skipChecks bool,
 	immutableNode bool,
-	checkBefore *Checker,
 ) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
+		checkBefore: NewControlPlaneChecker(
+			getter,
+			sshProvider,
+			nodeToHostForChecks,
+			commanderMode,
+			skipChecks,
+			immutableNode,
+		),
 		getter:        getter,
 		sshProvider:   sshProvider,
 		nodeToDestroy: nodeToDestroy,
 		commanderMode: commanderMode,
 		immutableNode: immutableNode,
-		checkBefore:   checkBefore,
 	}
 }
 
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
 	if h.checkBefore != nil {
 		if err := h.checkBefore.IsAllNodesReady(ctx); err != nil {
-			return false, fmt.Errorf("check before destroying node '%s': %w", h.nodeToDestroy, err)
+			return false, fmt.Errorf("not all nodes are ready: %v", err)
 		}
 	}
 
