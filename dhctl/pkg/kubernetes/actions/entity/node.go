@@ -16,16 +16,13 @@ package entity
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"maps"
-	"net"
 	"slices"
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,7 +63,7 @@ func GetCloudConfig(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
 
-	return cloudData, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), name, func(ctx context.Context) error {
+	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), name, func(ctx context.Context) error {
 		if showDeckhouseLogs {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -106,72 +103,33 @@ func GetCloudConfig(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 			}()
 		}
 
-		allPassedHosts := ""
-		if len(apiserverHosts) > 0 {
-			allPassedHosts = strings.Join(apiserverHosts, ",")
+		if nodeGroupName == global.MasterNodeGroupName && len(apiserverHosts) > 0 {
+			dhlog.FromContext(ctx).InfoContext(
+				ctx,
+				fmt.Sprintf(
+					"Waiting for API server hosts %v to appear in the bootstrap Secret",
+					apiserverHosts,
+				),
+			)
 		}
 
-		err := retry.NewSilentLoop(name, 225, 1*time.Second).RunContext(ctx, func() error {
-			if nodeGroupName == global.MasterNodeGroupName {
-				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Waiting while all API-server endpoints '%s' will be available in bootstrap secret", allPassedHosts))
-			}
-			kubeCl, err := kubeProvider.KubeClientCtx(ctx)
-			if err != nil {
-				return err
-			}
+		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get Kubernetes client while waiting for cloud config: %w", err)
+		}
 
-			secret, err := kubeCl.CoreV1().
-				Secrets("d8-cloud-instance-manager").
-				Get(ctx, "manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-
-			if len(apiserverHosts) > 0 {
-				var endpoints []string
-
-				endpointsRaw := secret.Data["apiserverEndpoints"]
-				dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Got raw apiserverEndpoints: %v", string(endpointsRaw)), "\n"))
-
-				err := yaml.Unmarshal(endpointsRaw, &endpoints)
-				if err != nil {
-					return fmt.Errorf("failed to unmarshal apiserver endpoints: %v", err)
-				}
-
-				hostsMap := make(map[string]struct{}, len(endpoints))
-
-				for _, endpoint := range endpoints {
-					host, _, err := net.SplitHostPort(endpoint)
-					if err != nil {
-						return fmt.Errorf("failed to split endpoint `%s` into host and port: %v", endpoint, err)
-					}
-
-					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Got API-server host %s from secret", host))
-
-					hostsMap[host] = struct{}{}
-				}
-
-				for _, host := range apiserverHosts {
-					_, ok := hostsMap[host]
-					if !ok {
-						return fmt.Errorf("apiserver host '%s' not found in cloud config", host)
-					}
-				}
-			} else if nodeGroupName == global.MasterNodeGroupName {
-				dhlog.FromContext(ctx).DebugContext(ctx, "Got empty apiserver endpoints from arguments")
-			}
-
-			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
-
-			return nil
-		})
+		state, err := waitForCloudConfigSecret(ctx, kubeCl, nodeGroupName, apiserverHosts, cloudConfigWaitTimeout)
 		if err != nil {
 			return err
 		}
 
+		cloudData = state.cloudConfig
 		dhlog.FromContext(ctx).InfoContext(ctx, "Cloud configuration found!")
+
 		return nil
 	})
+
+	return cloudData, err
 }
 
 // errCreateNodeGroupTransient marks a Create/Patch failure that may succeed on retry (e.g. a

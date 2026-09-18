@@ -17,12 +17,7 @@ package immutable
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
-	"maps"
-	"net"
-	"slices"
-	"strconv"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -32,19 +27,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	kubeapiserver "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/apiserver"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
 // The objects a joining node is described by, addressed the way node-controller
 // addresses them; see the mirrors named below.
 const (
-	// The kubernetes Service's EndpointSlice, the cluster's own record of where
-	// its apiservers answer.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
-	apiServerEndpointSliceNS   = "default"
-	apiServerEndpointSliceName = "kubernetes"
-	apiServerPortName          = "https"
-
 	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given, and
 	// the source node-controller renders day-2 configs from, so a node sees one CA.
 	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
@@ -171,52 +160,17 @@ func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, n
 
 // apiServerEndpoints are the apiservers a joining node talks to until it runs one
 // itself. Derived from the cluster, not from the manual-bootstrap-for-master secret,
-// which is published too late. Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go:257 readAPIServerEndpoints.
+// which is published too late.
 func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]string, error) {
-	set := make(map[string]struct{})
-
-	pods, err := kubeCl.CoreV1().Pods(global.ConfigsNS).List(ctx, metav1.ListOptions{
-		LabelSelector: "component=kube-apiserver,tier=control-plane",
-	})
+	endpoints, err := kubeapiserver.GetEndpoints(ctx, kubeCl)
 	if err != nil {
-		return nil, fmt.Errorf("list kube-apiserver pods: %w", err)
-	}
-	for i := range pods.Items {
-		pod := &pods.Items[i]
-		// A terminating mirror pod keeps its address to the end; a master on
-		// its way out must not be handed to a node that is just arriving.
-		if pod.DeletionTimestamp != nil || pod.Status.PodIP == "" {
-			continue
-		}
-		set["https://"+net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(APIServerPort))] = struct{}{}
+		return nil, err
 	}
 
-	slice, err := kubeCl.DiscoveryV1().
-		EndpointSlices(apiServerEndpointSliceNS).
-		Get(ctx, apiServerEndpointSliceName, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("read the %s/%s EndpointSlice: %w", apiServerEndpointSliceNS, apiServerEndpointSliceName, err)
-	}
-	var ports []int32
-	for _, port := range slice.Ports {
-		if port.Name == nil || *port.Name != apiServerPortName {
-			continue
-		}
-		if port.Port == nil {
-			continue
-		}
-		ports = append(ports, *port.Port)
-	}
-	for _, endpoint := range slice.Endpoints {
-		for _, addr := range endpoint.Addresses {
-			for _, port := range ports {
-				set["https://"+net.JoinHostPort(addr, strconv.Itoa(int(port)))] = struct{}{}
-			}
-		}
+	urls := make([]string, 0, len(endpoints))
+	for _, endpoint := range endpoints {
+		urls = append(urls, "https://"+endpoint)
 	}
 
-	if len(set) == 0 {
-		return nil, errors.New("the cluster reports no apiserver endpoints")
-	}
-	return slices.Sorted(maps.Keys(set)), nil
+	return urls, nil
 }
