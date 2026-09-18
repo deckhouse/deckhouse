@@ -292,8 +292,10 @@ As with policy assignment, enforcement mode can be set:
 
 Namespaces named `d8-*` and `kube-*` hold the components of the platform itself.
 Policies apply to them differently from application namespaces, and that difference is not configurable.
+A namespace labeled `heritage: deckhouse` counts as one of them even if it is named differently:
+the platform sets that label on the namespaces it creates, and a policy written for application namespaces does not reach it.
 
-Every such namespace is checked against the `restricted` standard in `warn` mode.
+Every namespace named `d8-*` or `kube-*` is checked against the `restricted` standard in `warn` mode.
 The `security.deckhouse.io/pod-policy` label and the
 [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter
 do not apply there.
@@ -308,9 +310,10 @@ A module exempts a workload of its own where it has to, with a SecurityPolicyExc
 OperationPolicy and SecurityPolicy resources reach system namespaces in `warn` mode as well.
 A policy with `enforcementAction: Deny` blocks workloads in application namespaces
 and only reports violations in a system namespace.
-A module may opt its own namespace into enforcement, and there such a policy keeps its own action.
+A module may opt its own namespace into enforcement, and there a denying policy blocks workloads as it does in an application namespace.
 
-Such a policy is rendered as several Gatekeeper constraints, which are visible in the audit and in Deckhouse Console:
+A denying policy that reaches system namespaces is rendered as several Gatekeeper constraints,
+which are visible in the audit and in Deckhouse Console:
 
 - `d8-system-default-<policy>`: For the system namespaces that no module opted into enforcement.
 - `d8-system-enforce-<policy>`: For the system namespaces that a module opted into enforcement.
