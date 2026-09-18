@@ -37,6 +37,12 @@ import (
 // workloads through the Service, not through the indexer directly.
 const indexName = "package"
 
+// DefaultResyncPeriod is how often the informers re-deliver their cached
+// workloads to the event handlers. It re-enqueues every known package key, so
+// a package whose key was dropped is reconciled again without waiting for its
+// workloads to change. A resync replays the local cache; it is not a LIST.
+const DefaultResyncPeriod = 5 * time.Minute
+
 // workloadKind is a stable map key for per-kind state (indexers, sync funcs).
 // It is intentionally a string so the value can be used directly in log
 // fields and error messages without a separate conversion.
@@ -61,6 +67,9 @@ type Monitor struct {
 	reconcile Reconcile
 	labelKey  string
 
+	// resyncPeriod is the informer resync; zero disables periodic resync.
+	resyncPeriod time.Duration
+
 	logger *log.Logger
 
 	// once guards Run against accidental re-entry.
@@ -76,6 +85,16 @@ type Monitor struct {
 // known WorkloadStatus for the given package.
 type Reconcile func(name string, status []WorkloadStatus)
 
+// Option overrides a Monitor default at construction.
+type Option func(*Monitor)
+
+// WithResyncPeriod sets the informer resync period; zero disables resync.
+func WithResyncPeriod(period time.Duration) Option {
+	return func(m *Monitor) {
+		m.resyncPeriod = period
+	}
+}
+
 // NewMonitor constructs a Monitor. It wires up the shared informer
 // factory, the typed informers, and the per-package indexer, but does
 // not start any goroutines or perform any I/O; that happens in Start.
@@ -85,16 +104,8 @@ type Reconcile func(name string, status []WorkloadStatus)
 // API server only sends workloads that carry the package label. This
 // matches what the local indexer requires anyway and avoids caching every
 // Deployment/StatefulSet in the cluster.
-func NewMonitor(client kubernetes.Interface, reconcile Reconcile, labelKey string, logger *log.Logger) (*Monitor, error) {
-	// Resync period is 0: the watch is authoritative and we have nothing
-	// useful to do on a periodic full re-list.
+func NewMonitor(client kubernetes.Interface, reconcile Reconcile, labelKey string, logger *log.Logger, opts ...Option) (*Monitor, error) {
 	s := &Monitor{
-		factory: informers.NewSharedInformerFactoryWithOptions(client, 0,
-			informers.WithTransform(stripUnusedFields),
-			informers.WithTweakListOptions(func(o *metav1.ListOptions) {
-				o.LabelSelector = labelKey
-			}),
-		),
 		indexers: make(map[workloadKind]cache.Indexer, 2),
 		syncs:    make(map[workloadKind]cache.InformerSynced, 2),
 		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
@@ -102,11 +113,24 @@ func NewMonitor(client kubernetes.Interface, reconcile Reconcile, labelKey strin
 			workqueue.TypedRateLimitingQueueConfig[string]{Name: "health"},
 		),
 
-		reconcile: reconcile,
-		labelKey:  labelKey,
-		logger:    logger,
-		done:      make(chan struct{}),
+		reconcile:    reconcile,
+		labelKey:     labelKey,
+		resyncPeriod: DefaultResyncPeriod,
+		logger:       logger,
+		done:         make(chan struct{}),
 	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	// The factory carries the resync period, so it is built after the options.
+	s.factory = informers.NewSharedInformerFactoryWithOptions(client, s.resyncPeriod,
+		informers.WithTransform(stripUnusedFields),
+		informers.WithTweakListOptions(func(o *metav1.ListOptions) {
+			o.LabelSelector = labelKey
+		}),
+	)
 
 	if err := s.registerInformer(kindDeployment, s.factory.Apps().V1().Deployments().Informer()); err != nil {
 		return nil, fmt.Errorf("register Deployment informer: %w", err)
@@ -191,7 +215,9 @@ func metaFor(obj any) (metav1.Object, error) {
 // workload is relabeled from package A to package B, both packages must
 // be re-reconciled so A drops the workload and B picks it up. The
 // workqueue dedupes when the labels are equal, so the double enqueue is
-// free in the common case.
+// free in the common case. An informer resync arrives through the same
+// UpdateFunc with old and new equal, which is what makes a resync
+// re-enqueue every known package key.
 func (m *Monitor) eventHandler() cache.ResourceEventHandlerFuncs {
 	enqueue := func(obj any) {
 		meta, err := metaFor(obj)

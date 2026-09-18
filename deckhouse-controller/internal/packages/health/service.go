@@ -17,6 +17,7 @@ package health
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"k8s.io/client-go/kubernetes"
 
@@ -46,6 +47,19 @@ type Service struct {
 	mu         sync.Mutex
 	lastHealth map[string]State
 	callback   Callback
+
+	// resyncPeriod is handed to the monitor's informers; zero disables resync.
+	resyncPeriod time.Duration
+}
+
+// Option overrides a Service default at construction.
+type Option func(*Service)
+
+// WithResyncPeriod sets the health informer resync period; zero disables resync.
+func WithResyncPeriod(period time.Duration) Option {
+	return func(s *Service) {
+		s.resyncPeriod = period
+	}
 }
 
 // Callback is invoked from the reconcile goroutine whenever a package's
@@ -56,13 +70,18 @@ type Callback func(name string, event Event)
 // NewService constructs a Service. It does not start any goroutines or
 // perform any I/O; that happens in Start. The callback is invoked on
 // every package health transition and must be non-nil and non-blocking.
-func NewService(client kubernetes.Interface, cb Callback, logger *log.Logger) (*Service, error) {
+func NewService(client kubernetes.Interface, cb Callback, logger *log.Logger, opts ...Option) (*Service, error) {
 	s := &Service{
-		callback:   cb,
-		lastHealth: make(map[string]State),
+		callback:     cb,
+		lastHealth:   make(map[string]State),
+		resyncPeriod: monitor.DefaultResyncPeriod,
 	}
 
-	mon, err := monitor.NewMonitor(client, s.reconcile, LabelKey, logger)
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	mon, err := monitor.NewMonitor(client, s.reconcile, LabelKey, logger, monitor.WithResyncPeriod(s.resyncPeriod))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create monitor: %w", err)
 	}
@@ -88,7 +107,9 @@ func (s *Service) Stop() {
 
 // reconcile is the Monitor's Reconcile callback. It reduces the per-workload
 // statuses to a single State, dedupes against the last reported value, and
-// fires the user callback only on a real transition. The lock is held only
+// fires the user callback only on a real transition — including on an informer
+// resync, which therefore repairs this Service's view of the cache but never
+// republishes an unchanged State. Republishing is the status resync's job. The lock is held only
 // for the read-compare-write of one map entry; the user callback runs after
 // it drops, so a slow callback can't block other reconciles from updating
 // state — though it will still serialize with them on the worker goroutine.

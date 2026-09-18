@@ -19,6 +19,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,6 +111,14 @@ type Service struct {
 
 	// moduleQueue carries names of modules whose status changed.
 	moduleQueue workqueue.TypedRateLimitingInterface[string]
+
+	// resyncPeriod is how often every registered package is re-enqueued;
+	// zero disables the periodic resync entirely. Immutable after construction.
+	resyncPeriod time.Duration
+	// resyncStop ends the resync goroutine, resyncDone reports that it exited.
+	// Shutdown waits on resyncDone before shutting the queues down.
+	resyncStop chan struct{}
+	resyncDone chan struct{}
 }
 
 // Status represents the current state of a package
@@ -147,8 +156,10 @@ type Condition struct {
 	Message string                 `json:"message,omitempty"`
 }
 
-func NewService() *Service {
-	return &Service{
+// NewService creates the package status tracker. Options override the resync
+// period; the queues and maps are always fresh.
+func NewService(opts ...Option) *Service {
+	s := &Service{
 		appQueue: workqueue.NewTypedRateLimitingQueueWithConfig(
 			workqueue.DefaultTypedControllerRateLimiter[string](),
 			workqueue.TypedRateLimitingQueueConfig[string]{Name: appQueueName},
@@ -159,7 +170,16 @@ func NewService() *Service {
 		),
 		statuses:      make(map[string]*Status),
 		pendingHealth: make(map[string]health.Event),
+		resyncPeriod:  DefaultResyncPeriod,
+		resyncStop:    make(chan struct{}),
+		resyncDone:    make(chan struct{}),
 	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
 }
 
 // AppQueue returns the application notification queue. Consumers pull changed
@@ -187,8 +207,13 @@ func (s *Service) queueFor(name string) workqueue.TypedRateLimitingInterface[str
 	return s.moduleQueue
 }
 
-// Shutdown stops the notification queue; the consumer loop exits on the next Get.
+// Shutdown stops the periodic resync and then the notification queues; the
+// consumer loop exits on the next Get. The resync goroutine is fully stopped
+// first, so it cannot add a key to a queue that is already shutting down.
+// Called once, paired with the StartResync in Runtime.Run.
 func (s *Service) Shutdown() {
+	s.stopResync()
+
 	s.appQueue.ShutDown()
 	s.moduleQueue.ShutDown()
 }
