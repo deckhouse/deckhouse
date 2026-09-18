@@ -68,7 +68,7 @@ If there is a rule without the `namespaceSelector` option and `limitNamespaces` 
 
 Yes. Both models ultimately boil down to the standard Kubernetes RBAC mechanism, and RBAC is a permissive model: permissions from all sources are **summed up**. If an action is allowed by at least one source — a ClusterAuthorizationRule, an AuthorizationRule, a RoleBinding to an primary-model role, or a ProjectRoleBinding — it will be allowed. Nothing needs to be "switched over": you can keep the existing ClusterAuthorizationRule objects and gradually add primary-model role bindings.
 
-The only exception is the multitenancy mode ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)). If a user has a ClusterAuthorizationRule with a namespace restriction (`limitNamespaces` or `namespaceSelector`), that restriction acts as a **hard boundary**: requests to namespaces outside the list are denied even if the user has a RoleBinding there. See [the module description](./#rolebinding-car) for details. If a user needs combined access, use an AuthorizationRule instead of a ClusterAuthorizationRule, or do not set a namespace restriction in the CAR.
+This holds in the multitenancy mode ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) as well, with one rule about levels. The namespace restriction of a ClusterAuthorizationRule (`limitNamespaces` or `namespaceSelector`) limits the permissions of that rule only: in a namespace outside the list the user keeps whatever a RoleBinding, an AuthorizationRule or a ProjectRoleBinding grants there, at the level of that binding — the `accessLevel` of the ClusterAuthorizationRule does not leak into it. A namespace where the user has no source at all stays denied. See [the module description](./#using-clusterauthorizationrule-and-authorizationrule-together-with-rbac) for the full set of sources and an example.
 
 ## How do I get an equivalent of the ClusterAdmin and SuperAdmin roles in the granular model?
 
@@ -80,9 +80,9 @@ Approximate level mapping:
 |--------------------|-------------------------------|
 | `User` | `d8:namespace:viewer` (via RoleBinding or ProjectRoleBinding). |
 | `PrivilegedUser` | `d8:namespace:user`. |
-| `Editor` | `d8:namespace:manager`. |
+| `Editor` | `d8:namespace:manager` — the same level; the scope differs: the granular role is bound per namespace (RoleBinding) or per project (ProjectRoleBinding), not cluster-wide with a namespace filter. |
 | `Admin` | `d8:namespace:admin`. |
-| `ClusterEditor` | `d8:system:manager` (roughly; the scope is the platform and system namespaces). |
+| `ClusterEditor` | No direct counterpart. `ClusterEditor` is the `Editor` level in every namespace, system ones included, plus cluster-scoped objects. Assemble it from a ClusterProjectRoleBinding to `d8:project:manager` (all projects) and a system role for the platform part; `d8:system:manager` alone is not an equivalent: it gives no access to the user namespaces. |
 | `ClusterAdmin` | `d8:system:manager` + a ClusterProjectRoleBinding to `d8:project:admin`. |
 | `SuperAdmin` | `d8:system:superadmin` + a ClusterProjectRoleBinding to `d8:project:superadmin`. |
 

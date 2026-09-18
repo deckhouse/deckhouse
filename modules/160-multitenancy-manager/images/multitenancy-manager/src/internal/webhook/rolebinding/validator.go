@@ -101,15 +101,21 @@ func Validate(ctx context.Context, c client.Client, req admission.Request, in In
 		return admission.Denied(denied)
 	}
 
-	if !rolebinding.IsRoleAllowed(in.RoleRefName) {
+	prefixDenied := func() admission.Response {
 		return admission.Denied(fmt.Sprintf(
 			"ClusterRole %q cannot be granted via a project role binding; allowed: d8:project:*, d8:namespace:*, their capabilities and d8:custom:*",
 			in.RoleRefName))
 	}
 
+	// The role is looked up before the prefix check so that a deprecated alias (d8:use:role:*) --
+	// whose name is outside the granted prefixes -- still gets the message that names its
+	// replacement, instead of the generic prefix refusal.
 	clusterRole := &rbacv1.ClusterRole{}
 	if err := c.Get(ctx, client.ObjectKey{Name: in.RoleRefName}, clusterRole); err != nil {
 		if apierrors.IsNotFound(err) {
+			if !rolebinding.IsRoleAllowed(in.RoleRefName) {
+				return prefixDenied()
+			}
 			// Fail closed: a non-privileged user must not be able to pre-create a binding to a
 			// not-yet-existing role and thus skip the scope/label and privilege-escalation checks
 			// below. Only the controller/Deckhouse may reference an absent role.
@@ -124,7 +130,15 @@ func Validate(ctx context.Context, c client.Client, req admission.Request, in In
 	}
 
 	if clusterRole.Annotations[rolebinding.AnnotationDisabledForProjects] == "true" {
-		return admission.Denied(fmt.Sprintf("ClusterRole %q is disabled for direct use in projects", in.RoleRefName))
+		msg := fmt.Sprintf("ClusterRole %q is disabled for direct use in projects", in.RoleRefName)
+		if replacement := clusterRole.Annotations[rolebinding.AnnotationDeprecatedReplacedBy]; replacement != "" {
+			msg += fmt.Sprintf("; use %q instead", replacement)
+		}
+		return admission.Denied(msg)
+	}
+
+	if !rolebinding.IsRoleAllowed(in.RoleRefName) {
+		return prefixDenied()
 	}
 
 	if strings.HasPrefix(in.RoleRefName, customRolePrefix) {

@@ -17,6 +17,7 @@ limitations under the License.
 package dictbindings
 
 import (
+	"context"
 	"maps"
 	"strings"
 	"testing"
@@ -372,5 +373,42 @@ d8_user_authz_bindings_drift{kind="dict",reason="missing"} 0
 	}
 	if got := testutil.ToFloat64(m.ApplyTotal().WithLabelValues(metrics.KindDict, metrics.OpDelete, metrics.ResultSuccess)); got != 1 {
 		t.Errorf("deletes = %v, want 1", got)
+	}
+}
+
+// TestReconcile_ProjectRoleHoldersGetDict: a subject that holds a project role through the
+// RoleBinding multitenancy-manager fans out of a ProjectRoleBinding reads the dictionaries like a
+// namespace-role holder; the grant goes away with the binding. A custom project role
+// (d8:custom:project:*) is not a project role of the model and contributes nothing.
+func TestReconcile_ProjectRoleHoldersGetDict(t *testing.T) {
+	t.Parallel()
+	fanout := map[string]string{"heritage": "multitenancy-manager", "projects.deckhouse.io/project": "team"}
+	prb := roleBinding("team", "d8:prb:admins", "d8:project:admin", fanout, user("pat"), group("project-admins"))
+	c := reconcileWith(t,
+		prb,
+		roleBinding("team", "d8:cprb:ops", "d8:project:viewer", fanout, group("platform-ops")),
+		roleBinding("team", "d8:prb:custom", "d8:custom:project:role-x", fanout, user("ignored")),
+	)
+
+	got := dictSubjects(t, c)
+	for _, key := range []string{"user:pat", "group:project-admins", "group:platform-ops"} {
+		if _, ok := got[key]; !ok {
+			t.Errorf("%s must hold d8:dict, got %v", key, got)
+		}
+	}
+	if _, ok := got["user:ignored"]; ok {
+		t.Error("a custom project role must not grant d8:dict")
+	}
+
+	if err := c.Delete(context.Background(), prb); err != nil {
+		t.Fatal(err)
+	}
+	reconcileOnce(t, c)
+	got = dictSubjects(t, c)
+	if _, ok := got["user:pat"]; ok {
+		t.Error("pat's dict binding must be pruned with the ProjectRoleBinding fan-out")
+	}
+	if _, ok := got["group:platform-ops"]; !ok {
+		t.Error("platform-ops still holds a project role and keeps d8:dict")
 	}
 }
