@@ -292,7 +292,10 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 		// The pod comes first: a drain that starts before it exists has nothing
 		// to evict and simply succeeds.
 		createStuckPod("stuck-"+name, name)
-		createGroupNode(name, name, map[string]string{nodecommon.DrainingAnnotation: "bashible"})
+		createGroupNode(name, name, map[string]string{
+			nodecommon.DrainingAnnotation:    "bashible",
+			nodecommon.DrainFailedAnnotation: "previous drain failure",
+		})
 
 		// The pod going into termination is proof the drain is under way — the
 		// cordon alone is not, since it is written a pass earlier. The finalizer
@@ -305,15 +308,18 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 		Expect(k8sClient.Patch(suiteCtx, getNodeState(name), client.RawPatch(types.MergePatchType,
 			[]byte(`{"metadata":{"annotations":{"`+nodecommon.DrainingAnnotation+`":null}}}`)))).To(Succeed())
 
-		// The event is the only visible proof the drain was stopped: the node
-		// itself is left exactly as the drain found it.
+		// The event proves the drain was stopped. The controller also removes
+		// the failure marker because it no longer describes an active request.
 		Eventually(func() bool {
 			return eventExists(name, "DrainCancelled")
 		}, eventuallyTimeout, eventuallyPoll).Should(BeTrue())
 
 		Consistently(func(g Gomega) {
-			g.Expect(getNodeState(name).Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation),
+			annotations := getNodeState(name).Annotations
+			g.Expect(annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation),
 				"a cancelled drain must not be recorded as done")
+			g.Expect(annotations).NotTo(HaveKey(nodecommon.DrainFailedAnnotation),
+				"a cancelled drain must not retain a stale failure")
 		}, negativeCheckDuration, eventuallyPoll).Should(Succeed())
 	})
 

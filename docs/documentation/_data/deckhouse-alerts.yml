@@ -5031,13 +5031,17 @@ alerts:
       description: |
         Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` is stuck in the draining process.
 
-        To get more details, run the following:
+        The Node carries the error of the last attempt, cut to 1 KB. To read it, run:
+
+        ```shell
+        d8 k get node {{ $labels.node }} -o json | jq -r '.metadata.annotations["update.node.deckhouse.io/drain-failed"]'
+        ```
+
+        Its full text is in the Node's events:
 
         ```shell
         d8 k -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'
         ```
-
-        Error message: {{ $labels.message }}
       summary: |
         Node {{ $labels.node }} is stuck in draining.
       severity: "6"
