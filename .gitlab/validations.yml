@@ -15,6 +15,9 @@ no_cyrillic_validation:
   extends:
     - .validation_base
     - .rules:on_merge_request
+  before_script:
+    - !reference [.scripts, check_skip_label]
+    - !reference [.scripts, prepare_validation_diff]
   script:
     - ./testing/validate_no_cyrillic.sh "${DIFF_PATH}"
 
