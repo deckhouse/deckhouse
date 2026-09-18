@@ -44,6 +44,8 @@ func ValidateModuleConfig(state *zval.State, operation admissionv1.Operation) cp
 	case admissionv1.Create, admissionv1.Update:
 		result.Merge(
 			zval.ValidateProviderConnection(state),
+			zval.ValidateCustomNetworkConfigParameters(state),
+			zval.ValidateCustomNetworkConfigsCoverNodeGroupReplicas(state, true),
 		)
 	}
 
@@ -88,6 +90,8 @@ func ValidateNodeGroup(state *zval.State, operation admissionv1.Operation) cpval
 		result.Merge(
 			cpval.ValidateNodeGroupsClassReference(state, false),
 			cpval.ValidateInstanceClassesEtcdDisk(state),
+			zval.ValidateCustomNetworkConfigParameters(state),
+			zval.ValidateCustomNetworkConfigsCoverNodeGroupReplicas(state, false),
 		)
 	}
 

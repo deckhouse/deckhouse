@@ -141,6 +141,139 @@ func TestModuleConfigValidatorAllowsDeletion(t *testing.T) {
 	}
 }
 
+// The ModuleConfig surface reads every CloudPermanent NodeGroup of the cluster, so a key naming one
+// of them is accepted.
+func TestModuleConfigValidatorAcceptsCustomNetworkConfigsForExistingNodeGroups(t *testing.T) {
+	t.Parallel()
+
+	factory := newWebhookAdmissionStateBuilderFactory(t, validClusterObjects()...)
+	obj := moduleConfigObject(zmeta.ModuleName, "https://zvirt.example.com", "", false)
+	setCustomNetworkConfigs(t, obj, map[string]any{
+		"master": customNetworkConfigObject("192.168.1.10", "192.168.1.11"),
+	})
+
+	warnings, err := NewModuleConfigValidator(factory, &unstructured.Unstructured{}).
+		ValidateCreate(context.Background(), obj)
+	if err != nil {
+		t.Fatalf("ValidateCreate() = %v, want allow", err)
+	}
+
+	if len(warnings) != 0 {
+		t.Fatalf("ValidateCreate() warnings = %v, want none", warnings)
+	}
+}
+
+// A key that names no CloudPermanent NodeGroup is allowed with a warning: the entry may be written
+// before the NodeGroup it describes, and the operator needs to hear that those nodes will not get
+// the static configuration they expect.
+func TestModuleConfigValidatorWarnsAboutUnknownNodeGroupKeys(t *testing.T) {
+	t.Parallel()
+
+	factory := newWebhookAdmissionStateBuilderFactory(t, validClusterObjects()...)
+	obj := moduleConfigObject(zmeta.ModuleName, "https://zvirt.example.com", "", false)
+	setCustomNetworkConfigs(t, obj, map[string]any{
+		"typo": customNetworkConfigObject("192.168.1.10"),
+	})
+
+	warnings, err := NewModuleConfigValidator(factory, &unstructured.Unstructured{}).
+		ValidateCreate(context.Background(), obj)
+	if err != nil {
+		t.Fatalf("ValidateCreate() = %v, want the unknown key to be allowed", err)
+	}
+
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "typo") {
+		t.Fatalf("ValidateCreate() warnings = %v, want one about the unknown NodeGroup", warnings)
+	}
+}
+
+// The NodeGroup surface reads the ModuleConfig from the cluster: a group scaled past its address
+// list is caught here even though the group being reviewed is the only one in the state.
+func TestNodeGroupValidatorRejectsScalingPastTheAddressList(t *testing.T) {
+	t.Parallel()
+
+	mc := moduleConfigObject(zmeta.ModuleName, "https://zvirt.example.com", "", false)
+	setCustomNetworkConfigs(t, mc, map[string]any{
+		"worker": customNetworkConfigObject("192.168.1.10", "192.168.1.11"),
+	})
+
+	factory := newWebhookAdmissionStateBuilderFactory(t, append(validClusterObjects(), mc)...)
+
+	_, err := NewNodeGroupValidator(factory, &unstructured.Unstructured{}).
+		ValidateCreate(context.Background(), cloudPermanentNodeGroupObject("worker", "worker-class", 3))
+	if err == nil {
+		t.Fatalf("ValidateCreate() = nil, want the missing address to be rejected")
+	}
+
+	if !strings.Contains(err.Error(), "networkInterfaceAddresses") {
+		t.Fatalf("ValidateCreate() = %v, want it to name the short address list", err)
+	}
+}
+
+// The same group fits inside its address list, so nothing is denied.
+func TestNodeGroupValidatorAllowsScalingWithinTheAddressList(t *testing.T) {
+	t.Parallel()
+
+	mc := moduleConfigObject(zmeta.ModuleName, "https://zvirt.example.com", "", false)
+	setCustomNetworkConfigs(t, mc, map[string]any{
+		"worker": customNetworkConfigObject("192.168.1.10", "192.168.1.11"),
+	})
+
+	factory := newWebhookAdmissionStateBuilderFactory(t, append(validClusterObjects(), mc)...)
+
+	if _, err := NewNodeGroupValidator(factory, &unstructured.Unstructured{}).
+		ValidateCreate(context.Background(), cloudPermanentNodeGroupObject("worker", "worker-class", 2)); err != nil {
+		t.Fatalf("ValidateCreate() = %v, want allow", err)
+	}
+}
+
+// The NodeGroup surface also reads the ModuleConfig, so a duplicated address in the configuration
+// of the group being reviewed is caught while the group is written, not only while the config is.
+func TestNodeGroupValidatorRejectsDuplicateAddresses(t *testing.T) {
+	t.Parallel()
+
+	mc := moduleConfigObject(zmeta.ModuleName, "https://zvirt.example.com", "", false)
+	setCustomNetworkConfigs(t, mc, map[string]any{
+		"worker": customNetworkConfigObject("192.168.1.10", "192.168.1.10"),
+	})
+
+	factory := newWebhookAdmissionStateBuilderFactory(t, append(validClusterObjects(), mc)...)
+
+	_, err := NewNodeGroupValidator(factory, &unstructured.Unstructured{}).
+		ValidateCreate(context.Background(), cloudPermanentNodeGroupObject("worker", "worker-class", 1))
+	if err == nil {
+		t.Fatalf("ValidateCreate() = nil, want the duplicate address to be rejected")
+	}
+
+	if !strings.Contains(err.Error(), "duplicates") {
+		t.Fatalf("ValidateCreate() = %v, want it to name the duplicate", err)
+	}
+}
+
+// The NodeGroup surface holds only the group being reviewed, so a key naming a sibling must not be
+// reported as unknown: every NodeGroup update would otherwise carry warnings about the other
+// groups' configurations.
+func TestNodeGroupValidatorDoesNotWarnAboutSiblingCustomNetworkConfigKeys(t *testing.T) {
+	t.Parallel()
+
+	mc := moduleConfigObject(zmeta.ModuleName, "https://zvirt.example.com", "", false)
+	setCustomNetworkConfigs(t, mc, map[string]any{
+		"master": customNetworkConfigObject("192.168.1.10", "192.168.1.11"),
+		"worker": customNetworkConfigObject("192.168.1.20", "192.168.1.21"),
+	})
+
+	factory := newWebhookAdmissionStateBuilderFactory(t, append(validClusterObjects(), mc)...)
+
+	warnings, err := NewNodeGroupValidator(factory, &unstructured.Unstructured{}).
+		ValidateCreate(context.Background(), cloudPermanentNodeGroupObject("worker", "worker-class", 2))
+	if err != nil {
+		t.Fatalf("ValidateCreate() = %v, want allow", err)
+	}
+
+	if len(warnings) != 0 {
+		t.Fatalf("ValidateCreate() warnings = %v, want none about the sibling configurations", warnings)
+	}
+}
+
 func TestCredentialSecretValidatorRejectsAMissingPassword(t *testing.T) {
 	t.Parallel()
 

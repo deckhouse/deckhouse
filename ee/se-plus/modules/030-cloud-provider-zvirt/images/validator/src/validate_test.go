@@ -116,6 +116,34 @@ func testInput(operation validatev1.Operation) validatev1.Input {
 	}
 }
 
+// The legacy providerClusterConfiguration section travels as a bare top-level map, not wrapped in
+// apiVersion/kind/spec: dhctl flattens it before putting it on the wire.
+func testProviderClusterConfig(masterReplicas int, masterAddresses []string) map[string]any {
+	return map[string]any{
+		"layout":       "Standard",
+		"sshPublicKey": "ssh-rsa AAAA",
+		"clusterID":    "c4bf82a5-b803-40c3-9f6c-b9398378f424",
+		"masterNodeGroup": map[string]any{
+			"replicas": masterReplicas,
+			"instanceClass": map[string]any{
+				"numCPUs":  4,
+				"memory":   8192,
+				"template": "debian-bookworm",
+				"customNetworkConfig": map[string]any{
+					"networkInterfaceName":    "enp1s0",
+					"networkInterfaceAddress": masterAddresses,
+					"networkInterfaceNetmask": "255.255.255.0",
+					"networkInterfaceGateway": "192.168.1.1",
+					"dnsServers":              "8.8.8.8 8.8.4.4",
+				},
+			},
+		},
+		"provider": map[string]any{
+			"server": "https://zvirt.example.com/ovirt-engine/api",
+		},
+	}
+}
+
 func TestValidateAcceptsACompleteConfiguration(t *testing.T) {
 	t.Parallel()
 
@@ -132,6 +160,24 @@ func TestValidateAcceptsACompleteConfiguration(t *testing.T) {
 				t.Fatalf("validate(%s) = %q, want no violations", operation, result.Error())
 			}
 		})
+	}
+}
+
+// A cluster that still lives on the legacy providerClusterConfiguration has no ModuleConfig
+// customNetworkConfigs to check, so the same address-list rules must run against the PCC itself.
+func TestValidateAcceptsALegacyCustomNetworkConfig(t *testing.T) {
+	t.Parallel()
+
+	input := testInput(validatev1.OperationConverge)
+	input.ProviderClusterConfig = testProviderClusterConfig(1, []string{"192.168.1.10"})
+
+	result, err := validate(context.Background(), input)
+	if err != nil {
+		t.Fatalf("validate() = %v, want a result", err)
+	}
+
+	if result.HasErrors() {
+		t.Fatalf("validate() = %q, want no violations", result.Error())
 	}
 }
 
@@ -191,6 +237,20 @@ func TestValidateReportsViolations(t *testing.T) {
 				settings["provider"].(map[string]any)["parameters"].(map[string]any)["caBundle"] = "%%% not base64 %%%"
 			},
 			wantSub: "invalid CA bundle",
+		},
+		{
+			name: "the legacy address list is shorter than the master replicas",
+			mutate: func(in *validatev1.Input) {
+				in.ProviderClusterConfig = testProviderClusterConfig(2, []string{"192.168.1.10"})
+			},
+			wantSub: "networkInterfaceAddress",
+		},
+		{
+			name: "the legacy address list repeats an address",
+			mutate: func(in *validatev1.Input) {
+				in.ProviderClusterConfig = testProviderClusterConfig(2, []string{"192.168.1.10", "192.168.1.10"})
+			},
+			wantSub: "must not contain duplicates",
 		},
 	}
 

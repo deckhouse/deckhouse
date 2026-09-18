@@ -112,6 +112,26 @@ locals {
 
   # --- Synthesised ModuleConfig ---------------------------------------------
 
+  _pcc_custom_network_configs = {
+    for ng in local._pcc_ngs : ng.name => {
+      networkInterfaceName      = try(ng.instanceClass.customNetworkConfig.networkInterfaceName, "")
+      networkInterfaceAddresses = try(tolist(ng.instanceClass.customNetworkConfig.networkInterfaceAddress), [])
+      networkInterfaceNetmask   = try(ng.instanceClass.customNetworkConfig.networkInterfaceNetmask, "")
+      networkInterfaceGateway   = try(ng.instanceClass.customNetworkConfig.networkInterfaceGateway, "")
+      dnsServers                = compact(split(" ", try(ng.instanceClass.customNetworkConfig.dnsServers, "")))
+    } if try(ng.instanceClass.customNetworkConfig, null) != null
+  }
+
+  _pcc_node_parameters = merge(
+    {
+      sshPublicKey = try(local._pcc.sshPublicKey, "")
+      layout       = try(local._pcc.layout, local._default_layout)
+    },
+    length(local._pcc_custom_network_configs) > 0 ? {
+      customNetworkConfigs = local._pcc_custom_network_configs
+    } : {}
+  )
+
   _pcc_module_config = {
     apiVersion = "deckhouse.io/v1alpha1"
     kind       = "ModuleConfig"
@@ -129,10 +149,7 @@ locals {
           }
         }
         nodes = {
-          parameters = {
-            sshPublicKey = try(local._pcc.sshPublicKey, "")
-            layout       = try(local._pcc.layout, local._default_layout)
-          }
+          parameters = local._pcc_node_parameters
         }
       }
     }
@@ -175,13 +192,6 @@ locals {
         storageDomainID = try(ng.instanceClass.storageDomainID, "")
         rootDiskSizeGb  = try(ng.instanceClass.rootDiskSizeGb, local._default_root_disk_size_gb)
         etcdDiskSizeGb  = ng.name == "master" ? try(local._pcc.masterNodeGroup.instanceClass.etcdDiskSizeGb, local._default_etcd_disk_size_gb) : null
-        customNetworkConfig = try(ng.instanceClass.customNetworkConfig, null) == null ? null : {
-          networkInterfaceName    = try(ng.instanceClass.customNetworkConfig.networkInterfaceName, "")
-          networkInterfaceAddress = try(tolist(ng.instanceClass.customNetworkConfig.networkInterfaceAddress), [])
-          networkInterfaceNetmask = try(ng.instanceClass.customNetworkConfig.networkInterfaceNetmask, "")
-          networkInterfaceGateway = try(ng.instanceClass.customNetworkConfig.networkInterfaceGateway, "")
-          dnsServers              = compact(split(" ", try(ng.instanceClass.customNetworkConfig.dnsServers, "")))
-        }
       }
     }
   }

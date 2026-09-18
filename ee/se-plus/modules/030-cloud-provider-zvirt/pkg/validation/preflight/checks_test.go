@@ -81,6 +81,63 @@ func TestValidatePreflightChecksLegacyConfigDuringMigration(t *testing.T) {
 	}
 }
 
+// The legacy static network configuration is projected into the settings map during the migration,
+// and the new-model rules are skipped while it is pending — so the legacy surface has to catch a
+// short address list before the apply hands the surplus nodes over to DHCP.
+func TestValidatePreflightChecksLegacyCustomNetworkConfigDuringMigration(t *testing.T) {
+	t.Parallel()
+
+	state := &zval.State{
+		MigrationStatus: cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true},
+		ProviderClusterConfig: &zpccv1.ZvirtProviderClusterConfiguration{
+			Provider: zpccv1.ZvirtProvider{Server: "https://zvirt.example.com/ovirt-engine/api"},
+			MasterNodeGroup: zpccv1.ZvirtMasterNodeGroup{
+				Replicas: 2,
+				InstanceClass: zpccv1.ZvirtMasterInstanceClass{
+					ZvirtInstanceClass: zpccv1.ZvirtInstanceClass{
+						CustomNetworkConfig: &zpccv1.ZvirtNetworkConfig{
+							NetworkInterfaceAddress: []string{"192.168.1.10"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	result := ValidatePreflight(state)
+	if !hasViolationCode(result, zval.CodeNetworkInterfaceAddressesInsufficient) {
+		t.Fatalf("ValidatePreflight() = %q, want %s", result.Error(), zval.CodeNetworkInterfaceAddressesInsufficient)
+	}
+}
+
+// A legacy configuration whose static network settings are consistent must keep passing preflight:
+// the new rules extend, not tighten, what the migration can carry over.
+func TestValidatePreflightAcceptsLegacyCustomNetworkConfigDuringMigration(t *testing.T) {
+	t.Parallel()
+
+	state := &zval.State{
+		MigrationStatus: cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true},
+		ProviderClusterConfig: &zpccv1.ZvirtProviderClusterConfiguration{
+			Provider: zpccv1.ZvirtProvider{Server: "https://zvirt.example.com/ovirt-engine/api"},
+			MasterNodeGroup: zpccv1.ZvirtMasterNodeGroup{
+				Replicas: 2,
+				InstanceClass: zpccv1.ZvirtMasterInstanceClass{
+					ZvirtInstanceClass: zpccv1.ZvirtInstanceClass{
+						CustomNetworkConfig: &zpccv1.ZvirtNetworkConfig{
+							NetworkInterfaceAddress: []string{"192.168.1.10", "192.168.1.11"},
+							DNSServers:              "8.8.8.8 8.8.4.4",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if result := ValidatePreflight(state); result.HasErrors() {
+		t.Fatalf("ValidatePreflight() = %q, want no errors", result.Error())
+	}
+}
+
 func TestValidatePreflightRejectsInvalidProviderEndpoint(t *testing.T) {
 	t.Parallel()
 

@@ -103,51 +103,6 @@ type InstanceClassSpec struct {
 	// +deckhouse:XDocExamples:value="49bb4594-0cd4-4eb7-8288-8594eafd5a86"
 	// +optional
 	StorageDomainID string `json:"storageDomainID,omitempty"`
-
-	// Enables a custom static network configuration for nodes in this NodeGroup.
-	//
-	// If specified, you must set `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
-	// +deckhouse:ru:description:value="Включает пользовательскую статическую настройку сети для группы узлов (NodeGroup)."
-	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Если заполнено, необходимо задать `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` и `networkInterfaceNetmask`."
-	// +optional
-	CustomNetworkConfig CustomNetworkConfig `json:"customNetworkConfig,omitempty"`
-}
-
-// CustomNetworkConfig describes a static network configuration of the node group interfaces.
-// +deckhouse:ru:description:value="Описывает статическую настройку сетевых интерфейсов группы узлов."
-type CustomNetworkConfig struct {
-	// Name of the network interface to apply the static configuration to.
-	// +deckhouse:ru:description:value="Имя сетевого интерфейса, для которого будет применена статическая настройка."
-	// +deckhouse:XDocExamples:value="enp1s0"
-	// +optional
-	NetworkInterfaceName string `json:"networkInterfaceName,omitempty"`
-
-	// List of IP addresses to assign to the interface (one IP address per node).
-	// +deckhouse:ru:description:value="Список IP-адресов, которые нужно назначить интерфейсам (по адресу для каждого узла)."
-	// +kubebuilder:validation:UniqueItems=true
-	// +deckhouse:XDocExamples:value={"192.168.1.10","192.168.1.11"}
-	// +optional
-	NetworkInterfaceAddress []string `json:"networkInterfaceAddress,omitempty"`
-
-	// Subnet mask for the interface.
-	// +deckhouse:ru:description:value="Маска подсети для интерфейса."
-	// +deckhouse:XDocExamples:value="255.255.255.0"
-	// +optional
-	NetworkInterfaceNetmask string `json:"networkInterfaceNetmask,omitempty"`
-
-	// Default network gateway.
-	// +deckhouse:ru:description:value="Шлюз по умолчанию."
-	// +deckhouse:XDocExamples:value="192.168.1.1"
-	// +optional
-	NetworkInterfaceGateway string `json:"networkInterfaceGateway,omitempty"`
-
-	// List of DNS servers.
-	// +deckhouse:ru:description:value="Список DNS-серверов."
-	// +kubebuilder:validation:UniqueItems=true
-	// +deckhouse:XDocExamples:value={"8.8.8.8","8.8.4.4"}
-	// +optional
-	DNSServers []string `json:"dnsServers,omitempty"`
 }
 
 // InstanceClassStatus stores information about the ZvirtInstanceClass resource.

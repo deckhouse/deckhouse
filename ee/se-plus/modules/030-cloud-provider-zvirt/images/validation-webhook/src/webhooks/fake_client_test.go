@@ -84,6 +84,59 @@ func nodeGroupObject(name string, nodeType cpapi.NodeType) *unstructured.Unstruc
 	return obj
 }
 
+// cloudPermanentNodeGroupObject builds a zVirt CloudPermanent NodeGroup of the given size. Its
+// class reference may point at a class that does not exist yet: admission reviews one write at a
+// time and lets a group be created before its class.
+func cloudPermanentNodeGroupObject(name, className string, maxPerZone int64) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(nodeGroupGVK)
+	obj.SetName(name)
+	obj.Object["spec"] = map[string]any{
+		"nodeType": "CloudPermanent",
+		"cloudInstances": map[string]any{
+			"classReference": map[string]any{
+				"kind": zicv1.ZvirtInstanceClassKind,
+				"name": className,
+			},
+			"minPerZone": int64(0),
+			"maxPerZone": maxPerZone,
+		},
+	}
+
+	return obj
+}
+
+// customNetworkConfigObject is one entry of settings.nodes.parameters.customNetworkConfigs.
+func customNetworkConfigObject(addresses ...string) map[string]any {
+	list := make([]any, 0, len(addresses))
+	for _, address := range addresses {
+		list = append(list, address)
+	}
+
+	return map[string]any{
+		"networkInterfaceName":      "enp1s0",
+		"networkInterfaceAddresses": list,
+		"networkInterfaceNetmask":   "255.255.255.0",
+		"networkInterfaceGateway":   "192.168.1.1",
+		"dnsServers":                []any{"8.8.8.8"},
+	}
+}
+
+// setCustomNetworkConfigs puts settings.nodes.parameters.customNetworkConfigs into a ModuleConfig.
+func setCustomNetworkConfigs(t *testing.T, obj *unstructured.Unstructured, configs map[string]any) {
+	t.Helper()
+
+	parameters, found, err := unstructured.NestedMap(obj.Object, "spec", "settings", "nodes", "parameters")
+	if err != nil || !found {
+		t.Fatalf("settings.nodes.parameters: found=%v err=%v", found, err)
+	}
+
+	parameters["customNetworkConfigs"] = configs
+	if err := unstructured.SetNestedMap(obj.Object, parameters, "spec", "settings", "nodes", "parameters"); err != nil {
+		t.Fatalf("set settings.nodes.parameters: %v", err)
+	}
+}
+
 func staticNodeGroupObject(name string) *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(nodeGroupGVK)

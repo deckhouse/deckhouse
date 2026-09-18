@@ -40,6 +40,43 @@ properties:
         description: |
           Параметры подсистемы управления узлами.
         properties:
+          customNetworkConfigs:
+            additionalProperties:
+              description: |
+                Описывает статическую настройку сетевых интерфейсов группы узлов.
+              properties:
+                dnsServers:
+                  description: |
+                    Список DNS-серверов.
+                  items:
+                    type: string
+                  type: array
+                networkInterfaceAddresses:
+                  description: |
+                    Список IP-адресов, которые нужно назначить интерфейсам (по адресу для каждого узла).
+                  items:
+                    type: string
+                  type: array
+                networkInterfaceGateway:
+                  description: |
+                    Шлюз по умолчанию.
+                  type: string
+                networkInterfaceName:
+                  description: |
+                    Имя сетевого интерфейса, для которого будет применена статическая настройка.
+                  type: string
+                networkInterfaceNetmask:
+                  description: |
+                    Маска подсети для интерфейса.
+                  type: string
+              type: object
+            description: |
+              Статическая настройка сети узлов кластера. Ключ — имя группы узлов (NodeGroup) с типом CloudPermanent.
+
+              Адреса назначаются по порядковому номеру узла: первый адрес `networkInterfaceAddresses` получит узел с индексом 0, второй — узел с индексом 1 и так далее. Поэтому в списке должно быть не меньше адресов, чем реплик в группе узлов.
+
+              Узлы группы, не указанной в этом параметре, настраиваются по DHCP.
+            type: object
           layout:
             description: |
               Название схемы размещения.

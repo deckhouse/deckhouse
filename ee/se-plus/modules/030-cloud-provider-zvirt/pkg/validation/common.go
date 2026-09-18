@@ -11,11 +11,14 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 
 	zpccv1 "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/pkg/api/pcc/v1"
+	zsettingsv2 "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/pkg/api/settings/v2"
 )
 
 const (
@@ -23,6 +26,11 @@ const (
 	CodeProviderServerInvalid   = "provider_server_invalid"
 	CodeProviderCABundleInvalid = "provider_ca_bundle_invalid"
 	CodeProviderCABundleIgnored = "provider_ca_bundle_ignored"
+
+	CodeNetworkInterfaceAddressDuplicate      = "network_interface_address_duplicate"
+	CodeNetworkInterfaceAddressesInsufficient = "network_interface_addresses_insufficient"
+	CodeDNSServerDuplicate                    = "dns_server_duplicate"
+	CodeCustomNetworkConfigUnknownNodeGroup   = "custom_network_config_unknown_node_group"
 )
 
 // ValidateProviderConnection checks the zVirt API connection settings of the ModuleConfig
@@ -55,6 +63,262 @@ func ValidateLegacyProviderConnection(pcc *zpccv1.ZvirtProviderClusterConfigurat
 	result.Merge(
 		validateProviderServer(pathPrefix, pcc.Provider.Server),
 		validateProviderCABundleAndInsecureFlag(pathPrefix, pcc.Provider.CABundle, pcc.Provider.Insecure),
+	)
+
+	return result
+}
+
+// ValidateLegacyCustomNetworkConfigParameters checks each static network configuration of the legacy
+// ZvirtClusterConfiguration on its own, without looking at the node group it is attached to.
+//
+// The legacy addresses are one list and the DNS servers are one space-separated string; the
+// migration copies both into the settings map verbatim, so a repeated entry is just as broken here
+// as it is in the map.
+func ValidateLegacyCustomNetworkConfigParameters(pcc *zpccv1.ZvirtProviderClusterConfiguration) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	for _, entry := range getLegacyCustomNetworkConfigs(pcc) {
+		result.Merge(
+			validateUniqueValues(
+				entry.pathPrefix+".networkInterfaceAddress",
+				CodeNetworkInterfaceAddressDuplicate,
+				"networkInterfaceAddress",
+				entry.config.NetworkInterfaceAddress,
+			),
+			validateUniqueValues(
+				entry.pathPrefix+".dnsServers",
+				CodeDNSServerDuplicate,
+				"dnsServers",
+				strings.Fields(entry.config.DNSServers),
+			),
+		)
+	}
+
+	return result
+}
+
+// ValidateLegacyCustomNetworkConfigsCoverNodeGroupReplicas checks every static network configuration
+// of the legacy ZvirtClusterConfiguration against the replicas of the node group that declares it.
+//
+// The migration projects the legacy replica count onto both bounds of the NodeGroup and hands the
+// addresses out by node index, so a list shorter than the replica count leaves the surplus nodes on
+// DHCP — the same silent failure ValidateCustomNetworkConfigsCoverNodeGroupReplicas catches after
+// the migration, reported here before the doomed apply starts.
+func ValidateLegacyCustomNetworkConfigsCoverNodeGroupReplicas(pcc *zpccv1.ZvirtProviderClusterConfiguration) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	for _, entry := range getLegacyCustomNetworkConfigs(pcc) {
+		addresses := entry.config.NetworkInterfaceAddress
+		if entry.replicas <= len(addresses) {
+			continue
+		}
+
+		result.AddError(
+			entry.pathPrefix+".networkInterfaceAddress",
+			CodeNetworkInterfaceAddressesInsufficient,
+			len(addresses),
+			fmt.Sprintf(
+				"number of nodes in NodeGroup %q (%d) should be less than or equal to the length of %s.networkInterfaceAddress (%d)",
+				entry.nodeGroupName,
+				entry.replicas,
+				entry.pathPrefix,
+				len(addresses),
+			),
+		)
+	}
+
+	return result
+}
+
+// ValidateCustomNetworkConfigParameters checks each static network configuration on its own, without
+// looking at the NodeGroups it is keyed by.
+func ValidateCustomNetworkConfigParameters(state *State) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	for nodeGroupName, config := range getCustomNetworkConfigs(state) {
+		pathPrefix := fmt.Sprintf("ModuleConfig.spec.settings.nodes.parameters.customNetworkConfigs[%s]", nodeGroupName)
+
+		result.Merge(
+			validateUniqueValues(
+				pathPrefix+".networkInterfaceAddresses",
+				CodeNetworkInterfaceAddressDuplicate,
+				"networkInterfaceAddresses",
+				config.NetworkInterfaceAddresses,
+			),
+			validateUniqueValues(
+				pathPrefix+".dnsServers",
+				CodeDNSServerDuplicate,
+				"dnsServers",
+				config.DNSServers,
+			),
+		)
+	}
+
+	return result
+}
+
+// ValidateCustomNetworkConfigsCoverNodeGroupReplicas checks every customNetworkConfigs entry against
+// the CloudPermanent NodeGroup it is keyed by.
+//
+// The address is picked by node index — try(...[nodeIndex], "") in the master-node and static-node
+// terraform modules — so a list shorter than the replica count does not fail the apply: the
+// surplus nodes silently come up without the static configuration the operator asked for.
+//
+// allNodeGroupsKnown says whether the state carries every CloudPermanent NodeGroup of the cluster:
+// the ModuleConfig surface and preflight load all of them, while the NodeGroup surface sees only
+// the group being reviewed. It gates the warning alone — a key the state cannot match is not
+// reported as naming nothing when its siblings were never loaded.
+func ValidateCustomNetworkConfigsCoverNodeGroupReplicas(state *State, allNodeGroupsKnown bool) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	for nodeGroupName, networkConfig := range getCustomNetworkConfigs(state) {
+		pathPrefix := fmt.Sprintf("ModuleConfig.spec.settings.nodes.parameters.customNetworkConfigs[%s]", nodeGroupName)
+
+		nodeGroup, ok := state.FindNodeGroup(nodeGroupName)
+		if !ok {
+			if allNodeGroupsKnown {
+				result.AddWarning(
+					pathPrefix,
+					CodeCustomNetworkConfigUnknownNodeGroup,
+					nodeGroupName,
+					fmt.Sprintf(
+						"customNetworkConfigs contains the name of a non-existent NodeGroup %q",
+						nodeGroupName,
+					),
+				)
+			}
+
+			continue
+		}
+
+		if nodeGroup.Spec.NodeType != cpapi.NodeTypeCloudPermanent {
+			if allNodeGroupsKnown {
+				result.AddWarning(
+					pathPrefix,
+					CodeCustomNetworkConfigUnknownNodeGroup,
+					nodeGroupName,
+					fmt.Sprintf(
+						"customNetworkConfigs contains the name of NodeGroup %q, which is not CloudPermanent",
+						nodeGroupName,
+					),
+				)
+			}
+
+			continue
+		}
+
+		if nodeGroup.Spec.CloudInstances == nil {
+			continue
+		}
+
+		replicas := nodeGroup.Spec.CloudInstances.MaxPerZone
+		if replicas <= len(networkConfig.NetworkInterfaceAddresses) {
+			continue
+		}
+
+		result.AddError(
+			pathPrefix+".networkInterfaceAddresses",
+			CodeNetworkInterfaceAddressesInsufficient,
+			len(networkConfig.NetworkInterfaceAddresses),
+			fmt.Sprintf(
+				"number of nodes in NodeGroup %q (%d) should be less than or equal to the length of settings.nodes.parameters.customNetworkConfigs[%s].networkInterfaceAddresses (%d)",
+				nodeGroup.Name,
+				replicas,
+				nodeGroup.Name,
+				len(networkConfig.NetworkInterfaceAddresses),
+			),
+		)
+	}
+
+	return result
+}
+
+// getCustomNetworkConfigs returns the configured map, or nothing when the ModuleConfig carries no
+// settings yet — an absent ModuleConfig is reported by its own rule, not by these.
+func getCustomNetworkConfigs(state *State) map[string]zsettingsv2.CustomNetworkConfig {
+	if state == nil || state.ModuleConfig == nil || state.ModuleConfig.Spec.Settings == nil {
+		return nil
+	}
+
+	return state.ModuleConfig.Spec.Settings.Nodes.Parameters.CustomNetworkConfigs
+}
+
+// legacyCustomNetworkConfig is one static network configuration of the legacy configuration,
+// together with the node group it belongs to and the path to report it under.
+type legacyCustomNetworkConfig struct {
+	nodeGroupName string
+	pathPrefix    string
+	replicas      int
+	config        *zpccv1.ZvirtNetworkConfig
+}
+
+// getLegacyCustomNetworkConfigs lists the static network configurations the legacy configuration
+// declares: one on the masterNodeGroup, and one per additional node group that sets it. The legacy
+// configuration attaches the configuration to the InstanceClass, which is why the path crosses it.
+func getLegacyCustomNetworkConfigs(pcc *zpccv1.ZvirtProviderClusterConfiguration) []legacyCustomNetworkConfig {
+	if pcc == nil {
+		return nil
+	}
+
+	entries := make([]legacyCustomNetworkConfig, 0, len(pcc.NodeGroups)+1)
+
+	if config := pcc.MasterNodeGroup.InstanceClass.CustomNetworkConfig; config != nil {
+		entries = append(entries, legacyCustomNetworkConfig{
+			nodeGroupName: "master",
+			pathPrefix:    "ProviderClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig",
+			replicas:      pcc.MasterNodeGroup.Replicas,
+			config:        config,
+		})
+	}
+
+	for _, nodeGroup := range pcc.NodeGroups {
+		if nodeGroup.InstanceClass.CustomNetworkConfig == nil {
+			continue
+		}
+
+		entries = append(entries, legacyCustomNetworkConfig{
+			nodeGroupName: nodeGroup.Name,
+			pathPrefix: fmt.Sprintf(
+				"ProviderClusterConfiguration.nodeGroups[%s].instanceClass.customNetworkConfig",
+				nodeGroup.Name,
+			),
+			replicas: nodeGroup.Replicas,
+			config:   nodeGroup.InstanceClass.CustomNetworkConfig,
+		})
+	}
+
+	return entries
+}
+
+// validateUniqueValues reports the repeated values of a list as a single violation naming all of
+// them. Result keys violations by code and path, so one error per duplicate would collapse into
+// the last one anyway — and an operator fixing a long address list wants to see every duplicate at
+// once rather than one per apply.
+func validateUniqueValues(path, code, fieldName string, values []string) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	seen := make(map[string]struct{}, len(values))
+	duplicates := make([]string, 0)
+	for _, value := range values {
+		if _, ok := seen[value]; !ok {
+			seen[value] = struct{}{}
+			continue
+		}
+
+		if !slices.Contains(duplicates, value) {
+			duplicates = append(duplicates, value)
+		}
+	}
+
+	if len(duplicates) == 0 {
+		return result
+	}
+
+	result.AddError(
+		path,
+		code,
+		duplicates,
+		fmt.Sprintf("%s must not contain duplicates, listed more than once: %s", fieldName, strings.Join(duplicates, ", ")),
 	)
 
 	return result

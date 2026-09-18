@@ -45,6 +45,61 @@ properties:
         additionalProperties: false
         description: Parameters of the nodes subsystem.
         properties:
+          customNetworkConfigs:
+            additionalProperties:
+              additionalProperties: false
+              description: CustomNetworkConfig describes a static network configuration
+                of the node group interfaces.
+              properties:
+                dnsServers:
+                  description: List of DNS servers.
+                  items:
+                    type: string
+                  type: array
+                  x-doc-examples:
+                  - - 8.8.8.8
+                    - 8.8.4.4
+                networkInterfaceAddresses:
+                  description: List of IP addresses to assign to the interface (one
+                    IP address per node).
+                  items:
+                    type: string
+                  minItems: 1
+                  type: array
+                  x-doc-examples:
+                  - - 192.168.1.10
+                    - 192.168.1.11
+                networkInterfaceGateway:
+                  description: Default network gateway.
+                  type: string
+                  x-doc-examples:
+                  - 192.168.1.1
+                networkInterfaceName:
+                  description: Name of the network interface to apply the static configuration
+                    to.
+                  type: string
+                  x-doc-examples:
+                  - enp1s0
+                networkInterfaceNetmask:
+                  description: Subnet mask for the interface.
+                  type: string
+                  x-doc-examples:
+                  - 255.255.255.0
+              required:
+              - networkInterfaceAddresses
+              - networkInterfaceGateway
+              - networkInterfaceName
+              - networkInterfaceNetmask
+              type: object
+            description: |-
+              Static network configuration of the cluster nodes, keyed by CloudPermanent NodeGroup name.
+
+              Addresses are assigned by node index: the first address of `networkInterfaceAddresses` goes
+              to the node with index 0, the second to the node with index 1, and so on. The list must
+              therefore hold at least as many addresses as the NodeGroup has replicas.
+
+              Nodes of a NodeGroup that is not listed here are configured over DHCP.
+            type: object
           layout:
             description: |-
               The way resources are located in the cloud.

@@ -33,37 +33,6 @@ spec:
             description: |
               Определяет параметры виртуальной машины zVirt.
             properties:
-              customNetworkConfig:
-                description: |
-                  Включает пользовательскую статическую настройку сети для группы узлов (NodeGroup).
-
-                  Если заполнено, необходимо задать `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` и `networkInterfaceNetmask`.
-                properties:
-                  dnsServers:
-                    description: |
-                      Список DNS-серверов.
-                    items:
-                      type: string
-                    type: array
-                  networkInterfaceAddress:
-                    description: |
-                      Список IP-адресов, которые нужно назначить интерфейсам (по адресу для каждого узла).
-                    items:
-                      type: string
-                    type: array
-                  networkInterfaceGateway:
-                    description: |
-                      Шлюз по умолчанию.
-                    type: string
-                  networkInterfaceName:
-                    description: |
-                      Имя сетевого интерфейса, для которого будет применена статическая настройка.
-                    type: string
-                  networkInterfaceNetmask:
-                    description: |
-                      Маска подсети для интерфейса.
-                    type: string
-                type: object
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd в GiB.

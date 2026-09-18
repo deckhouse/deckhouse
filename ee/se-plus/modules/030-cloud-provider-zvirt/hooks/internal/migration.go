@@ -335,11 +335,61 @@ func BuildModuleConfigSettingsV2(pcc zpccv1.ZvirtProviderClusterConfiguration) z
 		},
 		Nodes: zsettingsv2.Nodes{
 			Parameters: zsettingsv2.NodesParameters{
-				SSHPublicKey: sshPublicKey,
-				Layout:       layout,
+				SSHPublicKey:         sshPublicKey,
+				Layout:               layout,
+				CustomNetworkConfigs: buildCustomNetworkConfigs(pcc),
 			},
 		},
 	}
+}
+
+// buildCustomNetworkConfigs lifts the per-InstanceClass static network configuration of the legacy
+// configuration into the settings map keyed by NodeGroup name.
+//
+// The legacy configuration attaches it to the InstanceClass of a node group, which made it
+// reachable from CloudEphemeral groups it was never applied to. Keying by NodeGroup name says what
+// was always true: the configuration belongs to a CloudPermanent group, whose node indices the
+// addresses are handed out by.
+func buildCustomNetworkConfigs(pcc zpccv1.ZvirtProviderClusterConfiguration) map[string]zsettingsv2.CustomNetworkConfig {
+	configs := make(map[string]zsettingsv2.CustomNetworkConfig)
+
+	if pcc.MasterNodeGroup.Replicas > 0 {
+		if config, ok := mapPCCCustomNetworkConfig(pcc.MasterNodeGroup.InstanceClass.CustomNetworkConfig); ok {
+			configs[masterNodeGroupName] = config
+		}
+	}
+
+	for _, nodeGroup := range pcc.NodeGroups {
+		if nodeGroup.Name == "" {
+			continue
+		}
+
+		if config, ok := mapPCCCustomNetworkConfig(nodeGroup.InstanceClass.CustomNetworkConfig); ok {
+			configs[nodeGroup.Name] = config
+		}
+	}
+
+	if len(configs) == 0 {
+		return nil
+	}
+
+	return configs
+}
+
+// mapPCCCustomNetworkConfig converts one legacy static network configuration. The legacy DNS
+// servers are one space-separated string; the settings take a list.
+func mapPCCCustomNetworkConfig(config *zpccv1.ZvirtNetworkConfig) (zsettingsv2.CustomNetworkConfig, bool) {
+	if config == nil {
+		return zsettingsv2.CustomNetworkConfig{}, false
+	}
+
+	return zsettingsv2.CustomNetworkConfig{
+		NetworkInterfaceName:      config.NetworkInterfaceName,
+		NetworkInterfaceAddresses: config.NetworkInterfaceAddress,
+		NetworkInterfaceNetmask:   config.NetworkInterfaceNetmask,
+		NetworkInterfaceGateway:   config.NetworkInterfaceGateway,
+		DNSServers:                strings.Fields(config.DNSServers),
+	}, true
 }
 
 // BuildNodeGroupAndInstanceClassResources creates a ZvirtInstanceClass and NodeGroup pair for one
@@ -432,16 +482,6 @@ func MapPCCInstanceClassToSpec(instanceClass zpccv1.ZvirtInstanceClass, etcdDisk
 			etcdSize = *etcdDiskSizeGb
 		}
 		spec.EtcdDiskSizeGb = &etcdSize
-	}
-
-	if instanceClass.CustomNetworkConfig != nil {
-		spec.CustomNetworkConfig = zicv1.CustomNetworkConfig{
-			NetworkInterfaceName:    instanceClass.CustomNetworkConfig.NetworkInterfaceName,
-			NetworkInterfaceAddress: instanceClass.CustomNetworkConfig.NetworkInterfaceAddress,
-			NetworkInterfaceNetmask: instanceClass.CustomNetworkConfig.NetworkInterfaceNetmask,
-			NetworkInterfaceGateway: instanceClass.CustomNetworkConfig.NetworkInterfaceGateway,
-			DNSServers:              strings.Fields(instanceClass.CustomNetworkConfig.DNSServers),
-		}
 	}
 
 	return spec
