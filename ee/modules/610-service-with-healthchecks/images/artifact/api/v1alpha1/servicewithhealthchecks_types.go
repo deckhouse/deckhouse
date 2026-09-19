@@ -20,7 +20,8 @@ type ServiceWithHealthchecksSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	corev1.ServiceSpec `json:",inline"`
-	Healthcheck        Healthcheck `json:"healthcheck"`
+	// +optional
+	Healthcheck Healthcheck `json:"healthcheck,omitempty"`
 }
 
 // ServiceWithHealthchecksStatus defines the observed state of ServiceWithHealthchecks

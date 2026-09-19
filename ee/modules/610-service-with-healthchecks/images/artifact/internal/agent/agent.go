@@ -221,7 +221,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 		var failedProbes []string
 
 		// there are always success if svc options set to PublishNotReadyAddresses, otherwise need to evaluate
-		if !svc.Spec.PublishNotReadyAddresses {
+		if hasHealthchecks(svc.Spec) && !svc.Spec.PublishNotReadyAddresses {
 			probesSuccessful = *areAllProbesSucceed(result.probeResultDetails)
 			failedProbes = result.FailedProbes()
 		}
@@ -345,7 +345,7 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 						continue // can not receive stored ServiceWithHealthchecks specification
 					}
 
-					if swhSpec.PublishNotReadyAddresses || swhSpec.ClusterIP == "None" {
+					if !hasHealthchecks(swhSpec) || swhSpec.PublishNotReadyAddresses || swhSpec.ClusterIP == "None" {
 						continue // not need to check connections probe to pod, they are always successful
 					}
 
@@ -617,7 +617,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpoints(svc networkv1alpha1.S
 	defer r.mu.RUnlock()
 
 	for _, probeResult := range r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
-		probesSucceed := *areAllProbesSucceed(probeResult.probeResultDetails)
+		probesSucceed := !hasHealthchecks(svc.Spec) || *areAllProbesSucceed(probeResult.probeResultDetails)
 
 		// a terminating pod stays published until it disappears, so that consumers may fall
 		// back to it while no ready endpoint is left
@@ -874,6 +874,12 @@ func areAllProbesSucceed(probeResultDetail []ProbeResultDetail) *bool {
 	}
 	result := successfulCount > 0 && successfulCount == len(probeResultDetail)
 	return &result
+}
+
+// hasHealthchecks reports whether custom probes are configured. When they are
+// absent, Kubernetes Pod readiness is sufficient for publishing an endpoint.
+func hasHealthchecks(spec networkv1alpha1.ServiceWithHealthchecksSpec) bool {
+	return len(spec.Healthcheck.Probes) > 0
 }
 
 func MakeSliceCopy[T any](originalSlice []T) []T {

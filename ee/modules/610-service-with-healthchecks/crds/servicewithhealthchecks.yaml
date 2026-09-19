@@ -573,8 +573,6 @@ spec:
                   [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
                 default: ClusterIP
                 type: string
-            required:
-            - healthcheck
             type: object
           status:
             description: Defines the observed state of ServiceWithHealthchecks
