@@ -224,7 +224,7 @@ spec:
             type: object
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       status: {}
   - additionalPrinterColumns:
@@ -294,6 +294,8 @@ spec:
               releaseChannel:
                 description: Release channel for the module package.
                 type: string
+                x-doc-examples:
+                - alpha.
               settings:
                 description: Configuration settings for the module.
                 type: object
@@ -425,6 +427,6 @@ spec:
         - spec
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}

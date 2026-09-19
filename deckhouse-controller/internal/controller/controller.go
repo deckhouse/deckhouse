@@ -58,6 +58,7 @@ import (
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	dctlconfig "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -200,7 +201,7 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 			runtime.GetClient(),
 			manager,
 			ms,
-			settingsContainer,
+			dctlconfig.NewSchemaStore(nil),
 		)
 	}
 

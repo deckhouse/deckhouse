@@ -76,7 +76,7 @@ func (r *reaperMutex) Release() {
 	r.Unlock()
 }
 
-func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []string) error {
+func start(logger *log.Logger, _ *app.Config) func(cmd *cobra.Command, args []string) error {
 	return func(_ *cobra.Command, _ []string) error {
 		if os.Getenv(app.EnvSkipEntrypoint) != "true" {
 			if err := entrypoint(logger); err != nil {
@@ -89,6 +89,10 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 
 		ctx := context.Background()
 		client := klient.New(klient.WithLogger(logger.Named("deckhouse")))
+		if err := client.Init(); err != nil {
+			return fmt.Errorf("init kubernetes client: %w", err)
+		}
+
 		ms := metricsstorage.NewMetricStorage(
 			metricsstorage.WithLogger(logger.Named("metric-storage")),
 		)
