@@ -305,6 +305,14 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			Expect(vw.Exists()).To(BeFalse())
 		})
+
+		It("Labels the namespace so that the generic workload alerts cover the module", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ns := f.KubernetesGlobalResource("Namespace", nsName)
+			Expect(ns.Exists()).To(BeTrue())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeTrue())
+			Expect(ns.Field(`metadata.labels.security\.deckhouse\.io/pod-policy`).String()).To(Equal("restricted"))
+		})
 	})
 
 	Context("Cluster with deckhouse on master node with bootstrapped module", func() {

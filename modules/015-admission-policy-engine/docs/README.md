@@ -47,8 +47,7 @@ a rule that inspects `input.review.operation` only runs if the request reaches G
 {% alert level="warning" %}
 The webhook uses `failurePolicy: Fail`.
 While Gatekeeper is unavailable, both creating and deleting the resource kinds listed above is blocked.
-To restore operations, bring the `gatekeeper-controller-manager` deployment back up
-or remove the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration.
+To restore operations, bring the `gatekeeper-controller-manager` deployment back up.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -642,3 +641,30 @@ The module allows you to use the [Gatekeeper Custom Resources](gatekeeper-cr.htm
 - [AssignImage](gatekeeper-cr.html#assignimage) — to change the `image` parameter of the resource.
 
 You can read more about the available options in the [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/) documentation.
+
+## Availability of the module components
+
+The module is on the critical path of the cluster: while its admission webhook is unavailable, the API server rejects the requests the webhook intercepts. This section explains what that costs the cluster and why only the pods of the webhook are excluded from validation.
+
+### Why the admission webhook is a critical component
+
+The `gatekeeper-controller-manager` deployment serves the ValidatingWebhookConfiguration named `d8-admission-policy-engine-config`. Its main webhook is configured with `failurePolicy: Fail`, which means that a request the API server cannot deliver to the webhook is rejected rather than admitted.
+
+The choice is deliberate. A policy that is skipped whenever the webhook is down is not a policy: an object that violates it would be admitted exactly at the moment the enforcement is missing. The cost of that guarantee is that the availability of the webhook becomes the availability of admission in the cluster.
+
+While no replica of `gatekeeper-controller-manager` is available, the following stops working in the namespaces the webhook covers:
+
+- Creation and modification of pods and of the controllers that create them: Deployment, StatefulSet, DaemonSet, ReplicationController, Job and CronJob.
+- Deletion of those same resources. The webhook intercepts the `DELETE` operation as well, because a policy must be able to forbid deleting an object; a rejected `DELETE` is the same failure mode as a rejected `CREATE`.
+- Creation and modification of Role, RoleBinding and Gatekeeper constraints.
+- `kubectl exec` and `kubectl attach` in namespaces whose names start with `d8-` and `kube-`. These are intercepted by a separate webhook that also has `failurePolicy: Fail`, so the outage narrows the ways to diagnose itself.
+
+The mutating webhook is configured differently: its `failurePolicy` is `Ignore`, and an unavailable deployment only means that mutations are not applied.
+
+Disabling the module unblocks the cluster, but the control goes with it: no policy is enforced any more, and an object a policy used to forbid is created without hindrance. The FAQ describes [what to do](faq.html#what-to-do-if-the-admission-webhook-is-unavailable) while the webhook is unavailable.
+
+### Why only the webhook pods are excluded from validation
+
+One exclusion in the webhook configuration covers the pods of `gatekeeper-controller-manager` and nothing else: the webhooks that intercept the creation of objects exclude objects carrying the `gatekeeper.sh/operation: webhook` label through their `objectSelector`. The exclusion exists to break a circular dependency, not to relax the policies for the module. It does not extend to the webhook that intercepts `kubectl exec` and `kubectl attach`, which has no `objectSelector`, so exec into the pods of the module is blocked during an outage along with everything else.
+
+A webhook that validates the pods serving it cannot recover from its own outage. Once the last replica is gone, the API server has nowhere to deliver the request, so it rejects the creation of the replacement pod and the deployment can never return to a running replica on its own. The label, which Gatekeeper sets on its own pods, is the narrowest exclusion that breaks the cycle: the deployment can always create a pod, while every other object of the namespace is validated as usual.

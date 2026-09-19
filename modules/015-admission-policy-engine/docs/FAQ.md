@@ -720,3 +720,36 @@ the policy denies the pods that request GPU resources in that namespace.
 The devices requested through [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)
 in the `spec.resourceClaims` field are not extended resources, and the policy does not check them.
 {% endalert %}
+
+## What to do if the admission webhook is unavailable?
+
+While the `gatekeeper-controller-manager` deployment has no available replicas, the API server rejects every request its webhook intercepts, and the cluster cannot create or delete workloads. The `D8AdmissionPolicyEngineWebhookUnavailable` alert reports this state. Read [why the component is critical](./#why-the-admission-webhook-is-a-critical-component) for the list of what stops working.
+
+Confirm that the deployment is the cause and collect the reason:
+
+```bash
+d8 k -n d8-admission-policy-engine get deploy gatekeeper-controller-manager
+d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=controller-manager -o wide
+d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=controller-manager
+d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
+```
+
+The pods of this deployment are excluded from validation by their `gatekeeper.sh/operation: webhook` label, so the ReplicaSet creates a replacement pod even while the webhook is down. To get a fresh pod, delete the current one:
+
+```bash
+d8 k -n d8-admission-policy-engine delete pod -l app=gatekeeper,control-plane=controller-manager
+```
+
+Restarting the deployment with `kubectl rollout restart` does not work here. The same label is guarded by the `deny-gatekeeper-webhook-operation-label-controllers` ValidatingAdmissionPolicy, which rejects a change to a pod template carrying it unless the request comes from a service account of a `d8-*` or `kube-*` namespace, or from `system:sudouser`.
+
+Look for the cause first. Disabling the module unblocks the cluster, but it also removes every policy the cluster relies on, so treat it as a last resort rather than as the first step:
+
+```bash
+d8 platform module disable admission-policy-engine
+```
+
+Deckhouse keeps the objects of the module removed while it is disabled, so the cluster stays unblocked for as long as the module is off. Return the module as soon as the cause is fixed, since no policy is enforced while it is disabled:
+
+```bash
+d8 platform module enable admission-policy-engine
+```
