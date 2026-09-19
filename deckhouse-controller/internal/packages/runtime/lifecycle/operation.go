@@ -69,7 +69,7 @@ func (s *Store) BeginUpdate(name string) (context.Context, bool) {
 
 // BeginReconciliation begins a reconciliation, superseding the one before it — this is what makes
 // a schedule cancel an in-flight disable and back. A running update is left alone.
-func (s *Store) BeginReconciliation(name string) (context.Context, bool) {
+func (s *Store) BeginReconciliation(name string, reason string) (context.Context, bool) {
 	pkg, ok := s.packages[name]
 	if !ok || pkg.removing {
 		return nil, false
@@ -77,7 +77,7 @@ func (s *Store) BeginReconciliation(name string) (context.Context, bool) {
 
 	ctx := pkg.beginOperation(
 		OperationReconciliation,
-		errReconciliationSuperseded,
+		CancelCause(reason),
 	)
 
 	return ctx, true
@@ -121,7 +121,7 @@ func (s *Store) CompleteRemoval(name string) bool {
 		return false
 	}
 
-	op, ok := pkg.operation(OperationRemoval)
+	op, ok := pkg.operations[OperationRemoval]
 	if ok {
 		op.cancel(nil)
 	}

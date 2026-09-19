@@ -170,7 +170,7 @@ func (r *Runtime) updateModule(module Module, force bool, opts ...queue.EnqueueO
 // nothing is deployed or loaded for it: the settings are stashed for the next scheduleGlobal pass,
 // which a reschedule triggers. The scheduler holds global enabled at order 0, so its enabled
 // intent is ignored.
-func (r *Runtime) UpdateGlobalModule(module Module) {
+func (r *Runtime) UpdateGlobalModule(settings addonutils.Values, settingsVersion int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -178,14 +178,14 @@ func (r *Runtime) UpdateGlobalModule(module Module) {
 
 	r.logger.Debug("update global module", slog.String("name", name))
 
-	if len(module.Settings) == 0 {
-		module.Settings = make(addonutils.Values)
+	if len(settings) == 0 {
+		settings = make(addonutils.Values)
 	}
 
 	decision := r.packages.Reconcile(name, lifecycle.DesiredState{
 		Version:         r.global.GetVersion().String(),
-		Settings:        module.Settings,
-		SettingsVersion: module.SettingsVersion,
+		Settings:        settings,
+		SettingsVersion: settingsVersion,
 	})
 
 	if decision.Kind == lifecycle.DecisionNone {

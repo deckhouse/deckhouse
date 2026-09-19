@@ -58,10 +58,3 @@ func (p *Package) cancelOperation(kind OperationKind, cause error) {
 	op.cancel(cause)
 	delete(p.operations, kind)
 }
-
-// operation returns the running operation of that kind, if there is one.
-func (p *Package) operation(kind OperationKind) (operation, bool) {
-	op, ok := p.operations[kind]
-
-	return op, ok
-}

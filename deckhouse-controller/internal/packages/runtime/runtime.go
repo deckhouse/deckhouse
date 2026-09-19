@@ -581,7 +581,7 @@ func (r *Runtime) scheduleGlobal(enabled []string, reason string) {
 
 	r.logger.Debug("schedule global package", slog.String("reason", reason))
 
-	ctx, ok := r.packages.BeginReconciliation(r.global.GetName())
+	ctx, ok := r.packages.BeginReconciliation(r.global.GetName(), reason)
 	if !ok {
 		return
 	}
@@ -638,7 +638,7 @@ func (r *Runtime) schedulePackage(name, reason string) {
 		r.scheduler.Complete(name)
 	})
 
-	ctx, ok := r.packages.BeginReconciliation(name)
+	ctx, ok := r.packages.BeginReconciliation(name, reason)
 	if !ok {
 		return
 	}
@@ -678,7 +678,7 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 
 	r.logger.Debug("disable package", slog.String("name", name))
 
-	ctx, ok := r.packages.BeginReconciliation(name)
+	ctx, ok := r.packages.BeginReconciliation(name, reason)
 	if !ok {
 		return
 	}
