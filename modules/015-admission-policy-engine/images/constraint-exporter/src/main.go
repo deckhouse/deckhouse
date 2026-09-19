@@ -29,6 +29,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/flant/constraint_exporter/pkg/policystatus"
 )
 
 var (
@@ -75,6 +77,8 @@ func main() {
 	if err != nil {
 		fatal("create kube client failed", err)
 	}
+
+	exporter.statusWriter = policystatus.NewWriter(clientGVR)
 
 	go exporter.startScheduled(clientGVR, interval)
 	prometheus.Unregister(collectors.NewGoCollector())

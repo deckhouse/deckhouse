@@ -16,8 +16,15 @@ spec:
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
+      additionalPrinterColumns:
+      - name: Violations
+        jsonPath: .status.violations.total
+        type: integer
+        description: A total number of the policy violations recorded by the last audit cycle.
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -27,6 +34,94 @@ spec:
 
             Each CustomResource `OperationPolicy` describes rules for objects in a cluster.
           properties:
+            status:
+              type: object
+              properties:
+                violations:
+                  type: object
+                  description: |
+                    Summary of the policy violations recorded by the last audit cycle.
+
+                    The module fills in the section once per audit cycle.
+                    It holds aggregated counters and a short sample of the violations,
+                    while the full list is available in the `d8_gatekeeper_exporter_constraint_violations` metric.
+                  properties:
+                    lastUpdateTime:
+                      type: string
+                      format: date-time
+                      description: |
+                        Time when the module last changed the summary.
+
+                        The module rewrites the section only when its contents change,
+                        so the timestamp stays put while the set of violations stays the same.
+                    total:
+                      type: integer
+                      description: |
+                        Total number of the violations of the policy.
+
+                        The counter stays exact even when the lists below are shortened.
+                    truncated:
+                      type: integer
+                      description: |
+                        Number of the violations that the audit did not record.
+
+                        A value above zero means that the number of violations exceeded the audit limit,
+                        so `topNamespaces` and `sample` describe only the recorded part.
+                    byEnforcement:
+                      type: object
+                      description: Number of the violations grouped by the action taken on them.
+                      properties:
+                        deny:
+                          type: integer
+                          description: Number of the violations that block the workload.
+                        warn:
+                          type: integer
+                          description: Number of the violations that are reported without blocking the workload.
+                        dryrun:
+                          type: integer
+                          description: Number of the violations that are only recorded.
+                    topNamespaces:
+                      type: array
+                      description: |
+                        Namespaces with the highest number of the violations.
+
+                        The list holds at most 10 entries, ordered by the number of violations.
+                      items:
+                        type: object
+                        properties:
+                          namespace:
+                            type: string
+                            description: Name of the namespace.
+                          count:
+                            type: integer
+                            description: Number of the violations in the namespace.
+                    sample:
+                      type: array
+                      description: |
+                        Sample of the violations, for a preview in the interface.
+
+                        The list holds at most 10 entries and is not a complete report.
+                      items:
+                        type: object
+                        properties:
+                          kind:
+                            type: string
+                            description: Kind of the object that violates the policy.
+                          namespace:
+                            type: string
+                            description: Namespace of the object that violates the policy.
+                          name:
+                            type: string
+                            description: Name of the object that violates the policy.
+                          rule:
+                            type: string
+                            description: Constraint kind that recorded the violation.
+                          enforcementAction:
+                            type: string
+                            description: Action taken on the violation.
+                          message:
+                            type: string
+                            description: Message that explains the violation.
             spec:
               type: object
               required: ["match", "policies"]

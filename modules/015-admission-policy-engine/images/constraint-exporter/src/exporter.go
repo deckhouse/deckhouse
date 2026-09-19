@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"time"
@@ -28,13 +29,15 @@ import (
 
 	"github.com/flant/constraint_exporter/pkg/gatekeeper"
 	"github.com/flant/constraint_exporter/pkg/kinds"
+	"github.com/flant/constraint_exporter/pkg/policystatus"
 )
 
 type Exporter struct {
 	client     *kubernetes.Clientset
 	kubeConfig *rest.Config
 
-	kindTracker *kinds.KindTracker
+	kindTracker  *kinds.KindTracker
+	statusWriter *policystatus.Writer
 
 	metricsMu sync.RWMutex
 	metrics   []prometheus.Metric
@@ -142,6 +145,14 @@ func (e *Exporter) startScheduled(clientGVR controllerClient.Client, t time.Dura
 
 			if e.kindTracker != nil {
 				e.kindTracker.UpdateTrackedObjects(constraints, mutations)
+			}
+
+			// The status of a policy is a report, not a lock on the audit: a failure to write it
+			// is logged by the writer and the next cycle tries again.
+			if e.statusWriter != nil {
+				if err := e.statusWriter.Sync(context.TODO(), policystatus.Build(constraints)); err != nil {
+					slog.Warn("update policy statuses failed", "error", err)
+				}
 			}
 		}
 	}

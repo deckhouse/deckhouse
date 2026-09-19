@@ -1,0 +1,92 @@
+{{/*
+  The two SecurityPolicy objects below describe the Pod Security Standards the module enforces.
+
+  They exist so that a standard is visible in the cluster and in Deckhouse Console as a policy of its
+  own, and so that the audit has an object to record its violations in. They do NOT drive the
+  constraints: the constraints of a standard are rendered by the templates next to this file, and the
+  `security.deckhouse.io/pod-standard` label keeps these objects out of the snapshot the
+  `security-policies` hook feeds to the SecurityPolicy rendering. Editing them changes nothing,
+  and the module restores them on the next converge.
+
+  `spec.policies` repeats the rule set of the constraint parameters defined in `baseline/constraint.yaml`
+  and `restricted/constraint.yaml`, written in the vocabulary of the SecurityPolicy API. The template
+  test `pss_security_policy_objects` fails if the two drift apart.
+
+  `spec.match` repeats the namespace selector of the constraints, so that a reader sees which
+  namespaces the standard reaches. Two things it cannot express:
+  - System namespaces, which are covered by their own constraints regardless of the labels below.
+  - A namespace labeled `security.deckhouse.io/pod-policy-action`, which is checked with an action of
+    its own rather than with `spec.enforcementAction`. The `byEnforcement` counters of the status
+    show how many violations each action ended up with.
+*/}}
+
+{{- define "pss_security_policy_object" }}
+  {{- $context := index . 0 }}
+  {{- $standard := index . 1 }}
+  {{- $policies := index . 2 }}
+  {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "privileged" | lower) }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: d8-pod-security-{{ $standard }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
+spec:
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "Deny" }}
+  match:
+    labelSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/skip-pss-check
+          operator: NotIn
+          values: ["true"]
+    namespaceSelector:
+      labelSelector:
+        matchExpressions:
+        {{- if eq $standard "baseline" }}
+          {{- if eq $defaultPolicy "privileged" }}
+          - { key: security.deckhouse.io/pod-policy, operator: In, values: [ baseline, restricted ] }
+          {{- else }}
+          - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged ] }
+          - { key: heritage, operator: NotIn, values: [ deckhouse ] }
+          {{- end }}
+        {{- else if eq $standard "restricted" }}
+          {{- if eq $defaultPolicy "restricted" }}
+          - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged, baseline ] }
+          {{- else }}
+          - { key: security.deckhouse.io/pod-policy, operator: In, values: [ restricted ] }
+          {{- end }}
+          - { key: heritage, operator: NotIn, values: [ deckhouse ] }
+        {{- else }}
+          {{- cat "Unknown policy standard" | fail }}
+        {{- end }}
+  policies:
+    {{- $policies | toYaml | nindent 4 }}
+{{- end }}
+
+{{- $context := . }}
+
+{{- $baseline := dict
+      "allowPrivileged" false
+      "allowHostNetwork" false
+      "allowedHostPorts" list
+      "allowHostPID" false
+      "allowHostIPC" false
+      "allowedHostPaths" list
+      "allowedProcMount" "Default"
+      "allowedAppArmor" (list "runtime/default" "localhost/*")
+      "allowedCapabilities" (list "AUDIT_WRITE" "CHOWN" "DAC_OVERRIDE" "FOWNER" "FSETID" "KILL" "MKNOD" "NET_BIND_SERVICE" "SETFCAP" "SETGID" "SETPCAP" "SETUID" "SYS_CHROOT")
+      "seLinux" (list (dict "type" "") (dict "type" "container_t") (dict "type" "container_init_t") (dict "type" "container_kvm_t") (dict "type" "container_engine_t"))
+      "allowedUnsafeSysctls" (list "kernel.shm_rmid_forced" "net.ipv4.ip_local_port_range" "net.ipv4.ip_unprivileged_port_start" "net.ipv4.tcp_syncookies" "net.ipv4.ping_group_range" "net.ipv4.ip_local_reserved_ports" "net.ipv4.tcp_keepalive_time" "net.ipv4.tcp_fin_timeout" "net.ipv4.tcp_keepalive_intvl" "net.ipv4.tcp_keepalive_probes")
+      "seccompProfiles" (dict "allowedProfiles" (list "RuntimeDefault" "Localhost" "" "undefined") "allowedLocalhostFiles" (list "*"))
+}}
+{{- include "pss_security_policy_object" (list $context "baseline" $baseline) }}
+
+{{- $restricted := dict
+      "allowPrivilegeEscalation" false
+      "allowedCapabilities" (list "NET_BIND_SERVICE")
+      "requiredDropCapabilities" (list "ALL")
+      "allowedVolumes" (list "configMap" "csi" "downwardAPI" "emptyDir" "ephemeral" "persistentVolumeClaim" "projected" "secret")
+      "runAsUser" (dict "rule" "MustRunAsNonRoot")
+      "seccompProfiles" (dict "allowedProfiles" (list "RuntimeDefault" "Localhost") "allowedLocalhostFiles" (list "*"))
+}}
+{{- include "pss_security_policy_object" (list $context "restricted" $restricted) }}
