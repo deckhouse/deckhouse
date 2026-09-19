@@ -39,9 +39,9 @@ var _ = Describe("Modules :: common :: hooks :: storage_classes ::", func() {
 			Expect(expectedSCSet.Has(sc.Name)).To(BeTrue())
 
 			var expectSc *SC
-			for _, supportedSc := range storageClassesConfig {
-				if supportedSc.GetName() == sc.Name {
-					expectSc = supportedSc.(*SC)
+			for index, supportedSc := range storageClassesConfig {
+				if supportedSc.Name == sc.Name {
+					expectSc = &storageClassesConfig[index]
 					break
 				}
 			}

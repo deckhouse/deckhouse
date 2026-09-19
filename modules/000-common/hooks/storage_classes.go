@@ -21,37 +21,37 @@ import (
 )
 
 type SC struct {
-	storage_class.SimpleStorageClass
+	Name            string `json:"name"`
+	Type            string `json:"type"`
 	AdditionalField string `json:"additional_field"`
 }
 
-var storageClassesConfig = []storage_class.StorageClass{
-	&SC{
-		SimpleStorageClass: storage_class.SimpleStorageClass{
-			Name: "first-hdd",
-			Type: "first-hdd",
-		},
-
+var storageClassesConfig = []SC{
+	{
+		Name:            "first-hdd",
+		Type:            "first-hdd",
 		AdditionalField: "first-field",
 	},
-
-	&SC{
-		SimpleStorageClass: storage_class.SimpleStorageClass{
-			Name: "second-hdd",
-			Type: "second-hdd",
-		},
-
+	{
+		Name:            "second-hdd",
+		Type:            "second-hdd",
 		AdditionalField: "second-field",
 	},
-
-	&SC{
-		SimpleStorageClass: storage_class.SimpleStorageClass{
-			Name: "third-ssd",
-			Type: "third-ssd",
-		},
-
+	{
+		Name:            "third-ssd",
+		Type:            "third-ssd",
 		AdditionalField: "third-field",
 	},
 }
 
-var _ = storage_class.RegisterHook("cloudProviderFake", storageClassesConfig)
+var _ = storage_class.RegisterHook(storage_class.Config[SC]{
+	ModuleName:      "common",
+	ModuleValuesKey: "cloudProviderFake",
+	Order:           20,
+
+	ExcludeStorageClassesValuesPath: "cloudProviderFake.storageClass.exclude",
+	StorageClassesValuesPath:        "cloudProviderFake.internal.storageClasses",
+
+	NameOfFunc:  func(class SC) string { return class.Name },
+	CollectFunc: storage_class.NewStaticCollector(storageClassesConfig...),
+})
