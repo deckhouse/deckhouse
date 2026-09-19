@@ -121,11 +121,11 @@ spec:
                 type: string
               requirements:
                 description: Module dependencies, a set of requirements that must
-                  be met for Deckhouse Platform (DP) to run the module.
+                  be met for Deckhouse Kubernetes Platform (DKP) to run the module.
                 properties:
                   bootstrapped:
                     description: Required cluster installation status (for built-in
-                      DP modules only).
+                      DKP modules only).
                     type: string
                   deckhouse:
                     description: Required Deckhouse version.
@@ -403,7 +403,7 @@ spec:
                   state:
                     description: |-
                       State is the high-level lifecycle state observed for the module.
-                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
                     type: string
                     x-doc-examples:
                     - Pending
@@ -412,6 +412,7 @@ spec:
                     - Ready
                     - Degraded
                     - Suspended
+                    - Deleting
                   tip:
                     description: |-
                       Tip is a human-readable instruction on how to resolve the current
