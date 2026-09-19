@@ -300,7 +300,7 @@ A violation is recorded in the audit and shown in Deckhouse Console, and the wor
 The exception is a namespace whose module has hardened it: there the standards are enforced and a violating workload is denied.
 
 These checks cannot be tuned from outside the platform.
-The labels that govern them, and the workloads they cover, belong to the module that owns the namespace, and Deckhouse returns both to their declared state the next time it applies the configuration.
+The labels that govern them, and the workloads they cover, belong to the module that owns the namespace, and Deckhouse Platform returns both to their declared state the next time it applies the configuration.
 A module exempts a workload of its own where it has to, with a SecurityPolicyException it ships itself.
 
 OperationPolicy and SecurityPolicy resources reach system namespaces in `warn` mode as well.
