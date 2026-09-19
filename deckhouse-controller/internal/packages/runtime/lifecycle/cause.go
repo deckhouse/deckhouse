@@ -27,8 +27,7 @@ func (c CancelCause) Is(target error) bool { return target == context.Canceled }
 
 // Causes a cancelled task reports through context.Cause, naming what superseded it.
 var (
-	errUpdateStarted            = CancelCause("update started")
-	errUpdateSuperseded         = CancelCause("update superseded")
-	errReconciliationSuperseded = CancelCause("reconciliation superseded")
-	errRemovalStarted           = CancelCause("removal started")
+	errUpdateStarted    = CancelCause("update started")
+	errUpdateSuperseded = CancelCause("update superseded")
+	errRemovalStarted   = CancelCause("removal started")
 )
