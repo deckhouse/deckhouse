@@ -33,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -109,7 +108,7 @@ type reconciler struct {
 
 // packageManager registers and unregisters modules in the package runtime.
 type packageManager interface {
-	UpdateModule(module packageruntime.Module, force bool, opts ...queue.EnqueueOption)
+	UpdateModule(module packageruntime.Module, force bool)
 	UpdateGlobalModule(module packageruntime.Module)
 	// RemoveModule tears the module down and reports whether the teardown has finished.
 	RemoveModule(name string) bool

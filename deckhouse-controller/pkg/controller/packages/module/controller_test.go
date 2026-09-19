@@ -46,7 +46,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -916,7 +915,7 @@ type digestCall struct {
 	tag  string
 }
 
-func (s *packageManagerStub) UpdateModule(mod packageruntime.Module, force bool, _ ...queue.EnqueueOption) {
+func (s *packageManagerStub) UpdateModule(mod packageruntime.Module, force bool) {
 	s.updated = append(s.updated, updatedModule{module: mod, forced: force})
 }
 

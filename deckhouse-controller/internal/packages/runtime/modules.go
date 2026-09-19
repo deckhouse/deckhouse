@@ -73,11 +73,7 @@ func (m Module) IsEmbedded() bool {
 func (r *Runtime) LoadModules(ctx context.Context, mods []Module) {
 	wg := new(sync.WaitGroup)
 
-	for _, module := range mods {
-		r.logger.Debug("load module", slog.String("name", module.Name))
-
-		r.UpdateModule(module, false, queue.WithWait(wg))
-	}
+	r.enqueueModules(wg, mods)
 
 	loaded := make(chan struct{})
 
@@ -98,6 +94,19 @@ func (r *Runtime) LoadModules(ctx context.Context, mods []Module) {
 	}
 }
 
+// enqueueModules runs the bootstrap's tree through the same path as a single update, with wg riding
+// every task. Split out of LoadModules so r.mu is released before the barrier waits on wg.
+func (r *Runtime) enqueueModules(wg *sync.WaitGroup, mods []Module) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, module := range mods {
+		r.logger.Debug("load module", slog.String("name", module.Name))
+
+		r.updateModule(module, false, queue.WithWait(wg))
+	}
+}
+
 // UpdateModule handles module creation, version changes, settings and enabled intent from the
 // module controller. A module the image ships arrives without a repository: it takes the running
 // edition's version and its pipeline skips Deploy, since the files are in place already.
@@ -106,15 +115,18 @@ func (r *Runtime) LoadModules(ctx context.Context, mods []Module) {
 // discard the cached copy of the version. It is for callers that resolved the image digest and
 // found it changed under a tag the runtime still sees as unchanged, and is transitional: it goes
 // away once module tags are immutable.
-//
-// opts ride every task the pipeline enqueues; the bootstrap barrier is the only caller that passes
-// any.
-func (r *Runtime) UpdateModule(module Module, force bool, opts ...queue.EnqueueOption) {
+func (r *Runtime) UpdateModule(module Module, force bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.logger.Debug("update module", slog.String("name", module.Name), slog.Bool("force", force))
 
+	r.updateModule(module, force)
+}
+
+// updateModule runs the desired state past the store and acts on its decision. opts ride every task
+// the pipeline enqueues, which is how the bootstrap barrier waits on it. Callers hold r.mu.
+func (r *Runtime) updateModule(module Module, force bool, opts ...queue.EnqueueOption) {
 	name := module.Name
 
 	if len(module.Settings) == 0 {
