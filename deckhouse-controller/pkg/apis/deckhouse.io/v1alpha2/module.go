@@ -62,6 +62,7 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
 // +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
@@ -69,6 +70,8 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
 // +crd-enricher:crd:preserveUnknownFields=false
 
 // Module represents a module instance managed via the package system.
@@ -98,6 +101,7 @@ type ModuleSpec struct {
 	PackageVersion string `json:"packageVersion"`
 
 	// Release channel for the module package.
+	// +crd-enricher:deckhouse:documentation:examples=alpha.
 	// +optional
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 

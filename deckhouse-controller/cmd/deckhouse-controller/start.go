@@ -28,11 +28,8 @@ import (
 	"syscall"
 	"time"
 
-	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
-	admetrics "github.com/flant/addon-operator/pkg/metrics"
-	"github.com/flant/kube-client/client"
+	klient "github.com/flant/kube-client/client"
 	"github.com/flant/shell-operator/pkg/executor"
-	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
@@ -50,9 +47,8 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
-	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
-	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller"
+	d8apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -80,7 +76,7 @@ func (r *reaperMutex) Release() {
 	r.Unlock()
 }
 
-func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []string) error {
+func start(logger *log.Logger, _ *app.Config) func(cmd *cobra.Command, args []string) error {
 	return func(_ *cobra.Command, _ []string) error {
 		if os.Getenv(app.EnvSkipEntrypoint) != "true" {
 			if err := entrypoint(logger); err != nil {
@@ -89,37 +85,21 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 			}
 		}
 
-		// addon-operator prints its own startup banner via its AppStartMessage.
-		app.SetAppStartMessage(version())
 		app.SetKubeClientFieldManager("deckhouse-hook")
 
 		ctx := context.Background()
+		client := klient.New(klient.WithLogger(logger.Named("deckhouse")))
+		if err := client.Init(); err != nil {
+			return fmt.Errorf("init kubernetes client: %w", err)
+		}
 
-		metricsStorage := metricsstorage.NewMetricStorage(
+		ms := metricsstorage.NewMetricStorage(
 			metricsstorage.WithLogger(logger.Named("metric-storage")),
 		)
 
-		hookMetricStorage := metricsstorage.NewMetricStorage(
-			metricsstorage.WithNewRegistry(),
-			metricsstorage.WithLogger(logger.Named("hook-metric-storage")),
-		)
-
-		// Initialize metric names with the configured prefix
-		shmetrics.InitMetrics(cfg.App.PrometheusMetricsPrefix)
-		// Initialize addon-operator specific metrics
-		admetrics.InitMetrics(cfg.App.PrometheusMetricsPrefix)
-
-		// Hand the fully-built *Config to addon-operator via WithConfig: it
-		// then calls addon-operator's ApplyConfig internally to populate its
-		// package globals and projects the relevant subset onto shell-operator's
-		// *Config (kube clients, listen addr, metric prefix), so no env vars
-		// are re-parsed downstream. See deckhouse-controller/pkg/envconfig.
-		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage,
-			addonoperator.WithConfig(cfg),
-			addonoperator.WithLogger(logger.Named("addon-operator")),
-		)
-
-		operator.StartAPIServer()
+		if err := d8apis.EnsureCRDs(ctx, client, app.PathDeckhouseCRDs); err != nil {
+			return fmt.Errorf("ensure crds: %w", err)
+		}
 
 		versionFile := app.VersionFilePath
 
@@ -128,25 +108,25 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 		if err != nil {
 			logger.Warn("cannot get deckhouse version", log.Err(err))
 		} else {
-			version = strings.TrimSuffix(string(content), "\n")
+			version = strings.TrimSpace(string(content))
 		}
 
 		if version == "dev" && !app.EnabledHA() {
-			if err := run(ctx, operator, logger); err != nil {
+			if err := run(ctx, client, ms, logger); err != nil {
 				logger.Error("run", log.Err(err))
 				os.Exit(1)
 			}
 		}
 
-		logger.Info("Deckhouse starts in HA mode")
-		runWithLeaderElection(ctx, operator, logger)
+		logger.Info("deckhouse starts in HA mode")
+		runWithLeaderElection(ctx, client, ms, logger)
 
 		return nil
 	}
 }
 
 func entrypoint(logger *log.Logger) error {
-	var possibleBundles = []string{"Default", "Minimal", "Managed"}
+	possibleBundles := []string{"Default", "Minimal", "Managed"}
 	bundleEnvValue, found := os.LookupEnv(app.EnvBundle)
 	if !found || len(bundleEnvValue) == 0 {
 		bundleEnvValue = "Default"
@@ -159,7 +139,7 @@ func entrypoint(logger *log.Logger) error {
 	chrootDirEnvValue, found := os.LookupEnv(app.EnvShellChrootDir)
 	if found && len(chrootDirEnvValue) > 0 {
 		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, app.DefaultTempDir)
-		if err := os.MkdirAll(chrootedTmpDirPath, 0750); err != nil {
+		if err := os.MkdirAll(chrootedTmpDirPath, 0o750); err != nil {
 			return fmt.Errorf("create chroot dir: %w", err)
 		}
 
@@ -186,7 +166,7 @@ func entrypoint(logger *log.Logger) error {
 		return fmt.Errorf("read bundle values file: %w", err)
 	}
 
-	if err := os.WriteFile("/tmp/values.yaml", bytes, 0644); err != nil {
+	if err := os.WriteFile("/tmp/values.yaml", bytes, 0o644); err != nil {
 		return fmt.Errorf("write values file: %w", err)
 	}
 
@@ -195,7 +175,7 @@ func entrypoint(logger *log.Logger) error {
 	return nil
 }
 
-func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
+func runWithLeaderElection(ctx context.Context, client *klient.Client, ms metricsstorage.Storage, logger *log.Logger) {
 	var identity string
 	podName := app.PodName()
 	if len(podName) == 0 {
@@ -227,7 +207,7 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 				Name:      leaseName,
 				Namespace: podNs,
 			},
-			Client: operator.KubeClient().CoordinationV1(),
+			Client: client.CoordinationV1(),
 			LockConfig: resourcelock.ResourceLockConfig{
 				Identity: identity,
 			},
@@ -237,16 +217,10 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 		RetryPeriod:   time.Duration(retryPeriod) * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
-				err := run(ctx, operator, logger)
-				if err != nil {
-					operator.Logger.Info("run", log.Err(err))
+				if err := run(ctx, client, ms, logger); err != nil {
+					logger.Info("run", log.Err(err))
 					os.Exit(1)
 				}
-			},
-			OnStoppedLeading: func() {
-				operator.Logger.Info("Restarting because the leadership was handed over")
-				operator.Stop()
-				os.Exit(0)
 			},
 		},
 		ReleaseOnCancel: true,
@@ -255,57 +229,35 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 		logger.Fatal("create leader elector", log.Err(err))
 	}
 
-	// addon-operator does not run the election, it only reads the leader state in its
-	// /readyz handler: a non-leader replica reports readiness by proxying to the leader
-	// instead of to its own converge, which never runs there.
-	operator.LeaderElector = elector
-
 	go func() {
 		<-ctx.Done()
-		logger.Info("Context canceled received")
+		logger.Info("context canceled received")
 		if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
-			logger.Fatal("Couldn't shutdown deckhouse", log.Err(err))
+			logger.Fatal("couldn't shutdown deckhouse", log.Err(err))
 		}
 	}()
 
 	elector.Run(ctx)
 }
 
-func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
+func run(ctx context.Context, client *klient.Client, ms metricsstorage.Storage, logger *log.Logger) error {
 	exitCh := make(chan struct{})
-	operatorStarted := false
-	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
-
-	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathDeckhouseCRDs); err != nil {
-		return fmt.Errorf("ensure crds: %w", err)
-	}
 
 	// we have to lock the controller run if dhctl lock configmap exists
-	if err := lockOnBootstrap(ctx, operator.KubeClient(), logger); err != nil {
+	if err := lockOnBootstrap(ctx, client, logger); err != nil {
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
-	if DefaultReleaseChannel == "" {
-		DefaultReleaseChannel = app.DefaultReleaseChannel
-	}
-
-	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, DefaultReleaseChannel, operator, logger.Named("deckhouse-controller"))
+	ctrl, err := controller.Build(ctx, client.RestConfig(), ms, logger)
 	if err != nil {
 		return fmt.Errorf("create deckhouse controller: %w", err)
 	}
 
-	// load modules from FS, start controllers and run deckhouse config event loop
-	if err = deckhouseController.Start(ctx); err != nil {
+	if err = ctrl.Start(ctx); err != nil {
 		return fmt.Errorf("start deckhouse controller: %w", err)
 	}
 
-	if err = operator.Start(ctx); err != nil {
-		return fmt.Errorf("start operator: %w", err)
-	}
-
-	operatorStarted = true
-
-	debugserver.RegisterRoutes(operator.DebugServer)
+	go signalHandler(ctx, exitCh, ctrl, logger)
 
 	// block main thread by waiting signals from OS.
 	<-exitCh
@@ -313,7 +265,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	return nil
 }
 
-func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
+func signalHandler(ctx context.Context, exitCh chan struct{}, ctrl *controller.Controller, logger *log.Logger) {
 	telemetryShutdown := registerTelemetry(ctx, logger.Named("otlp-tracing"))
 
 	interruptCh := make(chan os.Signal, 5)
@@ -340,9 +292,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					logger.Error("telemetry shutdown", log.Err(err))
 				}
 
-				if *operatorStarted {
-					operator.Stop()
-				}
+				ctrl.Stop()
 				if err := syscall.Kill(-1, syscall.SIGKILL); err != nil {
 					if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
 						logger.Error("Couldn't kill child processes", log.Err(err))
@@ -408,9 +358,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					logger.Error("telemetry shutdown", log.Err(err))
 				}
 
-				if *operatorStarted {
-					operator.Stop()
-				}
+				ctrl.Stop()
 				if err := syscall.Kill(-1, syscall.SIGKILL); err != nil {
 					if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
 						logger.Error("Couldn't kill child processes", log.Err(err))
@@ -428,8 +376,8 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 
 const cmLockName = "deckhouse-bootstrap-lock"
 
-func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Logger) error {
-	bk := wait.Backoff{
+func lockOnBootstrap(ctx context.Context, client *klient.Client, logger *log.Logger) error {
+	backoff := wait.Backoff{
 		Duration: 1 * time.Second,
 		Factor:   1.2,
 		Jitter:   1,
@@ -437,11 +385,13 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 		Cap:      5 * time.Minute,
 	}
 
-	err := retry.OnError(bk, func(err error) bool {
-		logger.Error("An error occurred during the bootstrap lock. Retrying", log.Err(err))
+	retriable := func(err error) bool {
+		logger.Error("error occurred during the bootstrap lock, retrying...", log.Err(err))
 		// retry on any error
 		return true
-	}, func() error {
+	}
+
+	return retry.OnError(backoff, retriable, func() error {
 		if _, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
@@ -449,32 +399,29 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 			return fmt.Errorf("get the '%s' configmap: %w", cmLockName, err)
 		}
 
-		logger.Info("Bootstrap lock ConfigMap exists. Waiting for bootstrap process to be done")
+		logger.Info("bootstrap lock ConfigMap exists. Waiting for bootstrap process to be done")
 
-		listOpts := v1.ListOptions{
+		opts := v1.ListOptions{
 			FieldSelector: "metadata.name=" + cmLockName,
 			Watch:         true,
 		}
-		wch, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Watch(ctx, listOpts)
+
+		watcher, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Watch(ctx, opts)
 		if err != nil {
 			return fmt.Errorf("watch configmaps: %w", err)
 		}
 
-		for event := range wch.ResultChan() {
+		for event := range watcher.ResultChan() {
 			if event.Type == watch.Deleted {
 				break
 			}
 		}
-		wch.Stop()
+		watcher.Stop()
 
-		logger.Info("Bootstrap lock has been released")
+		logger.Info("bootstrap lock has been released")
 
 		return nil
 	})
-	if err != nil {
-		return fmt.Errorf("on error: %w", err)
-	}
-	return nil
 }
 
 func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {
