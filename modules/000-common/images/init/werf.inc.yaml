@@ -1,21 +1,33 @@
-{{- $binaries := "/bin/sh /bin/chown /bin/chmod /bin/ls /bin/cp /bin/rm /bin/mkdir /bin/nc /bin/sleep /bin/true" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /relocate
+  add: /
   to: /
+  before: setup
+  includePaths:
+  - bin
+  - usr/bin/sh
+  - usr/bin/chown
+  - usr/bin/chmod
+  - usr/bin/ls
+  - usr/bin/cp
+  - usr/bin/rm
+  - usr/bin/mkdir
+  - usr/bin/sleep
+  - usr/bin/true
+  # - usr/bin/nc
+  - usr/bin/busybox
+- image: registrypackages/netcat-artifact 
+  add: /nc
+  to: /usr/bin/nc
   before: setup
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 final: false
-shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y netcat
-  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+# shell:
+#   beforeInstall:
+#   - pm install netcat
