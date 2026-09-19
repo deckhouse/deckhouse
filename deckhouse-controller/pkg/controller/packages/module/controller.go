@@ -33,8 +33,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -109,17 +109,15 @@ type reconciler struct {
 
 // packageManager registers and unregisters modules in the package runtime.
 type packageManager interface {
-	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
-	UpdateGlobalSettings(settingsVersion int, settings addonutils.Values)
-	UpdateModule(module packageruntime.Module, force bool)
-	GetModuleDigest(ctx context.Context, repo registry.Remote, name, tag string) (string, error)
-	UpdateEmbeddedModule(module packageruntime.Module)
+	UpdateModule(module packageruntime.Module, force bool, opts ...queue.EnqueueOption)
+	UpdateGlobalModule(module packageruntime.Module)
 	// RemoveModule tears the module down and reports whether the teardown has finished.
 	RemoveModule(name string) bool
 	// RemoveEmbeddedModule is RemoveModule for a module the image ships; it undeploys nothing.
 	RemoveEmbeddedModule(name string) bool
 	GetStatus(name string) packagestatus.Status
 	GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string]
+	GetModuleDigest(ctx context.Context, repo registry.Remote, name, tag string) (string, error)
 }
 
 // Reconcile dispatches the module to the delete or the create/update handler.
@@ -264,13 +262,15 @@ func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1alp
 		return err
 	}
 
-	r.manager.UpdateEmbeddedModule(packageruntime.Module{
+	// No repository and no package version: that is what routes the module to the embedded
+	// pipeline, which loads the files the image already carries.
+	r.manager.UpdateModule(packageruntime.Module{
 		Name:            module.Name,
 		Settings:        module.Spec.Settings.GetMap(),
 		SettingsVersion: module.Spec.SettingsVersion,
 		Maintenance:     module.Spec.Maintenance,
 		Enabled:         module.Spec.Enabled,
-	})
+	}, false)
 
 	return r.commit(ctx, module, original, pkg, mpv)
 }
@@ -294,7 +294,12 @@ func (r *reconciler) handleGlobal(ctx context.Context, module, original *v1alpha
 		return err
 	}
 
-	r.manager.UpdateGlobalSettings(module.Spec.SettingsVersion, module.Spec.Settings.GetMap())
+	r.manager.UpdateGlobalModule(packageruntime.Module{
+		Name:            module.Name,
+		Settings:        module.Spec.Settings.GetMap(),
+		SettingsVersion: module.Spec.SettingsVersion,
+		Enabled:         module.Spec.Enabled,
+	})
 
 	return r.commit(ctx, module, original, pkg, mpv)
 }

@@ -46,6 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -313,18 +314,19 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 		assert.True(suite.T(), result.IsZero())
 
-		// The released path would resolve this fixture too, so reaching the runtime as an
-		// embedded module — with no Definition, which is what the image already ships — is
+		// The released path would resolve this fixture too, so reaching the runtime with neither
+		// a repository nor a Definition — which is what routes it to the embedded pipeline — is
 		// what tells the two apart.
-		assert.Empty(suite.T(), suite.manager.updated,
-			"the image ships an embedded module, so nothing is pulled for it")
-		assert.Equal(suite.T(), []packageruntime.Module{{
+		require.Len(suite.T(), suite.manager.updated, 1)
+		assert.False(suite.T(), suite.manager.updated[0].forced)
+		assert.Equal(suite.T(), packageruntime.Module{
 			Name:            moduleName,
 			Settings:        addonutils.Values{"replicas": float64(2)},
 			SettingsVersion: 1,
 			Maintenance:     "NoResourceReconciliation",
 			Enabled:         ptr.To(true),
-		}}, suite.manager.embedded)
+		}, suite.manager.updated[0].module,
+			"the image ships an embedded module, so nothing is pulled for it")
 
 		// A module the image started shipping after it had already been released still
 		// points at the downloaded version, which the relink has to drop.
@@ -340,7 +342,9 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 		assert.True(suite.T(), result.IsZero(), "an embedded module follows no mutable tag to re-resolve")
 
-		assert.Len(suite.T(), suite.manager.embedded, 1)
+		require.Len(suite.T(), suite.manager.updated, 1)
+		assert.Empty(suite.T(), suite.manager.updated[0].module.Repository.Name,
+			"an embedded module reaches the runtime without a repository")
 		assert.Empty(suite.T(), suite.manager.digestCalls,
 			"the embedded annotation is read first, the way the bootstrap and the runtime do")
 	})
@@ -503,7 +507,8 @@ func TestReconcileRequeuesOnGetError(t *testing.T) {
 func TestRelinkFailureKeepsTheModuleOutOfTheRuntime(t *testing.T) {
 	cl := seedFakeClient(t, "successful-reconcile.yaml", interceptor.Funcs{
 		SubResourcePatch: func(context.Context, client.Client, string, client.Object, client.Patch,
-			...client.SubResourcePatchOption) error {
+			...client.SubResourcePatchOption,
+		) error {
 			return errors.New("status patch rejected")
 		},
 	})
@@ -619,7 +624,8 @@ func TestReconcileWaitsForInit(t *testing.T) {
 func TestFinalizerFailureKeepsTheModuleOutOfTheRuntime(t *testing.T) {
 	cl := seedFakeClient(t, "successful-reconcile.yaml", interceptor.Funcs{
 		Patch: func(context.Context, client.WithWatch, client.Object, client.Patch,
-			...client.PatchOption) error {
+			...client.PatchOption,
+		) error {
 			return errors.New("patch rejected")
 		},
 	})
@@ -722,7 +728,8 @@ func TestDeleteFailsOnUnreadableVersion(t *testing.T) {
 
 	cl := seedFakeClient(t, "delete.yaml", interceptor.Funcs{
 		Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object,
-			opts ...client.GetOption) error {
+			opts ...client.GetOption,
+		) error {
 			if _, ok := obj.(*v1alpha1.ModulePackageVersion); ok {
 				return getErr
 			}
@@ -803,7 +810,8 @@ func failFirstModulePatch() func(context.Context, client.WithWatch, client.Objec
 	failed := false
 
 	return func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch,
-		opts ...client.PatchOption) error {
+		opts ...client.PatchOption,
+	) error {
 		if _, ok := obj.(*v1alpha2.Module); ok && !failed {
 			failed = true
 
@@ -819,7 +827,8 @@ func failFirstModulePatch() func(context.Context, client.WithWatch, client.Objec
 func failStatusPatchOf(name string) func(context.Context, client.Client, string, client.Object,
 	client.Patch, ...client.SubResourcePatchOption) error {
 	return func(ctx context.Context, cl client.Client, _ string, obj client.Object,
-		patch client.Patch, opts ...client.SubResourcePatchOption) error {
+		patch client.Patch, opts ...client.SubResourcePatchOption,
+	) error {
 		if obj.GetName() == name {
 			return errors.New("status patch rejected")
 		}
@@ -867,7 +876,7 @@ func ownerRefName(mod *v1alpha2.Module, kind string) string {
 // compile-time check that this stub still matches the real runtime.
 type packageManagerStub struct {
 	updated     []updatedModule
-	embedded    []packageruntime.Module
+	global      []packageruntime.Module
 	removed     []removedModule
 	digestCalls []digestCall
 
@@ -907,17 +916,13 @@ type digestCall struct {
 	tag  string
 }
 
-func (s *packageManagerStub) UpdateModule(mod packageruntime.Module, force bool) {
+func (s *packageManagerStub) UpdateModule(mod packageruntime.Module, force bool, _ ...queue.EnqueueOption) {
 	s.updated = append(s.updated, updatedModule{module: mod, forced: force})
 }
 
-func (s *packageManagerStub) UpdateEmbeddedModule(mod packageruntime.Module) {
-	s.embedded = append(s.embedded, mod)
+func (s *packageManagerStub) UpdateGlobalModule(mod packageruntime.Module) {
+	s.global = append(s.global, mod)
 }
-
-func (s *packageManagerStub) UpdateModulesSettings(string, int, addonutils.Values, string, *bool) {}
-
-func (s *packageManagerStub) UpdateGlobalSettings(int, addonutils.Values) {}
 
 func (s *packageManagerStub) GetModuleDigest(_ context.Context, repo registry.Remote, name, tag string) (string, error) {
 	s.digestCalls = append(s.digestCalls, digestCall{repo: repo, name: name, tag: tag})
