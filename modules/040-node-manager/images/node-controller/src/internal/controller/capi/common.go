@@ -25,18 +25,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
 const (
-	capiNamespace                = "d8-cloud-instance-manager"
-	cloudProviderSecretName      = common.CloudProviderSecretName
-	cloudProviderSecretNamespace = common.CloudProviderSecretNamespace
-	clusterConfigSecretName      = "d8-cluster-configuration"
-	clusterConfigSecretNamespace = "kube-system"
-	clusterUUIDConfigMapName     = "d8-cluster-uuid"
-	clusterUUIDConfigMapNS       = "kube-system"
+	capiNamespace                   = common.MachineNamespace
+	cloudProviderSecretName         = common.CloudProviderSecretName
+	cloudProviderSecretNamespace    = common.CloudProviderSecretNamespace
+	providerTemplateSecretNamespace = cloudprovider.ProviderTemplateSecretNamespace
+	machineTemplateContractKey      = cloudprovider.CAPIMachineTemplateKey
+	clusterConfigSecretName         = common.ClusterConfigSecretName
+	clusterConfigSecretNamespace    = common.ClusterConfigSecretNamespace
+	clusterUUIDConfigMapName        = common.ClusterUUIDConfigMapName
+	clusterUUIDConfigMapNS          = common.KubeSystemNamespace
 )
 
 type BaseWithReader struct {

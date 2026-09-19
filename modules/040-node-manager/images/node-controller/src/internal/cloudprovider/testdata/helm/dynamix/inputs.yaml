@@ -1,0 +1,14 @@
+module: ee/modules/030-cloud-provider-dynamix
+registration:
+  capiClusterAPIVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  capiClusterKind: DynamixCluster
+  capiClusterName: dynamix
+renderData:
+  cluster:
+    name: dynamix
+    namespace: d8-cloud-instance-manager
+  controlPlane:
+  - host: 192.0.2.10
+    port: 6443
+  prefix: test-prefix
+  provider: {}

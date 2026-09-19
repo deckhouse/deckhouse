@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/network"
 )
 
@@ -38,8 +39,8 @@ const (
 	clusterConfigKey        = "cluster-configuration.yaml"
 
 	// clusterUUIDConfigMap holds the cluster UUID (global.discovery.clusterUUID).
-	clusterUUIDConfigMapName = "d8-cluster-uuid"
-	clusterUUIDKey           = "cluster-uuid"
+	clusterUUIDConfigMapName = common.ClusterUUIDConfigMapName
+	clusterUUIDKey           = common.ClusterUUIDConfigMapKey
 
 	dnsAppLabel = "k8s-app"
 )

@@ -478,8 +478,6 @@ const (
 	openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
 	vsphereCIMPath      = "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager"
 	vsphereCIMSymlink   = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
-	vcdCAPIPath         = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
-	vcdCAPISymlink      = "/deckhouse/modules/040-node-manager/capi/vcd"
 )
 
 var nodeManagerAWSSpot = strings.Replace(nodeManagerAWS, "      instanceType: t2.medium\n", "      instanceType: t2.medium\n      spot: true\n", 1)
@@ -492,16 +490,12 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Symlink(vsphereCIMPath, vsphereCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink(vcdCAPIPath, vcdCAPISymlink)
-		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
 		err := os.Remove(openstackCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Remove(vsphereCIMSymlink)
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Remove(vcdCAPISymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -995,13 +989,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 				Expect(openStackTemplate.Exists()).To(BeFalse())
 			})
 
-			It("must keep API floating IP enabled for Standard-like layouts", func() {
+			It("must not render the provider infrastructure cluster in helm", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				openStackCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "openstack")
-				Expect(openStackCluster.Exists()).To(BeTrue())
-				Expect(openStackCluster.Field("spec.disableAPIServerFloatingIP").Exists()).To(BeFalse())
-				Expect(openStackCluster.Field("spec.controlPlaneEndpoint").Exists()).To(BeFalse())
+				Expect(openStackCluster.Exists()).To(BeFalse())
 			})
 		})
 
@@ -1053,14 +1045,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 				f.HelmRender()
 			})
 
-			It("must use the existing control plane endpoint instead of API floating IP", func() {
+			It("must not render the provider infrastructure cluster in helm", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				openStackCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "openstack")
-				Expect(openStackCluster.Exists()).To(BeTrue())
-				Expect(openStackCluster.Field("spec.disableAPIServerFloatingIP").Bool()).To(BeTrue())
-				Expect(openStackCluster.Field("spec.controlPlaneEndpoint.host").String()).To(Equal("10.0.0.1"))
-				Expect(openStackCluster.Field("spec.controlPlaneEndpoint.port").Int()).To(Equal(int64(6443)))
+				Expect(openStackCluster.Exists()).To(BeFalse())
 			})
 		})
 	})
@@ -1598,12 +1587,9 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 	Context("CAPI", func() {
 		assertClusterResources := func(f *Config, clusterName string) {
-			// Cluster and MachineHealthCheck (cluster.x-k8s.io/v1beta1) are no
-			// longer rendered by helm — they are owned by the
-			// create_capi_cluster_resources hook on a dedicated queue (see
-			// hooks/create_capi_cluster_resources.go). Helm rendering used to
-			// race the capi conversion webhook. Hook-level tests cover their
-			// content; template tests only assert what helm still owns.
+			// Cluster, MachineHealthCheck, DeckhouseControlPlane and the provider
+			// InfrastructureCluster are reconciled by node-controller. Helm must not
+			// own any of them after the handover.
 			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", clusterName)
 			Expect(cluster.Exists()).To(BeFalse())
 
@@ -1611,7 +1597,25 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(healthCheck.Exists()).To(BeFalse())
 
 			controlPlane := f.KubernetesResource("DeckhouseControlPlane", "d8-cloud-instance-manager", fmt.Sprintf("%s-control-plane", clusterName))
-			Expect(controlPlane.Exists()).To(BeTrue())
+			Expect(controlPlane.Exists()).To(BeFalse())
+
+			nodeControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-controller")
+			Expect(nodeControllerRole.Exists()).To(BeTrue())
+			var controlPlaneRule map[string]interface{}
+			for _, rule := range nodeControllerRole.Field("rules").Array() {
+				r := rule.Value().(map[string]interface{})
+				resources, ok := r["resources"].([]interface{})
+				if !ok {
+					continue
+				}
+				for _, resource := range resources {
+					if resource == "deckhousecontrolplanes" {
+						controlPlaneRule = r
+					}
+				}
+			}
+			Expect(controlPlaneRule).ToNot(BeNil())
+			Expect(controlPlaneRule["verbs"]).To(ConsistOf("get", "list", "watch", "create", "update", "patch"))
 
 			capiDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "capi-controller-manager")
 			Expect(capiDeploy.Exists()).To(BeTrue())
@@ -1790,17 +1794,12 @@ internal:
 			It("Everything must render properly", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				assertVCDCluster := func(f *Config) {
+				assertVCDResourcesNotRendered := func(f *Config) {
 					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "capi-user-credentials")
-					Expect(secret.Exists()).To(BeTrue())
-					Expect(secret.Field("data.username").String()).To(Equal("dXNlcg==")) // user
-					Expect(secret.Field("data.password").String()).To(Equal("cGFzcw==")) // pass
+					Expect(secret.Exists()).To(BeFalse())
 
 					vcdCluster := f.KubernetesResource("VCDCluster", "d8-cloud-instance-manager", "app")
-					Expect(vcdCluster.Exists()).To(BeTrue())
-					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
-					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))
-					Expect(vcdCluster.Field("spec.ovdc").String()).To(Equal("dc"))
+					Expect(vcdCluster.Exists()).To(BeFalse())
 				}
 
 				type mdParams struct {
@@ -1828,7 +1827,7 @@ internal:
 
 				assertClusterResources(f, "app")
 
-				assertVCDCluster(f)
+				assertVCDResourcesNotRendered(f)
 
 				// zonea
 				assertMachineDeploymentAndItsDeps(f, mdParams{

@@ -1,0 +1,11 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1
+kind: ZvirtCluster
+metadata:
+  name: zvirt
+  namespace: d8-cloud-instance-manager
+  labels:
+    app: capz-controller-manager
+    heritage: deckhouse
+    module: node-manager
+spec:
+  id: cluster-id
