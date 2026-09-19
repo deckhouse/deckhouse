@@ -46,6 +46,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/daixiang0/gci v0.2.8 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/deckhouse/deckhouse/go_lib/dependency/cr v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1 // indirect
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 // indirect
@@ -296,6 +297,7 @@ replace (
 	github.com/deckhouse/deckhouse/go_lib/cloud-data => ../go_lib/cloud-data
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider => ../go_lib/cloud-provider
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion => ../go_lib/configtools/conversion
+	github.com/deckhouse/deckhouse/go_lib/dependency/cr => ../go_lib/dependency/cr
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ../go_lib/dependency/k8s/drain
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ../go_lib/dependency/vsphere
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ../go_lib/dhctl-provider-protocol

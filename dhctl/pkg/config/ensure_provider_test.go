@@ -29,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 )
 
@@ -73,14 +74,15 @@ func ensureTestGlobalOptions(t *testing.T) *options.GlobalOptions {
 
 func stubProviderDigest(t *testing.T, digest string, calls *atomic.Int32) {
 	t.Helper()
-	orig := resolveProviderBundleDigest
-	resolveProviderBundleDigest = func(_ string) (string, error) {
+	orig := resolveProviderBundleRef
+	resolveProviderBundleRef = func(_ context.Context, _ string, _ providerModuleLookup, _ *options.GlobalOptions) (providerBundleRef, error) {
 		if calls != nil {
 			calls.Add(1)
 		}
-		return digest, nil
+		return providerBundleRef{Digest: digest}, nil
 	}
-	t.Cleanup(func() { resolveProviderBundleDigest = orig })
+
+	t.Cleanup(func() { resolveProviderBundleRef = orig })
 }
 
 func stubProviderDownload(t *testing.T, kind string, delay time.Duration, calls *atomic.Int32) {
@@ -92,6 +94,7 @@ func stubProviderDownload(t *testing.T, kind string, delay time.Duration, calls 
 		writeTestProviderSchema(t, dest, kind)
 		return nil
 	}
+
 	t.Cleanup(func() { downloadProviderBundle = orig })
 }
 
@@ -131,9 +134,11 @@ func TestEnsureProviderBundleDefaultRegistryFallback(t *testing.T) {
 	orig := downloadProviderBundle
 	downloadProviderBundle = func(_ context.Context, imgName, dest, _ string, _ image.RegistryConfig, _ bool) error {
 		gotImgName = imgName
+
 		writeTestProviderSchema(t, dest, "EnsNoRegConfiguration")
 		return nil
 	}
+
 	t.Cleanup(func() { downloadProviderBundle = orig })
 
 	err := EnsureProviderBundle(context.Background(), "", []string{ensureClusterConfigDoc("EnsNoReg")}, ensureTestGlobalOptions(t))
@@ -178,6 +183,7 @@ func TestEnsureProviderBundleLoadsDeliveredBundleFromDisk(t *testing.T) {
 		downloads.Add(1)
 		return nil
 	}
+
 	t.Cleanup(func() { downloadProviderBundle = orig })
 
 	globalOptions := ensureTestGlobalOptions(t)
@@ -205,6 +211,7 @@ func TestEnsureProviderBundleSingleflight(t *testing.T) {
 
 	var wg sync.WaitGroup
 	errs := make([]error, 5)
+
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
 		go func(n int) {
@@ -265,19 +272,173 @@ func TestUnpackProviderBundleFailedDownloadLeavesNoDigestDir(t *testing.T) {
 		writeTestProviderSchema(t, dest, "EnsPartialConfiguration")
 		return nil
 	}
+
 	t.Cleanup(func() { downloadProviderBundle = orig })
 
 	conf, err := image.NewRegistryConfig("HTTPS", "r.example.com/test", "", "", "")
 	require.NoError(t, err)
 
-	require.Error(t, unpackProviderBundle(context.Background(), "enspartial", digest, conf, globalOptions))
+	require.Error(t, unpackProviderBundle(context.Background(), "enspartial", providerBundleRef{Digest: digest}, conf, globalOptions))
 	_, statErr := os.Stat(digestDir)
 	require.True(t, os.IsNotExist(statErr), "failed download must not leave a digest dir that poisons the cache")
 	_, statErr = os.Stat(digestDir + ".partial")
 	require.True(t, os.IsNotExist(statErr), "failed download must not leave a partial dir")
 
 	fail = false
-	require.NoError(t, unpackProviderBundle(context.Background(), "enspartial", digest, conf, globalOptions))
+
+	require.NoError(t, unpackProviderBundle(context.Background(), "enspartial", providerBundleRef{Digest: digest}, conf, globalOptions))
 	_, statErr = os.Stat(filepath.Join(digestDir, "openapi"))
 	require.NoError(t, statErr, "retry after failure must deliver the bundle")
+}
+
+func TestEnsureProviderBundleUsesResolvedImageReference(t *testing.T) {
+	// An external module publishes the bundle under <repo>/<module>, so the digest must be
+	// pulled from there and not from the flat images repo.
+	const digest = "sha256:ensmodule"
+	orig := resolveProviderBundleRef
+	resolveProviderBundleRef = func(_ context.Context, _ string, _ providerModuleLookup, _ *options.GlobalOptions) (providerBundleRef, error) {
+		conf, err := image.NewRegistryConfig("HTTPS", "modules.example.com/modules", "", "", "")
+		require.NoError(t, err)
+		return providerBundleRef{
+			Image:    "modules.example.com/modules/cloud-provider-ensmod@" + digest,
+			Digest:   digest,
+			Registry: conf,
+		}, nil
+	}
+
+	t.Cleanup(func() { resolveProviderBundleRef = orig })
+
+	var gotImgName, gotRegistry string
+	origDownload := downloadProviderBundle
+	downloadProviderBundle = func(_ context.Context, imgName, dest, _ string, conf image.RegistryConfig, _ bool) error {
+		gotImgName = imgName
+		gotRegistry = conf.GetRegistry()
+
+		writeTestProviderSchema(t, dest, "EnsModConfiguration")
+		return nil
+	}
+
+	t.Cleanup(func() { downloadProviderBundle = origDownload })
+
+	globalOptions := ensureTestGlobalOptions(t)
+	docs := []string{ensureClusterConfigDoc("EnsMod"), ensureRegistryMCDoc}
+	require.NoError(t, EnsureProviderBundle(context.Background(), "", docs, globalOptions))
+
+	require.Equal(t, "modules.example.com/modules/cloud-provider-ensmod@"+digest, gotImgName)
+	require.Equal(t, "modules.example.com/modules", gotRegistry, "the ModuleSource registry must win over the cluster one")
+	// The on-disk cache still keys on the digest alone.
+	_, err := os.Stat(providerdir.ProviderDigestDir(globalOptions.DownloadDir, "ensmod", digest))
+	require.NoError(t, err)
+}
+
+// An explicit opt-in has to reach the resolver even for a provider whose validator is compiled
+// into dhctl: for those (inTreeValidatorProviders - yandex and vcd) providerCandiPresent answers
+// true on the candi schemas alone, and returning there would leave dhctl validating the
+// configuration against those schemas while cluster-bootstrapper installs the module build the
+// very same config.yml pinned.
+func TestEnsureProviderBundlePinnedModuleReachesResolver(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		doc      string
+		digest   string
+		resolved bool
+	}{
+		{name: "no opt-in", digest: "sha256:enspinnednone"},
+		{name: "spec.source", digest: "sha256:enspinnedsource", resolved: true, doc: `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-vcd
+spec:
+  enabled: true
+  version: 1
+  source: deckhouse
+`},
+		{name: "ModulePullOverride", digest: "sha256:enspinnedoverride", resolved: true, doc: `
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: cloud-provider-vcd
+spec:
+  imageTag: mr1
+`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			globalOptions := ensureTestGlobalOptions(t)
+			writeTestProviderSchema(t, filepath.Join(globalOptions.CandiDir, "cloud-providers", "vcd"), "VCDClusterConfiguration")
+
+			var resolveCalls, downloadCalls atomic.Int32
+			stubProviderDigest(t, tc.digest, &resolveCalls)
+			stubProviderDownload(t, "VCDClusterConfiguration", 0, &downloadCalls)
+
+			docs := []string{ensureRegistryMCDoc, ensureClusterConfigDoc("VCD")}
+			if tc.doc != "" {
+				docs = append(docs, tc.doc)
+			}
+
+			require.NoError(t, EnsureProviderBundle(context.Background(), "", docs, globalOptions))
+
+			if !tc.resolved {
+				require.Zero(t, resolveCalls.Load(), "candi already carries the schemas and nothing pins another build")
+				require.Zero(t, downloadCalls.Load())
+				return
+			}
+
+			require.Equal(t, int32(1), resolveCalls.Load())
+			require.Equal(t, int32(1), downloadCalls.Load())
+			_, err := os.Stat(providerdir.ProviderDigestDir(globalOptions.DownloadDir, "vcd", tc.digest))
+			require.NoError(t, err)
+		})
+	}
+}
+
+// Resolving the bundle reference now asks the cluster which module the provider came from, so
+// the providerCandiPresent early-return is the only thing left keeping EnsureExternalProviderBundle's
+// promise that a bundle already on disk never dials the kube API - the promise destroy relies on
+// when it is served entirely from the local state cache.
+func TestEnsureExternalProviderBundleNeverDialsForDeliveredBundle(t *testing.T) {
+	globalOptions := ensureTestGlobalOptions(t)
+
+	bundleDir := filepath.Join(globalOptions.DownloadDir, "ensnodial")
+	writeTestProviderSchema(t, bundleDir, "EnsNoDialConfiguration")
+	require.NoError(t, os.WriteFile(filepath.Join(bundleDir, "validator"), []byte("#!/bin/sh\n"), 0o755))
+
+	getter := func(context.Context) (*client.KubernetesClient, error) {
+		t.Error("the kube API must not be dialed for an already-delivered bundle")
+		return nil, fmt.Errorf("dialed")
+	}
+
+	require.NoError(t, EnsureExternalProviderBundle(context.Background(), getter, ensureClusterConfigDoc("EnsNoDial"), globalOptions))
+}
+
+// Which module build a cluster runs is a property of that cluster, and this installer's own
+// contents say nothing about it: an operator can drive a cluster past the migration with a dhctl
+// that still ships the module, or the other way round. So the modules directory must not be used
+// to decide the cluster has nothing to say - only a bundle already on disk skips the resolve.
+func TestEnsureExternalProviderBundleResolvesFromTheClusterEvenForAShippedModule(t *testing.T) {
+	const (
+		digest   = "sha256:ensdial"
+		provider = "ensshipped"
+	)
+
+	globalOptions := ensureTestGlobalOptions(t)
+	stubEmbeddedDigests(t, `{"cloudProviderEnsshipped": {"terraformManager": "`+digest+`"}}`)
+	require.NoError(t, os.MkdirAll(filepath.Join(globalOptions.ModulesDir, "030-"+CloudProviderModuleName(provider)), 0o755))
+
+	// A warm dhctl-server: the bundle is unpacked and loaded into this process, and the
+	// validator that would satisfy providerCandiPresent is not on disk.
+	digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
+	writeTestProviderSchema(t, digestDir, "EnsDialClusterConfiguration")
+	require.NoError(t, switchProviderSymlink(providerdir.ProviderDir(globalOptions.DownloadDir, provider), digestDir))
+	require.NoError(t, NewSchemaStore(globalOptions).LoadProviderDir(provider, digest, digestDir))
+
+	var dialed atomic.Bool
+	getter := func(context.Context) (*client.KubernetesClient, error) {
+		dialed.Store(true)
+		return nil, fmt.Errorf("dialed")
+	}
+
+	err := EnsureExternalProviderBundle(context.Background(), getter, ensureClusterConfigDoc(provider), globalOptions)
+	require.ErrorContains(t, err, "dialed")
+	require.True(t, dialed.Load(), "the module shipping in this image must not stand in for the cluster's answer")
 }

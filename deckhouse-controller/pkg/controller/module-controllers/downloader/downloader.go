@@ -18,7 +18,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -129,36 +128,33 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	span.SetAttributes(attribute.String("module", moduleName))
 	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
 
-	releaseImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
+	// the release image is addressed by a kebab-cased channel name exactly the way it is
+	// addressed by an explicit version tag, so both paths go through the same
+	// cr.ResolveChannel call
+	info, err := md.resolveRelease(ctx, moduleName, strcase.ToKebab(releaseChannel))
 	if err != nil {
 		return nil, err
 	}
 
-	res := &ModuleDownloadResult{
-		Checksum:         releaseImageInfo.Digest.String(),
-		ModuleVersion:    "v" + releaseImageInfo.Metadata.Version.String(),
-		Changelog:        releaseImageInfo.Metadata.Changelog,
-		ModuleDefinition: releaseImageInfo.Metadata.ModuleDefinition,
-	}
-
-	return res, nil
+	return releaseResult(info)
 }
 
 // DownloadReleaseImageInfoByVersion downloads only module release image with metadata: version.json
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
-	releaseImageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
+	info, err := md.resolveRelease(ctx, moduleName, moduleVersion)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module release: %w", err)
 	}
 
-	res := &ModuleDownloadResult{
-		Checksum:      releaseImageInfo.Digest.String(),
-		ModuleVersion: moduleVersion,
-		Changelog:     releaseImageInfo.Metadata.Changelog,
+	res, err := releaseResult(info)
+	if err != nil {
+		return nil, err
 	}
-	if releaseImageInfo.Metadata.ModuleDefinition != nil {
-		res.ModuleDefinition = releaseImageInfo.Metadata.ModuleDefinition
+	// the caller asked for this exact version, keep answering in its terms
+	res.ModuleVersion = moduleVersion
+
+	if res.ModuleDefinition != nil {
 		return res, nil
 	}
 
@@ -328,97 +324,58 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 	}
 }
 
-// fetchModuleReleaseMetadataFromReleaseChannel get Image, Digest and release metadata by releaseChannel
-// releaseChannel must be in kebab-case
-// return error if version.json not found in metadata
-// Image fetch path example: registry.deckhouse.io/deckhouse/ce/modules/$moduleName/release:$releaseChannel
-func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (*ReleaseImageInfo, error) {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataFromReleaseChannel")
+// resolveRelease reads <repo>/<module>/release:<tag> through the shared go_lib/dependency/cr
+// package. The tag is either a kebab-cased release channel or an explicit version - the release
+// image is addressed identically in both cases.
+// Image fetch path example: registry.deckhouse.io/deckhouse/ce/modules/$moduleName/release:$tag
+func (md *ModuleDownloader) resolveRelease(ctx context.Context, moduleName, tag string) (cr.ReleaseInfo, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "resolveRelease")
 	defer span.End()
 
 	md.logger.Info("fetching module release metadata",
 		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
-		slog.String("release_channel", releaseChannel),
+		slog.String("tag", tag),
 	)
 
-	md.logger.Debug("module metadata",
-		slog.String("module_name", moduleName),
-	)
-
-	// fill releaseImageInfo.Image
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("fetch release image error: %w", err)
+		return cr.ReleaseInfo{}, fmt.Errorf("fetch release image error: %w", err)
 	}
 
-	releaseImageInfo, err := md.getReleaseImageInfo(ctx, regCli, strcase.ToKebab(releaseChannel))
+	info, err := cr.ResolveChannel(ctx, regCli, tag)
 	if err != nil {
-		return nil, fmt.Errorf("get image info: %w", err)
+		return info, fmt.Errorf("get image info: %w", err)
 	}
 
-	return releaseImageInfo, nil
+	return info, nil
 }
 
-// fetchModuleReleaseMetadataByVersion get Image, Digest and release metadata by version
-// return error if version.json not found in metadata
-// Image fetch path example: registry.deckhouse.io/deckhouse/ce/modules/$moduleName/release:$moduleVersion
-func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Context, moduleName, moduleVersion string) (*ReleaseImageInfo, error) {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataByVersion")
-	defer span.End()
-
-	md.logger.Info("fetching module release metadata",
-		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
-		slog.String("module_version", moduleVersion),
-	)
-
-	md.logger.Debug("module metadata",
-		slog.String("module_name", moduleName),
-	)
-
-	// fill releaseImageInfo.Image
-	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+// releaseResult turns the opaque release metadata into what the controller works with: the
+// cr package keeps the version as a raw string because dev builds ship non-semver versions, but
+// the controller orders releases and therefore has to insist on a semver here.
+func releaseResult(info cr.ReleaseInfo) (*ModuleDownloadResult, error) {
+	version, err := semver.NewVersion(info.Version)
 	if err != nil {
-		return nil, fmt.Errorf("fetch release image error: %w", err)
+		return nil, fmt.Errorf("parse version %q: %w", info.Version, err)
 	}
 
-	releaseImageInfo, err := md.getReleaseImageInfo(ctx, regCli, moduleVersion)
-	if err != nil {
-		return nil, fmt.Errorf("get image info: %w", err)
+	res := &ModuleDownloadResult{
+		Checksum:      info.Digest,
+		ModuleVersion: "v" + version.String(),
+		Changelog:     info.Changelog,
 	}
 
-	return releaseImageInfo, nil
-}
-
-// getReleaseImageInfo get Image, Digest and release metadata using imageTag with existing registry client
-// return error if version.json not found in metadata
-func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.Client, imageTag string) (*ReleaseImageInfo, error) {
-	img, err := regCli.Image(ctx, imageTag)
-	if err != nil {
-		return nil, fmt.Errorf("fetch image error: %w", err)
+	// module.yaml stays undecoded in the shared cr package: the definition type lives here and
+	// drags addon-operator with it, which is exactly what the shared module must not carry.
+	if len(info.ModuleYAML) > 0 {
+		def := new(moduletypes.Definition)
+		if err = yaml.Unmarshal(info.ModuleYAML, def); err != nil {
+			return nil, fmt.Errorf("unmarshal module yaml failed: %w", err)
+		}
+		res.ModuleDefinition = def
 	}
 
-	// fill releaseImageInfo.Digest
-	digest, err := img.Digest()
-	if err != nil {
-		return nil, fmt.Errorf("fetch digest error: %w", err)
-	}
-
-	// fill releaseImageInfo.Metadata
-	moduleMetadata, err := md.fetchModuleReleaseMetadata(ctx, img)
-	if err != nil {
-		return nil, fmt.Errorf("fetch release metadata error: %w", err)
-	}
-	if moduleMetadata.Version == nil {
-		return nil, fmt.Errorf("metadata malformed: no version found")
-	}
-
-	releaseImageInfo := &ReleaseImageInfo{
-		Image:    img,
-		Digest:   digest,
-		Metadata: &moduleMetadata,
-	}
-
-	return releaseImageInfo, nil
+	return res, nil
 }
 
 func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *moduletypes.Definition {
@@ -474,61 +431,6 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromModuleImage(moduleName stri
 	return def, nil
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img crv1.Image) (ModuleReleaseMetadata, error) {
-	_, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadata")
-	defer span.End()
-
-	var meta ModuleReleaseMetadata
-
-	rc, err := cr.Extract(img)
-	if err != nil {
-		return meta, fmt.Errorf("extract: %w", err)
-	}
-	defer rc.Close()
-
-	rr := &releaseReader{
-		versionReader:   bytes.NewBuffer(nil),
-		changelogReader: bytes.NewBuffer(nil),
-		moduleReader:    bytes.NewBuffer(nil),
-	}
-
-	if err = rr.untarMetadata(rc); err != nil {
-		return meta, fmt.Errorf("untar metadata: %w", err)
-	}
-
-	if rr.versionReader.Len() > 0 {
-		err = json.NewDecoder(rr.versionReader).Decode(&meta)
-		if err != nil {
-			return meta, fmt.Errorf("json decode: %w", err)
-		}
-	}
-
-	if rr.moduleReader.Len() > 0 {
-		var ModuleDefinition moduletypes.Definition
-		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
-		if err != nil {
-			return meta, fmt.Errorf("unmarshal module yaml failed: %w", err)
-		}
-
-		meta.ModuleDefinition = &ModuleDefinition
-	}
-
-	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-		if err != nil {
-			changelog = make(map[string]any)
-		}
-
-		meta.Changelog = changelog
-	}
-
-	if err != nil {
-		return meta, fmt.Errorf("decode: %w", err)
-	}
-	return meta, nil
-}
-
 type moduleReader struct {
 	moduleReader *bytes.Buffer
 }
@@ -577,17 +479,4 @@ func isRel(candidate, target string) bool {
 	}
 	relpath, err := filepath.Rel(target, realpath)
 	return err == nil && !strings.HasPrefix(filepath.Clean(relpath), "..")
-}
-
-type ModuleReleaseMetadata struct {
-	Version *semver.Version `json:"version"`
-
-	Changelog        map[string]any          `json:"-"`
-	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
-}
-
-type ReleaseImageInfo struct {
-	Metadata *ModuleReleaseMetadata
-	Image    crv1.Image
-	Digest   crv1.Hash
 }
