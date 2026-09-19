@@ -71,3 +71,7 @@ linters-settings:
       enum:
         - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
         - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+  no-cyrillic:
+    exclude-rules:
+      directories:
+        - pkg/api

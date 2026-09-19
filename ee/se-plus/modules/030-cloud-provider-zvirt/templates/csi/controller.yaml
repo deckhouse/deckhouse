@@ -1,3 +1,13 @@
+{{- /*
+  The driver reads its credentials only from the cloud-config rendered by csi/secret.yaml, so the
+  pods have to be rolled when that Secret changes. helm_lib already stamps a cloud-config-checksum
+  taken from cloud-controller-manager/secret.yaml, but that template renders nothing when the CCM is
+  disabled, and then a credential rotation would never reach the driver.
+*/ -}}
+{{- define "csi_pod_annotations" }}
+checksum/config: {{ include (print $.Template.BasePath "/csi/secret.yaml") . | sha256sum }}
+{{- end }}
+
 {{- define "csi_controller_args" }}
 - "--node-name=$(NODE_ID)"
 - "--ovirt-conf=/etc/cloud/cloud-config"
@@ -18,28 +28,22 @@
 - name: csi-controller-config-volume
   secret:
     secretName: csi-controller-manager
-  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
+  {{- if dig "provider" "parameters" "caBundle" "" .Values.cloudProviderZvirt }}
 - name: csi-controller-ca-volume
   secret:
     secretName: csi-controller-manager-ca
   {{- end }}
-- name: zvirt-credentials-volume
-  secret:
-    secretName: zvirt-credentials
 {{- end }}
 
 {{- define "csi_controller_volume_mounts" }}
 - name: csi-controller-config-volume
   mountPath: /etc/cloud
   readOnly: true
-  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
+  {{- if dig "provider" "parameters" "caBundle" "" .Values.cloudProviderZvirt }}
 - name: csi-controller-ca-volume
   mountPath: /etc/cloud/ca
   readOnly: true
   {{- end }}
-- name: zvirt-credentials-volume
-  mountPath: /etc/kubernetes/zvirt/basic-auth
-  readOnly: true
 {{- end }}
 
 {{- define "csi_node_args" }}
@@ -62,32 +66,26 @@
 - name: csi-node-config-volume
   secret:
     secretName: csi-controller-manager
-  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
+  {{- if dig "provider" "parameters" "caBundle" "" .Values.cloudProviderZvirt }}
 - name: csi-controller-ca-volume
   secret:
     secretName: csi-controller-manager-ca
   {{- end }}
-- name: zvirt-credentials-volume
-  secret:
-    secretName: zvirt-credentials
 {{- end }}
 
 {{- define "csi_node_volume_mounts" }}
 - mountPath: /etc/cloud
   name: csi-node-config-volume
   readOnly: true
-  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
+  {{- if dig "provider" "parameters" "caBundle" "" .Values.cloudProviderZvirt }}
 - name: csi-controller-ca-volume
   mountPath: /etc/cloud/ca
   readOnly: true
   {{- end }}
-- name: zvirt-credentials-volume
-  mountPath: /etc/kubernetes/zvirt/basic-auth
-  readOnly: true
 {{- end }}
 
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . "zvirtCsiDriver") }}
-{{- if $csiControllerImage }}
+{{- if and $csiControllerImage (not (default false (dig "storage" "disabled" false .Values.cloudProviderZvirt))) }}
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
@@ -99,6 +97,7 @@
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalCsiControllerPodAnnotations" (include "csi_pod_annotations" . | fromYaml) }}
   {{- $_ := set $csiControllerConfig "dnsPolicy"  (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 
   {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
@@ -112,6 +111,7 @@
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalCsiNodePodAnnotations" (include "csi_pod_annotations" . | fromYaml) }}
   {{- $_ := set $csiNodeConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}

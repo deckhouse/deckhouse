@@ -4,9 +4,10 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
-  to: /candi
+  to: /
   excludePaths:
   - '**/terraform_versions.yml'
+  - '**/plan_rules.yml'
   stageDependencies:
     install:
     - '**/*'
@@ -15,10 +16,19 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/plan_rules.yml
+  to: /terraform-manager/plan_rules.yml
+  stageDependencies:
+    install:
+    - '**/*'
 import:
   - image: terraform-provider-ovirt
     add: /terraform-provider-ovirt
     to: /terraform-manager/terraform-provider-ovirt
+    before: setup
+  - image: {{ $.ModuleName }}/validator
+    add: /dhctl-provider-zvirt
+    to: /validator
     before: setup
 shell:
   install:

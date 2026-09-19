@@ -6,7 +6,8 @@ variable "clusterConfiguration" {
 }
 
 variable "providerClusterConfiguration" {
-  type = any
+  type    = any
+  default = null
 }
 
 variable "nodeIndex" {
@@ -15,7 +16,7 @@ variable "nodeIndex" {
 }
 
 variable "cloudConfig" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -24,39 +25,76 @@ variable "nodeGroupName" {
 }
 
 variable "resourceManagementTimeout" {
-  type = string
+  type    = string
   default = "10m"
+}
+
+variable "nodeGroups" {
+  type    = any
+  default = {}
+}
+
+variable "instanceClasses" {
+  type    = any
+  default = {}
+}
+
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
+}
+
+module "migration" {
+  source                       = "../migration"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  nodeGroups                   = var.nodeGroups
+  instanceClasses              = var.instanceClasses
+  secrets                      = var.secrets
+  settings                     = var.settings
 }
 
 locals {
   resource_name_prefix = var.clusterConfiguration.cloud.prefix
-  ng             = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
-  instance_class = local.ng["instanceClass"]
-  node_group_name = local.ng.name
 
-  vnic_profile_id = lookup(local.instance_class, "vnicProfileID", [])
-  cluster_id = lookup(var.providerClusterConfiguration, "clusterID", [])
-  template_name = lookup(local.instance_class, "template", [])
+  _provider_params = try(module.migration.settings.spec.settings.provider.parameters, {})
+  _node_params     = try(module.migration.settings.spec.settings.nodes.parameters, {})
+
+  _node_group     = try(module.migration.nodeGroups[var.nodeGroupName], {})
+  _instance_class = try(module.migration.instanceClasses[local._node_group.spec.cloudInstances.classReference.name].spec, {})
+
+  node_group_name = var.nodeGroupName
+  cluster_id      = try(local._provider_params.clusterID, "")
+  ssh_pubkey      = try(local._node_params.sshPublicKey, null)
+
+  vnic_profile_id = try(local._instance_class.vnicProfileID, "")
+  template_name   = try(local._instance_class.template, "")
+  cpus            = try(local._instance_class.numCPUs, 0)
+  ram_mb          = try(local._instance_class.memory, 0)
+
   node_name = join("-", [local.resource_name_prefix, local.node_group_name, var.nodeIndex])
-  cpus = lookup(local.instance_class, "numCPUs", [])
-  ram_mb = lookup(local.instance_class, "memory", [])
-  vm_type = "high_performance"
-  nic_name = "nic1"
-  ssh_pubkey = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
-  root_disk_size = lookup(local.instance_class, "rootDiskSizeGb", 50)*1024*1024*1024
+  vm_type   = "high_performance"
+  nic_name  = "nic1"
 
-  custom_network_config  = can(local.instance_class.customNetworkConfig) ? [1] : []
-  custom_network_name    = try(local.instance_class.customNetworkConfig.networkInterfaceName, "")
-  custom_network_address = try(local.instance_class.customNetworkConfig.networkInterfaceAddress[var.nodeIndex], "")
-  custom_network_netmask = try(local.instance_class.customNetworkConfig.networkInterfaceNetmask, "")
-  custom_network_gateway = try(local.instance_class.customNetworkConfig.networkInterfaceGateway, "")
-  custom_network_dns     = try(local.instance_class.customNetworkConfig.dnsServers, "")
+  root_disk_size = try(local._instance_class.rootDiskSizeGb, 50) * 1024 * 1024 * 1024
+
+  _custom_network        = try(local._node_params.customNetworkConfigs[var.nodeGroupName], null)
+  custom_network_config  = local._custom_network == null ? [] : [1]
+  custom_network_name    = try(local._custom_network.networkInterfaceName, "")
+  custom_network_address = try(local._custom_network.networkInterfaceAddresses[var.nodeIndex], "")
+  custom_network_netmask = try(local._custom_network.networkInterfaceNetmask, "")
+  custom_network_gateway = try(local._custom_network.networkInterfaceGateway, "")
+  custom_network_dns     = join(" ", try(tolist(local._custom_network.dnsServers), []))
 
   cloud_init_script = yamlencode(merge({
-    "hostname": local.node_name,
-    "create_hostname_file": true,
-    "ssh_deletekeys": true,
-    "ssh_genkeytypes": ["rsa", "ecdsa", "ed25519"],
+    "hostname" : local.node_name,
+    "create_hostname_file" : true,
+    "ssh_deletekeys" : true,
+    "ssh_genkeytypes" : ["rsa", "ecdsa", "ed25519"],
     "ssh_authorized_keys" : [local.ssh_pubkey]
   }, length(var.cloudConfig) > 0 ? yamldecode(base64decode(var.cloudConfig)) : tomap({})))
 }

@@ -10,20 +10,20 @@ resource "ovirt_vm" "node_vm" {
   name        = local.node_name
   cluster_id  = local.cluster_id
   template_id = tolist(data.ovirt_templates.node_template.templates)[0].id
-  clone = true
+  clone       = true
 
   cpu_sockets = 1
   cpu_cores   = local.cpus
   cpu_threads = 1
 
-  memory         = local.ram_mb * 1024 * 1024
-  maximum_memory = local.ram_mb * 1024 * 1024
+  memory            = local.ram_mb * 1024 * 1024
+  maximum_memory    = local.ram_mb * 1024 * 1024
   memory_ballooning = false
 
   vm_type = local.vm_type
 
   initialization_custom_script = local.cloud_init_script
-  initialization_dns = local.custom_network_dns
+  initialization_dns           = local.custom_network_dns
 
   dynamic "initialization_nic" {
     for_each = local.custom_network_config

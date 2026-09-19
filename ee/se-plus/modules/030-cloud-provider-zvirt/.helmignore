@@ -2,6 +2,8 @@ crds
 images
 hooks
 docs
+pkg
+tools
 template_tests
 enabled
 openapi

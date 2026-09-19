@@ -41,7 +41,6 @@ var terraformProviders = []string{
 var tofuProviders = []string{
 	yandex.ProviderName,
 	"dynamix",
-	"zvirt",
 	"vsphere",
 	"huaweicloud",
 	"openstack",
