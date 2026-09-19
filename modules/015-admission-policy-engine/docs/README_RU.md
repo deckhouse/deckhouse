@@ -186,7 +186,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one pod violates the configured cluster pod security standards.
@@ -244,7 +244,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster operation policies.
@@ -302,7 +302,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster security policies.
@@ -342,7 +342,8 @@ status:
 Политику по умолчанию можно переопределить глобально ([в настройках модуля](configuration.html#parameters-podsecuritystandards-defaultpolicy)).
 
 {% alert level="info" %}
-Модуль не применяет политики к системным неймспейсам.
+В неймспейсах с именами `d8-*` и `kube-*` стандарт `restricted` применяется независимо от политики по умолчанию.
+Нарушение фиксируется в отчётах безопасности и отображается в веб-интерфейсе Deckhouse, нагрузка при этом запускается, если владеющий неймспейсом модуль не включил принудительное применение.
 {% endalert %}
 
 {% alert level="info" %}
@@ -575,7 +576,7 @@ spec:
 Для примера рассмотрим под, которому требуется:
 
 - разрешение на использование настройки [`hostNetwork`](/products/kubernetes-platform/documentation/v1/user/security/pod-settings.html#hostnetwork) всему поду;
-- разрешение на использование настройки [`privileged`](/products/kubernetes-platform/documentation/v1/user/security/pod-settings.html#privileged) только для контейнера `sample-init`.
+- разрешение на использование настройки [`privileged`](/products/kubernetes-platform/documentation/v1/user/security/pod-settings.html#privileged) только для контейнера `sample-init`.
 
 Без использования ресурса SecurityPolicyException для разрешения этих параметров потребовалось бы создать пользовательскую политику безопасности, допускающую их использование для всех подов в кластере.
 

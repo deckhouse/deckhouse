@@ -83,8 +83,10 @@ spec:
                   description: |
                     An enforcement action as a result of the constraint:
                     - `Deny` — Deny action.
-                    - `Dryrun` — No action. Used for debugging. Information about the event can be viewed in Grafana in dashboard `Security/Admission policy engine`.
+                    - `Dryrun` — No action. Used for debugging. Information about the event can be viewed in Deckhouse Console.
                     - `Warn` — No action; similar to `Dryrun`. Provides information about the constraint that would result in a denial if the `Deny` action is used.
+
+                    `Deny` holds in application namespaces. In a namespace named `d8-*` or `kube-*` the policy always warns, whatever action is set here.
                   enum:
                     - Warn
                     - Deny

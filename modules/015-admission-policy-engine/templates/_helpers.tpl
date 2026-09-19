@@ -9,28 +9,282 @@
   selector not mirrored at the controller top level will result in no controller-level
   check at all, and an exclusion-style selector (NotIn/DoesNotExist) used to exempt
   a workload will stop exempting at the controller level.
+
+  NOTE on the namespace scope:
+  scoped_policy_variants injects the internal keys `d8NamespaceScope` and `d8SystemNamespaces`
+  into the copy of match it hands over. They are not part of the CR API — they select the namespace
+  lists rendered here, so that one user policy can enforce in user namespaces and follow the module
+  constant in system ones. The scopes are `user` and `system-all`; a CR with no scope is rendered as
+  it was written.
 */}}
 {{- define "constraint_selector" }}
     {{- $cr := index . 0 }}
+    {{- $match := $cr.spec.match | default dict }}
+    {{- $scope := $match.d8NamespaceScope | default "" }}
+    {{- $nsSelector := $match.namespaceSelector | default dict }}
+    {{- $namespaces := $nsSelector.matchNames | default list }}
+    {{- $excluded := $nsSelector.excludeNames | default list }}
 
-    {{- if $cr.spec.match.namespaceSelector }}
-      {{- if hasKey $cr.spec.match.namespaceSelector "matchNames"}}
+    {{- if eq $scope "user" }}
+      {{- $excluded = concat $excluded (include "system_namespaces" . | fromYamlArray) | uniq }}
+    {{- else if eq $scope "system-all" }}
+      {{- $namespaces = $match.d8SystemNamespaces }}
+    {{- end }}
+
+    {{- if $namespaces }}
     namespaces:
-      {{- $cr.spec.match.namespaceSelector.matchNames | toYaml | nindent 6 }}
-      {{- end }}
-      {{- if hasKey $cr.spec.match.namespaceSelector "excludeNames" }}
+      {{- $namespaces | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if $excluded }}
     excludedNamespaces:
-      {{- $cr.spec.match.namespaceSelector.excludeNames | toYaml | nindent 6 }}
-      {{- end }}
-      {{- if hasKey $cr.spec.match.namespaceSelector "labelSelector" }}
+      {{- $excluded | toYaml | nindent 6 }}
+    {{- end }}
+
+    {{- $labelSelector := dict }}
+    {{- if hasKey $nsSelector "labelSelector" }}
+      {{- $labelSelector = deepCopy $nsSelector.labelSelector }}
+    {{- end }}
+    {{- $scopeExpressions := list }}
+    {{- if eq $scope "user" }}
+      {{/* #### TODO: Backward compatibility, remove once every platform namespace is named
+           `d8-*` or `kube-*` and the name lists alone define a system namespace.
+
+           Excluding the system namespaces by name is not enough while a namespace the platform
+           labels as its own may be called something else: it stays outside user policies, as it
+           did when that label was the whole definition of a system namespace. */}}
+      {{- $scopeExpressions = list
+            (dict "key" "heritage" "operator" "NotIn" "values" (list "deckhouse")) }}
+    {{- end }}
+    {{- /* A system-scoped constraint carries no label of its own. The opt-in label a module puts on
+           its namespace raises the Pod Security Standards there, and a user policy is not one of
+           them: the module declares the namespace compliant with the platform's standards, not with
+           a rule a cluster operator wrote for application workloads. */}}
+    {{- if $scopeExpressions }}
+      {{- $_ := set $labelSelector "matchExpressions" (concat ($labelSelector.matchExpressions | default list) $scopeExpressions) }}
+    {{- end }}
+    {{- if $labelSelector }}
     namespaceSelector:
-      {{- $cr.spec.match.namespaceSelector.labelSelector | toYaml | nindent 6 }}
+      {{- $labelSelector | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if hasKey $match "labelSelector" }}
+    labelSelector:
+      {{- $match.labelSelector | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{/*
+  system_namespaces lists the namespaces that hold the components of the platform itself.
+
+  Gatekeeper's match.namespaces and match.excludedNamespaces take these globs as they are,
+  and the webhooks recognize the same names through a CEL match condition. Keep the two in
+  sync: a namespace a webhook does not route never reaches the constraints listed here.
+*/}}
+{{- define "system_namespaces" }}
+- "d8-*"
+- "kube-*"
+{{- end }}
+
+{{/*
+  system_namespaces_action is what happens to a violation in a system namespace that no module
+  opted into enforcement.
+
+  It is a constant rather than a module setting on purpose. How the platform treats its own
+  namespaces is not a cluster operator's decision: raising it to `deny` blocks the converge of
+  every module whose workloads do not yet comply, and lowering it would hide violations the
+  platform wants to see. Change it here, together with the exclusions below, and ship the two as
+  one release.
+*/}}
+{{- define "system_namespaces_action" -}}
+warn
+{{- end }}
+
+{{/*
+  system_namespaces_cel recognizes the same namespaces as system_namespaces, as a CEL expression
+  for a webhook matchConditions entry. Keep the two definitions in sync.
+
+  The `has()` guard is required, not defensive. For a cluster-scoped resource the AdmissionRequest
+  carries no `namespace` key at all, and reading it raises `no such key: namespace`. A matchCondition
+  that errors rejects the request under `failurePolicy: Fail`, which took down every apply of a
+  cluster-scoped constraint until the guard was added.
+
+  With the guard the expression is false for a cluster-scoped resource, so the negated form used by
+  the main webhook stays true and such objects keep being validated there, as they were when the
+  webhook selected namespaces by label.
+*/}}
+{{- define "system_namespaces_cel" -}}
+has(request.namespace) && (request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-"))
+{{- end }}
+
+{{/*
+  system_namespace_scope intersects the namespaces a policy names with the system namespaces,
+  and reports whether the policy can reach a user namespace at all.
+
+  Gatekeeper cannot AND two include lists, so the intersection has to be resolved here.
+  It is exact for literal names, for prefix globs, and for a policy that names no namespace.
+  A suffix glob such as `*-system` intersects `d8-*` in a set that no single Gatekeeper glob
+  describes, so the result is reported as undecidable and the caller leaves the policy alone
+  rather than guessing a wider or a narrower match.
+
+  Names the policy already excludes are dropped from the result. Gatekeeper applies
+  excludedNamespaces over namespaces, so keeping them would render constraints that match
+  nothing while still costing an audit pass each.
+
+  Usage: include "system_namespace_scope" (list $matchNames $excludeNames) | fromYaml
+  Returns: {decidable: bool, names: [glob...], userPossible: bool}
+*/}}
+{{- define "system_namespace_scope" }}
+  {{- $matchNames := index . 0 }}
+  {{- $excludeNames := list }}
+  {{- if gt (len .) 1 }}
+    {{- $excludeNames = index . 1 }}
+  {{- end }}
+  {{- $prefixes := list "d8-" "kube-" }}
+  {{- $names := list }}
+  {{- $decidable := true }}
+  {{- $userPossible := not $matchNames }}
+  {{- if not $matchNames }}
+    {{- range $prefix := $prefixes }}
+      {{- $names = append $names (printf "%s*" $prefix) }}
+    {{- end }}
+  {{- end }}
+  {{- range $entry := $matchNames }}
+    {{- if eq $entry "*" }}
+      {{- $userPossible = true }}
+      {{- range $prefix := $prefixes }}
+        {{- $names = append $names (printf "%s*" $prefix) }}
+      {{- end }}
+    {{- else if hasPrefix "*" $entry }}
+      {{- $decidable = false }}
+    {{- else if hasSuffix "*" $entry }}
+      {{- $stem := trimSuffix "*" $entry }}
+      {{- $covered := false }}
+      {{- range $prefix := $prefixes }}
+        {{- if hasPrefix $prefix $stem }}
+          {{- $names = append $names $entry }}
+          {{- $covered = true }}
+        {{- else if hasPrefix $stem $prefix }}
+          {{- $names = append $names (printf "%s*" $prefix) }}
+        {{- end }}
+      {{- end }}
+      {{- if not $covered }}
+        {{- $userPossible = true }}
+      {{- end }}
+    {{- else if contains "*" $entry }}
+      {{/* Gatekeeper globs only anchor at one end, so anything else is not ours to interpret. */}}
+      {{- $decidable = false }}
+    {{- else }}
+      {{- $covered := false }}
+      {{- range $prefix := $prefixes }}
+        {{- if hasPrefix $prefix $entry }}
+          {{- $names = append $names $entry }}
+          {{- $covered = true }}
+        {{- end }}
+      {{- end }}
+      {{- if not $covered }}
+        {{- $userPossible = true }}
       {{- end }}
     {{- end }}
-    {{- if hasKey $cr.spec.match "labelSelector" }}
-    labelSelector:
-      {{- $cr.spec.match.labelSelector | toYaml | nindent 6 }}
+  {{- end }}
+  {{- $kept := list }}
+  {{- range $name := ($names | uniq) }}
+    {{- $covered := false }}
+    {{- range $exclude := $excludeNames }}
+      {{- if eq $exclude "*" }}
+        {{- $covered = true }}
+      {{- else if hasSuffix "*" $exclude }}
+        {{- if hasPrefix (trimSuffix "*" $exclude) $name }}
+          {{- $covered = true }}
+        {{- end }}
+      {{- else if hasPrefix "*" $exclude }}
+        {{/* A suffix glob decides a literal name exactly, and says nothing about a glob. */}}
+        {{- if and (not (contains "*" $name)) (hasSuffix (trimPrefix "*" $exclude) $name) }}
+          {{- $covered = true }}
+        {{- end }}
+      {{- else if eq $exclude $name }}
+        {{- $covered = true }}
+      {{- end }}
     {{- end }}
+    {{- if not $covered }}
+      {{- $kept = append $kept $name }}
+    {{- end }}
+  {{- end }}
+  {{- dict "decidable" $decidable "names" $kept "userPossible" $userPossible | toYaml }}
+{{- end }}
+
+{{/*
+  scoped_policy_variants expands one SecurityPolicy or OperationPolicy into the set of CRs
+  the constraint templates must render.
+
+  A Gatekeeper constraint carries a single enforcementAction, and a constraint cannot OR two
+  namespace lists, so "deny in user namespaces, follow the module constant in system ones"
+  needs more than one object. A policy with enforcementAction: Deny that spans both is split into:
+    - the original name, with the system namespaces excluded;
+    - `d8-system-default-<name>`, for every system namespace, with the action from the
+      `system_namespaces_action` constant — `warn`, so a policy written for application namespaces
+      cannot block a platform component by accident;
+
+  No label of the namespace changes any of this. A module opting its own namespace into
+  enforcement raises the Pod Security Standards there and nothing else: the platform declares its
+  own namespace compliant with its own standards, which says nothing about a policy a cluster
+  operator wrote for application workloads. A user policy therefore never blocks in a system
+  namespace unless the constant above says so, for every system namespace at once.
+
+  The generated names carry a prefix rather than a suffix so that none can collide with another,
+  and the validating webhook `reserved_policy_names.py` keeps the prefixes free by rejecting
+  policies that claim them. No prefix may be a prefix of another, or two policies could derive the
+  same name.
+
+  Nothing is split that does not have to be, because every extra constraint costs an audit pass:
+    - a policy that only warns or only runs in dryrun keeps one CR, its action being already
+      harmless in system namespaces;
+    - a denying policy that names no system namespace, that already excludes every system namespace
+      it names, or whose namespace list cannot be intersected exactly keeps one CR, scoped to user
+      namespaces — a system namespace has to stay out of a constraint that still denies;
+    - a policy that names only system namespaces drops the user-scoped CR, and the remaining one
+      keeps the original name and the action of the constant.
+
+  Usage: include "scoped_policy_variants" (list $context $policy) | fromYamlArray
+*/}}
+{{- define "scoped_policy_variants" }}
+  {{- $context := index . 0 }}
+  {{- $policy := index . 1 }}
+  {{- $action := $policy.spec.enforcementAction | default "deny" | lower }}
+  {{- $match := $policy.spec.match | default dict }}
+  {{- $nsSelector := $match.namespaceSelector | default dict }}
+  {{- $scope := include "system_namespace_scope" (list ($nsSelector.matchNames | default list) ($nsSelector.excludeNames | default list)) | fromYaml }}
+  {{- $systemAction := include "system_namespaces_action" . | trim | lower }}
+
+  {{- if ne $action "deny" }}
+    {{- /* Warn and dryrun block nothing anywhere, so the policy keeps the single constraint it was
+           written as, system namespaces included. */}}
+    {{- list $policy | toYaml }}
+  {{- else if or (not $scope.decidable) (not $scope.names) }}
+    {{- /* The intersection with the system namespaces is empty, or is a set no Gatekeeper glob
+           describes. Either way there is nothing to split off, and the one constraint left still
+           denies — so it is scoped to user namespaces, or a policy that names `*-system` would
+           block in `kube-system` while the documentation promises it only warns there. */}}
+    {{- $userScoped := deepCopy $policy }}
+    {{- $_ := set $userScoped.spec.match "d8NamespaceScope" "user" }}
+    {{- list $userScoped | toYaml }}
+  {{- else }}
+    {{- $variants := list }}
+    {{- if $scope.userPossible }}
+      {{- $userScoped := deepCopy $policy }}
+      {{- $_ := set $userScoped.spec.match "d8NamespaceScope" "user" }}
+      {{- $variants = append $variants $userScoped }}
+    {{- end }}
+
+    {{- $systemDefault := deepCopy $policy }}
+    {{- if $scope.userPossible }}
+      {{- $_ := set $systemDefault.metadata "name" (printf "d8-system-default-%s" $policy.metadata.name) }}
+    {{- end }}
+    {{- $_ := set $systemDefault.spec "enforcementAction" $systemAction }}
+    {{- $_ := set $systemDefault.spec.match "d8NamespaceScope" "system-all" }}
+    {{- $_ := set $systemDefault.spec.match "d8SystemNamespaces" $scope.names }}
+    {{- $variants = append $variants $systemDefault }}
+
+    {{- $variants | toYaml }}
+  {{- end }}
 {{- end }}
 
 {{- define "pod_security_standard_baseline" }}
@@ -64,6 +318,8 @@
   {{- $policyAction := index . 3 }}
   {{- $parameters := index . 4 }}
   {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "privileged" | lower) }}
+  {{/* System namespaces are governed by their own settings, not by defaultPolicy/enforcementAction. */}}
+  {{- $systemAction := include "system_namespaces_action" . | trim | lower }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
@@ -82,6 +338,9 @@ spec:
     scope: Namespaced
     kinds:
 {{- include "workload_kinds" . }}
+    # System namespaces are covered by the constraints below, never by this one.
+    excludedNamespaces:
+      {{- include "system_namespaces" . | fromYamlArray | toYaml | nindent 6 }}
     labelSelector:
       matchExpressions:
         - key: security.deckhouse.io/skip-pss-check
@@ -92,20 +351,23 @@ spec:
           values: ["webhook"]
     namespaceSelector:
       matchExpressions:
+        # #### TODO: Backward compatibility, remove once every platform namespace is named `d8-*`
+        # or `kube-*` and the name list above alone keeps them out of this constraint.
+        # A namespace the platform labels as its own is never a user namespace, whatever it is
+        # called. The label was the whole definition of "system" before the names took over, and
+        # honouring it keeps a namespace that carries it outside user policies, as it was.
+        - { key: heritage, operator: NotIn, values: [ deckhouse ] }
       {{- if eq $standard "baseline" }}
         {{- if eq $defaultPolicy "privileged" }}
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ baseline, restricted ] }
         {{- else }}
         - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged ] }
-        - { key: heritage, operator: NotIn, values: [ deckhouse ] }
         {{- end }}
       {{- else if eq $standard "restricted" }}
         {{- if eq $defaultPolicy "restricted" }}
         - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged, baseline ] }
-        - { key: heritage, operator: NotIn, values: [ deckhouse ] }
         {{- else }}
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ restricted ] }
-        - { key: heritage, operator: NotIn, values: [ deckhouse ] }
         {{- end }}
       {{- else}}
         {{ cat "Unknown policy standard" | fail }}
@@ -124,8 +386,72 @@ spec:
   parameters:
     {{ $parameters | toYaml | nindent 4 }}
   {{- end }}
+{{/*
+  Pod Security Standards for system namespaces that no module has opted into enforcement.
+
+  Every namespace named `d8-*` or `kube-*` is checked against this standard regardless of its
+  `security.deckhouse.io/pod-policy` label and of the module's defaultPolicy, which applies to
+  non-system namespaces only. The block runs for both standards, so the two together give system
+  namespaces the full `restricted` set of checks.
+
+  The action comes from the `system_namespaces_action` constant and is `warn`, which reports
+  violations in the audit and in Deckhouse Console without blocking a system component.
+  Neither is a module setting: how the platform treats its own namespaces is decided in the module,
+  not by a cluster operator.
+
+  The namespaces a module opted into enforcement are left to the block below.
+
+  The block does not depend on the module's own enforcement action, so it is rendered on the
+  iteration of the default action, which is always present in
+  internal.podSecurityStandards.enforcementActions. That keeps it at one object per standard
+  instead of one per action.
+*/}}
+{{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: {{ $policyCRDName }}
+metadata:
+  name: d8-pod-security-{{$standard}}-system
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
+spec:
+  enforcementAction: {{ $systemAction }}
+  match:
+    scope: Namespaced
+    kinds:
+{{- include "workload_kinds" . }}
+    namespaces:
+      {{- include "system_namespaces" . | fromYamlArray | toYaml | nindent 6 }}
+    labelSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/skip-pss-check
+          operator: NotIn
+          values: ["true"]
+        - key: gatekeeper.sh/operation
+          operator: NotIn
+          values: ["webhook"]
+    namespaceSelector:
+      matchExpressions:
+        - { key: security.deckhouse.io/enable-security-policy-check, operator: NotIn, values: [ "true" ] }
+  {{- if $parameters }}
+  parameters:
+    {{ $parameters | toYaml | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{/*
+  Pod Security Standards at the configured action for system namespaces that opted into
+  enforcement with `security.deckhouse.io/enable-security-policy-check: "true"`.
+
+  Rendered for both standards and for every defaultPolicy, which applies to non-system namespaces
+  only. Gating it on defaultPolicy, as it once was, disabled a standard exactly where the namespace
+  had asked for it: with `defaultPolicy: Restricted` the restricted constraint was dropped, and with
+  `defaultPolicy: Privileged` the baseline one, leaving the namespace enforced against the weaker
+  standard and only warned about the stronger.
+
+  The workloads this reaches carry a SecurityPolicyException wherever they need one, and
+  `defaultPolicy: Baseline` has been the default since v1.55, so most clusters already enforce both
+  standards in these namespaces.
+*/}}
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
-{{- if or (and (eq $standard "baseline") (ne $defaultPolicy "privileged"))  (and (eq $standard "restricted") (ne $defaultPolicy "restricted")) }} 
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: {{ $policyCRDName }}
@@ -152,17 +478,14 @@ spec:
           values: ["webhook"]
     namespaceSelector:
       matchExpressions:
-    {{- if eq $standard "baseline" }}
-      {{- if ne $defaultPolicy "privileged" }}
+        # Selected by the two labels alone, without the name list the block above uses. Both are
+        # written by the module that owns the namespace, and this is the selector the constraint
+        # carried before names entered the picture, so a namespace that opted in keeps being
+        # enforced even if it is not called `d8-*` or `kube-*`.
+        # #### TODO: Backward compatibility, drop the `heritage` expression and match this
+        # constraint by name once every platform namespace is named `d8-*` or `kube-*`.
         - { key: heritage, operator: In, values: [ deckhouse ] }
         - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
-      {{- end }}
-    {{- else if eq $standard "restricted" }}
-      {{- if ne $defaultPolicy "restricted" }}
-        - { key: heritage, operator: In, values: [ deckhouse ] }
-        - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
-      {{- end }}
-    {{- end }}
       # matches default enforcement action
       {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
         # if there are other policy actions apart from the default one, we add all of them to NotIn list, so that the namespaces with such labels aren't subject to the default policy
@@ -176,19 +499,9 @@ spec:
   {{- if $parameters }}
   parameters:
     {{ $parameters | toYaml | nindent 4 }}
-  {{- end }} 
-{{- end }} 
+  {{- end }}
 {{/* #### end of TODO */}}
 {{- end }}
-{{- end }}
-
-{{- define "trivy.provider.enabled" }}
-  {{- $context := . }}
-  {{- $denyEnabled := dig "operatorTrivy" "denyVulnerableImages" "enabled" false ($context.Values | merge (dict)) }}
-  {{- if and ($context.Values.global.enabledModules | has "operator-trivy") $denyEnabled }}
-    {{- print "true" }}
-  {{- end }}
-  {{- print "" }}
 {{- end }}
 
 {{/* workload_kinds outputs the standard Gatekeeper match.kinds blocks for pod-creating workloads. */}}

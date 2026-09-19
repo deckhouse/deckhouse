@@ -48,7 +48,7 @@ Allowed policy enforcement modes:
 
 - `deny`: Blocks actions from being executed.
 - `dryrun`: Does not affect execution and used for debugging.
-  Event information can be viewed in Grafana or in the console using `kubectl`.
+  Event information can be viewed in Deckhouse Console or with `d8 k`.
 - `warn`: Works like `dryrun` but also displays a warning with the reason the action would have been denied in `deny` mode.
 
 By default, Pod Security Standards policies in DVP are enforced in `deny` mode.
@@ -64,6 +64,44 @@ As with policy assignment, enforcement mode can be set:
   ```shell
   d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
   ```
+
+### Policies in system namespaces
+
+Namespaces named `d8-*` and `kube-*` hold the components of the platform itself.
+Policies apply to them differently from application namespaces, and that difference is not configurable.
+The platform also labels the namespaces it creates with `heritage: deckhouse`. A namespace that carries the label but is named otherwise is left out of policies and mutations written for application namespaces; the Pod Security Standards below follow the names.
+
+Every namespace named `d8-*` or `kube-*` is checked against the `restricted` standard.
+The `security.deckhouse.io/pod-policy` label and the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter do not apply there.
+A violation is recorded in the audit and shown in Deckhouse Console, and the workload still starts.
+The exception is a namespace whose module has hardened it: there the standards are enforced and a violating workload is denied.
+
+These checks cannot be tuned from outside the platform.
+The labels that govern them, and the workloads they cover, belong to the module that owns the namespace, and Deckhouse Platform returns both to their declared state the next time it applies the configuration.
+A module exempts a workload of its own where it has to, with a SecurityPolicyException it ships itself.
+
+OperationPolicy and SecurityPolicy resources reach system namespaces in `warn` mode as well.
+A policy with `enforcementAction: Deny` blocks workloads in application namespaces and only reports violations in a system namespace.
+No label of the namespace changes that: a module that hardens its own namespace raises the Pod Security Standards there, which says nothing about a policy you wrote for application workloads.
+
+A denying policy that reaches system namespaces is therefore rendered as two Gatekeeper constraints, both visible in the audit and in Deckhouse Console:
+
+- The policy's own name: For application namespaces, with the action the policy asks for.
+- `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
+
+The `d8-system-default-` and `d8-pod-security-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
+A policy name is limited to 235 characters for the same reason, so that the derived constraint names stay within the 253-character limit of a Kubernetes object name.
+
+A policy is rendered as a single constraint when the split would change nothing:
+
+- The policy uses the `Warn` or the `Dryrun` action.
+- The namespaces the policy selects include no system namespace.
+- The policy already excludes every system namespace it selects.
+- The namespace list uses a leading glob, such as `*-system`, which cannot be intersected with `d8-*` exactly. The single constraint then keeps the policy's action and excludes system namespaces outright.
+- The policy selects system namespaces only, in which case the single constraint keeps the policy's name and warns.
+
+Gatekeeper mutations do not apply in system namespaces, whatever labels the namespace carries.
+The platform sets the parameters of its own components, so an `Assign` or a `ModifySet` resource is not allowed to change them there.
 
 ### Extending a policy
 
