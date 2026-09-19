@@ -875,7 +875,6 @@ func ownerRefName(mod *v1alpha2.Module, kind string) string {
 // compile-time check that this stub still matches the real runtime.
 type packageManagerStub struct {
 	updated     []updatedModule
-	global      []packageruntime.Module
 	removed     []removedModule
 	digestCalls []digestCall
 
@@ -919,8 +918,7 @@ func (s *packageManagerStub) UpdateModule(mod packageruntime.Module, force bool)
 	s.updated = append(s.updated, updatedModule{module: mod, forced: force})
 }
 
-func (s *packageManagerStub) UpdateGlobalModule(mod packageruntime.Module) {
-	s.global = append(s.global, mod)
+func (s *packageManagerStub) UpdateGlobalModule(settings addonutils.Values, version int) {
 }
 
 func (s *packageManagerStub) GetModuleDigest(_ context.Context, repo registry.Remote, name, tag string) (string, error) {

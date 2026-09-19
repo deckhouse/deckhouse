@@ -444,7 +444,7 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 		// The runtime built the global module itself out of the global hooks dir before the
 		// bootstrap ran, so nothing is loaded for it; only its settings cross over.
 		if module.Name == globalModuleName {
-			c.manager.UpdateGlobalModule(runtimeModule(module, registry.Remote{}))
+			c.manager.UpdateGlobalModule(module.Spec.Settings.GetMap(), module.Spec.SettingsVersion)
 
 			continue
 		}
