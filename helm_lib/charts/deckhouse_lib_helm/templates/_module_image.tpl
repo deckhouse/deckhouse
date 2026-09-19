@@ -16,7 +16,7 @@
 
     {{- $imageDigest := index ($context.Module.Package.Digests | default dict) $containerName }}
     {{- if not $imageDigest }}
-      {{- fail (printf "Image %s has no digest in package %s" $containerName $context.Module.Package.Name) }}
+      {{- fail (printf "Image %s has no digest" $containerName) }}
     {{- end }}
 
     {{- printf "%s@%s" $registryBase $imageDigest }}
