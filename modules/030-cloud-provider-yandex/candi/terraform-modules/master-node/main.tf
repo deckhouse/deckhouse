@@ -60,20 +60,21 @@ data "yandex_vpc_subnet" "kube_d" {
   name  = "${local.prefix}-d"
 }
 
-resource "yandex_vpc_address" "addr" {
-  count = (var.nodeIndex < length(local.external_ip_addresses)
+locals {
+  reserved_address_name = join("-", [local.prefix, "master", var.nodeIndex])
+
+  reserved_address_count = (var.nodeIndex < length(local.external_ip_addresses)
     ? (local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0)
   : (length(local.external_ip_addresses) > 0 ? 1 : 0))
-  name = join("-", [local.prefix, "master", var.nodeIndex])
+}
+
+resource "yandex_vpc_address" "addr" {
+  count = local.reserved_address_count
+  name  = local.reserved_address_name
 
   external_ipv4_address {
     zone_id = local.internal_subnet.zone
   }
-
-  #   If we specify this flag and change the zone_id, terraform will exit with an error.
-  #   lifecycle {
-  #     create_before_destroy = true
-  #   }
 }
 
 locals {
@@ -156,7 +157,6 @@ resource "yandex_compute_instance" "master" {
       metadata,
       secondary_disk,
     ]
-    create_before_destroy = true
   }
 
   timeouts {

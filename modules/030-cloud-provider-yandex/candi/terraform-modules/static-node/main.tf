@@ -59,9 +59,15 @@ data "yandex_vpc_subnet" "kube_d" {
   name  = "${local.prefix}-d"
 }
 
+locals {
+  reserved_address_name = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
+
+  reserved_address_count = var.nodeIndex < length(local.external_ip_addresses) ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0 : 0
+}
+
 resource "yandex_vpc_address" "addr" {
-  count = var.nodeIndex < length(local.external_ip_addresses) ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0 : 0
-  name  = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
+  count = local.reserved_address_count
+  name  = local.reserved_address_name
 
   external_ipv4_address {
     zone_id = local.internal_subnet.zone
@@ -122,7 +128,6 @@ resource "yandex_compute_instance" "static" {
       metadata,
       secondary_disk,
     ]
-    create_before_destroy = true
   }
 
   timeouts {
