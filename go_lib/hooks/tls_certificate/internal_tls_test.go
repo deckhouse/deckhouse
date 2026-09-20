@@ -62,3 +62,10 @@ func TestDefaultSANs(t *testing.T) {
 		"conversion-webhook-handler.d8-system.svc.example2.com",
 	}, res2)
 }
+
+func TestGenSelfSignedTLSHookConfSnapshotName(t *testing.T) {
+	require.Equal(t, SnapshotKey, (GenSelfSignedTLSHookConf{}).snapshotName())
+	require.Equal(t, "ironicWebhookCertificate", (GenSelfSignedTLSHookConf{
+		SnapshotName: "ironicWebhookCertificate",
+	}).snapshotName())
+}

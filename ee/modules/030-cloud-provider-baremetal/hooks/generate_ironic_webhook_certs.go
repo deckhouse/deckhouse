@@ -19,5 +19,6 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 
 	Namespace:            webhookProviderNamespace,
 	TLSSecretName:        "irso-webhook-server-cert",
+	SnapshotName:         "ironicStandaloneOperatorWebhookCertificate",
 	FullValuesPathPrefix: "cloudProviderBaremetal.internal.ironicStandaloneOperatorWebhookCert",
 })

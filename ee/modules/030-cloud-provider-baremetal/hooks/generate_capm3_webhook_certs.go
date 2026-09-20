@@ -19,5 +19,6 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 
 	Namespace:            webhookProviderNamespace,
 	TLSSecretName:        "capm3-webhook-service-cert",
+	SnapshotName:         "capm3WebhookCertificate",
 	FullValuesPathPrefix: "cloudProviderBaremetal.internal.capm3WebhookCert",
 })

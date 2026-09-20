@@ -89,6 +89,11 @@ type GenSelfSignedTLSHookConf struct {
 	// CA certificate MUST set to ca.crt key
 	TLSSecretName string
 
+	// SnapshotName identifies the Secret snapshot for this hook. It must be
+	// unique when a module registers more than one internal TLS hook.
+	// Defaults to SnapshotKey for backward compatibility.
+	SnapshotName string
+
 	// Usages specifies valid usage contexts for keys.
 	// See: https://tools.ietf.org/html/rfc5280#section-4.2.1.3
 	//      https://tools.ietf.org/html/rfc5280#section-4.2.1.12
@@ -116,6 +121,13 @@ type GenSelfSignedTLSHookConf struct {
 
 func (gss GenSelfSignedTLSHookConf) path() string {
 	return strings.TrimSuffix(gss.FullValuesPathPrefix, ".")
+}
+
+func (gss GenSelfSignedTLSHookConf) snapshotName() string {
+	if gss.SnapshotName != "" {
+		return gss.SnapshotName
+	}
+	return SnapshotKey
 }
 
 type certValues struct {
@@ -149,7 +161,7 @@ func RegisterInternalTLSHook(conf GenSelfSignedTLSHookConf) bool {
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
-				Name:       SnapshotKey,
+				Name:       conf.snapshotName(),
 				ApiVersion: "v1",
 				Kind:       "Secret",
 				NamespaceSelector: &types.NamespaceSelector{
@@ -208,7 +220,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 
 		cn, sans := conf.CN, conf.SANs(ctx, input)
 
-		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, SnapshotKey)
+		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, conf.snapshotName())
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal secret snapshot: %w", err)
 		}

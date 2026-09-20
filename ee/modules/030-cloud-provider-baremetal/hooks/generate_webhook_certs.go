@@ -21,5 +21,6 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 
 	Namespace:            webhookProviderNamespace,
 	TLSSecretName:        "bmo-webhook-server-cert",
+	SnapshotName:         "baremetalOperatorWebhookCertificate",
 	FullValuesPathPrefix: "cloudProviderBaremetal.internal.baremetalOperatorWebhookCert",
 })
