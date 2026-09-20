@@ -267,6 +267,7 @@ spec:
     targetPort: 9443
   selector:
     control-plane: controller-manager
+    app.kubernetes.io/part-of: ironic-standalone-operator
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -294,6 +295,7 @@ spec:
         kubectl.kubernetes.io/default-container: manager
       labels:
         control-plane: controller-manager
+        app.kubernetes.io/part-of: ironic-standalone-operator
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}

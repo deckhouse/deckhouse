@@ -162,6 +162,10 @@ dhcp:
 
 			irso := f.KubernetesResource("Deployment", "d8-cloud-provider-baremetal", "ironic-standalone-operator-controller-manager")
 			Expect(irso.Exists()).To(BeTrue())
+			irsoWebhookService := f.KubernetesResource("Service", "d8-cloud-provider-baremetal", "ironic-standalone-operator-webhook-service")
+			Expect(irsoWebhookService.Exists()).To(BeTrue())
+			Expect(irsoWebhookService.Field("spec.selector.app\\.kubernetes\\.io/part-of").String()).To(Equal("ironic-standalone-operator"))
+			Expect(irso.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/part-of").String()).To(Equal("ironic-standalone-operator"))
 
 			instanceManager := f.KubernetesResource("Deployment", "d8-cloud-provider-baremetal", "baremetal-instance-manager")
 			Expect(instanceManager.Exists()).To(BeTrue())
