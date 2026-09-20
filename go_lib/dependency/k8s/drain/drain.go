@@ -266,6 +266,22 @@ func (d *Helper) DeleteOrEvictPods(pods []corev1.Pod) error {
 	return d.deletePods(pods, getPodFn)
 }
 
+// maxTransientEvictionRetries caps the retries for an eviction that failed for a reason that may
+// pass on its own: an admission webhook being restarted, an API server timing out. The cap keeps a
+// genuinely broken eviction from spinning until the global drain timeout.
+const maxTransientEvictionRetries = 5
+
+// isTransientEvictionError reports whether the eviction may succeed if simply tried again. An
+// unreachable admission webhook surfaces as an internal error, which is indistinguishable from a
+// permanent failure at the call site and used to end the pod's eviction for good.
+func isTransientEvictionError(err error) bool {
+	return apierrors.IsInternalError(err) ||
+		apierrors.IsServiceUnavailable(err) ||
+		apierrors.IsTimeout(err) ||
+		apierrors.IsServerTimeout(err) ||
+		apierrors.IsUnexpectedServerError(err)
+}
+
 func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupVersion, getPodFn func(namespace, name string) (*corev1.Pod, error)) error {
 	returnCh := make(chan error, 1)
 	// 0 timeout means infinite, we use MaxInt64 to represent it.
@@ -280,6 +296,7 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 	for _, pod := range pods {
 		go func(pod corev1.Pod, returnCh chan error) {
 			refreshPod := false
+			transientRetries := 0
 			for {
 				switch d.DryRunStrategy {
 				case cmdutil.DryRunServer:
@@ -327,6 +344,14 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 					// an eviction request in a deleting namespace will throw a forbidden error,
 					// if the pod is not marked deleted, we retry until it is.
 					fmt.Fprintf(d.ErrOut, "error when evicting pod %q from terminating namespace %q (will retry after 5s): %v\n", activePod.Name, activePod.Namespace, err)
+					time.Sleep(5 * time.Second)
+				} else if isTransientEvictionError(err) && transientRetries < maxTransientEvictionRetries {
+					// A webhook that was unreachable for a moment must not disqualify the pod for
+					// the rest of the drain: without a retry a single failed second is as final as
+					// a budget that never allows eviction.
+					transientRetries++
+					fmt.Fprintf(d.ErrOut, "error when evicting pods/%q -n %q (transient, attempt %d of %d, will retry after 5s): %v\n",
+						activePod.Name, activePod.Namespace, transientRetries, maxTransientEvictionRetries, err)
 					time.Sleep(5 * time.Second)
 				} else {
 					returnCh <- fmt.Errorf("error when evicting pods/%q -n %q: %v", activePod.Name, activePod.Namespace, err)
