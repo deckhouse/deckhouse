@@ -135,7 +135,7 @@ func (r *Runtime) updateModule(module Module, force bool, opts ...queue.EnqueueO
 
 	// An embedded module has no package version of its own; the running edition's stands in.
 	if module.IsEmbedded() {
-		module.Definition.Version = app.EmbeddedPackageVersion(r.edition.Version)
+		module.Definition.Version = app.EmbeddedPackageVersion()
 	}
 
 	// The enabled intent lives in the global module, which has no notion of tracking, so the
@@ -276,7 +276,7 @@ func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, pac
 		return "", status.NewError("LoadFailed", err)
 	}
 
-	conf.Definition.Version = app.EmbeddedPackageVersion(r.edition.Version)
+	conf.Definition.Version = app.EmbeddedPackageVersion()
 
 	module, err := r.registerModule(ctx, conf)
 	if err != nil {

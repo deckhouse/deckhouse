@@ -347,7 +347,7 @@ func TestSyncGlobalModulePackageVersion(t *testing.T) {
 			"the global hooks dir holds no definition to fill any of it from")
 	})
 
-	t.Run("creates the catalog entry no repository offers", func(t *testing.T) {
+	t.Run("creates the catalog entry for a package available in no repository", func(t *testing.T) {
 		globalDir := t.TempDir()
 		writeLegacyOpenAPI(t, globalDir, "type: object\n", "")
 
@@ -453,7 +453,7 @@ func TestSyncModulePackageVersionsFromModuleReleases(t *testing.T) {
 			testModuleRelease("parca", "deckhouse", "1.4.2", v1alpha1.ModuleReleasePhaseSuperseded),
 			testModuleRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhaseSuspended),
 			testModuleRelease("orphan", "", "1.0.0", v1alpha1.ModuleReleasePhaseDeployed),
-			testModuleRelease("bad", "deckhouse", "latest", v1alpha1.ModuleReleasePhaseDeployed),
+			testModuleRelease("bad", "deckhouse", "latest", v1alpha1.ModuleReleasePhasePending),
 		)
 
 		require.NoError(t, s.sync(ctx))
