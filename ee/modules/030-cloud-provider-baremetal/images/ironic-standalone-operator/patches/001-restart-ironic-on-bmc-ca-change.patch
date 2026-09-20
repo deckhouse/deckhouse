@@ -1,0 +1,35 @@
+From 8d1c5fab12d30fdbd3fc5ae7a9288e274f0ea5e4 Mon Sep 17 00:00:00 2001
+From: Flant JSC <support@flant.com>
+Date: Sat, 20 Sep 2026 21:00:00 +0300
+Subject: [PATCH] Restart Ironic when the BMC CA bundle changes
+
+The BMC CA Secret is mounted into Ironic but was not part of the pod
+template annotations. Kubernetes updates the volume eventually, but Ironic
+does not guarantee reloading its trust store. Include the Secret version in
+the pod template to make the update deterministic.
+
+---
+ pkg/ironic/containers.go | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/pkg/ironic/containers.go b/pkg/ironic/containers.go
+index 0f4d1b2..1a9f2e0 100644
+--- a/pkg/ironic/containers.go
++++ b/pkg/ironic/containers.go
+@@ -1029,6 +1029,9 @@ func ironicDeploymentPodTemplate(cctx ControllerContext, resources Resources) (
+ 	annotations := secretVersionAnnotations("api-secret", resources.APISecret)
+ 	if resources.TLSSecret != nil {
+ 		maps.Copy(annotations, secretVersionAnnotations("tls-secret", resources.TLSSecret))
+ 	}
++	if resources.BMCCASecret != nil {
++		maps.Copy(annotations, secretVersionAnnotations("bmc-ca", resources.BMCCASecret))
++	}
+ 
+ 	return applyOverridesToPod(resources.Ironic.Spec.Overrides, corev1.PodTemplateSpec{
+*** Add File: /deckhouse/ee/modules/030-cloud-provider-baremetal/images/ironic-standalone-operator/patches/README.md
+## Patches
+
+### 001-restart-ironic-on-bmc-ca-change.patch
+
+Restart Ironic when its BMC CA Secret changes, so newly trusted BMC
+certificates take effect deterministically.

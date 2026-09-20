@@ -7,8 +7,15 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -189,6 +196,85 @@ func TestEnsureCredentialSecretRejectsForeignSecret(t *testing.T) {
 	if string(actual.Data["username"]) != "foreign" || len(actual.GetAnnotations()) != 0 {
 		t.Fatalf("foreign Secret was modified: %#v", actual)
 	}
+}
+
+func TestEnsureBMCCABundle(t *testing.T) {
+	instance := testInstance()
+	instance.Object["spec"].(map[string]interface{})["bmc"].(map[string]interface{})["tls"] = map[string]interface{}{
+		"caCertRef": map[string]interface{}{"kind": "Secret", "name": "server-ca", "key": "ca.crt"},
+	}
+	certificate := testCACertificate(t)
+	caSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "server-ca", Namespace: "d8-cloud-instance-manager"},
+		Data:       map[string][]byte{"ca.crt": certificate},
+	}
+	kubeClient := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(instance, caSecret).Build()
+	r := &reconciler{Client: kubeClient, targetNamespace: "d8-cloud-instance-manager", providerNamespace: "d8-cloud-provider-baremetal"}
+
+	if err := r.ensureBMCCABundle(context.Background()); err != nil {
+		t.Fatalf("synchronize BMC CA bundle: %v", err)
+	}
+	bundle := &corev1.Secret{}
+	if err := kubeClient.Get(context.Background(), types.NamespacedName{Namespace: "d8-cloud-provider-baremetal", Name: bmcCABundleSecretName}, bundle); err != nil {
+		t.Fatalf("get BMC CA bundle: %v", err)
+	}
+	if string(bundle.Data[bmcCABundleSecretKey]) != string(certificate) {
+		t.Fatalf("unexpected BMC CA bundle: %q", bundle.Data[bmcCABundleSecretKey])
+	}
+	if bundle.Labels[ironicOperatorLabel] != "true" {
+		t.Fatalf("Ironic Standalone Operator label is missing: %#v", bundle.Labels)
+	}
+}
+
+func TestReadSpecRejectsInsecureWithCACertRef(t *testing.T) {
+	instance := testInstance()
+	bmc := instance.Object["spec"].(map[string]interface{})["bmc"].(map[string]interface{})
+	bmc["insecure"] = true
+	bmc["tls"] = map[string]interface{}{"caCertRef": map[string]interface{}{"kind": "Secret", "name": "server-ca", "key": "ca.crt"}}
+
+	if _, err := readSpec(instance); err == nil {
+		t.Fatal("expected an error when insecure and caCertRef are both configured")
+	}
+}
+
+func TestReadCACertificateRejectsInvalidPEM(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "server-ca", Namespace: "d8-cloud-instance-manager"},
+		Data:       map[string][]byte{"ca.crt": []byte("not a certificate")},
+	}
+	kubeClient := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(secret).Build()
+	r := &reconciler{Client: kubeClient, targetNamespace: "d8-cloud-instance-manager"}
+
+	if _, err := r.readCACertificate(context.Background(), secret.Namespace, objectReference{Kind: "Secret", Name: secret.Name, Key: "ca.crt"}); err == nil {
+		t.Fatal("expected invalid PEM to be rejected")
+	}
+}
+
+func testCACertificate(t *testing.T) []byte {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.CreateCertificate(rand.Reader, &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "test-bmc-ca"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}, &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "test-bmc-ca"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
 }
 
 func TestEnsureBareMetalHostRejectsForeignHost(t *testing.T) {

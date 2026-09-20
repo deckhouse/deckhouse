@@ -8,7 +8,9 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"reflect"
@@ -33,6 +35,9 @@ const (
 
 	credentialsSecretType  = "cloud-provider.deckhouse.io/credentials"
 	authSchemeUserPassword = "userPassword"
+	bmcCABundleSecretName  = "baremetal-bmc-ca"
+	bmcCABundleSecretKey   = "ca.crt"
+	ironicOperatorLabel    = "environment.metal3.io/ironic-standalone-operator"
 
 	annotationInstance          = "baremetal.deckhouse.io/instance"
 	annotationInstanceNamespace = "baremetal.deckhouse.io/instance-namespace"
@@ -49,8 +54,9 @@ var (
 
 type reconciler struct {
 	client.Client
-	targetNamespace string
-	resolver        BMCResolver
+	targetNamespace   string
+	providerNamespace string
+	resolver          BMCResolver
 }
 
 type instanceSpec struct {
@@ -58,12 +64,14 @@ type instanceSpec struct {
 	BootMACAddress  string
 	BMC             BMCConfig
 	CredentialsRef  objectReference
+	CACertRef       *objectReference
 	RootDeviceHints map[string]interface{}
 }
 
 type objectReference struct {
 	Kind string
 	Name string
+	Key  string
 }
 
 type credentials struct {
@@ -99,6 +107,15 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		return r.fail(ctx, instance, "CredentialsInvalid", err)
 	}
+	if spec.CACertRef != nil {
+		spec.BMC.CACert, err = r.readCACertificate(ctx, instance.GetNamespace(), *spec.CACertRef)
+		if err != nil {
+			return r.fail(ctx, instance, "BMCCASyncFailed", err)
+		}
+	}
+	if err := r.ensureBMCCABundle(ctx); err != nil {
+		return r.fail(ctx, instance, "BMCCASyncFailed", err)
+	}
 
 	resolved, err := r.resolver.Resolve(ctx, spec.BMC, creds.Username, creds.Password)
 	if err != nil {
@@ -133,6 +150,13 @@ func readSpec(instance *unstructured.Unstructured) (instanceSpec, error) {
 	spec.BMC.Insecure, _, _ = unstructured.NestedBool(instance.Object, "spec", "bmc", "insecure")
 	spec.CredentialsRef.Kind, _, _ = unstructured.NestedString(instance.Object, "spec", "bmc", "credentialsRef", "kind")
 	spec.CredentialsRef.Name, _, _ = unstructured.NestedString(instance.Object, "spec", "bmc", "credentialsRef", "name")
+	caKind, caSet, _ := unstructured.NestedString(instance.Object, "spec", "bmc", "tls", "caCertRef", "kind")
+	if caSet {
+		ref := &objectReference{Kind: caKind}
+		ref.Name, _, _ = unstructured.NestedString(instance.Object, "spec", "bmc", "tls", "caCertRef", "name")
+		ref.Key, _, _ = unstructured.NestedString(instance.Object, "spec", "bmc", "tls", "caCertRef", "key")
+		spec.CACertRef = ref
+	}
 	rootDeviceHints, ok, err := unstructured.NestedMap(instance.Object, "spec", "rootDeviceHints")
 	if err != nil {
 		return spec, fmt.Errorf("spec.rootDeviceHints must be an object: %w", err)
@@ -159,6 +183,12 @@ func readSpec(instance *unstructured.Unstructured) (instanceSpec, error) {
 	if spec.CredentialsRef.Kind != "Secret" || spec.CredentialsRef.Name == "" {
 		return spec, fmt.Errorf("spec.bmc.credentialsRef must reference a named Secret")
 	}
+	if spec.BMC.Insecure && spec.CACertRef != nil {
+		return spec, fmt.Errorf("spec.bmc.insecure cannot be true when spec.bmc.tls.caCertRef is set")
+	}
+	if spec.CACertRef != nil && (spec.CACertRef.Kind != "Secret" || spec.CACertRef.Name == "" || spec.CACertRef.Key == "") {
+		return spec, fmt.Errorf("spec.bmc.tls.caCertRef must reference a Secret key")
+	}
 	return spec, nil
 }
 
@@ -180,6 +210,124 @@ func (r *reconciler) readCredentials(ctx context.Context, instance *unstructured
 		return credentials{}, fmt.Errorf("Secret %s must contain non-empty identity and secret keys", key)
 	}
 	return credentials{Username: username, Password: password}, nil
+}
+
+func (r *reconciler) ensureBMCCABundle(ctx context.Context) error {
+	instances := &unstructured.UnstructuredList{}
+	instances.SetGroupVersionKind(bareMetalInstanceGVK.GroupVersion().WithKind("BareMetalInstanceList"))
+	if err := r.List(ctx, instances, client.InNamespace(r.targetNamespace)); err != nil {
+		return fmt.Errorf("list BareMetalInstances: %w", err)
+	}
+
+	bundleParts := make(map[string]struct{})
+	for i := range instances.Items {
+		instance := &instances.Items[i]
+		if !instance.GetDeletionTimestamp().IsZero() {
+			continue
+		}
+		spec, err := readSpec(instance)
+		if err != nil {
+			return err
+		}
+		if spec.CACertRef == nil {
+			continue
+		}
+		certificate, err := r.readCACertificate(ctx, instance.GetNamespace(), *spec.CACertRef)
+		if err != nil {
+			return err
+		}
+		bundleParts[string(certificate)] = struct{}{}
+	}
+	certificates := make([]string, 0, len(bundleParts))
+	for certificate := range bundleParts {
+		certificates = append(certificates, certificate)
+	}
+	sort.Strings(certificates)
+	bundle := []byte(strings.Join(certificates, "\n"))
+
+	key := types.NamespacedName{Namespace: r.bmcBundleNamespace(), Name: bmcCABundleSecretName}
+	secret := &corev1.Secret{}
+	err := r.Get(ctx, key, secret)
+	if apierrors.IsNotFound(err) {
+		return r.Create(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name, Labels: map[string]string{ironicOperatorLabel: "true"}},
+			Type:       corev1.SecretTypeOpaque,
+			Data:       map[string][]byte{bmcCABundleSecretKey: bundle},
+		})
+	}
+	if err != nil {
+		return err
+	}
+	if secret.Labels == nil {
+		secret.Labels = map[string]string{}
+	}
+	updated := false
+	if secret.Labels[ironicOperatorLabel] != "true" {
+		secret.Labels[ironicOperatorLabel] = "true"
+		updated = true
+	}
+	if !reflect.DeepEqual(secret.Data, map[string][]byte{bmcCABundleSecretKey: bundle}) {
+		secret.Data = map[string][]byte{bmcCABundleSecretKey: bundle}
+		updated = true
+	}
+	if secret.Type != corev1.SecretTypeOpaque {
+		secret.Type = corev1.SecretTypeOpaque
+		updated = true
+	}
+	if !updated {
+		return nil
+	}
+	return r.Update(ctx, secret)
+}
+
+func (r *reconciler) bmcBundleNamespace() string {
+	if r.providerNamespace != "" {
+		return r.providerNamespace
+	}
+	return r.targetNamespace
+}
+
+func (r *reconciler) readCACertificate(ctx context.Context, namespace string, ref objectReference) ([]byte, error) {
+	secret := &corev1.Secret{}
+	key := types.NamespacedName{Namespace: namespace, Name: ref.Name}
+	if err := r.Get(ctx, key, secret); err != nil {
+		return nil, fmt.Errorf("get BMC CA Secret %s: %w", key, err)
+	}
+	certificate := secret.Data[ref.Key]
+	if len(certificate) == 0 {
+		return nil, fmt.Errorf("BMC CA Secret %s must contain a non-empty %q key", key, ref.Key)
+	}
+	if err := validateCACertificate(certificate); err != nil {
+		return nil, fmt.Errorf("BMC CA Secret %s key %q is invalid: %w", key, ref.Key, err)
+	}
+	return certificate, nil
+}
+
+func validateCACertificate(data []byte) error {
+	remaining := data
+	found := false
+	for {
+		block, rest := pem.Decode(remaining)
+		if block == nil {
+			break
+		}
+		remaining = rest
+		if block.Type != "CERTIFICATE" {
+			return fmt.Errorf("PEM block type %q is not CERTIFICATE", block.Type)
+		}
+		certificate, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return fmt.Errorf("parse certificate: %w", err)
+		}
+		if !certificate.IsCA {
+			return fmt.Errorf("certificate is not a CA")
+		}
+		found = true
+	}
+	if !found || len(strings.TrimSpace(string(remaining))) != 0 {
+		return fmt.Errorf("does not contain a PEM CA certificate")
+	}
+	return nil
 }
 
 func (r *reconciler) ensureCredentialSecret(ctx context.Context, instance *unstructured.Unstructured, creds credentials, name string) error {
@@ -443,7 +591,8 @@ func (r *reconciler) secretToInstances(ctx context.Context, obj client.Object) [
 	requests := make([]reconcile.Request, 0)
 	for i := range instances.Items {
 		name, _, _ := unstructured.NestedString(instances.Items[i].Object, "spec", "bmc", "credentialsRef", "name")
-		if name == obj.GetName() {
+		caName, _, _ := unstructured.NestedString(instances.Items[i].Object, "spec", "bmc", "tls", "caCertRef", "name")
+		if name == obj.GetName() || caName == obj.GetName() {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: obj.GetNamespace(), Name: instances.Items[i].GetName()}})
 		}
 	}
@@ -509,6 +658,8 @@ func failureMessage(reason string) string {
 		return "BMC credentials are invalid or unavailable."
 	case "BMCResolutionFailed":
 		return "Unable to resolve the BMC endpoint."
+	case "BMCCASyncFailed":
+		return "Unable to synchronize the BMC CA certificate."
 	case "CredentialsSecretSyncFailed":
 		return "Unable to synchronize the BMC credentials Secret."
 	case "HostSyncFailed":

@@ -14,6 +14,12 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -21,6 +27,7 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/metal3-io/ironic-standalone-operator.git /src
   - cd /src
+  - git apply /patches/*.patch --verbose
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ type BMCConfig struct {
 	Port       int
 	SystemUUID string
 	Insecure   bool
+	CACert     []byte
 }
 
 type ResolvedBMC struct {
@@ -83,12 +85,9 @@ func (r *networkBMCResolver) resolveRedfish(ctx context.Context, config BMCConfi
 func redfishEndpoints(config BMCConfig) []string {
 	if config.Port != 0 {
 		host := net.JoinHostPort(config.IPAddress, fmt.Sprintf("%d", config.Port))
-		return []string{"https://" + host, "http://" + host}
+		return []string{"https://" + host}
 	}
-	return []string{
-		"https://" + net.JoinHostPort(config.IPAddress, "443"),
-		"http://" + net.JoinHostPort(config.IPAddress, "80"),
-	}
+	return []string{"https://" + net.JoinHostPort(config.IPAddress, "443")}
 }
 
 type redfishClient struct {
@@ -123,7 +122,18 @@ type redfishSystem struct {
 
 func resolveRedfishEndpoint(ctx context.Context, endpoint string, config BMCConfig, username, password string) (ResolvedBMC, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: config.Insecure} //nolint:gosec
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: config.Insecure} //nolint:gosec
+	if len(config.CACert) > 0 {
+		pool, err := x509.SystemCertPool()
+		if err != nil || pool == nil {
+			pool = x509.NewCertPool()
+		}
+		if !pool.AppendCertsFromPEM(config.CACert) {
+			return ResolvedBMC{}, fmt.Errorf("BMC CA certificate is not valid PEM")
+		}
+		tlsConfig.RootCAs = pool
+	}
+	transport.TLSClientConfig = tlsConfig
 	c := &redfishClient{
 		baseURL:  strings.TrimSuffix(endpoint, "/"),
 		username: username,

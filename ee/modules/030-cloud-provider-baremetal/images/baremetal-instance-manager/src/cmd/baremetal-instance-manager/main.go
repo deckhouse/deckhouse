@@ -23,8 +23,10 @@ import (
 
 func main() {
 	var targetNamespace string
+	var providerNamespace string
 	var bmcProbeTimeout time.Duration
 	flag.StringVar(&targetNamespace, "target-namespace", "d8-cloud-instance-manager", "namespace where BareMetalInstance and generated BareMetalHost resources are stored")
+	flag.StringVar(&providerNamespace, "provider-namespace", "d8-cloud-provider-baremetal", "namespace where the Ironic BMC CA bundle is stored")
 	flag.DurationVar(&bmcProbeTimeout, "bmc-probe-timeout", 15*time.Second, "timeout for a single BMC protocol probe")
 	flag.Parse()
 
@@ -43,9 +45,7 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
-		Cache: cache.Options{DefaultNamespaces: map[string]cache.Config{
-			targetNamespace: {},
-		}},
+		Cache:  cache.Options{DefaultNamespaces: map[string]cache.Config{targetNamespace: {}, providerNamespace: {}}},
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "create manager: %v\n", err)
@@ -58,9 +58,10 @@ func main() {
 	bmh.SetGroupVersionKind(bareMetalHostGVK)
 
 	r := &reconciler{
-		Client:          mgr.GetClient(),
-		targetNamespace: targetNamespace,
-		resolver:        newNetworkBMCResolver(bmcProbeTimeout),
+		Client:            mgr.GetClient(),
+		targetNamespace:   targetNamespace,
+		providerNamespace: providerNamespace,
+		resolver:          newNetworkBMCResolver(bmcProbeTimeout),
 	}
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(instance).

@@ -121,6 +121,9 @@ spec:
                 - ipAddress
                 - systemUUID
                 - credentialsRef
+                x-kubernetes-validations:
+                - rule: "!(has(self.insecure) && self.insecure && has(self.tls) && has(self.tls.caCertRef))"
+                  message: insecure cannot be true when tls.caCertRef is set
                 properties:
                   ipAddress:
                     type: string
@@ -150,10 +153,33 @@ spec:
                         type: string
                         minLength: 1
                         maxLength: 253
+                  tls:
+                    type: object
+                    properties:
+                      caCertRef:
+                        type: object
+                        required:
+                        - kind
+                        - name
+                        - key
+                        properties:
+                          kind:
+                            type: string
+                            enum:
+                            - Secret
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 253
+                          key:
+                            type: string
+                            minLength: 1
+                            maxLength: 253
+                    description: TLS trust settings for the Redfish BMC endpoint.
                   insecure:
                     type: boolean
                     default: false
-                    description: Disables TLS certificate verification while accessing Redfish.
+                    description: Disables TLS certificate verification while accessing Redfish. Cannot be used with tls.caCertRef.
           status:
             type: object
             properties:
