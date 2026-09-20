@@ -26,12 +26,11 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-// ensureModulePackageExists makes sure the catalog names the embedded module:
-// an empty ModulePackage is created once and never touched again. The repository
-// scan enriches the same object with owners and available repositories once a
-// repository offers the package; the embedded entry itself has no owner, so it
-// outlives every repository.
-func (s *syncer) ensureModulePackageExists(ctx context.Context, name string) error {
+// ensureModulePackage makes sure the catalog names the module: an empty ModulePackage is created
+// once and never touched again, seeded with the repositories of the sources whose catalog lists the
+// module, so a dev copy can be placed before the repository scan enriches the same object. The entry
+// has no owner, so it outlives every repository.
+func (s *syncer) ensureModulePackage(ctx context.Context, name string, moduleSources []v1alpha1.ModuleSource) error {
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, new(v1alpha1.ModulePackage))
 	if err == nil {
 		return nil
@@ -63,5 +62,38 @@ func (s *syncer) ensureModulePackageExists(ctx context.Context, name string) err
 
 	s.logger.Debug("module package created", slog.String("name", name))
 
+	repositories := availableRepositoriesFromSources(name, moduleSources)
+	if len(repositories) == 0 {
+		return nil
+	}
+
+	// the status is a subresource, so the create above did not carry it
+	original := pkg.DeepCopy()
+	pkg.Status.AvailableRepositories = repositories
+
+	if err := s.writer.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("patch module package status '%s': %w", name, err)
+	}
+
 	return nil
+}
+
+// availableRepositoriesFromSources lists the repositories of the module sources whose catalog holds
+// the module, one entry per source even when the source names the module more than once.
+func availableRepositoriesFromSources(moduleName string, moduleSources []v1alpha1.ModuleSource) []string {
+	repositories := make([]string, 0, len(moduleSources))
+
+	for _, moduleSource := range moduleSources {
+		for _, availableModule := range moduleSource.Status.AvailableModules {
+			if availableModule.Name != moduleName {
+				continue
+			}
+
+			repositories = append(repositories, PackageRepositoryNameForModuleSource(moduleSource.Name))
+
+			break
+		}
+	}
+
+	return repositories
 }
