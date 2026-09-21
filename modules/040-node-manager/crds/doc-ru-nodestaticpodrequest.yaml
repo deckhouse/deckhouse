@@ -45,6 +45,10 @@ spec:
                 failedNodes:
                   description: |
                     Сколько выбранных узлов сообщают об отказе по манифесту.
+                matchedNodes:
+                  description: Сколько узлов в выбранных группах.
+                pendingNodes:
+                  description: Сколько из этих узлов ещё не сообщили ни о применении, ни об отказе.
                 failureMessage:
                   description: |
                     Что узлы говорят об отказе; берётся с одного из них.

@@ -19,14 +19,17 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 // reconcileNSPRStatuses writes each NodeStaticPodRequest's status (the checks
@@ -50,32 +53,25 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 		return err
 	}
 
-	// What the fleet made of these pods, from the two places the answer can live.
-	// Nothing is published without both: counts absent read as counts zero, so a
-	// transient read failure would turn "every node refused it" into a clean
-	// Ready and lose the reason with it.
+	// What the fleet made of these pods, from the one place the answer lives:
+	// every node has a NodeConfig, Engine or bashible. Nothing is published
+	// without it: counts absent read as counts zero, so a transient read failure
+	// would turn "every node refused it" into a clean Ready and lose the reason.
 	outcomes, err := readNodeConfigOutcomes(ctx, r.Client)
 	if err != nil {
-		return fmt.Errorf("read what the Engine nodes report about NodeStaticPodRequests: %w", err)
+		return fmt.Errorf("read what the nodes report about NodeStaticPodRequests: %w", err)
 	}
 
-	// The bashible half, removable as a unit with nsprapplied_annotation.go once
-	// the last mutable NodeGroup is gone; the immutable groups are read here
-	// because this source is the only thing left that needs them.
-	immutable, err := r.immutableNodeGroupNames(ctx)
-	if err != nil {
-		return err
+	// The denominator: read once for every object, since it is the same listing.
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes); err != nil {
+		return fmt.Errorf("list Nodes for the NodeStaticPodRequest counts: %w", err)
 	}
-	fromAnnotations, err := readAnnotationOutcomes(ctx, r.Client, immutable)
-	if err != nil {
-		return fmt.Errorf("read what the bashible nodes report about NodeStaticPodRequests: %w", err)
-	}
-	outcomes = mergeOutcomes(outcomes, fromAnnotations)
 
 	// Iterated in contest order so a reader of the log sees the winner before the
 	// objects that lost to it.
 	for _, nspr := range ordered {
-		if err := r.updateNSPRStatus(ctx, nspr, rejected, groups, outcomes[nspr.Name]); err != nil {
+		if err := r.updateNSPRStatus(ctx, nspr, rejected, groups, nodes.Items, outcomes[nspr.Name]); err != nil {
 			logger.Error(err, "cannot update NodeStaticPodRequest status", "staticPodRequest", nspr.Name)
 		}
 	}
@@ -84,10 +80,12 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 
 // updateNSPRStatus computes and patches one object's status, skipping the write
 // when nothing changed.
-func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, nodeGroups []string, outcome nsprOutcome) error {
+func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, nodeGroups []string, nodes []corev1.Node, outcome nsprOutcome) error {
 	desired := nspr.Status.DeepCopy()
 	desired.ObservedGeneration = nspr.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(nspr.Spec.NodeGroupSelector.MatchNames, nodeGroups)
+	desired.MatchedNodes = matchedNodeCount(nodes, desired.MatchedNodeGroups)
+	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, outcome.applied, outcome.failed)
 	desired.AppliedNodes = outcome.applied
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
@@ -109,7 +107,7 @@ func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alph
 		desired.Phase = phaseReady
 		status = metav1.ConditionTrue
 		reason = reasonResolved
-		message = fmt.Sprintf("the static pod resolved; %d node(s) report it written", outcome.applied)
+		message = fmt.Sprintf("the static pod resolved; %d of %d node(s) report it written", outcome.applied, desired.MatchedNodes)
 	}
 	meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
 		Type:               readyConditionType,
@@ -128,4 +126,21 @@ func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alph
 		return fmt.Errorf("patch status: %w", err)
 	}
 	return nil
+}
+
+// matchedNodeCount is how many nodes belong to the groups a request selects.
+func matchedNodeCount(nodes []corev1.Node, groups []string) int32 {
+	var count int32
+	for i := range nodes {
+		if slices.Contains(groups, nodes[i].Labels[nodecommon.NodeGroupLabel]) {
+			count++
+		}
+	}
+	return count
+}
+
+// pendingNodeCount never goes below zero: a node can report before the node
+// list this pass read has caught up with it.
+func pendingNodeCount(matched, applied, failed int32) int32 {
+	return max(matched-applied-failed, 0)
 }
