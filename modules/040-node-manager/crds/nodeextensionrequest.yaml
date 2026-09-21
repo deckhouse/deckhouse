@@ -28,6 +28,12 @@ spec:
         - name: Matched
           jsonPath: .status.matchedNodes
           type: integer
+        - name: Applied
+          jsonPath: .status.appliedNodes
+          type: integer
+        - name: Failed
+          jsonPath: .status.failedNodes
+          type: integer
         - name: Age
           jsonPath: .metadata.creationTimestamp
           type: date

@@ -30,6 +30,8 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Phase,jsonPath=.status.phase,type=string
 // +kubebuilder:printcolumn:name=Matched,jsonPath=.status.matchedNodes,type=integer
+// +kubebuilder:printcolumn:name=Applied,jsonPath=.status.appliedNodes,type=integer
+// +kubebuilder:printcolumn:name=Failed,jsonPath=.status.failedNodes,type=integer
 // +kubebuilder:printcolumn:name=Age,jsonPath=.metadata.creationTimestamp,type=date
 type NodeExtensionRequest struct {
 	metav1.TypeMeta   `json:",inline"`
