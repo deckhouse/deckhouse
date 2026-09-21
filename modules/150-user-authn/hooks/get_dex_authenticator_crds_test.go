@@ -54,6 +54,39 @@ type inputDexAuthenticatorClientSecret struct {
 
 const testSharedKubernetesClientSecret = "sharedKubernetesSecret"
 
+// activeNamespaces declares every namespace the fixtures below place objects into, so that the
+// specs run the filtering branch of renderableNamespaces the way a cluster does: there the
+// namespace snapshot is never empty. A fixture without Namespace objects takes the guard branch.
+const activeNamespaces = `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-monitoring
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-dashboard
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ` + kubernetesDexClientAppSecretNamespace + `
+status:
+  phase: Active`
+
 var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v2alpha1", "DexAuthenticator", true)
@@ -71,7 +104,7 @@ var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 
 	Context("With dex credentials secret after deploying DexAuthenticator object", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: v1
 kind: Secret
@@ -146,7 +179,7 @@ spec:
 
 	Context("After deploying DexAuthenticator and secret in Allowed Namespace", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: v1
 kind: Secret
@@ -205,7 +238,7 @@ spec:
 
 	Context("After deploying DexAuthenticator and secret in Allowed Namespace", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: v1
 kind: Secret
@@ -279,7 +312,7 @@ data:
 		const shortName = "short-name"
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
@@ -340,7 +373,7 @@ spec:
 				annotations = fmt.Sprintf("\n  annotations:\n    %s: %q", dexAuthenticatorAllowAccessToKubernetesAnnotation, *in.annotation)
 			}
 
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
@@ -426,7 +459,7 @@ data:
 				f.ValuesSet(kubernetesDexClientAppSecretPath, in.inValues)
 			}
 
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: v1
 kind: Secret
@@ -498,6 +531,108 @@ spec:
 		// authenticator whose credentials Secret has no client-secret would be rotated.
 		Entry("is left empty when neither the credentials Secret nor the shared secret carries one",
 			inputDexAuthenticatorClientSecret{omitExisting: true},
+		),
+	)
+
+	// An authenticator whose namespace cannot take objects must not reach the values. The API
+	// server refuses every create in a namespace that is gone or terminating, so one such entry
+	// fails the whole module release, and the failing ModuleRun then blocks the main queue.
+	DescribeTable("A DexAuthenticator whose namespace cannot take objects",
+		func(namespaces string, expectedIDs []string) {
+			f.BindingContexts.Set(f.KubeStateSet(namespaces + `
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: alive
+  namespace: live-ns
+spec:
+  applications:
+  - domain: alive
+    ingressClassName: "nginx"
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: doomed
+  namespace: dead-ns
+spec:
+  applications:
+  - domain: doomed
+    ingressClassName: "nginx"
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			ids := make([]string, 0, 2)
+			for _, authenticator := range f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").Array() {
+				ids = append(ids, authenticator.Get("uuid").String())
+			}
+
+			Expect(ids).To(ConsistOf(expectedIDs))
+
+			names := f.ValuesGet("userAuthn.internal.dexAuthenticatorNames")
+			for _, id := range expectedIDs {
+				Expect(names.Get(id).Exists()).To(BeTrue(), "computed names must be kept for "+id)
+			}
+			if len(expectedIDs) == 1 {
+				Expect(names.Get("doomed@dead-ns").Exists()).To(BeFalse(),
+					"computed names must not be kept for an authenticator that is not rendered")
+			}
+
+			skipped := make([]string, 0, 1)
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == "d8_user_authn_dex_authenticator_skipped" && m.Value != nil {
+					skipped = append(skipped, m.Labels["name"]+"@"+m.Labels["namespace"])
+				}
+			}
+			if len(expectedIDs) == 1 {
+				Expect(skipped).To(ConsistOf("doomed@dead-ns"), "the skipped authenticator must be exported as a metric")
+			} else {
+				Expect(skipped).To(BeEmpty(), "nothing is skipped, so nothing is exported")
+			}
+		},
+		Entry("is dropped while its namespace is terminating",
+			`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: live-ns
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dead-ns
+status:
+  phase: Terminating
+`,
+			[]string{"alive@live-ns"},
+		),
+		// The two snapshots are fed by independent informers, so the Namespace DELETE can reach the
+		// hook before the DexAuthenticator DELETE does: for that run the namespace is absent while
+		// the authenticator is still there. A namespace never disappears with objects left in it.
+		Entry("is dropped while the namespace snapshot is ahead of the authenticator snapshot",
+			`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: live-ns
+status:
+  phase: Active
+`,
+			[]string{"alive@live-ns"},
+		),
+		// The guard against filtering on an empty snapshot. A cluster never reaches this state
+		// (the binding is listed before the first run and cannot lose its last namespace); the
+		// guard keeps a broken assumption from dropping every authenticator in the cluster.
+		Entry("is kept when no namespace is known at all",
+			"",
+			[]string{"alive@live-ns", "doomed@dead-ns"},
 		),
 	)
 })
