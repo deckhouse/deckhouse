@@ -44,6 +44,7 @@ type HookForDestroyPipeline struct {
 	oldMasterIPForSSH string
 	commanderMode     bool
 	immutableNode     bool
+	confirm           ConfirmFunc
 }
 
 func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshProvider libcon.SSHProvider, nodeToDestroy string, commanderMode, immutableNode bool) *HookForDestroyPipeline {
@@ -53,7 +54,13 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshP
 		nodeToDestroy: nodeToDestroy,
 		commanderMode: commanderMode,
 		immutableNode: immutableNode,
+		confirm:       DefaultConfirm,
 	}
+}
+
+func (h *HookForDestroyPipeline) WithConfirm(confirm ConfirmFunc) *HookForDestroyPipeline {
+	h.confirm = confirm
+	return h
 }
 
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
@@ -86,7 +93,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.getter, h.nodeToDestroy, h.commanderMode, h.immutableNode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.getter, h.nodeToDestroy, h.confirm, h.commanderMode, h.immutableNode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
@@ -123,9 +130,11 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, commanderMode, immutableNode bool) error {
-	// Everything below takes the node's etcd member away, both hooks come through here,
-	// and nothing after this point can be taken back.
+func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, confirm ConfirmFunc, commanderMode, immutableNode bool) error {
+	if err := checkControlPlaneWithoutNode(ctx, kubeGetter, nodeName, confirm); err != nil {
+		return err
+	}
+
 	if err := checkEtcdQuorumBeforeRemoval(ctx, kubeGetter, nodeName); err != nil {
 		return err
 	}
@@ -236,4 +245,23 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 
 		return nil
 	})
+}
+
+// checkControlPlaneWithoutNode asks whether the masters that stay are ready, the same
+// question the update pipeline asks before it recreates one. The answer can be waived the
+// same way: an operator who already knows the state of the cluster says no and goes on.
+func checkControlPlaneWithoutNode(ctx context.Context, kubeClientProvider kubernetes.KubeClientProviderWithCtx, nodeName string, confirm ConfirmFunc) error {
+	if confirm == nil {
+		confirm = DefaultConfirm
+	}
+
+	if !confirm(fmt.Sprintf("Do you want to wait for all control-plane nodes except %s to become ready?", nodeName)) {
+		return nil
+	}
+
+	if err := NewManagerReadinessChecker(kubeClientProvider).IsReadyAllExcept(ctx, nodeName); err != nil {
+		return fmt.Errorf("control plane without '%s': %w", nodeName, err)
+	}
+
+	return nil
 }

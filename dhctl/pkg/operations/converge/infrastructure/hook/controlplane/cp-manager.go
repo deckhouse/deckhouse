@@ -64,7 +64,18 @@ func NewManagerReadinessChecker(getter kubernetes.KubeClientProviderWithCtx) *Ma
 func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 	ctx, span := telemetry.StartSpan(ctx, "ManagerReadinessChecker.IsReadyAll")
 	defer span.End()
+	return c.isReadyAllExcept(ctx)
+}
 
+func (c *ManagerReadinessChecker) IsReadyAllExcept(ctx context.Context, excludedNodes ...string) error {
+	ctx, span := telemetry.StartSpan(ctx, "ManagerReadinessChecker.IsReadyAllExcept")
+	defer span.End()
+	return c.isReadyAllExcept(ctx)
+}
+
+// isReadyAllExcept checks every master but the named ones, so a master on its way out is
+// not required to answer for itself.
+func (c *ManagerReadinessChecker) isReadyAllExcept(ctx context.Context, excludedNodes ...string) error {
 	kubeClient, err := c.getter.KubeClientCtx(ctx)
 	if err != nil {
 		return fmt.Errorf("Could not get kube client: %w", err)
@@ -82,7 +93,7 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 	)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
-		msg, err := checkControlPlaneNodesReady(ctx, kubeClient)
+		msg, err := checkControlPlaneNodesReady(ctx, kubeClient, excludedNodes)
 
 		// all ControlPlaneNodes are ready
 		if err == nil {
@@ -143,11 +154,12 @@ func (c *ManagerReadinessChecker) Name() string {
 	return "Control plane readiness"
 }
 
-// checkControlPlaneNodesReady verifies that every master node has a ready ControlPlaneNode.
-// Returns a short readiness summary and an error when at least one required condition is not True.
-func checkControlPlaneNodesReady(ctx context.Context, kubeClient client.KubeClient) (string, error) {
+// checkControlPlaneNodesReady verifies that every master node outside excludedNodes has a
+// ready ControlPlaneNode. Returns a short readiness summary and an error when at least one
+// required condition is not True.
+func checkControlPlaneNodesReady(ctx context.Context, kubeClient client.KubeClient, excludedNodes []string) (string, error) {
 	nodes, err := kubeClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{
-		LabelSelector: "node.deckhouse.io/group=master",
+		LabelSelector: masterNodesLabelSelector,
 	})
 	if err != nil {
 		if kubeerrors.IsPermanentAuthError(ctx, err) {
@@ -160,10 +172,22 @@ func checkControlPlaneNodesReady(ctx context.Context, kubeClient client.KubeClie
 		return "", fmt.Errorf("%w: get nodes count: %w", ErrControlPlaneReadinessCheckTransient, err)
 	}
 
+	excluded := make(map[string]struct{}, len(excludedNodes))
+	for _, nodeName := range excludedNodes {
+		excluded[nodeName] = struct{}{}
+	}
+
 	readyNodes := 0
+	checkedNodes := 0
 	var msg strings.Builder
 
 	for _, node := range nodes.Items {
+		if _, ok := excluded[node.Name]; ok {
+			continue
+		}
+
+		checkedNodes++
+
 		conditions, err := getControlPlaneNodeConditions(ctx, kubeClient, node.Name)
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
@@ -180,12 +204,16 @@ func checkControlPlaneNodesReady(ctx context.Context, kubeClient client.KubeClie
 		appendControlPlaneNodeReadinessMessage(&msg, node.Name, conditions, nil)
 	}
 
-	header := fmt.Sprintf("ControlPlaneNodes Ready %v of %v", readyNodes, len(nodes.Items))
+	if checkedNodes == 0 && len(excludedNodes) > 0 {
+		return "", fmt.Errorf("%w: no master nodes left after excluding %v", ErrControlPlaneReadinessCheckTransient, excludedNodes)
+	}
+
+	header := fmt.Sprintf("ControlPlaneNodes Ready %v of %v", readyNodes, checkedNodes)
 	if msg.Len() > 0 {
 		header = fmt.Sprintf("%s\n%s", header, msg.String())
 	}
 
-	if readyNodes >= len(nodes.Items) {
+	if readyNodes >= checkedNodes {
 		return header, nil
 	}
 

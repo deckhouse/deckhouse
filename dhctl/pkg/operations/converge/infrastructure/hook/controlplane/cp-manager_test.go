@@ -21,9 +21,12 @@ import (
 
 	klient "github.com/flant/kube-client/client"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 
@@ -84,7 +87,7 @@ func TestCheckControlPlaneNodesReadyAuthErrors(t *testing.T) {
 			kubeCl := newFakeKubeClientFailingNodeList(t, tt.listErr)
 			ctx := kubeerrors.WithAuthMode(t.Context(), kubeerrors.AuthModeKubeProxy)
 
-			_, err := checkControlPlaneNodesReady(ctx, kubeCl)
+			_, err := checkControlPlaneNodesReady(ctx, kubeCl, nil)
 
 			require.ErrorIs(t, err, ErrControlPlaneReadinessCheckTransient)
 		})
@@ -95,7 +98,7 @@ func TestCheckControlPlaneNodesReadyAuthErrors(t *testing.T) {
 			kubeCl := newFakeKubeClientFailingNodeList(t, tt.listErr)
 			ctx := kubeerrors.WithAuthMode(t.Context(), kubeerrors.AuthModeOwnCredentials)
 
-			_, err := checkControlPlaneNodesReady(ctx, kubeCl)
+			_, err := checkControlPlaneNodesReady(ctx, kubeCl, nil)
 
 			require.Error(t, err)
 			require.NotErrorIs(t, err, ErrControlPlaneReadinessCheckTransient)
@@ -111,7 +114,7 @@ func TestCheckControlPlaneNodesReadyTransportError(t *testing.T) {
 				errors.New("dial tcp 127.0.0.1:6445: connect: connection refused"))
 			ctx := kubeerrors.WithAuthMode(t.Context(), mode)
 
-			_, err := checkControlPlaneNodesReady(ctx, kubeCl)
+			_, err := checkControlPlaneNodesReady(ctx, kubeCl, nil)
 
 			require.ErrorIs(t, err, ErrControlPlaneReadinessCheckTransient)
 		})
@@ -120,6 +123,54 @@ func TestCheckControlPlaneNodesReadyTransportError(t *testing.T) {
 
 // IsReadyAll must not abort on the impersonation denial that started this: it keeps polling and
 // succeeds as soon as the apiserver serves the list again.
+// The master on its way out is not required to answer for itself: it is the one being
+// removed, and its ControlPlaneNode is what the removal is often about.
+func TestCheckControlPlaneNodesReadyExcludesTheLeavingMaster(t *testing.T) {
+	gvr := schema.GroupVersionResource{
+		Group: "control-plane.deckhouse.io", Version: "v1alpha1", Resource: "controlplanenodes",
+	}
+	kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+		gvr: "ControlPlaneNodeList",
+	})
+
+	for _, nodeName := range []string{"master-0", "master-1", "master-2"} {
+		_, err := kubeCl.CoreV1().Nodes().Create(t.Context(), &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   nodeName,
+				Labels: map[string]string{"node.deckhouse.io/group": "master"},
+			},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		conditions := make([]any, 0, len(requiredControlPlaneNodeConditions))
+		for _, conditionType := range requiredControlPlaneNodeConditions {
+			status := string(metav1.ConditionTrue)
+			if nodeName == "master-2" && conditionType == "APIServerReady" {
+				status = string(metav1.ConditionFalse)
+			}
+			conditions = append(conditions, map[string]any{"type": conditionType, "status": status})
+		}
+
+		_, err = kubeCl.Dynamic().Resource(gvr).Namespace("kube-system").Create(t.Context(), &unstructured.Unstructured{
+			Object: map[string]any{
+				"apiVersion": "control-plane.deckhouse.io/v1alpha1",
+				"kind":       "ControlPlaneNode",
+				"metadata":   map[string]any{"name": nodeName, "namespace": "kube-system"},
+				"status":     map[string]any{"conditions": conditions},
+			},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	_, err := checkControlPlaneNodesReady(t.Context(), kubeCl, nil)
+	require.ErrorIs(t, err, ErrControlPlaneIsNotReady)
+
+	msg, err := checkControlPlaneNodesReady(t.Context(), kubeCl, []string{"master-2"})
+	require.NoError(t, err)
+	require.Contains(t, msg, "Ready 2 of 2")
+	require.NotContains(t, msg, "master-2")
+}
+
 func TestIsReadyAllRidesOutImpersonationDenial(t *testing.T) {
 	const failedAttempts = 3
 
