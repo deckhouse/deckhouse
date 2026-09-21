@@ -56,7 +56,7 @@ func TestClusterParams(t *testing.T) {
 		ClusterType:             config.CloudClusterType,
 	}, params)
 
-	for _, key := range []string{"clusterDomain", "serviceSubnetCIDR", "podSubnetCIDR"} {
+	for _, key := range []string{"serviceSubnetCIDR", "podSubnetCIDR"} {
 		t.Run("missing "+key, func(t *testing.T) {
 			metaConfig := testMetaConfig(t)
 			delete(metaConfig.ClusterConfig, key)
@@ -76,6 +76,17 @@ func TestClusterParams(t *testing.T) {
 		params, err := clusterParams(metaConfig)
 		require.NoError(t, err)
 		require.Equal(t, config.DefaultPodSubnetNodeCIDRPrefix, params.PodSubnetNodeCIDRPrefix)
+	})
+
+	// clusterDomain has the same fallback shape: ClusterConfigMap's resolver
+	// (ModuleConfig, then this deprecated field, then the schema default) always sets it.
+	t.Run("missing clusterDomain defaults to cluster.local", func(t *testing.T) {
+		metaConfig := testMetaConfig(t)
+		delete(metaConfig.ClusterConfig, "clusterDomain")
+
+		params, err := clusterParams(metaConfig)
+		require.NoError(t, err)
+		require.Equal(t, config.DefaultClusterDomain, params.ClusterDomain)
 	})
 }
 

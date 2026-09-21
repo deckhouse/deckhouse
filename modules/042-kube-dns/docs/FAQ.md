@@ -5,6 +5,26 @@ search: DNS, domain, clusterdomain
 
 ## How to change cluster domain with minimal downtime?
 
+{% alert level="warning" %}
+
+**Before you start.** The cluster domain must already be managed from the `control-plane-manager` ModuleConfig. If the `D8ObsoleteClusterDomainInClusterConfiguration` alert is firing, it is still kept in `ClusterConfiguration`; finish the migration first:
+
+1. Copy the current value into `spec.settings.network.clusterDomain` of the `control-plane-manager` ModuleConfig. Keep the value exactly as it is now: admission rejects a mismatch on the initial move.
+
+   ```bash
+   d8 k edit mc control-plane-manager
+   ```
+
+1. Remove `clusterDomain` from `ClusterConfiguration`:
+
+   ```bash
+   d8 system edit cluster-configuration
+   ```
+
+1. Make sure the alert has cleared.
+
+{% endalert %}
+
 Add a new domain and retain the previous one. To do this, modify the configuration parameters:
 
 1. In the [controlPlaneManager.apiserver](../control-plane-manager/configuration.html):
@@ -61,10 +81,10 @@ Add a new domain and retain the previous one. To do this, modify the configurati
    d8 k -n kube-system get pods -l component=kube-apiserver
    ```
 
-1. Replace the previous `clusterDomain` with the new one. Run this command to edit cluster configuration:
+1. Set `spec.settings.network.clusterDomain` to the new domain:
 
    ```bash
-   d8 system edit cluster-configuration
+   d8 k edit mc control-plane-manager
    ```
 
 1. Restart deckhouse pods:

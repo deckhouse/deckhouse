@@ -204,7 +204,7 @@ func TestReadClusterState(t *testing.T) {
 		in := clusterInputs{}
 		require.NoError(t, s.readClusterState(t.Context(), &in))
 
-		require.Equal(t, defaultClusterDomain, in.ClusterDomain)
+		require.Equal(t, network.DefaultClusterDomain, in.ClusterDomain)
 		require.Equal(t, []string{"https://10.0.0.1:6443"}, in.APIServerEndpoints)
 		require.Equal(t, "10.0.0.10", in.ClusterDNS)
 		require.NotEmpty(t, in.KubernetesCA)

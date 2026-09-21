@@ -124,12 +124,8 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 			return obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == imagesDigestsConfigMapName
 		},
 	)))
-	// podSubnetNodeCIDRPrefix (network.FromModuleConfig, read fresh every pass in
-	// readClusterConfiguration) otherwise has nothing enqueuing a pass at all: an
-	// operator editing it touches neither a NodeGroup nor a Node, so without this
-	// watch the new value would only reach DefaultMaxPods whenever some unrelated
-	// trigger next fires. Narrowed to spec.settings.network so an unrelated CPM
-	// settings edit (apiserver, etcd, ...) does not re-render the whole fleet.
+	// Without this watch, an operator editing the network group has nothing enqueuing a pass: it
+	// touches neither a NodeGroup nor a Node.
 	moduleConfigGVK := network.ModuleConfigGVK()
 	watchedModuleConfig := &unstructured.Unstructured{}
 	watchedModuleConfig.SetGroupVersionKind(moduleConfigGVK)
@@ -146,11 +142,8 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	}))
 }
 
-// moduleConfigNetworkGroupChanged reports whether spec.settings.network differs between the two
-// ModuleConfig revisions. Both objects come off an unstructured-backed informer (see cache.go); a
-// type assertion failure, or spec/spec.settings existing but not being a map (NestedFieldNoCopy's
-// error case), is a "cannot tell" that must not silently drop the event, so it answers true rather
-// than comparing two nils that both came from a walk that never actually completed.
+// Reports whether spec.settings.network differs between the two revisions. A "cannot tell" answers
+// true rather than silently dropping the event.
 func moduleConfigNetworkGroupChanged(oldObj, newObj client.Object) bool {
 	oldU, ok := oldObj.(*unstructured.Unstructured)
 	if !ok {
@@ -161,15 +154,16 @@ func moduleConfigNetworkGroupChanged(oldObj, newObj client.Object) bool {
 		return true
 	}
 
-	oldNetwork, _, err := unstructured.NestedFieldNoCopy(oldU.UnstructuredContent(), "spec", "settings", "network")
+	path := []string{"spec", "settings", "network"}
+	oldValue, _, err := unstructured.NestedFieldNoCopy(oldU.UnstructuredContent(), path...)
 	if err != nil {
 		return true
 	}
-	newNetwork, _, err := unstructured.NestedFieldNoCopy(newU.UnstructuredContent(), "spec", "settings", "network")
+	newValue, _, err := unstructured.NestedFieldNoCopy(newU.UnstructuredContent(), path...)
 	if err != nil {
 		return true
 	}
-	return !apiequality.Semantic.DeepEqual(oldNetwork, newNetwork)
+	return !apiequality.Semantic.DeepEqual(oldValue, newValue)
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

@@ -79,11 +79,15 @@ apiVersions:
           > **Внимание.** Изменение этого параметра в работающем кластере может привести к полному отказу кластера. Изменение заблокировано по умолчанию. Чтобы обойти эту защиту, используйте команду `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing`. Однако **настоятельно рекомендуется пересоздать кластер** вместо изменения этого параметра. Подробнее см. в [документации](/products/kubernetes-platform/documentation/v1/admin/configuration/#изменение-защищённых-параметров).
       clusterDomain:
         description: |
+          **Устарело.** Используйте [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) в секции `network` ModuleConfig `control-plane-manager`.
+
           Домен кластера (используется для маршрутизации внутри кластера).
 
           **Обратите внимание:** домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate). Например, нельзя одновременно устанавливать `clusterDomain: cluster.local` и `publicDomainTemplate: %s.cluster.local`.
 
           > При необходимости смены параметра в уже развернутом кластере рекомендуется воспользоваться [инструкцией](/modules/kube-dns/faq.html#как-поменять-домен-кластера-с-минимальным-простоем)
+
+          Если параметр не задан ни там, ни здесь, используется `cluster.local`.
       defaultCRI:
         x-doc-deprecated: true
         description: |

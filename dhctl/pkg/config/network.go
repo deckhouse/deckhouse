@@ -35,11 +35,12 @@ import (
 const DefaultPodSubnetNodeCIDRPrefix = "24"
 
 // NetworkSettings is one resolved network parameter set. An empty field means "not set in this
-// document", which is why none of the three may carry a schema default.
+// document", which is why neither of the two CIDR fields may carry a schema default.
 type NetworkSettings struct {
 	PodSubnetCIDR           string
 	ServiceSubnetCIDR       string
 	PodSubnetNodeCIDRPrefix string
+	ClusterDomain           string
 }
 
 // networkParam is one parameter's candidate values, in precedence order.
@@ -93,6 +94,7 @@ func (m *MetaConfig) moduleConfigNetwork() NetworkSettings {
 	out.PodSubnetCIDR, _ = group["podSubnetCIDR"].(string)
 	out.ServiceSubnetCIDR, _ = group["serviceSubnetCIDR"].(string)
 	out.PodSubnetNodeCIDRPrefix, _ = group["podSubnetNodeCIDRPrefix"].(string)
+	out.ClusterDomain, _ = group["clusterDomain"].(string)
 
 	return out
 }
@@ -135,6 +137,7 @@ func (m *MetaConfig) Network() NetworkSettings {
 		PodSubnetCIDR:           params[0].resolved(),
 		ServiceSubnetCIDR:       params[1].resolved(),
 		PodSubnetNodeCIDRPrefix: params[2].resolved(),
+		ClusterDomain:           m.ClusterDomainResolved(),
 	}
 
 	if out.PodSubnetNodeCIDRPrefix == "" {

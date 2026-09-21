@@ -148,12 +148,12 @@ func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, err
 		},
 		ClusterType: metaConfig.ClusterType,
 	}
+	params.ClusterDomain, _ = clusterConfig["clusterDomain"].(string)
 
 	required := []struct {
 		key    string
 		target *string
 	}{
-		{"clusterDomain", &params.ClusterDomain},
 		{"serviceSubnetCIDR", &params.ServiceSubnetCIDR},
 		{"podSubnetCIDR", &params.PodSubnetCIDR},
 		{"podSubnetNodeCIDRPrefix", &params.PodSubnetNodeCIDRPrefix},

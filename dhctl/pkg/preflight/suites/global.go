@@ -59,5 +59,6 @@ func NewGlobalSuite(deps GlobalDeps) preflight.Suite {
 		// merge's business, and it is the one thing standing between a half-migrated
 		// ClusterConfiguration/ModuleConfig pair and a silently picked winner.
 		checks.NetworkSingleSource(deps.MetaConfig),
+		checks.ClusterDomainSingleSource(deps.MetaConfig),
 	)
 }

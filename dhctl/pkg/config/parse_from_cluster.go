@@ -289,6 +289,10 @@ func parseLegacyProviderClusterConfig(ctx context.Context, secret *corev1.Secret
 }
 
 func (f *fromClusterMetaConfigFiller) Static(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
+	if cpm := loadControlPlaneManagerModuleConfig(ctx, f.kubeCl); cpm != nil {
+		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, cpm)
+	}
+
 	// The configuration may be absent entirely: auto-discovery covers it.
 	staticClusterConfig, err := f.kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-static-cluster-configuration", metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
