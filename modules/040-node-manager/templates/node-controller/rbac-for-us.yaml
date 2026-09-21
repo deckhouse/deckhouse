@@ -735,12 +735,12 @@ subjects:
     name: deckhouse
     namespace: d8-system
 ---
-# The agent on an immutable node reaches the API with the kubelet's identity
-# (user system:node:<name>, group system:nodes). The Node authorizer does not
-# cover custom resources, so without this the agent can neither read the
-# NodeConfig it is meant to reconcile nor report what it did with it — and the
-# rollout, which waits for exactly that report, would never move past the first
-# node.
+# The node agent, on an immutable node and on a bashible one alike, reaches the
+# API with the kubelet's identity (user system:node:<name>, group system:nodes).
+# The Node authorizer does not cover custom resources, so without this the agent
+# can neither read the NodeConfig it is meant to reconcile nor report what it did
+# with it — and the rollout, which waits for exactly that report, would never
+# move past the first node.
 #
 # The grants are cluster-wide because both resources are cluster-scoped: RBAC
 # cannot narrow them to "this node's own object". Reads are therefore

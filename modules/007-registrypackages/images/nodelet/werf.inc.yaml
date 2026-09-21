@@ -13,6 +13,9 @@
   {{- /* Pinned by release tag: werf keys a shell-cloned source on the rendered
          instructions alone, so a moving branch would be built once and cached
          forever. Bump this line to pick up agent changes. */ -}}
+  {{- /* Bashible step 077 starts the agent with -system-type and -controllers,
+         flags this tag does not know, and Go exits 2 on an unknown one: do not
+         merge before the bump to a tag cut from nodelet MR !22 or later. */ -}}
   {{- $nodeletVersion := "v0.1.9" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

@@ -134,9 +134,9 @@ type NodeStaticPodRequestList struct {
 	Items           []NodeStaticPodRequest `json:"items"`
 }
 
-// reservedStaticPodNames already have a writer of /etc/kubernetes/manifests: the
-// control-plane four (nodelet; bashible cluster-bootstrap 050, 072) and what the
-// bashible steps 051, 052 and 020/070 write on every mutable node.
+// reservedStaticPodNames mirror nodelet's internal/config/systemtype.go
+// (ControlPlaneStaticPods plus bashibleStaticPods): the manifests the agent or a
+// bashible step already writes into /etc/kubernetes/manifests.
 var reservedStaticPodNames = []string{
 	"etcd",
 	"kube-apiserver",

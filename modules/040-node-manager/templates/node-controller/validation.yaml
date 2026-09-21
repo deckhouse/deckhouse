@@ -11,12 +11,12 @@ since Kubernetes 1.30, and candi/version_map.yml supports 1.32 upwards.
 */}}
 {{- $policyName := "nodeconfigs-own-node-only.deckhouse.io" }}
 ---
-# The agent on an immutable node reaches the API with its kubelet identity, and
-# both NodeConfig and NodeOperation are cluster-scoped, so RBAC can only grant
-# the verbs cluster-wide. This narrows those grants to the node's own objects:
-# without it any kubelet could hand a neighbour a maintenance token of its own
-# choosing and then push that neighbour an arbitrary configuration, or forge the
-# neighbour's applied generation and let the whole group be disrupted at once.
+# The node agent, on an immutable node and on a bashible one alike, reaches the
+# API with its kubelet identity, and both NodeConfig and NodeOperation are
+# cluster-scoped, so RBAC grants the verbs cluster-wide. This narrows them to the
+# node's own objects: without it any kubelet could hand a neighbour a maintenance
+# token of its own choosing and push it an arbitrary configuration, or forge the
+# neighbour's applied generation and disrupt the whole group at once.
 #
 # It covers every write surface of the resource, not only the ones the node-agent
 # ClusterRole happens to grant today. This policy is the compensating control
