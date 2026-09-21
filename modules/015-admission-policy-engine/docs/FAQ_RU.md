@@ -88,7 +88,7 @@ spec:
 - «все неймспейсы команды `team=backend`» (с соответствующим лейблом);
 - «все неймспейсы с `security.deckhouse.io/pod-policy=restricted`».
 
-`labelSelector` особенно полезен, когда неймспейсы создаются/удаляются динамически: достаточно автоматически проставлять label на неймспейс при создании, и политика начнёт действовать без редактирования политики.
+`labelSelector` особенно полезен, когда неймспейсы создаются/удаляются динамически: достаточно автоматически проставлять лейбл на неймспейс при создании, и политика начнёт действовать без редактирования политики.
 
 `labelSelector` не обязателен, если у вас небольшой статичный список неймспейсов – тогда проще и легче читается подход с использованием `matchNames`.
 
@@ -188,7 +188,7 @@ spec:
 ## Как расширить политики Pod Security Standards?
 
 {% alert level="info" %}
-Pod Security Standards реагируют на label `security.deckhouse.io/pod-policy: restricted` или `security.deckhouse.io/pod-policy: baseline`.
+Pod Security Standards реагируют на лейбл `security.deckhouse.io/pod-policy: restricted` или `security.deckhouse.io/pod-policy: baseline`.
 {% endalert %}
 
 Чтобы расширить политику Pod Security Standards, добавив к существующим проверкам политики свои собственные, необходимо:
@@ -256,7 +256,7 @@ spec:
       - "mycompany.registry.com"
 ```
 
-Пример демонстрирует настройку проверки адреса репозитория в поле `image` у всех подов, создающихся в неймспейсах, имеющих label `security.deckhouse.io/pod-policy: restricted`. Если адрес в поле `image` создаваемого пода начинается не с `mycompany.registry.com`, под создан не будет.
+Пример демонстрирует настройку проверки адреса репозитория в поле `image` у всех подов, создающихся в неймспейсах, имеющих лейбл `security.deckhouse.io/pod-policy: restricted`. Если адрес в поле `image` создаваемого пода начинается не с `mycompany.registry.com`, под создан не будет.
 
 Подробнее о шаблонах и языке политик можно узнать [в документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/).
 
