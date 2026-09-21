@@ -321,6 +321,23 @@ func TestHandle_VirtualTemplateIsReserved(t *testing.T) {
 		assert.Contains(t, resp.Result.Message, "reserved for the platform's virtual projects")
 	})
 
+	t.Run("a user may not take the platform's virtual project names either, whatever the template", func(t *testing.T) {
+		v := newValidator(t)
+		for _, name := range []string{projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName} {
+			project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: name}}
+			project.Spec.ProjectTemplateName = "default"
+			raw, err := json.Marshal(project)
+			require.NoError(t, err)
+			resp := v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+				Operation: admissionv1.Create,
+				UserInfo:  authnv1.UserInfo{Username: "alice"},
+				Object:    runtime.RawExtension{Raw: raw},
+			}})
+			assert.False(t, resp.Allowed, name)
+			assert.Contains(t, resp.Result.Message, "reserved for the platform's virtual projects", name)
+		}
+	})
+
 	t.Run("the controller keeps creating the platform's virtual projects", func(t *testing.T) {
 		v := newValidator(t)
 		for _, name := range []string{projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName} {

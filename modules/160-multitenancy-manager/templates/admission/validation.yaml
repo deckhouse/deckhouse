@@ -5,7 +5,9 @@
   admission call for a resource a module's Helm release applies (e.g. the deckhouse-controller creating
   a namespace) would fail and addon-operator would retry it forever, locking the module's queue.
   Excluding system writers makes that impossible regardless of backend health, while ordinary users are
-  still validated. Mirrors the same exclusion on the cluster-objects grant webhooks.
+  still validated. The cluster-objects grant webhooks (hooks/configure_grant_validation_webhook.go)
+  keep a similar list but also exclude system:masters: they intercept every grantable
+  cluster-resource write into project namespaces, a far larger surface for a deadlock.
 
   People are not system writers: system:masters goes through these webhooks like everyone else, so a
   Project an administrator creates is validated the same way as one a user creates. The one human
@@ -72,6 +74,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
+    {{- $excludeSystemWriters | nindent 4 }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
@@ -95,6 +98,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
+    {{- $excludeSystemWriters | nindent 4 }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
@@ -119,6 +123,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
+    {{- $excludeSystemWriters | nindent 4 }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
