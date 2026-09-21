@@ -37,7 +37,7 @@ two pods for one VM on two nodes, both holding that address, so a requested
 address is accepted even when it falls outside the local node's podCIDR.
 
 Upstream <https://github.com/cilium/cilium/pull/24098>
-Test `~/src/kind/d8-1.20-tests/001-request-ip/`
+Test `~/src/kind/d8-1.20-tests/request-ip/`
 
 ## 002-stable-mac.patch
 
@@ -52,7 +52,7 @@ every node. Upstream's per-pod `cni.cilium.io/mac-address` still overrides the
 container side, and covers only that side.
 
 Upstream <https://github.com/cilium/cilium/pull/24100>
-Test `~/src/kind/d8-1.20-tests/002-stable-mac/`
+Test `~/src/kind/d8-1.20-tests/stable-mac/`
 
 ## 003-mtu.patch
 
@@ -64,7 +64,7 @@ overlay cannot carry. Covers creation time (CNI plugin and health endpoint) and
 the endpoint MTU updater, which would otherwise reset the devices.
 
 Upstream issue <https://github.com/cilium/cilium/issues/23711>
-Test `~/src/kind/d8-1.20-tests/003-mtu/`
+Test `~/src/kind/d8-1.20-tests/mtu/`
 
 ## 004-ebpf-dhcp-server.patch
 
@@ -81,7 +81,7 @@ search domain and MTU.
 Option 26 hands out `RouteMTU`, the same value `003-mtu.patch` puts on the
 devices. Only the `veth` datapath is covered.
 
-Test `~/src/kind/d8-1.20-tests/005-dhcp/`
+Test `~/src/kind/d8-1.20-tests/dhcp/`
 
 ## 005-hide-error-of-incompatibility-of-egw-with-ces.patch
 
@@ -96,7 +96,7 @@ not set.
 
 Remove once CES is stable, <https://github.com/cilium/cilium/issues/31904>.
 
-Test `~/src/kind/d8-1.20-tests/008-egw-with-ces/`
+Test `~/src/kind/d8-1.20-tests/egw-with-ces/`
 
 ## 006-ignore-egress-gateway-inactual-warning.patch
 
@@ -107,7 +107,7 @@ upstream's derive failure would log an error on every reconcile.
 Note this changes forwarding, not only logging: the policy is programmed with the
 configured egress IP, where unpatched the entry stays `0.0.0.0`.
 
-Test `~/src/kind/d8-1.20-tests/013-egw-unassigned-ip/`
+Test `~/src/kind/d8-1.20-tests/egw-unassigned-ip/`
 
 ## 007-fix-svacer.patch
 
@@ -120,7 +120,7 @@ required, and `cilium-dbg policy import` no longer exists -- but it clears the
 Svace `DEREF_OF_NULL` finding in this build (see `SvaceBuildOptions` in
 `werf.inc.yaml`).
 
-Test `~/src/kind/d8-1.20-tests/018-icmp-nil-type/` (unit test; its negative
+Test `~/src/kind/d8-1.20-tests/icmp-nil-type/` (unit test; its negative
 control runs the same test against a pristine v1.20.1 worktree, where it panics)
 
 ## 008-wireguard-port.patch
@@ -133,7 +133,7 @@ iptables rules and the device derive from it too, so the 1.17 patch's
 `bpf/node_config.h` hunk is gone. The `.github/actions/bpftrace` hunk is dropped
 as CI-only.
 
-Test `~/src/kind/d8-1.20-tests/009-wireguard-port/`
+Test `~/src/kind/d8-1.20-tests/wireguard-port/`
 
 ## 009-cleanup-conntrack-endpoints.patch
 
@@ -151,7 +151,7 @@ endpoint is set only for an address owned by another node. The lookup happens
 once per teardown, not inside the GC filter, which runs for every conntrack
 entry.
 
-Test `~/src/kind/d8-1.20-tests/015-conntrack-cleanup/`. A live migration is
+Test `~/src/kind/d8-1.20-tests/conntrack-cleanup/`. A live migration is
 imitated on the dev cluster by rewriting the datapath's ipcache entry for the pod
 so it carries a tunnel endpoint, which is what the address looks like once
 another node owns it, and holding that across the teardown -- the agent
@@ -176,7 +176,7 @@ keep working. `daemon/cmd/status.go` and `api_handlers.go` are gone in 1.20, so
 the handlers live in `pkg/maps` and are provided by its cell. The generated API
 files come from `make generate-api`, never hand edits.
 
-Test `~/src/kind/d8-1.20-tests/016-conntrack-api/`. It installs the way the
+Test `~/src/kind/d8-1.20-tests/conntrack-api/`. It installs the way the
 module does -- `bpf-lb-sock-hostns-only` -- because only then is pod traffic load
 balanced on the tc hooks, which is what produces the service conntrack entries
 the RevNAT translation needs.
@@ -194,7 +194,7 @@ Much smaller than on 1.17: that version also had to replace a
 `bpftool -j prog show` subprocess with a walk over the ebpf API, which upstream
 has since done itself (`bpfVisitor`). Only the metric is left.
 
-Test `~/src/kind/d8-1.20-tests/014-verifier-stat/`
+Test `~/src/kind/d8-1.20-tests/verifier-stat/`
 
 ## 012-bpf-lb-generate-icmp-reply.patch
 
@@ -226,7 +226,7 @@ Deckhouse sets `default-lb-service-ipam: none`, which is exactly when upstream
 writes no wildcard entry for a classless LoadBalancer service -- so this patch is
 still required. Needs `kubeProxyReplacement`.
 
-Test `~/src/kind/d8-1.20-tests/017-lb-icmp-reply/`
+Test `~/src/kind/d8-1.20-tests/lb-icmp-reply/`
 
 ## 013-add-least-conn-lb-algorithm.patch
 
@@ -265,7 +265,7 @@ Reachable only through the annotation -- `bpf-lb-algorithm` is validated against
 `random`/`maglev`, so least-conn cannot be a node-wide default. Needs
 `kubeProxyReplacement` and `bpf-lb-sock-hostns-only`.
 
-Test `~/src/kind/d8-1.20-tests/012-least-conn/`
+Test `~/src/kind/d8-1.20-tests/least-conn/`
 
 ## 014-add-pod-prioroty-management.patch
 
@@ -283,7 +283,7 @@ value struct, so the alignchecker and `mapkv.btf` are untouched.
 Folds in `007-fix-restoring-cep-for-dead-local-endpoint` (a 1.17 number; there
 is no separate patch for it here).
 
-Test `~/src/kind/d8-1.20-tests/006-pod-priority/`: fourteen single-case scripts,
+Test `~/src/kind/d8-1.20-tests/pod-priority/`: fourteen single-case scripts,
 one transition each, driven by `run-cases.sh`, which installs once and stops at
 the first failure. Patched: 70 case runs, no failures. On the same stack one
 commit earlier it stops at the second case, with both nodes holding an entry and
@@ -318,7 +318,7 @@ NodePort service keeps working. The annotation state matters because it switches
 `LB_SELECTION_PER_SERVICE`, which changes how `lb4_algorithm()` derives the
 algorithm; Deckhouse enables it via `extraLoadBalancerAlgorithmsEnabled`.
 
-Test kept as the evidence record: `~/src/kind/d8-1.20-tests/011-hostport-lb-algo/`
+Test kept as the evidence record: `~/src/kind/d8-1.20-tests/hostport-lb-algo/`
 (it passes on the unpatched image, which is the point).
 
 ### 019-ipcache-no-deadlock-on-label-injection.patch
