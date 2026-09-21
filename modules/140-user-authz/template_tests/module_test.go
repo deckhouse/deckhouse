@@ -188,6 +188,13 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			legacyUse := f.KubernetesGlobalResource("ClusterRole", "d8:use:role:admin")
 			Expect(legacyUse.Exists()).To(BeTrue())
 			Expect(legacyUse.Field(`metadata.labels.rbac\.deckhouse\.io/deprecated`).String()).To(Equal("true"))
+			// a use-role alias stays delegatable (existing RoleBindings keep working) but may not be
+			// the target of a NEW project role binding: the webhooks read this annotation
+			Expect(legacyUse.Field(`metadata.labels.rbac\.deckhouse\.io/delegatable`).String()).To(Equal("true"))
+			Expect(legacyUse.Field(`metadata.annotations.rbac\.deckhouse\.io/disabled-for-direct-use-in-projects`).String()).To(Equal("true"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:role:admin:kubernetes").Field(`metadata.annotations.rbac\.deckhouse\.io/disabled-for-direct-use-in-projects`).String()).To(Equal("true"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:namespace:admin").Field(`metadata.annotations.rbac\.deckhouse\.io/disabled-for-direct-use-in-projects`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:manager").Field(`metadata.annotations.rbac\.deckhouse\.io/disabled-for-direct-use-in-projects`).Exists()).To(BeFalse())
 
 			// d8:use:dict has no alias: its bindings are migrated to d8:dict by the dict-bindings hook.
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:dict").Exists()).To(BeFalse())

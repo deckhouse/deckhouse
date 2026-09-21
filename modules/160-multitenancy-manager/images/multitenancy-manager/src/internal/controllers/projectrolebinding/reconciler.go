@@ -155,7 +155,7 @@ func (r *Reconciler) upsertRoleBinding(ctx context.Context, prb *v1alpha3.Projec
 			return controllerutil.SetControllerReference(prb, rb, r.Scheme())
 		}
 	}
-	return rolebinding.UpsertServiceRoleBinding(ctx, r.Client, rolebinding.UpsertParams{
+	_, err := rolebinding.UpsertServiceRoleBinding(ctx, r.Client, rolebinding.UpsertParams{
 		Name:        rolebinding.PRBServiceName(prb.Name),
 		Namespace:   ns,
 		Project:     prb.Namespace,
@@ -165,6 +165,7 @@ func (r *Reconciler) upsertRoleBinding(ctx context.Context, prb *v1alpha3.Projec
 		Subjects:    prb.Spec.Subjects,
 		RoleRef:     prb.Spec.RoleRef.Name,
 	}, setOwner)
+	return err
 }
 
 // pruneRoleBindings deletes service RoleBindings of this PRB in namespaces that are no longer part

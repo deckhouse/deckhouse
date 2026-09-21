@@ -224,11 +224,18 @@ kubernetesValidating:
     scope:       "Namespaced"
 - name: {BINDING_EXEC}
   group: main
+  # The same four identities the edit binding excludes: PRIVILEGED_USERS in the hook body already
+  # let them through, but a webhook-handler that is down or slow must not stand between a cluster
+  # component and a system pod, and only a matchCondition guarantees that.
   matchConditions:
   - name: exclude-kube-apiserver
     expression: '"system:apiserver" != request.userInfo.username'
   - name: exclude-deckhouse
     expression: '"system:serviceaccount:d8-system:deckhouse" != request.userInfo.username'
+  - name: exclude-aggregation-controller
+    expression: '"system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username'
+  - name: exclude-multitenancy-manager
+    expression: '"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" != request.userInfo.username'
 {_EXCLUDE_BYPASS_GROUPS}
   rules:
   - apiGroups:   [""]
