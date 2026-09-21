@@ -316,11 +316,11 @@ docs: bin/werf ## Run containers with the documentation.
 	@echo -n "werf: "; bin/werf version
 	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
-	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
 
 .PHONY: docs-generate-pdf
 docs-generate-pdf: ## Generate PDF documentation.
-  ##~ Options: DOC_VERSION=X.XX - DKP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
+  ##~ Options: DOC_VERSION=X.XX - DP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
   ##~ Options: BUILD_LANG=ru|en - build a single language only. If not set, both languages are built.
   ##~ Outputs: pdf/deckhouse-admin-guide_{ru,en}.pdf and pdf/deckhouse-user-guide_{ru,en}.pdf
 	DOC_VERSION="$(strip $(DOC_VERSION))" \
@@ -335,7 +335,7 @@ docs-external-module: yq bin/werf ## Build an external module docs and run the l
 	@echo -n "werf: "; bin/werf version
 	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
-	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
 
 .PHONY: docs-external-module-clean
 docs-external-module-clean: ## Remove generated external module documentation output.
@@ -348,7 +348,7 @@ docs-dev: bin/werf ## Run containers with the documentation in the dev mode (all
 	@echo -n "werf: "; bin/werf version;
 	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
-	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
@@ -641,15 +641,15 @@ LIB_HELM_DIR ?= $(CURDIR)/helm_lib
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.13.1
-DECKHOUSE_CLI_VERSION ?= v0.33.1
+DECKHOUSE_CLI_VERSION ?= v0.33.19
 CRD_ENRICHER_VERSION ?= v0.0.2
-DMT_VERSION ?= 0.2.4
+DMT_VERSION ?= 0.2.5
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
 GOTESTSUM_VERSION ?= v1.13.0
 ## Pinned lib-helm version, mirrored from helm_lib/Chart.yaml by "make update-lib-helm".
-LIB_HELM_VERSION ?= 1.72.19
+LIB_HELM_VERSION ?= 1.72.21
 
 ## Generate werf
 .PHONY: generate-werf

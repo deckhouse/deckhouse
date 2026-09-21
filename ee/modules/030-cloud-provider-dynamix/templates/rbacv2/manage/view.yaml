@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-dynamix
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cloud-provider-dynamix.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-provider-dynamix
-  name: d8:manage:permission:module:cloud-provider-dynamix:view
+  name: d8:system-capability:cloud-provider-dynamix:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cloud-provider-dynamix: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль cloud-provider-dynamix: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the cloud-provider-dynamix module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля cloud-provider-dynamix."
 rules:
 - apiGroups:
   - deckhouse.io

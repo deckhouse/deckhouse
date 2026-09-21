@@ -11,7 +11,7 @@ storage:
     disable: true
 
 http:
-  addr: {{ .ListenAddress }}:5001
+  addr: {{ hostPort .ListenAddress 5001 | quote }}
   prefix: /
   secret: {{ quote .HTTPSecret }}
   debug:
@@ -31,7 +31,7 @@ http:
 
 {{- with .Upstream }}
 proxy:
-  remoteurl: "{{ .Scheme }}://{{ .Host }}"
+  remoteurl: {{ printf "%s://%s" .Scheme .Host | quote }}
   {{- if .User }}
   username: {{ quote .User }}
   password: {{ quote .Password }}
@@ -47,7 +47,7 @@ proxy:
 {{- end }}
 auth:
   token:
-    realm: "https://{{ .ListenAddress }}:5051/auth"
+    realm: {{ printf "https://%s/auth" (hostPort .ListenAddress 5051) | quote }}
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: /pki/token.crt

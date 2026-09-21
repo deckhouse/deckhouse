@@ -20,6 +20,10 @@ spec:
         resources:   ["*"]
         scope: "*"
   matchConditions:
+    # Only cluster components are excluded, and deliberately so: a template-owned object belongs to
+    # the project controller alone. Cluster administrators are exempt from the other protections
+    # around project namespaces (see the user-authz system-resource webhook) but not from this one —
+    # to change such an object, change the ProjectTemplate or the Project.
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'

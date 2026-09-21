@@ -26,7 +26,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -110,10 +109,13 @@ type Client struct {
 	registryHost string
 	// e.g., [deckhouse,ee,modules] (built from chained WithSegment calls)
 	segments []string
-	// cached joined segments for scope path
+	// segments joined into a scope path, e.g. "deckhouse/ee/modules".
+	//
+	// It is computed where the segments are fixed - at construction - and never
+	// written again. Filling it lazily instead would race: a client is shared
+	// across goroutines, every request method reads this field for its log
+	// record, and those reads are not inside whatever synchronizes the write.
 	constructedSegments string
-	// ensures constructedSegments is computed only once
-	constructedSegmentsOnce sync.Once
 	// remote options for go-containerregistry
 	options []remote.Option
 	// auth is stored separately from remote options to build authenticated
@@ -221,29 +223,22 @@ func (c *Client) withContext(ctx context.Context) remote.Option {
 // This method can be chained to build complex paths:
 // client.WithSegment("deckhouse").WithSegment("ee").WithSegment("modules")
 func (c *Client) WithSegment(segments ...string) registry.Client {
+	trimmed := make([]string, len(segments))
 	for idx, scope := range segments {
-		segments[idx] = strings.TrimSuffix(strings.TrimPrefix(scope, "/"), "/")
+		trimmed[idx] = strings.TrimSuffix(strings.TrimPrefix(scope, "/"), "/")
 	}
 
-	if len(segments) == 0 {
+	if len(trimmed) == 0 {
 		return c
 	}
 
-	// Every field is copied explicitly because Client embeds a sync.Once, which
-	// rules out `nc := *c` (go vet's copylocks). Any field added to Client has
-	// to be added here too, or it is silently dropped on the first chained call.
-	return &Client{
-		registryHost:  c.registryHost,
-		segments:      append(append([]string(nil), c.segments...), segments...),
-		options:       c.options,
-		auth:          c.auth,
-		keychain:      c.keychain,
-		userAgent:     c.userAgent,
-		baseTransport: c.baseTransport,
-		logger:        c.logger,
-		insecure:      c.insecure,
-		timeout:       c.timeout,
-	}
+	// Copying the struct carries every field over, including any added later.
+	// Only what the new scope changes is then overwritten.
+	nc := *c
+	nc.segments = append(append([]string(nil), c.segments...), trimmed...)
+	nc.constructedSegments = path.Join(nc.segments...)
+
+	return &nc
 }
 
 // GetRegistry returns the full registry path (host + scope)
@@ -251,10 +246,6 @@ func (c *Client) GetRegistry() string {
 	if len(c.segments) == 0 {
 		return c.registryHost
 	}
-
-	c.constructedSegmentsOnce.Do(func() {
-		c.constructedSegments = path.Join(c.segments...)
-	})
 
 	return path.Join(c.registryHost, c.constructedSegments)
 }

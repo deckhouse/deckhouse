@@ -1,7 +1,7 @@
 ---
 title: Диагностика
 permalink: ru/user/marketplace/troubleshooting.html
-description: "Диагностика и устранение проблем с приложениями Deckhouse Kubernetes Platform Marketplace. Проверка наличия CRD, чтение условий и summary приложения, просмотр логов."
+description: "Диагностика и устранение проблем с приложениями Deckhouse Platform Marketplace. Проверка наличия CRD, чтение условий и summary приложения, просмотр логов."
 lang: ru
 search: Application troubleshooting, application conditions, диагностика приложений, условия приложения, логи приложения
 ---
@@ -27,7 +27,7 @@ packagerepositoryoperations.deckhouse.io             2026-02-10T14:54:41Z
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-Если какие-либо CRD отсутствуют, обратитесь к администратору кластера. Marketplace требует DKP версии 1.76 или выше.
+Если какие-либо CRD отсутствуют, обратитесь к администратору кластера. Marketplace требует DP версии 1.76 или выше.
 
 ## Чтение summary приложения
 
@@ -43,12 +43,12 @@ d8 k get app -n <NAMESPACE> <APPLICATION_NAME> -o yaml | grep -A5 'summary:'
 summary:
   state: Updating
   message: "Update is waiting for dependent modules to converge; previous version is still serving"
-  tip: "Waiting until DKP processes all dependent modules to start the update."
+  tip: "Waiting until DP processes all dependent modules to start the update."
 ```
 
 - **`state`** — текущее общее состояние приложения.
 - **`message`** — объясняет, почему приложение находится в этом состоянии.
-- **`tip`** — что нужно сделать для решения проблемы или чего ожидает DKP.
+- **`tip`** — что нужно сделать для решения проблемы или чего ожидает DP.
 
 ## Чтение отдельных условий
 
@@ -105,7 +105,7 @@ currentVersion:
 
 В этом примере `Installed=True` (приложение запущено на версии v0.0.20), но `UpdateInstalled=False/Pending` означает, что обновление в очереди и ожидает завершения зависимого модуля.
 
-## Просмотр логов контроллера DKP
+## Просмотр логов контроллера DP
 
 Если условий статуса недостаточно для диагностики, просмотрите логи контроллера:
 
@@ -137,7 +137,7 @@ d8 k logs -n <NAMESPACE> deployments/<APPLICATION_NAME>-<RESOURCE_NAME>
 
 | Условие | Reason при Status=False | Что проверить |
 |---|---|---|
-| `Installed` | `InstallFailed` | Логи контроллера DKP, проверьте настройки по OpenAPI-схеме |
+| `Installed` | `InstallFailed` | Логи контроллера DP, проверьте настройки по OpenAPI-схеме |
 | `UpdateInstalled` | `Pending` | Конвергенция зависимых модулей — проверьте условия модуля `d8` |
 | `UpdateInstalled` | `UpdateFailed` | Указанная `packageVersion` не существует в репозитории — проверьте через `d8 k get apv -l package=<имя>` |
 | `ConfigurationApplied` | `ConfigurationFailed` | Ошибка валидации настроек — проверьте по схеме [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) |

@@ -1,7 +1,7 @@
 ---
 title: "Running Argo CD"
 permalink: en/admin/configuration/delivery/argocd/setup/
-description: "Running Argo CD in Deckhouse Kubernetes Platform."
+description: "Running Argo CD in Deckhouse Platform."
 lang: en
 relatedLinks:
   - title: "Official Argo CD website"
@@ -10,7 +10,7 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-This section describes the steps required to run an Argo CD instance in a DKP cluster:
+This section describes the steps required to run an Argo CD instance in a DP cluster:
 
 - [Preparing to run Argo CD](#preparing-to-run-argo-cd)
 - Deploying [one](#deploying-an-argo-cd-instance) or [multiple](#deploying-multiple-argo-cd-instances) Argo CD instances
@@ -24,7 +24,7 @@ Before creating Argo CD instances, complete the following steps:
 
 1. Wait until the module switches to the `Ready` state.
 
-   You can check the module state in the DKP web interface or with the following command:
+   You can check the module state in the DP web interface or with the following command:
 
    ```bash
    d8 k get module operator-argo -w
@@ -32,7 +32,7 @@ Before creating Argo CD instances, complete the following steps:
 
 Detailed information about module settings is available in the [`operator-argo` module documentation](/modules/operator-argo/).
 
-After you enable the `operator-argo` module, Argo CD custom resources become available in the DKP cluster.
+After you enable the `operator-argo` module, Argo CD custom resources become available in the DP cluster.
 
 To run an Argo CD instance, create an [ArgoCD](/modules/operator-argo/cr.html#argocd) object.
 Working with custom resources that belong to an Argo CD instance is described in the [Usage](/products/kubernetes-platform/documentation/v1/user/delivery/argocd/) section.
@@ -45,7 +45,7 @@ Working with custom resources that belong to an Argo CD instance is described in
 | [`appprojects.argoproj.io`](/modules/operator-argo/cr.html#appproject) | **Argo&nbsp;CD instance** | Used for logical segmentation of applications and for defining policies: allowed Git repositories, target clusters and namespaces, as well as access rules and restrictions on resource usage. |
 | [`applications.argoproj.io`](/modules/operator-argo/cr.html#application) | **Argo&nbsp;CD instance** | The main Argo CD application CRD for describing an application that must be synchronized from a declarative source (Git, Helm, Kustomize, and others) into Kubernetes. Defines the source, target environment, and synchronization parameters. |
 | [`applicationsets.argoproj.io`](/modules/operator-argo/cr.html#applicationset) | **Argo&nbsp;CD instance** | Used for automated creation of a set of Application objects from a template. Suitable for mass application management scenarios across multiple clusters, environments, directories, teams, or repository branches. |
-| [`argocdexports.argoproj.io`](/modules/operator-argo/cr.html#argocdexport) | **Argo&nbsp;CD instance** | Used for declarative export of data related to an Argo CD instance to external systems or related DKP components. Typically applied in integration scenarios where configuration, status, or access information must be published in a formalized way. |
+| [`argocdexports.argoproj.io`](/modules/operator-argo/cr.html#argocdexport) | **Argo&nbsp;CD instance** | Used for declarative export of data related to an Argo CD instance to external systems or related DP components. Typically applied in integration scenarios where configuration, status, or access information must be published in a formalized way. |
 | [`namespacemanagements.argoproj.io`](/modules/operator-argo/cr.html#namespacemanagement) | **Argo&nbsp;CD instance** | Used to manage the lifecycle of namespaces within GitOps processes. Can automate creation, configuration, and maintenance of namespaces into which applications are then deployed. |
 | [`notificationsconfigurations.argoproj.io`](/modules/operator-argo/cr.html#notificationsconfiguration) | **Argo&nbsp;CD instance** | Used to configure the Argo&nbsp;CD notification mechanism. Lets you declaratively describe delivery channels and rules for sending events related to synchronization, deployment errors, application status changes, and other operational events. |
 | [`imageupdaters.argocd-image-updater.argoproj.io`](/modules/operator-argo/cr.html#imageupdater) | **Argo&nbsp;CD instance** | Used to automatically track new container image versions and update application parameters according to the defined versioning and publishing strategy. |
@@ -121,7 +121,7 @@ You can work with Argo CD not only through the web interface and custom resource
 
 ## Deploying multiple Argo CD instances
 
-If the cluster needs multiple Argo CD instances, create a separate namespace (or DKP project) and a separate ArgoCD object for each of them.
+If the cluster needs multiple Argo CD instances, create a separate namespace (or DP project) and a separate ArgoCD object for each of them.
 
 For example, create:
 

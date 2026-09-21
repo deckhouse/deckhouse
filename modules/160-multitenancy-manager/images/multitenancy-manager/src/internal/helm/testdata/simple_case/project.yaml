@@ -1,0 +1,13 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: test
+spec:
+  description: A minimal project with only a namespace.
+  projectTemplateName: simple
+  parameters:
+    namespace:
+      labels:
+        team: backend
+      annotations:
+        owner: platform

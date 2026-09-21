@@ -230,7 +230,7 @@ func (c *Controller) releasePlacements(ctx context.Context) (map[string]placemen
 		}
 
 		placements[name] = placement{
-			repository: pkgsync.RepositoryNameForSource(release.GetModuleSource()),
+			repository: pkgsync.PackageRepositoryNameForModuleSource(release.GetModuleSource()),
 			version:    release.GetModuleVersion(),
 		}
 	}

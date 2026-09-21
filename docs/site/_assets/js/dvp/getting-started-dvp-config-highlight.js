@@ -1,4 +1,4 @@
-// DVP GS step 4: mightChange highlight (fork of DKP config_highlight for .dvp-config-yaml).
+// DVP GS step 4: mightChange highlight (fork of DP config_highlight for .dvp-config-yaml).
 
 // Mark editable YAML values after «Возможно, захотите изменить» comments.
 function dvp_config_highlight() {

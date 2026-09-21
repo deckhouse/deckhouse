@@ -1,0 +1,81 @@
+{%- comment -%}
+  Russian second-level product bar (DDS-Foundations redesign, Figma variant Type=Second level).
+  The English bar stays in _includes/header-l2-menu.liquid and is untouched.
+  The product lookup below is copied from it verbatim; only the markup around it is new.
+
+  #bottom-header-nav, .nav__trigger, .menu-item-has-children--bottom and the
+  ".header.header__product-menu ul.nav li" selector used by the inline scripts in the
+  layouts are all preserved.
+{%- endcomment -%}
+{%- assign productCode = page.product_code | default: "deckhouse-platform" %}
+{%- if productCode == "kubernetes-platform" %}{% assign productCode = "deckhouse-platform" %}{% endif %}
+{%- if productCode == "development-platform" %}{% assign productCode = "development-portal" %}{% endif %}
+{%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
+{%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
+{%- assign productMenuDataFallback = l2MenuDataFallback | where: "url", _conditionProductURL | first %}
+{%- assign productLogoURL = "/images/sprite.svg?v2#" | append: productCode | append: "-icon" %}
+{%- assign productName = productMenuData.title %}
+{%- unless productMenuData %}
+  {%- assign productName = productMenuDataFallback.title %}
+{%- endunless %}
+{%- comment -%}
+  Brand lockups, taken from the live site. Every product ships one on a uniform 120x36
+  canvas - that is what keeps this bar the same height on every product page, since the
+  row is as tall as its tallest child. Development Platform is the one exception at
+  120x37, and the live site's bar is 63px on that page for exactly the same reason, so
+  the odd pixel is reproduced rather than squashed.
+  Anything not listed keeps the previous mark + title, so an uncovered product still
+  renders correctly.
+  zoom-image-disable on the lockup below: assets/js/zoom-image.js makes every <img>
+  inside .content a GLightbox target and sets an inline cursor: zoom-in on it, and the
+  header renders inside that wrapper. The class is that script's own opt-out (:339).
+{%- endcomment -%}
+{%- assign productLockup = "" %}
+{%- assign lockupW = "120" %}
+{%- assign lockupH = "36" %}
+{%- case productCode %}
+  {%- when "deckhouse-platform" %}{% assign productLockup = "platform" %}
+  {%- when "stronghold" %}{% assign productLockup = "stronghold" %}
+  {%- when "observability-platform" %}{% assign productLockup = "observability" %}
+  {%- when "code" %}{% assign productLockup = "code" %}
+  {%- when "development-platform" %}{% assign productLockup = "development-platform" %}{% assign lockupH = "37" %}
+  {%- when "development-portal" %}{% assign productLockup = "development-platform" %}{% assign lockupH = "37" %}
+{%- endcase %}
+<div class="header header__product-menu header__product-menu--ru">
+  <div class="header__product-menu-inner container">
+    <div class="header__product-menu-logo">
+      {%- if productLockup != "" %}
+        <img class="header__product-lockup zoom-image-disable" src="/images/header/logo-{{ productLockup }}.svg" width="{{ lockupW }}" height="{{ lockupH }}" alt="{{ productName }}">
+      {%- else %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 20 20" fill="none">
+          <use xlink:href="{{ productLogoURL }}"></use>
+        </svg>
+        <span>{{ productName }}</span>
+      {%- endif %}
+    </div>
+    <div class="nav__trigger"></div>
+    <ul id="bottom-header-nav" class="nav header__nav header__nav--bottom">
+      {%- if productMenuData.items %}
+        {%- for item in productMenuData.items %}
+          {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif item.items %}{% assign itemClass='class="header__navigation-item menu-item-has-children menu-item-has-children--bottom"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
+          <li {{ itemClass }} {%- if item.items %} data-proofer-ignore{% endif %}>
+            <a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a>
+            {% if item.items %}
+              <div class="sub-menu-container">
+                <ul class="sub-menu">
+                  {% for item in item.items %}
+                    <li data-proofer-ignore><a href="{{ item.url }}">{{ item.title }}</a></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+          </li>
+        {%- endfor %}
+      {%- else %}
+        <li class="header__navigation-item active" data-proofer-ignore>
+          <a href="#">{{ site.data.i18n.common['documentation'][page.lang] | capitalize }}</a>
+        </li>
+      {%- endif %}
+    </ul>
+  </div>
+</div>

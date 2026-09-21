@@ -3,10 +3,10 @@ title: Control plane кластера
 permalink: ru/architecture/kubernetes-and-scheduling/control-plane.html
 lang: ru
 search: архитектура control plane
-description: Архитектура control plane кластера в Deckhouse Kubernetes Platform.
+description: Архитектура control plane кластера в Deckhouse Platform.
 ---
 
-В Deckhouse Kubernetes Platform (DKP) используется стандартный («vanilla») кластер Kubernetes. Control plane кластера включает в себя следующие базовые компоненты:
+В Deckhouse Platform (DP) используется стандартный («vanilla») кластер Kubernetes. Control plane кластера включает в себя следующие базовые компоненты:
 
 1. **kube-apiserver** — API-сервер Kubernetes. Обрабатывает REST-запросы, предоставляет интерфейс доступа к общему состоянию кластера, через который взаимодействуют все остальные компоненты, валидирует ресурсы Kubernetes API и сохраняет их в хранилище **etcd**. Включает следующие контейнеры:
 

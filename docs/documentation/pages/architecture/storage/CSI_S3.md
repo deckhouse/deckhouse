@@ -2,7 +2,7 @@
 title: Csi-s3 module
 permalink: en/architecture/storage/external/csi-s3.html
 search: csi-s3, s3
-description: Architecture of the csi-s3 module in Deckhouse Kubernetes Platform.
+description: Architecture of the csi-s3 module in Deckhouse Platform.
 ---
 
 The [`csi-s3`](/modules/csi-s3/) module is designed to manage volumes based on S3 storage. The module uses [geeseFS](https://github.com/yandex-cloud/geesefs), an S3-backed FUSE filesystem. The module enables creating StorageClass resources in Kubernetes using the S3StorageClass custom resource.
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`csi-s3`](/modules/csi-s3/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`csi-s3`](/modules/csi-s3/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![csi-s3 module architecture](../../../images/architecture/storage/c4-l2-csi-s3.png)
 

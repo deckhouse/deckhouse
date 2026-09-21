@@ -41,6 +41,14 @@ const (
 	endpointServiceNameLabelKey = "kubernetes.io/service-name"
 	endpointControllerLabelKey  = "endpointslice.kubernetes.io/managed-by"
 	controllerName              = "servicewithhealthchecks"
+
+	// resyncPeriod bounds how long a ServiceWithHealthchecks may stay out of sync with the
+	// pods on this node. New target pods are learned from watch events only, and once the
+	// last target is gone there is no probe result left to wake the reconciliation up
+	// either — so a single missed event would otherwise keep the EndpointSlice empty until
+	// the cache resync (10h by default) or an agent restart. The resync is read-only in the
+	// steady state: neither the status nor the EndpointSlice is written when nothing changed.
+	resyncPeriod = time.Minute
 )
 
 // ServiceWithHealthchecksReconciler reconciles a ServiceWithHealthchecks object
@@ -123,7 +131,20 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 
 	// update endpointslices unless ClusterIP is None
 	if serviceWithHC.Spec.ClusterIP != "None" {
-		err = r.updateEPSForServiceWithHealthchecks(ctx, serviceWithHC)
+		mayPublish, mayErr := r.mayPublishEPS(ctx, serviceWithHC)
+		if mayErr != nil {
+			r.logger.Error("unable to check the owner of the child Service", log.Err(mayErr))
+			return ctrl.Result{}, mayErr
+		}
+
+		if mayPublish {
+			err = r.updateEPSForServiceWithHealthchecks(ctx, serviceWithHC)
+		} else {
+			// Withdraw what this node published before the clash appeared. Doing it here rather
+			// than from the controller keeps the two components from undoing each other while
+			// they are rolled out one after another.
+			err = r.deleteEPSForNode(ctx, serviceWithHC)
+		}
 		if err != nil {
 			r.logger.Error("unable to update EPS for ServiceWithHealthchecks", log.Err(err))
 			return ctrl.Result{}, err
@@ -146,14 +167,14 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	kubernetes.SortConditions(serviceWithHC.Status.Conditions)
 
 	if reflect.DeepEqual(serviceWithHC.Status, updatedServiceWithHC.Status) {
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: resyncPeriod}, nil
 	}
 
 	err = r.Status().Patch(ctx, updatedServiceWithHC, patch)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to patch status of ServiceWithHealthchecks: %w", err)
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: resyncPeriod}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -252,19 +273,26 @@ func (r *ServiceWithHealthchecksReconciler) getExposedServiceWithHCForPod(ctx co
 	// iterate over saved services specifications and check if it matches pod labels
 	r.servicesWithHealthchecks.Range(func(key, value any) bool {
 		svcWithHCName := key.(types.NamespacedName)
-		svcWithHCSpec := value.(networkv1alpha1.ServiceWithHealthchecksSpec)
-		podsLabels := pod.GetLabels()
 
-		if labels.ValidatedSetSelector(svcWithHCSpec.Selector).Matches(labels.Set(podsLabels)) {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      svcWithHCName.Name,
-					Namespace: svcWithHCName.Namespace,
-				},
-			})
+		// A ServiceWithHealthchecks only ever selects pods of its own namespace, see the List
+		// call in Reconcile. Checked before the spec is read out of the interface, so that an
+		// entry of another namespace costs a string comparison instead of a struct copy.
+		if svcWithHCName.Namespace != pod.GetNamespace() {
 			return true
 		}
-		return false
+
+		svcWithHCSpec := value.(networkv1alpha1.ServiceWithHealthchecksSpec)
+		if labels.ValidatedSetSelector(svcWithHCSpec.Selector).Matches(labels.Set(pod.GetLabels())) {
+			requests = append(requests, reconcile.Request{NamespacedName: svcWithHCName})
+		}
+
+		// Every stored ServiceWithHealthchecks has to be examined, so the iteration is never
+		// stopped: sync.Map.Range treats a false return as "stop", and stopping at the first
+		// non-matching entry silently drops the event for all the entries behind it. Range
+		// order is randomized, so a pod of the Nth ServiceWithHealthchecks would only be
+		// noticed when it happens to be visited first — and a missed pod creation leaves the
+		// EndpointSlice empty until something else triggers a reconciliation.
+		return true
 	})
 	return requests
 }
@@ -428,27 +456,74 @@ func (r *ServiceWithHealthchecksReconciler) GetNodeName() string {
 	return r.nodeName
 }
 
+// mayPublishEPS reports whether the module may publish EndpointSlices under the name of this
+// resource. A Service the module does not control keeps its own selector and its own endpoints,
+// and kube-proxy balances over the union of every slice carrying the service name — so publishing
+// next to it would send traffic meant for somebody else's Service into the pods of this resource.
+//
+// The child Service is read from the cache of the manager. The agent does not watch Services, so a
+// Service appearing under this name is noticed on the next reconciliation rather than immediately;
+// the resync above bounds that window.
+func (r *ServiceWithHealthchecksReconciler) mayPublishEPS(ctx context.Context, svc networkv1alpha1.ServiceWithHealthchecks) (bool, error) {
+	var childService corev1.Service
+	err := r.Get(ctx, client.ObjectKey{Namespace: svc.GetNamespace(), Name: svc.GetName()}, &childService)
+	if errors.IsNotFound(err) {
+		// The controller has not created it yet. Slices are matched to a Service by name, so
+		// publishing ahead of it changes nothing until the Service shows up.
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return kubernetes.IsOwnedByServiceWithHealthchecks(&childService, svc.GetName()), nil
+}
+
+// deleteEPSForNode removes the EndpointSlice this node maintains for the resource, if any.
+//
+// The slice is read from the cache first, for two reasons. A name clash means somebody else's
+// objects are around, and a slice that is not ours is not ours to delete. And in the steady state
+// there is nothing to delete at all — for a resource with no pods on this node, or one stuck in a
+// conflict — so without the lookup every node would issue a DELETE on every resync.
+func (r *ServiceWithHealthchecksReconciler) deleteEPSForNode(ctx context.Context, svc networkv1alpha1.ServiceWithHealthchecks) error {
+	name := endpointSliceNameForNode(svc.GetName(), r.nodeName)
+
+	var existing discoveryv1.EndpointSlice
+	err := r.Get(ctx, client.ObjectKey{Namespace: svc.GetNamespace(), Name: name}, &existing)
+	if errors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		r.logger.Error("could not get EndpointSlice", log.Err(err), "name", name)
+		return err
+	}
+	if existing.Labels[endpointControllerLabelKey] != controllerName {
+		r.logger.Info("leaving an EndpointSlice of another controller alone", "name", name,
+			"managed_by", existing.Labels[endpointControllerLabelKey])
+		return nil
+	}
+
+	if err := r.Delete(ctx, &existing); err != nil && !errors.IsNotFound(err) {
+		r.logger.Error("could not delete EndpointSlice", log.Err(err), "name", name)
+		return err
+	}
+	return nil
+}
+
+func endpointSliceNameForNode(svcName, nodeName string) string {
+	return svcName + "-" + nodeName
+}
+
 func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(ctx context.Context, svc networkv1alpha1.ServiceWithHealthchecks) error {
 	r.logger.Debug("updating endpoints for service", "swh_name", svc.GetName(), "namespace", svc.GetNamespace())
-	desiredNameForEndpointSlice := svc.GetName() + "-" + r.nodeName
+	desiredNameForEndpointSlice := endpointSliceNameForNode(svc.GetName(), r.nodeName)
 
 	// Build the desired state
 	desiredEPS := r.BuildEndpointSlice(desiredNameForEndpointSlice, svc)
 
 	// If there are no endpoints, the slice should not exist on this node
 	if len(desiredEPS.Endpoints) == 0 {
-		epsToDelete := &discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      desiredNameForEndpointSlice,
-				Namespace: svc.GetNamespace(),
-			},
-		}
-		err := r.Delete(ctx, epsToDelete)
-		if err != nil && !errors.IsNotFound(err) {
-			r.logger.Error("could not delete EndpointSlice", log.Err(err), "name", desiredNameForEndpointSlice)
-			return err
-		}
-		return nil // Exit here after deleting (or if already deleted), do not proceed to Get/Update.
+		// Exit here after deleting (or if already deleted), do not proceed to Get/Update.
+		return r.deleteEPSForNode(ctx, svc)
 	}
 
 	// Try to get the existing one to see if we need to update it.
@@ -469,10 +544,15 @@ func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(
 		return err
 	}
 
+	// A slice created before the owner reference was introduced, or left over from a recreated
+	// parent, is adopted here instead of being recreated.
+	ownerIsOutdated := !reflect.DeepEqual(existingEPS.OwnerReferences, desiredEPS.OwnerReferences)
+
 	// Use Patch instead of Update to avoid conflicts and ResourceVersion issues.
-	if !endpointsAreEqual(existingEPS.Endpoints, desiredEPS.Endpoints) {
+	if ownerIsOutdated || !endpointsAreEqual(existingEPS.Endpoints, desiredEPS.Endpoints) {
 		patch := client.MergeFrom(existingEPS.DeepCopy())
 		existingEPS.Endpoints = desiredEPS.Endpoints
+		existingEPS.OwnerReferences = desiredEPS.OwnerReferences
 		if err := r.Patch(ctx, existingEPS, patch); err != nil {
 			r.logger.Error("couldn't patch EndpointSlice", log.Err(err), "name", desiredNameForEndpointSlice)
 			return err
@@ -490,6 +570,7 @@ func (r *ServiceWithHealthchecksReconciler) BuildEndpointSlice(desiredName strin
 				endpointServiceNameLabelKey: svc.GetName(),
 				endpointControllerLabelKey:  controllerName,
 			},
+			OwnerReferences: []metav1.OwnerReference{ownerReferenceForServiceWithHealthchecks(svc)},
 		},
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Ports:       r.buildPortsForEndpointslice(svc),
@@ -497,6 +578,24 @@ func (r *ServiceWithHealthchecksReconciler) BuildEndpointSlice(desiredName strin
 
 	eps.Endpoints = r.buildEndpoints(svc)
 	return eps
+}
+
+// ownerReferenceForServiceWithHealthchecks ties a slice to the resource it was built from, so
+// that the garbage collector removes the slices of every node once that resource is gone. The
+// child Service is owned by the same resource, so both branches of the tree are cleaned up.
+//
+// BlockOwnerDeletion is deliberately left unset: with the OwnerReferencesPermissionEnforcement
+// admission plugin enabled it would require the agent to have access to the
+// servicewithhealthchecks/finalizers subresource, which it has no other reason to hold.
+func ownerReferenceForServiceWithHealthchecks(svc networkv1alpha1.ServiceWithHealthchecks) metav1.OwnerReference {
+	isController := true
+	return metav1.OwnerReference{
+		APIVersion: networkv1alpha1.GroupVersion.String(),
+		Kind:       kubernetes.ServiceWithHealthchecksKind,
+		Name:       svc.GetName(),
+		UID:        svc.GetUID(),
+		Controller: &isController,
+	}
 }
 
 func (r *ServiceWithHealthchecksReconciler) buildPortsForEndpointslice(svc networkv1alpha1.ServiceWithHealthchecks) []discoveryv1.EndpointPort {

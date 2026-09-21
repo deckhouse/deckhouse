@@ -134,7 +134,7 @@ spec:
                       properties:
                         deckhouse:
                           description: |
-                            Требуемая версия Deckhouse Kubernetes Platform.
+                            Требуемая версия Deckhouse Platform.
                           properties:
                             constraint:
                               description: |

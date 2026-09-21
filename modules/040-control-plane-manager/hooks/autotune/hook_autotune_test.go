@@ -236,7 +236,8 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: autotune", func()
 			st := autotuneCMState(f)
 			// Only kubeApiserver moved: measured 0.25 cpu against a 100m baseline is
 			// past the deadband, the other three were measured at 0.10 cpu and stay.
-			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(250)))
+			// 250m measured + the 10% margin.
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(275)))
 			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(int64(100)))
 			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(int64(100)))
 			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(int64(100)))
@@ -277,15 +278,16 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: autotune", func()
 
 		// The fixture is fully deterministic, so the numbers are pinned exactly: a 1
 		// cpu master keeps 900m after the kubelet floor and hosts nothing else, so
-		// headroom is 900m; four components measured at 500m each propose 2000m.
+		// headroom is 900m; four components measured at 500m each propose 550m with
+		// the margin, 2200m in total.
 		It("keeps applied values, stores pendingRaiseSum, emits deficit metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			st := autotuneCMState(f)
 			for _, comp := range controlPlaneComponents {
 				Expect(*st[resourceCPU].Components[comp].AppliedMilliCPU).To(Equal(int64(50)))
 			}
-			Expect(st[resourceCPU].PendingRaiseSum).To(Equal(int64(2000)))
-			Expect(deficitMetric(f, resourceCPU)).To(Equal(float64(1100)))
+			Expect(st[resourceCPU].PendingRaiseSum).To(Equal(int64(2200)))
+			Expect(deficitMetric(f, resourceCPU)).To(Equal(float64(1300)))
 			// Memory was measured exactly at its baseline, so nothing was held back.
 			Expect(deficitMetric(f, resourceMemory)).To(Equal(float64(-1)))
 		})
@@ -501,9 +503,9 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: autotune", func()
 			Expect(f).To(ExecuteSuccessfully())
 			st := autotuneCMState(f)
 			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(100)))
-			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(int64(250)))
-			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(int64(250)))
-			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(int64(250)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(int64(275)))
+			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(int64(275)))
+			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(int64(275)))
 		})
 	})
 

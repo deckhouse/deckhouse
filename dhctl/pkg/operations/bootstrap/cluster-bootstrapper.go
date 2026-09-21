@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -781,6 +781,14 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "MetaConfig was loaded")
 
+	// Both CIDRs lost their ClusterConfiguration schema requirement now that they may live in
+	// ModuleConfig instead (see RequireNetwork); bootstrap is the one caller that must still refuse
+	// to proceed when neither document sets them, and it must do so here — before any infrastructure
+	// is created — rather than render an empty --service-cluster-ip-range into a master manifest.
+	if err := metaConfig.RequireNetwork(); err != nil {
+		return err
+	}
+
 	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
 		return fmt.Errorf("apply cni bootstrap: %w", err)
 	}
@@ -1350,7 +1358,22 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 		DeckhouseTimeout: b.Options.Bootstrap.DeckhouseTimeout,
 	}
 
-	installDeckhouseResult, err := InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, bctx.deckhouseInstallConfig, installParams)
+	// With the node interface attached, because installing Deckhouse is where the store on the first
+	// master is handed over to the cluster, and that is done by running commands on that node.
+	//
+	// Constructing the client with only KubeClient set — which is what every call here used to do —
+	// left NodeInterface nil, and the handover skipped both of its steps without saying so.
+	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return fmt.Errorf("Could not get NodeInterface: %w", err)
+	}
+
+	installDeckhouseResult, err := InstallDeckhouse(
+		ctx,
+		(&client.KubernetesClient{KubeClient: kubeCl}).WithNodeInterface(nodeInterface),
+		bctx.deckhouseInstallConfig,
+		installParams,
+	)
 	if err != nil {
 		return err
 	}
@@ -1783,7 +1806,7 @@ func isCloudProviderCredentialSecret(resource *template.Resource) bool {
 		return false
 	}
 	secretType, _, _ := unstructured.NestedString(resource.Object.Object, "type")
-	return secretType == proto.CredentialsSecretType
+	return secretType == validatev1.CredentialsSecretType
 }
 
 // prependMissingNamespaces inserts a minimal Namespace stub for every distinct

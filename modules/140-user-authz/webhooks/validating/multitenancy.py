@@ -141,11 +141,18 @@ def validate(ctx: DotMap) -> tuple[list[str], list[str]]:
     kind = req.kind.kind.lower()
 
     if kind == "clusterauthorizationrule":
-        # don't check ClusterAuthorizationRule if user-authz MultiTenancy option is enabled
-        if is_multitenancy_enabled(ctx):
-            return [], []
+        # A limitNamespaces pattern that does not compile is checked either way. It is a property of
+        # the rule, not of the module setting, and it is worth rejecting at admission: the webhook
+        # quarantines such a rule at runtime, which means its subjects silently get LESS access than
+        # the author wrote, reported only by a metric nobody is watching when they hit Apply.
+        errors, warnings = validate_car_limit_namespaces_patterns(req.object)
 
-        return validate_car_multitenancy_related_fields(req.object)
+        # don't check the multi-tenancy fields if user-authz MultiTenancy option is enabled
+        if is_multitenancy_enabled(ctx):
+            return errors, warnings
+
+        field_errors, field_warnings = validate_car_multitenancy_related_fields(req.object)
+        return errors + field_errors, warnings + field_warnings
     elif kind == "moduleconfig":
         settings = req.object.spec.settings
         field_present = "enableMultiTenancy" in settings
@@ -187,6 +194,201 @@ MULTITENANCY_RESTRICTED_FIELDS = {
     'namespaceSelector': "namespaceSelector option",
     'limitNamespaces': "limitNamespaces option"
 }
+
+# The authorization webhook compiles limitNamespaces with Go's regexp, which is RE2. This admission
+# check exists so that a pattern RE2 cannot compile is refused when it is written rather than
+# quarantined at runtime, where its only trace is a metric nobody is watching at the moment somebody
+# presses apply.
+#
+# It deliberately does NOT compile the pattern with Python's re to decide. The two dialects differ in
+# both directions, and only one of those directions is safe to be wrong about:
+#
+#   - Python accepts things RE2 refuses: lookaround, backreferences, atomic groups, conditionals,
+#     possessive quantifiers, inline comments, \Z, several inline flags, repeat counts above 1000.
+#     Missing one of these lets a rule through that will be quarantined - the status quo, tolerable.
+#   - Python REFUSES things RE2 accepts: \z, \pL, \Q...\E, \x{...}, (?<name>...), (?U). Rejecting
+#     one of these blocks an administrator from editing a rule that works. That is a regression, and
+#     it is the direction that must not happen.
+#
+# So the check is made of two parts that are true of RE2 specifically: a structural balance scan,
+# and a list of constructs RE2 does not have. Anything it is unsure about is allowed through, where
+# the runtime quarantine and its alert remain the backstop.
+
+# Constructs Python accepts and RE2 does not. Ordered so the longer prefixes match first.
+RE2_UNSUPPORTED = (
+    ("(?<=", "lookbehind"),
+    ("(?<!", "negative lookbehind"),
+    ("(?=", "lookahead"),
+    ("(?!", "negative lookahead"),
+    ("(?>", "atomic group"),
+    ("(?#", "inline comment"),
+    ("(?P=", "backreference"),
+    ("(?(", "conditional"),
+)
+
+# Inline flags RE2 knows. Anything else in a (?letters) group is a Python-only flag.
+RE2_INLINE_FLAGS = set("imsU-:")
+
+# RE2 refuses a repetition count above this.
+RE2_MAX_REPEAT = 1000
+
+
+def _spans(pattern: str):
+    """Yields (index, char, in_class, in_quote) with escapes resolved, so a scan can trust what it sees."""
+    i = 0
+    in_class = False
+    in_quote = False
+    while i < len(pattern):
+        ch = pattern[i]
+        if in_quote:
+            if ch == "\\" and i + 1 < len(pattern) and pattern[i + 1] == "E":
+                in_quote = False
+                i += 2
+                continue
+            i += 1
+            continue
+        if ch == "\\":
+            if i + 1 < len(pattern) and pattern[i + 1] == "Q":
+                in_quote = True
+                i += 2
+                continue
+            i += 2  # the escaped character is a literal, whatever it is
+            continue
+        if ch == "[" and not in_class:
+            in_class = True
+        elif ch == "]" and in_class:
+            in_class = False
+        yield i, ch, in_class, in_quote
+        i += 1
+
+
+def structural_error(pattern: str) -> str:
+    """Reports an imbalance RE2 would refuse. Only certainties - never a guess."""
+    depth = 0
+    in_class_at = None
+    for i, ch, in_class, _ in _spans(pattern):
+        if ch == "[" and in_class and in_class_at is None:
+            in_class_at = i
+            continue
+        if ch == "]" and not in_class:
+            in_class_at = None
+            continue
+        if in_class:
+            continue
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth < 0:
+                return "an unbalanced ')'"
+    if depth > 0:
+        return "an unclosed '('"
+    if in_class_at is not None:
+        return "an unclosed '['"
+    if pattern.endswith("\\") and not pattern.endswith("\\\\"):
+        return "a trailing backslash"
+    return ""
+
+
+def re2_unsupported_construct(pattern: str) -> str:
+    """Reports a construct RE2 does not have. Python accepts all of these, so compiling would not catch them."""
+    for i, ch, in_class, in_quote in _spans(pattern):
+        if in_class or in_quote:
+            continue
+        if ch == "\\":
+            continue
+        rest = pattern[i:]
+        for token, description in RE2_UNSUPPORTED:
+            if rest.startswith(token):
+                return description
+        # An inline flag group: (?letters) or (?letters:...). RE2 knows i, m, s and U.
+        if rest.startswith("(?"):
+            j = i + 2
+            flags = ""
+            while j < len(pattern) and pattern[j] not in ")::":
+                flags += pattern[j]
+                j += 1
+            if flags and all(c.isalpha() or c == "-" for c in flags):
+                unknown = [c for c in flags if c not in RE2_INLINE_FLAGS]
+                if unknown:
+                    return "the inline flag '%s', which RE2 does not have" % unknown[0]
+        # A repetition RE2 refuses for being too large.
+        if ch == "{":
+            close = pattern.find("}", i)
+            if close != -1:
+                body = pattern[i + 1:close]
+                for part in body.split(","):
+                    part = part.strip()
+                    if part.isdigit() and int(part) > RE2_MAX_REPEAT:
+                        return "a repetition of %s, above RE2's limit of %d" % (part, RE2_MAX_REPEAT)
+
+    # A backreference written as \1 .. \9. Scanned separately because _spans hides escapes.
+    #
+    # Not every \<digit> is one: Go reads \ plus two or three octal digits as a character, so
+    # "\123" compiles and only a lone "\1" - a digit with no octal digit after it - does not.
+    # Rejecting the octal form locked administrators out of editing rules that work.
+    i = 0
+    while i < len(pattern) - 1:
+        if pattern[i] == "\\":
+            nxt = pattern[i + 1]
+            if nxt.isdigit() and nxt != "0" and not _is_octal_escape(pattern, i):
+                return "a backreference"
+            i += 2
+            continue
+        i += 1
+
+    # A possessive quantifier: ++, *+, ?+, }+ . RE2 has no possessive form.
+    #
+    # The quantifier has to be the one the regular expression means, not the character that
+    # happens to precede the "+" in the string: in "a\?+" the "?" is an escaped literal and the
+    # "+" repeats it, which RE2 compiles. _spans yields the unescaped characters, so the previous
+    # one it yielded is the previous character of the expression.
+    prev = ""
+    for _, ch, in_class, in_quote in _spans(pattern):
+        if in_class or in_quote:
+            prev = ""
+            continue
+        if ch == "+" and prev in ("+", "*", "?", "}"):
+            return "a possessive quantifier"
+        prev = ch
+
+    return ""
+
+
+def _is_octal_escape(pattern: str, backslash: int) -> bool:
+    r"""Reports whether pattern[backslash:] is \ plus two or three octal digits, which RE2 reads as
+    a character. A single \1 is not, and neither is \18: the 8 is not an octal digit."""
+    digits = 0
+    for ch in pattern[backslash + 1:backslash + 4]:
+        if ch not in "01234567":
+            break
+        digits += 1
+    return digits >= 2
+
+
+def validate_car_limit_namespaces_patterns(obj: DotMap) -> tuple[list[str], list[str]]:
+    """Refuses a limitNamespaces entry the authorization webhook would not be able to compile."""
+    errors = []
+    resource_name = obj.metadata.name
+
+    limit_namespaces = obj.spec.get("limitNamespaces") if "limitNamespaces" in obj.spec else None
+    if not isinstance(limit_namespaces, list):
+        return errors, []
+
+    for pattern in limit_namespaces:
+        if not isinstance(pattern, str):
+            continue
+        reason = structural_error(pattern) or re2_unsupported_construct(pattern)
+        if reason:
+            errors.append(
+                f"limitNamespaces entry '{pattern}' in ClusterAuthorizationRule '{resource_name}' "
+                f"has {reason}, which the authorization webhook's regular expression engine (RE2) "
+                f"cannot compile. The rule would be quarantined and its subjects would get less "
+                f"access than written."
+            )
+
+    return errors, []
+
 
 def validate_car_multitenancy_related_fields(obj: DotMap) -> tuple[list[str], list[str]]:
     errors = []

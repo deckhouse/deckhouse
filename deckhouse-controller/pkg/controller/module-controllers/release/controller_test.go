@@ -28,7 +28,6 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	promdto "github.com/prometheus/client_model/go"
@@ -51,6 +50,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	installermock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/mock"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"

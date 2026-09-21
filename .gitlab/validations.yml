@@ -58,7 +58,7 @@ release_requirements_validation:
   stage: validate
   needs: []
   tags:
-    - vm-intteam-cloud-d8-ssdlc-runner
+    - deckhouse
   variables:
     GIT_DEPTH: "0"
     DIFF_PATH: ./pr.diff

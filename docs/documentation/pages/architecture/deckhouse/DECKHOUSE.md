@@ -2,16 +2,16 @@
 title: Deckhouse module
 permalink: en/architecture/deckhouse/deckhouse.html
 search: deckhouse, deckhouse-controller, modules
-description: Architecture of the deckhouse module in Deckhouse Kubernetes Platform.
+description: Architecture of the deckhouse module in Deckhouse Platform.
 ---
 
-The [`deckhouse`](/modules/deckhouse/) module implements the core of Deckhouse Kubernetes Platform (DKP), performing the following operations:
+The [`deckhouse`](/modules/deckhouse/) module implements the core of Deckhouse Platform (DP), performing the following operations:
 
 - Platform updates
 - Module configuration management
 - Module installation and updates
 - Module documentation build triggering
-- Validation of custom resources managed by DKP modules
+- Validation of custom resources managed by DP modules
 
 The module manages the following custom resources in the `deckhouse.io` API group:
 
@@ -25,7 +25,7 @@ The module manages the following custom resources in the `deckhouse.io` API grou
   - [ModuleUpdatePolicy](../../reference/api/cr.html#moduleupdatepolicy): Rules for module updates and version transition automation.
 
 - Platform management:
-  - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease): An object that defines the DKP release (version) and platform update policy.
+  - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease): An object that defines the DP release (version) and platform update policy.
 
 - Package management ([Marketplace](../marketplace/)):
   - [Application](../../reference/api/cr.html#application): Description and desired state of an application package (a group of components or an application).
@@ -40,7 +40,7 @@ The module manages the following custom resources in the `deckhouse.io` API grou
   - ObjectKeeper: A resource that links Kubernetes resources using `ownerReference`.
   - [ModuleDocumentation](../../reference/api/cr.html#moduledocumentation): Description of parameters for generating and storing module documentation.
 
-- Management of custom resources controlled by DKP modules:
+- Management of custom resources controlled by DP modules:
   - [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook): Settings and handlers for resource conversion webhooks.
   - [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook): Settings and handlers for resource validation webhooks.
 
@@ -53,7 +53,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`deckhouse`](/modules/deckhouse/) module and its interaction with other DKP components are shown in the following diagram:
+The Level 2 C4 architecture of the [`deckhouse`](/modules/deckhouse/) module and its interaction with other DP components are shown in the following diagram:
 
 ![Deckhouse module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse.svg)
 
@@ -87,11 +87,11 @@ The module consists of the following components:
    * **deckhouse**: Main container.
    * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the main container component debug interface.
   
-1. **Webhook-handler** (Deployment): Consists of a single **handler** container and implements a generic webhook for conversion and validation of custom resources managed by DKP.
+1. **Webhook-handler** (Deployment): Consists of a single **handler** container and implements a generic webhook for conversion and validation of custom resources managed by DP.
 
    The component watches [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) and [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) custom resources and, based on them, generates hook Python files for [shell-operator](https://github.com/flant/shell-operator) from templates. When `kube-apiserver` sends resource validation or conversion requests, shell-operator runs the required hook and returns the processing result.
 
-1. **Cni-migration-manager** (Deployment): An optional component running on control plane nodes, consisting of a single **manager** container. The component manages the network plugin (CNI) switching process in the DKP cluster and records the current state in the CNIMigration custom resource. Migration to Flannel, Simple bridge, and Cilium is supported. For details on switching CNI in the cluster, refer to the [corresponding guide](/products/kubernetes-platform/guides/cni-migration.html).
+1. **Cni-migration-manager** (Deployment): An optional component running on control plane nodes, consisting of a single **manager** container. The component manages the network plugin (CNI) switching process in the DP cluster and records the current state in the CNIMigration custom resource. Migration to Flannel, Simple bridge, and Cilium is supported. For details on switching CNI in the cluster, refer to the [corresponding guide](/products/kubernetes-platform/guides/cni-migration.html).
 
    {% alert level="info" %}
    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command.
@@ -112,10 +112,10 @@ The module interacts with the following components:
    - Watching Pod and DaemonSet resources, as well as restarting Pods when the network plugin is changed.
    - Watching resources described in the ObjectKeeper custom resource.
    - Creating and updating Lease resources.
-   - Creating, deleting, modifying, and watching resources described in DKP modules.
+   - Creating, deleting, modifying, and watching resources described in DP modules.
    - Authorizing requests.
 
-1. [**Documentation**](/modules/documentation/): Updating documentation when a DKP module is added or updated.
+1. [**Documentation**](/modules/documentation/): Updating documentation when a DP module is added or updated.
 
 1. **Image registry**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in `Unmanaged` mode.
 
@@ -123,5 +123,5 @@ The module interacts with the following components:
 
 The module is interacted with by the following external components:
 
-* **Kube-apiserver**: Validation and conversion of DKP custom resources.
+* **Kube-apiserver**: Validation and conversion of DP custom resources.
 * **Prometheus-main**: Collecting metrics from the `deckhouse` and `webhook-handler` containers.

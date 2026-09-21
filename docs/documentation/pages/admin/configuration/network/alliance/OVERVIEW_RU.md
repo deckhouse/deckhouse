@@ -6,14 +6,14 @@ lang: ru
 
 <!-- перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D1%84%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F-%D0%B8-%D0%BC%D1%83%D0%BB%D1%8C%D1%82%D0%B8%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80 -->
 
-В Deckhouse Kubernetes Platform (DKP) поддерживаются две схемы межкластерного взаимодействия:
+В Deckhouse Platform (DP) поддерживаются две схемы межкластерного взаимодействия:
 
 - [Мультикластер](../alliance/multicluster.html);
 - [Федерация](../alliance/federation.html).
 
 Обе схемы могут быть реализованы средствами Istio (модуль [`istio`](/modules/istio/)) или Cilium (модуль [`cni-cilium`](/modules/cni-cilium/)). Оба инструмента обеспечивают развёртывание service mesh (далее — сервис-меш) для контроля и настройки сетевых взаимодействий между приложениями внутри кластера.
 
-## Особенности использования service mesh DKP
+## Особенности использования service mesh DP
 
 Доступные сценарии зависят от редакции платформы.
 

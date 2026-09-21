@@ -32,7 +32,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	corev1 "k8s.io/api/core/v1"
@@ -50,6 +49,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"

@@ -143,6 +143,7 @@ status:
 							{"address": "1.2.3.4", "port": 234}
 						  ],
                           "apiHost": "api-host-0",
+                          "clusterID": "cluster-id-0",
                           "networkName": "network-name-0"
 						}`,
 						Code: http.StatusOK,
@@ -350,6 +351,9 @@ status:
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.private.networkName").String()).To(Equal("network-name-0"))
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-1").Field("status.metadataCache.private.networkName").String()).To(Equal("network-name-1"))
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-2").Field("status.metadataCache.private.networkName").String()).To(Equal("network-name-2"))
+
+			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.private.clusterID").String()).To(Equal("cluster-id-0"))
+			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-1").Field("status.metadataCache.private.clusterID").Exists()).To(BeFalse())
 
 			tokenPF0, errpf0p := jose.ParseSigned(bearerTokens["proper-hostname-0"])
 			Expect(errpf0p).ShouldNot(HaveOccurred())

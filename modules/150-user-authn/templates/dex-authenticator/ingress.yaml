@@ -1,4 +1,5 @@
 {{- $context := . }}
+{{- if eq (include "helm_lib_module_ingress_enabled" $context) "true" }}
 {{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
 {{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- if not .spec.applications }}
@@ -106,4 +107,5 @@ spec:
     {{- end }}
   {{- end }}
   {{- end }}
+{{- end }}
 {{- end }}

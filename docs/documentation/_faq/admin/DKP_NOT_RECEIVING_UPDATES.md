@@ -1,5 +1,5 @@
 ---
-title: What should I do if DKP is not receiving updates from the configured channel?
+title: What should I do if DP is not receiving updates from the configured channel?
 subsystems:
   - deckhouse
 lang: en
@@ -43,7 +43,7 @@ lang: en
   If the `search` parameter in `/etc/resolv.conf` file specifies a domain with wildcard DNS resolution configured,
   this may lead to incorrect IP address resolution for the Deckhouse image registry (see example below).
 
-#### Example DNS settings that may cause issues resolving the DKP image registry IP address
+#### Example DNS settings that may cause issues resolving the DP image registry IP address
 
 Below is an example of how DNS settings may result in different resolution behavior on the node and in a Kubernetes Pod:
 

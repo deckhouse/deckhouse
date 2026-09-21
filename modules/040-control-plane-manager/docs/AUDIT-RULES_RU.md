@@ -7,8 +7,8 @@ title: "Встроенные правила аудита"
 
 ## Что такое Audit Policy
 
-Audit Policy — это YAML-файл, который определяет, какие события должен записывать API-сервер.  
-Когда происходит запрос, Kubernetes проверяет его на соответствие правилам в файле.  
+Audit Policy — это YAML-файл, который определяет, какие события должен записывать API-сервер.
+Когда происходит запрос, Kubernetes проверяет его на соответствие правилам в файле.
 **Первое сработавшее правило** определяет уровень логирования.
 
 ## Структура политики
@@ -70,7 +70,7 @@ rules:                       # Набор правил для аудита
 
 ## Встроенные правила аудита
 
-В Deckhouse Kubernetes Platform (DKP) по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.  
+В Deckhouse Platform (DP) по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.
 
 В этой политике реализованы следующие правила:
 - [Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.](#rule-1)
@@ -338,7 +338,9 @@ users:
   - system:serviceaccount:d8-system:deckhouse
   - system:serviceaccount:d8-system:documentation
   - system:serviceaccount:d8-system:network-policy-engine
+  - system:serviceaccount:d8-system:registry-controller
   - system:serviceaccount:d8-system:registry-nodeservices
+  - system:serviceaccount:d8-system:registry-storage
   - system:serviceaccount:d8-system:terraform-auto-converger
   - system:serviceaccount:d8-system:terraform-state-exporter
   - system:serviceaccount:d8-system:webhook-handler
@@ -818,7 +820,9 @@ rules:
       - system:serviceaccount:d8-system:deckhouse
       - system:serviceaccount:d8-system:documentation
       - system:serviceaccount:d8-system:network-policy-engine
+      - system:serviceaccount:d8-system:registry-controller
       - system:serviceaccount:d8-system:registry-nodeservices
+      - system:serviceaccount:d8-system:registry-storage
       - system:serviceaccount:d8-system:terraform-auto-converger
       - system:serviceaccount:d8-system:terraform-state-exporter
       - system:serviceaccount:d8-system:webhook-handler

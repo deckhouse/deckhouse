@@ -158,7 +158,7 @@ spec:
           value: "1"
         {{- end }}
         - name: ISTIO_META_CLUSTER_ID
-          value: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
+          value: {{ include "istioClusterID" $ }}
         - name: ISTIO_META_NETWORK
           value: {{ include "istioNetworkName" $ }}
         - name: JWT_POLICY

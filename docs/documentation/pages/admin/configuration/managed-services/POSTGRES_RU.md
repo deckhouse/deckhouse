@@ -1,28 +1,28 @@
 ---
 title: "Managed PostgreSQL"
 permalink: ru/admin/configuration/managed-services/postgres/
-description: "Администрирование managed-сервиса PostgreSQL в Deckhouse Kubernetes Platform"
+description: "Администрирование managed-сервиса PostgreSQL в Deckhouse Platform"
 lang: ru
 ---
 
-Сервис Managed PostgreSQL помогает разворачивать и поддерживать PostgreSQL в DKP. [Поддерживаемая версия PostgreSQL](/modules/managed-postgres/user_guide.html#%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B8%D0%B2%D0%B0%D0%B5%D0%BC%D1%8B%D0%B5-%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D0%B8-postgresql) — 17.6.
+Сервис Managed PostgreSQL помогает разворачивать и поддерживать PostgreSQL в DP. [Поддерживаемая версия PostgreSQL](/modules/managed-postgres/user_guide.html#%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B8%D0%B2%D0%B0%D0%B5%D0%BC%D1%8B%D0%B5-%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D0%B8-postgresql) — 17.6.
 
 На этой странице описано, что и как может настраивать администратор кластера: управление ограничениями ресурсов и топологией, настройка проверки параметров, установка значений по умолчанию и привязка к узлам кластера.
 
 ## Включение сервиса
 
-Чтобы включить в DKP сервис Managed PostgreSQL, выполните следующие шаги:
+Чтобы включить в DP сервис Managed PostgreSQL, выполните следующие шаги:
 
 1. Убедитесь, что выполнены [требования к работе модуля `managed-postgres`](/modules/managed-postgres/configuration.html#требования).
-1. [Включите модуль `managed-postgres`](/modules/managed-postgres/configuration.html#enable) в web-интерфейсе DKP или другими способами.
-1. Создайте [PostgresClass](/modules/managed-postgres/cr.html#postgresclass-v1alpha1) с необходимыми настройками, которые будут использоваться пользователями при создании объектов Postgres. Также можно использовать PostgresClass `default`, создаваемый модулем при включении. PostgresClass `default` содержит базовые настройки, чтобы пользователи могли сразу после включения Managed PostgreSQL в DKP создавать базы данных. Для production-окружений рекомендуется создавать отдельные PostgresClass с явными настройками и ограничениями.
+1. [Включите модуль `managed-postgres`](/modules/managed-postgres/configuration.html#enable) в web-интерфейсе DP или другими способами.
+1. Создайте [PostgresClass](/modules/managed-postgres/cr.html#postgresclass-v1alpha1) с необходимыми настройками, которые будут использоваться пользователями при создании объектов Postgres. Также можно использовать PostgresClass `default`, создаваемый модулем при включении. PostgresClass `default` содержит базовые настройки, чтобы пользователи могли сразу после включения Managed PostgreSQL в DP создавать базы данных. Для production-окружений рекомендуется создавать отдельные PostgresClass с явными настройками и ограничениями.
 
 После включения модуля пользователи смогут сами создавать базы данных PostgreSQL. Пользовательские операции с сервисом описаны [в разделе «Использование» →
 «Managed-сервисы» → «Managed PostgreSQL»](../../../user/managed-services/postgres.html).
 
 ## Зависимости для отдельных функций
 
-Некоторые функции модуля требуют дополнительной настройки компонентов Deckhouse Kubernetes Platform или инфраструктуры кластера:
+Некоторые функции модуля требуют дополнительной настройки компонентов Deckhouse Platform или инфраструктуры кластера:
 
 | Функция                                                  | Требование                                                                                                                                                                                 |
 |----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

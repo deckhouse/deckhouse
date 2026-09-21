@@ -30,9 +30,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -127,6 +127,37 @@ func TestClusterConfigForInfrastructure(t *testing.T) {
 		}
 		infra := m.clusterConfigForInfrastructure()
 		_, ok := infra["cloud"]
+		require.False(t, ok)
+	})
+
+	// OpenStack and HuaweiCloud layouts read var.clusterConfiguration.podSubnetCIDR (etc.) directly
+	// and cannot read ModuleConfig; once a cluster migrates and the field is removed from
+	// ClusterConfiguration, Terraform must still get the value the cluster actually runs with, or
+	// every apply from then on hits an object with no such attribute at all.
+	t.Run("resolves network parameters for Terraform even after they are removed from ClusterConfiguration", func(t *testing.T) {
+		m := metaConfigWithNetwork(t,
+			nil, // removed from ClusterConfiguration
+			map[string]interface{}{
+				"podSubnetCIDR":           "10.11.0.0/16",
+				"serviceSubnetCIDR":       "10.22.0.0/16",
+				"podSubnetNodeCIDRPrefix": "23",
+			},
+		)
+		m.ClusterType = CloudClusterType
+		m.ClusterConfig["cloud"] = json.RawMessage(`{"provider":"OpenStack"}`)
+
+		infra := m.clusterConfigForInfrastructure()
+
+		var podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix string
+		require.NoError(t, json.Unmarshal(infra["podSubnetCIDR"], &podSubnetCIDR))
+		require.NoError(t, json.Unmarshal(infra["serviceSubnetCIDR"], &serviceSubnetCIDR))
+		require.NoError(t, json.Unmarshal(infra["podSubnetNodeCIDRPrefix"], &podSubnetNodeCIDRPrefix))
+		require.Equal(t, "10.11.0.0/16", podSubnetCIDR)
+		require.Equal(t, "10.22.0.0/16", serviceSubnetCIDR)
+		require.Equal(t, "23", podSubnetNodeCIDRPrefix)
+
+		// The persisted ClusterConfig (→ the secret) must still not carry them.
+		_, ok := m.ClusterConfig["podSubnetCIDR"]
 		require.False(t, ok)
 	})
 }
@@ -396,6 +427,70 @@ spec:
 			require.Equal(t, "test-password", registry.Password)
 			require.Equal(t, "-----BEGIN CERTIFICATE-----", registry.CA)
 		})
+		// The mode the whole cluster is built from, not just the mode the installer pulls its own
+		// images with. cfg.Registry is what the bashible context reads, and it decides whether the
+		// steps that stand up the registry on the node run at all — with an Unmanaged answer here they
+		// are skipped, the store stays empty, and Deckhouse never pulls. That is a cluster that
+		// installs successfully and does not work, so it is asserted on the parsed configuration
+		// rather than on the provider that produced it.
+		//
+		// Note the cluster in this template is a Cloud one: this configuration used to be refused
+		// outright before an installation from a bundle was allowed outside static clusters.
+		t.Run("ModuleConfig registry, a cache with no upstream -> the cluster is built with a local registry", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+				"manifests": []string{
+					`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    storage:
+      cache: true
+      size: 20Gi
+      source:
+        bundleRef: d8-mirror-bundle
+        expectedDigests: 556
+`,
+				},
+			})
+			require.Equal(t, registry_const.ModeLocal, cfg.Registry.Settings.Mode,
+				"a cache with nothing to fill it from over the network is an install from a bundle")
+			require.True(t, cfg.Registry.IsLocal())
+			require.Equal(t, registry_const.BundleImagesRepo, cfg.Registry.Settings.RemoteData.ImagesRepo,
+				"the nodes must be pointed at the bundle registry the tunnel serves, not at an upstream they cannot reach")
+		})
+		t.Run("ModuleConfig registry, a cache with an upstream -> an ordinary install", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+				"manifests": []string{
+					`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    primary:
+      upstream:
+        scheme: HTTPS
+        host: registry.deckhouse.io
+        path: /deckhouse/ce
+    storage:
+      cache: true
+      size: 20Gi
+`,
+				},
+			})
+			require.NotEqual(t, registry_const.ModeLocal, cfg.Registry.Settings.Mode,
+				"an upstream is a source of images, so nothing here says bundle")
+		})
 	})
 
 	// A managed cluster (EKS) carries no ClusterConfiguration, so there is no defaultCRI to
@@ -482,6 +577,32 @@ func TestEnrichProxyData(t *testing.T) {
 			"httpsProxy": "https://2.3.4.5",
 			"noProxy":    []string{"example.com", ".example.com", "127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
+	})
+
+	// The two CIDRs are being migrated to ModuleConfig control-plane-manager; noProxy must exclude
+	// the value the control plane actually runs with, not a stale/deprecated ClusterConfiguration
+	// field, or in-cluster traffic would go through the proxy on a migrated cluster.
+	t.Run("ModuleConfig network settings win over ClusterConfiguration", func(t *testing.T) {
+		cfg := metaConfigWithNetwork(t,
+			map[string]string{
+				"clusterDomain":     "cluster.local",
+				"podSubnetCIDR":     "10.111.0.0/16",
+				"serviceSubnetCIDR": "10.222.0.0/16",
+			},
+			map[string]interface{}{
+				"podSubnetCIDR":     "10.11.0.0/16",
+				"serviceSubnetCIDR": "10.22.0.0/16",
+			},
+		)
+		cfg.ClusterConfig["proxy"] = json.RawMessage(`{"httpProxy":"http://1.2.3.4"}`)
+
+		p, err := cfg.EnrichProxyData()
+		require.NoError(t, err)
+
+		require.Equal(t, map[string]any{
+			"httpProxy": "http://1.2.3.4",
+			"noProxy":   []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.11.0.0/16", "10.22.0.0/16"},
+		}, p)
 	})
 }
 
@@ -1061,7 +1182,7 @@ func TestPrepareGuardIsOffForLegacyProviderConfig(t *testing.T) {
 // A cluster whose NodeGroups lost their replica count must still be destroyable.
 func TestPrepareGuardIsOffForDestroy(t *testing.T) {
 	m := cloudMetaConfig("")
-	m.Operation = proto.OperationDestroy
+	m.Operation = string(validatev1.OperationDestroy)
 	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
 		"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
 	}}

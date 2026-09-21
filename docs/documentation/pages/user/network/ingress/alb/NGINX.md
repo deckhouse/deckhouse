@@ -1,6 +1,6 @@
 ---
 title: "Publishing applications using the Ingress NGINX Controller"
-description: "Publish applications with Ingress NGINX Controller in Deckhouse Kubernetes Platform. Ingress examples, HTTPS, gRPC, and verification."
+description: "Publish applications with Ingress NGINX Controller in Deckhouse Platform. Ingress examples, HTTPS, gRPC, and verification."
 permalink: en/user/network/ingress/alb/nginx.html
 extractedLinksMax: 0
 relatedLinks:

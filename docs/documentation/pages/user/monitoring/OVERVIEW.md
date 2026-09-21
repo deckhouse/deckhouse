@@ -1,15 +1,15 @@
 ---
 title: "Application and Infrastructure Monitoring"
-description: "Overview of the monitoring system in Deckhouse Kubernetes Platform. Ready-made Grafana dashboards, Prometheus alerts, application metrics collection. Configuring monitoring for user applications and creating custom dashboards."
+description: "Overview of the monitoring system in Deckhouse Platform. Ready-made Grafana dashboards, Prometheus alerts, application metrics collection. Configuring monitoring for user applications and creating custom dashboards."
 permalink: en/user/monitoring/
 ---
 
-This section is intended for project users of the Deckhouse Kubernetes Platform (DKP).
+This section is intended for project users of the Deckhouse Platform (DP).
 
-DKP includes a built-in monitoring system
+DP includes a built-in monitoring system
 that provides convenient tools for observing the state of the infrastructure and applications.
 
-By default, DKP provides a predefined set of dashboards and alerts that help track key application health metrics.
+By default, DP provides a predefined set of dashboards and alerts that help track key application health metrics.
 They are available through the "Monitoring" section of the [Deckhouse web interface](/modules/console/).
 
 In addition, users can:
@@ -23,7 +23,7 @@ refer to the documentation for the [`observability`](/modules/observability/) mo
 
 ## Available by default
 
-After installing DKP, users have access to a basic set of tools for monitoring the cluster out of the box.
+After installing DP, users have access to a basic set of tools for monitoring the cluster out of the box.
 
 ### Dashboards
 
@@ -45,7 +45,7 @@ Alerts are automated notifications that report events requiring attention,
 such as metric threshold violations or component availability issues.
 For most alerts, trigger thresholds can be overridden if necessary.
 
-By default, a DKP cluster includes alerts for the following types of events:
+By default, a DP cluster includes alerts for the following types of events:
 
 - Certificate expiration, as well as errors during certificate issuing or renewal
   (`cert-manager`, `extended-monitoring`, and `ingress-nginx` modules).
@@ -61,7 +61,7 @@ By default, a DKP cluster includes alerts for the following types of events:
 
 ## Monitoring configuration
 
-The following monitoring configuration options are available to DKP users:
+The following monitoring configuration options are available to DP users:
 
 - **Monitoring user applications**: You can configure metrics collection from your application
   by following the [instructions](app.html).
