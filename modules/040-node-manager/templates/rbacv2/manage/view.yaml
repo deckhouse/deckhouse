@@ -16,9 +16,11 @@ rules:
   resources:
   - instances
   - instancetypescatalogs
+  - nodeextensionrequests
   - nodegroupconfigurations
   - nodegroups
   - nodeoperations
+  - nodestaticpodrequests
   - nodeusers
   - sshcredentials
   - staticinstances

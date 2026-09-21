@@ -45,6 +45,11 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeConfig view rol
 		Expect(roleVerbs(view, "internal.deckhouse.io", "nodeconfigs")).To(ConsistOf("get", "list", "watch"),
 			"the view role must name internal.deckhouse.io/nodeconfigs")
 
+		// The NodeConfig above answers "where did it land"; these two are the
+		// objects that question is about, and neither was in any user-facing role.
+		Expect(roleVerbs(view, "deckhouse.io", "nodestaticpodrequests")).To(ConsistOf("get", "list", "watch"))
+		Expect(roleVerbs(view, "deckhouse.io", "nodeextensionrequests")).To(ConsistOf("get", "list", "watch"))
+
 		// status.maintenanceToken is a credential for a root-equivalent config
 		// push. The API masks it on the resource only, never on the subresource.
 		rules := view.Field("rules").String()
@@ -60,5 +65,10 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeConfig view rol
 
 		// node-controller and the node itself write NodeConfig; a user never does.
 		Expect(roleVerbs(edit, "internal.deckhouse.io", "nodeconfigs")).To(BeEmpty())
+
+		// Creating one of these runs a privileged pod on every node of a group,
+		// so the grant is the cluster owner's to make, not this role's.
+		Expect(roleVerbs(edit, "deckhouse.io", "nodestaticpodrequests")).To(BeEmpty())
+		Expect(roleVerbs(edit, "deckhouse.io", "nodeextensionrequests")).To(BeEmpty())
 	})
 })
