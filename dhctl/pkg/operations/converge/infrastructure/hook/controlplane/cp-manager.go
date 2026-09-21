@@ -97,24 +97,22 @@ func (c *ManagerReadinessChecker) isReadyAllExcept(ctx context.Context, excluded
 	)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
-		return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "ControlPlaneNodes readiness", func(ctx context.Context) error {
-			msg, err := checkControlPlaneNodesReady(ctx, kubeClient, excludedNodes)
+		msg, err := checkControlPlaneNodesReady(ctx, kubeClient, excludedNodes)
 
-			// all ControlPlaneNodes are ready
-			if err == nil {
-				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint(msg))
-				return nil
-			}
+		// all ControlPlaneNodes are ready
+		if err == nil {
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint(msg))
+			return nil
+		}
 
-			// some ControlPlaneNodes are not ready
-			if msg != "" {
-				return fmt.Errorf("%w: %s", ErrControlPlaneReadinessCheckTransient, msg)
-			}
+		// some ControlPlaneNodes are not ready
+		if msg != "" {
+			return fmt.Errorf("%w: %s", ErrControlPlaneReadinessCheckTransient, msg)
+		}
 
-			// some other error occurred (already tagged transient/permanent by checkControlPlaneNodesReady)
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking control-plane nodes readiness: %v", err))
-			return err
-		})
+		// some other error occurred (already tagged transient/permanent by checkControlPlaneNodesReady)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking control-plane nodes readiness: %v", err))
+		return err
 	})
 }
 

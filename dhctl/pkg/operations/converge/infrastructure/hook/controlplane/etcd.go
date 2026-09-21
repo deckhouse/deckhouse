@@ -55,33 +55,31 @@ func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProv
 	)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
-		return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Etcd membership", func(ctx context.Context) error {
-			// Fresh client each attempt: the captured tunnel dies on master replace.
-			kc, err := kubeGetter.KubeClientCtx(ctx)
-			if err != nil {
-				return fmt.Errorf("get kube client: %w", err)
-			}
-			client := kc.KubeClient.(libcon.KubeClient)
+		// Fresh client each attempt: the captured tunnel dies on master replace.
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
+		client := kc.KubeClient.(libcon.KubeClient)
 
-			members, err := getEtcdMembers(ctx, client, "")
-			if err != nil {
-				return fmt.Errorf("getting etcd members: %w", err)
-			}
+		members, err := getEtcdMembers(ctx, client, "")
+		if err != nil {
+			return fmt.Errorf("getting etcd members: %w", err)
+		}
 
-			names := make([]string, 0, len(members))
-			for _, m := range members {
-				names = append(names, m.Name)
-			}
+		names := make([]string, 0, len(members))
+		for _, m := range members {
+			names = append(names, m.Name)
+		}
 
-			voting := hasVotingMember(members, nodeName)
+		voting := hasVotingMember(members, nodeName)
 
-			if voting {
-				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Current members: [%s]", strings.Join(names, ", ")))
-				return nil
-			}
+		if voting {
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Current members: [%s]", strings.Join(names, ", ")))
+			return nil
+		}
 
-			return fmt.Errorf("%w: '%s' is not yet a voting member", errEtcdNotExpectedMembership, nodeName)
-		})
+		return fmt.Errorf("%w: '%s' is not yet a voting member", errEtcdNotExpectedMembership, nodeName)
 	})
 }
 
@@ -94,26 +92,24 @@ func waitEtcdHasNoMember(ctx context.Context, kubeGetter kubernetes.KubeClientPr
 	)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
-		return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Etcd membership", func(ctx context.Context) error {
-			fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
+		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
 
-			kc, err := kubeGetter.KubeClientCtx(ctx)
-			if err != nil {
-				return fmt.Errorf("get kube client: %w", err)
-			}
-			client := kc.KubeClient.(libcon.KubeClient)
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
+		client := kc.KubeClient.(libcon.KubeClient)
 
-			ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
-			if err != nil {
-				return fmt.Errorf("checking etcd membership for '%s': %w", nodeName, err)
-			}
+		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
+		if err != nil {
+			return fmt.Errorf("checking etcd membership for '%s': %w", nodeName, err)
+		}
 
-			if ok {
-				return fmt.Errorf("%w: node '%s' is still listed as etcd cluster member", errEtcdNotExpectedMembership, nodeName)
-			}
+		if ok {
+			return fmt.Errorf("%w: node '%s' is still listed as etcd cluster member", errEtcdNotExpectedMembership, nodeName)
+		}
 
-			return nil
-		})
+		return nil
 	})
 }
 
@@ -128,43 +124,41 @@ func checkEtcdQuorumBeforeRemoval(ctx context.Context, kubeGetter kubernetes.Kub
 	)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
-		return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Etcd quorum", func(ctx context.Context) error {
-			kc, err := kubeGetter.KubeClientCtx(ctx)
-			if err != nil {
-				return fmt.Errorf("get kube client: %w", err)
-			}
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
 
-			client, ok := kc.KubeClient.(libcon.KubeClient)
-			if !ok {
-				return fmt.Errorf("kube client cannot exec into an etcd pod")
-			}
+		client, ok := kc.KubeClient.(libcon.KubeClient)
+		if !ok {
+			return fmt.Errorf("kube client cannot exec into an etcd pod")
+		}
 
-			fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeToDestroy).String()
-			members, err := getEtcdMembers(ctx, client, fieldSelector)
-			if err != nil {
-				return fmt.Errorf("getting etcd members: %w", err)
-			}
+		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeToDestroy).String()
+		members, err := getEtcdMembers(ctx, client, fieldSelector)
+		if err != nil {
+			return fmt.Errorf("getting etcd members: %w", err)
+		}
 
-			endpoints, err := getEtcdEndpointsHealth(ctx, client, fieldSelector)
-			if err != nil {
-				return err
-			}
+		endpoints, err := getEtcdEndpointsHealth(ctx, client, fieldSelector)
+		if err != nil {
+			return err
+		}
 
-			voting, healthy := etcdQuorumBeforeRemoval(members, endpoints, nodeToDestroy)
+		voting, healthy := etcdQuorumBeforeRemoval(members, endpoints, nodeToDestroy)
 
-			quorum := voting/2 + 1
-			if healthy < quorum {
-				return fmt.Errorf(
-					"%w: removing '%s' leaves %d voting etcd members with only %d healthy members, quorum needs %d",
-					errEtcdClusterIsNotHealthy, nodeToDestroy, voting, healthy, quorum)
-			}
+		quorum := voting/2 + 1
+		if healthy < quorum {
+			return fmt.Errorf(
+				"%w: removing '%s' leaves %d voting etcd members with only %d healthy members, quorum needs %d",
+				errEtcdClusterIsNotHealthy, nodeToDestroy, voting, healthy, quorum)
+		}
 
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
-				"Removing '%s' leaves %d voting etcd members, quorum %d, %d healthy members",
-				nodeToDestroy, voting, quorum, healthy))
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+			"Removing '%s' leaves %d voting etcd members, quorum %d, %d healthy members",
+			nodeToDestroy, voting, quorum, healthy))
 
-			return nil
-		})
+		return nil
 	})
 }
 
@@ -182,31 +176,29 @@ func checkEtcdClusterHealthy(ctx context.Context, kubeGetter kubernetes.KubeClie
 	)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
-		return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Etcd endpoints health", func(ctx context.Context) error {
-			kc, err := kubeGetter.KubeClientCtx(ctx)
-			if err != nil {
-				return fmt.Errorf("get kube client: %w", err)
-			}
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
 
-			client, ok := kc.KubeClient.(libcon.KubeClient)
-			if !ok {
-				return fmt.Errorf("kube client cannot exec into an etcd pod")
-			}
+		client, ok := kc.KubeClient.(libcon.KubeClient)
+		if !ok {
+			return fmt.Errorf("kube client cannot exec into an etcd pod")
+		}
 
-			fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", skippedNode).String()
+		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", skippedNode).String()
 
-			members, err := getEtcdMembers(ctx, client, fieldSelector)
-			if err != nil {
-				return fmt.Errorf("getting etcd members: %w", err)
-			}
+		members, err := getEtcdMembers(ctx, client, fieldSelector)
+		if err != nil {
+			return fmt.Errorf("getting etcd members: %w", err)
+		}
 
-			endpoints, err := getEtcdEndpointsHealth(ctx, client, fieldSelector)
-			if err != nil {
-				return err
-			}
+		endpoints, err := getEtcdEndpointsHealth(ctx, client, fieldSelector)
+		if err != nil {
+			return err
+		}
 
-			return checkEtcdEndpointsHealthy(ctx, members, endpoints, skippedNode)
-		})
+		return checkEtcdEndpointsHealthy(ctx, members, endpoints, skippedNode)
 	})
 }
 
