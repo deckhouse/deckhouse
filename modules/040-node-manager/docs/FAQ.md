@@ -344,7 +344,9 @@ The field can only be changed while the StaticInstance is still `Pending`: after
 that the name is already on the node.
 
 For the first master node of a static or hybrid cluster, pass `--node-name` to
-`dhctl bootstrap`.
+`dhctl bootstrap`. A cloud cluster refuses the option: there the master is a node
+the infrastructure created, and `dhctl converge` finds its machine again by the
+node's name.
 
 ## How do I rename a node that is already in the cluster?
 

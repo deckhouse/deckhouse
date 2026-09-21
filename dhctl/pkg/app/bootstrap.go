@@ -59,7 +59,8 @@ the classic bootstrap leaves on the master cannot be fetched from it afterwards.
 func DefineNodeNameFlag(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 	cmd.Flag("node-name", `Name for the first master node in the cluster. Defaults to the hostname of the machine.
 An RFC 1123 DNS subdomain: lowercase letters, digits, '-' and '.'. The hostname of the machine is left unchanged.
-Only has an effect on a static or hybrid cluster, where dhctl bootstraps the master itself.`).
+Static and hybrid clusters only. A cloud cluster refuses it: there the master is named by the infrastructure, and
+converge finds its machine again by that name.`).
 		Envar(configEnvName("NODE_NAME")).
 		PlaceHolder("name").
 		StringVar(&o.NodeName)

@@ -958,6 +958,7 @@ WithNAT
 WithNATInstance
 WithNatInstance
 WithoutNAT
+Xorg
 YC
 YCC
 YCloud
@@ -1264,6 +1265,7 @@ gRPC
 gatewayEE
 gcloud
 gcp
+gdm
 geo
 geohash
 ghcr
@@ -1399,6 +1401,7 @@ ldap
 letsencrypt
 libc
 lifecycle
+lightdm
 linkTitle
 linstor
 linters
@@ -1639,6 +1642,7 @@ scrapeInterval
 scrapeIntervals
 screenshot
 scriptable
+sddm
 sds
 seccomp
 securityGroups
@@ -1661,6 +1665,7 @@ shapshot
 shouldn
 smokeMini
 snaphost
+softdog
 sourceRanges
 spellchecker
 sqs
@@ -1954,6 +1959,7 @@ zoneTagCategory
 аутентифицироваться
 аутентифицирует
 аутентифицируетесь
+аутентифицируется
 аутентифицируйтесь
 баг
 бакета
@@ -1990,6 +1996,7 @@ zoneTagCategory
 буквенно
 бутстрап
 бутстрапа
+бутстрапе
 бутстрапится
 бэкап
 бэкенд
@@ -2496,6 +2503,7 @@ zoneTagCategory
 пересоздайте
 пересоздастся
 пересоздаёт
+пересоздаётся
 переупорядочивание
 перехешируются
 пецификация
@@ -2741,6 +2749,7 @@ zoneTagCategory
 таймаутом
 таймауту
 таймауты
+тайминги
 таргетов
 тегирование
 тегирования

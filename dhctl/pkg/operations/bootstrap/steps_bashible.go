@@ -186,7 +186,13 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		}
 	})
 
-	if err := prepareMasterNode(ctx, nodeInterface, templateController, params.NodeName); err != nil {
+	// Has to land before the prerequisites script runs: that script is what pins
+	// the node's name, and it only reads the file while the name is not pinned yet.
+	if err := requestNodeName(ctx, nodeInterface, cfg, params.NodeName); err != nil {
+		return err
+	}
+
+	if err := prepareMasterNode(ctx, nodeInterface, templateController); err != nil {
 		return err
 	}
 
@@ -249,15 +255,9 @@ func getModulesPreparators(ctx context.Context, params *BashiblePipelineParams) 
 	return []ModulePreparator{cp}, cp
 }
 
-func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller, nodeName string) error {
+func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
 	ctx, span := telemetry.StartSpan(ctx, "prepareMasterNode")
 	defer span.End()
-
-	// Has to land before the prerequisites script runs: that script is what pins
-	// the node's name, and it only reads this file while the name is not pinned yet.
-	if err := requestNodeName(ctx, nodeInterface, nodeName); err != nil {
-		return err
-	}
 
 	upload := func(ctx context.Context, scriptPath string) error {
 		ctx, span := telemetry.StartSpan(ctx, "upload script")
@@ -323,9 +323,22 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 // its hostname, by leaving the name where bb-discover-node-name looks for it. The
 // hostname of the machine is not touched: from here on the two are separate, and
 // nothing re-derives the node name from the hostname again.
-func requestNodeName(ctx context.Context, nodeInterface libcon.Interface, nodeName string) error {
+//
+// Only a static or hybrid cluster may do this. In a cloud cluster the master is a
+// CloudPermanent node the infrastructure built, and its name is how everything
+// afterwards finds the machine behind it: converge keeps that machine's state in a
+// Secret named d8-node-terraform-state-<node name>. A master registering under a
+// name of its own would read as a master that vanished and a node that appeared
+// from nowhere, and the next converge would build a replacement for it.
+func requestNodeName(ctx context.Context, nodeInterface libcon.Interface, cfg *config.MetaConfig, nodeName string) error {
 	if nodeName == "" {
 		return nil
+	}
+
+	if !cfg.IsStatic() {
+		return fmt.Errorf("--node-name is only supported for a static or hybrid cluster: "+
+			"in a %s cluster the master node is named by the infrastructure, and converge finds its machine by that name",
+			cfg.ClusterType)
 	}
 
 	ctx, span := telemetry.StartSpan(ctx, "requestNodeName")
