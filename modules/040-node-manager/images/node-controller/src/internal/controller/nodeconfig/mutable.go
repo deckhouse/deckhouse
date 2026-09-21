@@ -73,10 +73,9 @@ func (s *sourceReader) readMutableInputs(ctx context.Context) (mutableInputs, er
 	return in, nil
 }
 
-// newMutableNodeConfig renders the document of a node bashible configures: the
-// static pods selected for its group, and what the agent needs to fetch an image.
-// spec.images is deliberately left out: today's platform preload list is pause
-// and registry-agent, both of which bashible already puts on such a node.
+// newMutableNodeConfig renders the document of a node bashible configures.
+// spec.images is left out: the platform preload list is pause and registry-agent,
+// both of which bashible already puts on such a node.
 func newMutableNodeConfig(ng *v1.NodeGroup, node *corev1.Node, in mutableInputs) *internalv1alpha1.NodeConfig {
 	return &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -147,14 +146,9 @@ func (r *Reconciler) reconcileMutableNode(ctx context.Context, ng *v1.NodeGroup,
 	return nil
 }
 
-// removeOnSystemTypeChange deletes an object rendered for the other kind of node
-// and reports that the caller is done with it. spec.systemType is immutable (a
-// CEL rule on the type), so a node relabelled across the two kinds would fail its
-// patch for ever; the next pass creates the document its group now asks for.
-// An object this controller does not manage is left alone and reported all the
-// same: a patch on it can never succeed either, and deleting one is not
-// recoverable — the Engine path refuses to recreate the document of a master or
-// of any node that is not CloudEphemeral, and a node registers its own only once.
+// removeOnSystemTypeChange deletes an object rendered for the other kind of node,
+// since spec.systemType is immutable and its patch would fail for ever. One this
+// controller does not manage is left alone: a delete, unlike a patch, is final.
 func (r *Reconciler) removeOnSystemTypeChange(ctx context.Context, existing, desired *internalv1alpha1.NodeConfig, logger logr.Logger) (bool, error) {
 	from, to := systemTypeOf(existing), systemTypeOf(desired)
 	if from == to {
