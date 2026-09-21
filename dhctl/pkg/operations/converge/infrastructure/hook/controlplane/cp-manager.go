@@ -70,7 +70,7 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 func (c *ManagerReadinessChecker) IsReadyAllExcept(ctx context.Context, excludedNodes ...string) error {
 	ctx, span := telemetry.StartSpan(ctx, "ManagerReadinessChecker.IsReadyAllExcept")
 	defer span.End()
-	return c.isReadyAllExcept(ctx)
+	return c.isReadyAllExcept(ctx, excludedNodes...)
 }
 
 // isReadyAllExcept checks every master but the named ones, so a master on its way out is
