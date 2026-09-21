@@ -439,16 +439,16 @@ type memberListOutput struct {
 	Members []etcdMember `json:"members"`
 }
 
-type endpointHealth struct {
-	Endpoint string `json:"endpoint"`
-	Health   bool   `json:"health"`
-	Error    string `json:"error"`
-}
-
 type etcdMember struct {
 	Name       string   `json:"name"`
 	ClientURLs []string `json:"clientURLs"`
 	// A learner replicates the log but does not vote, so a master that came back
 	// as one does not restore the quorum the next master replace will spend.
 	IsLearner bool `json:"isLearner"`
+}
+
+type endpointHealth struct {
+	Endpoint string `json:"endpoint"`
+	Health   bool   `json:"health"`
+	Error    string `json:"error"`
 }
