@@ -771,7 +771,7 @@ client-gen-generate: client-gen
 	$(CLIENT_GEN) \
 		--clientset-name "versioned" \
 		--input-base "" \
-		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2" \
+		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1" \
 		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset" \
 		--output-dir "./deckhouse-controller/pkg/client/clientset" \
 		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt"
@@ -784,7 +784,8 @@ lister-gen-generate: lister-gen
 		--output-dir "./deckhouse-controller/pkg/client/listers" \
 		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
 		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
-		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1
 
 ## Generate informers
 .PHONY: informer-gen-generate
@@ -796,7 +797,8 @@ informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
 		--output-dir "./deckhouse-controller/pkg/client/informers" \
 		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
 		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
-		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1
 
 ## Tool installations
 

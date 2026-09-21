@@ -14,7 +14,7 @@
 
 // +kubebuilder:object:generate=true
 // +groupName=deckhouse.io
-package v1alpha2
+package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	Version = "v1alpha2"
+	Version = "v1beta1"
 )
 
 // SchemeGroupVersion is group version used to register these objects
@@ -53,10 +53,8 @@ func init() {
 // Adds the list of known types to api.Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&ModuleUpdatePolicy{},
-		&ModuleUpdatePolicyList{},
-		&ModulePullOverride{},
-		&ModulePullOverrideList{},
+		&Module{},
+		&ModuleList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

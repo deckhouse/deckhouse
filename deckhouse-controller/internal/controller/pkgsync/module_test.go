@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 )
 
 func TestSyncEmbeddedModules(t *testing.T) {
@@ -75,12 +76,12 @@ func TestSyncEmbeddedModules(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
-		existing := &v1alpha2.Module{
+		existing := &v1beta1.Module{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "echo",
 				Annotations: map[string]string{"en.meta.deckhouse.io/description": "echoes back"},
 			},
-			Spec: v1alpha2.ModuleSpec{
+			Spec: v1beta1.ModuleSpec{
 				PackageRepositoryName: "deckhouse-modules",
 				PackageVersion:        "v1.2.3",
 			},
@@ -169,12 +170,12 @@ func TestSyncModulesFromModuleReleases(t *testing.T) {
 	})
 
 	t.Run("a module that left the image loses the embedded mark", func(t *testing.T) {
-		existing := &v1alpha2.Module{
+		existing := &v1beta1.Module{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "echo",
-				Annotations: map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"},
+				Annotations: map[string]string{v1beta1.ModuleAnnotationEmbedded: "true"},
 			},
-			Spec: v1alpha2.ModuleSpec{PackageRepositoryName: "embedded", PackageVersion: "v1.79.0"},
+			Spec: v1beta1.ModuleSpec{PackageRepositoryName: "embedded", PackageVersion: "v1.79.0"},
 		}
 
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing,
@@ -256,9 +257,9 @@ func TestSyncModulesFromModulePullOverrides(t *testing.T) {
 	})
 
 	t.Run("the repository comes from the module object when it carries one", func(t *testing.T) {
-		existing := &v1alpha2.Module{
+		existing := &v1beta1.Module{
 			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
-			Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "other", PackageVersion: "v1.2.3"},
+			Spec:       v1beta1.ModuleSpec{PackageRepositoryName: "other", PackageVersion: "v1.2.3"},
 		}
 
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing,
@@ -336,9 +337,9 @@ func TestSyncModulesFromModuleConfig(t *testing.T) {
 
 	t.Run("clears the settings of a module with no config", func(t *testing.T) {
 		enabled := true
-		existing := &v1alpha2.Module{
+		existing := &v1beta1.Module{
 			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
-			Spec: v1alpha2.ModuleSpec{
+			Spec: v1beta1.ModuleSpec{
 				Enabled:         &enabled,
 				SettingsVersion: 2,
 				Maintenance:     "NoResourceReconciliation",
@@ -451,9 +452,9 @@ func TestSyncModulesReleaseChannel(t *testing.T) {
 		moduleConfig := testModuleConfig("echo")
 		moduleConfig.Spec.Source = "example"
 
-		existing := &v1alpha2.Module{
+		existing := &v1beta1.Module{
 			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
-			Spec:       v1alpha2.ModuleSpec{ReleaseChannel: "Alpha"},
+			Spec:       v1beta1.ModuleSpec{ReleaseChannel: "Alpha"},
 		}
 
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing, pullOverride, moduleConfig)
@@ -466,7 +467,7 @@ func TestSyncModulesReleaseChannel(t *testing.T) {
 func listModuleNames(t *testing.T, cl client.Client) []string {
 	t.Helper()
 
-	list := new(v1alpha2.ModuleList)
+	list := new(v1beta1.ModuleList)
 	require.NoError(t, cl.List(context.Background(), list))
 
 	names := make([]string, 0, len(list.Items))
@@ -477,10 +478,10 @@ func listModuleNames(t *testing.T, cl client.Client) []string {
 	return names
 }
 
-func getModule(t *testing.T, cl client.Client, name string) *v1alpha2.Module {
+func getModule(t *testing.T, cl client.Client, name string) *v1beta1.Module {
 	t.Helper()
 
-	module := new(v1alpha2.Module)
+	module := new(v1beta1.Module)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, module))
 
 	return module
