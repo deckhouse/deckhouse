@@ -346,6 +346,8 @@ func etcdctlCommand() []string {
 // etcdQuorumBeforeRemoval counts the voting members that will be left once nodeToDestroy is
 // gone, and how many of them a master node answers for. A member listed twice votes twice but the machine
 // behind it answers once, so duplicates are counted once on the second number.
+//
+//nolint:nonamedreturns
 func etcdQuorumBeforeRemoval(members []etcdMember, nodeToDestroy string, masters map[string]struct{}) (voting, served int) {
 	counted := make(map[string]struct{}, len(members))
 
