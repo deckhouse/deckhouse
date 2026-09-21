@@ -185,7 +185,7 @@ func (r *Runtime) enqueueModules(wg *sync.WaitGroup, mods []Module) {
 
 		version := module.Definition.Version
 		if embedded {
-			version = app.EmbeddedPackageVersion(r.edition.Version)
+			version = app.EmbeddedPackageVersion()
 		}
 
 		r.global.SetConfigEnabled(name, module.Enabled)
@@ -295,7 +295,7 @@ func (r *Runtime) UpdateEmbeddedModule(module Module) {
 	}
 
 	name := module.Name
-	version := app.EmbeddedPackageVersion(r.edition.Version)
+	version := app.EmbeddedPackageVersion()
 	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
 
 	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
@@ -374,7 +374,7 @@ func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, pac
 		return "", status.NewError("LoadFailed", err)
 	}
 
-	conf.Definition.Version = app.EmbeddedPackageVersion(r.edition.Version)
+	conf.Definition.Version = app.EmbeddedPackageVersion()
 
 	module, err := r.registerModule(ctx, conf)
 	if err != nil {

@@ -95,7 +95,7 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 
 	// Shared with the ClusterConfiguration webhook, which uses "non-nil result, Valid=true" rather
 	// than validateCommon's "nil,nil means allow" — hence the translation below.
-	res, err := validateKubernetesVersion(effective, v.moduleManager)
+	res, err := validateKubernetesVersion(effective, v.packageManager)
 	if err != nil {
 		return nil, err
 	}

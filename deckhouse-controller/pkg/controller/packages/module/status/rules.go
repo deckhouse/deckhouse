@@ -15,6 +15,8 @@
 package status
 
 import (
+	"slices"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
@@ -288,8 +290,20 @@ func applyingProgress(state condmap.State, ext string) (metav1.Condition, bool) 
 }
 
 // pipelineBlocker returns the highest-priority blocker for an install or
-// update flow: Pending=True wins over any False condition in chain.
+// update flow: the scheduler's verdict first, then Pending=True, then the
+// first False condition in chain.
+//
+// The verdict outranks Pending because Load sets Pending=True ("waiting for
+// processing") and only Enable clears it — which never runs for a module the
+// scheduler switched off. Reporting "waiting to converge" for a module that is
+// not queued behind anything would be a lie. The chain is consulted for
+// membership because updatePipeline deliberately omits RequirementsMet: the
+// verdict is not re-checked on a version change.
 func pipelineBlocker(state condmap.State, chain []string) (string, bool) {
+	if slices.Contains(chain, intRequirementsMet) && state.IntEqual(intRequirementsMet, metav1.ConditionFalse) {
+		return intRequirementsMet, true
+	}
+
 	if state.IntEqual(intPending, metav1.ConditionTrue) {
 		return intPending, true
 	}

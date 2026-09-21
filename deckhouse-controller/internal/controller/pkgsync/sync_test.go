@@ -28,7 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -46,16 +48,34 @@ func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.
 func newTestSyncerWithGlobal(t *testing.T, version, embeddedDir, globalDir string, objects ...client.Object) (*syncer, client.Client) {
 	t.Helper()
 
+	setDeckhouseVersion(t, version)
+
 	sc, err := project.Scheme()
 	require.NoError(t, err)
 
 	cl := fake.NewClientBuilder().
 		WithScheme(sc).
-		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}, &v1alpha1.ModulePackage{}).
+		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}, &v1alpha1.ModulePackage{}, &v1alpha2.Module{}).
 		WithObjects(objects...).
 		Build()
 
-	return newSyncer(cl, cl, dependency.NewMockedContainer(), version, "Stable", embeddedDir, globalDir, log.NewNop()), cl
+	syncer := newSyncer(cl, cl, dependency.NewMockedContainer(), log.NewNop(),
+		WithEmbeddedModulesDir(embeddedDir),
+		WithGlobalHooksDir(globalDir),
+	)
+
+	return syncer, cl
+}
+
+// setDeckhouseVersion names the version the packages of the image are named after. The syncer reads
+// it off the app globals, so it is put back afterwards; no test in this package runs in parallel.
+func setDeckhouseVersion(t *testing.T, version string) {
+	t.Helper()
+
+	previous := app.Version
+	app.SetDeckhouseVersion(version)
+
+	t.Cleanup(func() { app.SetDeckhouseVersion(previous) })
 }
 
 // writeLegacyOpenAPI writes the openapi files under the legacy config-values.yaml name the

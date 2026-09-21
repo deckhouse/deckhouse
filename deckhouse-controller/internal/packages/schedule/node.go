@@ -114,9 +114,21 @@ type node struct {
 	version *semver.Version // Current installed version; used by dependency checkers of dependents.
 
 	state nodeState // Lifecycle phase: idle → scheduled → active.
-	order Order     // Scheduling priority; lower values run before higher ones.
+	order Order     // Scheduling priority declared by the package; lower values run before higher ones.
+
+	// effectiveOrder is the tier canSchedule actually enforces: the node's own
+	// order raised to that of its highest dependency, recomputed every pass by
+	// computeEffectiveOrders. A package that declares an order below one of its
+	// dependencies would otherwise deadlock against the order barrier.
+	effectiveOrder Order
 
 	decision rule.Decision // Last computed decision from the rule chain; the node is enabled iff Kind == rule.Enable.
+
+	// published is the decision consumers were last told about. compute()
+	// compares it with a freshly resolved not-enabled decision, so a node born
+	// not-enabled and a node whose verdict merely changed its reason both reach
+	// the runtime — while an unchanged verdict is not re-sent on every pass.
+	published rule.Decision
 
 	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and rule inputs.
 
@@ -147,13 +159,16 @@ func (s *Scheduler) addNode(pkg Package) {
 	constraints := pkg.GetConstraints()
 
 	n := &node{
-		name:          pkg.GetName(),
-		version:       pkg.GetVersion(),
-		state:         nodeStateIdle,
-		order:         constraints.Order,
-		dependencies:  maps.Clone(constraints.Dependencies),
-		subscriptions: maps.Clone(constraints.Subscriptions),
-		subscribers:   make(map[string]struct{}),
+		name:    pkg.GetName(),
+		version: pkg.GetVersion(),
+		state:   nodeStateIdle,
+		order:   constraints.Order,
+		// Seeded with the declared order so a node added between two passes is
+		// never treated as tier 0 by canSchedule; compute() refines it.
+		effectiveOrder: constraints.Order,
+		dependencies:   maps.Clone(constraints.Dependencies),
+		subscriptions:  maps.Clone(constraints.Subscriptions),
+		subscribers:    make(map[string]struct{}),
 	}
 
 	// The package's floor sits first (lowest precedence): gates appended after
@@ -176,7 +191,10 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.rules = append(n.rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
+	// The dependency gates read the graph itself through s.dependencyVersion, so
+	// they are always built — a package's declared dependencies are never
+	// silently unchecked.
+	if len(constraints.Dependencies) > 0 {
 		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
 		for name, dep := range constraints.Dependencies {
 			deps[name] = dependency.Dependency{
@@ -185,15 +203,15 @@ func (s *Scheduler) addNode(pkg Package) {
 			}
 		}
 
-		n.rules = append(n.rules, dependency.NewRule(s.dependencyGetter, deps))
+		n.rules = append(n.rules, dependency.NewRule(s.dependencyVersion, deps))
 	}
 
-	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
-		n.rules = append(n.rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	if len(constraints.AnyOf) > 0 {
+		n.rules = append(n.rules, dependency.NewAnyOfRule(s.dependencyVersion, toAnyOfGroups(constraints.AnyOf)))
 	}
 
-	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
-		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	if len(constraints.NoneOf) > 0 {
+		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyVersion, toNoneOfGroups(constraints.NoneOf)))
 	}
 
 	// Modules (floor = Static(Disable)) trigger a full-graph reschedule when they

@@ -117,7 +117,6 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
-// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Weight",type="integer",JSONPath=".properties.weight",priority=1,description="Module weight"
 // +kubebuilder:printcolumn:name="Stage",type="string",JSONPath=".properties.stage",description="Module stage"
 // +kubebuilder:printcolumn:name="Release channel",type="string",JSONPath=".properties.releaseChannel",priority=1,description="Release channel of the module."

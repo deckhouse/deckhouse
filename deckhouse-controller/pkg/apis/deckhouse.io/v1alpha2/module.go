@@ -62,13 +62,17 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
+// +kubebuilder:printcolumn:name=Enabled,type=boolean,JSONPath=.spec.enabled
 // +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
 // +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status,priority=1
 // +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
 // +crd-enricher:crd:preserveUnknownFields=false
 
 // Module represents a module instance managed via the package system.
@@ -98,6 +102,7 @@ type ModuleSpec struct {
 	PackageVersion string `json:"packageVersion"`
 
 	// Release channel for the module package.
+	// +crd-enricher:deckhouse:documentation:examples=alpha.
 	// +optional
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 
@@ -170,9 +175,9 @@ type ModuleStatus struct {
 // machine on top of conditions.
 type ModuleStatusSummary struct {
 	// State is the high-level lifecycle state observed for the module.
-	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
+	// Always one of: Pending, Disabled, Failed, Updating, Ready, Degraded, Suspended, Deleting.
 	// +optional
-	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting]
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Disabled, Failed, Updating, Ready, Degraded, Suspended, Deleting]
 	State string `json:"state,omitempty"`
 
 	// Message is a human-readable description of the current state.

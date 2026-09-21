@@ -23,11 +23,16 @@ import (
 // devPackageVersion is what a "dev" binary's packages carry, matching the package runtime.
 const devPackageVersion = "v2.0.0"
 
-// EmbeddedPackageVersion reduces a Deckhouse version to the one every package the image ships
+// EmbeddedPackageVersion reduces the running Deckhouse version the way EmbeddedPackageVersionOf does.
+func EmbeddedPackageVersion() string {
+	return EmbeddedPackageVersionOf(Version)
+}
+
+// EmbeddedPackageVersionOf reduces a Deckhouse version to the one every package the image ships
 // carries: major.minor.patch, so a single version name spans every build of a release. A "dev"
 // binary counts as v2.0.0; a version that is not semver is passed through unchanged, which keeps
 // every caller naming the same version even when the result is no legal object name.
-func EmbeddedPackageVersion(deckhouseVersion string) string {
+func EmbeddedPackageVersionOf(deckhouseVersion string) string {
 	if deckhouseVersion == "dev" {
 		return devPackageVersion
 	}

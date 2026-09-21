@@ -46,15 +46,16 @@ type GlobalHook interface {
 }
 
 // GlobalStorage provides thread-safe storage for global hooks.
-// It maintains a single index:
-//   - byName: Fast lookup by hook name (O(1))
+// `all` is the authoritative set; the two maps are indices over it:
+//   - byName: Fast lookup by hook name (O(1)); a name is NOT unique — see Add
 //   - byBinding: Fast lookup by binding type (O(1))
 //
 // Thread Safety: All methods use RWMutex for concurrent access.
 type GlobalStorage struct {
 	mu        sync.RWMutex                         // Protects all fields
+	all       []GlobalHook                         // Every hook added, in insertion order — the authoritative set
 	byBinding map[shtypes.BindingType][]GlobalHook // Hooks grouped by binding type
-	byName    map[string]GlobalHook                // Hooks indexed by name
+	byName    map[string]GlobalHook                // Hooks indexed by name; one entry per name, last writer wins
 }
 
 // NewGlobalStorage creates a new empty global hook storage.
@@ -65,11 +66,17 @@ func NewGlobalStorage() *GlobalStorage {
 	}
 }
 
-// Add adds a global hook to storage, indexing it by name.
-// If a hook with the same name exists, it will be replaced.
+// Add stores a global hook and indexes it by name and by every binding it declares.
+//
+// Names are not unique: the SDK derives a Go hook's name from the file that
+// registered it, so a file with two RegisterFunc calls yields two distinct
+// hooks under one name. Only the name index collapses them — `all` and
+// byBinding keep both, which is what lets every hook get a hook controller.
 func (s *GlobalStorage) Add(hook GlobalHook) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	s.all = append(s.all, hook)
 
 	s.byName[hook.GetName()] = hook
 	for _, binding := range hook.GetHookConfig().Bindings() {
@@ -97,16 +104,16 @@ func (s *GlobalStorage) GetHooksByBinding(binding shtypes.BindingType) []GlobalH
 	return res
 }
 
-// GetHooks returns all hooks in storage in arbitrary order.
-// The returned slice is safe to use - it's a copy of internal data.
+// GetHooks returns every hook in storage, in insertion order, as a copy.
+// It reads `all`, never byName: two hooks registered from one file share a name,
+// and building the result from the map would silently drop one — leaving it
+// without a hook controller for the rest of the process's life.
 func (s *GlobalStorage) GetHooks() []GlobalHook {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	res := make([]GlobalHook, 0, len(s.byName))
-	for _, hook := range s.byName {
-		res = append(res, hook)
-	}
+	res := make([]GlobalHook, len(s.all))
+	copy(res, s.all)
 
 	return res
 }
@@ -120,9 +127,13 @@ func (s *GlobalStorage) GetHookByName(name string) GlobalHook {
 }
 
 // Clear removes all hooks from storage, resetting it to empty state.
+// Every field must be reset: leaving one populated would make the indices
+// disagree with the authoritative set.
 func (s *GlobalStorage) Clear() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	s.all = nil
+	s.byBinding = make(map[shtypes.BindingType][]GlobalHook)
 	s.byName = make(map[string]GlobalHook)
 }

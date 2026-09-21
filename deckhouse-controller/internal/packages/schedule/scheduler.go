@@ -19,6 +19,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
@@ -75,7 +77,6 @@ type Scheduler struct {
 	eventCh chan Event
 
 	bundleChecker          bundle.BundleChecker
-	dependencyGetter       dependency.Getter
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
@@ -107,13 +108,6 @@ func WithDeckhouseVersionGetter(deckhouseVersionGetter version.Getter) Option {
 func WithBootstrapCondition(cond condition.Condition) Option {
 	return func(s *Scheduler) {
 		s.bootstrapCondition = cond
-	}
-}
-
-// WithDependencyGetter sets the provider for the current dependency version.
-func WithDependencyGetter(getter dependency.Getter) Option {
-	return func(s *Scheduler) {
-		s.dependencyGetter = getter
 	}
 }
 
@@ -200,7 +194,7 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 		rules = append(rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
+	if len(constraints.Dependencies) > 0 {
 		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
 		for depName, dep := range constraints.Dependencies {
 			deps[depName] = dependency.Dependency{
@@ -209,15 +203,15 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 			}
 		}
 
-		rules = append(rules, dependency.NewRule(s.dependencyGetter, deps))
+		rules = append(rules, dependency.NewRule(s.dependencyVersion, deps))
 	}
 
-	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
-		rules = append(rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	if len(constraints.AnyOf) > 0 {
+		rules = append(rules, dependency.NewAnyOfRule(s.dependencyVersion, toAnyOfGroups(constraints.AnyOf)))
 	}
 
-	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
-		rules = append(rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	if len(constraints.NoneOf) > 0 {
+		rules = append(rules, dependency.NewNoneOfRule(s.dependencyVersion, toNoneOfGroups(constraints.NoneOf)))
 	}
 
 	if d := rule.Resolve(rules...); d.Kind == rule.Forbid {
@@ -378,10 +372,11 @@ func (s *Scheduler) schedule() {
 // compute recomputes every node's decision in topological order, guaranteeing
 // that dependencies are resolved before dependents. Nodes whose enabled status
 // flipped are individually reset to idle so they re-enter the scheduling path
-// on the next pass; nodes that lose eligibility emit an [EventDisable]. No
-// global reconverge happens — canSchedule no longer gates on per-dep state, so
-// one node's decision change cannot invalidate another node's schedulability
-// beyond the live order-tier check.
+// on the next pass; every not-enabled node whose decision differs from the last
+// published one emits an [EventDisable], including on its first pass. No
+// global reconverge happens — the per-node reset absorbs a decision change,
+// and canSchedule re-reads live state (order tier and dependency edges) on
+// every pass, so one node's decision never invalidates another's.
 func (s *Scheduler) compute() ([]string, []*node) {
 	// AddNode is the authoritative cycle gate, so topoSort should never
 	// return an error here. The not-enabled sweep below walks `sorted`
@@ -391,9 +386,24 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	reschedule := false
 	trigger := ""
 	sorted, _ := topoSort(s.nodes)
+
+	s.computeEffectiveOrders(sorted)
+
 	for _, n := range sorted {
 		current := n.enabled()
 		n.decision = rule.Resolve(n.rules...)
+
+		// The verdict is published, not the transition: a node born not-enabled
+		// never flips, so the check below would leave the runtime without a
+		// reason to report. Comparing against the last published decision also
+		// re-sends when only the reason changed (bundle -> script), and stays
+		// silent while the verdict holds.
+		if !n.enabled() && n.decision != n.published {
+			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.decision.Reason, Message: n.decision.Message})
+		}
+
+		n.published = n.decision
+
 		if current == n.enabled() {
 			continue
 		}
@@ -410,10 +420,6 @@ func (s *Scheduler) compute() ([]string, []*node) {
 		n.scheduleReason = ReasonDecisionChanged
 		if n.decision.Reason != "" {
 			n.scheduleReason += ":" + n.decision.Reason
-		}
-
-		if !n.enabled() {
-			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.decision.Reason, Message: n.decision.Message})
 		}
 	}
 
@@ -455,21 +461,80 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	return enabled, sorted
 }
 
-// canSchedule returns true if a node is eligible to transition from idle to
-// scheduled. Two conditions must hold:
-//  1. The node must be enabled (its rule chain resolved to Enable).
-//  2. All nodes with a strictly lower Order must be active.
+// computeEffectiveOrders recomputes every node's effectiveOrder — its declared
+// order raised to that of its highest dependency. It walks sorted, which is
+// topological, so a dependency's value is final before its dependents are
+// visited; a node missing from sorted (cycle member) keeps its previous value.
 //
-// Dependency-level ordering between same-tier nodes is encoded in the rule
-// chain (the dependency.Getter contract returns versions only for nodes that
-// have reached nodeStateActive).
+// This is what keeps a package that declares an order *below* one of its
+// dependencies from deadlocking: the order barrier would hold the dependency
+// behind the dependent while the per-edge wait holds the dependent behind the
+// dependency. Raising the dependent into its dependency's tier leaves both
+// gates satisfiable, and ordering between the two stays with the per-edge wait.
+//
+// Must be called with s.mu held for writing.
+func (s *Scheduler) computeEffectiveOrders(sorted []*node) {
+	for _, n := range sorted {
+		effective := n.order
+
+		for name := range n.dependencies {
+			if dep, ok := s.nodes[name]; ok && dep.effectiveOrder > effective {
+				effective = dep.effectiveOrder
+			}
+		}
+
+		n.effectiveOrder = effective
+	}
+}
+
+// dependencyVersion answers the dependency rules from the graph itself: the
+// installed version of an enabled node, nil otherwise. It reports eligibility
+// only — "not ready yet" is not its business. Holding a dependent back until
+// its dependencies finish is canSchedule's job.
+//
+// Must be called with s.mu held in some mode. Every rule chain is resolved from
+// compute() (write lock) or CheckConstraints (read lock), so it never locks
+// itself: doing so would deadlock on Go's non-reentrant RWMutex.
+func (s *Scheduler) dependencyVersion(name string) *semver.Version {
+	n, ok := s.nodes[name]
+	if !ok || !n.enabled() {
+		return nil
+	}
+
+	return n.version
+}
+
+// canSchedule returns true if a node is eligible to transition from idle to
+// scheduled. Three conditions must hold:
+//  1. The node must be enabled (its rule chain resolved to Enable).
+//  2. All nodes in a strictly lower effective tier must be active.
+//  3. Every declared dependency present in the graph must be active.
+//
+// (2) reads effectiveOrder, not the declared order, so a dependency can never
+// end up in a lower tier than its dependent — see computeEffectiveOrders.
+//
+// (3) is what orders dependents behind their dependencies within one tier: the
+// dependent stays idle, keeping its Enable, until the dependency's Complete
+// triggers the pass that advances it. A not-enabled dependency is parked active
+// by compute(), so it never holds a dependent back — a dependency that is off
+// fails the dependency rule instead, and (1) stops the node.
+//
+// (3) ignores Optional: optionality governs presence, not ordering, and
+// topoSort already builds an edge for an optional dependency. A present,
+// enabled one is therefore waited for.
 func (s *Scheduler) canSchedule(n *node) bool {
 	if !n.enabled() {
 		return false
 	}
 
 	for _, other := range s.nodes {
-		if other.order < n.order && other.state != nodeStateActive {
+		if other.effectiveOrder < n.effectiveOrder && other.state != nodeStateActive {
+			return false
+		}
+	}
+
+	for name := range n.dependencies {
+		if dep, ok := s.nodes[name]; ok && dep.state != nodeStateActive {
 			return false
 		}
 	}
@@ -477,13 +542,14 @@ func (s *Scheduler) canSchedule(n *node) bool {
 	return true
 }
 
-// IsEnabled returns true if the given node is currently enabled (in the active state).
+// IsEnabled reports whether the named node's rule chain resolved to Enable. It
+// reads the decision, never the state: compute() parks not-enabled nodes in
+// nodeStateActive, so state says nothing about enablement.
 func (s *Scheduler) IsEnabled(name string) bool {
-	for _, n := range s.nodes {
-		if n.name == name && n.state == nodeStateActive {
-			return true
-		}
-	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	return false
+	n, ok := s.nodes[name]
+
+	return ok && n.enabled()
 }
