@@ -346,6 +346,40 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
         limits:
           cpu: "100m"
           memory: "128Mi"
+- name: test-fractional-resources
+  encodedName: testFractionalResources
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    applications:
+    - domain: test-fractional-resources.example.com
+      ingressClassName: test
+      ingressSecretName: test
+    resources:
+      limits:
+        cpu: "0.5"
+        memory: "0.5Gi"
+      redis:
+        limits:
+          cpu: "0.5"
+          memory: "512Mi"
+- name: test-tiny-resources
+  encodedName: testTinyResources
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    applications:
+    - domain: test-tiny-resources.example.com
+      ingressClassName: test
+      ingressSecretName: test
+    resources:
+      limits:
+        cpu: "5m"
+        memory: "8Mi"
 - name: test-without-resources
   encodedName: testWithoutResources
   namespace: d8-test
@@ -383,6 +417,30 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
       name: "test-with-resources-both-dex-authenticator"
       truncated: false
       hash: ""
+"test-fractional-resources@d8-test":
+  name: "test-fractional-resources-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-fractional-resources"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-fractional-resources-dex-authenticator"
+      truncated: false
+      hash: ""
+"test-tiny-resources@d8-test":
+  name: "test-tiny-resources-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-tiny-resources"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-tiny-resources-dex-authenticator"
+      truncated: false
+      hash: ""
 "test-without-resources@d8-test":
   name: "test-without-resources-dex-authenticator"
   truncated: false
@@ -415,8 +473,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			// Init limits = sum of explicitly set main container limits (only dex here: 200m / 256Mi)
 			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.cpu").String()).To(Equal("10m"))
 			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.memory").String()).To(Equal("10Mi"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("200m"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("256Mi"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("25Mi"))
 
 			// Check dex-authenticator container resources
 			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("100m"))
@@ -430,8 +488,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(deployment.Exists()).To(BeTrue())
 
 			// Init limits = sum of dex + redis limits
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("400m"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("512Mi"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("25Mi"))
 
 			// Check dex-authenticator container resources
 			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("150m"))
@@ -456,6 +514,38 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.memory").Exists()).To(BeFalse())
 		})
 
+		It("Should give the init container fixed resources whatever the CR asks for", func() {
+			// The limits of the init container used to be the sum of the main container limits,
+			// which produced a limit below its own requests whenever the sum was zero or tiny,
+			// and the API server rejects such a Deployment. The fixed values are accounted the
+			// same way, because a quota counts a pod as max(max(init), sum(app)).
+			for _, name := range []string{
+				"test-fractional-resources-dex-authenticator",
+				"test-tiny-resources-dex-authenticator",
+				"test-with-resources-both-dex-authenticator",
+				"test-without-resources-dex-authenticator",
+			} {
+				deployment := hec.KubernetesResource("Deployment", "d8-test", name)
+				Expect(deployment.Exists()).To(BeTrue(), name)
+
+				init := "spec.template.spec.initContainers.0.resources."
+				Expect(deployment.Field(init+"requests.cpu").String()).To(Equal("10m"), name)
+				Expect(deployment.Field(init+"requests.memory").String()).To(Equal("10Mi"), name)
+				Expect(deployment.Field(init+"limits.cpu").String()).To(Equal("10m"), name)
+				Expect(deployment.Field(init+"limits.memory").String()).To(Equal("25Mi"), name)
+			}
+		})
+
+		It("Should pass the CR limits to the main containers untouched", func() {
+			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-fractional-resources-dex-authenticator")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.limits.cpu").String()).To(Equal("0.5"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.limits.memory").String()).To(Equal("0.5Gi"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.limits.cpu").String()).To(Equal("0.5"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.limits.memory").String()).To(Equal("512Mi"))
+		})
+
 		It("Should use default resources when VPA disabled and resources not specified", func() {
 			hec.ValuesSet("global.enabledModules", []string{"cert-manager"})
 			hec.HelmRender()
@@ -464,8 +554,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(deployment.Exists()).To(BeTrue())
 
 			// Init limits = sum of defaults (10m+10m, 25Mi+25Mi)
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("20m"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("50Mi"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("25Mi"))
 
 			// Check dex-authenticator container resources
 			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("10m"))
