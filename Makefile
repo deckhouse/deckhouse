@@ -673,9 +673,21 @@ dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
 ## Generate tools documentation
 .PHONY: generate-docs
 generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
+  ##~ The werf-derived commands wrap their help text to min(width of the stderr terminal, 100),
+  ##~ and ignore both COLUMNS and WERF_LOG_TERMINAL_WIDTH. Running this in a terminal narrower
+  ##~ than 100 columns therefore rewraps every longDescription in d8-cli.json and makes the
+  ##~ go_generate CI job fail on a diff that carries no content change. Pointing stderr at a
+  ##~ regular file detaches it from the terminal, so the width is always the 100-column default
+  ##~ that CI produces. stderr is still printed, and the exit code is still the CLI's own.
 	@$(DECKHOUSE_CLI) --version
 	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
-	@DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+	@err=$$(mktemp); \
+	DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI) help-json --username-replace=$(WHOAMI) \
+		> ./docs/documentation/_data/reference/d8-cli.json 2>$$err; \
+	rc=$$?; \
+	cat $$err >&2; rm -f $$err; \
+	if [ $$rc -ne 0 ]; then exit $$rc; fi; \
+	echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
