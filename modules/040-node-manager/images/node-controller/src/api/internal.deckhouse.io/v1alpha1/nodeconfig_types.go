@@ -219,17 +219,36 @@ type NodeConfigList struct {
 	Items           []NodeConfig `json:"items"`
 }
 
+// SystemType says how a node is managed. The values are NodeGroup's
+// spec.systemType, copied into the node's document with no table in between.
+// +kubebuilder:validation:Enum=Immutable;Mutable
+type SystemType string
+
+const (
+	SystemTypeImmutable SystemType = "Immutable"
+	SystemTypeMutable   SystemType = "Mutable"
+)
+
 // NodeSpec is the desired state of the node.
+//
+// +kubebuilder:validation:XValidation:rule="self.systemType == 'Mutable' || has(self.osImage)",message="spec.osImage must be set on an Immutable node"
+// +kubebuilder:validation:XValidation:rule="self.systemType == oldSelf.systemType",message="spec.systemType cannot be changed"
 type NodeSpec struct {
+	// SystemType says how this node is managed. On a Mutable node bashible
+	// configures the machine and the agent does only what bashible does not.
+	// An absent value is Immutable: every document older than the field is one.
+	// +optional
+	// +kubebuilder:default=Immutable
+	SystemType SystemType `json:"systemType,omitempty"`
 	// NodeName is the Kubernetes node name this config applies to.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	NodeName string `json:"nodeName"`
-	// OSImage is the image the cluster believes this node should run. Required: a
-	// rootfs update is decided by comparing it with what the node recorded at
-	// install, and a config that names no image is one no update can start from.
-	OSImage OSImage `json:"osImage"`
+	// OSImage is the image the cluster believes this node should run. Required
+	// on an Immutable node, by the rule on this type.
+	// +optional
+	OSImage OSImage `json:"osImage,omitzero"`
 	// Storage selects the target disk for the OS install. The partition layout
 	// is fixed (boot/config/data), so only the whole-disk device is needed.
 	// +optional

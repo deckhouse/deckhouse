@@ -404,9 +404,8 @@ spec:
                 type: string
               osImage:
                 description: |-
-                  OSImage is the image the cluster believes this node should run. Required: a
-                  rootfs update is decided by comparing it with what the node recorded at
-                  install, and a config that names no image is one no update can start from.
+                  OSImage is the image the cluster believes this node should run. Required
+                  on an Immutable node, by the rule on this type.
                 properties:
                   additionalPath:
                     description: |-
@@ -679,6 +678,16 @@ spec:
                       disk is set up, so an existing layout stays and a reboot never destroys data.
                     type: boolean
                 type: object
+              systemType:
+                default: Immutable
+                description: |-
+                  SystemType says how this node is managed. On a Mutable node bashible
+                  configures the machine and the agent does only what bashible does not.
+                  An absent value is Immutable: every document older than the field is one.
+                enum:
+                - Immutable
+                - Mutable
+                type: string
               updatePolicy:
                 description: UpdatePolicy controls how and when the node is updated.
                 properties:
@@ -718,8 +727,12 @@ spec:
                 type: object
             required:
             - nodeName
-            - osImage
             type: object
+            x-kubernetes-validations:
+            - message: spec.osImage must be set on an Immutable node
+              rule: self.systemType == 'Mutable' || has(self.osImage)
+            - message: spec.systemType cannot be changed
+              rule: self.systemType == oldSelf.systemType
           status:
             description: Status is reported by the on-node agent after each reconcile
               pass.

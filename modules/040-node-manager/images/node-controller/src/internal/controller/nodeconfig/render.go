@@ -63,6 +63,10 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 	kernel.Modules = extraModules
 
 	return internalv1alpha1.NodeSpec{
+		// Written rather than left to the CRD default: a rendered spec the API
+		// server has to default differs from the stored one on every pass, and
+		// each of those differences spends a rollout slot.
+		SystemType:           internalv1alpha1.SystemType(ng.Spec.SystemType),
 		NodeName:             node.Name,
 		OSImage:              in.OSImage,
 		APIServerEndpoints:   in.APIServerEndpoints,

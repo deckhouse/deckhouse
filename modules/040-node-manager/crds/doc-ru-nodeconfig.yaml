@@ -12,6 +12,11 @@ spec:
               description: |
                 Желаемое состояние узла.
               properties:
+                systemType:
+                  description: |
+                    Как управляется узел. `Immutable` — узел Deckhouse Engine, агент настраивает его целиком. `Mutable` — узел настраивает bashible, агент делает только то, чего bashible не делает: пишет static pod'ы и загружает образы.
+
+                    После создания объекта значение не меняется.
                 nodeName:
                   description: |
                     Имя узла Kubernetes, к которому относится конфигурация.

@@ -1629,6 +1629,58 @@ var _ = Describe("NodeConfig controller", func() {
 	})
 })
 
+// User story: As a cluster operator, I want one NodeConfig kind for both kinds
+// of node, so that a Mutable node the agent only writes static pods on needs no
+// OS image of ours and never silently becomes an Immutable one.
+var _ = Describe("NodeConfig system type", func() {
+	mutable := func(name string) *internalv1alpha1.NodeConfig {
+		return &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec: internalv1alpha1.NodeSpec{
+				SystemType: internalv1alpha1.SystemTypeMutable,
+				NodeName:   name,
+			},
+		}
+	}
+	create := func(ctx context.Context, obj *internalv1alpha1.NodeConfig) error {
+		err := k8sClient.Create(ctx, obj)
+		if err == nil {
+			DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, obj) })
+		}
+		return err
+	}
+
+	It("stores a Mutable document that names no OS image", func(ctx context.Context) {
+		Expect(create(ctx, mutable(testenv.UniqueName("mutable")))).To(Succeed())
+	})
+
+	It("refuses an Immutable document that names no OS image", func(ctx context.Context) {
+		obj := mutable(testenv.UniqueName("immutable"))
+		obj.Spec.SystemType = internalv1alpha1.SystemTypeImmutable
+		err := create(ctx, obj)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("spec.osImage must be set on an Immutable node"))
+	})
+
+	It("reads a document written before the field existed as Immutable", func(ctx context.Context) {
+		obj := mutable(testenv.UniqueName("legacy"))
+		obj.Spec.SystemType = ""
+		obj.Spec.OSImage = internalv1alpha1.OSImage{Digest: testOSImageDigest}
+		Expect(create(ctx, obj)).To(Succeed())
+		Expect(obj.Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeImmutable))
+	})
+
+	It("refuses a change of system type", func(ctx context.Context) {
+		obj := mutable(testenv.UniqueName("fixed"))
+		Expect(create(ctx, obj)).To(Succeed())
+		obj.Spec.SystemType = internalv1alpha1.SystemTypeImmutable
+		obj.Spec.OSImage = internalv1alpha1.OSImage{Digest: testOSImageDigest}
+		err := k8sClient.Update(ctx, obj)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("spec.systemType cannot be changed"))
+	})
+})
+
 // reportHeld is what the agent publishes while it holds a config it may not
 // apply yet: the generation it is still running, and the request to interrupt.
 func reportHeld(ctx context.Context, name string, heldGeneration int64) {
