@@ -373,9 +373,9 @@ func (s *Scheduler) schedule() {
 // that dependencies are resolved before dependents. Nodes whose enabled status
 // flipped are individually reset to idle so they re-enter the scheduling path
 // on the next pass; nodes that lose eligibility emit an [EventDisable]. No
-// global reconverge happens — canSchedule no longer gates on per-dep state, so
-// one node's decision change cannot invalidate another node's schedulability
-// beyond the live order-tier check.
+// global reconverge happens — the per-node reset absorbs a decision change,
+// and canSchedule re-reads live state (order tier and dependency edges) on
+// every pass, so one node's decision never invalidates another's.
 func (s *Scheduler) compute() ([]string, []*node) {
 	// AddNode is the authoritative cycle gate, so topoSort should never
 	// return an error here. The not-enabled sweep below walks `sorted`
@@ -477,6 +477,10 @@ func (s *Scheduler) dependencyVersion(name string) *semver.Version {
 // Complete triggers the pass that advances it. A not-enabled dependency is
 // parked active by compute(), so it never holds a dependent back — a dependency
 // that is off fails the dependency rule instead, and (1) stops the node.
+//
+// (3) ignores Optional: optionality governs presence, not ordering, and
+// topoSort already builds an edge for an optional dependency. A present,
+// enabled one is therefore waited for.
 //
 // A dependency whose Order is higher than the dependent's deadlocks here: the
 // dependent waits for it under (3) while it waits for the dependent under (2).

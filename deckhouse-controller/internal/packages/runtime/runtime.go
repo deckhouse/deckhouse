@@ -905,9 +905,6 @@ func (r *Runtime) ResumeScheduler() {
 
 // IsPackageEnabled returns true if the package is enabled.
 func (r *Runtime) IsPackageEnabled(name string) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
 	return r.scheduler.IsEnabled(name)
 }
 

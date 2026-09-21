@@ -16,10 +16,12 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
 	"github.com/flant/kube-client/klogtolog"
@@ -53,6 +55,17 @@ func version() string {
 	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, nelm %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, NelmVersion, runtime.Version())
 }
 
+// logHandlerType maps a $LOG_TYPE value to a pkg/log handler; "color" keeps
+// addon-operator's flag vocabulary alive and falls back to the text handler.
+func logHandlerType(logType string) log.HandlerType {
+	switch strings.ToLower(logType) {
+	case "text", "color":
+		return log.TextHandlerType
+	default:
+		return log.JSONHandlerType
+	}
+}
+
 // main is almost a copy from addon-operator. We compile addon-operator to inline
 // Go hooks and set some defaults. Also, helper commands are defined for Shell hooks.
 
@@ -74,6 +87,13 @@ func main() {
 	// v1.21 moved MODULES_DIR under ADDON_OPERATOR_MODULES_DIR) must not
 	// silently change the deckhouse env contract.
 	cfg := app.NewConfig()
+
+	// addon-operator defaults Log.Type to "text" but never consumed it, so the
+	// binary has always logged JSON. Keep that default now that the value is
+	// actually applied to the logger below: only an explicit LOG_TYPE/--log-type
+	// switches the handler.
+	cfg.Log.Type = "json"
+
 	if err := envconfig.Load(cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
 		os.Exit(1)
@@ -102,7 +122,14 @@ func main() {
 	app.ApplyConfig(cfg)
 	sh_debug.DefaultSocketPath = cfg.Debug.UnixSocket
 
-	logger := log.NewLogger()
+	// LOG_LEVEL and LOG_TYPE arrive through envconfig.Load above. Applying them
+	// here replaces addon-operator's SetupLogging, which is no longer reached
+	// now that the operator is not started; without it the process stayed on
+	// pkg/log's hardcoded info/json defaults whatever the env said.
+	logger := log.NewLogger(
+		log.WithLevel(log.LogLevelFromStr(cfg.Log.Level).Level()),
+		log.WithHandlerType(logHandlerType(cfg.Log.Type)),
+	)
 	log.SetDefault(logger)
 
 	fileName := filepath.Base(os.Args[0])
@@ -126,6 +153,16 @@ func main() {
 
 				os.Exit(0)
 			}
+
+			// Flags are parsed after the logger is built, so re-apply the level:
+			// an explicit --log-level has to win over $LOG_LEVEL. The handler
+			// type cannot be swapped after construction, so --log-type does not.
+			level, err := log.ParseLevel(cfg.Log.Level)
+			if err != nil {
+				logger.Warn("unknown log level, falling back to info", slog.String("log_level", cfg.Log.Level))
+			}
+
+			logger.SetLevel(level)
 
 			klogtolog.InitAdapter(cfg.Debug.KubernetesAPI, logger.Named("klog"))
 			stdliblogtolog.InitAdapter(logger)
