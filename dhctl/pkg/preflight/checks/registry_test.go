@@ -127,7 +127,12 @@ func TestCheckResponse_WrongStatus(t *testing.T) {
 	s.ErrorIs(checkResponseIsFromDockerRegistry(resp), ErrRegistryUnreachable)
 }
 
-func TestCheckRegistryCredentials(t *testing.T) {
+func TestRegistryImageAvailabilityKeepsLegacyCheckName(t *testing.T) {
+	check := RegistryImageAvailability(nil, nil)
+	require.Equal(t, "registry-credentials", check.Name.String())
+}
+
+func TestCheckRegistryImageAvailability(t *testing.T) {
 	t.Setenv("DHCTL_TEST_VERSION_TAG", "v1.2.3")
 
 	registryCfg := registry_mocks.ConfigBuilder(
@@ -154,7 +159,7 @@ func TestCheckRegistryCredentials(t *testing.T) {
 		ExpectReference(ref).
 		Return(&v1.ConfigFile{}, nil)
 
-	check := RegistryCredentialsCheck{
+	check := RegistryImageAvailabilityCheck{
 		MetaConfig:    metaCfg,
 		InstallConfig: installer,
 		descriptor:    provider,
@@ -163,7 +168,7 @@ func TestCheckRegistryCredentials(t *testing.T) {
 	require.NoError(t, check.Run(t.Context()))
 }
 
-func TestCheckRegistryCredentialsResolveError(t *testing.T) {
+func TestCheckRegistryImageAvailabilityResolveError(t *testing.T) {
 	t.Setenv("DHCTL_TEST_VERSION_TAG", "v1.2.3")
 
 	registryCfg := registry_mocks.ConfigBuilder(
@@ -189,7 +194,7 @@ func TestCheckRegistryCredentialsResolveError(t *testing.T) {
 		ExpectReference(ref).
 		Return(nil, errors.New("resolve failed"))
 
-	check := RegistryCredentialsCheck{
+	check := RegistryImageAvailabilityCheck{
 		MetaConfig:    metaCfg,
 		InstallConfig: installer,
 		descriptor:    provider,

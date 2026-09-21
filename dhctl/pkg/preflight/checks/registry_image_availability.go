@@ -23,28 +23,30 @@ import (
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
-type RegistryCredentialsCheck struct {
+type RegistryImageAvailabilityCheck struct {
 	MetaConfig    *config.MetaConfig
 	InstallConfig *config.DeckhouseInstaller
 
 	descriptor imageDescriptorProvider
 }
 
-const RegistryCredentialsCheckName preflight.CheckName = "registry-credentials"
+// RegistryImageAvailabilityCheckName keeps the legacy external ID because it is
+// accepted by --preflight-skip-check and may be used by existing automation.
+const RegistryImageAvailabilityCheckName preflight.CheckName = "registry-credentials"
 
-func (RegistryCredentialsCheck) Description() string {
+func (RegistryImageAvailabilityCheck) Description() string {
 	return "deckhouse image is available in registry"
 }
 
-func (RegistryCredentialsCheck) Phase() preflight.Phase {
+func (RegistryImageAvailabilityCheck) Phase() preflight.Phase {
 	return preflight.PhasePreInfra
 }
 
-func (RegistryCredentialsCheck) RetryPolicy() preflight.RetryPolicy {
+func (RegistryImageAvailabilityCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.DefaultRetryPolicy
 }
 
-func (c RegistryCredentialsCheck) Run(ctx context.Context) error {
+func (c RegistryImageAvailabilityCheck) Run(ctx context.Context) error {
 	if c.MetaConfig == nil || c.InstallConfig == nil {
 		return fmt.Errorf("metaConfig and installConfig are required")
 	}
@@ -65,14 +67,14 @@ func (c RegistryCredentialsCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func RegistryCredentials(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) preflight.Check {
-	check := RegistryCredentialsCheck{
+func RegistryImageAvailability(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) preflight.Check {
+	check := RegistryImageAvailabilityCheck{
 		MetaConfig:    meta,
 		InstallConfig: cfg,
 	}
 
 	return preflight.Check{
-		Name:        RegistryCredentialsCheckName,
+		Name:        RegistryImageAvailabilityCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
