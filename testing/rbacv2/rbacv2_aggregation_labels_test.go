@@ -46,7 +46,7 @@ var aggregationLabelAllowedDirs = []string{
 // rbac.deckhouse.io/aggregate-to-namespace-as: admin would be merged into d8:namespace:admin for
 // every holder in the cluster, and the contract test would never see it: it walks templates/rbacv2
 // only. The admission webhook refuses such an object from a user; this test refuses it from a module.
-func TestNoPlatformAggregationLabelOutsideRBACv2(t *testing.T) {
+func TestRBACv2AggregationLabelPlacementValidation(t *testing.T) {
 	root, err := filepath.Abs("../..")
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +65,7 @@ func TestNoPlatformAggregationLabelOutsideRBACv2(t *testing.T) {
 			if d.IsDir() {
 				// Module sources, test fixtures and vendored charts are not templates the platform renders.
 				switch d.Name() {
-				case "images", "testdata", "charts", "docs", "crds", "openapi", "hooks", "monitoring":
+				case "images", "testdata", "docs":
 					return filepath.SkipDir
 				}
 				return nil
