@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,6 +93,13 @@ func (s *Service) handleEvent(ctx context.Context, name string) error {
 
 	// Get the package status from the operator and compute conditions
 	s.computeAndApplyConditions(name, module)
+
+	// The resync republishes every package on a timer, so most events compute a
+	// status identical to the published one. Patching it anyway would bump
+	// resourceVersion on every tick and wake every watcher for nothing.
+	if apiequality.Semantic.DeepEqual(original.Status, module.Status) {
+		return nil
+	}
 
 	if err := s.client.Status().Patch(ctx, module, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch module status: %w", err)
