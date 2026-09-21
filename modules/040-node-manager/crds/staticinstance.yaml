@@ -103,6 +103,17 @@ spec:
                       type: string
                   type: object
                   x-kubernetes-map-type: atomic
+                nodeName:
+                  description: |-
+                    The name the node registers under in the cluster.
+
+                    Leave it unset and the node keeps the name it has always had: its hostname.
+                    Set it and the hostname of the host is left alone - only the Node object is
+                    named this way. The name is fixed when the instance is bootstrapped, so
+                    changing it afterwards has no effect on a node that is already running.
+                  maxLength: 253
+                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                  type: string
               required:
               - address
               - credentialsRef
@@ -359,6 +370,17 @@ spec:
                       type: string
                   type: object
                   x-kubernetes-map-type: atomic
+                nodeName:
+                  description: |-
+                    The name the node registers under in the cluster.
+
+                    Leave it unset and the node keeps the name it has always had: its hostname.
+                    Set it and the hostname of the host is left alone - only the Node object is
+                    named this way. The name is fixed when the instance is bootstrapped, so
+                    changing it afterwards has no effect on a node that is already running.
+                  maxLength: 253
+                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                  type: string
               required:
               - address
               - credentialsRef

@@ -105,6 +105,13 @@ spec:
         - --ip-masq
         - --kube-subnet-mgr
         env:
+        # Read by the entrypoint to find this node's Node object, and by flanneld
+        # itself, which otherwise falls back to the machine's hostname.
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
         - name: POD_NETWORK_MODE
           value: {{ .Values.cniFlannel.internal.podNetworkMode }}
         - name: MODULE_CNI_CILIUM_ENABLED

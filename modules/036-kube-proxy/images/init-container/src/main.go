@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -178,12 +179,12 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 		return "", err
 	}
 
-	hostname, err := os.Hostname()
+	nodeName, err := nodeName()
 	if err != nil {
-		return "", fmt.Errorf("failed to get pod hostname: %s", err)
+		return "", err
 	}
 
-	node, err := waitForNodeTemplate(clientSet, hostname)
+	node, err := waitForNodeTemplate(clientSet, nodeName)
 	if err != nil {
 		return "", err
 	}
@@ -270,4 +271,25 @@ func getAPIProxyAddress() (string, error) {
 	}
 
 	return apiProxyAddress, nil
+}
+
+// nodeName is the name of the Node this pod runs on. It comes from the pod's own
+// spec.nodeName through the downward API, because a node's name in the cluster is
+// not necessarily the hostname of the machine: kubelet registers under
+// --hostname-override, which Deckhouse lets an operator choose.
+//
+// The fallback keeps a pod whose manifest predates the NODE_NAME env working the
+// way it always did, on a cluster where the two happen to be the same.
+func nodeName() (string, error) {
+	if name := strings.TrimSpace(os.Getenv("NODE_NAME")); name != "" {
+		return name, nil
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", fmt.Errorf("NODE_NAME is not set and the hostname is unreadable: %s", err)
+	}
+	log.Printf("NODE_NAME is not set, falling back to the hostname %q", hostname)
+
+	return hostname, nil
 }

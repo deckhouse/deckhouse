@@ -82,6 +82,14 @@ spec:
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "initContainer") }}
         env:
+        # The container looks the Node object up by this name. Taking it from the
+        # pod rather than from the machine's hostname is what lets a node be named
+        # something other than its hostname.
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
         - name: CLOUD_PROVIDER
           value: {{ dig "cloud" "provider" "Static" .Values.global.clusterConfiguration | lower }}
         - name: POD_SUBNET

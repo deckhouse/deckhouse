@@ -48,6 +48,29 @@ const (
 	RequeueForStaticInstanceBootstrapping = 1 * time.Minute
 )
 
+// requestedNodeNameCommand is the fragment of the bootstrap command that hands the
+// node the name an operator asked for in StaticInstance.spec.nodeName. The bootstrap
+// script reads the file before anything else and pins the name as the node's
+// identity, which is what lets the Node be called something other than the hostname
+// of the host. An empty name adds nothing: the node then falls back to its hostname.
+//
+// The name is safe to interpolate because the CRD only admits an RFC 1123 DNS
+// subdomain - lowercase letters, digits, "-" and "." - but the shell quoting is kept
+// anyway so a name never has to be trusted to be shell-inert.
+func requestedNodeNameCommand(nodeName string) string {
+	if nodeName == "" {
+		return ""
+	}
+
+	return fmt.Sprintf(" && echo '%s' > /var/lib/bashible/node-name", shellSingleQuote(nodeName))
+}
+
+// shellSingleQuote makes a value safe to put inside a single-quoted shell word by
+// ending the quoting, emitting an escaped quote and opening it again.
+func shellSingleQuote(value string) string {
+	return strings.ReplaceAll(value, "'", `'\''`)
+}
+
 // Bootstrap runs the bootstrap script on StaticInstance.
 func (c *Client) Bootstrap(ctx context.Context, staticInstance *deckhousev1.StaticInstance,
 	staticMachine *infrav1.StaticMachine, machine *clusterv1.Machine) (ctrl.Result, error) {
@@ -97,6 +120,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 
 		providerID      string
 		machineName     string
+		nodeName        string
 		bootstrapScript []byte
 	}
 
@@ -106,6 +130,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		sshLegacyMode:   sshLegacyMode,
 		providerID:      string(staticMachine.Spec.ProviderID),
 		machineName:     machine.Name,
+		nodeName:        staticInstance.Spec.NodeName,
 		bootstrapScript: bootstrapScript,
 	}
 
@@ -131,8 +156,8 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		}
 		tLogger.Info("bootstrapping node")
 		tRes, tErr := sshCl.ExecSSHCommandToString(
-			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
-				t.providerID, t.machineName, base64.StdEncoding.EncodeToString(t.bootstrapScript)))
+			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name%s && echo '%s' | base64 -d | bash",
+				t.providerID, t.machineName, requestedNodeNameCommand(t.nodeName), base64.StdEncoding.EncodeToString(t.bootstrapScript)))
 		if tErr != nil {
 			if strings.Contains(tErr.Error(), "Process exited with status 2") {
 				return nil

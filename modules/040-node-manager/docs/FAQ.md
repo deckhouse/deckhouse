@@ -303,6 +303,109 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Applying the changes will take some time.
 
+## How do I give a node a name of its own?
+
+By default a node joins the cluster under the hostname of its machine. Where the
+hostnames are not yours to choose — assigned by an imaging pipeline, by DHCP, or
+simply not unique across the fleet — a static node can be given a name of its own
+instead. The hostname of the machine is left alone: only the Node object is named
+this way.
+
+The name has to be an RFC 1123 DNS subdomain (lowercase letters, digits, `-` and
+`.`) and unique across the cluster. It is fixed the first time the node is
+bootstrapped and does not change afterwards, which is also why the hostname of a
+node already in the cluster can be changed without disturbing it.
+
+For a [manually added](#how-do-i-add-a-static-node-to-a-cluster) static node, set
+`D8_NODE_NAME` when running the bootstrap script:
+
+```shell
+echo <Base64-CODE> | base64 -d | D8_NODE_NAME=worker-rack3-07 bash
+```
+
+For a node added through [CAPS](./#cluster-api-provider-static), set
+[`spec.nodeName`](cr.html#staticinstance-v1alpha2-spec-nodename) on its StaticInstance:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: StaticInstance
+metadata:
+  name: static-worker-1
+spec:
+  address: "192.168.1.100"
+  nodeName: worker-rack3-07
+  credentialsRef:
+    kind: SSHCredentials
+    apiVersion: deckhouse.io/v1alpha2
+    name: credentials
+```
+
+The field can only be changed while the StaticInstance is still `Pending`: after
+that the name is already on the node.
+
+For the first master node of a static or hybrid cluster, pass `--node-name` to
+`dhctl bootstrap`.
+
+## How do I rename a node that is already in the cluster?
+
+A Node object cannot be renamed, so a node is renamed by re-registering it: kubelet
+drops the identity it joined with and registers again under the new name. The
+machine itself stays where it is — its disks, its container runtime and its
+hostname are untouched — and the Node object of the old name is removed once the
+renamed node is back. This works for static and CloudStatic nodes, master nodes of
+a static or hybrid cluster included.
+
+{% alert level="warning" %}
+The workload on the node does not survive the rename: the old Node object is
+removed and everything still scheduled on it goes with it. Drain the node first.
+For a master node, rename one at a time and wait for etcd to report all members
+healthy before starting the next.
+{% endalert %}
+
+Nodes created by the cloud — `CloudEphemeral` and `CloudPermanent` — cannot be
+renamed, and `rename_node.sh` is not installed on them. Their name is how the rest
+of the cluster finds the machine behind them: `machine-controller-manager` matches
+a Machine to its Node by name, and the infrastructure state `dhctl converge` works
+from is kept in a `d8-node-terraform-state-<node-name>` Secret. A renamed node
+would read as a machine that vanished and a node that appeared from nowhere.
+
+Local PersistentVolumes pin their node in `nodeAffinity` by the
+`kubernetes.io/hostname` label, which holds the node's name. A rename leaves such
+volumes bound to a node that no longer exists; move or recreate them.
+
+1. Drain the node:
+
+   ```shell
+   d8 k drain <old-name> --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Get a bootstrap token of the node's NodeGroup — kubelet authenticates with it to
+   register under the new name:
+
+   ```shell
+   NODE_GROUP=worker
+   d8 k -n kube-system get secret -l node-manager.deckhouse.io/node-group=${NODE_GROUP} \
+     -o jsonpath='{.items[0].data.token-id}{"."}{.items[0].data.token-secret}' | base64 -d
+   ```
+
+1. On the node itself, run:
+
+   ```shell
+   sudo /var/lib/bashible/rename_node.sh --new-name <new-name> --bootstrap-token <token>
+   ```
+
+   The script checks that the new name is free, re-registers the node and waits for
+   it to come back. It refuses to run on a node that has not been cordoned; pass
+   `--skip-drain` to override that.
+
+1. `node-manager` removes the Node object of the old name once it has seen the
+   renamed node become `Ready`. It only removes a Node that is not `Ready` and that
+   reports the same machine, so a rename that did not work leaves the old Node
+   object in place to go back to.
+
+If the node is managed by CAPS, also update `spec.nodeName` on its StaticInstance
+so the two agree; CAPS itself finds the node again by its provider ID, not by name.
+
 ## How to clean up a node for adding to the cluster?
 
 This is only needed if you have to move a static node from one cluster to another. Be aware these operations remove local storage data. If you just need to change a NodeGroup, follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).

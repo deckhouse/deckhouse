@@ -23,10 +23,11 @@ import (
 )
 
 func run(cordonEnabled bool) error {
-	nodeName, err := os.Hostname()
+	nodeName, err := kubernetes.DiscoverNodeName()
 	if err != nil {
-		dlog.Fatal("failed to get hostname", dlog.Err(err))
+		dlog.Fatal("failed to determine the node name", dlog.Err(err))
 	}
+	dlog.Info("acting on node", slog.String("node", nodeName))
 
 	// Wait for kube-apiserver to be available before creating client
 	var kubeClient *kubernetes.Klient

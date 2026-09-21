@@ -38,6 +38,17 @@ type StaticInstanceSpec struct {
 
 	// The reference to the `SSHCredentials` object.
 	CredentialsRef *corev1.ObjectReference `json:"credentialsRef"`
+
+	// The name the node registers under in the cluster.
+	//
+	// Leave it unset and the node keeps the name it has always had: its hostname.
+	// Set it and the hostname of the host is left alone - only the Node object is
+	// named this way. The name is fixed when the instance is bootstrapped, so
+	// changing it afterwards has no effect on a node that is already running.
+	//+optional
+	//+kubebuilder:validation:MaxLength=253
+	//+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	NodeName string `json:"nodeName,omitempty"`
 }
 
 // StaticInstanceStatus defines the observed state of StaticInstance.

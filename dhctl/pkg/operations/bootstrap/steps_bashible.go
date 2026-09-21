@@ -57,6 +57,11 @@ type BashiblePipelineParams struct {
 	IsDebug       bool
 	GlobalOpts    *options.GlobalOptions
 
+	// NodeName is what the master should register under. Empty leaves the node
+	// named after its hostname, which is what every cluster bootstrapped before
+	// this option got.
+	NodeName string
+
 	// CompleteSubPhase completes a child of the InstallKubernetes node. The pipeline gets the
 	// node's completer and not the phase context itself: it runs inside one node of the tree and
 	// has no business announcing, switching or completing phases - the walker does that.
@@ -181,7 +186,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		}
 	})
 
-	if err := prepareMasterNode(ctx, nodeInterface, templateController); err != nil {
+	if err := prepareMasterNode(ctx, nodeInterface, templateController, params.NodeName); err != nil {
 		return err
 	}
 
@@ -244,9 +249,15 @@ func getModulesPreparators(ctx context.Context, params *BashiblePipelineParams) 
 	return []ModulePreparator{cp}, cp
 }
 
-func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
+func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller, nodeName string) error {
 	ctx, span := telemetry.StartSpan(ctx, "prepareMasterNode")
 	defer span.End()
+
+	// Has to land before the prerequisites script runs: that script is what pins
+	// the node's name, and it only reads this file while the name is not pinned yet.
+	if err := requestNodeName(ctx, nodeInterface, nodeName); err != nil {
+		return err
+	}
 
 	upload := func(ctx context.Context, scriptPath string) error {
 		ctx, span := telemetry.StartSpan(ctx, "upload script")
@@ -303,6 +314,41 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			if err != nil {
 				return err
 			}
+		}
+		return nil
+	})
+}
+
+// requestNodeName asks the machine to register under a name of its own instead of
+// its hostname, by leaving the name where bb-discover-node-name looks for it. The
+// hostname of the machine is not touched: from here on the two are separate, and
+// nothing re-derives the node name from the hostname again.
+func requestNodeName(ctx context.Context, nodeInterface libcon.Interface, nodeName string) error {
+	if nodeName == "" {
+		return nil
+	}
+
+	ctx, span := telemetry.StartSpan(ctx, "requestNodeName")
+	defer span.End()
+
+	// The name has already been through app.ValidateNodeName, so it holds nothing
+	// a shell would look at. The quoting is here so that stays true of a caller
+	// that has not.
+	remote := fmt.Sprintf("mkdir -p /var/lib/bashible && printf '%%s\\n' '%s' > /var/lib/bashible/node-name",
+		strings.ReplaceAll(nodeName, "'", `'\''`))
+
+	p := retry.NewEmptyParams(
+		retry.WithName("Set the node name to %s", nodeName),
+		retry.WithAttempts(30),
+		retry.WithWait(1*time.Second),
+		retry.WithLogger(dhlog.FromContext(ctx)),
+	)
+
+	return retry.NewLoopWithParams(p).RunContext(ctx, func() error {
+		cmd := nodeInterface.Command("bash", "-c", remote)
+		cmd.Sudo(ctx)
+		if _, stderr, err := cmd.Output(ctx); err != nil {
+			return fmt.Errorf("write /var/lib/bashible/node-name: %w (stderr: %s)", err, string(stderr))
 		}
 		return nil
 	})

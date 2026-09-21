@@ -16,6 +16,7 @@ package app
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -50,6 +51,41 @@ the classic bootstrap leaves on the master cannot be fetched from it afterwards.
 		Envar(configEnvName("KUBECONFIG_OUT")).
 		StringVar(&o.KubeconfigOut)
 }
+
+// DefineNodeNameFlag registers --node-name, the name the first master registers
+// under. Without it a node is named after its hostname; the two are separate from
+// here on, and nothing later re-derives the name from the hostname, so the host
+// can be renamed afterwards without touching the cluster.
+func DefineNodeNameFlag(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
+	cmd.Flag("node-name", `Name for the first master node in the cluster. Defaults to the hostname of the machine.
+An RFC 1123 DNS subdomain: lowercase letters, digits, '-' and '.'. The hostname of the machine is left unchanged.
+Only has an effect on a static or hybrid cluster, where dhctl bootstraps the master itself.`).
+		Envar(configEnvName("NODE_NAME")).
+		PlaceHolder("name").
+		StringVar(&o.NodeName)
+
+	cmd.PreAction(func(_ *kingpin.ParseContext) error {
+		return ValidateNodeName(o.NodeName)
+	})
+}
+
+// ValidateNodeName rejects a name no Node object could carry. Catching it here
+// costs a parse error; catching it on the node costs a kubelet that never
+// registers and a bootstrap that hangs with nothing to point at.
+func ValidateNodeName(name string) error {
+	if name == "" {
+		return nil
+	}
+	if len(name) > 253 {
+		return fmt.Errorf("--node-name %q is longer than the 253 characters a Kubernetes object name allows", name)
+	}
+	if !nodeNameRe.MatchString(name) {
+		return fmt.Errorf("--node-name %q is not a valid RFC 1123 DNS subdomain: lowercase letters, digits, '-' and '.'", name)
+	}
+	return nil
+}
+
+var nodeNameRe = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
 // DefineDeckhouseFlags registers --deckhouse-timeout.
 func DefineDeckhouseFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {

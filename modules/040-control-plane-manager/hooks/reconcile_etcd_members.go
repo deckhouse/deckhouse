@@ -20,11 +20,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/pkg/errors"
+	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -107,6 +109,39 @@ type recicleEtcdNode struct {
 	Name string
 }
 
+// etcdMemberNodeIP finds the node an etcd member is running on, and reports
+// whether the member still belongs to the cluster at all. Everything this hook
+// does to a member hangs off it: a member no node claims is removed from etcd.
+//
+// The name is only the first way to ask. A member publishes its name when it
+// starts, so the name etcd reports lags behind the Node object twice over: a
+// member added but not yet started has none, and a renamed node keeps announcing
+// the name it booted with until its etcd restarts under the new one. In both
+// windows the member is healthy, voting and irreplaceable, and matching on the
+// name alone would take it out of the cluster.
+//
+// The peer URL does not lag: it is the address the member was added with and it
+// is what its peers reach it on. Matching on it as well narrows what this hook
+// removes to members no master node answers for, by name or by address.
+func etcdMemberNodeIP(mem *etcdserverpb.Member, byName map[string]string, nodeIPs map[string]struct{}) (string, bool) {
+	if ip, ok := byName[mem.Name]; ok {
+		return ip, true
+	}
+
+	for _, peerURL := range mem.PeerURLs {
+		parsed, err := url.Parse(peerURL)
+		if err != nil {
+			continue
+		}
+		host := parsed.Hostname()
+		if _, ok := nodeIPs[host]; ok {
+			return host, true
+		}
+	}
+
+	return "", false
+}
+
 func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	snapsM := input.Snapshots.Get("master_nodes")
 	snapsEO := input.Snapshots.Get("etcd_arbiter_node")
@@ -121,6 +156,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 
 	etcdServersEndpoints := make([]string, 0, len(snaps))
 	discoveredEtcdNodesMap := make(map[string]string, len(snaps))
+	discoveredEtcdNodeIPs := make(map[string]struct{}, len(snaps))
 	for node, err := range sdkobjectpatch.SnapshotIter[recicleEtcdNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over ETCD Nodes snapshots: %v", err)
@@ -134,6 +170,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 		}
 
 		discoveredEtcdNodesMap[node.Name] = node.IP
+		discoveredEtcdNodeIPs[node.IP] = struct{}{}
 		etcdServersEndpoints = append(etcdServersEndpoints, fmt.Sprintf("https://%s:2379", node.IP))
 	}
 
@@ -158,7 +195,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 			input.Logger.Warn("found learner etcd member, will be skipped", slog.Uint64("member_id", mem.ID), slog.String("member_name", mem.Name))
 			continue
 		}
-		if ip, ok := discoveredEtcdNodesMap[mem.Name]; ok {
+		if ip, ok := etcdMemberNodeIP(mem, discoveredEtcdNodesMap, discoveredEtcdNodeIPs); ok {
 			etcdVotingMembers = append(etcdVotingMembers, fmt.Sprintf("https://%s:2379", ip))
 		}
 	}
@@ -166,9 +203,9 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 
 	removeListIDs := make([]uint64, 0)
 	for _, mem := range etcdMembersResp.Members {
-		if _, ok := discoveredEtcdNodesMap[mem.Name]; !ok {
+		if _, ok := etcdMemberNodeIP(mem, discoveredEtcdNodesMap, discoveredEtcdNodeIPs); !ok {
 			removeListIDs = append(removeListIDs, mem.ID)
-			input.Logger.Warn("added etcd member to remove list", slog.Uint64("member_id", mem.ID), slog.String("member_name", mem.Name))
+			input.Logger.Warn("added etcd member to remove list", slog.Uint64("member_id", mem.ID), slog.String("member_name", mem.Name), slog.Any("peer_urls", mem.PeerURLs))
 		}
 	}
 

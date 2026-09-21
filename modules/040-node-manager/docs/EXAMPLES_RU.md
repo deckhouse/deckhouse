@@ -237,6 +237,15 @@ spec:
    echo <Base64-КОД-СКРИПТА> | base64 -d | bash
    ```
 
+   Узел войдёт в кластер под hostname машины. Чтобы он вошёл под собственным именем, не
+   меняя hostname, задайте `D8_NODE_NAME`:
+
+   ```shell
+   echo <Base64-КОД-СКРИПТА> | base64 -d | D8_NODE_NAME=worker-rack3-07 bash
+   ```
+
+   Подробнее — [как задать узлу собственное имя](faq.html#как-задать-узлу-собственное-имя).
+
 ### С помощью Cluster API Provider Static
 
 {% alert level="warning" %}
