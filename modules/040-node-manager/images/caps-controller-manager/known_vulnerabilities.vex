@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-5bdc8e69dccc36c00c0692044b87756a554c45abfbda2a3633e8263b5dffaff8",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость GO-2026-5932 отмечает пакет golang.org/x/crypto/openpgp как неподдерживаемый и небезопасный по своей конструкции. Бинарь caps-controller-manager использует из модуля golang.org/x/crypto только пакет ssh — SSH-клиент для бутстрапа узлов StaticInstance (internal/ssh/gossh/gossh.go). Пакет openpgp никуда не импортируется и в сборку не попадает: go list -deps ./cmd/... не возвращает ни одного пакета golang.org/x/crypto/openpgp.",
+      "timestamp": "2026-09-18T16:28:21Z"
+    }
+  ],
+  "timestamp": "2026-09-18T16:28:21Z"
+}
