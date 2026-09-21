@@ -53,6 +53,82 @@ const (
 	masterNodesLabelSelector = "node.deckhouse.io/group=master"
 )
 
+func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
+	attempt := 0
+
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Waiting for '%s' to join etcd", nodeName),
+		retry.WithAttempts(2000),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errEtcdMemberCheckTransient, errEtcdNotExpectedMembership),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+		attempt++
+
+		// Fresh client each attempt: the captured tunnel dies on master replace.
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
+		client := kc.KubeClient.(libcon.KubeClient)
+
+		members, err := getEtcdMembers(ctx, client, "")
+		if err != nil {
+			return fmt.Errorf("getting etcd members: %w", err)
+		}
+
+		names := make([]string, 0, len(members))
+		for _, m := range members {
+			names = append(names, m.Name)
+		}
+
+		voting := hasVotingMember(members, nodeName)
+
+		if attempt == 1 || voting {
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Current members: [%s]", strings.Join(names, ", ")))
+		}
+
+		if voting {
+			return nil
+		}
+
+		return fmt.Errorf("%w: '%s' is not yet a voting member", errEtcdNotExpectedMembership, nodeName)
+	})
+}
+
+func waitEtcdHasNoMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
+	const maxAttempts = 225
+
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Waiting for '%s' to leave etcd", nodeName),
+		retry.WithAttempts(maxAttempts),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errEtcdMemberCheckTransient, errEtcdNotExpectedMembership),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
+
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
+		client := kc.KubeClient.(libcon.KubeClient)
+
+		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
+		if err != nil {
+			return fmt.Errorf("checking etcd membership for '%s': %w", nodeName, err)
+		}
+
+		if ok {
+			return fmt.Errorf("%w: node '%s' is still listed as etcd cluster member", errEtcdNotExpectedMembership, nodeName)
+		}
+
+		return nil
+	})
+}
+
 // checkEtcdQuorumBeforeRemoval asks etcd for its membership instead of deriving it from the
 // master nodes: a member no node answers for still counts against the quorum. Whether the
 // remaining masters are healthy is decided before this runs.
@@ -152,82 +228,6 @@ func checkEtcdClusterHealthy(ctx context.Context, kubeGetter kubernetes.KubeClie
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Etcd cluster is healthy on all %d endpoints", len(endpoints)))
 
 		return nil
-	})
-}
-
-func waitEtcdHasNoMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
-	const maxAttempts = 225
-
-	loopParams := retry.NewEmptyParams(
-		retry.WithName("Waiting for '%s' to leave etcd", nodeName),
-		retry.WithAttempts(maxAttempts),
-		retry.WithWait(1*time.Second),
-		retry.WithWhitelist(errEtcdMemberCheckTransient, errEtcdNotExpectedMembership),
-	)
-
-	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
-		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
-
-		kc, err := kubeGetter.KubeClientCtx(ctx)
-		if err != nil {
-			return fmt.Errorf("get kube client: %w", err)
-		}
-		client := kc.KubeClient.(libcon.KubeClient)
-
-		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
-		if err != nil {
-			return fmt.Errorf("checking etcd membership for '%s': %w", nodeName, err)
-		}
-
-		if ok {
-			return fmt.Errorf("%w: node '%s' is still listed as etcd cluster member", errEtcdNotExpectedMembership, nodeName)
-		}
-
-		return nil
-	})
-}
-
-func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
-	attempt := 0
-
-	loopParams := retry.NewEmptyParams(
-		retry.WithName("Waiting for '%s' to join etcd", nodeName),
-		retry.WithAttempts(2000),
-		retry.WithWait(1*time.Second),
-		retry.WithWhitelist(errEtcdMemberCheckTransient, errEtcdNotExpectedMembership),
-	)
-
-	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
-		attempt++
-
-		// Fresh client each attempt: the captured tunnel dies on master replace.
-		kc, err := kubeGetter.KubeClientCtx(ctx)
-		if err != nil {
-			return fmt.Errorf("get kube client: %w", err)
-		}
-		client := kc.KubeClient.(libcon.KubeClient)
-
-		members, err := getEtcdMembers(ctx, client, "")
-		if err != nil {
-			return fmt.Errorf("getting etcd members: %w", err)
-		}
-
-		names := make([]string, 0, len(members))
-		for _, m := range members {
-			names = append(names, m.Name)
-		}
-
-		voting := hasVotingMember(members, nodeName)
-
-		if attempt == 1 || voting {
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Current members: [%s]", strings.Join(names, ", ")))
-		}
-
-		if voting {
-			return nil
-		}
-
-		return fmt.Errorf("%w: '%s' is not yet a voting member", errEtcdNotExpectedMembership, nodeName)
 	})
 }
 
