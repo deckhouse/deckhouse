@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -46,6 +47,12 @@ func newTestReconciler() *ServiceWithHealthchecksReconciler {
 func newTestSWH() networkv1alpha1.ServiceWithHealthchecks {
 	return networkv1alpha1.ServiceWithHealthchecks{
 		ObjectMeta: metav1.ObjectMeta{Name: testSWHName, Namespace: testNamespace, UID: testSWHUID},
+		Spec: networkv1alpha1.ServiceWithHealthchecksSpec{
+			Healthcheck: networkv1alpha1.Healthcheck{Probes: []networkv1alpha1.Probe{{
+				Mode:       "TCP",
+				TCPHandler: &networkv1alpha1.TCPHandler{TargetPort: intstr.FromInt(32412)},
+			}}},
+		},
 	}
 }
 
@@ -339,6 +346,32 @@ func TestBuildEndpointsPublishesReadyPod(t *testing.T) {
 	}
 	if !endpointIsReady(endpoints[0]) {
 		t.Error("expected the endpoint to be ready")
+	}
+}
+
+func TestBuildEndpointsPublishesReadyPodWithoutHealthchecks(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	swh.Spec.Healthcheck = networkv1alpha1.Healthcheck{}
+	swhKey := types.NamespacedName{Namespace: testNamespace, Name: testSWHName}
+
+	pod := newPod("udp-worker", corev1.PodRunning, true, testPodIP)
+	r.healthchecksResultsByServiceWithHealthchecks[swhKey] = []HealthcheckTarget{{
+		targetHost:   testPodIP,
+		podName:      pod.Name,
+		podNamespace: testNamespace,
+		podUID:       pod.UID,
+		podReady:     true,
+	}}
+
+	endpoints := r.buildEndpoints(swh)
+	if len(endpoints) != 1 || !endpointIsReady(endpoints[0]) {
+		t.Fatalf("expected ready endpoint without custom healthchecks, got %+v", endpoints)
+	}
+
+	statuses := r.buildEndpointStatuses(&swh)
+	if len(statuses) != 1 || !statuses[0].ProbesSuccessful {
+		t.Fatalf("expected successful endpoint status without custom healthchecks, got %+v", statuses)
 	}
 }
 

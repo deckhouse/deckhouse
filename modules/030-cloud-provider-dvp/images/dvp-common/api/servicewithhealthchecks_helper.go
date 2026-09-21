@@ -122,6 +122,10 @@ func setServiceWithHealthchecksSpec(
 ) error {
 	probes := make([]any, 0, len(ports))
 	for _, p := range ports {
+		if p.Protocol == v1.ProtocolUDP {
+			continue
+		}
+
 		var target int64
 		if p.TargetPort.Type == intstr.Int {
 			target = int64(p.TargetPort.IntVal)
@@ -146,12 +150,14 @@ func setServiceWithHealthchecksSpec(
 		"ports":                 servicePortsToUnstructured(ports),
 		"selector":              selectorAny,
 		"externalTrafficPolicy": string(externalTrafficPolicy),
-		"healthcheck": map[string]any{
+	}
+	if len(probes) > 0 {
+		spec["healthcheck"] = map[string]any{
 			"initialDelaySeconds": int64(10),
 			"periodSeconds":       int64(10),
 			"timeoutSeconds":      int64(1),
 			"probes":              probes,
-		},
+		}
 	}
 
 	if len(externalIPs) > 0 {
