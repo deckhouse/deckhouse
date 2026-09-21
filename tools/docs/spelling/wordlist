@@ -205,6 +205,7 @@ DDTHH
 DHCP
 DHE
 DKP
+DM
 DN
 DNAT
 DNS
@@ -1726,6 +1727,7 @@ shapshot
 shouldn
 smokeMini
 snaphost
+snapshotter
 sourceRanges
 specialCharacters
 spellchecker
@@ -1935,6 +1937,7 @@ zoneTagCategory
 Пререквизиты
 Пробросьте
 Р
+Рантайм
 Ревью
 РедОС
 Реквесты
@@ -2424,6 +2427,7 @@ zoneTagCategory
 недеструктивные
 недеструктивных
 недоиспользованных
+незагруженным
 незапрошенные
 незапрошенных
 незашифрованном
@@ -2658,8 +2662,11 @@ zoneTagCategory
 разблокируется
 раннера
 раннером
+рантайм
 рантайма
 рантайме
+рантаймом
+рантайму
 раскомментировать
 раскопировано
 распарсены
