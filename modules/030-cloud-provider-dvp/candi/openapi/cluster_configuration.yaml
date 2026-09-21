@@ -220,11 +220,11 @@ apiVersions:
                       description: |
                         List of GPU devices to attach to the virtual machine.
 
-                        Each entry references a `GPUClass` by name; list order is not significant. To attach several devices of the same class, repeat the entry.
+                        Each entry references a `GPUClass` by name; list order is not significant. To attach several devices of the same class, repeat the entry. A single virtual machine takes no more than 16 devices.
 
                         Requires the `GPU` feature gate to be enabled in the `virtualization` module of the cluster hosting the virtual machines. A virtual machine with an attached GPU cannot be live migrated.
 
-                        > Attaching a device only passes the card through to the virtual machine. It does not turn the node into a GPU node on its own: the NVIDIA driver must be installed on the node and the NodeGroup must define the [`spec.gpu`](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-gpu) section. Without them the node never exposes the `nvidia.com/gpu` resource and no workload can request the GPU.
+                        > Attaching a device only passes the card through to the virtual machine. It does not turn the node into a GPU node on its own: the NVIDIA driver must be installed on the node and the NodeGroup must define the [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) section. Without them the node never exposes the `nvidia.com/gpu` resource and no workload can request the GPU.
 
                         > Changing this parameter for already created nodes is applied during converge to the existing virtual machines. Such a virtual machine is updated in place and not recreated, and since `disruptions.restartApprovalMode: Automatic` is set for it, the change is applied by restarting the virtual machine without additional confirmation. Perform the converge one node at a time, keeping the control plane quorum in mind.
                       items:

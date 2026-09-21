@@ -219,8 +219,8 @@ properties:
                         type: array
                         maxItems: 16
                         description: |
-                          List of GPU devices to attach to the VM. Each entry references a GPUClass by name; repeating a name attaches several devices of that class.
-                          Requires the GPU feature gate enabled in the virtualization module of the cluster hosting the VMs. A VM with an attached GPU is not live migratable.
+                          List of GPU devices to attach to the VM. Each entry references a `GPUClass` by name; repeating a name attaches several devices of that class.
+                          Requires the `GPU` feature gate enabled in the `virtualization` module of the cluster hosting the VMs. A VM with an attached GPU is not live migratable.
                         items:
                           type: object
                           required: [gpuClassName]
@@ -230,7 +230,7 @@ properties:
                               minLength: 1
                               maxLength: 253
                               description: |
-                                Name of the GPUClass that selects the GPU to attach. The GPUClass must already exist in the cluster hosting the VMs.
+                                Name of the `GPUClass` that selects the GPU to attach. The `GPUClass` must already exist in the cluster hosting the VMs.
                       ipAddresses:
                         type: array
                         description: |
