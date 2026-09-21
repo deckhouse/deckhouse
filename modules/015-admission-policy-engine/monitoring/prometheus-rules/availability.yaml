@@ -57,7 +57,7 @@
             }[5m]
           )
         ) > 0
-      for: 5m
+      for: 15m
       labels:
         severity_level: "2"
         tier: cluster
@@ -74,12 +74,14 @@
 
           The alert is independent of the replica counters: it fires while the pods are `Ready` as well. A replica that is running but unreachable to the API server produces the same outage, and only this alert reports it. Typical causes are a `gatekeeper-webhook-server-cert` that no longer matches the `caBundle` of the ValidatingWebhookConfiguration, an empty `gatekeeper-webhook-service` endpoint list, and a network policy that blocks the API server.
 
+          The API server counts a webhook that exceeds its `timeoutSeconds` of 15 the same way it counts one it cannot reach, so a few slow evaluations of a large object raise the metric as well. They do not raise the alert: `for: 15m` requires the failures to continue, while a burst leaves the rate elevated for little more than its own duration plus the five-minute window.
+
           Read the reason the API server reports, then check the certificate and the endpoints:
 
           ```bash
           d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
           d8 k -n d8-admission-policy-engine get endpoints gatekeeper-webhook-service
-          d8 k get validatingwebhookconfiguration d8-admission-policy-engine-config -o jsonpath='{.webhooks[*].clientConfig.caBundle}' | base64 -d | openssl x509 -noout -subject -dates
+          d8 k get validatingwebhookconfiguration d8-admission-policy-engine-config -o jsonpath='{.webhooks[0].clientConfig.caBundle}' | base64 -d | openssl x509 -noout -subject -dates
           d8 k -n d8-admission-policy-engine get secret gatekeeper-webhook-server-cert -o jsonpath='{.data.ca\.crt}' | base64 -d | openssl x509 -noout -subject -dates
           ```
 
