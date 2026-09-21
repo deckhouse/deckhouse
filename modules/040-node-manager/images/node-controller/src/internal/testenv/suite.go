@@ -41,6 +41,13 @@ type Suite struct {
 	APIReader client.Reader
 	Scheme    *runtime.Scheme
 	Ctx       context.Context
+
+	// CachedClient reads through the manager's informer cache - the same view the
+	// controllers have, which lags the API server by however long it takes a watch
+	// event to arrive. A spec that writes an object and then provokes a reconcile
+	// that depends on the write has to wait on this, not on Client: otherwise it
+	// races the cache and the controller is judged on a state it could not see.
+	CachedClient client.Client
 }
 
 // StartSuite boots envtest with the client-go scheme plus the given builders and
@@ -108,12 +115,13 @@ func startSuite(w io.Writer, addToScheme []func(*runtime.Scheme) error,
 	}
 
 	suite := &Suite{
-		Env:       env,
-		Config:    cfg,
-		Client:    c,
-		APIReader: mgr.GetAPIReader(),
-		Scheme:    scheme,
-		Ctx:       ctx,
+		Env:          env,
+		Config:       cfg,
+		Client:       c,
+		APIReader:    mgr.GetAPIReader(),
+		CachedClient: mgr.GetClient(),
+		Scheme:       scheme,
+		Ctx:          ctx,
 	}
 	return suite, func() {
 		cancel()

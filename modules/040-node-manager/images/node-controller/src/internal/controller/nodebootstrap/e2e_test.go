@@ -107,20 +107,17 @@ var _ = Describe("NodeBootstrap controller", func() {
 		machine := createMachine(ctx, testenv.UniqueName("m"), ngName)
 		config := createBootstrapConfig(ctx, machine)
 
+		// The provider reads the Secret and only then reports the infrastructure
+		// provisioned, so wait for the userdata to exist before saying it did.
 		secretName := machine.Name + dataSecretSuffix
 		Eventually(func(g Gomega) {
 			g.Expect(getSecret(ctx, g, secretName).Data[secretValueKey]).NotTo(BeEmpty())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		setInfrastructureProvisioned(ctx, machine.Name)
-		rotateBootstrapToken(ctx, ngName)
-		nudgeConfig(ctx, config.Name)
+		waitForCachedMachine(ctx, machine.Name, consumed)
 
-		var frozen string
-		Eventually(func(g Gomega) {
-			frozen = string(getSecret(ctx, g, secretName).Data[secretValueKey])
-			g.Expect(frozen).NotTo(BeEmpty())
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		frozen := settledSecretValue(ctx, secretName)
 
 		rotateBootstrapToken(ctx, ngName)
 		nudgeConfig(ctx, config.Name)
@@ -158,14 +155,9 @@ var _ = Describe("NodeBootstrap controller", func() {
 
 		By("the node registering, which is what makes the userdata history")
 		setNodeRef(ctx, machine.Name)
-		rotateBootstrapToken(ctx, ngName)
-		nudgeConfig(ctx, config.Name)
+		waitForCachedMachine(ctx, machine.Name, consumed)
 
-		var frozen string
-		Eventually(func(g Gomega) {
-			frozen = string(getSecret(ctx, g, secretName).Data[secretValueKey])
-			g.Expect(frozen).NotTo(BeEmpty())
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		frozen := settledSecretValue(ctx, secretName)
 
 		rotateBootstrapToken(ctx, ngName)
 		nudgeConfig(ctx, config.Name)
@@ -412,4 +404,57 @@ func nudgeConfig(ctx context.Context, name string) {
 		config.Annotations["test.deckhouse.io/nudge"] = testenv.UniqueName("n")
 		g.Expect(k8sClient.Patch(ctx, config, patch)).To(Succeed())
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+// settleWindow is how long the userdata has to stay put before a spec calls the
+// controller done with it. Two polls of the manager's work queue on an idle
+// envtest is generous; a render in flight writes within microseconds of deciding
+// to.
+const settleWindow = 500 * time.Millisecond
+
+// waitForCachedMachine blocks until the controller's own cache shows a machine
+// that satisfies want.
+//
+// The freeze these specs are about is decided on the Machine the controller reads
+// through its informer cache, and that cache lags the API server. Provoking a
+// reconcile straight after writing the Machine's status races it: the reconcile
+// can still see an unconsumed machine and re-render, which is correct behaviour
+// on the state it had and a failed spec all the same.
+func waitForCachedMachine(ctx context.Context, name string, want func(*capiv1beta2.Machine) bool) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		machine := &capiv1beta2.Machine{}
+		g.Expect(cachedClient.Get(ctx,
+			types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: name}, machine)).To(Succeed())
+		g.Expect(want(machine)).To(BeTrue(), "the controller's cache has not caught up with the machine yet")
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+// settledSecretValue returns the userdata once the controller has stopped
+// writing it.
+//
+// Waiting for the machine to be consumed is not enough on its own. A render that
+// started before the machine was consumed passed the freeze check already, and it
+// reads the bootstrap token afterwards, live from the API server - so a token
+// rotated while that render is still in flight lands in the Secret through no
+// fault of the freeze. The value a spec freezes against is therefore the one left
+// after the in-flight work has drained, not whatever is there the instant the
+// machine is marked consumed.
+func settledSecretValue(ctx context.Context, secretName string) string {
+	GinkgoHelper()
+
+	var settled string
+	Eventually(func(g Gomega) {
+		first := string(getSecret(ctx, g, secretName).Data[secretValueKey])
+		g.Expect(first).NotTo(BeEmpty())
+
+		time.Sleep(settleWindow)
+
+		g.Expect(string(getSecret(ctx, g, secretName).Data[secretValueKey])).To(Equal(first),
+			"the controller is still re-rendering the userdata")
+		settled = first
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+	return settled
 }
