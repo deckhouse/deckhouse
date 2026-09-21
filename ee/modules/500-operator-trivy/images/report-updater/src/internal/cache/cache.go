@@ -16,12 +16,16 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"net/http"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -32,7 +36,8 @@ import (
 )
 
 const (
-	dockerConfigPath      = "/root/.docker/config.json"
+	dockerConfigDir       = "/root/.docker"
+	dockerConfigFilename  = "config.json"
 	bduDictionaryFilename = "export.json"
 	tarGzMediaType        = "application/deckhouse.io.bdu.layer.v1.tar+gzip"
 )
@@ -42,6 +47,9 @@ type VulnerabilityCache struct {
 	dict   Dictionary
 	mtx    sync.RWMutex
 	config RegistryConfig
+	// anonymous records whether the last lookup found no credentials, so that
+	// the fallback is reported when it starts rather than on every renewal.
+	anonymous bool
 }
 
 type Dictionary struct {
@@ -50,19 +58,9 @@ type Dictionary struct {
 }
 
 type RegistryConfig struct {
-	registry   string
-	repository string
+	repository name.Repository
 	tag        string
-	user       string
-	password   string
-}
-
-type ContainerRegistry struct {
-	Auth string `json:"auth"`
-}
-
-type DockerConfig struct {
-	Auths map[string]ContainerRegistry `json:"auths"`
+	configDir  string
 }
 
 func New(ctx context.Context, logger *log.Logger) (*VulnerabilityCache, error) {
@@ -76,21 +74,8 @@ func New(ctx context.Context, logger *log.Logger) (*VulnerabilityCache, error) {
 		return nil, fmt.Errorf("parse the '%s' image: %w", image, err)
 	}
 
-	dockerConfigFile, err := os.Open(dockerConfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("open docker config.json: %w", err)
-	}
-	defer dockerConfigFile.Close()
-
-	dockerConfig := new(DockerConfig)
-	if err = json.NewDecoder(dockerConfigFile).Decode(dockerConfig); err != nil {
-		return nil, fmt.Errorf("unmarshal docker config.json: %w", err)
-	}
-
-	registry := ref.Context().RegistryStr()
-	user, password, err := parseAuthConfig(dockerConfig, registry, logger)
-	if err != nil {
-		return nil, fmt.Errorf("parse docker config.json: %w", err)
+	if err = useDockerConfig(dockerConfigDir); err != nil {
+		return nil, err
 	}
 
 	cache := &VulnerabilityCache{
@@ -99,11 +84,9 @@ func New(ctx context.Context, logger *log.Logger) (*VulnerabilityCache, error) {
 			Data: make(map[string][]string),
 		},
 		config: RegistryConfig{
-			registry:   registry,
-			repository: ref.Context().RepositoryStr(),
+			repository: ref.Context(),
 			tag:        ref.Identifier(),
-			user:       user,
-			password:   password,
+			configDir:  dockerConfigDir,
 		},
 	}
 
@@ -114,29 +97,149 @@ func New(ctx context.Context, logger *log.Logger) (*VulnerabilityCache, error) {
 	return cache, nil
 }
 
-func parseAuthConfig(config *DockerConfig, registry string, logger *log.Logger) (string, string, error) {
-	containerRegistry, ok := config.Auths[registry]
-	if !ok {
-		logger.Printf("failed to find auth config for the '%s' registry in docker file\n", registry)
-		return "", "", nil
+// useDockerConfig points the go-containerregistry keychain at the docker config
+// mounted into the pod.
+//
+// The keychain reads $HOME/.docker/config.json first and falls back to
+// $DOCKER_CONFIG, but the image is distroless and the pod runs as the deckhouse
+// user, so $HOME is nothing to rely on. Both branches end up loading
+// $DOCKER_CONFIG when it is set, which makes the lookup deterministic.
+func useDockerConfig(dir string) error {
+	if _, err := os.Stat(filepath.Join(dir, dockerConfigFilename)); err != nil {
+		return fmt.Errorf("docker config in %s: %w", dir, err)
 	}
 
-	if len(containerRegistry.Auth) == 0 {
-		logger.Printf("auth config for the '%s' registry is empty; using anonymous access\n", registry)
-		return "", "", nil
-	}
+	return os.Setenv("DOCKER_CONFIG", dir)
+}
 
-	decoded, err := base64.StdEncoding.DecodeString(containerRegistry.Auth)
+// credential resolves the credentials for the BDU repository from the mounted
+// docker config.
+//
+// The lookup is delegated to go-containerregistry instead of reading the file
+// by hand. An entry of a kubernetes.io/dockerconfigjson secret is valid with
+// either the `auth` field or a `username`/`password` pair, it may hold an
+// identity or a registry token, and its key may carry a scheme or a repository
+// path. Kubelet accepts every one of those shapes when it pulls images, so
+// credentials that work for imagePullSecrets have to work here too.
+//
+// The config file is re-read on every call, so credentials rotated in the
+// secret are picked up on the next dictionary renewal without a restart.
+func (c *VulnerabilityCache) credential() (auth.Credential, error) {
+	repository := c.config.repository
+
+	authenticator, err := authn.DefaultKeychain.Resolve(repository)
 	if err != nil {
-		return "", "", fmt.Errorf("decode the '%s' registry auth config: %w", registry, err)
+		// The keychain decodes the `auth` field of every entry and rejects the
+		// whole file on the first one it cannot read, naming neither the entry
+		// nor its registry. Name it, so that a broken entry of an unrelated
+		// registry does not turn into an opaque crash loop.
+		if broken := c.brokenAuthEntries(); len(broken) > 0 {
+			return auth.EmptyCredential, fmt.Errorf(
+				"resolve credentials for '%s': auth of %v is not base64(user:password): %w",
+				repository, broken, err,
+			)
+		}
+
+		return auth.EmptyCredential, fmt.Errorf("resolve credentials for '%s': %w", repository, err)
 	}
 
-	splits := strings.Split(string(decoded), ":")
-	if len(splits) < 2 {
-		return "", "", fmt.Errorf("the '%s' registry auth config is malformed, should have the format: 'user:password'", registry)
+	authConfig, err := authenticator.Authorization()
+	if err != nil {
+		return auth.EmptyCredential, fmt.Errorf("read credentials for '%s': %w", repository, err)
 	}
 
-	return splits[0], splits[1], nil
+	// Take the fields as they are and never marshal AuthConfig back to JSON:
+	// its MarshalJSON recomputes `auth` from the username and the password,
+	// which turns a token-only entry into base64(":").
+	// See https://github.com/google/go-containerregistry/issues/1864.
+	credential := auth.Credential{
+		Username:     authConfig.Username,
+		Password:     authConfig.Password,
+		RefreshToken: authConfig.IdentityToken,
+		AccessToken:  authConfig.RegistryToken,
+	}
+
+	// Report the fallback when it starts, not on every renewal: a registry that
+	// needs no authentication is a legitimate setup, and a warning per renewal
+	// would only bury the renewal errors that follow a real credential loss.
+	// The renewal loop is the only caller, so the flag needs no lock.
+	if credential == auth.EmptyCredential {
+		if !c.anonymous {
+			c.logger.Printf(
+				"WARNING: no credentials for '%s' in %s (it holds %v); using anonymous access",
+				repository, filepath.Join(c.config.configDir, dockerConfigFilename), c.dockerConfigHosts(),
+			)
+		}
+		c.anonymous = true
+	} else {
+		c.anonymous = false
+	}
+
+	return credential, nil
+}
+
+// dockerConfigHosts returns the sorted keys of the `auths` object of the
+// mounted docker config. It only feeds the log message that reports missing
+// credentials: naming the keys that are in the file turns "which registry did
+// it look for" into a single line of the log.
+func (c *VulnerabilityCache) dockerConfigHosts() []string {
+	config, err := c.readDockerConfig()
+	if err != nil {
+		return nil
+	}
+
+	return slices.Sorted(maps.Keys(config.Auths))
+}
+
+// brokenAuthEntries returns the registries of the mounted docker config whose
+// `auth` field docker cannot decode, sorted. It applies docker's own rule:
+// standard base64 with padding, holding a `user:password` pair with a
+// non-empty user.
+func (c *VulnerabilityCache) brokenAuthEntries() []string {
+	config, err := c.readDockerConfig()
+	if err != nil {
+		return nil
+	}
+
+	broken := make([]string, 0, len(config.Auths))
+	for registry, entry := range config.Auths {
+		if entry.Auth == "" {
+			continue
+		}
+
+		decoded, err := base64.StdEncoding.DecodeString(entry.Auth)
+		if err != nil {
+			broken = append(broken, registry)
+			continue
+		}
+		if user, _, ok := strings.Cut(string(decoded), ":"); !ok || user == "" {
+			broken = append(broken, registry)
+		}
+	}
+	slices.Sort(broken)
+
+	return broken
+}
+
+type dockerConfig struct {
+	Auths map[string]struct {
+		Auth string `json:"auth"`
+	} `json:"auths"`
+}
+
+func (c *VulnerabilityCache) readDockerConfig() (*dockerConfig, error) {
+	file, err := os.Open(filepath.Join(c.config.configDir, dockerConfigFilename))
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	config := new(dockerConfig)
+	if err = json.NewDecoder(file).Decode(config); err != nil {
+		return nil, err
+	}
+
+	return config, nil
 }
 
 func (c *VulnerabilityCache) initDictionary(ctx context.Context) error {
@@ -153,9 +256,14 @@ func (c *VulnerabilityCache) Renew(ctx context.Context) error {
 	c.logger.Println("download BDU image")
 
 	// set target repository
-	repo, err := remote.NewRepository(c.config.registry + "/" + c.config.repository)
+	repo, err := remote.NewRepository(c.config.repository.Name())
 	if err != nil {
 		return fmt.Errorf("new repository: %w", err)
+	}
+
+	credential, err := c.credential()
+	if err != nil {
+		return err
 	}
 
 	// customize http client transport
@@ -188,11 +296,10 @@ func (c *VulnerabilityCache) Renew(ctx context.Context) error {
 		Client: &http.Client{
 			Transport: transport,
 		},
-		Cache: auth.DefaultCache,
-		Credential: auth.StaticCredential(c.config.registry, auth.Credential{
-			Username: c.config.user,
-			Password: c.config.password,
-		}),
+		// A cache of its own per renewal: the shared DefaultCache would keep
+		// serving a token issued for credentials that have since been rotated.
+		Cache:      auth.NewCache(),
+		Credential: auth.StaticCredential(c.config.repository.RegistryStr(), credential),
 	}
 
 	// create oras in-memory storage
