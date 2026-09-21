@@ -42,7 +42,7 @@ func discoveryModulesImagesDigests(_ context.Context, input *go_hook.HookInput) 
 	digestsFile := "/deckhouse/modules/images_digests.json"
 
 	if env := d8env.GetDownloadedModulesDir(); env != "" {
-		downloadedModulesDir = filepath.Join(env, "modules")
+		downloadedModulesDir = filepath.Join(env, "modules", "deployed")
 	}
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
