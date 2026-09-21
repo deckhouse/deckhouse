@@ -54,6 +54,39 @@ type inputDexAuthenticatorClientSecret struct {
 
 const testSharedKubernetesClientSecret = "sharedKubernetesSecret"
 
+// activeNamespaces declares every namespace the fixtures below place objects into, so that the
+// specs run the filtering branch of renderableNamespaces the way a cluster does: there the
+// namespace snapshot is never empty. A fixture without Namespace objects takes the guard branch.
+const activeNamespaces = `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-monitoring
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-dashboard
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ` + kubernetesDexClientAppSecretNamespace + `
+status:
+  phase: Active`
+
 var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v2alpha1", "DexAuthenticator", true)
@@ -71,7 +104,7 @@ var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 
 	Context("With dex credentials secret after deploying DexAuthenticator object", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: v1
 kind: Secret
@@ -146,7 +179,7 @@ spec:
 
 	Context("After deploying DexAuthenticator and secret in Allowed Namespace", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: v1
 kind: Secret
@@ -205,7 +238,7 @@ spec:
 
 	Context("After deploying DexAuthenticator and secret in Allowed Namespace", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: v1
 kind: Secret
@@ -279,7 +312,7 @@ data:
 		const shortName = "short-name"
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
@@ -340,7 +373,7 @@ spec:
 				annotations = fmt.Sprintf("\n  annotations:\n    %s: %q", dexAuthenticatorAllowAccessToKubernetesAnnotation, *in.annotation)
 			}
 
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
@@ -426,7 +459,7 @@ data:
 				f.ValuesSet(kubernetesDexClientAppSecretPath, in.inValues)
 			}
 
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(activeNamespaces + `
 ---
 apiVersion: v1
 kind: Secret
@@ -547,6 +580,18 @@ spec:
 				Expect(names.Get("doomed@dead-ns").Exists()).To(BeFalse(),
 					"computed names must not be kept for an authenticator that is not rendered")
 			}
+
+			skipped := make([]string, 0, 1)
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == "d8_user_authn_dex_authenticator_skipped" && m.Value != nil {
+					skipped = append(skipped, m.Labels["name"]+"@"+m.Labels["namespace"])
+				}
+			}
+			if len(expectedIDs) == 1 {
+				Expect(skipped).To(ConsistOf("doomed@dead-ns"), "the skipped authenticator must be exported as a metric")
+			} else {
+				Expect(skipped).To(BeEmpty(), "nothing is skipped, so nothing is exported")
+			}
 		},
 		Entry("is dropped while its namespace is terminating",
 			`
@@ -567,7 +612,10 @@ status:
 `,
 			[]string{"alive@live-ns"},
 		),
-		Entry("is dropped when its namespace is gone and other namespaces are known",
+		// The two snapshots are fed by independent informers, so the Namespace DELETE can reach the
+		// hook before the DexAuthenticator DELETE does: for that run the namespace is absent while
+		// the authenticator is still there. A namespace never disappears with objects left in it.
+		Entry("is dropped while the namespace snapshot is ahead of the authenticator snapshot",
 			`
 ---
 apiVersion: v1
@@ -579,10 +627,9 @@ status:
 `,
 			[]string{"alive@live-ns"},
 		),
-		// The guard against filtering on an unpopulated snapshot: a cluster always has
-		// namespaces, so an empty snapshot means the hook cannot tell what is alive. Filtering
-		// against it would drop every authenticator in the cluster and delete the objects of
-		// namespaces that are perfectly healthy.
+		// The guard against filtering on an empty snapshot. A cluster never reaches this state
+		// (the binding is listed before the first run and cannot lose its last namespace); the
+		// guard keeps a broken assumption from dropping every authenticator in the cluster.
 		Entry("is kept when no namespace is known at all",
 			"",
 			[]string{"alive@live-ns", "doomed@dead-ns"},

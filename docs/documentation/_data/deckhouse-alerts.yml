@@ -1157,6 +1157,26 @@ alerts:
         Prometheus is unable to scrape Dex metrics.
       severity: "6"
       markupFormat: markdown
+    - name: D8DexAuthenticatorNamespaceUnusable
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-authenticator.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |
+        The `{{ $labels.namespace }}` namespace is terminating, so the API server refuses every create in it. The `user-authn` module leaves the DexAuthenticator `{{ $labels.name }}` out of its release: with it, the release would fail on the objects it cannot create and the Deckhouse main queue would stop behind the retrying module.
+
+        A namespace does not finish terminating while something in it holds a finalizer, and the authenticator is usually that something. Check what keeps the namespace:
+
+        ```bash
+        kubectl get namespace {{ $labels.namespace }} -o jsonpath='{.status.conditions}'
+        kubectl -n {{ $labels.namespace }} get dexauthenticator {{ $labels.name }} -o jsonpath='{.metadata.finalizers}'
+        ```
+
+        Let the deletion finish: remove the finalizer that holds the authenticator, or delete the object that owns it. The authenticator is deleted with its namespace; to keep it, recreate it in a live namespace. The alert resolves once the authenticator is gone.
+      summary: |
+        DexAuthenticator {{ $labels.namespace }}/{{ $labels.name }} is left out of the release because its namespace accepts no objects.
+      severity: "7"
+      markupFormat: markdown
     - name: D8DexAuthRequestsQuotaExhausted
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex.yaml
       moduleUrl: 150-user-authn
