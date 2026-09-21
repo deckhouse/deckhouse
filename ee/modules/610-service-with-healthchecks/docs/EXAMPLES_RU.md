@@ -181,10 +181,10 @@ spec:
 
 ### Конфигурация балансировщиков ServiceWithHealthchecks
 
-Создайте Secret для хранения учетных данных для доступа проб к базе данных:
+Создайте Secret для хранения учетных данных для доступа проб к базе данных. Secret должен быть типа `network.deckhouse.io/postgresql-credentials` (секреты других типов игнорируются) и может содержать поля `user`, `password`, `tlsMode`, `clientCert`, `clientKey`, `caCert`:
 
 ```shell
-d8 k -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
+d8 k -n my-ns create secret generic cred-secret --type=network.deckhouse.io/postgresql-credentials --from-literal=user=postgres --from-literal=password=example
 ```
 
 Пример манифеста балансировщика для чтения:

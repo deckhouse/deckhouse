@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,7 +26,10 @@ import (
 )
 
 const (
-	secretTypePostgresqlCredentials = "network.deckhouse.io/postgresql-credentials"
+	// SecretTypePostgreSQLCredentials is the only Secret type this agent reads. It is used both to
+	// filter reconcile events and to scope the manager's Secret informer (see cmd/agent), so the
+	// agent watches and caches only these credential secrets instead of every Secret in the cluster.
+	SecretTypePostgreSQLCredentials = "network.deckhouse.io/postgresql-credentials"
 )
 
 type PostgreSQLCredentialsReconciler struct {
@@ -46,10 +50,17 @@ func (r *PostgreSQLCredentialsReconciler) Reconcile(ctx context.Context, req ctr
 		Namespace: req.Namespace,
 		Name:      req.Name,
 	}, &secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			// The secret has been deleted. Drop the credentials cached for it so probes stop
+			// using stale data, and return without error so the event is not requeued forever.
+			r.secretsCache.Delete(req.NamespacedName)
+			return ctrl.Result{}, nil
+		}
 		r.Logger.Error("unable to fetch Secret", log.Err(err), "name", req.Name, "namespace", req.Namespace)
 		return ctrl.Result{}, err
 	}
 
+	// A secret still present but marked for deletion is treated the same way.
 	if secret.DeletionTimestamp != nil {
 		r.secretsCache.Delete(req.NamespacedName)
 		return ctrl.Result{}, nil
@@ -75,18 +86,18 @@ func (r *PostgreSQLCredentialsReconciler) SetupWithManager(mgr ctrl.Manager) err
 				oldSecret := e.ObjectOld.(*corev1.Secret)
 				newSecret := e.ObjectNew.(*corev1.Secret)
 
-				if newSecret.Type != secretTypePostgresqlCredentials {
+				if newSecret.Type != SecretTypePostgreSQLCredentials {
 					return false
 				}
 				return oldSecret.ResourceVersion != newSecret.ResourceVersion
 			},
 			CreateFunc: func(e event.CreateEvent) bool {
 				secret := e.Object.(*corev1.Secret)
-				return secret.Type == secretTypePostgresqlCredentials
+				return secret.Type == SecretTypePostgreSQLCredentials
 			},
 			DeleteFunc: func(e event.DeleteEvent) bool {
 				secret := e.Object.(*corev1.Secret)
-				return secret.Type == secretTypePostgresqlCredentials
+				return secret.Type == SecretTypePostgreSQLCredentials
 			},
 			GenericFunc: func(e event.GenericEvent) bool {
 				return false

@@ -181,10 +181,10 @@ spec:
 
 ### Configuring ServiceWithHealthchecks load balancers
 
-Create a Secret to store credentials so that probes can access the database:
+Create a Secret to store credentials so that probes can access the database. The Secret must be of type `network.deckhouse.io/postgresql-credentials` — secrets of any other type are ignored — and may contain the fields `user`, `password`, `tlsMode`, `clientCert`, `clientKey`, `caCert`:
 
 ```shell
-d8 k -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
+d8 k -n my-ns create secret generic cred-secret --type=network.deckhouse.io/postgresql-credentials --from-literal=user=postgres --from-literal=password=example
 ```
 
 Below is an example of a load balancer manifest for reading:
