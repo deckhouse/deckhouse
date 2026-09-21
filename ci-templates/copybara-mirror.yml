@@ -27,7 +27,7 @@ copybara-mirror:
   stage: "$[[ inputs.stage ]]"
   image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/copybara:40b4f2d3
   tags:
-    - k8s-intteam-cloud-d8-ssdlc-runner
+    - werf-2-stable
   interruptible: false
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $COPYBARA_MIRROR_ENABLE == "true"'
