@@ -1,0 +1,79 @@
+# copy.bara.sky
+#
+# Example / test Copybara config for the copybara-mirror GitLab CI template
+# (.gitlab/copybara-mirror.yml). See .gitlab/copybara-mirror.spec.md for the
+# full design rationale behind the template.
+#
+# Contract with the template (do not break these when editing this file):
+#   - it must define exactly one workflow named "mirror" — that's the name
+#     the CI job always invokes: `copybara <config> mirror`;
+#   - origin_files must exclude this file itself (and any other CI-only
+#     paths), so the mirror config and CI internals never leak into the
+#     destination repository;
+#   - the destination url must be the literal placeholder
+#     ${MIRROR_DESTINATION_AUTH} — the CI job substitutes it with the real,
+#     authenticated URL (destination + push token) before invoking copybara.
+#
+# Origin is the runner's own checkout of this project (folder.origin), not a
+# remote git URL: the CI job already delivers the right codebase — that's
+# what GIT_STRATEGY: clone in copybara-mirror.yml is for — so copybara reads
+# it straight from disk instead of fetching it again over the network. This
+# also means the template needs no read credentials for the origin side, and
+# works the same way for any project regardless of whether it has a public
+# mirror anywhere.
+#
+# --------------------------------------------------------------------------
+# Usage examples (consumer side, GitLab CI)
+# --------------------------------------------------------------------------
+#
+# 1) Mirror this project to a GitLab test project, using the default config
+#    path (this file, at the project root):
+#
+#      include:
+#        - local: '.gitlab/copybara-mirror.yml'
+#          inputs:
+#            destination: 'https://fox.flant.com/deckhouse/deckhouse-test-1.git'
+#            vault_path: '<vault-engine-path>/deckhouse-test-1-gitlab/writetoken/token@projects'
+#
+# 2) Mirror this project to a GitHub test repo, with an explicit (non-default)
+#    config path and a custom pipeline stage:
+#
+#      include:
+#        - local: '.gitlab/copybara-mirror.yml'
+#          inputs:
+#            config: 'copy.bara.sky'
+#            destination: 'https://github.com/deckhouse/deckhouse-test-2.git'
+#            vault_path: '<vault-engine-path>/deckhouse-test-2-github/writetoken/token@projects'
+#            stage: 'deploy'
+#
+# In both cases: create a GitLab pipeline schedule (CI/CD > Schedules) and set
+# the variable COPYBARA_MIRROR_ENABLE=true on it — that schedule is the only
+# thing that triggers the mirror job (see copybara-mirror.spec.md, section 8).
+# Use the schedule's "Run now" button for manual/on-demand runs.
+# --------------------------------------------------------------------------
+
+core.workflow(
+    name = "mirror",
+    origin = folder.origin(
+        outside_symlinks_mode = "IGNORE",
+        broken_symlinks_mode = "IGNORE",
+    ),
+    destination = git.destination(
+        url = "${MIRROR_DESTINATION_AUTH}",
+        fetch = "main",
+        push = "main",
+    ),
+    authoring = authoring.pass_thru("Deckhouse Mirror Bot <mirror@deckhouse.io>"),
+    origin_files = glob(
+        ["**"],
+        exclude = [
+            "bin/**",
+            "copy.bara.sky",
+            "testing/**",
+            ".github/**",
+            ".gitlab/**",
+            ".git/**",
+        ],
+    ),
+    mode = "SQUASH",
+)

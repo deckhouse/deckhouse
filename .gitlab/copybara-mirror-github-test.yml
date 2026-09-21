@@ -1,0 +1,17 @@
+# Wires copybara-mirror.yml up for this project: mirrors it to the GitHub
+# test repo deckhouse/deckhouse-test-2, using copy.bara.sky at the project
+# root (default `config` input).
+#
+# Token reused from changelog-update.yml's GITHUB_TOKEN (same boatswain
+# GitHub token that changelog generation already pushes to GitHub with) —
+# see .gitlab/changelog-update.yml.
+#
+# To actually trigger a run: create a GitLab pipeline schedule (CI/CD >
+# Schedules) with the variable COPYBARA_MIRROR_ENABLE=true, then use its
+# "Run now" button. See copybara-mirror.spec.md, section 8.
+
+include:
+  - local: '.gitlab/copybara-mirror.yml'
+    inputs:
+      destination: 'https://github.com/deckhouse/deckhouse-test-2.git'
+      vault_path: '6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN/token@projects'

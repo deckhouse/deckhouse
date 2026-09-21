@@ -1,0 +1,84 @@
+spec:
+  inputs:
+    config:
+      default: 'copy.bara.sky'
+      description: 'Path to the copybara Starlark config, relative to the project root'
+    destination:
+      description: 'Destination repository git URL (GitLab or GitHub), without the token'
+    vault_path:
+      description: 'Path to the push-token secret in Vault, e.g.: 101ceaca-.../writetoken/token@projects'
+    stage:
+      default: 'deploy'
+      description: 'Pipeline stage of the consumer where the job should run'
+---
+
+# The copy.bara.sky config referenced via the `config` input must:
+#   - define exactly one workflow named "mirror" (core.workflow(name = "mirror", ...));
+#   - use folder.origin() as the origin — the job already checks out the right
+#     codebase (GIT_STRATEGY: clone below), so copybara reads it from disk
+#     instead of fetching it again over the network;
+#   - exclude itself from origin_files, so it never gets mirrored:
+#       origin_files = glob(["**"], exclude = ["<path to this file>"])
+#   - use the ${MIRROR_DESTINATION_AUTH} placeholder as the destination url in git.destination(...) —
+#     the job substitutes it with the real URL + token before running copybara.
+# See .gitlab/copybara-mirror.spec.md for the full rationale.
+
+copybara-mirror:
+  stage: "$[[ inputs.stage ]]"
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/copybara:40b4f2d3
+  tags:
+    - k8s-intteam-cloud-d8-ssdlc-runner
+  interruptible: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $COPYBARA_MIRROR_ENABLE == "true"'
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    MIRROR_PUSH_TOKEN:
+      vault: "$[[ inputs.vault_path ]]"
+      token: $VAULT_ID_TOKEN
+      file: false
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+    GIT_STRATEGY: clone
+    GIT_DEPTH: "1"
+    GIT_SUBMODULE_STRATEGY: none
+    COPYBARA_CONFIG: "$[[ inputs.config ]]"
+    MIRROR_DESTINATION: "$[[ inputs.destination ]]"
+  script:
+    - |
+      set -euo pipefail
+
+      if [[ "${MIRROR_DESTINATION}" == *"github.com"* ]]; then
+        MIRROR_DESTINATION_AUTH="${MIRROR_DESTINATION/https:\/\//https:\/\/${MIRROR_PUSH_TOKEN}@}"
+      else
+        MIRROR_DESTINATION_AUTH="${MIRROR_DESTINATION/https:\/\//https:\/\/oauth2:${MIRROR_PUSH_TOKEN}@}"
+      fi
+      export MIRROR_DESTINATION_AUTH
+
+      if [[ ! -f "${COPYBARA_CONFIG}" ]]; then
+        echo "copybara-mirror: config file '${COPYBARA_CONFIG}' not found" >&2
+        exit 1
+      fi
+
+      RENDERED_CONFIG="$(mktemp -d)/copy.bara.sky"
+      while IFS= read -r line || [[ -n "${line}" ]]; do
+        echo "${line//\$\{MIRROR_DESTINATION_AUTH\}/${MIRROR_DESTINATION_AUTH}}"
+      done < "${COPYBARA_CONFIG}" > "${RENDERED_CONFIG}"
+
+      # folder.origin() in copy.bara.sky reads straight from this checkout —
+      # no separate origin fetch, no origin credentials needed. Exact CLI
+      # syntax for passing the folder path may need to be validated against
+      # this image's copybara version (see copybara-mirror.spec.md, open
+      # questions).
+      #
+      # --git-committer-name/-email: copybara runs its internal git
+      # subprocess calls in an isolated env that doesn't see `git config
+      # --global` set in this job, so the committer identity has to be
+      # passed explicitly via these flags (same identity as
+      # authoring.pass_thru in copy.bara.sky, which only sets the author).
+      copybara "${RENDERED_CONFIG}" mirror "${CI_PROJECT_DIR}" \
+        --git-committer-name "Deckhouse Mirror Bot" \
+        --git-committer-email "mirror@deckhouse.io"
