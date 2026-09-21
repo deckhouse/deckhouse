@@ -385,6 +385,9 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	reschedule := false
 	trigger := ""
 	sorted, _ := topoSort(s.nodes)
+
+	s.computeEffectiveOrders(sorted)
+
 	for _, n := range sorted {
 		current := n.enabled()
 		n.decision = rule.Resolve(n.rules...)
@@ -449,6 +452,32 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	return enabled, sorted
 }
 
+// computeEffectiveOrders recomputes every node's effectiveOrder — its declared
+// order raised to that of its highest dependency. It walks sorted, which is
+// topological, so a dependency's value is final before its dependents are
+// visited; a node missing from sorted (cycle member) keeps its previous value.
+//
+// This is what keeps a package that declares an order *below* one of its
+// dependencies from deadlocking: the order barrier would hold the dependency
+// behind the dependent while the per-edge wait holds the dependent behind the
+// dependency. Raising the dependent into its dependency's tier leaves both
+// gates satisfiable, and ordering between the two stays with the per-edge wait.
+//
+// Must be called with s.mu held for writing.
+func (s *Scheduler) computeEffectiveOrders(sorted []*node) {
+	for _, n := range sorted {
+		effective := n.order
+
+		for name := range n.dependencies {
+			if dep, ok := s.nodes[name]; ok && dep.effectiveOrder > effective {
+				effective = dep.effectiveOrder
+			}
+		}
+
+		n.effectiveOrder = effective
+	}
+}
+
 // dependencyVersion answers the dependency rules from the graph itself: the
 // installed version of an enabled node, nil otherwise. It reports eligibility
 // only — "not ready yet" is not its business. Holding a dependent back until
@@ -469,29 +498,28 @@ func (s *Scheduler) dependencyVersion(name string) *semver.Version {
 // canSchedule returns true if a node is eligible to transition from idle to
 // scheduled. Three conditions must hold:
 //  1. The node must be enabled (its rule chain resolved to Enable).
-//  2. All nodes with a strictly lower Order must be active.
+//  2. All nodes in a strictly lower effective tier must be active.
 //  3. Every declared dependency present in the graph must be active.
 //
-// (3) is what orders dependents behind their dependencies within one Order
-// tier: the dependent stays idle, keeping its Enable, until the dependency's
-// Complete triggers the pass that advances it. A not-enabled dependency is
-// parked active by compute(), so it never holds a dependent back — a dependency
-// that is off fails the dependency rule instead, and (1) stops the node.
+// (2) reads effectiveOrder, not the declared order, so a dependency can never
+// end up in a lower tier than its dependent — see computeEffectiveOrders.
+//
+// (3) is what orders dependents behind their dependencies within one tier: the
+// dependent stays idle, keeping its Enable, until the dependency's Complete
+// triggers the pass that advances it. A not-enabled dependency is parked active
+// by compute(), so it never holds a dependent back — a dependency that is off
+// fails the dependency rule instead, and (1) stops the node.
 //
 // (3) ignores Optional: optionality governs presence, not ordering, and
 // topoSort already builds an edge for an optional dependency. A present,
 // enabled one is therefore waited for.
-//
-// A dependency whose Order is higher than the dependent's deadlocks here: the
-// dependent waits for it under (3) while it waits for the dependent under (2).
-// See known-hazards.md.
 func (s *Scheduler) canSchedule(n *node) bool {
 	if !n.enabled() {
 		return false
 	}
 
 	for _, other := range s.nodes {
-		if other.order < n.order && other.state != nodeStateActive {
+		if other.effectiveOrder < n.effectiveOrder && other.state != nodeStateActive {
 			return false
 		}
 	}

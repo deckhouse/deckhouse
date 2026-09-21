@@ -397,6 +397,104 @@ func (s *SchedulerSuite) TestReschedulingDependencyDoesNotDisableDependent() {
 	s.True(s.sched.IsEnabled("consumer"))
 }
 
+// TestDependencyBelowDependentTierDoesNotDeadlock reproduces the shape that
+// deadlocked a live cluster: monitoring-custom (Order 900) depends on prometheus
+// (Order 999), which depends on operator-prometheus (Order 999). The order
+// barrier held prometheus behind the 900 tier while the per-edge wait held
+// monitoring-custom behind prometheus. effectiveOrder raises the dependent into
+// its dependency's tier, which leaves both gates satisfiable.
+func (s *SchedulerSuite) TestDependencyBelowDependentTierDoesNotDeadlock() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "operator-prometheus",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "prometheus",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Dependencies: map[string]schedule.Dependency{
+				"operator-prometheus": {},
+			},
+		},
+	}))
+
+	// Declares a tier below its dependency — the inversion that used to wedge.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "monitoring-custom",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 900,
+			Dependencies: map[string]schedule.Dependency{
+				"prometheus": {},
+			},
+		},
+	}))
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "operator-prometheus", "the root of the chain must advance")
+	s.NotContains(scheduled, "prometheus", "a dependent must not run before its dependency")
+	s.NotContains(scheduled, "monitoring-custom", "the tier inversion must not reorder the chain")
+
+	s.sched.Complete("operator-prometheus")
+
+	scheduled = eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "prometheus")
+	s.NotContains(scheduled, "monitoring-custom")
+
+	s.sched.Complete("prometheus")
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "monitoring-custom",
+		"the whole chain must drain once each dependency completes")
+}
+
+// TestEffectiveOrderPropagatesThroughChain covers the transitive raise: with
+// root (999) ← middle (500) ← leaf (100), every node lands in tier 999. Taking
+// only one level — raising leaf to middle's declared 500 — would leave leaf
+// below root, and root would wait for the tier that is waiting for it.
+func (s *SchedulerSuite) TestEffectiveOrderPropagatesThroughChain() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "root",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "middle",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order:        500,
+			Dependencies: map[string]schedule.Dependency{"root": {}},
+		},
+	}))
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "leaf",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order:        100,
+			Dependencies: map[string]schedule.Dependency{"middle": {}},
+		},
+	}))
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "root")
+	s.NotContains(scheduled, "middle")
+	s.NotContains(scheduled, "leaf")
+
+	s.sched.Complete("root")
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "middle")
+
+	s.sched.Complete("middle")
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "leaf")
+}
+
 // TestIsEnabledReadsDecisionNotState pins IsEnabled to the rule chain's verdict.
 // State cannot answer the question in either direction: compute() parks
 // not-enabled nodes in active, and an enabled node is not active until its

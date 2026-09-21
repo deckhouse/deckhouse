@@ -30,6 +30,7 @@ type dump struct {
 type nodeDump struct {
 	Version        string                `json:"version" yaml:"version"`
 	Order          Order                 `json:"order" yaml:"order"`
+	EffectiveOrder Order                 `json:"effectiveOrder" yaml:"effectiveOrder"`
 	State          nodeState             `json:"state" yaml:"state"`
 	ScheduleReason string                `json:"scheduleReason" yaml:"scheduleReason"`
 	Decision       rule.Decision         `json:"decision" yaml:"decision"`
@@ -56,6 +57,7 @@ func (s *Scheduler) Dump() any {
 		snapshot.Nodes[n.name] = nodeDump{
 			Version:        n.version.String(),
 			Order:          n.order,
+			EffectiveOrder: n.effectiveOrder,
 			State:          n.state,
 			ScheduleReason: n.scheduleReason,
 			Decision:       n.decision,
@@ -83,13 +85,15 @@ func (s *Scheduler) DumpByName(name string) any {
 	}
 
 	snapshot := nodeDump{
-		Version:       n.version.String(),
-		Order:         n.order,
-		State:         n.state,
-		Decision:      n.decision,
-		Dependencies:  maps.Clone(n.dependencies),
-		Subscriptions: sortedKeys(n.subscriptions),
-		Subscribers:   sortedKeys(n.subscribers),
+		Version:        n.version.String(),
+		Order:          n.order,
+		EffectiveOrder: n.effectiveOrder,
+		State:          n.state,
+		ScheduleReason: n.scheduleReason,
+		Decision:       n.decision,
+		Dependencies:   maps.Clone(n.dependencies),
+		Subscriptions:  sortedKeys(n.subscriptions),
+		Subscribers:    sortedKeys(n.subscribers),
 	}
 
 	return snapshot
