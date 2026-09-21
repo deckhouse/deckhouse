@@ -17,10 +17,20 @@ limitations under the License.
 package ssh
 
 import (
+	"context"
 	"io"
+	"time"
+)
+
+const (
+	// ConnectTimeout bounds the ssh handshake so that an unreachable or hung host
+	// cannot occupy a task slot forever.
+	ConnectTimeout = 30 * time.Second
+	// CommandTimeout bounds the execution of a single remote command.
+	CommandTimeout = 30 * time.Minute
 )
 
 type SSH interface {
-	ExecSSHCommand(command string, stdout io.Writer, stderr io.Writer) error
-	ExecSSHCommandToString(command string) (string, error)
+	ExecSSHCommand(ctx context.Context, command string, stdout io.Writer, stderr io.Writer) error
+	ExecSSHCommandToString(ctx context.Context, command string) (string, error)
 }
