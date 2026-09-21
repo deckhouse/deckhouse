@@ -118,7 +118,7 @@ func waitEtcdHasNoMember(ctx context.Context, kubeGetter kubernetes.KubeClientPr
 func checkEtcdQuorumBeforeRemoval(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeToDestroy string) error {
 	loopParams := retry.NewEmptyParams(
 		retry.WithName("Check etcd quorum without '%s'", nodeToDestroy),
-		retry.WithAttempts(30),
+		retry.WithAttempts(225),
 		retry.WithWait(1*time.Second),
 		retry.WithWhitelist(errEtcdMemberCheckTransient, errEtcdClusterIsNotHealthy),
 	)
@@ -170,7 +170,7 @@ func checkEtcdQuorumBeforeRemoval(ctx context.Context, kubeGetter kubernetes.Kub
 func checkEtcdClusterHealthy(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, skippedNode string) error {
 	loopParams := retry.NewEmptyParams(
 		retry.WithName("Check etcd cluster health without '%s'", skippedNode),
-		retry.WithAttempts(30),
+		retry.WithAttempts(225),
 		retry.WithWait(1*time.Second),
 		retry.WithWhitelist(errEtcdMemberCheckTransient, errEtcdClusterIsNotHealthy),
 	)
