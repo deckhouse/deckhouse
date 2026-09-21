@@ -42,6 +42,151 @@ var errEtcdMemberCheckTransient = fmt.Errorf("etcd member check: transient error
 // member yet / still a member), as opposed to a genuine check failure.
 var errEtcdNotExpectedMembership = fmt.Errorf("etcd membership: not yet in the expected state")
 
+// errEtcdClusterIsNotHealthy marks an endpoint that did not answer the health call. Losing a
+// member costs a leader election, so it is retried before it is believed.
+var errEtcdClusterIsNotHealthy = fmt.Errorf("etcd cluster is not healthy")
+
+const (
+	etcdQuorumCheckAttempts = 30
+	etcdHealthCheckAttempts = 30
+
+	masterNodesLabelSelector = "node.deckhouse.io/group=master"
+)
+
+// checkEtcdQuorumBeforeRemoval asks etcd for its membership instead of deriving it from the
+// master nodes: a member no node answers for still counts against the quorum. Whether the
+// remaining masters are healthy is decided before this runs.
+func checkEtcdQuorumBeforeRemoval(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeToDestroy string) error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Check etcd quorum without '%s'", nodeToDestroy),
+		retry.WithAttempts(etcdQuorumCheckAttempts),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errEtcdMemberCheckTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
+
+		client, ok := kc.KubeClient.(libcon.KubeClient)
+		if !ok {
+			return fmt.Errorf("kube client cannot exec into an etcd pod")
+		}
+
+		members, err := getEtcdMembers(ctx, client, fields.OneTermNotEqualSelector("spec.nodeName", nodeToDestroy).String())
+		if err != nil {
+			return fmt.Errorf("getting etcd members: %w", err)
+		}
+
+		nodes, err := kc.CoreV1().Nodes().List(ctx, v1.ListOptions{LabelSelector: masterNodesLabelSelector})
+		if err != nil {
+			return fmt.Errorf("%w: listing master nodes: %w", errEtcdMemberCheckTransient, err)
+		}
+
+		masters := make(map[string]struct{}, len(nodes.Items))
+		for _, node := range nodes.Items {
+			if node.Name != nodeToDestroy {
+				masters[node.Name] = struct{}{}
+			}
+		}
+
+		voting, served := etcdQuorumBeforeRemoval(members, nodeToDestroy, masters)
+
+		quorum := voting/2 + 1
+		if served < quorum {
+			return fmt.Errorf(
+				"removing '%s' leaves %d voting etcd members with only %d master nodes to serve them, quorum needs %d",
+				nodeToDestroy, voting, served, quorum)
+		}
+
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+			"Removing '%s' leaves %d voting etcd members, quorum %d, served by %d masters",
+			nodeToDestroy, voting, quorum, served))
+
+		return nil
+	})
+}
+
+// checkEtcdClusterHealthy answers whether the cluster serves, which a member list does not:
+// etcd answers that one from the local member alone, while the health call each endpoint
+// runs needs a quorum behind it. The endpoints of skippedNode are not required to answer —
+// before its removal that member may be exactly what is broken, and after it there is
+// nothing left to ask.
+func checkEtcdClusterHealthy(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, skippedNode string) error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Check etcd cluster health without '%s'", skippedNode),
+		retry.WithAttempts(etcdHealthCheckAttempts),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errEtcdMemberCheckTransient, errEtcdClusterIsNotHealthy),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
+
+		client, ok := kc.KubeClient.(libcon.KubeClient)
+		if !ok {
+			return fmt.Errorf("kube client cannot exec into an etcd pod")
+		}
+
+		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", skippedNode).String()
+
+		members, err := getEtcdMembers(ctx, client, fieldSelector)
+		if err != nil {
+			return fmt.Errorf("getting etcd members: %w", err)
+		}
+
+		endpoints, err := getEtcdEndpointsHealth(ctx, client, fieldSelector)
+		if err != nil {
+			return err
+		}
+
+		if unhealthy := unhealthyEndpoints(endpoints, memberEndpoints(members, skippedNode)); len(unhealthy) > 0 {
+			return fmt.Errorf("%w: %s", errEtcdClusterIsNotHealthy, strings.Join(unhealthy, "; "))
+		}
+
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Etcd cluster is healthy on all %d endpoints", len(endpoints)))
+
+		return nil
+	})
+}
+
+func waitEtcdHasNoMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
+	const maxAttempts = 225
+
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Waiting for '%s' to leave etcd", nodeName),
+		retry.WithAttempts(maxAttempts),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errEtcdMemberCheckTransient, errEtcdNotExpectedMembership),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
+
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
+		client := kc.KubeClient.(libcon.KubeClient)
+
+		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
+		if err != nil {
+			return fmt.Errorf("checking etcd membership for '%s': %w", nodeName, err)
+		}
+
+		if ok {
+			return fmt.Errorf("%w: node '%s' is still listed as etcd cluster member", errEtcdNotExpectedMembership, nodeName)
+		}
+
+		return nil
+	})
+}
+
 func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
 	attempt := 0
 
@@ -86,90 +231,13 @@ func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProv
 	})
 }
 
-func waitEtcdHasNoMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
-	const maxAttempts = 225
-
-	loopParams := retry.NewEmptyParams(
-		retry.WithName("Waiting for '%s' to leave etcd", nodeName),
-		retry.WithAttempts(maxAttempts),
-		retry.WithWait(1*time.Second),
-		retry.WithWhitelist(errEtcdMemberCheckTransient, errEtcdNotExpectedMembership),
-	)
-
-	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
-		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
-
-		kc, err := kubeGetter.KubeClientCtx(ctx)
-		if err != nil {
-			return fmt.Errorf("get kube client: %w", err)
-		}
-		client := kc.KubeClient.(libcon.KubeClient)
-
-		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
-		if err != nil {
-			return fmt.Errorf("checking etcd membership for '%s': %w", nodeName, err)
-		}
-
-		if ok {
-			return fmt.Errorf("%w: node '%s' is still listed as etcd cluster member", errEtcdNotExpectedMembership, nodeName)
-		}
-
-		return nil
-	})
-}
-
-func isEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName, fieldSelector string) (bool, error) {
-	members, err := getEtcdMembers(ctx, client, fieldSelector)
-	if err != nil {
-		return false, err
-	}
-
-	for _, m := range members {
-		if m.Name == nodeName {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
 func getEtcdMembers(ctx context.Context, client libcon.KubeClient, fieldSelector string) ([]etcdMember, error) {
-	pods, err := client.CoreV1().Pods("kube-system").List(ctx, v1.ListOptions{
-		LabelSelector: "component=etcd,tier=control-plane",
-		FieldSelector: fieldSelector,
-	})
+	pod, err := runningEtcdPod(ctx, client, fieldSelector)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to get etcd pods: %w", errEtcdMemberCheckTransient, err)
+		return nil, err
 	}
 
-	if len(pods.Items) == 0 {
-		return nil, fmt.Errorf("%w: etcd pods not found", errEtcdMemberCheckTransient)
-	}
-
-	var pod *corev1.Pod
-	for i := range pods.Items {
-		for _, cs := range pods.Items[i].Status.ContainerStatuses {
-			if cs.Name == "etcd" && cs.State.Running != nil {
-				pod = &pods.Items[i]
-				break
-			}
-		}
-		if pod != nil {
-			break
-		}
-	}
-	if pod == nil {
-		return nil, fmt.Errorf("%w: no etcd pod with running container found", errEtcdMemberCheckTransient)
-	}
-
-	command := []string{
-		"etcdctl",
-		"--cacert", "/etc/kubernetes/pki/etcd/ca.crt",
-		"--cert", "/etc/kubernetes/pki/etcd/ca.crt",
-		"--key", "/etc/kubernetes/pki/etcd/ca.key",
-		"--endpoints", "https://127.0.0.1:2379/",
-		"member", "list", "-w", "json",
-	}
+	command := append(etcdctlCommand(), "member", "list", "-w", "json")
 
 	var stdout bytes.Buffer
 
@@ -194,15 +262,156 @@ func getEtcdMembers(ctx context.Context, client libcon.KubeClient, fieldSelector
 	return members.Members, nil
 }
 
-type memberListOutput struct {
-	Members []etcdMember `json:"members"`
+func getEtcdEndpointsHealth(ctx context.Context, client libcon.KubeClient, fieldSelector string) ([]endpointHealth, error) {
+	pod, err := runningEtcdPod(ctx, client, fieldSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	var stdout bytes.Buffer
+
+	params := libcon.PodExecParams{
+		Namespace: "kube-system",
+		Name:      pod.Name,
+		Command:   append(etcdctlCommand(), "endpoint", "health", "--cluster", "-w", "json"),
+		Container: "etcd",
+		Stdout:    &stdout,
+	}
+
+	// A failing endpoint makes etcdctl exit non-zero while still reporting every endpoint
+	// on stdout, so the report is read first and the exit code only speaks when it is empty.
+	execErr := client.Exec(ctx, &params)
+
+	var endpoints []endpointHealth
+	if unmarshalErr := json.Unmarshal(stdout.Bytes(), &endpoints); unmarshalErr != nil {
+		if execErr != nil {
+			return nil, fmt.Errorf("%w: %w", errEtcdMemberCheckTransient, execErr)
+		}
+
+		return nil, fmt.Errorf("failed to unmarshal etcd endpoint health: %w", unmarshalErr)
+	}
+
+	return endpoints, nil
 }
 
-type etcdMember struct {
-	Name string `json:"name"`
-	// A learner replicates the log but does not vote, so a master that came back
-	// as one does not restore the quorum the next master replace will spend.
-	IsLearner bool `json:"isLearner"`
+func isEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName, fieldSelector string) (bool, error) {
+	members, err := getEtcdMembers(ctx, client, fieldSelector)
+	if err != nil {
+		return false, err
+	}
+
+	for _, m := range members {
+		if m.Name == nodeName {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func runningEtcdPod(ctx context.Context, client libcon.KubeClient, fieldSelector string) (*corev1.Pod, error) {
+	pods, err := client.CoreV1().Pods("kube-system").List(ctx, v1.ListOptions{
+		LabelSelector: "component=etcd,tier=control-plane",
+		FieldSelector: fieldSelector,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to get etcd pods: %w", errEtcdMemberCheckTransient, err)
+	}
+
+	if len(pods.Items) == 0 {
+		return nil, fmt.Errorf("%w: etcd pods not found", errEtcdMemberCheckTransient)
+	}
+
+	for i := range pods.Items {
+		for _, cs := range pods.Items[i].Status.ContainerStatuses {
+			if cs.Name == "etcd" && cs.State.Running != nil {
+				return &pods.Items[i], nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("%w: no etcd pod with running container found", errEtcdMemberCheckTransient)
+}
+
+func etcdctlCommand() []string {
+	return []string{
+		"etcdctl",
+		"--cacert", "/etc/kubernetes/pki/etcd/ca.crt",
+		"--cert", "/etc/kubernetes/pki/etcd/ca.crt",
+		"--key", "/etc/kubernetes/pki/etcd/ca.key",
+		"--endpoints", "https://127.0.0.1:2379/",
+	}
+}
+
+// etcdQuorumBeforeRemoval counts the voting members that will be left once nodeToDestroy is
+// gone, and how many of them a master node answers for. A member listed twice votes twice but the machine
+// behind it answers once, so duplicates are counted once on the second number.
+func etcdQuorumBeforeRemoval(members []etcdMember, nodeToDestroy string, masters map[string]struct{}) (voting, served int) {
+	counted := make(map[string]struct{}, len(members))
+
+	for _, m := range members {
+		if m.Name == nodeToDestroy || m.IsLearner {
+			continue
+		}
+
+		voting++
+
+		if _, ok := masters[m.Name]; !ok {
+			continue
+		}
+
+		if _, ok := counted[m.Name]; ok {
+			continue
+		}
+
+		counted[m.Name] = struct{}{}
+		served++
+	}
+
+	return voting, served
+}
+
+// memberEndpoints collects the client URLs etcd serves nodeName on, so the health call can
+// stop requiring an answer from the member that is leaving.
+func memberEndpoints(members []etcdMember, nodeName string) map[string]struct{} {
+	endpoints := make(map[string]struct{})
+
+	for _, m := range members {
+		if m.Name != nodeName {
+			continue
+		}
+
+		for _, url := range m.ClientURLs {
+			endpoints[strings.TrimSuffix(url, "/")] = struct{}{}
+		}
+	}
+
+	return endpoints
+}
+
+// unhealthyEndpoints names the endpoints `etcdctl endpoint health --cluster` refused to
+// call healthy, with the reason it gave for each.
+func unhealthyEndpoints(endpoints []endpointHealth, ignored map[string]struct{}) []string {
+	unhealthy := make([]string, 0, len(endpoints))
+
+	for _, e := range endpoints {
+		if e.Health {
+			continue
+		}
+
+		if _, ok := ignored[strings.TrimSuffix(e.Endpoint, "/")]; ok {
+			continue
+		}
+
+		reason := e.Error
+		if reason == "" {
+			reason = "unhealthy"
+		}
+
+		unhealthy = append(unhealthy, fmt.Sprintf("%s: %s", e.Endpoint, reason))
+	}
+
+	return unhealthy
 }
 
 // hasVotingMember answers for the name, not for the first entry carrying it: a
@@ -224,4 +433,22 @@ func hasVotingMember(members []etcdMember, nodeName string) bool {
 	}
 
 	return found
+}
+
+type memberListOutput struct {
+	Members []etcdMember `json:"members"`
+}
+
+type endpointHealth struct {
+	Endpoint string `json:"endpoint"`
+	Health   bool   `json:"health"`
+	Error    string `json:"error"`
+}
+
+type etcdMember struct {
+	Name       string   `json:"name"`
+	ClientURLs []string `json:"clientURLs"`
+	// A learner replicates the log but does not vote, so a master that came back
+	// as one does not restore the quorum the next master replace will spend.
+	IsLearner bool `json:"isLearner"`
 }

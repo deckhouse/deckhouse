@@ -124,6 +124,16 @@ func (h *HookForDestroyPipeline) IsReady() error {
 }
 
 func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, commanderMode, immutableNode bool) error {
+	// Everything below takes the node's etcd member away, both hooks come through here,
+	// and nothing after this point can be taken back.
+	if err := checkEtcdQuorumBeforeRemoval(ctx, kubeGetter, nodeName); err != nil {
+		return err
+	}
+
+	if err := checkEtcdClusterHealthy(ctx, kubeGetter, nodeName); err != nil {
+		return fmt.Errorf("etcd without '%s': %w", nodeName, err)
+	}
+
 	if immutableNode {
 		return retireImmutableControlPlaneNode(ctx, kubeCl, kubeGetter, nodeName, commanderMode)
 	}
@@ -140,6 +150,10 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 	err = waitEtcdHasNoMember(ctx, kubeGetter, nodeName)
 	if err != nil {
 		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
+	}
+
+	if err := checkEtcdClusterHealthy(ctx, kubeGetter, nodeName); err != nil {
+		return fmt.Errorf("etcd after '%s' left: %w", nodeName, err)
 	}
 
 	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode), infra_utils.DrainOptions{Force: true})
@@ -168,6 +182,10 @@ func retireImmutableControlPlaneNode(ctx context.Context, kubeCl *client.Kuberne
 
 	if err := waitEtcdHasNoMember(ctx, kubeGetter, nodeName); err != nil {
 		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
+	}
+
+	if err := checkEtcdClusterHealthy(ctx, kubeGetter, nodeName); err != nil {
+		return fmt.Errorf("etcd after '%s' left: %w", nodeName, err)
 	}
 
 	return nil
