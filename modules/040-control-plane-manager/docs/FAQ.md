@@ -931,7 +931,7 @@ Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard Clus
 
 The following options are available for administrative access:
 
-* Personalized OIDC-based kubeconfig obtained through the [kubeconfig generator](#how-to-generate-a-kubeconfig-to-access-the-kubernetes-api). This provides individual accountability and audit trail.
+* Personalized OIDC-based kubeconfig obtained through the [DP web interface](/products/kubernetes-platform/documentation/v1/user/web/ui.html). This provides individual accountability and audit trail.
 * Administrators can explicitly use the admin kubeconfig on a master node:
 
   ```bash
@@ -940,9 +940,9 @@ The following options are available for administrative access:
 
 ### How to generate a kubeconfig to access the Kubernetes API?
 
-`kubeconfig` for remote cluster access via `d8` (`kubectl`) can be generated in the [`kubeconfigurator` web interface](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
+`kubeconfig` for remote cluster access via `d8` (`kubectl`) can be generated in the [DP web interface](../../../../user/web/ui.html).
 
-To publish it, configure the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module:
+To publish the Kubernetes API and generate `kubeconfig`, configure the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module:
 
 * Open the `control-plane-manager` module settings (create the ModuleConfig `control-plane-manager` resource if there is none):
 
@@ -958,8 +958,6 @@ To publish it, configure the [`apiserver.publishAPI`](/modules/control-plane-man
       ingress:
         enabled: true
   ```
-
-The name `kubeconfig` is reserved for the kubeconfig generation web interface. The URL depends on the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter (for example, for the template that looks like `%s.kube.my`, the kubeconfig generation web interface will be available at `kubeconfig.kube.my`, and for `%s-kube.company.my` — at `kubeconfig-kube.company.my`).
 
 ### Root kubeconfig symlink
 

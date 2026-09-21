@@ -28,7 +28,7 @@ lang: ru
              enabled: true
    ```
 
-1. Откройте [веб-интерфейс DP](../../../../user/web/ui.html). Опубликованный API становится доступен для генерации kubeconfig автоматически после включения публикации API (параметр [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled)) в модуле `control-plane-manager`. Этот веб-интерфейс доступен по URL:
+1. Откройте [веб-интерфейс DP](../../../../user/web/ui.html). Опубликованный API становится доступен для генерации kubeconfig автоматически после включения публикации API (параметр [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled)) в модуле `control-plane-manager`.
 
 1. Сгенерируйте конфигурацию `kubectl`. В веб-интерфейсе пользователь получит набор команд для настройки `kubectl`. Эти команды можно скопировать и вставить в консоль. Аутентификация будет производиться по OIDC-токену, выданному Dex. При поддержке провайдером функции продления сессии конфигурация будет включать `refresh token`, что позволит продлевать доступ без повторной аутентификации.
 

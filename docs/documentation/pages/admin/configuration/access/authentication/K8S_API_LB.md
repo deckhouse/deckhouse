@@ -29,7 +29,6 @@ To configure access, follow these steps:
 
 1. Open the [DP web UI](../../../../user/web/ui.html).  
    The published API becomes available for kubeconfig generation automatically after enabling API publishing (the `apiserver.publishAPI.ingress.enabled` parameter) in the `control-plane-manager` module.  
-   This web interface is available at the following URL:
 
 1. Generate the `kubectl` configuration.  
    The web UI provides a set of commands to configure `kubectl`.  

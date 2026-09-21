@@ -937,7 +937,7 @@ Deckhouse привязывает группу `kubeadm:cluster-admins` к вст
 
 Для административного доступа можно использовать следующие варианты:
 
-* Персонализированный kubeconfig на основе OIDC, получаемый через [kubeconfig-генератор](#как-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api). Это обеспечивает индивидуальную ответственность и журнал аудита.
+* Персонализированный kubeconfig на основе OIDC, получаемый через [веб-интерфейс DP](/products/kubernetes-platform/documentation/v1/user/web/ui.html). Это обеспечивает индивидуальную ответственность и журнал аудита.
 * Явное использование адимнистраторами admin kubeconfig на master-узле:
 
   ```bash
@@ -946,9 +946,9 @@ Deckhouse привязывает группу `kubeadm:cluster-admins` к вст
 
 ### Как сгенерировать kubeconfig для доступа к Kubernetes API?
 
-`kubeconfig` для удалённого доступа к кластеру через `d8` (`kubectl`) можно сгенерировать в [веб-интерфейсе `kubeconfigurator`](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
+`kubeconfig` для удалённого доступа к кластеру через `d8` (`kubectl`) можно сгенерировать в [веб-интерфейсе DP](../../../../user/web/ui.html).
 
-Для его публикации настройте параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`:
+Для публикации Kubernetes API и генерации `kubeconfig` настройте параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`:
 
 * Откройте настройки модуля `control-plane-manager` (создайте ресурс ModuleConfig `control-plane-manager`, если его нет):
 
@@ -964,8 +964,6 @@ Deckhouse привязывает группу `kubeadm:cluster-admins` к вст
       ingress:
         enabled: true
   ```
-
-Имя `kubeconfig` зарезервировано для веб-интерфейса генерации kubeconfig. URL зависит от параметра [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (например, при шаблоне вида `%s.kube.my` веб-интерфейс генерации kubeconfig будет доступен по адресу `kubeconfig.kube.my`, при `%s-kube.company.my` — по адресу `kubeconfig-kube.company.my`).  
 
 ### Символическая ссылка root kubeconfig
 
