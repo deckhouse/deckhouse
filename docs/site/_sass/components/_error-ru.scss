@@ -1,0 +1,304 @@
+@use 'components/common/_breakpoints.scss';
+
+// 404 page, Russian version only. The English page keeps the artwork and typography of
+// _error.scss untouched: every rule here is scoped under html[lang="ru"], which
+// _layouts/default.html writes straight from page.lang, so none of it can reach an
+// English page. .docs.section is carried only by the eight 404 pages, so the scope is
+// tight on the other axis too.
+//
+// Specificity note: html[lang="ru"] adds 0-1-1 on top of whatever follows it, which puts
+// every rule below ahead of its _error.scss and docs.scss counterparts no matter which
+// stylesheet the browser reads first. The legacy list bullets come from
+// ".docs ul > li::before" in docs.css, a separate file loaded after site.css, which is
+// why the resets below are written out rather than left to source order.
+//
+// Font weight note: same shift as _header-ru.scss. deckhouse.ru maps font-weight 400 to
+// onest-*-300-normal.woff2 and 500 to onest-*-400-normal.woff2, while our fonts.css maps
+// every weight to its own file, so the Onest weights here are one step below the numbers
+// the design writes. Heading Now is not shifted - there the reference declares its face
+// at 500 and so do we.
+//
+// Geometry comes from Figma frame 51:4188 (1440 wide): two 638px columns, 44px apart,
+// inside 60px gutters. The same numbers are live on deckhouse.ru, which is where the
+// percentages of the artwork below were measured.
+
+$text-primary: #000;       // --text-primary
+$text-secondary: #42424c;  // --text-secondary
+$text-brand: #0a6eff;      // --text-brand
+$brand-container: #004df2; // --bg-brand-container
+$accent-lime: #c8ff50;     // --bg-accent-lime
+
+$media-gap: 44px;  // --spacing-group, the gap between the text column and the artwork
+// The artwork's column: half the row, less half the gap, and never wider than the 638px
+// Figma draws. It is the second track of the grid below, and the first track takes what
+// is left, so the gap between the two stays exactly 44px at every width. Written as a
+// string so Sass hands the min() to the browser rather than trying to resolve it - the
+// percentage is only known at layout time.
+$media-w: #{"min(50% - 22px, 638px)"};
+
+html[lang="ru"] {
+  // The blue stripe is drawn several times wider and taller than the artwork on purpose,
+  // so it has to be clipped twice over. deckhouse.ru gets both clips from one declaration:
+  // its <main> is full-width and carries overflow-x: hidden, which computes overflow-y to
+  // auto and so cuts the stripe at the bottom of the section as well. We have no such
+  // element - the section sits inside .container - so the two clips are written out
+  // separately, and .docs.section below adds the vertical one.
+  //
+  // overflow-x: clip rather than hidden: clip does not make the element a scroll
+  // container, so the sticky .header-container inside it keeps sticking to the viewport.
+  // Leaving overflow-y untouched is what keeps the header dropdowns hanging out of the
+  // box - clip is the only overflow value that may pair with visible on the other axis.
+  .content:has(.docs.section) {
+    overflow-x: clip;
+  }
+
+  // _layouts/sidebar-nosidebar.html puts an inline margin-top on the wrapper around the
+  // page body; the documentation project's copy of that layout does not. !important is
+  // the only way past an inline style, and it buys the two projects the same top edge.
+  .layout-sidebar > div:has(> .docs.section) {
+    margin-top: 0 !important;
+  }
+
+  .docs.section {
+    position: relative;
+    margin: 0;
+    padding: 80px 0;
+    // The other half of the clip described above: cut the stripe at the bottom edge of
+    // the section, where deckhouse.ru cuts it, while still letting it run sideways past
+    // the container gutters to the edge of the window.
+    overflow-x: visible;
+    overflow-y: clip;
+
+    // The English page paints /images/404.svg in this pseudo-element.
+    &::before {
+      content: none;
+    }
+
+    @include breakpoints.min-w(m) {
+      padding: 96px 0;
+    }
+
+    @include breakpoints.min-w(l) {
+      padding: 120px 0;
+    }
+
+    // deckhouse.ru puts the artwork beside the text from 1024 up. We start at 1200,
+    // because our left column is not its heading and two lines: it also carries the
+    // version list, and in half of a 1024 row that list falls into a single column tall
+    // enough to run into the blue stripe, which would leave the last links blue on blue.
+    // From 1200 the list fits two columns and stays well clear of the artwork.
+    //
+    // The row is a grid rather than a text column with the artwork positioned into its
+    // right half. That detail matters: as a grid item the artwork keeps setting the
+    // height of the section, exactly as the flex child does on deckhouse.ru, so the
+    // section is as tall as the artwork whenever the text is shorter. Absolute
+    // positioning made the section only as tall as the text, which pulled the whole
+    // artwork - and with it the blue stripe, which is anchored to it - up over the last
+    // row of links. The four auto rows hold the heading, the description and the list;
+    // the fifth takes up whatever the artwork has left over, so the text rows stay packed
+    // at the top while the artwork centres against the whole column.
+    @include breakpoints.min-w(xl) {
+      display: grid;
+      grid-template-columns: 1fr #{$media-w};
+      grid-template-rows: repeat(4, auto) 1fr;
+      column-gap: $media-gap;
+    }
+
+    // The artwork comes after the text in the document, and the blue stripe reaches well
+    // across the text column, so the text is lifted a layer. deckhouse.ru needs no such
+    // rule because its left column is two lines tall; ours carries the version list and
+    // runs past the stripe at 1024 and below.
+    .docs__title,
+    .post-content > p,
+    .post-content > ul {
+      position: relative;
+      z-index: 1;
+
+      @include breakpoints.min-w(xl) {
+        grid-column: 1;
+      }
+    }
+
+    .docs__title {
+      max-width: none;
+      margin: 0;
+      color: $text-primary;
+      font-family: 'Heading Now 75', sans-serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: 24px;
+      line-height: 28px;
+      letter-spacing: normal;
+
+      @include breakpoints.min-w(l) {
+        font-size: 40px;
+        line-height: 44px;
+      }
+    }
+
+    .post-content {
+      max-width: none;
+      margin: 0;
+
+      // Dissolve the wrapper so the heading, the text and the artwork are all items of
+      // the grid above; without this the artwork could not sit in the second column.
+      @include breakpoints.min-w(xl) {
+        display: contents;
+      }
+
+      // Text/M/Regular. 16px in the design, so 300 here - see the font weight note.
+      p {
+        margin: 16px 0 0;
+        color: $text-secondary;
+        font-family: 'Onest', sans-serif;
+        font-weight: 300;
+        font-size: 14px;
+        line-height: 20px;
+        letter-spacing: normal;
+
+        @include breakpoints.min-w(l) {
+          font-size: 16px;
+          line-height: 22px;
+        }
+      }
+
+      // Figma lays the version links out in three 190px columns, 32px apart, 16px between
+      // rows. The column count is left to auto-fill rather than pinned to three: our
+      // labels read "Документация версии v1.76" where the mock had the shorter
+      // "DKP v1.73", and they render 213px wide, so three of them do not fit beside the
+      // artwork below 1664. 216px is that measured width rounded up, which is what keeps
+      // a label from ever wrapping; the min() keeps the track from overflowing a narrow
+      // screen. The list then finds its own count: four columns while the page is still
+      // stacked, two beside the artwork, three from 1664, one on a phone.
+      ul {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 216px), 1fr));
+        gap: 16px 32px;
+        margin: 32px 0 0;
+        padding: 0;
+        list-style: none;
+
+        li {
+          position: static;
+          margin: 0;
+          padding: 0;
+          color: $text-brand;
+          font-family: 'Onest', sans-serif;
+          font-weight: 300;
+          font-size: 14px;
+          line-height: 20px;
+          letter-spacing: normal;
+
+          @include breakpoints.min-w(l) {
+            font-size: 16px;
+            line-height: 22px;
+          }
+
+          // The blue dot docs.css puts in front of every list item.
+          &::before {
+            content: none;
+          }
+
+          a {
+            color: inherit;
+            text-decoration: underline;
+            text-decoration-skip-ink: none;
+
+            &:hover {
+              color: $brand-container;
+            }
+          }
+        }
+      }
+
+      // Empty on these pages - page.tags is never set - but it still ends the flow.
+      .tags {
+        display: none;
+      }
+    }
+  }
+
+  // Artwork, _includes/error404-media_ru.html. The percentages are the ones deckhouse.ru
+  // uses; they are all relative to the 638x414 box, so the whole thing scales with it.
+  .error404__media {
+    position: relative;
+    width: 100%;
+    margin-top: 32px;
+    aspect-ratio: 638 / 414;
+
+    // Stacked, deckhouse.ru lets the artwork run the full width of the row. It can do
+    // that because it stacks only below 1024; we stack up to 1200, and a 1135px-wide
+    // card would be 737px tall. Past the size Figma draws it there is nothing to gain,
+    // so it stops at 638x414 and stays left, aligned with the text above it.
+    @include breakpoints.min-w(l) {
+      max-width: 638px;
+    }
+
+    @include breakpoints.min-w(xl) {
+      grid-column: 2;
+      grid-row: 1 / -1;
+      align-self: center;
+      width: 100%;
+      max-width: none;
+      margin-top: 0;
+    }
+  }
+
+  .error404__stripe {
+    position: absolute;
+    top: 233.94%;
+    left: -48.39%;
+    width: 648.28%;
+    height: 281.4%;
+    background-color: $brand-container;
+    transform: translate(-50%, -50%) rotate(-6deg);
+  }
+
+  .error404__card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 86.38%;
+    height: 83.52%;
+    color: $accent-lime;
+    transform: translate(-50%, -50%) scaleX(-1);
+
+    svg {
+      display: block;
+    }
+  }
+
+  .error404__number {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    color: $text-primary;
+    font-family: 'Heading Now 95', sans-serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 31vw;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    transform: translate(-50%, -50%) rotate(-4.19deg);
+
+    @include breakpoints.min-w(m) {
+      font-size: 224px;
+    }
+
+    // Still stacked, but the card has stopped growing at the 638px Figma draws it, so the
+    // number takes the size Figma gives it on a card that size.
+    @include breakpoints.min-w(l) {
+      font-size: 216px;
+    }
+
+    // The artwork drops to half the row here, so the number drops with it.
+    @include breakpoints.min-w(xl) {
+      font-size: 128px;
+    }
+
+    @include breakpoints.min-w(xxl) {
+      font-size: 216px;
+    }
+  }
+}
