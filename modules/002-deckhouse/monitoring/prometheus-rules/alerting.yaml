@@ -361,19 +361,19 @@
 
         To resolve this issue, follow these steps:
 
-        1. Review the changes required to migrate to version {{ $labels.latest }}:
+        1. Review the migration notes for the `{{ $labels.name }}` module settings, one line per conversion step:
 
            ```bash
            d8 k get modulesettingsdefinition {{ $labels.name }} -o jsonpath='{range .spec.versions[*].conversions[*]}{.descriptions.en}{"\n"}{end}'
            ```
 
-        2. Migrate `spec.settings` accordingly and set `spec.version` to {{ $labels.latest }}:
+        1. Migrate `spec.settings` accordingly and set `spec.version` to {{ $labels.latest }}:
 
            ```bash
            d8 k edit moduleconfig {{ $labels.name }}
            ```
 
-        3. Verify that the version has been updated and no warnings are left:
+        1. Verify that the version has been updated and no warnings are left:
 
            ```bash
            d8 k get moduleconfig {{ $labels.name }} -o jsonpath='{.spec.version}{"\t"}{.status.message}{"\n"}'

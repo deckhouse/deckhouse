@@ -449,28 +449,36 @@
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: |
-        Deckhouse configuration is invalid.
+        Deckhouse rejected the cluster configuration: one of the ModuleConfig resources is invalid.
       description: |
-        Deckhouse configuration contains errors.
+        Deckhouse has detected errors in the cluster configuration. The usual causes are `spec.settings` that do not match the module's settings schema, and a failed conversion of `spec.settings` to the latest schema version.
 
-        Steps to troubleshoot:
+        This alert does not name the module, because the underlying metric has no labels. Deckhouse puts the exact error into the `status.message` field of the ModuleConfig that caused it, prefixed with `Error:`.
 
-        1. Check Deckhouse logs by running the following command:
+        To resolve this issue, follow these steps:
+
+        1. Find the affected configuration. The `MESSAGE` column holds the error and the `VERSION` column holds the settings schema version currently in use:
+
+           ```bash
+           d8 k get moduleconfig
+           ```
+
+        1. Read the full error for the ModuleConfig that reports one (`global` is a valid value for `<MODULE_NAME>`):
+
+           ```bash
+           d8 k get moduleconfig <MODULE_NAME> -o jsonpath='{.status.message}{"\n"}'
+           ```
+
+        1. Fix `spec.settings`, or `spec.version` if the error mentions a settings version or a conversion:
+
+           ```bash
+           d8 k edit moduleconfig <MODULE_NAME>
+           ```
+
+        1. If no ModuleConfig reports an error, check the Deckhouse logs:
 
            ```bash
            d8 k -n d8-system logs -f -l app=deckhouse
-           ```
-
-        1. Edit the Deckhouse global configuration:
-
-           ```bash
-           d8 k edit mc global
-           ```
-
-           Or edit configuration of a specific module:
-
-           ```bash
-           d8 k edit mc <MODULE_NAME>
            ```
 
   - alert: DeckhouseUpdating
