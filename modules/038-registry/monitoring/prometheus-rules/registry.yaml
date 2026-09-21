@@ -26,8 +26,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_config: "D8RegistryConfigInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_config: "D8RegistryConfigInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The registry configuration was rejected.
       description: |-
         The `registry` module cannot use its configuration, so the cluster keeps whatever
@@ -52,8 +52,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_nodes: "D8RegistryNodeNotConverged,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_nodes: "D8RegistryNodeNotConverged,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Some nodes have not applied their registry configuration.
       description: |-
         The agent on one or more nodes has not applied the layout it was given. Those nodes
@@ -84,8 +84,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_nodes: "D8RegistryNodeRunningFromDisk,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_nodes: "D8RegistryNodeRunningFromDisk,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Some nodes are routing pulls from their on-disk copy of the configuration.
       description: |-
         The agent on one or more nodes cannot reach the API server and is routing pulls from
@@ -116,8 +116,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_storage: "D8RegistryStorageIncomplete,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_storage: "D8RegistryStorageIncomplete,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Some registry cache replicas do not hold the whole image set.
       description: |-
         One or more replicas of the in-cluster cache are still filling, or have stopped
@@ -141,8 +141,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_storage: "D8RegistryAirGapTransitionHeld,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_storage: "D8RegistryAirGapTransitionHeld,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The registry upstream cannot be removed yet.
       description: |-
         The configuration has no upstream, so the cluster is meant to be air-gapped, and the
@@ -174,8 +174,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_upstream: "D8RegistryUpstreamProbeFailing,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_upstream: "D8RegistryUpstreamProbeFailing,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The configured registry upstream does not pass its preflight check.
       description: |-
         A change to the primary upstream was refused, and the cluster is still using the
@@ -209,8 +209,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_upstream: "D8RegistryUpstreamRejected,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_upstream: "D8RegistryUpstreamRejected,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: An additional registry was refused.
       description: |-
         A `RegistryUpstream` resource was not accepted, so pulls for the registry it names
@@ -234,8 +234,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_stale_data: "D8RegistryStaleCacheData,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_stale_data: "D8RegistryStaleCacheData,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: A node still holds registry cache data that nothing uses.
       description: |-
         Node `{{ $labels.node }}` holds data of the in-cluster registry cache while no cache
@@ -287,8 +287,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_storage: "D8RegistryStorageNotReclaimed,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_storage: "D8RegistryStorageNotReclaimed,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The registry cache has not reclaimed its disk for a week.
       description: |-
         No replica of the in-cluster cache has finished a garbage collection in the last week.

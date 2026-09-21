@@ -10,8 +10,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_migration_pending: "D8RegistryMigrationPending,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_migration_pending: "D8RegistryMigrationPending,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The registry module is still running its previous implementation.
       description: |-
         This cluster still pulls images the way the previous implementation of the
@@ -75,8 +75,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_migration_preflight: "D8RegistryMigrationPreflightBlocked,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_migration_preflight: "D8RegistryMigrationPreflightBlocked,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The registry migration must not be started on this cluster yet.
       description: |-
         A precondition of the `registry` module's migration is not met, and the migration
@@ -147,8 +147,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_foreign_config: "D8RegistryNodeForeignRegistryConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_foreign_config: "D8RegistryNodeForeignRegistryConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Node {{ $labels.node }} carries container runtime registry configuration the registry module did not write.
       description: |-
         Node `{{ $labels.node }}` has a file under `/etc/containerd/conf.d/` (containerd v1) or

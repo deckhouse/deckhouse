@@ -14,8 +14,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_registry_drain_stuck: "D8RegistryDrainStuck,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_registry_drain_stuck: "D8RegistryDrainStuck,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The registry module cannot finish leaving the pull path.
       description: |-
         The `registry` ModuleConfig asks for `Unmanaged`, and the module is still running its
