@@ -204,17 +204,22 @@ Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutor
 To issue a wildcard certificate with DNS-01 validation in Yandex Cloud DNS,
 configure the module parameters and create a Certificate that references the `yandex` ClusterIssuer.
 
-> If you previously installed the upstream `cert-manager-webhook-yandex` Helm chart manually,
-> uninstall that chart and delete the cluster-scoped APIService `v1alpha1.acme.cloud.yandex.com`
-> **before** enabling the module settings below.
-> The built-in webhook registers the same APIService name; leaving the manual install in place
-> can break the whole `cert-manager` release or silently break renewals for an existing custom ClusterIssuer.
-> The built-in `yandex` ClusterIssuer uses the **production** Let's Encrypt directory
-> (same as Cloudflare, Route53, and CloudDNS issuers in this module).
-> Confirm that the folder ID, service account role (`dns.editor`), and public DNS zone are correct
-> before creating Certificates, so failed retries do not consume production rate limits.
-> To validate the setup against staging first, create a temporary ClusterIssuer that points at
-> `https://acme-staging-v02.api.letsencrypt.org/directory` and reuses the same webhook solver config.
+{% alert level="warning" %}
+If you previously installed the upstream `cert-manager-webhook-yandex` Helm chart manually,
+uninstall that chart and delete the cluster-scoped APIService `v1alpha1.acme.cloud.yandex.com`
+before enabling the module settings below. The built-in webhook registers the same APIService
+name; leaving the manual install in place can break the whole `cert-manager` release or silently
+break renewals for an existing custom ClusterIssuer.
+{% endalert %}
+
+{% alert level="info" %}
+The built-in `yandex` ClusterIssuer uses the production Let's Encrypt directory (same as
+Cloudflare, Route53, and CloudDNS issuers in this module). Confirm that the folder ID, service
+account role (`dns.editor`), and public DNS zone are correct before creating Certificates, so
+failed retries do not consume production rate limits. To validate the setup against staging
+first, create a temporary ClusterIssuer that points at
+`https://acme-staging-v02.api.letsencrypt.org/directory` and reuses the same webhook solver config.
+{% endalert %}
 
 1. Create a [service account](https://yandex.cloud/en/docs/iam/operations/sa/create) in Yandex Cloud and assign the `dns.editor` role (or equivalent) on the folder that contains the public DNS zone.
 
