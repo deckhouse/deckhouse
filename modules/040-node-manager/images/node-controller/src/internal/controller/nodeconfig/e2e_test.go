@@ -430,8 +430,7 @@ var _ = Describe("NodeConfig controller", func() {
 	//
 	// A CR name is a DNS subdomain, spec.staticPods[].name is a DNS label: the API
 	// server admits "foo.bar" and every node it reached would refuse the NodeConfig
-	// whole — and reconcileAllNodes stops at the first such node, so no NER or NSPR
-	// status in the cluster would move again.
+	// whole, so one typo would cost every node of the group its whole configuration.
 	It("refuses a NodeStaticPodRequest whose name the node config would not take", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-imm")
 		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
