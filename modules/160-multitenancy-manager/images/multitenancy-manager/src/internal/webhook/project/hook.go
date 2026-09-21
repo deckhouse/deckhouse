@@ -62,6 +62,16 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	privileged := req.UserInfo.Username == rolebindingwebhook.ControllerServiceAccount ||
 		req.UserInfo.Username == rolebindingwebhook.DeckhouseServiceAccount
 
+	// The "virtual" template names the platform's own virtual projects (default, deckhouse), which
+	// have no namespace of their own. A user project on that template is handled as virtual by the
+	// project controller (no namespace, Deployed) but looks like an ordinary project to everything
+	// keyed on the virtual-project label, so the PRB/CPRB fan-out kept failing on a namespace that
+	// never exists and no ClusterProjectRoleBinding in the cluster could reach Ready.
+	if project.Spec.ProjectTemplateName == projectmanager.VirtualTemplate && !privileged &&
+		project.Name != projectmanager.DefaultProjectName && project.Name != projectmanager.DeckhouseProjectName {
+		return admission.Denied(fmt.Sprintf("the %q project template is reserved for the platform's virtual projects", projectmanager.VirtualTemplate))
+	}
+
 	if req.Operation == admissionv1.Create {
 		// pass virtual projects
 		if project.Name == projectmanager.DefaultProjectName || project.Name == projectmanager.DeckhouseProjectName {

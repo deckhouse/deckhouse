@@ -127,6 +127,32 @@ func TestReconcile_FansOutToAllNonVirtualProjects(t *testing.T) {
 	assert.Contains(t, got.Finalizers, v1alpha3.ClusterProjectRoleBindingFinalizer)
 }
 
+// TestReconcile_SkipsProjectOnVirtualTemplate covers a project that reached the virtual code path
+// of the project controller through its template name alone, without the virtual-project label:
+// it has no namespace, so the fan-out must leave it out instead of failing every reconcile on a
+// namespace that never exists.
+func TestReconcile_SkipsProjectOnVirtualTemplate(t *testing.T) {
+	ghost := project("ghost", false)
+	ghost.Spec.ProjectTemplateName = v1alpha3.VirtualProjectTemplateName
+	r, c := newReconciler(t,
+		cprb("global-viewer", "d8:project:viewer"),
+		project("alpha", false, "alpha"),
+		ghost,
+	)
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "global-viewer"}})
+	assert.NoError(t, err)
+
+	name := rolebinding.CPRBServiceName("global-viewer")
+	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "alpha", Name: name}, &rbacv1.RoleBinding{}))
+	assert.Error(t, c.Get(context.Background(), client.ObjectKey{Namespace: "ghost", Name: name}, &rbacv1.RoleBinding{}),
+		"a project on the virtual template must not receive the binding")
+
+	got := &v1alpha3.ClusterProjectRoleBinding{}
+	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "global-viewer"}, got))
+	assert.Equal(t, int32(1), got.Status.BoundProjects)
+}
+
 // TestReconcile_DeletionRemovesFinalizerAndBindings mirrors the PRB deletion path: the finalizer is
 // removed only after the fanned-out service RoleBindings are cleaned up.
 func TestReconcile_DeletionRemovesFinalizerAndBindings(t *testing.T) {

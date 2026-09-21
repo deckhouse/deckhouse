@@ -57,7 +57,7 @@ const (
 	DeckhouseProjectName = "deckhouse"
 	DefaultProjectName   = "default"
 
-	VirtualTemplate = "virtual"
+	VirtualTemplate = v1alpha3.VirtualProjectTemplateName
 
 	// MinimalTemplate renders the project namespace and nothing else. It is what a project gets
 	// when it names no template: the CRD schema defaults the field, and the controller falls back
@@ -423,7 +423,7 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 // pin the wrong template after a failed migrate.
 func (m *Manager) ensureTemplateName(ctx context.Context, project *v1alpha3.Project) error {
 	if project.Spec.ProjectTemplateName != "" ||
-		project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" ||
+		project.IsVirtual() ||
 		namespacemanager.IsLeftoverWrap(project) {
 		return nil
 	}

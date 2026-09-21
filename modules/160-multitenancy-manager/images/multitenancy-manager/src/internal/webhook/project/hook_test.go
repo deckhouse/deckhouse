@@ -35,6 +35,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	projectmanager "controller/internal/manager/project"
 	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
 
@@ -282,5 +283,49 @@ func TestHandle_ProjectNameValidation(t *testing.T) {
 		v := newValidator(t, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}})
 		resp := v.Handle(context.Background(), createReq(t, "foobar"))
 		assert.True(t, resp.Allowed, resp.Result)
+	})
+}
+
+// The "virtual" template belongs to the platform's virtual projects. A user project on it would be
+// handled as virtual by the project controller and as ordinary by everything keyed on the
+// virtual-project label, and every ClusterProjectRoleBinding would then fail on its namespace.
+func TestHandle_VirtualTemplateIsReserved(t *testing.T) {
+	createReq := func(t *testing.T, user, name string) admission.Request {
+		t.Helper()
+		project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: name}}
+		project.Spec.ProjectTemplateName = projectmanager.VirtualTemplate
+		raw, err := json.Marshal(project)
+		require.NoError(t, err)
+		return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: user},
+			Object:    runtime.RawExtension{Raw: raw},
+		}}
+	}
+
+	t.Run("a user may not create a project on the virtual template", func(t *testing.T) {
+		v := newValidator(t)
+		resp := v.Handle(context.Background(), createReq(t, "alice", "virtual"))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "reserved for the platform's virtual projects")
+	})
+
+	t.Run("a user may not move an existing project onto the virtual template", func(t *testing.T) {
+		v := newValidator(t)
+		old := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "team"}}
+		old.Spec.ProjectTemplateName = "default"
+		updated := old.DeepCopy()
+		updated.Spec.ProjectTemplateName = projectmanager.VirtualTemplate
+		resp := v.Handle(context.Background(), updateRequest(t, "alice", old, updated))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "reserved for the platform's virtual projects")
+	})
+
+	t.Run("the controller keeps creating the platform's virtual projects", func(t *testing.T) {
+		v := newValidator(t)
+		for _, name := range []string{projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName} {
+			resp := v.Handle(context.Background(), createReq(t, rolebindingwebhook.ControllerServiceAccount, name))
+			assert.True(t, resp.Allowed, name)
+		}
 	})
 }

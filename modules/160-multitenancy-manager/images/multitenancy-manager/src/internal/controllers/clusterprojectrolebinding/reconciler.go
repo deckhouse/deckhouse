@@ -149,7 +149,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	boundProjects := 0
 	for i := range projects.Items {
 		project := &projects.Items[i]
-		if project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
+		if project.IsVirtual() {
 			continue
 		}
 		if !project.DeletionTimestamp.IsZero() {
