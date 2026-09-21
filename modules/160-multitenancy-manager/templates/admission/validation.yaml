@@ -6,15 +6,22 @@
   a namespace) would fail and addon-operator would retry it forever, locking the module's queue.
   Excluding system writers makes that impossible regardless of backend health, while ordinary users are
   still validated. Mirrors the same exclusion on the cluster-objects grant webhooks.
+
+  People are not system writers: system:masters goes through these webhooks like everyone else, so a
+  Project an administrator creates is validated the same way as one a user creates. The one human
+  identity that bypasses them is system:sudouser -- the same identity the heritage
+  ValidatingAdmissionPolicy exempts -- so an administrator who has to bypass a check does it on
+  purpose, by impersonating that user, and the bypass is visible in the audit log.
 */ -}}
 {{- $excludeSystemWriters := `matchConditions:
 - name: exclude-system-writers
   expression: >-
     request.userInfo.username != "system:apiserver"
+    && request.userInfo.username != "system:sudouser"
     && request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
     && request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
     && request.userInfo.username != "system:serviceaccount:d8-user-authz:controller"
-    && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz" || g == "system:masters" || g == "system:nodes")` }}
+    && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz" || g == "system:nodes")` }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
