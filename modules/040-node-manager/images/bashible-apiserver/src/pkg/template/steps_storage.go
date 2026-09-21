@@ -46,10 +46,6 @@ type StepsStorage struct {
 	nodeGroupConfigurations      map[string][]*nodeConfigurationScript
 	nodeGroupConfigurationsQueue chan nodeConfigurationQueueAction
 
-	staticPodRequests          map[string][]*staticPodRequest
-	staticPodRequestsQueue     chan nodeConfigurationQueueAction
-	staticPodRequestsHasSynced func() bool
-
 	configurationsChanged chan struct{}
 	emitter               changesEmitter
 
@@ -76,15 +72,12 @@ func NewStepsStorage(ctx context.Context, rootDir string, ngConfigFactory dynami
 		systemScripts:                make(map[string]map[string][]byte),
 		nodeGroupConfigurations:      make(map[string][]*nodeConfigurationScript),
 		nodeGroupConfigurationsQueue: make(chan nodeConfigurationQueueAction, 100),
-		staticPodRequests:            make(map[string][]*staticPodRequest),
-		staticPodRequestsQueue:       make(chan nodeConfigurationQueueAction, 100),
 		configurationsChanged:        make(chan struct{}, 1),
 		cloudProviderStepSecrets:     make(map[string]cloudProviderStepsSecret),
 		cloudProviderStepsChanged:    make(chan struct{}, 1),
 	}
 
 	ss.subscribeOnCRD(ctx, ngConfigFactory)
-	ss.subscribeOnStaticPodRequests(ctx, ngConfigFactory)
 	return ss
 }
 
@@ -95,16 +88,6 @@ func (s *StepsStorage) Render(target, provider string, templateContext map[strin
 	}
 
 	if len(ng) > 0 {
-		// No step at all until the informer has listed the objects: an empty list
-		// tells the node to remove every static pod it is running.
-		if s.staticPodRequestsSynced() {
-			staticPodsStep, err := s.renderStaticPodsStep(ng[0])
-			if err != nil {
-				return nil, fmt.Errorf("render static pods step: %w", err)
-			}
-			steps[staticPodsStepName] = staticPodsStep
-		}
-
 		userConfigurations, err := s.renderNodeGroupConfigurations(ng[0], templateContext)
 		if err != nil {
 			klog.Errorf("Render user NodeGroupConfigurations failed: %s", err)

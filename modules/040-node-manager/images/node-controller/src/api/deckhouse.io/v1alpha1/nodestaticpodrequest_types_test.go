@@ -32,10 +32,6 @@ import (
 // These manifests are written by something else — the node agent on an Engine
 // node, a bashible step on a mutable one. A static pod of one of those names
 // would give one file two writers, and the loser is whichever ran last.
-//
-// The twin list is reservedStaticPodNames in bashible-apiserver
-// pkg/template/static_pods.go, pinned by TestAcceptedStaticPodsSkipsAReservedName;
-// separate modules, so nothing but these two tests keeps them equal.
 func TestIsReservedStaticPodName(t *testing.T) {
 	for _, name := range []string{
 		"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler",
