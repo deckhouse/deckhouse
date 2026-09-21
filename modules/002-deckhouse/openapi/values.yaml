@@ -105,5 +105,18 @@ properties:
         type: object
         default: {}
         properties:
+          v2Active:
+            type: boolean
+            default: false
+            description: |
+              Whether the registry module runs its current implementation on this
+              cluster, read from the presence of its handover record.
+
+              What it gates: the legacy registry contour (`d8-system/registry-config`),
+              which this module renders out of `deckhouse.registry.*`. On a cluster that
+              has switched, nothing writes those settings any more, so the secret keeps
+              describing the registry the cluster was migrated from — and dhctl preferred
+              it over the cluster's own configuration. See
+              `hooks/legacy_registry_contour.go`.
           mode:
             type: string

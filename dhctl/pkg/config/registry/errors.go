@@ -21,4 +21,10 @@ import (
 var (
 	ErrUnknownMode = errors.New("Unknown registry mode")
 	ErrIsNotReady  = errors.New("Registry is not ready")
+
+	// ErrHandoverNeedsTheNode is refused early, because the alternative is a success that did nothing.
+	// See HandOverBundleStore.
+	ErrHandoverNeedsTheNode = errors.New(
+		"an installation from a bundle has to hand the store on the first master over to the cluster, " +
+			"which means running commands on that node, and this installer was given no way to reach it")
 )
