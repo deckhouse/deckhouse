@@ -48,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
@@ -216,6 +217,7 @@ func buildSchema() (*runtime.Scheme, error) {
 		coordv1.AddToScheme,
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
+		v1beta1.AddToScheme,
 		appsv1.AddToScheme,
 		discoveryv1.AddToScheme,
 	}
@@ -305,7 +307,7 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 		&v1alpha1.Application{}:                {},
 		&v1alpha1.ModulePackage{}:              {},
 		&v1alpha1.ModulePackageVersion{}:       {},
-		&v1alpha2.Module{}:                     {},
+		&v1beta1.Module{}:                      {},
 	}
 }
 

@@ -16,26 +16,22 @@
 package fake
 
 import (
-	v1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha2"
+	v1beta1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1beta1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeDeckhouseV1alpha2 struct {
+type FakeDeckhouseV1beta1 struct {
 	*testing.Fake
 }
 
-func (c *FakeDeckhouseV1alpha2) ModulePullOverrides() v1alpha2.ModulePullOverrideInterface {
-	return newFakeModulePullOverrides(c)
-}
-
-func (c *FakeDeckhouseV1alpha2) ModuleUpdatePolicies() v1alpha2.ModuleUpdatePolicyInterface {
-	return newFakeModuleUpdatePolicies(c)
+func (c *FakeDeckhouseV1beta1) Modules() v1beta1.ModuleInterface {
+	return newFakeModules(c)
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeDeckhouseV1alpha2) RESTClient() rest.Interface {
+func (c *FakeDeckhouseV1beta1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

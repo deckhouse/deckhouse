@@ -21,6 +21,8 @@ import (
 	fakedeckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1/fake"
 	deckhousev1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha2"
 	fakedeckhousev1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha2/fake"
+	deckhousev1beta1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1beta1"
+	fakedeckhousev1beta1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1beta1/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -95,4 +97,9 @@ func (c *Clientset) DeckhouseV1alpha1() deckhousev1alpha1.DeckhouseV1alpha1Inter
 // DeckhouseV1alpha2 retrieves the DeckhouseV1alpha2Client
 func (c *Clientset) DeckhouseV1alpha2() deckhousev1alpha2.DeckhouseV1alpha2Interface {
 	return &fakedeckhousev1alpha2.FakeDeckhouseV1alpha2{Fake: &c.Fake}
+}
+
+// DeckhouseV1beta1 retrieves the DeckhouseV1beta1Client
+func (c *Clientset) DeckhouseV1beta1() deckhousev1beta1.DeckhouseV1beta1Interface {
+	return &fakedeckhousev1beta1.FakeDeckhouseV1beta1{Fake: &c.Fake}
 }

@@ -20,6 +20,7 @@ import (
 
 	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	v1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	v1beta1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -87,12 +88,14 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().PackageRepositoryOperations().Informer()}, nil
 
 		// Group=deckhouse.io, Version=v1alpha2
-	case v1alpha2.SchemeGroupVersion.WithResource("modules"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha2().Modules().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("modulepulloverrides"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha2().ModulePullOverrides().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("moduleupdatepolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha2().ModuleUpdatePolicies().Informer()}, nil
+
+		// Group=deckhouse.io, Version=v1beta1
+	case v1beta1.SchemeGroupVersion.WithResource("modules"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1beta1().Modules().Informer()}, nil
 
 	}
 

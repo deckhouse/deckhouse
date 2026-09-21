@@ -29,7 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -80,7 +80,7 @@ func (s *Service) Start(ctx context.Context, queue workqueue.TypedRateLimitingIn
 // The event is a plain module name. A returned error is retryable; nil means
 // done — including a missing Module, which never becomes valid on retry.
 func (s *Service) handleEvent(ctx context.Context, name string) error {
-	module := new(v1alpha2.Module)
+	module := new(v1beta1.Module)
 	if err := s.client.Get(ctx, client.ObjectKey{Name: name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -100,11 +100,11 @@ func (s *Service) handleEvent(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *Service) computeAndApplyConditions(name string, module *v1alpha2.Module) {
+func (s *Service) computeAndApplyConditions(name string, module *v1beta1.Module) {
 	packageStatus := s.getter(name)
 
 	if module.Status.CurrentVersion == nil {
-		module.Status.CurrentVersion = new(v1alpha2.ModuleStatusVersion)
+		module.Status.CurrentVersion = new(v1beta1.ModuleStatusVersion)
 	}
 
 	versionChanged := module.Status.CurrentVersion.Version != "" && module.Status.CurrentVersion.Version != packageStatus.Version
@@ -156,7 +156,7 @@ func (s *Service) computeAndApplyConditions(name string, module *v1alpha2.Module
 	// disabled-module helpers, so the two cannot drift, and reads the internal
 	// conditions directly instead of reverse-deriving reasons.
 	state, message, tip := summarize(mapperStatus)
-	module.Status.Summary = &v1alpha2.ModuleStatusSummary{
+	module.Status.Summary = &v1beta1.ModuleStatusSummary{
 		State:   state,
 		Message: message,
 		Tip:     tip,
