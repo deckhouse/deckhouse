@@ -7,9 +7,15 @@ here. Regenerate with:
 
     git format-patch --no-signature --no-numbered --binary v1.20.1..d8/v1.20.1 -o <dir>
 
-`--binary` matters: 012 adds two BPF maps, which regenerates
-`pkg/datapath/maps/mapkv.btf`. Without it that hunk exports as "Binary files
-differ" and the patch will not apply.
+`--binary` matters: `013-add-least-conn-lb-algorithm` adds two BPF maps, which
+regenerates `pkg/datapath/maps/mapkv.btf`. Without it that hunk exports as
+"Binary files differ" and the patch will not apply.
+
+The numbers are the order the commits sit in on the branch, because the build
+applies `patches/*.patch` and the shell expands that in filename order -- a patch
+whose diff was taken on top of another must be applied after it. They are
+therefore **not** the numbers the same patches had in the 1.17 set; where a 1.17
+number is meant, it says so.
 
 ## 000-go-mod.patch
 
@@ -60,7 +66,7 @@ the endpoint MTU updater, which would otherwise reset the devices.
 Upstream issue <https://github.com/cilium/cilium/issues/23711>
 Test `~/src/kind/d8-1.20-tests/003-mtu/`
 
-## 005-ebpf-dhcp-server.patch
+## 004-ebpf-dhcp-server.patch
 
 A DHCP server for pods, implemented in the datapath (`bpf/lib/dhcp.h`, hooked
 into `cil_from_container`). A VM inside a pod boots by DHCP, and there is no
@@ -77,7 +83,7 @@ devices. Only the `veth` datapath is covered.
 
 Test `~/src/kind/d8-1.20-tests/005-dhcp/`
 
-## 008-hide-error-of-incompatibility-of-egw-with-ces.patch
+## 005-hide-error-of-incompatibility-of-egw-with-ces.patch
 
 Upstream makes the agent fatal when the egress gateway and CiliumEndpointSlice
 are both enabled (commit `9768f15c9d`, <https://github.com/cilium/cilium/issues/24833>).
@@ -92,7 +98,7 @@ Remove once CES is stable, <https://github.com/cilium/cilium/issues/31904>.
 
 Test `~/src/kind/d8-1.20-tests/008-egw-with-ces/`
 
-## 013-ignore-egress-gateway-inactual-warning.patch
+## 006-ignore-egress-gateway-inactual-warning.patch
 
 Tolerate a `CiliumEgressGatewayPolicy` whose egress IP is not assigned to any
 interface on the gateway node. Deckhouse attaches such addresses out of band, so
@@ -103,7 +109,7 @@ configured egress IP, where unpatched the entry stays `0.0.0.0`.
 
 Test `~/src/kind/d8-1.20-tests/013-egw-unassigned-ip/`
 
-## 018-fix-svacer.patch
+## 007-fix-svacer.patch
 
 Nil guard in `ICMPField.UnmarshalJSON`: a missing or null `type` panics in
 `IntOrString.IntValue()`, because `String()` tolerates a nil receiver and
@@ -117,7 +123,7 @@ Svace `DEREF_OF_NULL` finding in this build (see `SvaceBuildOptions` in
 Test `~/src/kind/d8-1.20-tests/018-icmp-nil-type/` (unit test; its negative
 control runs the same test against a pristine v1.20.1 worktree, where it panics)
 
-## 009-wireguard-port.patch
+## 008-wireguard-port.patch
 
 Move the WireGuard listen port from upstream's `51871` to `4287`, inside the
 range Deckhouse reserves for platform components.
@@ -129,7 +135,7 @@ as CI-only.
 
 Test `~/src/kind/d8-1.20-tests/009-wireguard-port/`
 
-## 015-cleanup-conntrack-endpoints.patch
+## 009-cleanup-conntrack-endpoints.patch
 
 Keep local clients' conntrack entries when an address migrates to another node.
 
@@ -153,7 +159,7 @@ reconciles it back within about a second. Patched, the local client's outbound
 entries survive and the inbound ones go; unpatched, all of them go. A table test
 in `pkg/maps/ctmap` pins down the per-direction behaviour.
 
-## 016-add-import-export-conntrack-http-endpoints.patch
+## 010-add-import-export-conntrack-http-endpoints.patch
 
 `GET /conntrack/export` streams one IPv4 endpoint's conntrack entries as a binary
 stream; `POST /conntrack/import` ingests them on another node. Used to carry a
@@ -175,7 +181,7 @@ module does -- `bpf-lb-sock-hostns-only` -- because only then is pod traffic loa
 balanced on the tc hooks, which is what produces the service conntrack entries
 the RevNAT translation needs.
 
-## 014-kernel-verifier-stat.patch
+## 011-kernel-verifier-stat.patch
 
 Export `cilium_bpf_progs_complexity_max_verified_insts`: the highest instruction
 count the verifier walked for any loaded `cil_`/`tail_` program. The verifier
@@ -190,7 +196,7 @@ has since done itself (`bpfVisitor`). Only the metric is left.
 
 Test `~/src/kind/d8-1.20-tests/014-verifier-stat/`
 
-## 017-bpf-lb-generate-icmp-reply.patch
+## 012-bpf-lb-generate-icmp-reply.patch
 
 Make a LoadBalancer service IP answer `ping`. A VIP is on no interface anywhere,
 so nothing in the stack replies to an echo request for it and monitoring reads
@@ -222,7 +228,7 @@ still required. Needs `kubeProxyReplacement`.
 
 Test `~/src/kind/d8-1.20-tests/017-lb-icmp-reply/`
 
-## 012-add-least-conn-lb-algorithm.patch
+## 013-add-least-conn-lb-algorithm.patch
 
 A `least-conn` load balancing algorithm, selected per service:
 
@@ -261,7 +267,7 @@ Reachable only through the annotation -- `bpf-lb-algorithm` is validated against
 
 Test `~/src/kind/d8-1.20-tests/012-least-conn/`
 
-## 006-add-pod-prioroty-management.patch
+## 014-add-pod-prioroty-management.patch
 
 One shared IPv4, two pods, a single owner -- the window a DVP live migration
 passes through.
@@ -274,7 +280,8 @@ the IPv4 is withheld: the two pods of one VM have distinct IPv6 addresses, which
 are never in conflict. Unlike the 1.17 version this needs no change to the lxcmap
 value struct, so the alignchecker and `mapkv.btf` are untouched.
 
-Folds in `007-fix-restoring-cep-for-dead-local-endpoint`.
+Folds in `007-fix-restoring-cep-for-dead-local-endpoint` (a 1.17 number; there
+is no separate patch for it here).
 
 Test `~/src/kind/d8-1.20-tests/006-pod-priority/`: fourteen single-case scripts,
 one transition each, driven by `run-cases.sh`, which installs once and stops at
@@ -286,6 +293,8 @@ CiliumEndpoints are garbage collected with their pod -- and is carried on the
 strength of having been seen in production on 1.17.
 
 ## Dropped
+
+Numbered as they were in the 1.17 set.
 
 Patches from the 1.17 stack that are not carried on 1.20, with the evidence:
 
