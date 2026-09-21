@@ -26,10 +26,9 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-// Matched alone is a denominator with no numerator: kubectl get ner said how
-// many nodes the request covers and never how many got it. The markers on the
-// type and the shipped CRD are two copies of one declaration — this API group
-// ships its CRD by hand — so both are pinned here.
+// Matched alone is a denominator with no numerator. The markers on the type and
+// the shipped CRD are two copies of one declaration — this group ships its CRD
+// by hand — so both are pinned here.
 func TestNERPrinterColumnsSayWhatTheNodesDidWithIt(t *testing.T) {
 	markers := printerColumnMarkers(t, "nodeextensionrequest_types.go")
 	require.Equal(t, [][2]string{

@@ -147,9 +147,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.reconcileNode(ctx, req.Name, logger, newPass())
 }
 
-// reconcileAllNodes re-renders every node of every group. One failure does not
-// stop the others; failures are counted, not logged one by one, and the first
-// error is returned so the pass is retried with backoff.
+// reconcileAllNodes re-renders every node of every group, then reports each
+// request's status. One failure does not stop the others; what went wrong is
+// returned joined, so the pass is retried with backoff.
 func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) (ctrl.Result, error) {
 	nodes := &corev1.NodeList{}
 	if err := r.Client.List(ctx, nodes); err != nil {
@@ -199,11 +199,9 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 		errs = append(errs, fmt.Errorf("render the NodeConfig of %d of %d nodes: %w", failed, len(nodes.Items), firstErr))
 	}
 
-	// Report each request's resolution back on its own status. This runs on the
-	// same all-nodes pass a NER change triggers, so editing a request refreshes
-	// both the nodes it targets and its status. Run whatever the renders did:
-	// these read their own inputs and fail closed on their own read failures, so
-	// one unrenderable node must not freeze every request's status.
+	// Run whatever the renders did: these read their own inputs and fail closed
+	// on their own read failures, so one unrenderable node must not freeze every
+	// request's status in the cluster.
 	if err := r.reconcileNERStatuses(ctx, logger); err != nil {
 		errs = append(errs, err)
 	}

@@ -327,10 +327,9 @@ func TestNSPRStatusRefusedByTheNodesKeepsItsArithmetic(t *testing.T) {
 	require.Equal(t, int32(1), fresh.Status.PendingNodes, "the third node still owes an answer")
 }
 
-// Every node of a classic cluster now goes through readMutableInputs, which
-// fails whole on one bad read of the kubernetes endpoints or the proxy-token
-// Secret. Returning on the first such node froze every request's status in the
-// cluster, and the statuses read their own inputs anyway.
+// Every node of a classic cluster goes through readMutableInputs, which fails
+// whole on one bad read; returning on the first such node froze every request's
+// status in the cluster.
 func TestARenderFailureDoesNotFreezeTheRequestStatuses(t *testing.T) {
 	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
 	node := nodeInGroup("worker-0", "worker")

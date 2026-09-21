@@ -429,8 +429,8 @@ var _ = Describe("NodeConfig controller", func() {
 	// pod rather than every node's whole configuration.
 	//
 	// A CR name is a DNS subdomain, spec.staticPods[].name is a DNS label: the API
-	// server admits "foo.bar" and every node it reached would refuse the NodeConfig
-	// whole, so one typo would cost every node of the group its whole configuration.
+	// server admits "foo.bar" and every node it reached would refuse the whole
+	// NodeConfig, taking down every other static pod on it.
 	It("refuses a NodeStaticPodRequest whose name the node config would not take", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-imm")
 		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
