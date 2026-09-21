@@ -17,11 +17,8 @@
 # Origin is the runner's own checkout of this project (folder.origin), not a
 # remote git URL: the CI job already delivers the right codebase — that's
 # what GIT_STRATEGY: clone in ci-templates/copybara-mirror.yml is for — so
-# copybara reads
-# it straight from disk instead of fetching it again over the network. This
-# also means the template needs no read credentials for the origin side, and
-# works the same way for any project regardless of whether it has a public
-# mirror anywhere.
+# copybara reads it straight from disk instead of fetching it again over the
+# network.
 #
 # --------------------------------------------------------------------------
 # Usage examples (consumer side, GitLab CI)
@@ -77,5 +74,5 @@ core.workflow(
             "ci-templates/**",
         ],
     ),
-    mode = "SQUASH",
+    mode = "ITERATIVE",
 )

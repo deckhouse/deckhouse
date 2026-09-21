@@ -68,17 +68,6 @@ copybara-mirror:
         echo "${line//\$\{MIRROR_DESTINATION_AUTH\}/${MIRROR_DESTINATION_AUTH}}"
       done < "${COPYBARA_CONFIG}" > "${RENDERED_CONFIG}"
 
-      # folder.origin() in copy.bara.sky reads straight from this checkout —
-      # no separate origin fetch, no origin credentials needed. Exact CLI
-      # syntax for passing the folder path may need to be validated against
-      # this image's copybara version (see copybara-mirror.spec.md, open
-      # questions).
-      #
-      # --git-committer-name/-email: copybara runs its internal git
-      # subprocess calls in an isolated env that doesn't see `git config
-      # --global` set in this job, so the committer identity has to be
-      # passed explicitly via these flags (same identity as
-      # authoring.pass_thru in copy.bara.sky, which only sets the author).
       copybara "${RENDERED_CONFIG}" mirror "${CI_PROJECT_DIR}" \
         --git-committer-name "Deckhouse Mirror Bot" \
         --git-committer-email "mirror@deckhouse.io"
