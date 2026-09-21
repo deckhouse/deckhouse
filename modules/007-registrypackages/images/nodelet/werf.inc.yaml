@@ -46,6 +46,34 @@ shell:
   # runs: the binary is the same path whichever copy the overlay serves.
   - cd /src && GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-w -s -X main.version={{ $nodeletVersion }}" -o /nodelet ./cmd/nodelet
 ---
+# The same binary as a plain registry package, for the nodes bashible configures:
+# they have no sysext, so a bashible step installs it under /opt/deckhouse/bin
+# (candi/bashible/common-steps/all/077_install_nodelet.sh.tpl).
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /nodelet
+  to: /nodelet
+  before: setup
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  stageDependencies:
+    setup:
+    - '**/*'
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "nodelet": "{{ $nodeletVersion }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
