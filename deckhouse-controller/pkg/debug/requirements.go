@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +29,7 @@ func DefineRequirementsCommands(rootCmd *cobra.Command) {
 		Use:   "requirements",
 		Short: "Dump all requirements from memory storage.",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			debugServerAddr := os.Getenv("DEBUG_HTTP_SERVER_ADDR")
+			debugServerAddr := os.Getenv(envconfig.EnvDebugHTTPServerAddr)
 			resp, err := http.Get(fmt.Sprintf("http://%s/requirements", debugServerAddr))
 			if err != nil || resp.StatusCode != http.StatusOK {
 				return fmt.Errorf("error getting requirements")
