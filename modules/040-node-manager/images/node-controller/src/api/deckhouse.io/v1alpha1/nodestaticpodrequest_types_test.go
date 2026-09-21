@@ -214,7 +214,7 @@ func TestShippedCRDMatchesTheGoTypes(t *testing.T) {
 	for _, column := range version.Columns {
 		shipped = append(shipped, [2]string{column.Name, column.JSONPath})
 	}
-	require.Equal(t, printerColumnMarkers(t), shipped)
+	require.Equal(t, printerColumnMarkers(t, "nodestaticpodrequest_types.go"), shipped)
 
 	schema := version.Schema.OpenAPIV3Schema
 	require.Equal(t, []any{"manifest"}, crdField(t, schema, "spec")["required"])
@@ -230,11 +230,11 @@ func TestShippedCRDMatchesTheGoTypes(t *testing.T) {
 var printerColumnMarker = regexp.MustCompile(`\+kubebuilder:printcolumn:name=([^,]+),jsonPath=([^,]+),`)
 
 // printerColumnMarkers returns the name and jsonPath of every printcolumn marker
-// on the type, in the order they are declared.
-func printerColumnMarkers(t *testing.T) [][2]string {
+// in the file, in the order they are declared.
+func printerColumnMarkers(t *testing.T, file string) [][2]string {
 	t.Helper()
 
-	raw, err := os.ReadFile("nodestaticpodrequest_types.go")
+	raw, err := os.ReadFile(file)
 	require.NoError(t, err)
 
 	var columns [][2]string
