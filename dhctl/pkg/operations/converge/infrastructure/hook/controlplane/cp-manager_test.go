@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	klient "github.com/flant/kube-client/client"
 	"github.com/stretchr/testify/require"
@@ -169,6 +170,50 @@ func TestCheckControlPlaneNodesReadyExcludesTheLeavingMaster(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, msg, "Ready 2 of 2")
 	require.NotContains(t, msg, "master-2")
+}
+
+func TestManagerReadinessCheckerIsReadyAllExceptSkipsExcludedUnreadyNode(t *testing.T) {
+	gvr := schema.GroupVersionResource{
+		Group: "control-plane.deckhouse.io", Version: "v1alpha1", Resource: "controlplanenodes",
+	}
+	kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+		gvr: "ControlPlaneNodeList",
+	})
+
+	for _, nodeName := range []string{"master-0", "master-1"} {
+		_, err := kubeCl.CoreV1().Nodes().Create(t.Context(), &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   nodeName,
+				Labels: map[string]string{"node.deckhouse.io/group": "master"},
+			},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		conditions := make([]any, 0, len(requiredControlPlaneNodeConditions))
+		for _, conditionType := range requiredControlPlaneNodeConditions {
+			status := string(metav1.ConditionTrue)
+			if nodeName == "master-1" && conditionType == "APIServerReady" {
+				status = string(metav1.ConditionFalse)
+			}
+			conditions = append(conditions, map[string]any{"type": conditionType, "status": status})
+		}
+
+		_, err = kubeCl.Dynamic().Resource(gvr).Namespace("kube-system").Create(t.Context(), &unstructured.Unstructured{
+			Object: map[string]any{
+				"apiVersion": "control-plane.deckhouse.io/v1alpha1",
+				"kind":       "ControlPlaneNode",
+				"metadata":   map[string]any{"name": nodeName, "namespace": "kube-system"},
+				"status":     map[string]any{"conditions": conditions},
+			},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+
+	checker := NewManagerReadinessChecker(fakeKubeClientGetter{kubeCl: kubeCl})
+	require.NoError(t, checker.IsReadyAllExcept(ctx, "master-1"))
 }
 
 func TestIsReadyAllRidesOutImpersonationDenial(t *testing.T) {
