@@ -21,14 +21,19 @@
 {{- if ne $nodeletDigest "<missing>" }}
 
 bb-event-on 'nodelet-changed' '_nodelet_changed'
+# Runs from the step's EXIT trap, where a non-zero status fails the whole step.
+# The agent has Restart=always and the node is configured either way, so a
+# systemd refusal here is logged rather than allowed to stop the bashible run.
 _nodelet_changed() {
-  systemctl daemon-reload
-  systemctl is-enabled --quiet nodelet.service || systemctl enable nodelet.service
+  systemctl daemon-reload || bb-log-error "nodelet: daemon-reload failed"
+  systemctl is-enabled --quiet nodelet.service \
+    || systemctl enable nodelet.service \
+    || bb-log-error "nodelet: enabling nodelet.service failed"
   # A reboot is already scheduled: the unit starts on the way back up.
   if bb-flag? reboot; then
     return 0
   fi
-  systemctl restart nodelet.service
+  systemctl restart nodelet.service || bb-log-error "nodelet: restarting nodelet.service failed"
 }
 
 bb-event-on 'bb-package-installed' '_nodelet_package_installed'
@@ -49,6 +54,7 @@ bb-sync-file /etc/systemd/system/nodelet.service - nodelet-changed << "EOF"
 [Unit]
 Description=Deckhouse node agent
 Documentation=https://deckhouse.io/modules/node-manager/
+Wants=network-online.target
 After=network-online.target containerd-deckhouse.service
 
 [Service]

@@ -49,13 +49,9 @@ shell:
 # The same binary as a plain registry package, for the nodes bashible configures:
 # they have no sysext, so a bashible step installs it under /opt/deckhouse/bin
 # (candi/bashible/common-steps/all/077_install_nodelet.sh.tpl).
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "builder/scratch" }}
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /nodelet
-  to: /nodelet
-  before: setup
+image: {{ $.ModuleName }}/{{ $.ImageName }}-package-artifact
+final: false
+fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -65,6 +61,26 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /nodelet
+  to: /nodelet
+  before: setup
+shell:
+  setup:
+  - chmod +x /install /uninstall
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-package-artifact
+  add: /
+  to: /
+  includePaths:
+  - nodelet
+  - install
+  - uninstall
+  before: setup
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "nodelet": "{{ $nodeletVersion }}" }
