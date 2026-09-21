@@ -337,7 +337,7 @@ func (r *reconciler) commit(ctx context.Context, module, original *v1alpha2.Modu
 		ctrlutils.OwnerReference(v1alpha1.ModulePackageVersionGVK, mpv.Name, mpv.UID),
 		ctrlutils.OwnerReference(v1alpha1.ModulePackageGVK, pkg.Name, pkg.UID),
 	)
-	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+	delete(module.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 
 	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
 		r.logger.Error("failed to patch the module", slog.String("name", module.Name), log.Err(err))
@@ -416,7 +416,7 @@ func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.M
 
 	ctrlutils.DropOwnerReferences(module, v1alpha1.ModulePackageVersionKind, v1alpha1.ModulePackageKind)
 	module.Annotations[v1alpha2.ModuleAnnotationHash] = digest
-	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+	delete(module.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 
 	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
 		logger.Error("failed to patch the module", log.Err(err))

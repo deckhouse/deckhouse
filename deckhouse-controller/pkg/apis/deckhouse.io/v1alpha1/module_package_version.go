@@ -29,13 +29,6 @@ const (
 	ModulePackageVersionResource = "modulepackageversions"
 	ModulePackageVersionKind     = "ModulePackageVersion"
 
-	// Labels carrying the version's origin and lifecycle state.
-	ModulePackageVersionLabelLegacy          = "packages.deckhouse.io/legacy"
-	ModulePackageVersionLabelDraft           = "packages.deckhouse.io/draft"
-	ModulePackageVersionLabelPackage         = "packages.deckhouse.io/package"
-	ModulePackageVersionLabelRepository      = "packages.deckhouse.io/repository"
-	ModulePackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
-
 	// Condition type and the reasons reported when metadata loading fails.
 	ModulePackageVersionConditionTypeMetadataLoaded         = "MetadataLoaded"
 	ModulePackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
@@ -198,13 +191,13 @@ type ModulePackageVersionStatusMetadata struct {
 
 // IsDraft reports whether this package version is marked as a draft.
 func (m *ModulePackageVersion) IsDraft() bool {
-	return m.hasTrueLabel(ModulePackageVersionLabelDraft)
+	return m.hasTrueLabel(PackageLabelDraft)
 }
 
 // IsLegacy reports whether this package version was produced from a legacy ModuleRelease
 // rather than discovered as a package in a repository.
 func (m *ModulePackageVersion) IsLegacy() bool {
-	return m.hasTrueLabel(ModulePackageVersionLabelLegacy)
+	return m.hasTrueLabel(PackageLabelLegacy)
 }
 
 // GetExclusiveGroup returns the exclusive group of this package version.
