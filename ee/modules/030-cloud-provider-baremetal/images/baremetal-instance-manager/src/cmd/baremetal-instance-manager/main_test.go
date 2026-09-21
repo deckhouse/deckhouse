@@ -208,7 +208,14 @@ func TestEnsureBMCCABundle(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "server-ca", Namespace: "d8-cloud-instance-manager"},
 		Data:       map[string][]byte{"ca.crt": certificate},
 	}
-	kubeClient := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(instance, caSecret).Build()
+	ironic := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "ironic.metal3.io/v1alpha1",
+		"kind":       "Ironic",
+		"metadata":   map[string]interface{}{"name": "ironic", "namespace": "d8-cloud-provider-baremetal"},
+		"spec":       map[string]interface{}{},
+	}}
+	ironic.SetGroupVersionKind(ironicGVK)
+	kubeClient := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(instance, caSecret, ironic).Build()
 	r := &reconciler{Client: kubeClient, targetNamespace: "d8-cloud-instance-manager", providerNamespace: "d8-cloud-provider-baremetal"}
 
 	if err := r.ensureBMCCABundle(context.Background()); err != nil {
@@ -224,6 +231,11 @@ func TestEnsureBMCCABundle(t *testing.T) {
 	if bundle.Labels[ironicOperatorLabel] != "true" {
 		t.Fatalf("Ironic Standalone Operator label is missing: %#v", bundle.Labels)
 	}
+	if err := kubeClient.Get(context.Background(), types.NamespacedName{Namespace: "d8-cloud-provider-baremetal", Name: "ironic"}, ironic); err != nil {
+		t.Fatalf("get Ironic: %v", err)
+	}
+	assertNestedString(t, ironic, "Secret", "spec", "tls", "bmcCA", "kind")
+	assertNestedString(t, ironic, bmcCABundleSecretName, "spec", "tls", "bmcCA", "name")
 }
 
 func TestReadSpecRejectsInsecureWithCACertRef(t *testing.T) {
@@ -444,6 +456,8 @@ func TestReconcilePassesRootDeviceHintsToBareMetalHost(t *testing.T) {
 	scheme.AddKnownTypeWithName(bareMetalInstanceGVK.GroupVersion().WithKind("BareMetalInstanceList"), &unstructured.UnstructuredList{})
 	scheme.AddKnownTypeWithName(bareMetalHostGVK, &unstructured.Unstructured{})
 	scheme.AddKnownTypeWithName(bareMetalHostGVK.GroupVersion().WithKind("BareMetalHostList"), &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(ironicGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(ironicGVK.GroupVersion().WithKind("IronicList"), &unstructured.UnstructuredList{})
 
 	instance := testInstance()
 	if err := unstructured.SetNestedMap(instance.Object, map[string]interface{}{

@@ -49,6 +49,7 @@ const (
 var (
 	bareMetalInstanceGVK       = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "BareMetalInstance"}
 	bareMetalHostGVK           = schema.GroupVersionKind{Group: "metal3.io", Version: "v1alpha1", Kind: "BareMetalHost"}
+	ironicGVK                  = schema.GroupVersionKind{Group: "ironic.metal3.io", Version: "v1alpha1", Kind: "Ironic"}
 	errManagedResourceConflict = errors.New("managed resource ownership conflict")
 )
 
@@ -243,17 +244,33 @@ func (r *reconciler) ensureBMCCABundle(ctx context.Context) error {
 		certificates = append(certificates, certificate)
 	}
 	sort.Strings(certificates)
+	if len(certificates) == 0 {
+		if err := r.ensureIronicBMCCA(ctx, false); err != nil {
+			return err
+		}
+		secret := &corev1.Secret{}
+		key := types.NamespacedName{Namespace: r.bmcBundleNamespace(), Name: bmcCABundleSecretName}
+		if err := r.Get(ctx, key, secret); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		} else if err == nil {
+			return client.IgnoreNotFound(r.Delete(ctx, secret))
+		}
+		return nil
+	}
 	bundle := []byte(strings.Join(certificates, "\n"))
 
 	key := types.NamespacedName{Namespace: r.bmcBundleNamespace(), Name: bmcCABundleSecretName}
 	secret := &corev1.Secret{}
 	err := r.Get(ctx, key, secret)
 	if apierrors.IsNotFound(err) {
-		return r.Create(ctx, &corev1.Secret{
+		if err := r.Create(ctx, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name, Labels: map[string]string{ironicOperatorLabel: "true"}},
 			Type:       corev1.SecretTypeOpaque,
 			Data:       map[string][]byte{bmcCABundleSecretKey: bundle},
-		})
+		}); err != nil {
+			return err
+		}
+		return r.ensureIronicBMCCA(ctx, true)
 	}
 	if err != nil {
 		return err
@@ -275,9 +292,50 @@ func (r *reconciler) ensureBMCCABundle(ctx context.Context) error {
 		updated = true
 	}
 	if !updated {
+		return r.ensureIronicBMCCA(ctx, true)
+	}
+	if err := r.Update(ctx, secret); err != nil {
+		return err
+	}
+	return r.ensureIronicBMCCA(ctx, true)
+}
+
+func (r *reconciler) ensureIronicBMCCA(ctx context.Context, enabled bool) error {
+	ironic := &unstructured.Unstructured{}
+	ironic.SetGroupVersionKind(ironicGVK)
+	key := types.NamespacedName{Namespace: r.bmcBundleNamespace(), Name: "ironic"}
+	if err := r.Get(ctx, key, ironic); err != nil {
+		if !enabled && apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get Ironic %s: %w", key, err)
+	}
+
+	updated := false
+	if enabled {
+		desired := map[string]interface{}{"kind": "Secret", "name": bmcCABundleSecretName}
+		current, found, err := unstructured.NestedMap(ironic.Object, "spec", "tls", "bmcCA")
+		if err != nil {
+			return err
+		}
+		if !found || !reflect.DeepEqual(current, desired) {
+			if err := unstructured.SetNestedMap(ironic.Object, desired, "spec", "tls", "bmcCA"); err != nil {
+				return err
+			}
+			updated = true
+		}
+	} else {
+		if _, found, err := unstructured.NestedFieldNoCopy(ironic.Object, "spec", "tls", "bmcCA"); err != nil {
+			return err
+		} else if found {
+			unstructured.RemoveNestedField(ironic.Object, "spec", "tls", "bmcCA")
+			updated = true
+		}
+	}
+	if !updated {
 		return nil
 	}
-	return r.Update(ctx, secret)
+	return r.Update(ctx, ironic)
 }
 
 func (r *reconciler) bmcBundleNamespace() string {

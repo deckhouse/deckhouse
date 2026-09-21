@@ -23,9 +23,6 @@ spec:
     - name: BMC
       type: string
       jsonPath: .spec.bmc.ipAddress
-    - name: Protocol
-      type: string
-      jsonPath: .status.bmc.protocol
     - name: Boot MAC
       type: string
       jsonPath: .spec.bootMACAddress

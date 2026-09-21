@@ -124,8 +124,6 @@ dhcp:
 			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-baremetal", "ironic")
 			Expect(ironic.Exists()).To(BeTrue())
 			Expect(ironic.Field("spec.images.ironic").String()).NotTo(BeEmpty())
-			Expect(ironic.Field("spec.tls.bmcCA.kind").String()).To(Equal("Secret"))
-			Expect(ironic.Field("spec.tls.bmcCA.name").String()).To(Equal("baremetal-bmc-ca"))
 			Expect(ironic.Field("spec.deployRamdisk.disableDownloader").Bool()).To(BeTrue())
 			Expect(ironic.Field("spec.overrides.agentImages.0.architecture").String()).To(Equal("x86_64"))
 			Expect(ironic.Field("spec.overrides.agentImages.0.kernel").String()).To(Equal("http://172.22.0.20:6180/images/ironic-python-agent.kernel"))

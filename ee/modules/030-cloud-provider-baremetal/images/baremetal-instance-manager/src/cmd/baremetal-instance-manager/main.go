@@ -47,6 +47,8 @@ func main() {
 	instance.SetGroupVersionKind(bareMetalInstanceGVK)
 	bmh := &unstructured.Unstructured{}
 	bmh.SetGroupVersionKind(bareMetalHostGVK)
+	ironic := &unstructured.Unstructured{}
+	ironic.SetGroupVersionKind(ironicGVK)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
@@ -55,6 +57,7 @@ func main() {
 			ByObject: map[client.Object]cache.ByObject{
 				instance:         {Namespaces: map[string]cache.Config{targetNamespace: {}}},
 				bmh:              {Namespaces: map[string]cache.Config{targetNamespace: {}}},
+				ironic:           {Namespaces: map[string]cache.Config{providerNamespace: {}}},
 				&corev1.Secret{}: {Namespaces: map[string]cache.Config{targetNamespace: {}, providerNamespace: {}}},
 			},
 		},
