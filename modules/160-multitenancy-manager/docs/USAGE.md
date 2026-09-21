@@ -174,7 +174,7 @@ Besides the user-created projects, the `d8 k get projects` list always contains 
 
 Virtual-project status is rebuilt from the live namespace list: a deleted namespace disappears from that list. Virtual projects do not recreate namespaces.
 
-Virtual projects exist for completeness: with them, every namespace of the cluster belongs to some project. They cannot be managed: they are not editable, [ProjectNamespace](cr.html#projectnamespace) and [ProjectRoleBinding](cr.html#projectrolebinding) resources cannot be created in them, and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) does not extend to them.
+Virtual projects exist for completeness: with them, every namespace of the cluster belongs to some project. They cannot be managed: they are not editable, [ProjectNamespace](cr.html#projectnamespace) and [ProjectRoleBinding](cr.html#projectrolebinding) resources cannot be created in them, and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) does not extend to them. Their project template, `virtual`, is reserved for them: a user project with `projectTemplateName: virtual` is refused by the webhook, since such a project would get no namespace of its own.
 
 ## Additional project namespaces
 
@@ -254,7 +254,7 @@ A namespace created directly (for example, `d8 k create ns my-app`) becomes a pr
 
 - the template is picked from what the namespace already carries: `secure` if it has the `security-scanning.deckhouse.io/enabled` label, `default` if it has `security.deckhouse.io/pod-policy` or `extended-monitoring.deckhouse.io/enabled`, and `simple` otherwise;
 - the project parameters are filled in from the current state of the namespace, so nothing inside it changes: the network policy stays unrestricted and the Pod Security Standard keeps the value the namespace already had;
-- from then on the project is the source of truth and is edited like any other project. Deleting the namespace no longer deletes the project — the project recreates the namespace.
+- from then on the project is the source of truth and is edited like any other project. Deleting the namespace no longer deletes the project — the project recreates the namespace. To remove the environment, delete the Project: `kubectl delete project <name>` removes the namespace with it and, like `kubectl delete ns` did, returns only once the namespace is gone.
 
 System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`, which stays on the virtual `default` project). There is no label that leaves a user namespace without a project. A namespace whose name is longer than 61 characters is also skipped: that is the Project name limit.
 
@@ -593,6 +593,10 @@ The following components are used for this:
 1. `ValidatingAdmissionPolicyBinding`: Defines which objects the validation applies to:
    - Uses `namespaceSelector` and `objectSelector` to select resources by the label `heritage: multitenancy-manager`.
 
+### Who bypasses admission
+
+The module's admission webhooks (on Project, ProjectTemplate, ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding) and the `ValidatingAdmissionPolicy` above follow one rule: requests from cluster components (the API server, the Deckhouse and module service accounts, kubelets) and from the `system:sudouser` identity are not checked; everyone else is, `system:masters` included. An administrator who has to get past a check does it deliberately, by impersonating that identity — `kubectl --as system:sudouser …` — and the bypass is then visible in the audit log.
+
 ### Creating your own validation
 
 To implement validation for resources with a different label (for example, `heritage: my-custom-label`):
@@ -669,13 +673,23 @@ The module allows you to manage project access to cluster-wide resources such as
 
 For a description of the mechanism, the resources it uses, and the cluster-wide resources registered by the platform, refer to the [module description](./#managing-access-to-cluster-wide-resources).
 
+### How a policy selects its projects
+
+A ClusterResourceGrantPolicy has one selector, `projectSelector`, and it is evaluated **per namespace**, not per Project object. For every namespace of a project the module merges two label sets — the labels of the Project object and the labels of that namespace — and matches the selector against the union. When the same key is set on both, the namespace value wins.
+
+Which means, in practice:
+
+- a label on the **Project** selects the project's main namespace and all of its additional namespaces at once — this is the place to label a project as a whole, because a ProjectNamespace carries no labels of its own;
+- a label on a **Namespace** selects that namespace only — a per-namespace override, or a way to reach a namespace by a label the platform set (for example `projects.deckhouse.io/project=<name>`, which the module puts on every project namespace);
+- there is no separate `namespaceSelector`; both label sources feed the same `projectSelector`.
+
+A user interface that counts matching *Projects* by their own labels undercounts a policy written against a namespace label — the policy still applies, because the match is decided on the namespace.
+
 The following sections provide common scenarios for configuring and using the mechanism.
 
 ### For cluster administrators
 
-The following examples show how to configure project access to cluster-wide resources using ClusterResourceGrantPolicy.
-
-`projectSelector` is matched against the union of the labels of the Project object and the labels of each namespace of the project; when the same key is set on both, the namespace value wins. A label on the Project therefore selects its main namespace and all its additional namespaces. The examples below put the label on the Project, which is the only place a project's own labels are set: a ProjectNamespace does not carry labels, and the labels a template adds through `namespaceMetadata.labels` are the same in every namespace of the project.
+The following examples show how to configure project access to cluster-wide resources using ClusterResourceGrantPolicy. They put the label on the Project, which selects every namespace of the project; the labels a template adds through `namespaceMetadata.labels` are the same in every namespace of the project and can be used the same way.
 
 Because the namespace labels take part in the match, writing labels on a Namespace object decides which policies apply to it. That permission is cluster-level (`d8:manage:permission:subsystem:kubernetes:manage_resources`); the project roles `d8:project:*` and `d8:namespace:*` only read namespaces, so a project user cannot bring another project's policy onto their namespace.
 
