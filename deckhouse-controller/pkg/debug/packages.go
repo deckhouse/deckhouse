@@ -20,8 +20,9 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/spf13/cobra"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 )
 
 var packagesDebugSocket = "/tmp/deckhouse-debug.socket"

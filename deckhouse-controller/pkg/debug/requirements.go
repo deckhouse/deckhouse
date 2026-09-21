@@ -20,8 +20,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/spf13/cobra"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 )
 
 func DefineRequirementsCommands(rootCmd *cobra.Command) {
