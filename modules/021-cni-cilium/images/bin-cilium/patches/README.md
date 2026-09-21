@@ -261,6 +261,30 @@ Reachable only through the annotation -- `bpf-lb-algorithm` is validated against
 
 Test `~/src/kind/d8-1.20-tests/012-least-conn/`
 
+## 006-add-pod-prioroty-management.patch
+
+One shared IPv4, two pods, a single owner -- the window a DVP live migration
+passes through.
+
+    network.deckhouse.io/pod-common-ip-priority: <number>      (0 is the highest)
+
+The operator publishes the address on the winning CiliumEndpoint only, and every
+other node withholds its `cilium_lxc` entry until the address comes back. Only
+the IPv4 is withheld: the two pods of one VM have distinct IPv6 addresses, which
+are never in conflict. Unlike the 1.17 version this needs no change to the lxcmap
+value struct, so the alignchecker and `mapkv.btf` are untouched.
+
+Folds in `007-fix-restoring-cep-for-dead-local-endpoint`.
+
+Test `~/src/kind/d8-1.20-tests/006-pod-priority/`: fourteen single-case scripts,
+one transition each, driven by `run-cases.sh`, which installs once and stops at
+the first failure. Patched: 70 case runs, no failures. On the same stack one
+commit earlier it stops at the second case, with both nodes holding an entry and
+both CiliumEndpoints publishing the address. The 007 half has no cluster test --
+the leftover CiliumEndpoint it catches cannot be staged from outside, because
+CiliumEndpoints are garbage collected with their pod -- and is carried on the
+strength of having been seen in production on 1.17.
+
 ## Dropped
 
 Patches from the 1.17 stack that are not carried on 1.20, with the evidence:
