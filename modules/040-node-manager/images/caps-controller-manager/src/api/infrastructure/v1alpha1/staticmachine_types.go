@@ -17,7 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 
 	"caps-controller-manager/internal/providerid"
@@ -30,6 +34,9 @@ const (
 	// MachineFinalizer allows ReconcileStaticMachine to clean up Static resources associated with StaticMachine before
 	// removing it from the apiserver.
 	MachineFinalizer = "staticmachine.infrastructure.cluster.x-k8s.io"
+
+	// AllowBootstrapLabel excludes a StaticInstance from bootstrapping when set to "false".
+	AllowBootstrapLabel = "node.deckhouse.io/allow-bootstrap"
 )
 
 // StaticMachineSpec defines the desired state of StaticMachine.
@@ -126,4 +133,33 @@ func (r *StaticMachine) GetConditions() []metav1.Condition {
 // SetConditions sets the StaticInstance status conditions
 func (r *StaticMachine) SetConditions(conditions []metav1.Condition) {
 	r.Status.Conditions = conditions
+}
+
+// StaticInstanceSelector returns the selector of the StaticInstances this StaticMachine is
+// allowed to consume: spec.labelSelector narrowed down to the instances that are not
+// explicitly excluded from bootstrapping.
+func (r *StaticMachine) StaticInstanceSelector() (labels.Selector, error) {
+	allowBootstrapRequirement, err := labels.NewRequirement(AllowBootstrapLabel, selection.NotIn, []string{"false"})
+	if err != nil {
+		return nil, fmt.Errorf("unable to build the '%s' label requirement: %w", AllowBootstrapLabel, err)
+	}
+
+	if r.Spec.LabelSelector == nil {
+		return labels.NewSelector().Add(*allowBootstrapRequirement), nil
+	}
+
+	labelSelector, err := metav1.LabelSelectorAsSelector(r.Spec.LabelSelector)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert StaticMachine label selector: %w", err)
+	}
+
+	requirements, _ := labelSelector.Requirements()
+
+	for _, requirement := range requirements {
+		if requirement.Key() == allowBootstrapRequirement.Key() {
+			return nil, fmt.Errorf("label selector requirement for the '%s' key can't be added manually", AllowBootstrapLabel)
+		}
+	}
+
+	return labelSelector.Add(*allowBootstrapRequirement), nil
 }
