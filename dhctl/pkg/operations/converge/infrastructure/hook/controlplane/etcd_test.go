@@ -53,78 +53,72 @@ func TestHasVotingMemberWithStaleDuplicate(t *testing.T) {
 	require.False(t, hasVotingMember(members, "cluster-master-1"))
 }
 
-// Quorum is counted over the etcd membership, not over the master nodes: two members no node
-// answers for are two votes nobody casts, and removing a healthy master hands the cluster to
-// them.
 func TestEtcdQuorumBeforeRemoval(t *testing.T) {
-	masters := map[string]struct{}{
-		"cluster-master-0": {},
-		"cluster-master-1": {},
+	member := func(name, url string) etcdMember {
+		return etcdMember{Name: name, ClientURLs: []string{url}}
 	}
-
-	t.Run("a healthy scale down passes", func(t *testing.T) {
-		threeMasters := map[string]struct{}{
-			"cluster-master-0": {}, "cluster-master-1": {},
-		}
-		members := []etcdMember{
-			{Name: "cluster-master-0"}, {Name: "cluster-master-1"}, {Name: "cluster-master-2"},
-		}
-
-		voting, served := etcdQuorumBeforeRemoval(members, "cluster-master-2", threeMasters)
-		require.Equal(t, 2, voting)
-		require.Equal(t, 2, served, "3 -> 2 must pass")
-
-		oneMaster := map[string]struct{}{"cluster-master-0": {}}
-		members = []etcdMember{{Name: "cluster-master-0"}, {Name: "cluster-master-1"}}
-
-		voting, served = etcdQuorumBeforeRemoval(members, "cluster-master-1", oneMaster)
-		require.Equal(t, 1, voting)
-		require.Equal(t, 1, served, "2 -> 1 must pass")
-	})
-
-	t.Run("orphan members count against the quorum", func(t *testing.T) {
-		members := []etcdMember{
-			{Name: "cluster-master-0"},
-			{Name: "cluster-master-1"},
-			{Name: "cluster-master-2"},
-			{Name: "cluster-master-7"},
-			{Name: "cluster-master-8"},
-		}
-
-		voting, served := etcdQuorumBeforeRemoval(members, "cluster-master-2", masters)
-
-		require.Equal(t, 4, voting)
-		require.Equal(t, 2, served)
-		require.Less(t, served, voting/2+1)
-	})
-
-	t.Run("learners do not vote", func(t *testing.T) {
-		members := []etcdMember{
-			{Name: "cluster-master-0"},
-			{Name: "cluster-master-1"},
-			{Name: "cluster-master-2"},
-			{Name: "cluster-master-9", IsLearner: true},
-		}
-
-		voting, served := etcdQuorumBeforeRemoval(members, "cluster-master-2", masters)
-
-		require.Equal(t, 2, voting)
-		require.Equal(t, 2, served)
-	})
-
-	t.Run("a member listed twice votes twice and answers once", func(t *testing.T) {
-		members := []etcdMember{
-			{Name: "cluster-master-0"},
-			{Name: "cluster-master-1"},
-			{Name: "cluster-master-1"},
-			{Name: "cluster-master-2"},
-		}
-
-		voting, served := etcdQuorumBeforeRemoval(members, "cluster-master-2", masters)
-
-		require.Equal(t, 3, voting)
-		require.Equal(t, 2, served)
-	})
+	tests := []struct {
+		name            string
+		members         []etcdMember
+		endpoints       []endpointHealth
+		removed         string
+		voting, healthy int
+	}{
+		{
+			name:      "three to two",
+			members:   []etcdMember{member("a", "a"), member("b", "b"), member("c", "c")},
+			endpoints: []endpointHealth{{Endpoint: "a", Health: true}, {Endpoint: "b", Health: true}},
+			removed:   "c", voting: 2, healthy: 2,
+		},
+		{
+			name:      "two to one",
+			members:   []etcdMember{member("a", "a"), member("b", "b")},
+			endpoints: []endpointHealth{{Endpoint: "a", Health: true}},
+			removed:   "b", voting: 1, healthy: 1,
+		},
+		{
+			name:      "unhealthy survivor does not count",
+			members:   []etcdMember{member("a", "a"), member("b", "b"), member("c", "c")},
+			endpoints: []endpointHealth{{Endpoint: "a", Health: true}, {Endpoint: "b", Health: false}, {Endpoint: "c", Health: true}},
+			removed:   "c", voting: 2, healthy: 1,
+		},
+		{
+			name:      "missing health and client URLs do not count",
+			members:   []etcdMember{member("a", "a"), member("b", "b"), {Name: "unstarted"}, member("c", "c")},
+			endpoints: []endpointHealth{{Endpoint: "a", Health: true}, {Endpoint: "unknown", Health: true}},
+			removed:   "c", voting: 3, healthy: 1,
+		},
+		{
+			name:      "learner does not vote",
+			members:   []etcdMember{member("a", "a"), {Name: "learner", ClientURLs: []string{"l"}, IsLearner: true}, member("c", "c")},
+			endpoints: []endpointHealth{{Endpoint: "a", Health: true}, {Endpoint: "l", Health: true}},
+			removed:   "c", voting: 1, healthy: 1,
+		},
+		{
+			name:      "multiple URLs count as one member",
+			members:   []etcdMember{{Name: "a", ClientURLs: []string{"a/", "a2", "a3"}}, member("c", "c")},
+			endpoints: []endpointHealth{{Endpoint: "a", Health: false}, {Endpoint: "a2", Health: true}, {Endpoint: "a3", Health: true}},
+			removed:   "c", voting: 1, healthy: 1,
+		},
+		{
+			name:    "empty report",
+			members: []etcdMember{member("a", "a"), member("c", "c")},
+			removed: "c", voting: 1, healthy: 0,
+		},
+		{
+			name:      "last member",
+			members:   []etcdMember{member("c", "c")},
+			endpoints: []endpointHealth{{Endpoint: "c", Health: true}},
+			removed:   "c", voting: 0, healthy: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			voting, healthy := etcdQuorumBeforeRemoval(tt.members, tt.endpoints, tt.removed)
+			require.Equal(t, tt.voting, voting)
+			require.Equal(t, tt.healthy, healthy)
+		})
+	}
 }
 
 // Output of `etcdctl endpoint health --cluster -w json` right after a master left: the
