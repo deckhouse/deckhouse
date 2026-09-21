@@ -3127,6 +3127,50 @@ alerts:
         Node {{ $labels.node }} cannot obtain disruption approval.
       severity: "8"
       markupFormat: markdown
+    - name: D8ObsoleteClusterDomainInClusterConfiguration
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        `ClusterConfiguration` still carries the obsolete `clusterDomain` field. The place to manage the cluster domain is ModuleConfig `control-plane-manager`.
+
+        This fires simply because the field is present, even if ModuleConfig `control-plane-manager` already overrides it - the goal is to remove the deprecated field, not just override it.
+
+        **To resolve this alert:**
+
+        1. If ModuleConfig `control-plane-manager` does not exist, create it:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+        2. Migrate the value straight from the Secret into ModuleConfig:
+
+           ```bash
+           DOMAIN=$(d8 k -n kube-system get secret d8-cluster-configuration \
+             -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d \
+             | sed -n 's/^clusterDomain:[[:space:]]*//p' | tr -d "\"'")
+
+           d8 k patch moduleconfig control-plane-manager --type merge \
+             -p "{\"spec\":{\"version\":3,\"settings\":{\"network\":{\"clusterDomain\":\"$DOMAIN\"}}}}"
+           ```
+
+           The value must match the one the cluster currently runs with; admission rejects a mismatch.
+
+        3. Remove the field from ClusterConfiguration:
+
+           ```bash
+           d8 system edit cluster-configuration
+           ```
+
+           Delete `clusterDomain`, then save.
+
+        Once the field is removed from `ClusterConfiguration`, this alert is resolved.
+      summary: |
+        The obsolete clusterDomain field is still present in ClusterConfiguration.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ObsoleteEncryptionAlgorithmInClusterConfiguration
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager
@@ -3339,50 +3383,6 @@ alerts:
         Once all three fields are removed from `ClusterConfiguration`, this alert is resolved.
       summary: |
         Obsolete network fields are still present in ClusterConfiguration.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8ObsoleteClusterDomainInClusterConfiguration
-      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
-      moduleUrl: 040-control-plane-manager
-      module: control-plane-manager
-      edition: ce
-      description: |-
-        `ClusterConfiguration` still carries the obsolete `clusterDomain` field. The place to manage the cluster domain is ModuleConfig `control-plane-manager`.
-
-        This fires simply because the field is present, even if ModuleConfig `control-plane-manager` already overrides it - the goal is to remove the deprecated field, not just override it.
-
-        **To resolve this alert:**
-
-        1. If ModuleConfig `control-plane-manager` does not exist, create it:
-
-           ```bash
-           d8 s module enable control-plane-manager
-           ```
-
-        2. Migrate the value straight from the Secret into ModuleConfig:
-
-           ```bash
-           DOMAIN=$(d8 k -n kube-system get secret d8-cluster-configuration \
-             -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d \
-             | sed -n 's/^clusterDomain:[[:space:]]*//p' | tr -d "\"'")
-
-           d8 k patch moduleconfig control-plane-manager --type merge \
-             -p "{\"spec\":{\"version\":3,\"settings\":{\"network\":{\"clusterDomain\":\"$DOMAIN\"}}}}"
-           ```
-
-           The value must match the one the cluster currently runs with; admission rejects a mismatch.
-
-        3. Remove the field from ClusterConfiguration:
-
-           ```bash
-           d8 system edit cluster-configuration
-           ```
-
-           Delete `clusterDomain`, then save.
-
-        Once the field is removed from `ClusterConfiguration`, this alert is resolved.
-      summary: |
-        The obsolete clusterDomain field is still present in ClusterConfiguration.
       severity: "6"
       markupFormat: markdown
     - name: D8ObsoletePublishAPIinUserAuthn
