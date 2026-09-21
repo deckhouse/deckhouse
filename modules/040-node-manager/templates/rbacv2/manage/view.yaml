@@ -37,3 +37,14 @@ rules:
   - get
   - list
   - watch
+# The per-node answer to "where did my NodeStaticPodRequest land". Only the
+# resource: status.maintenanceToken is masked there and NOT on the status
+# subresource, so nodeconfigs/status must never be added here.
+- apiGroups:
+  - internal.deckhouse.io
+  resources:
+  - nodeconfigs
+  verbs:
+  - get
+  - list
+  - watch
