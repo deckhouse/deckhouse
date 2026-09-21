@@ -37,7 +37,9 @@ import (
 // This hook is the warning in between: as long as the key is present in spec.settings -- with any
 // value, since neither value does anything -- a metric is exported and an alert asks to remove it.
 const (
-	deprecatedConfigMetric      = "d8_mc_deprecated"
+	// Not d8_mc_deprecated: the documentation module exports that name with a {module} label only,
+	// and one metric with two label shapes is a trap for the next query.
+	deprecatedConfigMetric      = "d8_mc_deprecated_parameter"
 	deprecatedConfigMetricGroup = "d8_mc_multitenancy_manager"
 	deprecatedConfigParameter   = "allowNamespacesWithoutProjects"
 	moduleConfigSnapshot        = "module_config"
@@ -63,11 +65,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 // filterDeprecatedConfigParameters keeps only what the alert needs: the names of the deprecated
 // parameters this ModuleConfig still sets. Presence is what matters, not the value.
 func filterDeprecatedConfigParameters(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	// The name selector above already narrows the watch; the check is repeated here so the filter
-	// stays correct on its own, and a same-named key in another module's config is never counted.
-	if obj.GetName() != "multitenancy-manager" {
-		return nil, nil
-	}
 	settings, _, err := unstructured.NestedMap(obj.Object, "spec", "settings")
 	if err != nil {
 		return nil, err

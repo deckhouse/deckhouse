@@ -2,7 +2,7 @@
   rules:
   - alert: MultitenancyManagerDeprecatedConfigParameter
     expr: |
-      max by (parameter) (d8_mc_deprecated{module="multitenancy-manager"}) > 0
+      max by (parameter) (d8_mc_deprecated_parameter{module="multitenancy-manager"}) > 0
     labels:
       severity_level: "9"
       tier: cluster

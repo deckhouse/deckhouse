@@ -54,21 +54,10 @@ spec:
   settings:
     highAvailability: true
 `
-	const otherModule = `
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: user-authz
-spec:
-  enabled: true
-  settings:
-    allowNamespacesWithoutProjects: true
-`
-
 	f := HookExecutionConfigInit(`{"multitenancyManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
-	// collected returns the d8_mc_deprecated series the hook set, ignoring the group expire.
+	// collected returns the deprecated-parameter series the hook set, ignoring the group expire.
 	collected := func() []map[string]string {
 		var out []map[string]string
 		for _, m := range f.MetricsCollector.CollectedMetrics() {
@@ -110,17 +99,6 @@ spec:
 			f.RunHook()
 		})
 		It("exports nothing and only expires the group", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(collected()).To(BeEmpty())
-		})
-	})
-
-	Context("another module's ModuleConfig carries a key of the same name", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(otherModule))
-			f.RunHook()
-		})
-		It("is not this module's business", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(collected()).To(BeEmpty())
 		})

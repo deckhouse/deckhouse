@@ -4436,6 +4436,28 @@ alerts:
         A binding still references a deprecated RBACv2 role.
       severity: "7"
       markupFormat: markdown
+    - name: D8UserAuthzForeignAggregationLabel
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/foreign-aggregation-label.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The ClusterRole `{{ $labels.name }}` carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label but is not labelled `rbac.deckhouse.io/kind: custom-capability`{{ if $labels.kind }} (its kind label is `{{ $labels.kind }}`){{ end }}. The aggregation controller reads nothing but that label, so the rules of this role are merged into the platform `d8:{{ $labels.lineage }}:*` roles for every holder in the cluster, outside the role model's contract.
+
+        The `rbacv2-cluster-roles.deckhouse.io` webhook now refuses such an object: every `UPDATE` of this role, including a GitOps re-apply, is denied until it is fixed. Choose one:
+
+        * If the role is meant to extend the platform roles, make it a custom capability: name it `d8:custom:<scope>-capability:<name>`, label it `rbac.deckhouse.io/kind: custom-capability` and `rbac.deckhouse.io/scope: <scope>`, and drop its `aggregationRule` if it has one. See the user-authz documentation on custom capabilities.
+        * Otherwise remove the `rbac.deckhouse.io/aggregate-to-*-as` labels from it.
+
+        List every such role:
+
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.labels // {}) | to_entries | any(.key | startswith("rbac.deckhouse.io/aggregate-to-"))) | select((.metadata.labels.heritage // "") != "deckhouse") | select((.metadata.labels["rbac.deckhouse.io/kind"] // "") != "custom-capability") | .metadata.name'
+        ```
+      summary: |
+        ClusterRole {{ $labels.name }} aggregates into the platform {{ $labels.lineage }} roles without being a custom capability.
+      severity: "6"
+      markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
       moduleUrl: 140-user-authz

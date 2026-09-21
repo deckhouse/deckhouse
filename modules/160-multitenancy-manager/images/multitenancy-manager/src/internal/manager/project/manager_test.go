@@ -316,7 +316,7 @@ func TestDelete_KeepsFinalizerWhileNamespaceExists(t *testing.T) {
 		Finalizers:        []string{"kubernetes"},
 		DeletionTimestamp: &now,
 	}}
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(project, namespace).Build()
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(project, namespace).WithStatusSubresource(&v1alpha3.Project{}).Build()
 	helmClient := &fakeHelmClient{}
 	m := New(c, helmClient, logr.Discard())
 
@@ -324,8 +324,8 @@ func TestDelete_KeepsFinalizerWhileNamespaceExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
-	if res.RequeueAfter <= 0 {
-		t.Fatalf("expected a requeue while the namespace exists, got %+v", res)
+	if res.RequeueAfter < namespaceDeletionPoll || res.RequeueAfter > namespaceDeletionPollMax {
+		t.Fatalf("expected a bounded requeue while the namespace exists, got %+v", res)
 	}
 	got := new(v1alpha3.Project)
 	if err := c.Get(context.Background(), client.ObjectKey{Name: "proj"}, got); err != nil {
@@ -333,6 +333,9 @@ func TestDelete_KeepsFinalizerWhileNamespaceExists(t *testing.T) {
 	}
 	if !controllerutil.ContainsFinalizer(got, v1alpha3.ProjectFinalizer) {
 		t.Fatal("the finalizer must stay while the namespace exists")
+	}
+	if !got.IsConditionFalse(v1alpha3.ProjectConditionNamespaceDeleted) {
+		t.Fatalf("the project must say it waits for its namespace, conditions: %+v", got.Status.Conditions)
 	}
 
 	// The namespace is gone -- Kubernetes drops it once its own finalizers are cleared. The fake
@@ -355,5 +358,23 @@ func TestDelete_KeepsFinalizerWhileNamespaceExists(t *testing.T) {
 	err = c.Get(context.Background(), client.ObjectKey{Name: "proj"}, new(v1alpha3.Project))
 	if !apierrors.IsNotFound(err) {
 		t.Fatalf("the project must be gone once its finalizer is removed, got %v", err)
+	}
+}
+
+// The poll starts fast and slows down with the time the namespace has spent terminating, so a
+// namespace that never finishes costs a reconcile a minute rather than twenty.
+func TestNamespaceDeletionPollGrows(t *testing.T) {
+	for _, tc := range []struct {
+		terminatingFor time.Duration
+		want           time.Duration
+	}{
+		{0, namespaceDeletionPoll},
+		{10 * time.Second, namespaceDeletionPoll},
+		{40 * time.Second, 10 * time.Second},
+		{10 * time.Minute, namespaceDeletionPollMax},
+	} {
+		if got := namespaceDeletionPollFor(tc.terminatingFor); got != tc.want {
+			t.Errorf("terminating for %s: got %s, want %s", tc.terminatingFor, got, tc.want)
+		}
 	}
 }

@@ -41,6 +41,10 @@ const (
 	// rendering the empty structured shape would delete the objects that string produced. Named so
 	// that True means healthy, like every other condition here.
 	ProjectConditionProjectTemplateUsable = "ProjectTemplateUsable"
+	// ProjectConditionNamespaceDeleted is False on a deleting project while its namespace is still
+	// terminating; the message says for how long and what the namespace reports as remaining, so
+	// that "kubectl describe project" tells what the deletion is waiting for.
+	ProjectConditionNamespaceDeleted = "NamespaceDeleted"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 
