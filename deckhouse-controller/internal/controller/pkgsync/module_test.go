@@ -439,6 +439,38 @@ func TestCleanupModules(t *testing.T) {
 
 		assert.Equal(t, []string{"echo"}, listModuleNamesExceptGlobal(t, cl))
 	})
+
+	t.Run("a surviving module loses the conditions of the old stack", func(t *testing.T) {
+		released := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "example", PackageVersion: "v1.2.3"},
+			Status: v1alpha2.ModuleStatus{Conditions: []metav1.Condition{
+				testModuleCondition(v1alpha1.ModuleConditionEnabledByModuleManager),
+				testModuleCondition(v1alpha1.ModuleConditionEnabledByModuleConfig),
+				testModuleCondition(v1alpha1.ModuleConditionIsReady),
+				testModuleCondition(v1alpha1.ModuleConditionLastReleaseDeployed),
+				testModuleCondition(v1alpha1.ModuleConditionIsOverridden),
+				testModuleCondition("Ready"),
+			}},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), released)
+		require.NoError(t, s.sync(ctx))
+
+		conditions := getModule(t, cl, "echo").Status.Conditions
+		require.Len(t, conditions, 1)
+		assert.Equal(t, "Ready", conditions[0].Type)
+	})
+}
+
+// testModuleCondition builds a true condition of the type, enough for the fake client to store it.
+func testModuleCondition(conditionType string) metav1.Condition {
+	return metav1.Condition{
+		Type:               conditionType,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Test",
+		LastTransitionTime: metav1.Now(),
+	}
 }
 
 func testModuleConfig(name string) *v1alpha1.ModuleConfig {
