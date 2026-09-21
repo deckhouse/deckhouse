@@ -1,0 +1,88 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package main
+
+import (
+	"context"
+	"fmt"
+
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
+	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
+	ycval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/validation"
+	ycpreflight "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/validation/preflight"
+)
+
+type Validator struct{}
+
+func (Validator) Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
+	ret, err := validate(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return toResponse(ret), nil
+}
+
+func validate(_ context.Context, input validatev1.Input) (cpvalapi.Result, error) {
+	result := cpvalapi.Result{}
+
+	if input.Operation == validatev1.OperationDestroy {
+		return result, nil
+	}
+
+	stateBuilderFactory := ycval.NewProtocolStateBuilderFactory(cpvalprotocol.StateBuilderConfig{
+		ModuleName:    ycmeta.ModuleName,
+		NamespaceName: ycmeta.Namespace,
+	})
+
+	state, err := stateBuilderFactory.CreateBuilder().Build(input)
+	if err != nil {
+		return result, fmt.Errorf("internal error: build validation state: %w", err)
+	}
+
+	result.Merge(
+		ycpreflight.ValidatePreflight(state, input.Operation, input.ClusterPrefix),
+	)
+
+	return result, nil
+}
+func toResponse(result cpvalapi.Result) *validatev1.ValidateResponse {
+	ret := &validatev1.ValidateResponse{}
+
+	for _, violation := range result.Errors() {
+		ret.Errors = append(ret.Errors, toViolationResponse(violation))
+	}
+
+	for _, violation := range result.Warnings() {
+		ret.Warnings = append(ret.Warnings, toViolationResponse(violation))
+	}
+
+	return ret
+}
+
+func toViolationResponse(violation cpvalapi.Violation) *validatev1.ViolationResponse {
+	ret := &validatev1.ViolationResponse{
+		Path:    violation.Path,
+		Code:    violation.Code,
+		Message: violation.Message,
+	}
+
+	if violation.Value != nil {
+		ret.Value = fmt.Sprint(violation.Value)
+	}
+	return ret
+}

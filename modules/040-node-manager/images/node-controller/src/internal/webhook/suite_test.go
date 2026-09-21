@@ -61,7 +61,7 @@ var _ = BeforeSuite(func() {
 
 	crds := slices.Concat(
 		testenv.CRDPaths(testenv.WithNodeManager(testenv.NodeUserCRDFile, testenv.StaticInstanceCRDFile)),
-		testenv.ModuleCRDPaths("030-cloud-provider-yandex/candi/openapi/instance_class.yaml"),
+		testenv.ModuleCRDPaths("030-cloud-provider-yandex/crds/instance_class.yaml"),
 	)
 	var err error
 	testEnv, cfg, k8sClient, err = testenv.StartWithWebhooks(scheme, validatingWebhookConfigurations(), crds...)

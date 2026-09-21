@@ -1,3 +1,4 @@
+{{- if not (default false (dig "storage" "disabled" false .Values.cloudProviderYandex)) }}
 apiVersion: storage.k8s.io/v1
 kind: CSIDriver
 metadata:
@@ -6,3 +7,4 @@ metadata:
 spec:
   attachRequired: true
   podInfoOnMount: false
+{{- end }}
