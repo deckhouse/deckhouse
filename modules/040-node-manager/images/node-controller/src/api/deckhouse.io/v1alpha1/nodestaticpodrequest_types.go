@@ -140,8 +140,6 @@ var reservedStaticPodNames = []string{
 }
 
 // IsReservedStaticPodName reports whether a static pod name already has a writer.
-// The twin list is reservedStaticPodNames in bashible-apiserver
-// pkg/template/static_pods.go — another module, so each is pinned by its own test.
 func IsReservedStaticPodName(name string) bool {
 	return slices.Contains(reservedStaticPodNames, name)
 }
