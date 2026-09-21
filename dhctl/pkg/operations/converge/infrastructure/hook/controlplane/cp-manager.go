@@ -89,8 +89,14 @@ func (c *ManagerReadinessChecker) isReadyAllExcept(ctx context.Context, excluded
 	// (Etcd → APIServer → KCM → Scheduler → CertificatesHealthy) within a few
 	// seconds of each other, and the previous 10s granularity smeared 10-40s of
 	// false-wait on the critical path. Total budget unchanged (500 attempts × 1s = ~8 min).
+
+	name := retry.WithName("Control-plane readiness")
+	if len(excludedNodes) > 0 {
+		name = retry.WithName("Control-plane readiness without '%s'", strings.Join(excludedNodes, "', '"))
+	}
+
 	loopParams := retry.NewEmptyParams(
-		retry.WithName("Control-plane readiness"),
+		name,
 		retry.WithAttempts(500),
 		retry.WithWait(1*time.Second),
 		retry.WithWhitelist(ErrControlPlaneReadinessCheckTransient),
