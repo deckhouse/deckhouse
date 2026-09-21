@@ -112,7 +112,7 @@
       echo "${DECKHOUSE_REGISTRY_STAGE_PASSWORD}" | regctl registry login "${DECKHOUSE_REGISTRY_STAGE_HOST}" \
         --user "${DECKHOUSE_REGISTRY_STAGE_USER}" --pass-stdin
     fi
-  
+
   login_write_registry: |
     if [[ -n "${DECKHOUSE_REGISTRY_HOST:-}" && -n "${DECKHOUSE_REGISTRY_USER:-}" ]]; then
       echo "${DECKHOUSE_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_HOST}" \
@@ -157,6 +157,20 @@
       export BUILD_MODE=dev
     fi
     echo "BUILD_MODE=${BUILD_MODE}"
+
+  # Skips the job (exit 0) if the MR has a `skip/<job_name>` label.
+  # Fetches labels live via the API (CI_JOB_TOKEN) instead of relying on
+  # CI_MERGE_REQUEST_LABELS, which is frozen at pipeline creation time and
+  check_skip_label: |
+    SKIP_LABEL="${SKIP_LABEL:-skip/${CI_JOB_NAME}}"
+    if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+      MR_INFO="$(curl -fsS --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+        "${CI_API_V4_URL}/projects/${CI_MERGE_REQUEST_PROJECT_ID}/merge_requests/${CI_MERGE_REQUEST_IID}")"
+      if grep -qo "\"labels\":\[[^]]*\"${SKIP_LABEL}\"[^]]*\]" <<<"$(tr -d '\n' <<<"${MR_INFO}")"; then
+        echo "Label '${SKIP_LABEL}' is set on !${CI_MERGE_REQUEST_IID} — skipping job."
+        exit 0
+      fi
+    fi
 
   prepare_validation_diff: |
     export VALIDATE_TITLE="${CI_MERGE_REQUEST_TITLE:-${CI_COMMIT_TITLE:-}}"
