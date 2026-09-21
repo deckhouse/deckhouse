@@ -37,14 +37,14 @@ The following tools and access are required on the computer from which the insta
 - Docker
 - `d8`
 - `yq` for validating YAML
-- An administrative Kubernetes kubeconfig for the Talos cluster
+- An administrative kubeconfig for the Talos cluster
 - Access to the Kubernetes API
 - HTTPS access to `registry.deckhouse.ru` from both the computer and the cluster nodes
-- `talosctl` and `talosconfig` if an administrative Kubernetes kubeconfig has not yet been obtained
+- `talosctl` and talosconfig if an administrative kubeconfig has not yet been obtained
 
 SSH access to Talos nodes is not required: the installer communicates with the cluster through the Kubernetes API.
 
-Before installation, it is recommended to create an etcd snapshot using Talos and save the original `talosconfig` and Kubernetes kubeconfig.
+Before installation, it is recommended to create an etcd snapshot using Talos and save the original talosconfig and kubeconfig.
 
 ## 2. Set the working paths
 
@@ -69,13 +69,13 @@ The files are used as follows:
 | Variable | Purpose |
 | --- | --- |
 | `TALOSCONFIG` | `talosctl` configuration for accessing the Talos API |
-| `ADMIN_KUBECONFIG` | Administrative Kubernetes kubeconfig for running `d8 k` on the computer |
+| `ADMIN_KUBECONFIG` | Administrative kubeconfig for running `d8 k` on the computer |
 | `INSTALLER_KUBECONFIG` | Portable copy of the administrative kubeconfig for the Docker container |
 | `CONFIG_FILE` | DP installation configuration |
 
 If you open a new terminal, return to this directory and repeat the block that defines the four variables.
 
-## 3. Prepare an administrative Kubernetes kubeconfig
+## 3. Prepare an administrative kubeconfig
 
 Choose how to obtain the administrative kubeconfig depending on whether you already have one.
 
@@ -88,11 +88,11 @@ cp <ADMIN_KUBECONFIG_PATH> "$ADMIN_KUBECONFIG"
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
-This must be a Kubernetes kubeconfig for `d8 k`, not a `talosconfig` file for `talosctl`.
+This must be a kubeconfig for `d8 k`, not a talosconfig file for `talosctl`.
 
 ### If you need to obtain a kubeconfig through Talos
 
-First, copy the existing `talosconfig` to the working directory:
+First, copy the existing talosconfig to the working directory:
 
 ```bash
 cp <TALOSCONFIG_PATH> "$TALOSCONFIG"
@@ -105,7 +105,7 @@ Specify the address of a control-plane node:
 CONTROL_PLANE_ADDRESS=<CONTROL_PLANE_ADDRESS>
 ```
 
-Obtain an administrative Kubernetes kubeconfig:
+Obtain an administrative kubeconfig:
 
 ```bash
 talosctl kubeconfig "$ADMIN_KUBECONFIG" \
@@ -116,7 +116,7 @@ talosctl kubeconfig "$ADMIN_KUBECONFIG" \
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
-By default, `talosctl` uses the Talos API endpoints from the current `talosconfig` context. If a different endpoint is required, add:
+By default, `talosctl` uses the Talos API endpoints from the current talosconfig context. If a different endpoint is required, add:
 
 ```text
 --endpoints=<TALOS_API_ENDPOINT>
@@ -461,4 +461,3 @@ The installation is considered successful when all of the following conditions a
 - The actual module Deployments, StatefulSets, and DaemonSets are ready.
 - DP lifecycle modules remain disabled.
 - Administrative access through the Talos administrative kubeconfig is preserved.
-

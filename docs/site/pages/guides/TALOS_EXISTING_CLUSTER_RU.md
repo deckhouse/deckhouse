@@ -37,14 +37,14 @@ Deckhouse Platform (DP) устанавливается поверх готово
 - Docker;
 - `d8`;
 - `yq` для проверки YAML;
-- административный Kubernetes kubeconfig Talos-кластера;
+- административный kubeconfig Talos-кластера;
 - доступ к Kubernetes API;
 - HTTPS-доступ к `registry.deckhouse.ru` с компьютера и узлов кластера;
-- `talosctl` и `talosconfig`, если административный Kubernetes kubeconfig ещё не получен.
+- `talosctl` и talosconfig, если административный kubeconfig ещё не получен.
 
 SSH к Talos-узлам не нужен: установщик работает через Kubernetes API.
 
-Перед установкой рекомендуется сделать снимок etcd средствами Talos и сохранить исходные `talosconfig` и Kubernetes kubeconfig.
+Перед установкой рекомендуется сделать снимок etcd средствами Talos и сохранить исходные talosconfig и kubeconfig.
 
 ## 2. Задайте рабочие пути
 
@@ -69,13 +69,13 @@ CONFIG_FILE="$PWD/config.yml"
 | Переменная | Назначение |
 | --- | --- |
 | `TALOSCONFIG` | Конфигурация `talosctl` для доступа к Talos API |
-| `ADMIN_KUBECONFIG` | Административный Kubernetes kubeconfig для команд `d8 k` на компьютере |
+| `ADMIN_KUBECONFIG` | Административный kubeconfig для команд `d8 k` на компьютере |
 | `INSTALLER_KUBECONFIG` | Переносимая копия административного kubeconfig для Docker-контейнера |
 | `CONFIG_FILE` | Конфигурация установки DP |
 
 Если вы открыли новый терминал, снова перейдите в каталог и повторите блок с четырьмя переменными.
 
-## 3. Подготовьте административный kubeconfig Kubernetes
+## 3. Подготовьте административный kubeconfig
 
 Выберите способ получения административного kubeconfig в зависимости от того, есть ли он у вас.
 
@@ -88,11 +88,11 @@ cp <ADMIN_KUBECONFIG_PATH> "$ADMIN_KUBECONFIG"
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
-Это должен быть Kubernetes kubeconfig для `d8 k`, а не `talosconfig` для `talosctl`.
+Это должен быть kubeconfig для `d8 k`, а не talosconfig для `talosctl`.
 
 ### Если kubeconfig нужно получить через Talos
 
-Сначала поместите существующий `talosconfig` в рабочий каталог:
+Сначала поместите существующий talosconfig в рабочий каталог:
 
 ```bash
 cp <TALOSCONFIG_PATH> "$TALOSCONFIG"
@@ -105,7 +105,7 @@ chmod 600 "$TALOSCONFIG"
 CONTROL_PLANE_ADDRESS=<CONTROL_PLANE_ADDRESS>
 ```
 
-Получите административный Kubernetes kubeconfig:
+Получите административный kubeconfig:
 
 ```bash
 talosctl kubeconfig "$ADMIN_KUBECONFIG" \
@@ -116,7 +116,7 @@ talosctl kubeconfig "$ADMIN_KUBECONFIG" \
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
-По умолчанию `talosctl` возьмёт эндпоинты Talos API из текущего контекста `talosconfig`. Если нужен другой эндпоинт, добавьте:
+По умолчанию `talosctl` возьмёт эндпоинты Talos API из текущего контекста talosconfig. Если нужен другой эндпоинт, добавьте:
 
 ```text
 --endpoints=<TALOS_API_ENDPOINT>
@@ -461,4 +461,3 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
 - реальные Deployment, StatefulSet и DaemonSet модулей готовы;
 - модули DP, отвечающие за управление жизненным циклом, остаются выключенными;
 - административный доступ через административный kubeconfig Talos сохранён.
-
