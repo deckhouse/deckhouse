@@ -120,7 +120,6 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 	desired.ObservedGeneration = ner.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(ner.Spec.NodeGroupSelector.MatchNames, immutableGroups)
 	desired.MatchedNodes = matchedNodeCount(nodes, desired.MatchedNodeGroups)
-	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, outcome.applied, outcome.failed)
 	desired.AppliedNodes = outcome.applied
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
@@ -130,6 +129,12 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 	desired.Phase = phaseDegraded
 	status := metav1.ConditionFalse
 	reason, message := nerStatusReason(ner, conflicts)
+	// A refusal here reached no node, so nobody is late with an answer. Only a
+	// refusal by the nodes keeps the arithmetic: there they did get it.
+	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, outcome.applied, outcome.failed)
+	if reason != "" {
+		desired.PendingNodes = 0
+	}
 	switch {
 	case reason == "" && outcome.failed > 0:
 		// It resolved here and the nodes refused it. Reporting Ready on the

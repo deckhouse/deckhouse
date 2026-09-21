@@ -85,7 +85,6 @@ func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alph
 	desired.ObservedGeneration = nspr.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(nspr.Spec.NodeGroupSelector.MatchNames, nodeGroups)
 	desired.MatchedNodes = matchedNodeCount(nodes, desired.MatchedNodeGroups)
-	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, outcome.applied, outcome.failed)
 	desired.AppliedNodes = outcome.applied
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
@@ -97,6 +96,12 @@ func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alph
 	reason, message := "", ""
 	if refusal, refused := rejected[nspr.Name]; refused {
 		reason, message = refusal.reason, refusal.message
+	}
+	// A refusal here reached no node, so nobody is late with an answer. Only a
+	// refusal by the nodes keeps the arithmetic: there they did get it.
+	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, outcome.applied, outcome.failed)
+	if reason != "" {
+		desired.PendingNodes = 0
 	}
 	switch {
 	case reason == "" && outcome.failed > 0:

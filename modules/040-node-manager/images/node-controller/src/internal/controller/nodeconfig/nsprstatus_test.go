@@ -268,3 +268,61 @@ func TestNSPRStatusCountsTheNodesOfEveryMatchedGroup(t *testing.T) {
 	require.Equal(t, int32(1), fresh.Status.PendingNodes)
 	require.Contains(t, meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Message, "1 of 2 node(s)")
 }
+
+// An object this controller refused was handed to no node, so nobody is late
+// with an answer: "Degraded, 2 nodes have not answered" sends an operator
+// looking at nodes that were never asked.
+func TestNSPRStatusRefusedHereLeavesNothingPending(t *testing.T) {
+	broken := nspr("broken", deckhousev1alpha1.NodeStaticPodRequestSpec{Manifest: "apiVersion: apps/v1\nkind: Deployment\n"})
+	first := nodeInGroup("worker-0", "worker")
+	second := nodeInGroup("worker-1", "worker")
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(&broken, immutableGroup("worker"), &first, &second).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "broken"}, fresh))
+	require.Equal(t, int32(0), fresh.Status.PendingNodes, "nothing was handed to a node")
+	require.Equal(t, int32(2), fresh.Status.MatchedNodes, "how many nodes the selector covers is still the answer")
+}
+
+// The nodes did get this one, so the arithmetic stands: zeroing pending on every
+// Degraded object would lose the node that has not reported yet.
+func TestNSPRStatusRefusedByTheNodesKeepsItsArithmetic(t *testing.T) {
+	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	first := nodeInGroup("worker-0", "worker")
+	second := nodeInGroup("worker-1", "worker")
+	silent := nodeInGroup("worker-2", "worker")
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(
+			&object, immutableGroup("worker"), &first, &second, &silent,
+			nodeConfigWithPod("worker-0",
+				[]internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}},
+				[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}}),
+			nodeConfigWithPod("worker-1",
+				[]internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}},
+				[]internalv1alpha1.StaticPodStatus{{
+					Name: "registry-agent", State: "Failed",
+					Reason: "WriteFailed", Message: "read-only file system",
+				}}),
+		).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
+	require.Equal(t, reasonRefusedByNodes,
+		meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Reason)
+	require.Equal(t, int32(1), fresh.Status.PendingNodes, "the third node still owes an answer")
+}
