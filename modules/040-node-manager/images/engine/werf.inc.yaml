@@ -1,5 +1,12 @@
 {{- $version := "v0.1.12" }}
 {{- $kernelVersion := "v6.12.85-lvc19-signed" }}
+{{- /*
+  The engine release tags carry io.deckhouse.engine.rootfs.roothash, and it arrives
+  here by inheritance: removeLabels in werf.yaml names what it strips instead of
+  taking everything, so io.deckhouse.* passes through. Nothing below re-adds it on
+  purpose - a hash pinned here would go stale on the first bump of $version and
+  override the inherited, correct one. See engine/docs/os-image-identity.md.
+*/ -}}
 {{- if ne $.Env "CSE" }}
 ---
 # The four files a boot slot consists of, and nothing else. The node fetches an
