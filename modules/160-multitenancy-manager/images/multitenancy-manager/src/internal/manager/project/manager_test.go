@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -290,4 +291,69 @@ func TestHandle_RequeuesLeftoverWrapWhenNamespaceGetFails(t *testing.T) {
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
 	assert.Empty(t, got.Spec.ProjectTemplateName)
 	assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
+}
+
+// Deleting a project issues the Helm uninstall and then has to wait for the namespace to actually
+// disappear before the finalizer goes: the uninstall does not wait, and "kubectl delete project"
+// must block for as long as "kubectl delete ns" used to.
+func TestDelete_KeepsFinalizerWhileNamespaceExists(t *testing.T) {
+	scheme := runtime.NewScheme()
+	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme} {
+		if err := add(scheme); err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := metav1.Now()
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{
+		Name:              "proj",
+		Finalizers:        []string{v1alpha3.ProjectFinalizer},
+		DeletionTimestamp: &now,
+	}}
+	// A namespace that is still on its way out: the uninstall has been issued, Kubernetes is still
+	// purging its contents.
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:              "proj",
+		Finalizers:        []string{"kubernetes"},
+		DeletionTimestamp: &now,
+	}}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(project, namespace).Build()
+	helmClient := &fakeHelmClient{}
+	m := New(c, helmClient, logr.Discard())
+
+	res, err := m.Delete(context.Background(), project)
+	if err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if res.RequeueAfter <= 0 {
+		t.Fatalf("expected a requeue while the namespace exists, got %+v", res)
+	}
+	got := new(v1alpha3.Project)
+	if err := c.Get(context.Background(), client.ObjectKey{Name: "proj"}, got); err != nil {
+		t.Fatalf("the project must still exist while its namespace does: %v", err)
+	}
+	if !controllerutil.ContainsFinalizer(got, v1alpha3.ProjectFinalizer) {
+		t.Fatal("the finalizer must stay while the namespace exists")
+	}
+
+	// The namespace is gone -- Kubernetes drops it once its own finalizers are cleared. The fake
+	// client keeps a deleting object around while it has finalizers, exactly like the real API
+	// server, so releasing them is what makes it disappear.
+	if err := c.Get(context.Background(), client.ObjectKey{Name: "proj"}, namespace); err != nil {
+		t.Fatal(err)
+	}
+	namespace.Finalizers = nil
+	if err := c.Update(context.Background(), namespace); err != nil {
+		t.Fatal(err)
+	}
+	res, err = m.Delete(context.Background(), got)
+	if err != nil {
+		t.Fatalf("Delete after the namespace is gone: %v", err)
+	}
+	if res.RequeueAfter != 0 {
+		t.Fatalf("no requeue expected once the namespace is gone, got %+v", res)
+	}
+	err = c.Get(context.Background(), client.ObjectKey{Name: "proj"}, new(v1alpha3.Project))
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("the project must be gone once its finalizer is removed, got %v", err)
+	}
 }

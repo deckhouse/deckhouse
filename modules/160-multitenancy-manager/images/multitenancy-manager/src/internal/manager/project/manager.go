@@ -65,6 +65,11 @@ const (
 	MinimalTemplate = "simple"
 )
 
+// namespaceDeletionPoll is how often a deleting project checks whether its namespace is gone. The
+// namespace controller drives the deletion; this loop only observes it, so a few seconds is enough
+// to keep "kubectl delete project" responsive without hammering the API server.
+const namespaceDeletionPoll = 3 * time.Second
+
 type Manager struct {
 	client     client.Client
 	helmClient helmClient
@@ -375,6 +380,26 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		// TODO: add error to the project`s status
 		m.logger.Error(err, "failed to delete the project", "project", project.Name)
 		return ctrl.Result{}, err
+	}
+
+	// The uninstall above only issues the deletes; it does not wait for them. The namespace is part
+	// of the release, and its own removal is what takes the time: every object inside has to go
+	// first. Dropping the finalizer here would make the Project vanish while the namespace is still
+	// Terminating -- so "kubectl delete project" returns at once, where "kubectl delete ns" used to
+	// block until the environment was gone, and a script that relied on that ordering breaks. The
+	// finalizer therefore stays until the namespace is really gone; the Project sits in Terminating
+	// exactly as long as its namespace does, which is what the old contract promised.
+	namespace := new(corev1.Namespace)
+	switch err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace); {
+	case err == nil:
+		if namespace.DeletionTimestamp.IsZero() {
+			// Not even terminating: the uninstall did not reach it (a foreign release owns it, or the
+			// delete was dropped). Retrying the uninstall is what the next reconcile does.
+			m.logger.Info("the project namespace is not terminating yet, waiting", "project", project.Name)
+		}
+		return ctrl.Result{RequeueAfter: namespaceDeletionPoll}, nil
+	case !apierrors.IsNotFound(err):
+		return ctrl.Result{}, fmt.Errorf("get the '%s' namespace: %w", project.Name, err)
 	}
 
 	// remove finalizer
