@@ -450,16 +450,16 @@ func (s *Scheduler) compute() ([]string, []*node) {
 }
 
 // dependencyVersion answers the dependency rules from the graph itself: the
-// installed version of a node that is both enabled and active, nil otherwise.
-// Returning nil for a node that is merely enabled is what orders same-tier
-// dependents behind their dependencies — see canSchedule.
+// installed version of an enabled node, nil otherwise. It reports eligibility
+// only — "not ready yet" is not its business. Holding a dependent back until
+// its dependencies finish is canSchedule's job.
 //
 // Must be called with s.mu held in some mode. Every rule chain is resolved from
 // compute() (write lock) or CheckConstraints (read lock), so it never locks
 // itself: doing so would deadlock on Go's non-reentrant RWMutex.
 func (s *Scheduler) dependencyVersion(name string) *semver.Version {
 	n, ok := s.nodes[name]
-	if !ok || !n.enabled() || n.state != nodeStateActive {
+	if !ok || !n.enabled() {
 		return nil
 	}
 
@@ -467,13 +467,20 @@ func (s *Scheduler) dependencyVersion(name string) *semver.Version {
 }
 
 // canSchedule returns true if a node is eligible to transition from idle to
-// scheduled. Two conditions must hold:
+// scheduled. Three conditions must hold:
 //  1. The node must be enabled (its rule chain resolved to Enable).
 //  2. All nodes with a strictly lower Order must be active.
+//  3. Every declared dependency present in the graph must be active.
 //
-// Dependency-level ordering between same-tier nodes is encoded in the rule
-// chain (dependencyVersion reports a version only for nodes that have reached
-// nodeStateActive).
+// (3) is what orders dependents behind their dependencies within one Order
+// tier: the dependent stays idle, keeping its Enable, until the dependency's
+// Complete triggers the pass that advances it. A not-enabled dependency is
+// parked active by compute(), so it never holds a dependent back — a dependency
+// that is off fails the dependency rule instead, and (1) stops the node.
+//
+// A dependency whose Order is higher than the dependent's deadlocks here: the
+// dependent waits for it under (3) while it waits for the dependent under (2).
+// See known-hazards.md.
 func (s *Scheduler) canSchedule(n *node) bool {
 	if !n.enabled() {
 		return false
@@ -485,16 +492,23 @@ func (s *Scheduler) canSchedule(n *node) bool {
 		}
 	}
 
-	return true
-}
-
-// IsEnabled returns true if the given node is currently enabled (in the active state).
-func (s *Scheduler) IsEnabled(name string) bool {
-	for _, n := range s.nodes {
-		if n.name == name && n.state == nodeStateActive {
-			return true
+	for name := range n.dependencies {
+		if dep, ok := s.nodes[name]; ok && dep.state != nodeStateActive {
+			return false
 		}
 	}
 
-	return false
+	return true
+}
+
+// IsEnabled reports whether the named node's rule chain resolved to Enable. It
+// reads the decision, never the state: compute() parks not-enabled nodes in
+// nodeStateActive, so state says nothing about enablement.
+func (s *Scheduler) IsEnabled(name string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	n, ok := s.nodes[name]
+
+	return ok && n.enabled()
 }

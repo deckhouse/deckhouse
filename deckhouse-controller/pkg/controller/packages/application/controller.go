@@ -72,7 +72,13 @@ func RegisterController(
 	}
 
 	r.status = status.NewService(r.client, r.manager.GetStatus, r.logger)
-	r.status.Start(context.Background(), r.manager.GetAppStatusQueue())
+
+	if err := runtime.Add(ctrlmanager.RunnableFunc(func(ctx context.Context) error {
+		r.status.Start(ctx, r.manager.GetAppStatusQueue())
+		return nil
+	})); err != nil {
+		return fmt.Errorf("add preflight: %w", err)
+	}
 
 	return ctrl.NewControllerManagedBy(runtime).
 		Named(controllerName).

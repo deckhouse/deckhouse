@@ -65,6 +65,7 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
+// +kubebuilder:printcolumn:name=Enabled,type=boolean,JSONPath=.spec.enabled
 // +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
 // +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status,priority=1
 // +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1

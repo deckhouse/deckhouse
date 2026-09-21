@@ -318,10 +318,9 @@ func (s *SchedulerSuite) TestConditionalDependencyAbsentIsOK() {
 }
 
 // TestSameTierDependencyWaitsForActive pins how the scheduler orders dependents
-// within one Order tier, where canSchedule's tier gate does not apply: a
-// dependency that is enabled but still being processed does not count as
-// installed, so its dependent fails the dependency gate and stays off until the
-// consumer calls Complete on the dependency.
+// within one Order tier, where canSchedule's tier gate does not apply: the
+// per-edge check holds the dependent in idle — still enabled, never disabled —
+// until the consumer calls Complete on the dependency.
 func (s *SchedulerSuite) TestSameTierDependencyWaitsForActive() {
 	s.activateGlobal()
 
@@ -342,15 +341,122 @@ func (s *SchedulerSuite) TestSameTierDependencyWaitsForActive() {
 		},
 	}))
 
-	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
-	s.Contains(scheduled, "provider")
-	s.NotContains(scheduled, "consumer",
-		"a scheduled-but-not-active dependency must not satisfy its dependent")
+	events := s.collectEvents()
+	s.Contains(eventNames(events, schedule.EventSchedule), "provider")
+	s.NotContains(eventNames(events, schedule.EventSchedule), "consumer",
+		"a scheduled-but-not-active dependency must not release its dependent")
+	s.NotContains(eventNames(events, schedule.EventDisable), "consumer",
+		"waiting for a dependency is not a reason to disable the dependent")
+	s.True(s.sched.IsEnabled("consumer"),
+		"a dependent waiting on an in-flight dependency stays enabled")
 
 	s.sched.Complete("provider")
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer",
 		"completing the dependency must release the dependent")
+}
+
+// TestReschedulingDependencyDoesNotDisableDependent covers the churn that
+// keying dependency resolution on `active` used to cause: Reschedule on a
+// dependency — a settings change, a version change, a hook — dropped it out of
+// active, which flipped its running dependents to disabled and undeployed them.
+// Resolution keys on the decision now, so the dependent is left alone. The flip
+// side, deliberate: it is not re-run either, so a dependent that must re-render
+// after its dependency moves needs a subscription.
+func (s *SchedulerSuite) TestReschedulingDependencyDoesNotDisableDependent() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "provider",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+	s.sched.Complete("provider")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Dependencies: map[string]schedule.Dependency{
+				"provider": {},
+			},
+		},
+	}))
+	s.sched.Complete("consumer")
+	s.drainEvents()
+
+	s.sched.Reschedule("provider", schedule.ReasonScheduled)
+
+	events := s.collectEvents()
+	s.Contains(eventNames(events, schedule.EventSchedule), "provider")
+	s.NotContains(eventNames(events, schedule.EventDisable), "consumer",
+		"a dependency going back to idle must not disable its dependent")
+	s.NotContains(eventNames(events, schedule.EventSchedule), "consumer",
+		"dependency edges carry no refresh cascade — that is what subscriptions are for")
+	s.True(s.sched.IsEnabled("consumer"))
+}
+
+// TestIsEnabledReadsDecisionNotState pins IsEnabled to the rule chain's verdict.
+// State cannot answer the question in either direction: compute() parks
+// not-enabled nodes in active, and an enabled node is not active until its
+// consumer calls Complete.
+func (s *SchedulerSuite) TestIsEnabledReadsDecisionNotState() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "off",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "in-flight",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+
+	s.False(s.sched.IsEnabled("off"), "a disabled node parked active is not enabled")
+	s.True(s.sched.IsEnabled("in-flight"), "an enabled node is enabled before it completes")
+	s.False(s.sched.IsEnabled("absent"), "an unknown node is not enabled")
+}
+
+// TestNoneOfForbidsMemberBeforeActive confirms NoneOf rejects a conflict the
+// moment the forbidden package is enabled, without waiting for it to finish
+// processing. Waiting meant both packages deployed and one was undeployed a
+// moment later.
+func (s *SchedulerSuite) TestNoneOfForbidsMemberBeforeActive() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"haproxy-legacy": nil,
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+
+	// Registered but never completed: enabled, still being processed.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "haproxy-legacy",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+	s.sched.Schedule()
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer",
+		"an in-flight forbidden package must violate the group already")
 }
 
 // TestDisabledDependencyDoesNotSatisfy covers a dependency that is present in
