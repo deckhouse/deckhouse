@@ -14,32 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package noderename collects the Node object a renamed node left behind.
+// Package noderename removes the Node object of a node that is about to come
+// back under a different name.
 //
 // A Node object cannot be renamed, so /var/lib/bashible/rename_node.sh renames a
-// node by giving kubelet a new identity and letting it register again. That
-// leaves the cluster holding two Node objects for one machine: the new one, which
-// is running, and the old one, which nothing will ever report to again. The
-// renamed node marks itself with the name it used to have, and this controller
-// removes the Node object of that name.
+// node by having it register again. The old object has to be gone before the
+// machine returns: while both exist they are one address wearing two names, and
+// a CNI that keys its peers by address tears down the entry for one when the
+// other goes away. A node may read the Node objects of its cluster but not
+// delete them, so it asks here instead, by annotating itself.
 //
-// It removes one only when every one of these holds:
-//
-//   - the annotation is on a Static or CloudStatic node - the only kinds whose
-//     name is their own and not their machine's;
-//   - the renamed node is Ready, so a rename that did not work leaves the old
-//     Node object in place to go back to;
-//   - the old Node is not Ready, so a name still in use is never taken away;
-//   - the old Node is the same machine, by the system UUID and machine ID kubelet
-//     reports. This is the load-bearing check: without it the annotation would be
-//     a way for one node to delete another, and a node can write its own
-//     annotations.
+// What makes this safe is that the request can only ever be about the node
+// carrying it: NodeRestriction lets a kubelet write its own Node object and no
+// other. The controller adds two conditions of its own - the node has to be one
+// whose name is its own business, and it has to have stopped reporting, which is
+// what rename_node.sh arranges by stopping kubelet before it asks.
 package noderename
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -58,20 +54,24 @@ func init() {
 }
 
 const (
-	// RenamedFromAnnotation carries the name the node was known by before it was
-	// renamed. rename_node.sh puts it there through bashible; this controller is
-	// what takes it off again, once the old Node object is gone.
-	RenamedFromAnnotation = "node.deckhouse.io/renamed-from"
+	// RenameToAnnotation is how a node asks for its own Node object to be
+	// removed so it can register again under the name the annotation carries.
+	// rename_node.sh sets it, with kubelet already stopped.
+	RenameToAnnotation = "node.deckhouse.io/rename-to"
 
 	nodeTypeStatic      = "Static"
 	nodeTypeCloudStatic = "CloudStatic"
 
-	// How long to wait before looking again at a rename that is not finished
-	// yet - the renamed node still settling, or the old kubelet still reporting.
-	// Node events do not carry the old Node's transitions to the new Node's
-	// reconcile, so this is what moves the rename along.
-	retryInterval = 30 * time.Second
+	// How long to wait before looking again at a node that has asked but is
+	// still reporting. Node events do not fire when a node merely goes quiet:
+	// the Ready condition turns on a timer the API server keeps, so this is what
+	// notices.
+	retryInterval = 20 * time.Second
 )
+
+// nodeNameRe is the RFC 1123 DNS subdomain the API server will accept as an
+// object name. A request for anything else could never be carried out.
+var nodeNameRe = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
 type Reconciler struct {
 	register.Base
@@ -90,76 +90,70 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	oldName := node.Annotations[RenamedFromAnnotation]
-	if oldName == "" {
+	newName := node.Annotations[RenameToAnnotation]
+	if newName == "" {
 		return ctrl.Result{}, nil
 	}
 
-	logger = logger.WithValues("renamedFrom", oldName)
+	logger = logger.WithValues("renameTo", newName)
 
-	if oldName == node.Name {
-		// Nothing was renamed. Whatever put this here has nothing to ask for.
+	if reason := r.refuse(node, newName); reason != "" {
+		logger.Info("refusing the rename request", "reason", reason)
+		r.Recorder.Eventf(node, corev1.EventTypeWarning, "NodeRenameRejected",
+			"Node %s asked to be renamed to %q, which was refused: %s", node.Name, newName, reason)
 		return ctrl.Result{}, r.clearAnnotation(ctx, node)
 	}
 
+	// Only a node that has stopped reporting. rename_node.sh stops kubelet
+	// before it asks, so a node still calling in is one whose request did not
+	// come from the rename - or one whose kubelet has not gone quiet yet, which
+	// takes as long as the API server's grace period.
+	if isReady(node) {
+		logger.V(1).Info("the node is still reporting; waiting for it to go quiet before removing its Node object")
+		return ctrl.Result{RequeueAfter: retryInterval}, nil
+	}
+
+	logger.Info("removing the Node object so the machine can register under its new name")
+	if err := r.Client.Delete(ctx, node); err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, fmt.Errorf("delete node %s: %w", node.Name, err)
+	}
+
+	r.Recorder.Eventf(node, corev1.EventTypeNormal, "NodeRenameAccepted",
+		"Node object %s removed; the machine will register as %s", node.Name, newName)
+
+	return ctrl.Result{}, nil
+}
+
+// refuse returns why the request cannot be carried out, or "" if it can.
+func (r *Reconciler) refuse(node *corev1.Node, newName string) string {
 	switch node.Labels[nodecommon.NodeTypeLabel] {
 	case nodeTypeStatic, nodeTypeCloudStatic:
 	default:
-		logger.Info("refusing to collect the previous Node of a node that is not static",
-			"nodeType", node.Labels[nodecommon.NodeTypeLabel])
-		return ctrl.Result{}, r.clearAnnotation(ctx, node)
+		// A cloud node is named by whatever created it, and that name is how the
+		// machine behind it is found again.
+		return fmt.Sprintf("a %s node is named by the infrastructure that created it",
+			node.Labels[nodecommon.NodeTypeLabel])
 	}
 
-	if !isReady(node) {
-		logger.V(1).Info("the renamed node is not Ready yet, keeping its previous Node object")
-		return ctrl.Result{RequeueAfter: retryInterval}, nil
+	if newName == node.Name {
+		return "the node already has that name"
 	}
 
-	old := &corev1.Node{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: oldName}, old)
-	if apierrors.IsNotFound(err) {
-		logger.V(1).Info("the previous Node object is already gone")
-		return ctrl.Result{}, r.clearAnnotation(ctx, node)
-	}
-	if err != nil {
-		return ctrl.Result{}, err
+	if len(newName) > 253 || !nodeNameRe.MatchString(newName) {
+		return "the name is not a valid RFC 1123 DNS subdomain"
 	}
 
-	if isReady(old) {
-		// Two live nodes claim to be one machine. Deleting either would be worse
-		// than leaving both: say so and stop.
-		logger.Info("refusing to collect the previous Node object: it is still Ready")
-		r.Recorder.Eventf(node, corev1.EventTypeWarning, "NodeRenameBlocked",
-			"Node %s was renamed from %s, but %s is still Ready and was left alone", node.Name, oldName, oldName)
-		return ctrl.Result{RequeueAfter: retryInterval}, nil
-	}
-
-	if !sameMachine(old, node) {
-		logger.Info("refusing to collect the previous Node object: it is a different machine",
-			"oldSystemUUID", old.Status.NodeInfo.SystemUUID, "newSystemUUID", node.Status.NodeInfo.SystemUUID)
-		r.Recorder.Eventf(node, corev1.EventTypeWarning, "NodeRenameRejected",
-			"Node %s claims to have been renamed from %s, but %s is a different machine and was left alone", node.Name, oldName, oldName)
-		return ctrl.Result{}, r.clearAnnotation(ctx, node)
-	}
-
-	logger.Info("collecting the Node object left behind by the rename")
-	if err := r.Client.Delete(ctx, old); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{}, fmt.Errorf("delete node %s: %w", oldName, err)
-	}
-
-	r.Recorder.Eventf(node, corev1.EventTypeNormal, "NodeRenamed",
-		"Node was renamed from %s; the Node object %s has been removed", oldName, oldName)
-
-	return ctrl.Result{}, r.clearAnnotation(ctx, node)
+	return ""
 }
 
-// clearAnnotation closes the handshake: while the annotation is there the node is
-// still asking, and every reconcile of it would ask again.
+// clearAnnotation takes a refused request off the node, so that a node whose
+// request cannot be carried out is not asked about on every reconcile for the
+// rest of its life.
 func (r *Reconciler) clearAnnotation(ctx context.Context, node *corev1.Node) error {
 	patch, err := json.Marshal(map[string]any{
 		"metadata": map[string]any{
 			"annotations": map[string]any{
-				RenamedFromAnnotation: nil,
+				RenameToAnnotation: nil,
 			},
 		},
 	})
@@ -171,20 +165,9 @@ func (r *Reconciler) clearAnnotation(ctx context.Context, node *corev1.Node) err
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("clear the %s annotation on node %s: %w", RenamedFromAnnotation, node.Name, err)
+		return fmt.Errorf("clear the %s annotation on node %s: %w", RenameToAnnotation, node.Name, err)
 	}
 	return nil
-}
-
-// sameMachine reports whether two Node objects are the same physical or virtual
-// machine. Both identifiers have to be present and equal: an empty one proves
-// nothing, and a machine ID alone is shared by every VM cloned from one image.
-func sameMachine(a, b *corev1.Node) bool {
-	if a.Status.NodeInfo.SystemUUID == "" || a.Status.NodeInfo.MachineID == "" {
-		return false
-	}
-	return a.Status.NodeInfo.SystemUUID == b.Status.NodeInfo.SystemUUID &&
-		a.Status.NodeInfo.MachineID == b.Status.NodeInfo.MachineID
 }
 
 func isReady(node *corev1.Node) bool {

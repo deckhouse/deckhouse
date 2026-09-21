@@ -350,12 +350,26 @@ node's name.
 
 ## How do I rename a node that is already in the cluster?
 
-A Node object cannot be renamed, so a node is renamed by re-registering it: kubelet
-drops the identity it joined with and registers again under the new name. The
-machine itself stays where it is — its disks, its container runtime and its
-hostname are untouched — and the Node object of the old name is removed once the
-renamed node is back. This works for static and CloudStatic nodes, master nodes of
-a static or hybrid cluster included.
+A Node object cannot be renamed, so a node is renamed by re-registering it: the
+Node object of the old name is removed, and the machine registers again under the
+new one. The machine itself stays where it is — its disks, its container runtime
+and its hostname are untouched. This works for static and CloudStatic nodes,
+master nodes of a static or hybrid cluster included.
+
+{% alert level="warning" %}
+**The machine is rebooted** as part of the rename, and the Node object of the old
+name is removed before it comes back.
+
+The reboot is not optional: a rename invalidates on-node state that nothing else
+resets — the CNI bridge still carries the subnet of the node's previous lease, and
+anything that read the node name at start-up still has the old one. Rebooting
+settles all of it at once.
+
+The order is not optional either. While both Node objects exist they are one
+address wearing two names, and a CNI that keys its peers by address tears down the
+entry for one when the other goes away, leaving the renamed node reachable by
+nobody.
+{% endalert %}
 
 {% alert level="warning" %}
 The workload on the node does not survive the rename: the old Node object is
@@ -396,14 +410,20 @@ volumes bound to a node that no longer exists; move or recreate them.
    sudo /var/lib/bashible/rename_node.sh --new-name <new-name> --bootstrap-token <token>
    ```
 
-   The script checks that the new name is free, re-registers the node and waits for
-   it to come back. It refuses to run on a node that has not been cordoned; pass
-   `--skip-drain` to override that.
+   It checks that the new name is free, stops kubelet, and then waits: it refuses to
+   run on a node that has not been cordoned (pass `--skip-drain` to override that).
 
-1. `node-manager` removes the Node object of the old name once it has seen the
-   renamed node become `Ready`. It only removes a Node that is not `Ready` and that
-   reports the same machine, so a rename that did not work leaves the old Node
-   object in place to go back to.
+   The Node object of the old name is removed for it: the node asks by annotating
+   itself with `node.deckhouse.io/rename-to`, and `node-manager` removes the object
+   once the node has gone quiet. A node may write its own Node object and no
+   other, which is what makes the request trustworthy; `node-manager` removes
+   nothing it was not asked for by the node itself, and nothing that is still
+   reporting. A request it will not carry out shows up as a `NodeRenameRejected`
+   event on the node.
+
+1. The script reboots the machine. It comes back, registers under the new name and
+   brings its CNI up on the subnet the new Node is given. Watch for it with
+   `d8 k get nodes -w`.
 
 If the node is managed by CAPS, also update `spec.nodeName` on its StaticInstance
 so the two agree; CAPS itself finds the node again by its provider ID, not by name.

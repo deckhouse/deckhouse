@@ -18,6 +18,7 @@ package noderename
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,11 +34,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
-const (
-	systemUUID = "4C4C4544-0042-3010-8036-B4C04F4E3233"
-	machineID  = "f4e1c2b0a9d84e7f9c3b1a0d5e6f7a8b"
-)
-
 type nodeOpt func(*corev1.Node)
 
 func ready(v bool) nodeOpt {
@@ -50,12 +46,12 @@ func ready(v bool) nodeOpt {
 	}
 }
 
-func renamedFrom(old string) nodeOpt {
+func renameTo(name string) nodeOpt {
 	return func(n *corev1.Node) {
 		if n.Annotations == nil {
 			n.Annotations = map[string]string{}
 		}
-		n.Annotations[RenamedFromAnnotation] = old
+		n.Annotations[RenameToAnnotation] = name
 	}
 }
 
@@ -63,33 +59,25 @@ func nodeType(t string) nodeOpt {
 	return func(n *corev1.Node) { n.Labels[nodecommon.NodeTypeLabel] = t }
 }
 
-func machine(uuid, id string) nodeOpt {
-	return func(n *corev1.Node) {
-		n.Status.NodeInfo.SystemUUID = uuid
-		n.Status.NodeInfo.MachineID = id
-	}
-}
-
 func newNode(name string, opts ...nodeOpt) *corev1.Node {
 	n := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{nodecommon.NodeTypeLabel: nodeTypeStatic}},
 	}
-	n.Status.NodeInfo.SystemUUID = systemUUID
-	n.Status.NodeInfo.MachineID = machineID
 	for _, o := range opts {
 		o(n)
 	}
 	return n
 }
 
-func newReconciler(t *testing.T, objs ...runtime.Object) *Reconciler {
+func newReconciler(t *testing.T, objs ...runtime.Object) (*Reconciler, *record.FakeRecorder) {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	if err := corev1.AddToScheme(scheme); err != nil {
 		t.Fatalf("add scheme: %v", err)
 	}
+	rec := record.NewFakeRecorder(10)
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objs...).Build()
-	return &Reconciler{Base: register.Base{Client: cl, Recorder: record.NewFakeRecorder(10)}}
+	return &Reconciler{Base: register.Base{Client: cl, Recorder: rec}}, rec
 }
 
 func reconcile(t *testing.T, r *Reconciler, name string) ctrl.Result {
@@ -119,134 +107,115 @@ func annotation(t *testing.T, r *Reconciler, name string) string {
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: name}, node); err != nil {
 		t.Fatalf("get node %s: %v", name, err)
 	}
-	return node.Annotations[RenamedFromAnnotation]
+	return node.Annotations[RenameToAnnotation]
 }
 
-func TestCollectsThePreviousNodeOfTheSameMachine(t *testing.T) {
-	r := newReconciler(t,
-		newNode("new-name", renamedFrom("old-name"), ready(true)),
-		newNode("old-name", ready(false)),
-	)
+func drainEvents(rec *record.FakeRecorder) string {
+	var all []string
+	for {
+		select {
+		case e := <-rec.Events:
+			all = append(all, e)
+		default:
+			return strings.Join(all, "\n")
+		}
+	}
+}
 
-	reconcile(t, r, "new-name")
+func TestRemovesTheNodeObjectOfANodeThatHasGoneQuiet(t *testing.T) {
+	r, rec := newReconciler(t, newNode("old-name", renameTo("new-name"), ready(false)))
+
+	reconcile(t, r, "old-name")
 
 	if exists(t, r, "old-name") {
-		t.Fatal("the Node object left behind by the rename is still there")
+		t.Fatal("the Node object is still there, so the machine cannot come back under its new name")
 	}
-	if got := annotation(t, r, "new-name"); got != "" {
-		t.Fatalf("the annotation should be cleared once the old Node is gone, got %q", got)
+	if ev := drainEvents(rec); !strings.Contains(ev, "NodeRenameAccepted") {
+		t.Fatalf("expected a NodeRenameAccepted event, got: %s", ev)
 	}
 }
 
-func TestWaitsWhileTheRenamedNodeIsNotReady(t *testing.T) {
-	r := newReconciler(t,
-		newNode("new-name", renamedFrom("old-name"), ready(false)),
-		newNode("old-name", ready(false)),
-	)
+// rename_node.sh stops kubelet before it asks, so a node still reporting either
+// has not gone quiet yet or never meant to. Either way it keeps its Node object.
+func TestWaitsWhileTheNodeIsStillReporting(t *testing.T) {
+	r, _ := newReconciler(t, newNode("old-name", renameTo("new-name"), ready(true)))
 
-	res := reconcile(t, r, "new-name")
+	res := reconcile(t, r, "old-name")
 
 	if !exists(t, r, "old-name") {
-		t.Fatal("the old Node was removed before the rename was known to have worked")
+		t.Fatal("a node that is still Ready had its Node object removed")
 	}
 	if res.RequeueAfter != retryInterval {
 		t.Fatalf("expected a requeue after %s, got %+v", retryInterval, res)
 	}
-	if annotation(t, r, "new-name") == "" {
-		t.Fatal("the annotation was cleared while the rename was still unfinished")
+	if annotation(t, r, "old-name") == "" {
+		t.Fatal("the request was dropped instead of being waited on")
 	}
 }
 
-func TestLeavesAPreviousNodeThatIsStillReady(t *testing.T) {
-	r := newReconciler(t,
-		newNode("new-name", renamedFrom("old-name"), ready(true)),
-		newNode("old-name", ready(true)),
-	)
+func TestRefusesANodeNamedByItsInfrastructure(t *testing.T) {
+	for _, nt := range []string{"CloudEphemeral", "CloudPermanent"} {
+		t.Run(nt, func(t *testing.T) {
+			r, rec := newReconciler(t, newNode("cloud-node", renameTo("new-name"), ready(false), nodeType(nt)))
 
-	res := reconcile(t, r, "new-name")
+			reconcile(t, r, "cloud-node")
 
-	if !exists(t, r, "old-name") {
-		t.Fatal("a Ready node was deleted")
-	}
-	if res.RequeueAfter != retryInterval {
-		t.Fatalf("expected a requeue after %s, got %+v", retryInterval, res)
-	}
-}
-
-func TestRefusesToDeleteADifferentMachine(t *testing.T) {
-	r := newReconciler(t,
-		newNode("new-name", renamedFrom("someone-else"), ready(true)),
-		newNode("someone-else", ready(false), machine("11111111-2222-3333-4444-555555555555", "0123456789abcdef0123456789abcdef")),
-	)
-
-	reconcile(t, r, "new-name")
-
-	if !exists(t, r, "someone-else") {
-		t.Fatal("a node the annotation merely pointed at was deleted")
-	}
-	if got := annotation(t, r, "new-name"); got != "" {
-		t.Fatalf("a rejected claim should not be retried forever, annotation is still %q", got)
+			if !exists(t, r, "cloud-node") {
+				t.Fatalf("a %s node was removed on a rename request", nt)
+			}
+			if got := annotation(t, r, "cloud-node"); got != "" {
+				t.Fatalf("a refused request should be taken off the node, got %q", got)
+			}
+			if ev := drainEvents(rec); !strings.Contains(ev, "NodeRenameRejected") {
+				t.Fatalf("expected a NodeRenameRejected event, got: %s", ev)
+			}
+		})
 	}
 }
 
-func TestRefusesWhenTheMachineIdentityIsUnknown(t *testing.T) {
-	r := newReconciler(t,
-		newNode("new-name", renamedFrom("old-name"), ready(true)),
-		newNode("old-name", ready(false), machine("", "")),
-	)
+func TestRefusesANameNoNodeCouldCarry(t *testing.T) {
+	for _, name := range []string{"Not_A_Name", "-leading-dash", strings.Repeat("a", 254)} {
+		t.Run(name[:min(len(name), 20)], func(t *testing.T) {
+			r, _ := newReconciler(t, newNode("old-name", renameTo(name), ready(false)))
 
-	reconcile(t, r, "new-name")
+			reconcile(t, r, "old-name")
 
-	if !exists(t, r, "old-name") {
-		t.Fatal("a node with no reported machine identity was deleted on an unverifiable claim")
+			if !exists(t, r, "old-name") {
+				t.Fatalf("the Node object was removed for an impossible new name %q", name)
+			}
+			if got := annotation(t, r, "old-name"); got != "" {
+				t.Fatalf("a refused request should be taken off the node, got %q", got)
+			}
+		})
 	}
 }
 
-func TestIgnoresNodesThatAreNotStatic(t *testing.T) {
-	r := newReconciler(t,
-		newNode("new-name", renamedFrom("old-name"), ready(true), nodeType("CloudEphemeral")),
-		newNode("old-name", ready(false)),
-	)
+func TestRefusesARequestForTheNameTheNodeAlreadyHas(t *testing.T) {
+	r, _ := newReconciler(t, newNode("same-name", renameTo("same-name"), ready(false)))
 
-	reconcile(t, r, "new-name")
+	reconcile(t, r, "same-name")
 
-	if !exists(t, r, "old-name") {
-		t.Fatal("a CloudEphemeral node was allowed to collect another Node object")
+	if !exists(t, r, "same-name") {
+		t.Fatal("the node deleted itself over a request that asked for nothing")
 	}
-	if got := annotation(t, r, "new-name"); got != "" {
-		t.Fatalf("expected the annotation to be cleared, got %q", got)
+	if got := annotation(t, r, "same-name"); got != "" {
+		t.Fatalf("expected the request to be cleared, got %q", got)
 	}
 }
 
-func TestClearsAnAnnotationNamingTheNodeItself(t *testing.T) {
-	r := newReconciler(t, newNode("new-name", renamedFrom("new-name"), ready(true)))
-
-	reconcile(t, r, "new-name")
-
-	if got := annotation(t, r, "new-name"); got != "" {
-		t.Fatalf("expected the annotation to be cleared, got %q", got)
-	}
-	if !exists(t, r, "new-name") {
-		t.Fatal("the node deleted itself")
-	}
-}
-
-func TestClearsTheAnnotationWhenThePreviousNodeIsAlreadyGone(t *testing.T) {
-	r := newReconciler(t, newNode("new-name", renamedFrom("old-name"), ready(true)))
-
-	reconcile(t, r, "new-name")
-
-	if got := annotation(t, r, "new-name"); got != "" {
-		t.Fatalf("expected the annotation to be cleared, got %q", got)
-	}
-}
-
-func TestDoesNothingWithoutTheAnnotation(t *testing.T) {
-	r := newReconciler(t, newNode("plain", ready(true)), newNode("other", ready(false)))
+func TestDoesNothingWithoutARequest(t *testing.T) {
+	r, _ := newReconciler(t, newNode("plain", ready(false)))
 
 	reconcile(t, r, "plain")
 
-	if !exists(t, r, "other") {
-		t.Fatal("an unrelated node was deleted")
+	if !exists(t, r, "plain") {
+		t.Fatal("a node that asked for nothing was removed")
 	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
