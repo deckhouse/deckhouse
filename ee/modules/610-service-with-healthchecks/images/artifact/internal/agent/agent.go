@@ -24,10 +24,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -190,7 +192,15 @@ func (r *ServiceWithHealthchecksReconciler) SetupWithManager(mgr ctrl.Manager) e
 			MaxConcurrentReconciles: 4,
 		}).
 		For(&networkv1alpha1.ServiceWithHealthchecks{}).
-		Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(r.getExposedServiceWithHCForPod)).
+		Watches(
+			&corev1.Pod{},
+			handler.EnqueueRequestsFromMapFunc(r.getExposedServiceWithHCForPod),
+			// Only endpoint-affecting pod changes should wake a reconcile. Without this, every
+			// status-subresource heartbeat or annotation edit of any node-local pod enqueues a full
+			// reconcile, and under pod churn that noise competes with the meaningful readiness change
+			// for the reconcile workers and delays convergence.
+			builder.WithPredicates(podEndpointRelevantPredicate()),
+		).
 		WatchesRawSource(source.Channel(r.events, &handler.EnqueueRequestForObject{})).
 		Complete(r)
 }
@@ -297,6 +307,46 @@ func (r *ServiceWithHealthchecksReconciler) getExposedServiceWithHCForPod(ctx co
 		return true
 	})
 	return requests
+}
+
+// podEndpointRelevantPredicate keeps the pod watch reacting to creations and deletions, and to updates
+// that can change the endpoints this agent publishes. Updates that touch nothing relevant (heartbeats,
+// unrelated status-subresource or annotation churn) are dropped before they reach the mapper, so the
+// reconcile workers are free to process a real readiness change without queueing behind the noise.
+func podEndpointRelevantPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc:  func(event.CreateEvent) bool { return true },
+		DeleteFunc:  func(event.DeleteEvent) bool { return true },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldPod, oldOK := e.ObjectOld.(*corev1.Pod)
+			newPod, newOK := e.ObjectNew.(*corev1.Pod)
+			if !oldOK || !newOK {
+				return true // unexpected type: do not drop the event
+			}
+			return podEndpointStateChanged(oldPod, newPod)
+		},
+	}
+}
+
+// podEndpointStateChanged reports whether a pod update touched a field that can change the endpoints the
+// agent publishes: its IP or phase (both gate whether the pod is tracked at all), its readiness, its
+// terminating state, or its labels (which decide selector membership).
+func podEndpointStateChanged(oldPod, newPod *corev1.Pod) bool {
+	switch {
+	case oldPod.Status.PodIP != newPod.Status.PodIP:
+		return true
+	case oldPod.Status.Phase != newPod.Status.Phase:
+		return true
+	case isPodReady(oldPod) != isPodReady(newPod):
+		return true
+	case isPodTerminating(oldPod) != isPodTerminating(newPod):
+		return true
+	case !reflect.DeepEqual(oldPod.Labels, newPod.Labels):
+		return true
+	default:
+		return false
+	}
 }
 
 func (r *ServiceWithHealthchecksReconciler) RunWorkers(ctx context.Context) error {

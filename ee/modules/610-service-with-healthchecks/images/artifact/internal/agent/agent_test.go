@@ -327,6 +327,41 @@ func TestSyncResetsProbeResultsOnPodRecreation(t *testing.T) {
 	}
 }
 
+func TestPodEndpointStateChanged(t *testing.T) {
+	base := func() *corev1.Pod {
+		pod := newPod("worker", corev1.PodRunning, true, testPodIP)
+		pod.Labels = map[string]string{"app": "demo"}
+		return &pod
+	}
+
+	cases := []struct {
+		name   string
+		mutate func(*corev1.Pod)
+		want   bool
+	}{
+		{"irrelevant churn", func(p *corev1.Pod) {
+			p.ResourceVersion = "9999"
+			p.Annotations = map[string]string{"kubectl.kubernetes.io/restartedAt": "now"}
+		}, false},
+		{"readiness flip", func(p *corev1.Pod) { p.Status.Conditions[0].Status = corev1.ConditionFalse }, true},
+		{"phase change", func(p *corev1.Pod) { p.Status.Phase = corev1.PodFailed }, true},
+		{"ip change", func(p *corev1.Pod) { p.Status.PodIP = "10.0.0.9" }, true},
+		{"terminating", func(p *corev1.Pod) { now := metav1.Now(); p.DeletionTimestamp = &now }, true},
+		{"label change", func(p *corev1.Pod) { p.Labels = map[string]string{"app": "other"} }, true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			oldPod := base()
+			newPod := base()
+			tc.mutate(newPod)
+			if got := podEndpointStateChanged(oldPod, newPod); got != tc.want {
+				t.Errorf("podEndpointStateChanged(%s) = %v, want %v", tc.name, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestBuildEndpointsPublishesReadyPod(t *testing.T) {
 	r := newTestReconciler()
 	swh := newTestSWH()
