@@ -137,9 +137,9 @@ func (c *Client) cleanup(ctx context.Context,
 		sshLegacyMode: sshLegacyMode,
 	}
 
-	logger = logger.WithValues("taskID", string(staticMachine.Spec.ProviderID))
+	logger = logger.WithValues("taskID", string(staticMachine.UID))
 	logger.Info("Running cleanup task")
-	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "cleanup", taskData, taskFunc)
+	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.UID), "cleanup", taskData, taskFunc)
 	if err != nil {
 		return err
 	}

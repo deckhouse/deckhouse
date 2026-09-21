@@ -36,13 +36,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/ssh"
 	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
-
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
 const (
@@ -158,9 +157,9 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		return nil
 	}
 
-	logger = logger.WithValues("taskID", string(staticMachine.Spec.ProviderID))
+	logger = logger.WithValues("taskID", string(staticMachine.UID))
 	logger.Info("Running bootstrap task")
-	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "bootstrap", taskData, taskFunc)
+	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.UID), "bootstrap", taskData, taskFunc)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to bootstrap StaticInstance: %w", err)
 	}
@@ -192,13 +191,20 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 	// retried with the address backoff rather than released, so that a Pending write and the
 	// watch event it produces cannot re-enqueue this StaticMachine.
 	//
-	// The bootstrap timeout itself does not hand the instance back: it only marks the
-	// StaticMachine with CreateError, after which reconcileNormal stops reconciling it. The
-	// instance returns to the pool through the MachineHealthCheck the node-controller creates
-	// for static clusters (nodeStartupTimeoutSeconds: 1200) - remediation deletes the Machine,
-	// cleanup runs, and the cleanup timeout moves the instance to Pending. So a host that never
-	// answers costs about 20 + 10 minutes instead of the instant, and storming, re-pick it used
-	// to do.
+	// How the instance gets back to the pool depends on whether the host was ever touched,
+	// which is exactly what an empty ProviderID tells: it is assigned at the end of this
+	// function, after both checks pass, and the bootstrap script only runs for a non-empty one.
+	//
+	// Empty ProviderID - nothing ran on the host, so the bootstrap timeout in
+	// reconcileStaticInstancePhase releases the instance itself, and the delete flow skips the
+	// remote cleanup instead of rebooting a host caps never touched.
+	//
+	// Non-empty ProviderID - the host may be half-bootstrapped and must not be handed to
+	// another StaticMachine as is. The reservation is held, the timeout only marks the
+	// StaticMachine with CreateError, and the instance comes back through the
+	// MachineHealthCheck the node-controller creates for static clusters
+	// (nodeStartupTimeoutSeconds: 1200): remediation deletes the Machine, cleanup runs, and the
+	// cleanup timeout moves the instance to Pending.
 	if err := c.reserveStaticInstance(staticInstance, staticMachine); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reserve StaticInstance: %w", err)
 	}

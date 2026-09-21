@@ -124,9 +124,9 @@ func (c *Client) AdoptStaticInstance(ctx context.Context,
 		machineName:   machine.Name,
 	}
 
-	logger = logger.WithValues("taskID", string(staticMachine.Spec.ProviderID))
+	logger = logger.WithValues("taskID", string(staticMachine.UID))
 	logger.Info("Running adopt task")
-	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "adopt", taskData, taskFunc)
+	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.UID), "adopt", taskData, taskFunc)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to adopt StaticInstance: %w", err)
 	}

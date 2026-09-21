@@ -19,15 +19,21 @@ package controller
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
+	"caps-controller-manager/internal/event"
 )
 
 const testNamespace = "d8-cloud-instance-manager"
@@ -41,6 +47,95 @@ func newStaticMachine(name string, nodeGroup string) *infrav1.StaticMachine {
 			},
 		},
 	}
+}
+
+func newReservedStaticInstance(machine *infrav1.StaticMachine, phase deckhousev1.StaticInstanceStatusCurrentStatusPhase, phaseAge time.Duration) *deckhousev1.StaticInstance {
+	return &deckhousev1.StaticInstance{
+		ObjectMeta: metav1.ObjectMeta{Name: "static-instance"},
+		Spec:       deckhousev1.StaticInstanceSpec{Address: "192.0.2.1"},
+		Status: deckhousev1.StaticInstanceStatus{
+			MachineRef: &corev1.ObjectReference{
+				Name:      machine.Name,
+				Namespace: machine.Namespace,
+				UID:       machine.UID,
+			},
+			CurrentStatus: &deckhousev1.StaticInstanceStatusCurrentStatus{
+				Phase:          phase,
+				LastUpdateTime: metav1.NewTime(time.Now().Add(-phaseAge)),
+			},
+		},
+	}
+}
+
+func newTestReconciler(t *testing.T) *StaticMachineReconciler {
+	t.Helper()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, infrav1.AddToScheme(scheme))
+	require.NoError(t, deckhousev1.AddToScheme(scheme))
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	return &StaticMachineReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Recorder: event.NewRecorder(fakeClient, logr.Discard()),
+	}
+}
+
+// ProviderID is assigned only after both connectivity checks pass, so an empty one means the
+// host was never touched. Such an instance must go back to the pool on the bootstrap timeout
+// instead of waiting for MachineHealthCheck remediation and the cleanup timeout.
+func TestBootstrapTimeoutReleasesInstanceWhenHostWasNeverTouched(t *testing.T) {
+	reconciler := newTestReconciler(t)
+
+	staticMachine := newStaticMachine("machine", "worker")
+	staticMachine.UID = types.UID("machine-uid")
+	staticInstance := newReservedStaticInstance(staticMachine, deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping, DefaultStaticInstanceBootstrapTimeout+time.Minute)
+
+	_, err := reconciler.reconcileStaticInstancePhase(context.Background(), &clusterv1.Machine{}, staticMachine, staticInstance)
+
+	require.ErrorIs(t, err, ErrStaticMachineBootstrapTimedOut)
+	require.Equal(t, "CreateError", ptr.Deref(staticMachine.Status.FailureReason, ""))
+	require.Equal(t, deckhousev1.StaticInstanceStatusCurrentStatusPhasePending, staticInstance.GetPhase())
+	require.Nil(t, staticInstance.Status.MachineRef)
+}
+
+// A host that already ran the bootstrap script may be half-configured, so it must not be handed
+// to another StaticMachine. The reservation is held and the MachineHealthCheck path, which runs
+// the remote cleanup, is the only way back.
+func TestBootstrapTimeoutKeepsReservationWhenHostWasTouched(t *testing.T) {
+	reconciler := newTestReconciler(t)
+
+	staticMachine := newStaticMachine("machine", "worker")
+	staticMachine.UID = types.UID("machine-uid")
+	staticMachine.Spec.ProviderID = "static://static-instance"
+	staticInstance := newReservedStaticInstance(staticMachine, deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping, DefaultStaticInstanceBootstrapTimeout+time.Minute)
+
+	_, err := reconciler.reconcileStaticInstancePhase(context.Background(), &clusterv1.Machine{}, staticMachine, staticInstance)
+
+	require.ErrorIs(t, err, ErrStaticMachineBootstrapTimedOut)
+	require.Equal(t, deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping, staticInstance.GetPhase())
+	require.NotNil(t, staticInstance.Status.MachineRef)
+}
+
+// The remote cleanup script wipes /var/lib/bashible and reboots the host. Running it on a host
+// caps never reached would reboot a machine an administrator is only preparing, so the delete
+// flow must skip it and release the instance directly.
+func TestCleanupSkipsRemoteScriptWhenHostWasNeverTouched(t *testing.T) {
+	reconciler := newTestReconciler(t)
+
+	staticMachine := newStaticMachine("machine", "worker")
+	staticMachine.UID = types.UID("machine-uid")
+	staticInstance := newReservedStaticInstance(staticMachine, deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping, time.Minute)
+
+	// HostClient stays nil on purpose: reaching it would mean the remote cleanup was attempted.
+	result, err := reconciler.cleanup(context.Background(), &clusterv1.Machine{}, staticMachine, staticInstance)
+
+	require.NoError(t, err)
+	require.Equal(t, RequeueForStaticMachineDeleting, result.RequeueAfter)
+	require.Equal(t, deckhousev1.StaticInstanceStatusCurrentStatusPhasePending, staticInstance.GetPhase())
+	require.Nil(t, staticInstance.Status.MachineRef)
 }
 
 // A StaticInstance going back to Pending must only wake up the StaticMachines that could

@@ -23,7 +23,50 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 )
+
+// The connectivity conditions describe the host as seen by one StaticMachine, so they must not
+// survive the instance going back to the pool: setStaticInstancePhaseToBootstrapping skips the
+// TCP check outright on a CheckTcpConnection it finds already True, and the next machine would
+// then go straight to ssh against a host that may be long gone.
+//
+// This cannot be guarded by ObservedGeneration instead. StaticInstance has a status
+// subresource and its spec never changes - spec.address is rejected as immutable by the
+// webhook - so metadata.generation stays put for the whole life of the object and every
+// condition always looks current.
+func TestToPendingDropsConnectivityConditions(t *testing.T) {
+	instance := &StaticInstance{
+		ObjectMeta: metav1.ObjectMeta{Name: "static-instance", Generation: 1},
+		Status: StaticInstanceStatus{
+			MachineRef: &corev1.ObjectReference{Name: "static-machine"},
+			CurrentStatus: &StaticInstanceStatusCurrentStatus{
+				Phase:          StaticInstanceStatusCurrentStatusPhaseBootstrapping,
+				LastUpdateTime: metav1.NewTime(time.Now().Add(-time.Hour).UTC()),
+			},
+		},
+	}
+
+	for _, conditionType := range []string{
+		StaticInstanceCheckTCPConnectionCondition,
+		StaticInstanceCheckSSHConnectionCondition,
+	} {
+		conditions.Set(instance, metav1.Condition{
+			Type:               conditionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             "CheckPassed",
+			Message:            "check passed",
+			LastTransitionTime: metav1.Now(),
+		})
+	}
+
+	instance.ToPending()
+
+	require.Nil(t, conditions.Get(instance, StaticInstanceCheckTCPConnectionCondition),
+		"a stale CheckTcpConnection makes the next StaticMachine skip the TCP check")
+	require.Nil(t, conditions.Get(instance, StaticInstanceCheckSSHConnectionCondition),
+		"a stale CheckSshCondition makes the next StaticMachine skip the ssh check")
+}
 
 func TestSetPhaseKeepsLastUpdateTimeWithoutTransition(t *testing.T) {
 	updatedAt := metav1.NewTime(time.Now().Add(-time.Hour).UTC())

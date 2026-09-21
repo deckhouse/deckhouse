@@ -217,6 +217,16 @@ func (s *SSH) ExecSSHCommand(ctx context.Context, command string, stdout io.Writ
 		waitErr = session.Wait()
 	}()
 
+	// The ssh session copies into stdout and stderr until Wait returns, and those are the
+	// caller's buffers, which the caller reads as soon as this function returns. So no exit
+	// path may leave that goroutine running: closing the session unblocks Wait even on a
+	// command that never finishes. Being the last deferred call, this runs before the session
+	// and the client are torn down.
+	defer func() {
+		_ = session.Close()
+		<-waitDone
+	}()
+
 	if err := s.answerSudoPrompt(ctx, stdin, stdoutWriter, stderrWriter, waitDone); err != nil {
 		return err
 	}
