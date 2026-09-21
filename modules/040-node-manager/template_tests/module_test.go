@@ -1615,6 +1615,16 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 			capiDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "capi-controller-manager")
 			Expect(capiDeploy.Exists()).To(BeTrue())
+			Expect(capiDeploy.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("10m"))
+			Expect(capiDeploy.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("50Mi"))
+
+			capiVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-instance-manager", "capi-controller-manager")
+			Expect(capiVPA.Exists()).To(BeTrue())
+			Expect(capiVPA.Field("spec.resourcePolicy.containerPolicies.0.containerName").String()).To(Equal("capi-controller-manager"))
+			Expect(capiVPA.Field("spec.resourcePolicy.containerPolicies.0.minAllowed.cpu").String()).To(Equal("10m"))
+			Expect(capiVPA.Field("spec.resourcePolicy.containerPolicies.0.minAllowed.memory").String()).To(Equal("50Mi"))
+			Expect(capiVPA.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.cpu").String()).To(Equal("20m"))
+			Expect(capiVPA.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.memory").String()).To(Equal("256Mi"))
 		}
 
 		Context("Scale from zero annotations", func() {
