@@ -58,7 +58,7 @@ Wants=network-online.target
 After=network-online.target containerd-deckhouse.service
 
 [Service]
-ExecStart=/opt/deckhouse/bin/nodelet --system-type=Mutable --controllers=images,static-pods --config=/var/lib/nodelet/nodeconfig.yaml
+ExecStart=/opt/deckhouse/bin/nodelet --controllers=images,static-pods --config=/var/lib/nodelet/nodeconfig.yaml
 Restart=always
 RestartSec=5
 
