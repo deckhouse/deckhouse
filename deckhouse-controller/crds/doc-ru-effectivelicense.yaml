@@ -124,6 +124,10 @@ spec:
                   rejected:
                     description: Число отклонённых записей.
                     type: integer
+                  retirable:
+                    description: |
+                      Число установленных ключей, которые можно удалить, не изменив политику.
+                    type: integer
                 type: object
               effective:
                 description: Действующая в данный момент квота.

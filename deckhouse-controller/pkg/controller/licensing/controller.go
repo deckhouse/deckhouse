@@ -231,6 +231,19 @@ func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 	// strictly growing counter.
 	request := effective.Status.RegistrationRequest
 	issue := due || request == "" || requestStale(request, res)
+	if issue && !due {
+		// A request that is issued between two sampling ticks would otherwise
+		// carry an instant read back out of the journal ConfigMap, and anyone
+		// who can write that ConfigMap could understate it for free. The
+		// observation is live, and it is deliberately not appended: the hourly
+		// cadence is what avg_7d and the extrapolation mean.
+		live, err := r.sampleConsumption(ctx)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		values = withLiveInstant(values, live)
+		res = licensing.Compute(keys, values, sustained, now, r.thresholds)
+	}
 	if issue {
 		journal.Seq++
 		request, err = r.buildRegistrationRequest(priv, clusterID, res, values, journal.Seq, now)
@@ -242,7 +255,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		}
 	}
 
-	owners, err := r.updateKeyStatuses(ctx, licenses, keys, failures, packages, res)
+	owners, err := r.updateKeyStatuses(ctx, licenses, keys, failures, packages, res, now)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

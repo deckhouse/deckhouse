@@ -61,6 +61,12 @@ var (
 	ErrBadSignature = errors.New("licensing: bad signature")
 	// ErrWrongType means the "typ" header does not match the expected token type.
 	ErrWrongType = errors.New("licensing: wrong token type")
+	// ErrUnsupportedVersion means the package schema is newer than this build
+	// understands. It wraps ErrMalformed, so existing callers keep classifying it
+	// as a malformed package; it is told apart only where the difference matters,
+	// which is retirability: this is the one package level failure that heals on
+	// its own, with a Deckhouse upgrade (spec 8.6).
+	ErrUnsupportedVersion = fmt.Errorf("%w: unsupported schema version", ErrMalformed)
 )
 
 // Characters that survive copy-paste through browsers, chats and PDF viewers.

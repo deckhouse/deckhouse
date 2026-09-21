@@ -99,6 +99,12 @@ type ClusterLicenseStatus struct {
 	// +optional
 	Accepted bool `json:"accepted"`
 
+	// Retirable is true when no record of this key contributes to the policy now
+	// or in the future, so the key can be deleted without changing either the
+	// policy or the timeline. It is always published, see Accepted.
+	// +optional
+	Retirable bool `json:"retirable"`
+
 	// PackageJti is the jti claim of the package, it identifies the key itself.
 	// +optional
 	PackageJti string `json:"packageJti,omitempty"`

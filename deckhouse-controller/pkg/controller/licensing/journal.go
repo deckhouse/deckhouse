@@ -90,6 +90,23 @@ func ceiling(instant float64, limit *int64) float64 {
 // latest is the last observation of a metric, whatever its age. It anchors the
 // ceiling, which is why it is read straight off the journal instead of out of
 // the window the projection uses.
+// withLiveInstant returns a copy of values whose instant is the live
+// observation instead of the one read back from the journal. Only the instant
+// is replaced: avg_7d and the extrapolation are statements about the recorded
+// window and have nowhere else to come from.
+func withLiveInstant(values map[string]licensing.MetricValue, live map[string]float64) map[string]licensing.MetricValue {
+	out := make(map[string]licensing.MetricValue, len(values))
+	for name, value := range values {
+		out[name] = value
+	}
+	for name, observed := range live {
+		value := out[name]
+		value.Instant = observed
+		out[name] = value
+	}
+	return out
+}
+
 func latest(journal *licensing.Journal, name string) float64 {
 	for i := len(journal.Samples) - 1; i >= 0; i-- {
 		if v, ok := journal.Samples[i].Values[name]; ok {

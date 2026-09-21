@@ -214,7 +214,7 @@ func ParsePackage(token string, ctx VerifyContext) (*Package, []RecordStatus, er
 	}
 	if *probe.Ver > SchemaVersion {
 		return nil, nil, fmt.Errorf("%w: package schema version %d is newer than supported by this Deckhouse release (max %d); update Deckhouse",
-			ErrMalformed, *probe.Ver, SchemaVersion)
+			ErrUnsupportedVersion, *probe.Ver, SchemaVersion)
 	}
 
 	var pkg Package

@@ -188,6 +188,10 @@ spec:
                   rejected:
                     description: Number of rejected records.
                     type: integer
+                  retirable:
+                    description: |
+                      Number of installed keys that can be deleted without changing the policy.
+                    type: integer
                 type: object
               effective:
                 description: The quota currently in effect.

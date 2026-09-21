@@ -16,6 +16,7 @@ package licensing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -38,6 +39,7 @@ func (r *reconciler) updateKeyStatuses(
 	failures []error,
 	packages []*licensing.Package,
 	res licensing.Result,
+	now time.Time,
 ) (map[string]string, error) {
 	// The verdicts are matched back to their key by record id rather than by
 	// position, so that a change in how Compute orders its output cannot quietly
@@ -71,7 +73,7 @@ func (r *reconciler) updateKeyStatuses(
 			owners[rec.ID] = item.Name
 		}
 
-		status := keyStatus(failures[i], packages[i], records)
+		status := keyStatus(item.Status, failures[i], packages[i], records, res.Retirable[item.Name], now)
 		if equality.Semantic.DeepEqual(item.Status, status) {
 			continue
 		}
@@ -84,16 +86,33 @@ func (r *reconciler) updateKeyStatuses(
 	return owners, nil
 }
 
-func keyStatus(failure error, pkg *licensing.Package, records []licensing.RecordStatus) v1alpha1.ClusterLicenseStatus {
-	if failure != nil {
-		return v1alpha1.ClusterLicenseStatus{Accepted: false, Message: failure.Error()}
+func keyStatus(
+	prev v1alpha1.ClusterLicenseStatus,
+	failure error,
+	pkg *licensing.Package,
+	records []licensing.RecordStatus,
+	retirable bool,
+	now time.Time,
+) v1alpha1.ClusterLicenseStatus {
+	status := v1alpha1.ClusterLicenseStatus{
+		Retirable:  retirable,
+		Conditions: append([]metav1.Condition(nil), prev.Conditions...),
 	}
 
-	status := v1alpha1.ClusterLicenseStatus{
-		PackageJti:   pkg.JTI,
-		CustomerName: pkg.CustomerName,
-		Records:      make([]v1alpha1.LicenseRecordStatus, 0, len(records)),
+	if failure != nil {
+		status.Message = failure.Error()
+		// A package that does not verify carries no records, so retirability is
+		// decided by the failure itself: a bad signature, a foreign issuer or a
+		// wrong type will never start verifying, while a package written for a
+		// newer schema starts working after a Deckhouse upgrade (spec 8.6).
+		status.Retirable = !errors.Is(failure, licensing.ErrUnsupportedVersion)
+		setRetirable(&status, now)
+		return status
 	}
+
+	status.PackageJti = pkg.JTI
+	status.CustomerName = pkg.CustomerName
+	status.Records = make([]v1alpha1.LicenseRecordStatus, 0, len(records))
 
 	accepted := 0
 	for _, rec := range records {
@@ -104,8 +123,18 @@ func keyStatus(failure error, pkg *licensing.Package, records []licensing.Record
 	}
 	status.Accepted = accepted > 0
 	status.Message = fmt.Sprintf("%d of %d records are part of the policy", accepted, len(records))
+	setRetirable(&status, now)
 
 	return status
+}
+
+func setRetirable(status *v1alpha1.ClusterLicenseStatus, now time.Time) {
+	reason, message := "InUse", "at least one record of this key contributes now or in the future"
+	if status.Retirable {
+		reason = conditionRetirable
+		message = "no record contributes now or in the future; the key can be deleted without changing the policy"
+	}
+	set(&status.Conditions, now, conditionRetirable, status.Retirable, reason, message, message)
 }
 
 func recordStatus(rec licensing.RecordStatus) v1alpha1.LicenseRecordStatus {
@@ -188,10 +217,11 @@ func effectiveStatus(
 			Since: ptr.To(metav1.NewTime(now)),
 		},
 		Counts: v1alpha1.LicenseCounts{
-			Packages: res.Counts.Packages,
-			Records:  res.Counts.Records,
-			Accepted: res.Counts.Accepted,
-			Rejected: res.Counts.Rejected,
+			Packages:  res.Counts.Packages,
+			Records:   res.Counts.Records,
+			Accepted:  res.Counts.Accepted,
+			Rejected:  res.Counts.Rejected,
+			Retirable: res.Counts.Retirable,
 		},
 		Effective: v1alpha1.LicenseEffective{
 			Limits:    res.Effective,

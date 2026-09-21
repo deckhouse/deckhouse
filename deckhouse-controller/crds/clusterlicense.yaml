@@ -22,6 +22,9 @@ spec:
     - jsonPath: .status.accepted
       name: Accepted
       type: boolean
+    - jsonPath: .status.retirable
+      name: Retirable
+      type: boolean
     - jsonPath: .spec.alias
       name: Alias
       type: string
@@ -225,6 +228,15 @@ spec:
                   - id
                   type: object
                 type: array
+              retirable:
+                description: |
+                  Whether the key can be deleted without changing the policy or the timeline.
+
+                  True when no record of the key contributes now or in the future: every one of them is
+                  expired, extinguished by a successor already in force, revoked, or rejected for a reason
+                  that will not heal with time. A record of a type this Deckhouse release does not support
+                  yet, and a record waiting for its `startAt`, both keep the key in use.
+                type: boolean
             type: object
         required:
         - spec

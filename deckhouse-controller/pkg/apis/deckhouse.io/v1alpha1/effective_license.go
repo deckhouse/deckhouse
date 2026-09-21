@@ -135,6 +135,11 @@ type LicenseCounts struct {
 
 	// +optional
 	Rejected int `json:"rejected,omitempty"`
+
+	// Retirable is the number of installed keys that can be deleted without
+	// changing the policy.
+	// +optional
+	Retirable int `json:"retirable,omitempty"`
 }
 
 type LicenseEffective struct {

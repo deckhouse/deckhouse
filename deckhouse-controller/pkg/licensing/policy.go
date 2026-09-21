@@ -118,8 +118,10 @@ type Result struct {
 	Timeline      []Segment
 	NextReduction *Reduction
 	ExpiringSoon  []RecordStatus
-	Counts        struct {
-		Packages, Records, Accepted, Rejected int
+	// Retirable is the per-key verdict of Retirable, keyed by KeyRecords.Key.
+	Retirable map[string]bool
+	Counts    struct {
+		Packages, Records, Accepted, Rejected, Retirable int
 	}
 }
 
@@ -128,6 +130,42 @@ type Result struct {
 // predecessor expires leaves neither a gap nor an overlap.
 func Active(r RecordStatus, t time.Time) bool {
 	return r.Accepted && !t.Before(r.StartAt) && (r.ExpireAt == nil || t.Before(*r.ExpireAt))
+}
+
+// retirableReasons are the verdicts that never turn back on their own: a record
+// carrying one of them contributes neither now nor later.
+//
+// UnsupportedType is deliberately absent: a record of a type this build does not
+// know starts counting after a Deckhouse upgrade, so its key must not be offered
+// for deletion (spec 8.6, vector K5). NotYetValid is absent for the same reason:
+// the record is simply waiting for its start_at.
+var retirableReasons = map[string]bool{
+	ReasonExpired:         true,
+	ReasonRenewed:         true,
+	ReasonSuperseded:      true,
+	ReasonRevoked:         true,
+	ReasonDuplicate:       true,
+	ReasonClusterMismatch: true,
+	ReasonSchemaViolation: true,
+}
+
+// Retirable reports whether a key can be deleted without changing either the
+// policy or the timeline: every one of its records is permanently out (spec 8.6).
+//
+// The records must be the final per-record statuses Compute produced, which is
+// what makes the successor rule fall out for free: extinction by a successor
+// whose start_at has already passed reads as Renewed or Superseded, while a
+// successor still in the future leaves the record accepted.
+func Retirable(records []RecordStatus) bool {
+	if len(records) == 0 {
+		return false
+	}
+	for _, r := range records {
+		if r.Accepted || !retirableReasons[r.Reason] {
+			return false
+		}
+	}
+	return true
 }
 
 // Compute turns the verified records of every key into the effective policy.
@@ -199,6 +237,16 @@ func Compute(keys []KeyRecords, metrics map[string]MetricValue, sustained map[st
 		}
 	}
 
+	// final is ordered records flattened, so each key owns the next len(Records)
+	// of it. Slicing beats matching by id: the same id may legitimately appear in
+	// two keys, one of them marked Duplicate.
+	res.Retirable = make(map[string]bool, len(ordered))
+	at := 0
+	for _, k := range ordered {
+		res.Retirable[k.Key] = Retirable(final[at : at+len(k.Records)])
+		at += len(k.Records)
+	}
+
 	res.Counts.Packages = len(keys)
 	res.Counts.Records = len(final)
 	for _, r := range final {
@@ -206,6 +254,11 @@ func Compute(keys []KeyRecords, metrics map[string]MetricValue, sustained map[st
 			res.Counts.Accepted++
 		} else {
 			res.Counts.Rejected++
+		}
+	}
+	for _, retirable := range res.Retirable {
+		if retirable {
+			res.Counts.Retirable++
 		}
 	}
 

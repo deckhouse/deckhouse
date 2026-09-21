@@ -32,6 +32,9 @@ const (
 	conditionSomeRecordsExpiring = "SomeRecordsExpiring"
 	conditionRejectedRecords     = "RejectedRecords"
 	conditionRegistered          = "Registered"
+	// conditionRetirable lives on ClusterLicense, not on EffectiveLicense: it is a
+	// verdict about one key.
+	conditionRetirable = "Retirable"
 )
 
 // benignRejections are the reasons a record may legitimately not contribute:
