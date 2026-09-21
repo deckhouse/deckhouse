@@ -166,4 +166,55 @@ func TestAnObjectOfTheOtherSystemTypeIsRemoved(t *testing.T) {
 		require.NoError(t, r.reconcileMutableNode(t.Context(), ng, node, logr.Discard(), p))
 		gone(t, r, "worker-0")
 	})
+
+	// A patch on it could never succeed either, but deleting it is the one move
+	// that cannot be taken back: the Engine path refuses to recreate the document
+	// of a master or of any node that is not CloudEphemeral.
+	t.Run("an object this controller does not manage", func(t *testing.T) {
+		stored := &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "master-0"},
+			Spec:       internalv1alpha1.NodeSpec{SystemType: internalv1alpha1.SystemTypeImmutable, NodeName: "master-0"},
+		}
+		r := newReconciler(t, stored)
+
+		ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "master"}, Spec: v1.NodeGroupSpec{SystemType: v1.SystemTypeMutable}}
+		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "master-0"}}
+		p := newPass()
+		p.mutable = &mutableInputsResult{inputs: mutableInputs{APIServerEndpoints: []string{"10.0.0.5:6443"}}}
+
+		require.NoError(t, r.reconcileMutableNode(t.Context(), ng, node, logr.Discard(), p))
+
+		after := &internalv1alpha1.NodeConfig{}
+		require.NoError(t, r.Client.Get(t.Context(), types.NamespacedName{Name: "master-0"}, after),
+			"a document this controller does not manage must survive")
+		require.Equal(t, stored.ResourceVersion, after.ResourceVersion, "and must not be patched either")
+	})
+}
+
+// Every node of a Mutable group gets a document, masters and hand-installed
+// nodes included: the Engine path waits for such a node to publish its own, and
+// a bashible node publishes none.
+func TestAMutableDocumentIsCreatedForEveryNodeType(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
+	r := &Reconciler{}
+	r.Client = fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "masters"},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic, SystemType: v1.SystemTypeMutable},
+	}
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name:   "master-0",
+		Labels: map[string]string{controlPlaneRoleLabel: ""},
+	}}
+	p := newPass()
+	p.mutable = &mutableInputsResult{inputs: mutableInputs{APIServerEndpoints: []string{"10.0.0.5:6443"}}}
+
+	require.NoError(t, r.reconcileMutableNode(t.Context(), ng, node, logr.Discard(), p))
+
+	created := &internalv1alpha1.NodeConfig{}
+	require.NoError(t, r.Client.Get(t.Context(), types.NamespacedName{Name: "master-0"}, created))
+	require.Equal(t, internalv1alpha1.SystemTypeMutable, created.Spec.SystemType)
 }

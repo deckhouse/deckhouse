@@ -381,7 +381,7 @@ func upToDate(existing, desired *internalv1alpha1.NodeConfig) bool {
 }
 
 // deleteOrphaned removes a NodeConfig this controller no longer owns, for
-// instance after a node left an immutable group.
+// instance after a node left every group or after its group was deleted.
 func (r *Reconciler) deleteOrphaned(ctx context.Context, name string, logger logr.Logger) error {
 	existing := &internalv1alpha1.NodeConfig{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, existing); err != nil {

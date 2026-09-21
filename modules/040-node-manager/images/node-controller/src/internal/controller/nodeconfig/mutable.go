@@ -75,6 +75,8 @@ func (s *sourceReader) readMutableInputs(ctx context.Context) (mutableInputs, er
 
 // newMutableNodeConfig renders the document of a node bashible configures: the
 // static pods selected for its group, and what the agent needs to fetch an image.
+// spec.images is deliberately left out: today's platform preload list is pause
+// and registry-agent, both of which bashible already puts on such a node.
 func newMutableNodeConfig(ng *v1.NodeGroup, node *corev1.Node, in mutableInputs) *internalv1alpha1.NodeConfig {
 	return &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -136,6 +138,7 @@ func (r *Reconciler) reconcileMutableNode(ctx context.Context, ng *v1.NodeGroup,
 	existing.OwnerReferences = desired.OwnerReferences
 	if err := r.Client.Patch(ctx, existing, patch); err != nil {
 		if apierrors.IsConflict(err) {
+			logger.V(1).Info("NodeConfig changed while it was being rendered; leaving it to the next pass", "node", desired.Name)
 			return nil
 		}
 		return fmt.Errorf("patch NodeConfig %s: %w", desired.Name, err)
@@ -145,13 +148,22 @@ func (r *Reconciler) reconcileMutableNode(ctx context.Context, ng *v1.NodeGroup,
 }
 
 // removeOnSystemTypeChange deletes an object rendered for the other kind of node
-// and reports that it did. spec.systemType is immutable (a CEL rule on the type),
-// so a node relabelled across the two kinds would fail its patch for ever; the
-// next pass creates the document its group now asks for.
+// and reports that the caller is done with it. spec.systemType is immutable (a
+// CEL rule on the type), so a node relabelled across the two kinds would fail its
+// patch for ever; the next pass creates the document its group now asks for.
+// An object this controller does not manage is left alone and reported all the
+// same: a patch on it can never succeed either, and deleting one is not
+// recoverable — the Engine path refuses to recreate the document of a master or
+// of any node that is not CloudEphemeral, and a node registers its own only once.
 func (r *Reconciler) removeOnSystemTypeChange(ctx context.Context, existing, desired *internalv1alpha1.NodeConfig, logger logr.Logger) (bool, error) {
 	from, to := systemTypeOf(existing), systemTypeOf(desired)
 	if from == to {
 		return false, nil
+	}
+	if existing.Labels[managedByLabel] != managedByValue {
+		logger.Info("NodeConfig kept: its system type does not match the node's group, but this controller does not manage it",
+			"node", existing.Name, "from", from, "to", to)
+		return true, nil
 	}
 	if err := r.Client.Delete(ctx, existing); err != nil && !apierrors.IsNotFound(err) {
 		return true, fmt.Errorf("delete NodeConfig %s: %w", existing.Name, err)
