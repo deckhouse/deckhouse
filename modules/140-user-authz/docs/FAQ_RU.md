@@ -55,9 +55,9 @@ spec:
 1. `jane.doe@example.com` имеет право запрашивать и просматривать объекты среди всех пространств имён, помеченных `env=review`.
 2. `Administrators` могут запрашивать, редактировать, получать и удалять объекты на уровне кластера и из пространств имён, помеченных `env=prod` и `env=stage`.
 
-Так как для `Jane Doe` подходят два правила, необходимо провести вычисления:
+Так как для `Jane Doe` подходят два правила, итоговые права определяются следующим образом:
 
-* `Jane Doe` будет иметь самый сильный accessLevel среди всех подходящих правил — `ClusterAdmin`.
+* `Jane Doe` будет иметь максимальный accessLevel среди всех подходящих правил — `ClusterAdmin`.
 * Опции `namespaceSelector` будут объединены так, что `Jane Doe` будет иметь доступ в пространства имён, помеченные лейблом `env` со значением `review`, `stage` или `prod`.
 
 {% alert level="warning" %}
@@ -163,22 +163,22 @@ d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
 ]
 ```
 
-`Ready=True` с причиной `BindingsApplied` означает, что биндинги соответствуют правилу. `Ready=False` называет проблему: `InvalidSpec` (правило нельзя превратить в биндинги, в сообщении сказано почему) или `ApplyError` (API-сервер отклонил запись; в сообщении указаны биндинг и ошибка). На правиле записываются события с теми же причинами.
+`Ready=True` с причиной `BindingsApplied` означает, что биндинги соответствуют правилу. `Ready=False` указывает на проблему: `InvalidSpec` (правило нельзя превратить в биндинги, в сообщении сказано почему) или `ApplyError` (API-сервер отклонил запись; в сообщении указаны биндинг и ошибка). На правиле записываются события с теми же причинами.
 
 **Метрики.** Контроллер отдаёт их на порту `metrics` своего пода, собирает их `PodMonitor` `user-authz-controller` (нужен включённый модуль `operator-prometheus`). Лейбл `kind` принимает значения `ClusterAuthorizationRule`, `AuthorizationRule`, `dict` и `manage`.
 
-| Метрика | Описание |
-|---|---|
-| `d8_user_authz_authorization_rules{kind}` | Известные контроллеру объекты данного вида |
-| `d8_user_authz_bindings_desired{kind}` | Биндинги, которые должны быть у объектов данного вида |
-| `d8_user_authz_bindings_actual{kind}` | Существующие биндинги данного вида |
-| `d8_user_authz_bindings_drift{kind,reason}` | Биндинги, не приведённые к желаемому состоянию на последнем reconcile; `reason` — `missing`, `extra` или `changed`. Больше нуля только пока контроллеру не удаётся сойтись |
-| `d8_user_authz_bindings_apply_total{kind,op,result}` | Операции записи контроллера (`op`: `create`, `update`, `delete`; `result`: `success`, `error`) |
-| `d8_user_authz_authorization_rules_invalid{kind,reason}` | Правила с условием `Ready=False` по виду и причине |
-| `d8_user_authz_authorization_rule_invalid{kind,name,rule_namespace,reason}` | `1` для каждого такого правила (по имени экспортируется не более 50 правил; агрегат выше всегда полный) |
-| `d8_user_authz_custom_cluster_roles{level}` | Кастомные ClusterRole (с аннотацией `user-authz.deckhouse.io/access-level`) по уровням доступа |
-| `d8_user_authz_custom_aggregation_missing{level}` | `1`, если у агрегированной ClusterRole `user-authz:<level>:custom` нет правил, хотя кастомные роли для неё существуют |
-| `d8_user_authz_bindings_keep_stamped_total`, `d8_user_authz_keep_stamp_duration_seconds` | Работа миграционного хука, защищающего созданные чартом биндинги от удаления релизом: сколько объектов помечено и длительность последнего прогона |
+| Метрика | Описание                                                                                                                                                                                  |
+|---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `d8_user_authz_authorization_rules{kind}` | Известные контроллеру объекты данного вида                                                                                                                                                |
+| `d8_user_authz_bindings_desired{kind}` | Биндинги, которые должны быть у объектов данного вида                                                                                                                                     |
+| `d8_user_authz_bindings_actual{kind}` | Существующие биндинги данного вида                                                                                                                                                        |
+| `d8_user_authz_bindings_drift{kind,reason}` | Биндинги, не приведённые к желаемому состоянию на последнем reconcile; `reason` — `missing`, `extra` или `changed`. Больше нуля, пока контроллер не привёл биндинги к желаемому состоянию |
+| `d8_user_authz_bindings_apply_total{kind,op,result}` | Операции записи контроллера (`op`: `create`, `update`, `delete`; `result`: `success`, `error`)                                                                                            |
+| `d8_user_authz_authorization_rules_invalid{kind,reason}` | Правила с условием `Ready=False` по виду и причине                                                                                                                                        |
+| `d8_user_authz_authorization_rule_invalid{kind,name,rule_namespace,reason}` | `1` для каждого такого правила (по имени экспортируется не более 50 правил; агрегат выше всегда полный)                                                                                   |
+| `d8_user_authz_custom_cluster_roles{level}` | Кастомные ClusterRole (с аннотацией `user-authz.deckhouse.io/access-level`) по уровням доступа                                                                                            |
+| `d8_user_authz_custom_aggregation_missing{level}` | `1`, если у агрегированной ClusterRole `user-authz:<level>:custom` нет правил, хотя кастомные роли для неё существуют                                                                     |
+| `d8_user_authz_bindings_keep_stamped_total`, `d8_user_authz_keep_stamp_duration_seconds` | Работа миграционного хука, защищающего созданные чартом биндинги от удаления релизом: сколько объектов помечено и длительность последнего прогона                                         |
 | `controller_runtime_reconcile_total`, `controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` | Стандартные метрики controller-runtime по каждому контроллеру (лейбл `controller`: `clusterauthorizationrule-bindings`, `authorizationrule-bindings`, `dict-bindings`, `manage-bindings`) |
 
 **Алерты** (в правилах Prometheus `d8_user_authz`):
@@ -225,7 +225,7 @@ d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
 
 Строка `rules source: directory rebuilt from N rules` показывает, что informer получил список правил, и сколько их в каталоге; `quarantined` — число правил, у которых не скомпилировались шаблоны `limitNamespaces`.
 
-Экземпляр, который ещё не прочитал правила, неготов и отвечает на запросы авторизации ошибкой, а не запретом. В те секунды, пока созданное правило не дошло до вебхука, его субъектам закрыты все неймспейсы.
+Экземпляр, который ещё не прочитал правила, не готов и отвечает на запросы авторизации ошибкой, а не запретом. В те секунды, пока созданное правило не дошло до вебхука, его субъектам временно запрещён доступ ко всем неймспейсам.
 
 Метрики вебхук отдаёт через сайдкар-контейнер `kube-rbac-proxy`; их собирает PodMonitor `user-authz-webhook`, для этого должен быть включён модуль `operator-prometheus`. На каждый master-узел приходится своя серия.
 
@@ -253,7 +253,7 @@ Permission Browser отдаёт те же метрики с префиксом `
 | `D8UserAuthzRulePropagationLag` | Один экземпляр час не обновлял правила, а другой обновлял |
 | `D8UserAuthzPermissionBrowserUnavailable` | У Permission Browser есть недоступные реплики |
 
-## Почему изменение ClusterAuthorizationRule применяется до 30 секунд?
+## Почему изменение ClusterAuthorizationRule применяется не сразу?
 
 API-сервер кеширует ответы вебхука авторизации. В ресурсе AuthorizationConfiguration, который создаёт `control-plane-manager`, для вебхука заданы `authorizedTTL: 5m`, `unauthorizedTTL: 30s` и `timeout: 3s`. Ключ кеша — весь SubjectAccessReview, поэтому ответ на повторный идентичный запрос приходит из кеша.
 
@@ -269,13 +269,13 @@ d8 k auth can-i --as=user@example.com get pods -n other-namespace
 
 Для ресурса только что установленного CRD, задержка достигает 40 секунд. Вебхук узнаёт из discovery, принадлежит ли ресурс неймспейсу, и запрашивает discovery не чаще раза в 10 секунд, после чего API-сервер кеширует ответ ещё на 30 секунд.
 
-В эти секунды ограничения по неймспейсам к такому ресурсу не применяются: вебхук о нём ещё не знает, мнения не имеет, и отвечает один только RBAC — поэтому субъект, которого правило ограничивает несколькими неймспейсами, может запросить новый ресурс по всему кластеру. Установка CRD требует куда больших прав, чем даёт это окно, поэтому discovery и запрашивается с ограниченной частотой, а не на каждый запрос. У Permission Browser есть такое же по порядку окно для его отчёта — до 30 секунд.
+В эти секунды ограничения по неймспейсам к такому ресурсу не применяются: вебхук о нём ещё не знает, мнения не имеет, и отвечает один только RBAC — поэтому субъект, которого правило ограничивает несколькими неймспейсами, может запросить новый ресурс по всему кластеру. Установка CRD требует значительно более широких прав, чем может предоставить это окно, поэтому discovery запрашивается с ограниченной частотой, а не на каждый запрос. У Permission Browser есть такое же по порядку окно для его отчёта — до 30 секунд.
 
 ## Почему правило требует мультитенантности?
 
 Параметры `limitNamespaces`, `namespaceSelector` и `allowAccessToSystemNamespaces` применяет вебхук авторизации, а он разворачивается, только если включён параметр [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy). Правило, в котором эти параметры заданы при выключенной мультитенантности, применяется без них: субъекты правила получают его уровень доступа во **всех** неймспейсах кластера, включая системные.
 
-Считаются только параметры, которые задают ограничение. Правило с `allowAccessToSystemNamespaces: false` или с пустым списком `limitNamespaces` в метрики не попадает.
+В метриках учитываются только параметры, которые задают ограничение. Правило с `allowAccessToSystemNamespaces: false` или с пустым списком `limitNamespaces` в метрики не попадает.
 
 О ситуации сообщают две метрики:
 
@@ -302,7 +302,7 @@ d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limi
 
 ## Как получить аналог ролей ClusterAdmin и SuperAdmin в гранулярной модели?
 
-Роли «одной сущностью», как `ClusterAdmin` и `SuperAdmin` упрощённой модели, в гранулярной модели нет — в ней разделяется управление платформой (системные роли) и доступ к приложениям (namespace- и проектные роли). Эквивалент собирается из **двух привязок**: ClusterRoleBinding на системную роль и [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) на проектную роль (она действует во всех проектах, включая создаваемые позже).
+В гранулярной модели нет ролей, объединяющих права в одну сущность, как `ClusterAdmin` и `SuperAdmin` в упрощённой модели. В ней разделяется управление платформой (системные роли) и доступ к приложениям (namespace- и проектные роли). Эквивалент собирается из **двух привязок**: ClusterRoleBinding на системную роль и [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) на проектную роль (она действует во всех проектах, включая создаваемые позже).
 
 Приблизительное соответствие уровней:
 
@@ -554,7 +554,7 @@ rbac.deckhouse.io/aggregate-to-mycustom-as: manager
    - watch
  ```
 
-Capability дополнит своими правами роль подсистемы, дав права на просмотр нового объекта.
+Capability добавит свои права в роль подсистемы, дав права на просмотр нового объекта.
 
 Особенности:
 
@@ -622,7 +622,7 @@ rules:
    - watch
  ```
 
-Хук отслеживает ClusterRoleBinding и при создании привязки анализирует все системные и подсистемные ролям, чтобы найти все объединенные в них capabilities с помощью проверки правила агрегации. Затем он берёт неймспейс из лейбла `rbac.deckhouse.io/namespace` и создает RoleBinding с namespace-ролью в этом неймспейсе.
+Хук отслеживает ClusterRoleBinding и при создании привязки анализирует все системные и подсистемные роли, чтобы найти все объединенные в них capabilities с помощью проверки правила агрегации. Затем он берёт неймспейс из лейбла `rbac.deckhouse.io/namespace` и создает RoleBinding с namespace-ролью в этом неймспейсе.
 
 Хук отслеживает только объекты с лейблом `rbac.deckhouse.io/scope: system` или `subsystem`. Capability без этого лейбла всё так же отдаёт свои правила роли через агрегацию, но её лейбл `rbac.deckhouse.io/namespace` не будет прочитан, и RoleBinding в неймспейсе не появится.
 
@@ -661,7 +661,7 @@ rules:
 
 - имя должно начинаться с `d8:custom:` (например, `d8:custom:namespace:developer`);
 - роль должна иметь лейбл `rbac.deckhouse.io/kind: custom-role`;
-- namespace- или проектная роль, которую будут выдавать через RoleBinding, должна также нести `rbac.deckhouse.io/delegatable: "true"`. Каждый пользовательский неймспейс — это проект, и RoleBinding в нём принимают только роли с этим лейблом. На системные и подсистемные роли лейбл ставить нельзя — вебхук такую роль отклонит;
+- namespace- или проектная роль, которую будут выдавать через RoleBinding, должна также иметь `rbac.deckhouse.io/delegatable: "true"`. Каждый пользовательский неймспейс — это проект, и RoleBinding в нём принимают только роли с этим лейблом. На системные и подсистемные роли лейбл ставить нельзя — вебхук отклонит такую роль;
 - роль **не может содержать собственных правил** (`rules`) — только агрегировать capabilities через `aggregationRule`. Права описываются в отдельных capabilities — так состав роли всегда прозрачен;
 - нельзя в одной роли агрегировать capabilities пользовательских областей (`namespace`, `project`) вместе с административными (`system`, подсистемы) — такая роль будет отклонена.
 
@@ -745,7 +745,7 @@ d8 k get clusterroles -l rbac.deckhouse.io/kind=capability \
 * `d8:manage:permission:module:<модуль>:view|edit` → `d8:system-capability:<модуль>:view|edit`;
 * `d8:use:capability:module:<модуль>:view|edit` → `d8:namespace-capability:<модуль>:view|edit`.
 
-Селекторы агрегации работают по лейблам, а не по именам, поэтому при миграции достаточно обновить селекторы. Прямые привязки к capabilities использовать не следует.
+Селекторы агрегации работают по лейблам, а не по именам ролей и capabilities. Поэтому после переименования объектов достаточно обновить селекторы агрегации, чтобы они соответствовали новой схеме. Прямые привязки к capabilities использовать не следует.
 
 Чтобы получить список всего, что ещё предстоит мигрировать при переходе на новую схему, используйте команду:
 
@@ -956,7 +956,7 @@ EOF
 
 ## Как узнать, что разрешено конкретному пользователю, группе или ServiceAccount'у?
 
-При включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) доступен ресурс SubjectAccessReport — обратная сторона WhoCan. Он отвечает на вопрос «что разрешено этому субъекту» и сразу возвращает готовый отчёт: какие роли и через какие привязки выданы, какие действия и над какими ресурсами разрешены в кластере и в каждом неймспейсе, и откуда взялось каждое право.
+При включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) доступен ресурс SubjectAccessReport — обратная сторона WhoCan. Он отвечает на вопрос «что разрешено этому субъекту» и сразу возвращает отчёт: какие роли и через какие привязки выданы, какие действия и над какими ресурсами разрешены в кластере и в каждом неймспейсе, и откуда взялось каждое право.
 
 ```shell
 d8 k create -o yaml -f - <<EOF
@@ -987,7 +987,7 @@ EOF
 
 ## Как пользователю увидеть список доступных ему неймспейсов?
 
-При включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) список неймспейсов фильтруется автоматически: команда `d8 k get namespaces` возвращает пользователю только те неймспейсы, к которым у него есть доступ — по любому из механизмов (привязки ролей, ProjectRoleBinding/ClusterProjectRoleBinding, ClusterAuthorizationRule/AuthorizationRule). Пользователь не видит чужих неймспейсов и не может по списку узнать об их существовании.
+При включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) список неймспейсов фильтруется автоматически: команда `d8 k get namespaces` возвращает пользователю только те неймспейсы, к которым у него есть доступ — независимо от механизма предоставления доступа (привязки ролей, ProjectRoleBinding/ClusterProjectRoleBinding, ClusterAuthorizationRule/AuthorizationRule). Пользователь не видит чужих неймспейсов и не может по списку узнать об их существовании.
 
 Тот же список отдаёт read-only ресурс `accessiblenamespaces` — его может запросить любой аутентифицированный пользователь **для самого себя**:
 

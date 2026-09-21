@@ -14,7 +14,7 @@ To limit a user's rights to specific namespaces in the granular role-based model
 
 In the basic role-based model, use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) CR.
 
-## What if there are two ClusterAuthorizationRules matching to a single user?
+## What if there are two ClusterAuthorizationRules matching a single user?
 
 In the example, the user `jane.doe@example.com` is in the `administrators` group. There are two cluster authorization rules:
 
@@ -53,12 +53,12 @@ spec:
 ```
 
 1. `jane.doe@example.com` has the right to get and list any objects in the namespaces labeled `env=review`
-2. `Administrators` can get, edit, list, and delete objects on the cluster level and in the namespaces labeled `env=prod` and `env=stage`.
+2. `Administrators` can get, edit, list, and delete objects at the cluster level and in the namespaces labeled `env=prod` and `env=stage`.
 
-Because `Jane Doe` matches two rules, some calculations will be made:
+Because `Jane Doe` matches two rules, the resulting permissions are calculated as follows:
 
-* `Jane Doe` will have the most powerful accessLevel across all matching rules — `ClusterAdmin`.
-* The `namespaceSelector` options will be combined, so that Jane will have access to all the namespaces labeled with `env` label of the following values: `review`, `stage`, or `prod`.
+* `Jane Doe` will have the highest accessLevel across all matching rules — `ClusterAdmin`.
+* The `namespaceSelector` options will be combined, so that Jane will have access to all the namespaces with the `env` label set to one of the following values: `review`, `stage`, or `prod`.
 
 {% alert level="warning" %}
 If there is a rule without the `namespaceSelector` option and `limitNamespaces` deprecated option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.
@@ -265,7 +265,7 @@ Example output:
 ]
 ```
 
-`Ready=True` with the reason `BindingsApplied` means the bindings match the rule. `Ready=False` names the problem: `InvalidSpec` (the rule cannot be rendered into bindings; the message says why) or `ApplyError` (the API server rejected a write; the message names the binding and the error). Events with the same reasons are recorded on the rule.
+`Ready=True` with the reason `BindingsApplied` means the bindings match the rule. `Ready=False` indicates the problem: `InvalidSpec` (the rule cannot be rendered into bindings; the message says why) or `ApplyError` (the API server rejected a write; the message names the binding and the error). Events with the same reasons are recorded on the rule.
 
 **Metrics.** The controller exposes them on the `metrics` port of its Pod and the `PodMonitor` `user-authz-controller` collects them (the `operator-prometheus` module must be enabled). The `kind` label is `ClusterAuthorizationRule`, `AuthorizationRule`, `dict` or `manage`.
 
@@ -486,7 +486,7 @@ Then there are selectors that implement aggregation:
    module: user-authn
   ```
 
-This way, your role will combine permissions of the `deckhouse` subsystem, `kubernetes` subsystem, and the `user-authn` module.
+This way, your role will combine the permissions of the `deckhouse` subsystem, `kubernetes` subsystem, and the `user-authn` module.
 
 Notes:
 
@@ -554,7 +554,7 @@ This selector would enable capabilities to be aggregated to a new subsystem by s
    - watch
  ```
 
-The capability will update the subsystem role to include its rights, so that the role bearer will be able to view the new object.
+The capability will add its permissions to the subsystem role. so that holders of the role will be able to view the new object.
 
 Notes:
 
