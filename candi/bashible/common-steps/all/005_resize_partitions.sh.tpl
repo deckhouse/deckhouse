@@ -67,8 +67,18 @@ grow_lvm() {
 }
 
 # resize only ext4 disks, because we don't use other fs as node disks.
-# exclude from resize all csi-driven disks, and disks, managed by kubelet (like https://kubernetes.io/docs/concepts/storage/volumes/#rbd).
-for partition in $(mount | grep -vE "kubernetes.io" | grep "ext4" | awk '{print $1}' | sort -u); do
+# exclude disks mounted inside the kubelet root dir.
+kubelet_root_dir={{ ((.nodeGroup).kubelet).rootDir | default "/var/lib/kubelet" | quote }}
+kubelet_root_dir="$(readlink -f "${kubelet_root_dir}" || echo "${kubelet_root_dir}")"
+kubelet_root_dir="${kubelet_root_dir%/}"
+
+if mount -t ext4 >/dev/null 2>&1; then
+  ext4_mounts="$(mount -t ext4 | grep -vF "kubernetes.io" | grep -vF "${kubelet_root_dir}/" | awk '{print $1}' | sort -u)" || true
+else
+  ext4_mounts="$(mount | grep "ext4" | grep -vF "kubernetes.io" | grep -vF "${kubelet_root_dir}/" | awk '{print $1}' | sort -u)" || true
+fi
+
+for partition in ${ext4_mounts}; do
   # check if disk is present
   if [[ ! -e "${partition}" ]]; then
     continue
