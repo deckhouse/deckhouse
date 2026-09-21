@@ -36,7 +36,7 @@ description: "Примеры настройки балансировщика с 
 {% alert level="warning" %}
 После включения модуля не происходит автоматическая замена имеющихся ресурсов типа Service на ServiceWithHealthcheck. Для замены имеющихся сервисов на использование ServiceWithHealthcheck выполните следующие действия:
 
-* Создайте ресурсы ServiceWithHealthcheck с такими же именами и параметрами, как существующие ресурсы Service, которые нужно заменить. При создании ServiceWithHealthcheck укажите обязательные параметры [`healthchecks`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck).
+* Создайте ресурсы ServiceWithHealthcheck с такими же именами и параметрами, как существующие ресурсы Service, которые нужно заменить. Секция [`healthcheck`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck) необязательна: укажите её, чтобы включить активные проверки работоспособности, или опустите, чтобы публиковать эндпоинты только по готовности подов, как у обычного Service.
 * Удалите ресурсы Service, которые требуется заменить ServiceWithHealthcheck.
 {% endalert %}
 

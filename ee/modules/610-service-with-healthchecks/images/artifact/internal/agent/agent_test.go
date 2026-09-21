@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -46,6 +47,16 @@ func newTestReconciler() *ServiceWithHealthchecksReconciler {
 func newTestSWH() networkv1alpha1.ServiceWithHealthchecks {
 	return networkv1alpha1.ServiceWithHealthchecks{
 		ObjectMeta: metav1.ObjectMeta{Name: testSWHName, Namespace: testNamespace, UID: testSWHUID},
+		// A TCP probe so the resource is probe-gated: these tests exercise probe-based publishing,
+		// and a resource carrying probe results has probes configured. The no-probe (readiness-only)
+		// path is covered separately.
+		Spec: networkv1alpha1.ServiceWithHealthchecksSpec{
+			Healthcheck: networkv1alpha1.Healthcheck{
+				Probes: []networkv1alpha1.Probe{
+					{Mode: "TCP", TCPHandler: &networkv1alpha1.TCPHandler{TargetPort: intstr.FromInt32(32412)}},
+				},
+			},
+		},
 	}
 }
 
@@ -339,6 +350,64 @@ func TestBuildEndpointsPublishesReadyPod(t *testing.T) {
 	}
 	if !endpointIsReady(endpoints[0]) {
 		t.Error("expected the endpoint to be ready")
+	}
+}
+
+// Without a healthcheck the resource behaves like a plain Service: ready pods are published (with no
+// probe results at all), not-ready ones are not.
+func TestBuildEndpointsWithoutProbesFollowsReadiness(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	swh.Spec.Healthcheck = networkv1alpha1.Healthcheck{} // no probes
+	swhKey := types.NamespacedName{Namespace: testNamespace, Name: testSWHName}
+
+	r.healthchecksResultsByServiceWithHealthchecks[swhKey] = []HealthcheckTarget{
+		{targetHost: "10.0.0.1", podName: "ready", podNamespace: testNamespace, podUID: "uid-ready", podReady: true},
+		{targetHost: "10.0.0.2", podName: "not-ready", podNamespace: testNamespace, podUID: "uid-not-ready", podReady: false},
+	}
+
+	endpoints := r.buildEndpoints(swh)
+	if len(endpoints) != 1 {
+		t.Fatalf("expected only the ready pod to be published, got %d endpoints", len(endpoints))
+	}
+	if endpoints[0].Addresses[0] != "10.0.0.1" || !endpointIsReady(endpoints[0]) || !endpointIsServing(endpoints[0]) {
+		t.Errorf("expected the ready pod published as ready and serving, got %#v", endpoints[0])
+	}
+}
+
+// A probe aimed at a UDP port is not blackbox-probeable: it must be skipped, and a resource whose only
+// probe targets UDP falls back to readiness-based publishing.
+func TestUDPProbeIsExcludedFromProbing(t *testing.T) {
+	spec := networkv1alpha1.ServiceWithHealthchecksSpec{}
+	spec.Ports = []corev1.ServicePort{
+		{Name: "syslog", Port: 514, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt32(1514)},
+		{Name: "admin", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8080)},
+	}
+	spec.Healthcheck.Probes = []networkv1alpha1.Probe{
+		{Mode: "TCP", TCPHandler: &networkv1alpha1.TCPHandler{TargetPort: intstr.FromInt32(1514)}}, // UDP target -> skipped
+		{Mode: "HTTP", HTTPHandler: &networkv1alpha1.HTTPHandler{TargetPort: intstr.FromInt32(8080)}},
+	}
+
+	r := newTestReconciler()
+	probes := r.getProbesFromServiceWithHealthchecks(spec, testPodIP, testNamespace)
+	if len(probes) != 1 {
+		t.Fatalf("expected the UDP-targeting probe to be skipped, got %d probes", len(probes))
+	}
+	if got := probes[0].GetPort(); got != 8080 {
+		t.Errorf("expected the surviving probe to target the TCP port 8080, got %d", got)
+	}
+	if !hasEffectiveProbes(spec) {
+		t.Error("a TCP probe remains, so the resource still has effective probes")
+	}
+
+	// A resource whose only probe targets a UDP port has no effective probes.
+	udpOnly := networkv1alpha1.ServiceWithHealthchecksSpec{}
+	udpOnly.Ports = []corev1.ServicePort{{Port: 514, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt32(1514)}}
+	udpOnly.Healthcheck.Probes = []networkv1alpha1.Probe{
+		{Mode: "TCP", TCPHandler: &networkv1alpha1.TCPHandler{TargetPort: intstr.FromInt32(1514)}},
+	}
+	if hasEffectiveProbes(udpOnly) {
+		t.Error("a resource whose only probe targets a UDP port must have no effective probes")
 	}
 }
 

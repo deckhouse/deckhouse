@@ -36,7 +36,7 @@ For the ServiceWithHealthchecks load balancers you create to work, the following
 {% alert level="warning" %}
 Enabling the module does not automatically replace existing Service resources with ServiceWithHealthcheck resources. To replace existing services with ServiceWithHealthcheck, follow these steps:
 
-* Create ServiceWithHealthcheck resources with the same names and parameters as the existing Service resources you want to replace. When creating a ServiceWithHealthcheck, specify the required [`healthchecks`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck) parameters.
+* Create ServiceWithHealthcheck resources with the same names and parameters as the existing Service resources you want to replace. The [`healthcheck`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck) section is optional: add it to enable active health probing, or omit it to publish endpoints based on pod readiness alone, like a plain Service.
 * Delete the Service resources that you want to replace with ServiceWithHealthcheck.
 {% endalert %}
 

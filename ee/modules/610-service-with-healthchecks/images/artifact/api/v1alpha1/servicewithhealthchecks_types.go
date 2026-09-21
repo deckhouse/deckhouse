@@ -20,7 +20,10 @@ type ServiceWithHealthchecksSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	corev1.ServiceSpec `json:",inline"`
-	Healthcheck        Healthcheck `json:"healthcheck"`
+	// Healthcheck is optional. When omitted (no probes), endpoints are published based on pod
+	// readiness alone, like a plain Service.
+	// +optional
+	Healthcheck Healthcheck `json:"healthcheck,omitempty"`
 }
 
 // ServiceWithHealthchecksStatus defines the observed state of ServiceWithHealthchecks

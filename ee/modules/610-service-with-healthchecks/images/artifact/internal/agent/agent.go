@@ -220,8 +220,10 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 		probesSuccessful := true
 		var failedProbes []string
 
-		// there are always success if svc options set to PublishNotReadyAddresses, otherwise need to evaluate
-		if !svc.Spec.PublishNotReadyAddresses {
+		// Probes matter only when the resource actually runs some. With PublishNotReadyAddresses,
+		// or with no effective probes (none configured, or all targeting UDP ports), a target is
+		// always considered probe-successful and its readiness is decided by the pod alone.
+		if !svc.Spec.PublishNotReadyAddresses && hasEffectiveProbes(svc.Spec) {
 			probesSuccessful = *areAllProbesSucceed(result.probeResultDetails)
 			failedProbes = result.FailedProbes()
 		}
@@ -347,6 +349,10 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 
 					if swhSpec.PublishNotReadyAddresses || swhSpec.ClusterIP == "None" {
 						continue // not need to check connections probe to pod, they are always successful
+					}
+
+					if !hasEffectiveProbes(swhSpec) {
+						continue // no probes to run; publishing follows pod readiness only
 					}
 
 					now := time.Now()
@@ -616,12 +622,21 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpoints(svc networkv1alpha1.S
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
+	// With no effective probes (none configured, or all targeting UDP ports) the resource behaves
+	// like a plain Service: a target is publishable on pod readiness alone. With probes, it becomes
+	// publishable once they pass.
+	probesConfigured := hasEffectiveProbes(svc.Spec)
+
 	for _, probeResult := range r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
-		probesSucceed := *areAllProbesSucceed(probeResult.probeResultDetails)
+		probesSucceed := !probesConfigured || *areAllProbesSucceed(probeResult.probeResultDetails)
+		healthy := probesSucceed
+		if !probesConfigured {
+			healthy = probeResult.podReady
+		}
 
 		// a terminating pod stays published until it disappears, so that consumers may fall
 		// back to it while no ready endpoint is left
-		if !svc.Spec.PublishNotReadyAddresses && !probesSucceed && !probeResult.podTerminating {
+		if !svc.Spec.PublishNotReadyAddresses && !healthy && !probeResult.podTerminating {
 			continue
 		}
 
@@ -711,7 +726,15 @@ func (r *ServiceWithHealthchecksReconciler) deleteServiceWithHealthchecks(swhNam
 
 func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks(svcSpec networkv1alpha1.ServiceWithHealthchecksSpec, targetHost, namespace string) []Prober {
 	probes := make([]Prober, 0, len(svcSpec.Healthcheck.Probes))
+	udpPorts := udpTargetPorts(svcSpec)
 	for _, serviceProbe := range svcSpec.Healthcheck.Probes {
+		// UDP cannot be blackbox-probed, so a probe aimed at a UDP port never runs. Skipping it
+		// here also keeps it out of hasEffectiveProbes, so such a target is published on readiness.
+		if _, isUDP := udpPorts[probeTargetPort(serviceProbe)]; isUDP {
+			r.logger.Warn("skipping probe targeting a UDP port; UDP is not suitable for blackbox healthchecking",
+				"target_port", probeTargetPort(serviceProbe), "mode", serviceProbe.Mode)
+			continue
+		}
 		switch strings.ToLower(serviceProbe.Mode) {
 		case "http":
 			probes = append(probes, FastHTTPProbeTarget{
@@ -762,6 +785,58 @@ func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks
 
 func (r *ServiceWithHealthchecksReconciler) getPostgreSQLCredentials(sqlHandler *networkv1alpha1.PGSQLHandler, namespace string) (PostgreSQLCredentials, error) {
 	return r.secretController.GetCachedSecret(types.NamespacedName{Namespace: namespace, Name: sqlHandler.AuthSecretName})
+}
+
+// udpTargetPorts returns the set of pod ports the resource exposes over UDP. UDP is not suitable for
+// blackbox healthchecking, so probes aimed at these ports are skipped when building the probe set and do
+// not gate endpoint publishing.
+func udpTargetPorts(spec networkv1alpha1.ServiceWithHealthchecksSpec) map[int]struct{} {
+	udp := make(map[int]struct{})
+	for i := range spec.Ports {
+		port := &spec.Ports[i]
+		if port.Protocol != corev1.ProtocolUDP {
+			continue
+		}
+		target := port.TargetPort.IntValue()
+		if target == 0 {
+			// An unset or named targetPort defaults to the service port number.
+			target = int(port.Port)
+		}
+		udp[target] = struct{}{}
+	}
+	return udp
+}
+
+// probeTargetPort returns the numeric pod port a probe connects to, or 0 if it cannot be determined.
+func probeTargetPort(probe networkv1alpha1.Probe) int {
+	switch strings.ToLower(probe.Mode) {
+	case "http":
+		if probe.HTTPHandler != nil {
+			return probe.HTTPHandler.TargetPort.IntValue()
+		}
+	case "tcp":
+		if probe.TCPHandler != nil {
+			return probe.TCPHandler.TargetPort.IntValue()
+		}
+	case "postgresql":
+		if probe.PostgreSQL != nil {
+			return probe.PostgreSQL.TargetPort.IntValue()
+		}
+	}
+	return 0
+}
+
+// hasEffectiveProbes reports whether the resource has at least one probe that will actually run. A
+// resource with no probes at all, or one whose probes all target UDP ports (which are skipped), is
+// published on pod readiness alone, like a plain Service.
+func hasEffectiveProbes(spec networkv1alpha1.ServiceWithHealthchecksSpec) bool {
+	udp := udpTargetPorts(spec)
+	for i := range spec.Healthcheck.Probes {
+		if _, isUDP := udp[probeTargetPort(spec.Healthcheck.Probes[i])]; !isUDP {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc networkv1alpha1.ServiceWithHealthchecks, podList corev1.PodList) {
