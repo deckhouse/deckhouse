@@ -1324,12 +1324,17 @@ var _ = Describe("NodeConfig controller", func() {
 			// rewritten by each in turn.
 			g.Expect(nc.Spec.Extensions).To(BeEmpty())
 			g.Expect(nc.Spec.OSImage).To(BeZero())
+			// Neither block is sent at all, so the API server defaults nothing
+			// into it: the defaults live inside kubelet and containerRuntime and
+			// are filled in whenever the key is present. A field the document did
+			// not ask for is one the agent reports as not applicable.
+			g.Expect(nc.Spec.Kubelet).To(BeZero())
+			g.Expect(nc.Spec.ContainerRuntime).To(BeZero())
 			settled = nc.ResourceVersion
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		// The API server defaults kubelet and containerRuntime on the stored
-		// object. A later pass that wrote them back empty would have them
-		// defaulted again and patch the node once a pass for ever.
+		// A defaulted block would differ from the render on every pass, and the
+		// node would be patched once a pass for ever.
 		By("re-rendering the node with nothing changed")
 		touchNodeGroup(ctx, ngName)
 		Consistently(func(g Gomega) {

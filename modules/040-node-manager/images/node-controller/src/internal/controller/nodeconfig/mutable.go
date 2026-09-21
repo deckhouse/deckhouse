@@ -126,7 +126,6 @@ func (r *Reconciler) reconcileMutableNode(ctx context.Context, ng *v1.NodeGroup,
 	if removed, err := r.removeOnSystemTypeChange(ctx, existing, desired, logger); removed || err != nil {
 		return err
 	}
-	keepUnownedFields(&desired.Spec, &existing.Spec)
 	if upToDate(existing, desired) {
 		return nil
 	}
@@ -143,20 +142,6 @@ func (r *Reconciler) reconcileMutableNode(ctx context.Context, ng *v1.NodeGroup,
 	}
 	logger.Info("NodeConfig updated", "node", desired.Name)
 	return nil
-}
-
-// keepUnownedFields carries over everything outside the fields listed below,
-// which are newMutableNodeConfig's whole output. The API server defaults kubelet
-// and containerRuntime on any object it stores, so writing those back empty
-// would have them defaulted again and patch the node once a pass for ever.
-func keepUnownedFields(desired, existing *internalv1alpha1.NodeSpec) {
-	owned := *desired
-	*desired = *existing
-	desired.SystemType = owned.SystemType
-	desired.NodeName = owned.NodeName
-	desired.APIServerEndpoints = owned.APIServerEndpoints
-	desired.RegistryPackagesProxyAccessTokenB64 = owned.RegistryPackagesProxyAccessTokenB64
-	desired.StaticPods = owned.StaticPods
 }
 
 // removeOnSystemTypeChange deletes an object rendered for the other kind of node

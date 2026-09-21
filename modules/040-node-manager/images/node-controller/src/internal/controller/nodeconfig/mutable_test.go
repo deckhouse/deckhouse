@@ -17,6 +17,9 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"encoding/json"
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -26,12 +29,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 // bashible configures the rest of such a node, so the document carries nothing
@@ -66,44 +68,44 @@ func TestAnEngineDocumentNamesItsSystemType(t *testing.T) {
 		"Immutable must be written explicitly, not left to the API default")
 }
 
-// The API server defaults kubelet and containerRuntime on every object it
-// stores. A render that wrote them back empty would be defaulted again and
-// patched again, once per pass for ever.
-func TestAMutableDocumentLeavesTheAPIServersOwnDefaultsAlone(t *testing.T) {
-	stored := &internalv1alpha1.NodeConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "worker-0",
-			Labels:          map[string]string{nodecommon.NodeGroupLabel: "worker", managedByLabel: managedByValue},
-			OwnerReferences: []metav1.OwnerReference{{APIVersion: "v1", Kind: "Node", Name: "worker-0", UID: "uid-1"}},
-		},
-		Spec: internalv1alpha1.NodeSpec{
-			SystemType:         internalv1alpha1.SystemTypeMutable,
-			NodeName:           "worker-0",
-			APIServerEndpoints: []string{"10.0.0.5:6443"},
-			// What the CRD defaults on any object it stores, and what bashible
-			// alone configures on such a node.
-			Kubelet:          internalv1alpha1.Kubelet{MaxPods: 120, ContainerLogMaxSize: "50Mi", ContainerLogMaxFiles: 4},
-			ContainerRuntime: internalv1alpha1.ContainerRuntime{MaxConcurrentDownloads: ptr.To(8), RegistryOwner: "nodelet", SandboxImage: "registry.k8s.io/pause:3.10"},
-		},
+// A Mutable document carries the fields below and nothing else, on the wire as
+// well as in Go. The API server fills in the defaults inside kubelet and
+// containerRuntime whenever those keys are present at all, and the agent reports
+// every spec field outside its own six as not applicable — every such node would
+// be Degraded for ever over two blocks that were sent empty.
+func TestAMutableDocumentSendsNoEmptyBlocks(t *testing.T) {
+	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}}
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0", UID: "uid-1"}}
+	in := mutableInputs{
+		APIServerEndpoints:         []string{"10.0.0.5:6443"},
+		RegistryPackagesProxyToken: "dG9rZW4=",
+	}
+	base := []string{"systemType", "nodeName", "apiServerEndpoints", "registryPackagesProxyAccessTokenB64"}
+
+	keysOf := func(t *testing.T, in mutableInputs) ([]string, []byte) {
+		t.Helper()
+
+		raw, err := json.Marshal(newMutableNodeConfig(ng, node, in).Spec)
+		require.NoError(t, err)
+		var fields map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(raw, &fields))
+		return slices.Collect(maps.Keys(fields)), raw
 	}
 
-	scheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(scheme))
-	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-	r := &Reconciler{}
-	r.Client = fake.NewClientBuilder().WithScheme(scheme).WithObjects(stored).Build()
+	t.Run("no static pods", func(t *testing.T) {
+		keys, raw := keysOf(t, in)
+		require.ElementsMatch(t, base, keys, "on the wire: %s", raw)
+	})
 
-	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{SystemType: v1.SystemTypeMutable}}
-	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0", UID: "uid-1"}}
-	p := newPass()
-	p.mutable = &mutableInputsResult{inputs: mutableInputs{APIServerEndpoints: []string{"10.0.0.5:6443"}}}
-
-	require.NoError(t, r.reconcileMutableNode(t.Context(), ng, node, logr.Discard(), p))
-
-	after := &internalv1alpha1.NodeConfig{}
-	require.NoError(t, r.Client.Get(t.Context(), types.NamespacedName{Name: "worker-0"}, after))
-	require.Equal(t, stored.ResourceVersion, after.ResourceVersion, "a settled document must not be written again")
-	require.Equal(t, stored.Spec.Kubelet, after.Spec.Kubelet)
+	t.Run("one static pod", func(t *testing.T) {
+		withPod := in
+		withPod.NodeStaticPodRequests = []*deckhousev1alpha1.NodeStaticPodRequest{{
+			ObjectMeta: metav1.ObjectMeta{Name: "probe"},
+			Spec:       deckhousev1alpha1.NodeStaticPodRequestSpec{Manifest: "apiVersion: v1\nkind: Pod\n"},
+		}}
+		keys, raw := keysOf(t, withPod)
+		require.ElementsMatch(t, append(base, "staticPods"), keys, "on the wire: %s", raw)
+	})
 }
 
 // spec.systemType is immutable on the object, so a node relabelled into a group

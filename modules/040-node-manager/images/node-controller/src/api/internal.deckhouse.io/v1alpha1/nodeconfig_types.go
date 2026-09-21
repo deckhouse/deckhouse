@@ -252,7 +252,7 @@ type NodeSpec struct {
 	// Storage selects the target disk for the OS install. The partition layout
 	// is fixed (boot/config/data), so only the whole-disk device is needed.
 	// +optional
-	Storage Storage `json:"storage,omitempty"`
+	Storage Storage `json:"storage,omitzero"`
 	// Extensions are the signed verity sysext images to merge onto the root.
 	// +optional
 	// +listType=map
@@ -277,16 +277,16 @@ type NodeSpec struct {
 	StaticPods []StaticPod `json:"staticPods,omitempty"`
 	// Kernel holds sysctl settings and kernel modules to load.
 	// +optional
-	Kernel Kernel `json:"kernel,omitempty"`
+	Kernel Kernel `json:"kernel,omitzero"`
 	// Network holds hostname, DNS, NTP, interfaces and routes.
 	// +optional
-	Network Network `json:"network,omitempty"`
+	Network Network `json:"network,omitzero"`
 	// Kubelet holds kubelet configuration parameters.
 	// +optional
-	Kubelet Kubelet `json:"kubelet,omitempty"`
+	Kubelet Kubelet `json:"kubelet,omitzero"`
 	// ContainerRuntime holds containerd configuration.
 	// +optional
-	ContainerRuntime ContainerRuntime `json:"containerRuntime,omitempty"`
+	ContainerRuntime ContainerRuntime `json:"containerRuntime,omitzero"`
 	// APIServerEndpoints is the list of API server URLs the node connects to
 	// (via the node-local API proxy).
 	// +optional
@@ -311,7 +311,7 @@ type NodeSpec struct {
 	StatusToken string `json:"statusToken,omitempty"`
 	// UpdatePolicy controls how and when the node is updated.
 	// +optional
-	UpdatePolicy UpdatePolicy `json:"updatePolicy,omitempty"`
+	UpdatePolicy UpdatePolicy `json:"updatePolicy,omitzero"`
 
 	// RegistryPackagesProxyAccessTokenB64 is a base64-encoded token used to
 	// authenticate against the registry packages proxy. Deliberately not marked
