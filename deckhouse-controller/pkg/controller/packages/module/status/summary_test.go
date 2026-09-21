@@ -81,9 +81,58 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				ConditionInstalled: {metav1.ConditionFalse, "Disabled"},
 				ConditionReady:     {metav1.ConditionFalse, "Disabled"},
 			},
-			state:   statePending,
-			message: "Installation is blocked: the module is disabled",
+			state:   stateDisabled,
+			message: "Module is disabled",
 			tip:     "Enable the module to start the installation.",
+		},
+		{
+			// The live shape of a module that never installed: Load set Pending
+			// and only Enable clears it, which never runs for a disabled module.
+			// The verdict must still win — see pipelineBlocker.
+			name: "install: module disabled by the bundle while pending",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionLoaded), metav1.ConditionTrue, "Loaded"),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Pending"),
+				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DisabledByBundle"),
+			},
+			wantConds: map[string]*expectedCondition{
+				ConditionEnabled:   {metav1.ConditionFalse, "DisabledByBundle"},
+				ConditionInstalled: {metav1.ConditionFalse, "DisabledByBundle"},
+				ConditionReady:     {metav1.ConditionFalse, "DisabledByBundle"},
+			},
+			state:   stateDisabled,
+			message: "Module is disabled by the edition bundle",
+			tip:     "Enable the module explicitly to override the bundle default.",
+		},
+		{
+			name: "install: module disabled by the enabled-script",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DisabledByScript"),
+			},
+			wantConds: map[string]*expectedCondition{
+				ConditionEnabled:   {metav1.ConditionFalse, "DisabledByScript"},
+				ConditionInstalled: {metav1.ConditionFalse, "DisabledByScript"},
+				ConditionReady:     {metav1.ConditionFalse, "DisabledByScript"},
+			},
+			state:   stateDisabled,
+			message: "Module is disabled by its enabled-script",
+			tip:     "The enabled-script evaluated to false. Check the cluster state the script depends on, or enable the module explicitly.",
+		},
+		{
+			// A blocked module is not a disabled one: it wants to install and
+			// cannot, so the state stays Pending even though Load set Pending too.
+			name: "install: dependency not enabled while pending",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Pending"),
+				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
+			},
+			wantConds: map[string]*expectedCondition{
+				ConditionEnabled:   {metav1.ConditionFalse, "DependencyNotEnabled"},
+				ConditionInstalled: {metav1.ConditionFalse, "DependencyNotEnabled"},
+			},
+			state:   statePending,
+			message: "Installation is blocked: a required module is not enabled",
+			tip:     "Enable the required module listed in the condition message. The installation will continue automatically.",
 		},
 		{
 			name: "install: dependency not enabled",

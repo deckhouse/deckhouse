@@ -372,7 +372,8 @@ func (s *Scheduler) schedule() {
 // compute recomputes every node's decision in topological order, guaranteeing
 // that dependencies are resolved before dependents. Nodes whose enabled status
 // flipped are individually reset to idle so they re-enter the scheduling path
-// on the next pass; nodes that lose eligibility emit an [EventDisable]. No
+// on the next pass; every not-enabled node whose decision differs from the last
+// published one emits an [EventDisable], including on its first pass. No
 // global reconverge happens — the per-node reset absorbs a decision change,
 // and canSchedule re-reads live state (order tier and dependency edges) on
 // every pass, so one node's decision never invalidates another's.
@@ -391,6 +392,18 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	for _, n := range sorted {
 		current := n.enabled()
 		n.decision = rule.Resolve(n.rules...)
+
+		// The verdict is published, not the transition: a node born not-enabled
+		// never flips, so the check below would leave the runtime without a
+		// reason to report. Comparing against the last published decision also
+		// re-sends when only the reason changed (bundle -> script), and stays
+		// silent while the verdict holds.
+		if !n.enabled() && n.decision != n.published {
+			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.decision.Reason, Message: n.decision.Message})
+		}
+
+		n.published = n.decision
+
 		if current == n.enabled() {
 			continue
 		}
@@ -407,10 +420,6 @@ func (s *Scheduler) compute() ([]string, []*node) {
 		n.scheduleReason = ReasonDecisionChanged
 		if n.decision.Reason != "" {
 			n.scheduleReason += ":" + n.decision.Reason
-		}
-
-		if !n.enabled() {
-			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.decision.Reason, Message: n.decision.Message})
 		}
 	}
 

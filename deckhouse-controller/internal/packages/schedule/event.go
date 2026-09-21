@@ -20,7 +20,9 @@ type EventKind int
 const (
 	// EventSchedule is emitted when a node transitions from idle to scheduled.
 	EventSchedule EventKind = iota
-	// EventDisable is emitted when a node loses eligibility during a scheduling pass.
+	// EventDisable carries the verdict of a node that is not enabled: it is emitted
+	// when a node loses eligibility, when it is first resolved as not enabled, and
+	// when the reason behind an existing not-enabled verdict changes.
 	EventDisable
 )
 

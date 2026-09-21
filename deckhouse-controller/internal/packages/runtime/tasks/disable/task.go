@@ -38,6 +38,8 @@ const (
 type packageI interface {
 	GetName() string
 	GetHooksQueues() []string
+	// HooksInitialized reports whether the hook controllers have been built.
+	HooksInitialized() bool
 	// RunHooksByBinding executes hooks matching the given binding type (e.g., AfterDeleteHelm).
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 	DisableHooks()
@@ -118,6 +120,8 @@ func (t *task) Execute(ctx context.Context) error {
 //  2. Run BeforeDeleteHelm hooks (on failure: skip uninstall and AfterDeleteHelm, retry with backoff)
 //  3. Uninstall Helm release
 //  4. Run AfterDeleteHelm hooks
+//
+// Steps 2 and 4 are skipped when the hook controllers were never built — see below.
 //  5. Disable all schedule hooks
 //  6. Stop all Kubernetes event monitors
 func (t *task) disablePackage(ctx context.Context) error {
@@ -132,14 +136,25 @@ func (t *task) disablePackage(ctx context.Context) error {
 	t.nelm.RemoveMonitor(t.pkg.GetName())
 
 	if !t.keep {
-		t.logger.Debug("run before delete helm hooks")
+		// A package the scheduler never enabled has hooks in its storage but no hook
+		// controllers behind them, so running one dereferences a nil controller. The
+		// release is still taken down: a package that resolves to disabled on the
+		// first pass may own a release left by a previous process.
+		hooks := t.pkg.HooksInitialized()
+		if !hooks {
+			t.logger.Debug("skip delete helm hooks, hook controllers are not initialized")
+		}
 
-		// Run beforeDeleteHelm hooks just before helm uninstall. On hook failure,
-		// helm uninstall and afterDeleteHelm are NOT executed and the disable is
-		// retried with backoff. Symmetric to beforeHelm aborting a helm install.
-		if err := t.pkg.RunHooksByBinding(ctx, addontypes.BeforeDeleteHelm); err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("run before delete helm hooks: %w", err)
+		if hooks {
+			t.logger.Debug("run before delete helm hooks")
+
+			// Run beforeDeleteHelm hooks just before helm uninstall. On hook failure,
+			// helm uninstall and afterDeleteHelm are NOT executed and the disable is
+			// retried with backoff. Symmetric to beforeHelm aborting a helm install.
+			if err := t.pkg.RunHooksByBinding(ctx, addontypes.BeforeDeleteHelm); err != nil {
+				span.SetStatus(codes.Error, err.Error())
+				return fmt.Errorf("run before delete helm hooks: %w", err)
+			}
 		}
 
 		t.logger.Debug("delete nelm release")
@@ -148,12 +163,14 @@ func (t *task) disablePackage(ctx context.Context) error {
 			return err
 		}
 
-		t.logger.Debug("run after delete helm hooks")
+		if hooks {
+			t.logger.Debug("run after delete helm hooks")
 
-		// Run after delete helm hooks
-		if err := t.pkg.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm); err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("run after delete helm hooks: %w", err)
+			// Run after delete helm hooks
+			if err := t.pkg.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm); err != nil {
+				span.SetStatus(codes.Error, err.Error())
+				return fmt.Errorf("run after delete helm hooks: %w", err)
+			}
 		}
 	}
 

@@ -26,6 +26,9 @@ import (
 //
 //   - Pending:   first install has not started or is blocked by an external
 //     factor (Installed=False with a Pending or scheduler-verdict reason).
+//   - Disabled:  the module is switched off and was never installed — the user,
+//     the bundle or the enabled-script says no, so nothing is pending. Its
+//     counterpart for a module that was already running is Suspended.
 //   - Failed:    no working version is running — either first install failed
 //     (Installed=False, other reason) or an update failed at a late stage.
 //   - Updating:  a new version is installing while the old one still runs.
@@ -39,6 +42,7 @@ import (
 //     down; every condition reports Deleting until the resource disappears.
 const (
 	statePending   = "Pending"
+	stateDisabled  = "Disabled"
 	stateFailed    = "Failed"
 	stateUpdating  = "Updating"
 	stateReady     = "Ready"
@@ -87,19 +91,23 @@ var summaryTable = map[phase]map[string]advice{
 
 		// Scheduler verdicts — the module is blocked, not broken. Which gate
 		// blocked it is the whole message, so every verdict has its own row.
+		//
+		// The intentional-disable family reports Disabled rather than Pending:
+		// nothing is waiting to happen, the module is switched off. Everything
+		// below it is a module that wants to install and cannot.
 		reasonDisabled: {
-			statePending,
-			"Installation is blocked: the module is disabled",
+			stateDisabled,
+			"Module is disabled",
 			"Enable the module to start the installation.",
 		},
 		reasonDisabledByBundle: {
-			statePending,
-			"Installation is blocked: the module is disabled by the edition bundle",
+			stateDisabled,
+			"Module is disabled by the edition bundle",
 			"Enable the module explicitly to override the bundle default.",
 		},
 		reasonDisabledByScript: {
-			statePending,
-			"Installation is blocked: the module is disabled by its enabled-script",
+			stateDisabled,
+			"Module is disabled by its enabled-script",
 			"The enabled-script evaluated to false. Check the cluster state the script depends on, or enable the module explicitly.",
 		},
 		"EnabledScriptError": {

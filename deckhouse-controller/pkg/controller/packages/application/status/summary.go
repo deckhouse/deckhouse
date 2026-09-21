@@ -26,6 +26,8 @@ import (
 //
 //   - Pending:   first install has not started or is blocked by an external
 //     factor (Installed=False, reason Pending or RequirementsUnmet).
+//   - Disabled:  the application is switched off and was never installed — the
+//     scheduler's verdict is an intentional disable, so nothing is pending.
 //   - Failed:    no working version is serving — either first install failed
 //     (Installed=False, other reason) or an update failed at a late stage
 //     (UpdateInstalled=False together with Ready=False).
@@ -41,6 +43,7 @@ import (
 //     disappears.
 const (
 	statePending   = "Pending"
+	stateDisabled  = "Disabled"
 	stateFailed    = "Failed"
 	stateUpdating  = "Updating"
 	stateReady     = "Ready"
@@ -222,6 +225,26 @@ var summaryTable = map[phase]map[string]advice{
 	},
 }
 
+// Scheduler verdicts of the intentional-disable family. The application mapper
+// collapses every verdict into RequirementsUnmet, so the Summary reads the
+// internal reason directly to tell "switched off" from "requirement lost" —
+// the user action differs.
+const (
+	reasonDisabled         = "Disabled"
+	reasonDisabledByBundle = "DisabledByBundle"
+	reasonDisabledByScript = "DisabledByScript"
+)
+
+// summaryDisabled is the fixed Summary for an application that is switched off
+// and was never installed. Which gate said no is not spelled out as it is for
+// modules: an application is disabled through its own spec or ModuleConfig, so
+// the bundle and script verdicts are not part of its normal vocabulary.
+var summaryDisabled = advice{
+	state:   stateDisabled,
+	message: "Application is disabled",
+	tip:     "Enable the application to start the installation.",
+}
+
 // summarySuspended is the fixed Summary for a running app whose hard dependency
 // was disabled.
 var summarySuspended = advice{
@@ -252,6 +275,18 @@ var summaryUpdating = advice{
 	state:   stateUpdating,
 	message: "Update in progress: the new version is being applied; the previous version is still serving",
 	tip:     "The previous version continues to serve while the new version is applied. No action is required unless this state persists.",
+}
+
+// isIntentionalDisable reports whether the scheduler's verdict is a deliberate
+// switch-off rather than an unmet requirement.
+func isIntentionalDisable(state condmap.State) bool {
+	reason, _ := state.GetIntReason(intRequirementsMet)
+	switch reason {
+	case reasonDisabled, reasonDisabledByBundle, reasonDisabledByScript:
+		return true
+	}
+
+	return false
 }
 
 // summarize computes the user-facing Summary (state, message, tip) from the
@@ -285,6 +320,9 @@ func summarize(state condmap.State) (string, string, string) {
 				return summaryReady.state, summaryReady.message, summaryReady.tip
 			}
 			return adviseFor(phaseInstall, "Pending")
+		}
+		if blocker == intRequirementsMet && isIntentionalDisable(state) {
+			return summaryDisabled.state, summaryDisabled.message, summaryDisabled.tip
 		}
 		return adviseFor(phaseInstall, reasonOf(state, blocker))
 

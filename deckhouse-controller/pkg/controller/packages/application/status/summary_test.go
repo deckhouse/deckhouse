@@ -101,6 +101,38 @@ func TestLifecycleScenarios(t *testing.T) {
 			tip:     "Check the application's spec.requirements: required Deckhouse version or dependent modules do not match the cluster. Update Deckhouse, enable required modules, or adjust requirements.",
 		},
 		{
+			// Load sets Pending and only Enable clears it, so a switched-off
+			// application carries both: the verdict must win over Pending.
+			name: "install: application disabled while pending",
+			opts: []mappingOption{
+				intCond(intPending, metav1.ConditionTrue, "Waiting"),
+				intCond(intRequirementsMet, metav1.ConditionFalse, "Disabled"),
+			},
+			wantConds: map[string]*expectedCondition{
+				ConditionInstalled: {metav1.ConditionFalse, "RequirementsUnmet"},
+				ConditionReady:     {metav1.ConditionFalse, "RequirementsUnmet"},
+			},
+			state:   stateDisabled,
+			message: "Application is disabled",
+			tip:     "Enable the application to start the installation.",
+		},
+		{
+			// An unmet requirement is not a switch-off: the application wants
+			// to install and cannot, so the state stays Pending.
+			name: "install: requirements unmet while pending",
+			opts: []mappingOption{
+				intCond(intPending, metav1.ConditionTrue, "Waiting"),
+				intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled"),
+			},
+			wantConds: map[string]*expectedCondition{
+				ConditionInstalled: {metav1.ConditionFalse, "RequirementsUnmet"},
+				ConditionReady:     {metav1.ConditionFalse, "RequirementsUnmet"},
+			},
+			state:   statePending,
+			message: "Installation is blocked: application requirements are not satisfied",
+			tip:     "Check the application's spec.requirements: required Deckhouse version or dependent modules do not match the cluster. Update Deckhouse, enable required modules, or adjust requirements.",
+		},
+		{
 			name: "install: download/mount failed",
 			opts: []mappingOption{intCond(intReadyOnFilesystem, metav1.ConditionFalse, "MountFailed")},
 			wantConds: map[string]*expectedCondition{

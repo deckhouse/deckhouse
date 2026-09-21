@@ -124,6 +124,12 @@ type node struct {
 
 	decision rule.Decision // Last computed decision from the rule chain; the node is enabled iff Kind == rule.Enable.
 
+	// published is the decision consumers were last told about. compute()
+	// compares it with a freshly resolved not-enabled decision, so a node born
+	// not-enabled and a node whose verdict merely changed its reason both reach
+	// the runtime — while an unchanged verdict is not re-sent on every pass.
+	published rule.Decision
+
 	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and rule inputs.
 
 	subscriptions map[string]struct{} // Subscriptions to other nodes: this node will be notified when the subscribed node changes state.

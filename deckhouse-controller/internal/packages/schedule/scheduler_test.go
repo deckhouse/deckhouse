@@ -637,6 +637,76 @@ func (s *SchedulerSuite) TestEnabledToDisabledFlipEmitsEventDisable() {
 	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
 }
 
+// disableEvent returns the EventDisable buffered for the named node, or nil.
+func disableEvent(events []schedule.Event, name string) *schedule.Event {
+	for _, e := range events {
+		if e.Kind == schedule.EventDisable && e.Name == name {
+			event := e
+
+			return &event
+		}
+	}
+
+	return nil
+}
+
+// TestBornDisabledEmitsVerdict verifies that a node resolved as not enabled on
+// its very first pass emits an EventDisable. Nothing flips there, yet the
+// runtime still needs the verdict — otherwise the package reports "waiting to
+// converge" forever. A second pass with the same verdict stays silent.
+func (s *SchedulerSuite) TestBornDisabledEmitsVerdict() {
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		log.NewNop(),
+		schedule.WithBundleChecker(func(edition.Licensing) bool { return false }),
+	)
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "mod",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0, Floor: rule.Static(rule.Disable)},
+	}))
+
+	event := disableEvent(s.collectEvents(), "mod")
+	s.Require().NotNil(event, "a node born not enabled must publish its verdict")
+	s.Equal("DisabledByBundle", event.Reason)
+	s.Contains(event.Message, "not enabled in the active bundle")
+
+	s.sched.Schedule()
+	s.Nil(disableEvent(s.collectEvents(), "mod"), "an unchanged verdict must not be re-sent")
+}
+
+// TestVerdictReasonChangeEmitsVerdict verifies that a node which stays off but
+// for a different reason publishes the new verdict: the reason reaches the
+// user as a condition, so a stale one would name the wrong gate.
+func (s *SchedulerSuite) TestVerdictReasonChangeEmitsVerdict() {
+	enabledState := make(map[string]*bool)
+
+	s.sched.Stop()
+	s.sched = schedule.NewScheduler(
+		log.NewNop(),
+		schedule.WithBundleChecker(func(edition.Licensing) bool { return false }),
+		schedule.WithDynamicGetter(func(module string) *bool { return enabledState[module] }),
+	)
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "mod",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0, Floor: rule.Static(rule.Disable)},
+	}))
+	s.Require().Equal("DisabledByBundle", disableEvent(s.collectEvents(), "mod").Reason)
+
+	// The user disables the module explicitly: still off, but the gate changed.
+	enabledState["mod"] = boolPtr(false)
+	s.sched.Schedule()
+
+	event := disableEvent(s.collectEvents(), "mod")
+	s.Require().NotNil(event, "a changed verdict must be published")
+	s.Equal("Disabled", event.Reason)
+}
+
 // TestStatusFlipResetsOnlyAffectedNode is the regression guard for the
 // reconverge removal: when one node's Enabled status flips, other nodes'
 // state must not be reset.

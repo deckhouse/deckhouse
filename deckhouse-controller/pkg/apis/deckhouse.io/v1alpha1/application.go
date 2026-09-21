@@ -168,9 +168,9 @@ type ApplicationStatus struct {
 // machine on top of conditions.
 type ApplicationStatusSummary struct {
 	// State is the high-level lifecycle state observed for the application.
-	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
+	// Always one of: Pending, Disabled, Failed, Updating, Ready, Degraded, Suspended, Deleting.
 	// +optional
-	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting]
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Disabled, Failed, Updating, Ready, Degraded, Suspended, Deleting]
 	State string `json:"state,omitempty"`
 
 	// Message is a human-readable description of the current state.
