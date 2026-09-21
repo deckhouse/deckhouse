@@ -16,7 +16,7 @@ spec:
               properties:
                 nodeGroupSelector:
                   description: |
-                    Ограничивает под узлами перечисленных NodeGroup. Если не указана ни одна группа, выбираются все NodeGroup, включая bashible-группы: их узлы получают манифест от шага bashible, а не из своего NodeConfig.
+                    Ограничивает под узлами перечисленных NodeGroup. Если не указана ни одна группа, выбираются все NodeGroup, включая bashible-группы: агент узла работает на узлах любого типа и пишет манифест из NodeConfig этого узла.
                   properties:
                     matchNames:
                       description: |
