@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
 
@@ -42,20 +43,26 @@ func main() {
 		fmt.Fprintf(os.Stderr, "register core scheme: %v\n", err)
 		os.Exit(1)
 	}
+	instance := &unstructured.Unstructured{}
+	instance.SetGroupVersionKind(bareMetalInstanceGVK)
+	bmh := &unstructured.Unstructured{}
+	bmh.SetGroupVersionKind(bareMetalHostGVK)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
-		Cache:  cache.Options{DefaultNamespaces: map[string]cache.Config{targetNamespace: {}, providerNamespace: {}}},
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{targetNamespace: {}},
+			ByObject: map[client.Object]cache.ByObject{
+				instance:         {Namespaces: map[string]cache.Config{targetNamespace: {}}},
+				bmh:              {Namespaces: map[string]cache.Config{targetNamespace: {}}},
+				&corev1.Secret{}: {Namespaces: map[string]cache.Config{targetNamespace: {}, providerNamespace: {}}},
+			},
+		},
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "create manager: %v\n", err)
 		os.Exit(1)
 	}
-
-	instance := &unstructured.Unstructured{}
-	instance.SetGroupVersionKind(bareMetalInstanceGVK)
-	bmh := &unstructured.Unstructured{}
-	bmh.SetGroupVersionKind(bareMetalHostGVK)
 
 	r := &reconciler{
 		Client:            mgr.GetClient(),
