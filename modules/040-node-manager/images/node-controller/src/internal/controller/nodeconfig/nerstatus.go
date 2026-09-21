@@ -22,6 +22,7 @@ import (
 	"slices"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,8 +67,14 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 		return fmt.Errorf("read what the nodes report about NodeExtensionRequests: %w", err)
 	}
 
+	// The denominator: read once for every request, since it is the same listing.
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes); err != nil {
+		return fmt.Errorf("list Nodes for the NodeExtensionRequest counts: %w", err)
+	}
+
 	for i := range ners.Items {
-		if err := r.updateNERStatus(ctx, &ners.Items[i], conflicts, groups, outcomes[ners.Items[i].Name]); err != nil {
+		if err := r.updateNERStatus(ctx, &ners.Items[i], conflicts, groups, nodes.Items, outcomes[ners.Items[i].Name]); err != nil {
 			logger.Error(err, "cannot update NodeExtensionRequest status", "request", ners.Items[i].Name)
 		}
 	}
@@ -108,10 +115,12 @@ func (r *Reconciler) allNodeGroupNames(ctx context.Context) ([]string, error) {
 
 // updateNERStatus computes and patches one request's status, skipping the write
 // when nothing changed.
-func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, immutableGroups []string, outcome nerOutcome) error {
+func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, immutableGroups []string, nodes []corev1.Node, outcome nerOutcome) error {
 	desired := ner.Status.DeepCopy()
 	desired.ObservedGeneration = ner.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(ner.Spec.NodeGroupSelector.MatchNames, immutableGroups)
+	desired.MatchedNodes = matchedNodeCount(nodes, desired.MatchedNodeGroups)
+	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, outcome.applied, outcome.failed)
 	desired.AppliedNodes = outcome.applied
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
@@ -133,7 +142,7 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 		desired.Phase = phaseReady
 		status = metav1.ConditionTrue
 		reason = reasonResolved
-		message = fmt.Sprintf("the sysext resolved; %d node(s) report it applied", outcome.applied)
+		message = fmt.Sprintf("the sysext resolved; %d of %d node(s) report it applied", outcome.applied, desired.MatchedNodes)
 	}
 	meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
 		Type:               readyConditionType,

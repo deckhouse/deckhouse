@@ -35,6 +35,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 func nsprStatusScheme(t *testing.T) *runtime.Scheme {
@@ -43,9 +44,7 @@ func nsprStatusScheme(t *testing.T) *runtime.Scheme {
 	require.NoError(t, v1.AddToScheme(scheme))
 	require.NoError(t, deckhousev1alpha1.AddToScheme(scheme))
 	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-	// The status pass runs both halves of the roll-up, and the bashible half
-	// lists Nodes: a bashible node reports through an annotation rather than
-	// through a NodeConfig.
+	// The pass lists Nodes for the denominator of the counts it publishes.
 	require.NoError(t, corev1.AddToScheme(scheme))
 	return scheme
 }
@@ -205,4 +204,67 @@ func TestNSPRStatusSettlesAndIsNotRewritten(t *testing.T) {
 	again := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, again))
 	require.Equal(t, written.ResourceVersion, again.ResourceVersion, "an unchanged status must not be patched")
+}
+
+// A count with no denominator answers nothing: 3 applied out of how many?
+func TestTheStatusSaysHowManyNodesWereAskedAndHowManyHaveNotAnswered(t *testing.T) {
+	nodes := []corev1.Node{
+		nodeInGroup("worker-0", "worker"), nodeInGroup("worker-1", "worker"),
+		nodeInGroup("worker-2", "worker"), nodeInGroup("master-0", "master"),
+	}
+	if got := matchedNodeCount(nodes, []string{"worker"}); got != 3 {
+		t.Fatalf("matchedNodeCount = %d, want 3", got)
+	}
+	if got := pendingNodeCount(3, 1, 1); got != 1 {
+		t.Fatalf("pendingNodeCount = %d, want 1", got)
+	}
+	// A node reports before the node list catches up: never a negative count.
+	if got := pendingNodeCount(1, 2, 0); got != 0 {
+		t.Fatalf("pendingNodeCount = %d, want 0", got)
+	}
+}
+
+func nodeInGroup(name, group string) corev1.Node {
+	return corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name,
+		Labels: map[string]string{nodecommon.NodeGroupLabel: group}}}
+}
+
+// A static pod reaches bashible groups too, and after task 10 their nodes report
+// through a NodeConfig like every other: the denominator counts them, and a node
+// yet to answer is pending rather than missing.
+func TestNSPRStatusCountsTheNodesOfEveryMatchedGroup(t *testing.T) {
+	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{
+		NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: []string{"mutable-workers"}},
+	})
+	mutableNode := nodeInGroup("mutable-0", "mutable-workers")
+	pendingNode := nodeInGroup("mutable-1", "mutable-workers")
+	otherNode := nodeInGroup("worker-0", "worker")
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(
+			&object,
+			immutableGroup("worker"),
+			&v1.NodeGroup{
+				ObjectMeta: metav1.ObjectMeta{Name: "mutable-workers"},
+				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, SystemType: v1.SystemTypeMutable},
+			},
+			&mutableNode, &pendingNode, &otherNode,
+			nodeConfigWithPod("mutable-0",
+				[]internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}},
+				[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}}),
+		).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
+	require.Equal(t, []string{"mutable-workers"}, fresh.Status.MatchedNodeGroups)
+	require.Equal(t, int32(2), fresh.Status.MatchedNodes, "the node of the group it does not select is not a denominator")
+	require.Equal(t, int32(1), fresh.Status.AppliedNodes)
+	require.Equal(t, int32(1), fresh.Status.PendingNodes)
+	require.Contains(t, meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Message, "1 of 2 node(s)")
 }

@@ -38,9 +38,9 @@ func nodeConfigWithPod(name string, pods []internalv1alpha1.StaticPod, podStatus
 	}
 }
 
-// nodeConfigScheme is all this source reads: no Nodes, no NodeGroups. Having a
-// NodeConfig is what makes a node Engine, so this reader needs nothing else to
-// know whose reports it is counting.
+// nodeConfigScheme is all this source reads: no Nodes, no NodeGroups. Every node
+// has a NodeConfig, so this reader needs nothing else to know whose reports it
+// is counting.
 func nodeConfigScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
@@ -120,39 +120,4 @@ func TestNodeConfigOutcomesOfASilentFleet(t *testing.T) {
 	outcomes, err := readNodeConfigOutcomes(context.Background(), cl)
 	require.NoError(t, err)
 	require.Empty(t, outcomes)
-}
-
-// The two sources are counted apart and added here, so this is where a node of
-// each kind becomes two applied nodes rather than two half-answers. Kept next to
-// the type it adds, in the file that outlives the annotation source.
-func TestMergeOutcomes(t *testing.T) {
-	fromConfigs := map[string]nsprOutcome{
-		"registry-agent": {applied: 1, failed: 2, message: "WriteFailed: read-only file system"},
-		"engine-only":    {applied: 3},
-	}
-	fromAnnotations := map[string]nsprOutcome{
-		"registry-agent": {applied: 4},
-		"bashible-only":  {applied: 5},
-	}
-
-	merged := mergeOutcomes(fromConfigs, fromAnnotations)
-
-	require.Equal(t, int32(5), merged["registry-agent"].applied, "one object, both kinds of node")
-	require.Equal(t, int32(2), merged["registry-agent"].failed, "the annotation source never refuses")
-	require.Equal(t, "WriteFailed: read-only file system", merged["registry-agent"].message,
-		"a message already in hand is not overwritten by a source that has none")
-	require.Equal(t, int32(3), merged["engine-only"].applied)
-	require.Equal(t, int32(5), merged["bashible-only"].applied)
-}
-
-// An empty second map is what the merge sees once the last mutable node is gone,
-// and it has to be a no-op rather than a zeroing.
-func TestMergeOutcomesWithNothingToAdd(t *testing.T) {
-	fromConfigs := map[string]nsprOutcome{"registry-agent": {applied: 7, failed: 1, message: "why"}}
-
-	merged := mergeOutcomes(fromConfigs, nil)
-
-	require.Equal(t, int32(7), merged["registry-agent"].applied)
-	require.Equal(t, int32(1), merged["registry-agent"].failed)
-	require.Equal(t, "why", merged["registry-agent"].message)
 }

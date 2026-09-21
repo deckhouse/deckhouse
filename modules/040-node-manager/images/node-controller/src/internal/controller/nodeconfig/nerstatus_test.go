@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -91,4 +92,51 @@ func TestNERStatusIsNotPublishedFromAFleetThatCouldNotBeRead(t *testing.T) {
 	require.Equal(t, phaseDegraded, fresh.Status.Phase)
 	require.Equal(t, int32(50), fresh.Status.FailedNodes)
 	require.Equal(t, "Required key not available", fresh.Status.FailureMessage)
+}
+
+// A NER never reaches a bashible node, so its denominator is the nodes of the
+// Immutable groups it matches and nothing else.
+func TestNERStatusCountsTheNodesOfTheImmutableGroupsItMatches(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, v1.AddToScheme(scheme))
+	require.NoError(t, deckhousev1alpha1.AddToScheme(scheme))
+	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	ner := &deckhousev1alpha1.NodeExtensionRequest{
+		ObjectMeta: metav1.ObjectMeta{Name: "bob-request"},
+		Spec: deckhousev1alpha1.NodeExtensionRequestSpec{
+			Sysext: deckhousev1alpha1.Sysext{
+				Name:   "bob",
+				Digest: "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+			},
+		},
+	}
+	engineNode := nodeInGroup("worker-0", "worker")
+	bashibleNode := nodeInGroup("mutable-0", "mutable-workers")
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(
+			ner,
+			immutableGroup("worker"),
+			&v1.NodeGroup{
+				ObjectMeta: metav1.ObjectMeta{Name: "mutable-workers"},
+				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, SystemType: v1.SystemTypeMutable},
+			},
+			&engineNode, &bashibleNode,
+		).
+		WithStatusSubresource(&deckhousev1alpha1.NodeExtensionRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNERStatuses(t.Context(), logr.Discard()))
+
+	fresh := &deckhousev1alpha1.NodeExtensionRequest{}
+	require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: ner.Name}, fresh))
+	require.Equal(t, []string{"worker"}, fresh.Status.MatchedNodeGroups)
+	require.Equal(t, int32(1), fresh.Status.MatchedNodes, "a bashible node is not a node a sysext reaches")
+	require.Equal(t, int32(1), fresh.Status.PendingNodes)
+	require.Equal(t, int32(0), fresh.Status.AppliedNodes)
 }
