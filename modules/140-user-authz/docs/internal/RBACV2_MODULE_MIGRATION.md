@@ -285,8 +285,32 @@ The old role names survive one release as aggregating aliases, so a binding to `
 - **`serviceaccounts/token` and `impersonate`**, which moved from admin to superadmin by design.
 
 Check your own documentation as well: examples that name `d8:manage:*` or `d8:use:role:*` keep
-working only for this release, and inside a project namespace a RoleBinding to an alias is already
-refused, because aliases are not delegatable.
+working only for this release. The `d8:use:role:*` aliases are delegatable, so a plain RoleBinding to
+one of them inside a project namespace keeps working; what is refused is a new ProjectRoleBinding or
+ClusterProjectRoleBinding to an old name — the alias carries
+`rbac.deckhouse.io/disabled-for-direct-use-in-projects`.
+
+## Before upgrading: roles that carry a platform aggregation label
+
+A ClusterRole labelled `rbac.deckhouse.io/aggregate-to-<lineage>-as` is merged into the platform role
+of that lineage, and the aggregation controller reads nothing but the label. The
+`rbacv2-cluster-roles.deckhouse.io` webhook now admits that label only on a `custom-capability`. A
+webhook sees writes: a role that already carries the label without being a custom capability keeps
+aggregating after the upgrade, and its next `UPDATE` — a GitOps re-apply included — is refused. Such
+roles are exported as `d8_user_authz_foreign_aggregation_label{name, lineage, kind}` and raise the
+`D8UserAuthzForeignAggregationLabel` alert; list them before upgrading:
+
+```bash
+d8 k get clusterroles -o json | jq -r '.items[]
+  | select((.metadata.labels // {}) | to_entries | any(.key | startswith("rbac.deckhouse.io/aggregate-to-")))
+  | select((.metadata.labels.heritage // "") != "deckhouse")
+  | select((.metadata.labels["rbac.deckhouse.io/kind"] // "") != "custom-capability")
+  | .metadata.name'
+```
+
+For each one either make it a proper custom capability (`d8:custom:<scope>-capability:<name>`,
+`rbac.deckhouse.io/kind: custom-capability`, `rbac.deckhouse.io/scope: <scope>`, no `aggregationRule`)
+or drop the `aggregate-to-*-as` labels.
 
 ## What happens if a module is not migrated
 
