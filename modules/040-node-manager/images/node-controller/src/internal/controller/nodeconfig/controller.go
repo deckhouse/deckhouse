@@ -21,6 +21,7 @@ package nodeconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -241,18 +242,24 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 			requeue = result.RequeueAfter
 		}
 	}
+	var errs []error
 	if firstErr != nil {
-		return ctrl.Result{}, fmt.Errorf("render the NodeConfig of %d of %d nodes: %w", failed, len(nodes.Items), firstErr)
+		errs = append(errs, fmt.Errorf("render the NodeConfig of %d of %d nodes: %w", failed, len(nodes.Items), firstErr))
 	}
 
 	// Report each request's resolution back on its own status. This runs on the
 	// same all-nodes pass a NER change triggers, so editing a request refreshes
-	// both the nodes it targets and its status.
+	// both the nodes it targets and its status. Run whatever the renders did:
+	// these read their own inputs and fail closed on their own read failures, so
+	// one unrenderable node must not freeze every request's status.
 	if err := r.reconcileNERStatuses(ctx, logger); err != nil {
-		return ctrl.Result{}, err
+		errs = append(errs, err)
 	}
 	if err := r.reconcileNSPRStatuses(ctx, logger); err != nil {
-		return ctrl.Result{}, err
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		return ctrl.Result{}, errors.Join(errs...)
 	}
 
 	return ctrl.Result{RequeueAfter: requeue}, nil

@@ -326,3 +326,35 @@ func TestNSPRStatusRefusedByTheNodesKeepsItsArithmetic(t *testing.T) {
 		meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Reason)
 	require.Equal(t, int32(1), fresh.Status.PendingNodes, "the third node still owes an answer")
 }
+
+// Every node of a classic cluster now goes through readMutableInputs, which
+// fails whole on one bad read of the kubernetes endpoints or the proxy-token
+// Secret. Returning on the first such node froze every request's status in the
+// cluster, and the statuses read their own inputs anyway.
+func TestARenderFailureDoesNotFreezeTheRequestStatuses(t *testing.T) {
+	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	node := nodeInGroup("worker-0", "worker")
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(&object, immutableGroup("worker"), &node).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, group := obj.(*v1.NodeGroup); group {
+					return apierrors.NewServiceUnavailable("etcd leader changed")
+				}
+				return c.Get(ctx, key, obj, opts...)
+			},
+		}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	_, err := r.reconcileAllNodes(context.Background(), logr.Discard())
+	require.ErrorContains(t, err, "render the NodeConfig", "the render failure is still the pass's to retry")
+
+	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
+	require.Equal(t, phaseReady, fresh.Status.Phase, "the status reads its own inputs and they were readable")
+	require.Equal(t, int32(1), fresh.Status.MatchedNodes)
+}
