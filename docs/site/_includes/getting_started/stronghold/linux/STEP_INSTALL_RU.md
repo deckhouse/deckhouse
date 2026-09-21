@@ -6,13 +6,17 @@
 
 ## Загрузка архива
 
-Перейдите на <a href="/products/stronghold/get/" target="_blank">страницу загрузки</a> и скачайте архив со Stronghold для ОС Linux. Для загрузки потребуется лицензионный ключ.
+Для загрузки архива со Stronghold для ОС Linux потребуется лицензионный ключ Deckhouse Stronghold редакции Enterprise Edition или Certified Security Edition. Выберите редакцию, введите ключ, выберите версию и нажмите «Скачать»: браузер сохранит архив `stronghold-<версия>.tar` с исполняемым файлом для Linux (amd64).
+
+{% include getting_started/stronghold/linux/partials/download.html.liquid %}
 
 Распакуйте скачанный архив, указав его фактическое имя (оно содержит версию Stronghold):
 
+<div id="stronghold-unpack" markdown="1">
 ```bash
 tar -xf stronghold-v1.19.3.tar
 ```
+</div>
 
 ## Запуск Stronghold
 

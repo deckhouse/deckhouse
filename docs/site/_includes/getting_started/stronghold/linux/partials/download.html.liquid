@@ -1,0 +1,42 @@
+{%- comment -%}
+Download block for the "Linux OS" getting started guide.
+Edition tabs are rendered by the Jekyll `tabs` plugin (docs/documentation/_plugins/tabs.rb);
+tab labels must be literals, so the edition names are hardcoded here.
+The license key is never validated on the site: it is sent to the download service
+(website-stronghold/registry-proxy) which reports success or an error.
+{%- endcomment -%}
+<script type="text/javascript">
+const strongholdDownload = {
+  prefix: '/products/stronghold/get',
+  lang: '{{ page.lang }}',
+  i18n: {
+    empty_input: '{{ site.data.license.response[page.lang].empty_input }}',
+    reject: '{{ site.data.license.response[page.lang].reject }}',
+    {%- if page.lang == 'ru' %}
+    network: 'Не удалось получить список версий. Повторите попытку позже.',
+    no_versions: 'Доступных версий не найдено.',
+    resolve: 'Выберите версию и нажмите «Скачать».'
+    {%- else %}
+    network: 'Failed to fetch the version list. Please try again later.',
+    no_versions: 'No versions available.',
+    resolve: 'Select a version and click "Download".'
+    {%- endif %}
+  }
+};
+</script>
+<script type="text/javascript" src='{% javascript_asset_tag stronghold-download %}[_assets/js/stronghold-download.js]{% endjavascript_asset_tag %}'></script>
+
+{% if page.lang == 'ru' %}
+#### Выберите редакцию Deckhouse Stronghold
+{% else %}
+#### Select the Deckhouse Stronghold edition
+{% endif %}
+
+{% tabs stronghold-edition %}
+{% tab "Enterprise Edition" %}
+{% include getting_started/stronghold/linux/partials/download_form.liquid revision="ee" %}
+{% endtab %}
+{% tab "Certified Security Edition" %}
+{% include getting_started/stronghold/linux/partials/download_form.liquid revision="cse" %}
+{% endtab %}
+{% endtabs %}

@@ -6,13 +6,17 @@ The development mode is intended for evaluation and testing only. Do not use it 
 
 ## Downloading the archive
 
-Go to the <a href="/products/stronghold/get/" target="_blank">download page</a> and download the Stronghold archive for Linux OS. A license key is required for downloading.
+Downloading the Stronghold archive for Linux OS requires a Deckhouse Stronghold license key for the Enterprise Edition or Certified Security Edition. Select the edition, enter the key, pick a version, and click "Download": the browser saves the `stronghold-<version>.tar` archive with the Linux (amd64) binary.
+
+{% include getting_started/stronghold/linux/partials/download.html.liquid %}
 
 Unpack the downloaded archive, specifying its actual name (it contains the Stronghold version):
 
+<div id="stronghold-unpack" markdown="1">
 ```bash
 tar -xf stronghold-v1.19.3.tar
 ```
+</div>
 
 ## Running Stronghold
 

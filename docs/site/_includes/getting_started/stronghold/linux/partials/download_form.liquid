@@ -1,0 +1,38 @@
+{%- assign revision = include.revision -%}
+{%- assign revision_name = site.data.i18n[revision] -%}
+<div data-stronghold-download data-edition="{{ revision }}">
+<div class="license-form__wrap">
+<div class="license-form-enter">
+<h3 class="text text_h3">
+{%- if page.lang == 'ru' %}Введите лицензионный ключ Deckhouse Stronghold {{ revision_name }}{% else %}Enter the Deckhouse Stronghold {{ revision_name }} license key{% endif -%}
+</h3>
+<div class="form form--inline">
+<div class="form__row">
+<label class="label" for="stronghold-license-{{ revision }}">{% if page.lang == 'ru' %}Лицензионный ключ{% else %}License key{% endif %}</label>
+<input id="stronghold-license-{{ revision }}" class="textfield" type="password" autocomplete="off" data-license-input />
+</div>
+<a href="#" class="button button_alt" data-versions-btn>{% if page.lang == 'ru' %}Показать версии{% else %}Show versions{% endif %}</a>
+<span data-message></span>
+</div>
+</div>
+<div class="license-form-enter" data-version-block style="display: none;">
+<div class="form form--inline">
+<div class="form__row">
+<label class="label" for="stronghold-version-{{ revision }}">{% if page.lang == 'ru' %}Версия{% else %}Version{% endif %}</label>
+<select id="stronghold-version-{{ revision }}" class="textfield" data-version-select></select>
+</div>
+<form method="post" data-download-form>
+<input type="hidden" name="license" />
+<input type="hidden" name="edition" value="{{ revision }}" />
+<button type="submit" class="button button_alt">{% if page.lang == 'ru' %}Скачать{% else %}Download{% endif %}</button>
+</form>
+</div>
+</div>
+<div class="license-form-request">
+<h3 class="text text_h3">{% if page.lang == 'ru' %}Нет ключа?{% else %}Have no key?{% endif %}</h3>
+<div class="button-group">
+<a href="" data-open-modal="request_access" class="button button_alt">{% if page.lang == 'ru' %}Запросить бесплатный триал{% else %}Request free trial{% endif %}</a>
+</div>
+</div>
+</div>
+</div>
