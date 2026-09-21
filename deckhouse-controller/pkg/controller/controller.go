@@ -74,6 +74,7 @@ import (
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
@@ -265,7 +266,7 @@ func NewDeckhouseController(
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
 	// set chrooted environment for modules
-	if len(os.Getenv(app.EnvShellChrootDir)) > 0 {
+	if len(os.Getenv(envconfig.EnvShellChrootDir)) > 0 {
 		setModulesEnvironment(operator)
 	}
 

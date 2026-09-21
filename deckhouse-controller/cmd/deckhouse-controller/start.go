@@ -53,6 +53,7 @@ import (
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -82,7 +83,7 @@ func (r *reaperMutex) Release() {
 
 func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []string) error {
 	return func(_ *cobra.Command, _ []string) error {
-		if os.Getenv(app.EnvSkipEntrypoint) != "true" {
+		if os.Getenv(envconfig.EnvSkipEntrypoint) != "true" {
 			if err := entrypoint(logger); err != nil {
 				logger.Error("entrypoint run", log.Err(err))
 				os.Exit(1)
@@ -131,7 +132,7 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 			version = strings.TrimSuffix(string(content), "\n")
 		}
 
-		if version == "dev" && !app.EnabledHA() {
+		if version == "dev" && !envconfig.EnabledHA() {
 			if err := run(ctx, operator, logger); err != nil {
 				logger.Error("run", log.Err(err))
 				os.Exit(1)
@@ -147,7 +148,7 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 
 func entrypoint(logger *log.Logger) error {
 	var possibleBundles = []string{"Default", "Minimal", "Managed"}
-	bundleEnvValue, found := os.LookupEnv(app.EnvBundle)
+	bundleEnvValue, found := os.LookupEnv(envconfig.EnvBundle)
 	if !found || len(bundleEnvValue) == 0 {
 		bundleEnvValue = "Default"
 	}
@@ -156,7 +157,7 @@ func entrypoint(logger *log.Logger) error {
 		logger.Fatal(fmt.Sprintf("Deckhouse bundle %q doesn't exist! -- Possible bundles: %s", bundleEnvValue, strings.Join(possibleBundles, ", ")))
 	}
 
-	chrootDirEnvValue, found := os.LookupEnv(app.EnvShellChrootDir)
+	chrootDirEnvValue, found := os.LookupEnv(envconfig.EnvShellChrootDir)
 	if found && len(chrootDirEnvValue) > 0 {
 		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, app.DefaultTempDir)
 		if err := os.MkdirAll(chrootedTmpDirPath, 0750); err != nil {
@@ -174,9 +175,9 @@ func entrypoint(logger *log.Logger) error {
 		}
 	}
 
-	modulesDirEnvValue, found := os.LookupEnv(app.EnvModulesDir)
+	modulesDirEnvValue, found := os.LookupEnv(envconfig.EnvModulesDir)
 	if !found || len(modulesDirEnvValue) == 0 {
-		return fmt.Errorf("%q env not set", app.EnvModulesDir)
+		return fmt.Errorf("%q env not set", envconfig.EnvModulesDir)
 	}
 
 	coreModulesDir := strings.Split(modulesDirEnvValue, ":")[0]
@@ -197,22 +198,22 @@ func entrypoint(logger *log.Logger) error {
 
 func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
 	var identity string
-	podName := app.PodName()
+	podName := envconfig.PodName()
 	if len(podName) == 0 {
 		logger.Fatal("DECKHOUSE_POD env not set or empty")
 	}
 
-	podIP := app.PodIP()
+	podIP := envconfig.PodIP()
 	if len(podIP) == 0 {
 		logger.Fatal("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
 	}
 
-	podNs := app.PodNamespace()
+	podNs := envconfig.PodNamespace()
 	if len(podNs) == 0 {
 		podNs = app.NamespaceDeckhouse
 	}
 
-	clusterDomain := app.ClusterDomain()
+	clusterDomain := envconfig.ClusterDomain()
 	if len(clusterDomain) == 0 {
 		logger.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - its value won't be used for the leader election")
 		identity = fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
@@ -331,7 +332,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 			switch sig {
 			case syscall.SIGUSR1, syscall.SIGUSR2:
 				environ := os.Environ()
-				skipEntrypointKeyValue := fmt.Sprintf("%s=true", app.EnvSkipEntrypoint)
+				skipEntrypointKeyValue := fmt.Sprintf("%s=true", envconfig.EnvSkipEntrypoint)
 				if !slices.Contains(environ, skipEntrypointKeyValue) {
 					environ = append(environ, skipEntrypointKeyValue)
 				}
@@ -349,7 +350,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					}
 				}
 				deckhouseBinaryToRun := deckhouseControllerBinaryPath
-				chrootDirEnvValue, found := os.LookupEnv(app.EnvShellChrootDir)
+				chrootDirEnvValue, found := os.LookupEnv(envconfig.EnvShellChrootDir)
 				if found && len(chrootDirEnvValue) > 0 {
 					deckhouseBinaryToRun = deckhouseControllerWithCapsBinaryPath
 				}
@@ -478,10 +479,10 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 }
 
 func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {
-	endpoint := app.TracingOTLPEndpoint()
-	authToken := app.TracingOTLPAuthToken()
-	insecureTransport := app.TracingOTLPInsecure()
-	tlsSkipVerify := app.TracingOTLPTLSSkipVerify()
+	endpoint := envconfig.TracingOTLPEndpoint()
+	authToken := envconfig.TracingOTLPAuthToken()
+	insecureTransport := envconfig.TracingOTLPInsecure()
+	tlsSkipVerify := envconfig.TracingOTLPTLSSkipVerify()
 
 	if endpoint == "" {
 		return func(_ context.Context) error {

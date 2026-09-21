@@ -127,21 +127,21 @@ func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.Pac
 	original := op.DeepCopy()
 
 	// Set default trigger to manual if not already set
-	if _, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger]; !ok {
+	if _, ok := op.Labels[v1alpha1.PackageLabelOperationTrigger]; !ok {
 		update = true
-		op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] = v1alpha1.PackagesRepositoryTriggerManual
+		op.Labels[v1alpha1.PackageLabelOperationTrigger] = v1alpha1.PackageOperationTriggerManual
 	}
 
 	// Ensure operation type label matches spec (sync on every reconcile)
-	if label, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || label != string(op.Spec.Type) {
+	if label, ok := op.Labels[v1alpha1.PackageLabelOperationType]; !ok || label != string(op.Spec.Type) {
 		update = true
-		op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType] = string(op.Spec.Type)
+		op.Labels[v1alpha1.PackageLabelOperationType] = string(op.Spec.Type)
 	}
 
 	// Set repository label for efficient filtering/querying
-	if _, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelRepository]; !ok {
+	if _, ok := op.Labels[v1alpha1.PackageLabelRepository]; !ok {
 		update = true
-		op.Labels[v1alpha1.PackagesRepositoryOperationLabelRepository] = op.Spec.PackageRepositoryName
+		op.Labels[v1alpha1.PackageLabelRepository] = op.Spec.PackageRepositoryName
 	}
 
 	// Ensure ownerReference to PackageRepository is set (for cascade deletion via GC).
@@ -358,7 +358,7 @@ func (r *reconciler) handleCleanupState(ctx context.Context, op *v1alpha1.Packag
 	logger.Debug("handle completed state")
 
 	selector := client.MatchingLabels{
-		v1alpha1.PackagesRepositoryOperationLabelRepository: op.Spec.PackageRepositoryName,
+		v1alpha1.PackageLabelRepository: op.Spec.PackageRepositoryName,
 	}
 
 	operations := new(v1alpha1.PackageRepositoryOperationList)

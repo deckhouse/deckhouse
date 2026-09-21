@@ -40,6 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	moduletools "github.com/deckhouse/deckhouse/go_lib/module"
@@ -272,7 +273,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 	ds := new(DownloadStatistic)
 	defer measure.Duration(func(d time.Duration) {
 		ds.PullDuration = d
-		if os.Getenv("D8_IS_TESTS_ENVIRONMENT") == "true" {
+		if envconfig.IsTestsEnvironment() {
 			ds.PullDuration, _ = time.ParseDuration("555s")
 		}
 	})()

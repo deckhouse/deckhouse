@@ -240,8 +240,8 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "embedded-echo-v1.80.0",
 				Labels: map[string]string{
-					v1alpha1.ModulePackageVersionLabelDraft:  "true",
-					v1alpha1.ModulePackageVersionLabelLegacy: "true",
+					v1alpha1.PackageLabelDraft:  "true",
+					v1alpha1.PackageLabelLegacy: "true",
 				},
 			},
 			Spec: v1alpha1.ModulePackageVersionSpec{
@@ -442,8 +442,8 @@ func TestSyncModulePackageVersionsFromModuleReleases(t *testing.T) {
 		assert.True(t, mpv.IsDraft(), "the stub must wait for the metadata as a draft")
 		assert.True(t, mpv.IsLegacy())
 		assert.Equal(t, "deckhouse", mpv.Labels["heritage"])
-		assert.Equal(t, "deckhouse-modules", mpv.Labels[v1alpha1.ModulePackageVersionLabelRepository])
-		assert.Equal(t, "parca", mpv.Labels[v1alpha1.ModulePackageVersionLabelPackage])
+		assert.Equal(t, "deckhouse-modules", mpv.Labels[v1alpha1.PackageLabelRepository])
+		assert.Equal(t, "parca", mpv.Labels[v1alpha1.PackageLabelPackage])
 		assert.Empty(t, mpv.OwnerReferences, "no owner until a repository adopts the version")
 		assert.Nil(t, mpv.Status.PackageMetadata)
 	})
@@ -465,7 +465,7 @@ func TestSyncModulePackageVersionsFromModuleReleases(t *testing.T) {
 		existing := &v1alpha1.ModulePackageVersion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "deckhouse-modules-parca-v1.4.3",
-				Labels: map[string]string{v1alpha1.ModulePackageVersionLabelRepository: "deckhouse-modules"},
+				Labels: map[string]string{v1alpha1.PackageLabelRepository: "deckhouse-modules"},
 			},
 			Spec: v1alpha1.ModulePackageVersionSpec{
 				PackageName:           "parca",

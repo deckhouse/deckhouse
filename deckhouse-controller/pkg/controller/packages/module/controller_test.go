@@ -302,7 +302,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 
 		annotations := suite.getModule(moduleName).Annotations
-		assert.NotContains(suite.T(), annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+		assert.NotContains(suite.T(), annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 		assert.Contains(suite.T(), annotations, "packages.deckhouse.io/keep-me")
 	})
 
@@ -372,7 +372,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		annotations := suite.getModule(moduleName).Annotations
 		assert.Equal(suite.T(), devDigest, annotations[v1alpha2.ModuleAnnotationHash],
 			"the digest is recorded only after the handover, so a failure re-forces rather than skips")
-		assert.NotContains(suite.T(), annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+		assert.NotContains(suite.T(), annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 	})
 
 	suite.Run("dev module on an untouched digest is not forced", func() {

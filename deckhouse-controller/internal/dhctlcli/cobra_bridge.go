@@ -33,6 +33,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -141,7 +142,7 @@ func newDhctlBridge(name, short, fileName string, preRun func() error, register 
 // reading --file or piped stdin.
 func clusterConfigurationStdinFromCluster(opts *options.Options) func() error {
 	return func() error {
-		if parseFileFlagPresent(os.Args) || os.Getenv("DHCTL_CLI_FILE") != "" || !input.IsTerminal() {
+		if parseFileFlagPresent(os.Args) || os.Getenv(envconfig.EnvDhctlCLIFile) != "" || !input.IsTerminal() {
 			return nil
 		}
 

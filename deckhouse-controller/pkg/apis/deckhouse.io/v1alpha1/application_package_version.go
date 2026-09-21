@@ -30,12 +30,6 @@ const (
 	ApplicationPackageVersionResource = "applicationpackageversions"
 	ApplicationPackageVersionKind     = "ApplicationPackageVersion"
 
-	// Labels carrying the version's origin and lifecycle state.
-	ApplicationPackageVersionLabelDraft           = "packages.deckhouse.io/draft"
-	ApplicationPackageVersionLabelPackage         = "packages.deckhouse.io/package"
-	ApplicationPackageVersionLabelRepository      = "packages.deckhouse.io/repository"
-	ApplicationPackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
-
 	// Condition type and the reasons reported when metadata loading fails.
 	ApplicationPackageVersionConditionTypeMetadataLoaded         = "MetadataLoaded"
 	ApplicationPackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
@@ -201,7 +195,7 @@ type ApplicationPackageVersionStatusMetadata struct {
 // IsDraft reports whether this package version is marked as a draft. An unparsable label
 // value counts as false, so a hand-edited label cannot flip behaviour by accident.
 func (a *ApplicationPackageVersion) IsDraft() bool {
-	val, err := strconv.ParseBool(a.Labels[ApplicationPackageVersionLabelDraft])
+	val, err := strconv.ParseBool(a.Labels[PackageLabelDraft])
 
 	return err == nil && val
 }
