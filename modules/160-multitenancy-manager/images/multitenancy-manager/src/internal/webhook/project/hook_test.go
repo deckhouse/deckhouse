@@ -236,3 +236,51 @@ func TestHandle_CreateOverExistingNamespace(t *testing.T) {
 	assert.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "a namespace with its name exists")
 }
+
+// The two name rules the webhook enforces on create: the platform prefixes are reserved, and the
+// "<project>-*" name space belongs to the additional namespaces of an existing project in both
+// directions. The checks existed; these are the tests the design promised for them.
+func TestHandle_ProjectNameValidation(t *testing.T) {
+	createReq := func(t *testing.T, name string) admission.Request {
+		t.Helper()
+		project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: name}}
+		raw, err := json.Marshal(project)
+		require.NoError(t, err)
+		return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}}
+	}
+
+	t.Run("platform prefixes are reserved", func(t *testing.T) {
+		v := newValidator(t)
+		for _, name := range []string{"d8-system", "d8-foo", "kube-system", "kube-foo"} {
+			resp := v.Handle(context.Background(), createReq(t, name))
+			assert.False(t, resp.Allowed, name)
+			assert.Contains(t, resp.Result.Message, "cannot start with 'd8-' or 'kube-'", name)
+		}
+	})
+
+	t.Run("a name under an existing project's additional-namespace space is refused", func(t *testing.T) {
+		existing := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+		v := newValidator(t, existing)
+		resp := v.Handle(context.Background(), createReq(t, "foo-bar"))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, `project name "foo-bar" conflicts with project "foo"`)
+	})
+
+	t.Run("a name whose additional-namespace space already holds a project is refused", func(t *testing.T) {
+		existing := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo-bar"}}
+		v := newValidator(t, existing)
+		resp := v.Handle(context.Background(), createReq(t, "foo"))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, `project name "foo" conflicts with project "foo-bar"`)
+	})
+
+	t.Run("an unrelated name is allowed beside both", func(t *testing.T) {
+		v := newValidator(t, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}})
+		resp := v.Handle(context.Background(), createReq(t, "foobar"))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+}
