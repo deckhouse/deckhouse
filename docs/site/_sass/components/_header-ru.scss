@@ -52,6 +52,8 @@ $wordmark-height: 24px;
 // the right is what makes the gap to the first menu item 39px at 1200 and 79px at 1440
 // while the flex gap itself is only 24 and 64.
 $logo-box: 120px;
+// The reference's container: 1568px of content plus its two 60px gutters.
+$container-box: 1688px;
 // Everything below is measured off test.deckhouse.ru, not off the Figma frame: the
 // shipped header is tighter than the 1440 mock in almost every dimension.
 $item-gap: 24px; // .header__nav.nav gap at >=1440 (8px below that)
@@ -205,6 +207,32 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
     gap: 0;
     padding-top: $bar-pad-y;
     padding-bottom: $bar-pad-y;
+  }
+
+  // Gutters. The shared .container gives 20/32/48 inside a 1664px box; the reference uses
+  // 16px below 728, 32px up to 1023 and 60px from 1024, inside a box of 1688 - its 1568px
+  // of content plus those two 60s. Restated here instead of changed in .container, which
+  // carries every page of both languages. Both rows are listed so they stay in step.
+  //
+  // Note that from 1024 the bar is inset 12px further than the page body below it, which
+  // keeps the shared .container's 48px. On the reference the whole site is on 60, so the
+  // two line up there; matching the bar and matching the page cannot both be had without
+  // moving .container for every Russian page.
+  .header__content,
+  .header__product-menu-inner {
+    max-width: $container-box;
+    padding-left: 16px;
+    padding-right: 16px;
+
+    @include breakpoints.min-w(m) {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    @include breakpoints.min-w(l) {
+      padding-left: 60px;
+      padding-right: 60px;
+    }
   }
 
   // body.sidebar-opened .header__logo gets width: inherit from the legacy sheet, which
@@ -594,15 +622,9 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
     // .header__product-menu .container: 1.25rem 2rem, then 1.5rem from 1200 and 4rem
     // from 1440 - the reference widened the last two steps.
     gap: 20px $l2-logo-gap;
-    padding-right: 20px;
-
-    @include breakpoints.min-w(s) {
-      padding-right: 32px;
-    }
 
     @include breakpoints.min-w(xl) {
       gap: 24px;
-      padding-right: 48px;
     }
 
     @include breakpoints.min-w(xxl) {
