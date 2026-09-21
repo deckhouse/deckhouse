@@ -301,11 +301,11 @@ The exception is a namespace whose module has hardened it: there the standards a
 
 These checks cannot be tuned from outside the platform.
 The labels that govern them, and the workloads they cover, belong to the module that owns the namespace, and Deckhouse Platform returns both to their declared state the next time it applies the configuration.
-A module exempts a workload of its own where it has to, with a SecurityPolicyException it ships itself.
+A module exempts its own workloads where necessary with a SecurityPolicyException that it ships with the module.
 
-OperationPolicy and SecurityPolicy resources reach system namespaces in `warn` mode as well.
+OperationPolicy and SecurityPolicy resources also apply to system namespaces in `warn` mode.
 A policy with `enforcementAction: Deny` blocks workloads in application namespaces and only reports violations in a system namespace.
-No label of the namespace changes that: a module that hardens its own namespace raises the Pod Security Standards there, which says nothing about a policy you wrote for application workloads.
+No label of the namespace changes that: a module that hardens its own namespace raises the Pod Security Standards there, which has no effect on a policy written for application workloads.
 
 A denying policy that reaches system namespaces is therefore rendered as two Gatekeeper constraints, both visible in the audit and in Deckhouse Console:
 
@@ -313,7 +313,7 @@ A denying policy that reaches system namespaces is therefore rendered as two Gat
 - `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
 
 The `d8-system-default-` and `d8-pod-security-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
-A policy name is limited to 235 characters for the same reason, so that the derived constraint names stay within the 253-character limit of a Kubernetes object name.
+A policy name is limited to 235 characters for the same reason, so that the derived constraint names stay within the 253-character limit for a Kubernetes object name.
 
 A policy is rendered as a single constraint when the split would change nothing:
 
