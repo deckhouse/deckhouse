@@ -595,13 +595,15 @@ The following components are used for this:
 
 ### Who bypasses admission
 
-Two exclusion lists are in force, and they are not identical:
+Three exclusion lists are in force, and they are not identical:
 
-- The module's admission webhooks — on Project, ProjectTemplate, ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding — skip requests from platform components only: the API server, the service accounts of Deckhouse, of this module and of `user-authz` (with the `d8-system`, `kube-system` and `d8-user-authz` service-account groups), kubelets — and from the `system:sudouser` identity. Everyone else is validated, `system:masters` included.
-- The `ValidatingAdmissionPolicy` above lets through this module's controller, the control-plane components (`system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`, `dhctl`, `observability`), the same service-account groups and kubelets, `system:sudouser`, and a rollout restart of a project workload. Everyone else is refused, `system:masters` included.
-- The webhooks that guard grantable cluster resources in project namespaces (`/is-granted`, `/defaults`, `/protect`, see [Managing access to cluster-wide resources](#managing-access-to-cluster-wide-resources)) keep `system:masters` on their exclusion list next to the platform components: they intercept every write of such a resource, a far larger surface for a deadlock.
+- The **Project and ProjectTemplate webhooks** skip requests from platform components — the API server (`system:apiserver`), the service accounts of Deckhouse (`d8-system:deckhouse`), of this module (`d8-multitenancy-manager:multitenancy-manager`) and of `user-authz` (`d8-user-authz:controller`), every service account of the `d8-system`, `kube-system` and `d8-user-authz` namespaces, kubelets (`system:nodes`) — and from the `system:sudouser` identity. Everyone else is validated, `system:masters` included.
+- The **ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding webhooks** skip nobody: nothing in the platform renders these objects, so no release can deadlock on them, and every request is validated. Inside them only the controller and Deckhouse service accounts are privileged; `system:sudouser` and `system:masters` are ordinary users there.
+- The **`ValidatingAdmissionPolicy`** above lets through this module's controller; the users `system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`, `dhctl`, `observability` and `system:sudouser`; the groups `system:nodes`, `system:serviceaccounts:kube-system` and `system:serviceaccounts:d8-system` (not `d8-user-authz`); and a rollout restart of a project workload. Everyone else is refused, `system:masters` included.
 
-An administrator who has to get past a webhook or the policy does it deliberately, as `system:sudouser` — `d8 k --as system:sudouser …` — and the bypass is then visible in the audit log.
+The webhooks that guard grantable cluster resources in project namespaces (`/is-granted`, `/defaults`, `/protect`, see [Managing access to cluster-wide resources](#managing-access-to-cluster-wide-resources)) keep `system:masters` on their exclusion list next to the platform components: they intercept every write of such a resource, a far larger surface for a deadlock.
+
+An administrator who has to get past the Project or ProjectTemplate webhook, or the policy, does it deliberately, as `system:sudouser` — `d8 k --as system:sudouser …` — and the bypass is then visible in the audit log. There is no such door for ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding.
 
 ### Creating your own validation
 

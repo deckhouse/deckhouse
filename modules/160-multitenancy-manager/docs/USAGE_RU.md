@@ -596,13 +596,15 @@ data:
 
 ### Кто обходит валидацию
 
-Действуют два списка исключений, и они не совпадают:
+Действуют три списка исключений, и они не совпадают:
 
-- Вебхуки модуля — на Project, ProjectTemplate, ProjectRoleBinding, ProjectNamespace и ClusterProjectRoleBinding — пропускают без проверки только компоненты платформы: API-сервер, service account'ы Deckhouse, этого модуля и `user-authz` (и группы service account'ов `d8-system`, `kube-system`, `d8-user-authz`), kubelet'ы — и пользователя `system:sudouser`. Все остальные проверяются, включая группу `system:masters`.
-- Описанная выше `ValidatingAdmissionPolicy` пропускает контроллер модуля, компоненты control plane (`system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`, `dhctl`, `observability`), те же группы service account'ов и kubelet'ы, `system:sudouser`, а также rollout restart нагрузки проекта. Всем остальным отказывает, включая `system:masters`.
-- Вебхуки, охраняющие грантуемые cluster-wide-ресурсы в неймспейсах проектов (`/is-granted`, `/defaults`, `/protect`, см. [«Управление доступом к cluster-wide-ресурсам»](#управление-доступом-к-cluster-wide-ресурсам)), оставляют `system:masters` в списке исключений рядом с компонентами платформы: они перехватывают каждую запись такого ресурса — поверхность для deadlock'а куда больше.
+- **Вебхуки Project и ProjectTemplate** пропускают без проверки компоненты платформы — API-сервер (`system:apiserver`), service account'ы Deckhouse (`d8-system:deckhouse`), этого модуля (`d8-multitenancy-manager:multitenancy-manager`) и `user-authz` (`d8-user-authz:controller`), все service account'ы неймспейсов `d8-system`, `kube-system` и `d8-user-authz`, kubelet'ы (`system:nodes`) — и пользователя `system:sudouser`. Все остальные проверяются, включая группу `system:masters`.
+- **Вебхуки ProjectRoleBinding, ProjectNamespace и ClusterProjectRoleBinding** не пропускают никого: платформа такие объекты не рендерит, deadlock релиза на них невозможен, поэтому проверяется каждый запрос. Привилегированы внутри них только service account'ы контроллера и Deckhouse; `system:sudouser` и `system:masters` там — обычные пользователи.
+- **Описанная выше `ValidatingAdmissionPolicy`** пропускает контроллер модуля; пользователей `system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`, `dhctl`, `observability` и `system:sudouser`; группы `system:nodes`, `system:serviceaccounts:kube-system` и `system:serviceaccounts:d8-system` (но не `d8-user-authz`); а также rollout restart нагрузки проекта. Всем остальным отказывает, включая `system:masters`.
 
-Администратор, которому нужно пройти мимо вебхука или политики, делает это явно, от имени `system:sudouser` — `d8 k --as system:sudouser …`; такой обход виден в audit-логе.
+Вебхуки, охраняющие грантуемые cluster-wide-ресурсы в неймспейсах проектов (`/is-granted`, `/defaults`, `/protect`, см. [«Управление доступом к cluster-wide-ресурсам»](#управление-доступом-к-cluster-wide-ресурсам)), оставляют `system:masters` в списке исключений рядом с компонентами платформы: они перехватывают каждую запись такого ресурса — поверхность для deadlock'а куда больше.
+
+Администратор, которому нужно пройти мимо вебхука Project или ProjectTemplate либо политики, делает это явно, от имени `system:sudouser` — `d8 k --as system:sudouser …`; такой обход виден в audit-логе. Для ProjectRoleBinding, ProjectNamespace и ClusterProjectRoleBinding такой двери нет.
 
 ### Создание собственной валидации
 
