@@ -87,7 +87,7 @@ func (s *syncer) syncModulePackageVersionsFromFS(ctx context.Context, moduleSour
 // the image; the metadata and the settings/values schemas come from the
 // module files on disk.
 func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName string, moduleSources []v1alpha1.ModuleSource) error {
-	version := s.embeddedPackageVersion()
+	version := app.EmbeddedPackageVersion()
 	moduleDir := filepath.Join(s.embeddedModulesDir, dirName)
 
 	def, err := loader.LoadEmbeddedDefinition(moduleDir)
@@ -149,7 +149,7 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 // the module controller gates registration on, so withholding them over an
 // unreadable dir would strand the global Module rather than degrade it.
 func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context, moduleSources []v1alpha1.ModuleSource) error {
-	version := s.embeddedPackageVersion()
+	version := app.EmbeddedPackageVersion()
 
 	name := v1alpha1.MakeModulePackageVersionName(repositoryNameEmbedded, packageNameGlobal, version)
 	if !s.validModulePackageVersionName(name, packageNameGlobal) {

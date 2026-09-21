@@ -99,7 +99,7 @@ func (s *syncer) getModuleConfigs(ctx context.Context) (map[string]*v1alpha1.Mod
 func (s *syncer) syncGlobalModule(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) error {
 	// every module of one build carries the same version, the one
 	// embeddedPackageVersion reduces the Deckhouse version to
-	embeddedPackageVersion := s.embeddedPackageVersion()
+	embeddedPackageVersion := app.EmbeddedPackageVersion()
 
 	if err := s.ensureModule(ctx, "global", repositoryNameEmbedded, embeddedPackageVersion, "", false, configs["global"]); err != nil {
 		return fmt.Errorf("ensure global module: %w", err)
@@ -118,7 +118,7 @@ func (s *syncer) syncEmbeddedModules(ctx context.Context, deckhouseReleaseChanne
 
 	// every module of one build carries the same version, the one
 	// embeddedPackageVersion reduces the Deckhouse version to
-	embeddedPackageVersion := s.embeddedPackageVersion()
+	embeddedPackageVersion := app.EmbeddedPackageVersion()
 
 	releaseChannel := deckhouseReleaseChannel
 
@@ -314,7 +314,7 @@ func (s *syncer) cleanupModules(ctx context.Context) error {
 
 	for _, module := range modules.Items {
 		disposable := module.Spec.PackageVersion == "" ||
-			(module.IsEmbedded() && module.Spec.PackageVersion != s.embeddedPackageVersion())
+			(module.IsEmbedded() && module.Spec.PackageVersion != app.EmbeddedPackageVersion())
 
 		if !disposable {
 			continue

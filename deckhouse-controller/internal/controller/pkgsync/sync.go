@@ -56,7 +56,6 @@ type syncer struct {
 	writer client.Client
 	dc     dependency.Container
 
-	deckhouseVersion   string
 	embeddedModulesDir string
 	globalHooksDir     string
 
@@ -65,11 +64,6 @@ type syncer struct {
 
 // Option overrides a syncer default; the defaults describe the running process.
 type Option func(*syncer)
-
-// WithDeckhouseVersion sets the version every package the image ships is named after.
-func WithDeckhouseVersion(deckhouseVersion string) Option {
-	return func(s *syncer) { s.deckhouseVersion = deckhouseVersion }
-}
 
 // WithEmbeddedModulesDir points the sync at another embedded modules dir.
 func WithEmbeddedModulesDir(dir string) Option {
@@ -81,8 +75,8 @@ func WithGlobalHooksDir(dir string) Option {
 	return func(s *syncer) { s.globalHooksDir = dir }
 }
 
-// Sync ensures the package objects of the old module stack for the given
-// Deckhouse version, embedded modules dir and global hooks dir. The
+// Sync ensures the package objects of the old module stack for the running
+// Deckhouse version and the dirs the image ships. The
 // repositories go first, so the version stubs find them in place. A source
 // naming no valid version (no module source, an unparsable release version, an
 // illegal object name, an unreadable module dir, broken or missing schema
@@ -93,14 +87,14 @@ func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc de
 	return newSyncer(reader, writer, dc, logger).sync(ctx)
 }
 
-// newSyncer builds a syncer over the version and the dirs the running process carries.
+// newSyncer builds a syncer over the dirs the running process carries; the version every package
+// the image ships is named after comes from app.Version.
 func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, logger *log.Logger, opts ...Option) *syncer {
 	s := &syncer{
 		reader: reader,
 		writer: writer,
 		dc:     dc,
 
-		deckhouseVersion:   app.Version,
 		embeddedModulesDir: app.EmbeddedModulesDir,
 		globalHooksDir:     app.GlobalHooksDir,
 
@@ -112,11 +106,6 @@ func newSyncer(reader client.Reader, writer client.Client, dc dependency.Contain
 	}
 
 	return s
-}
-
-// embeddedPackageVersion is the version every package the image ships carries.
-func (s *syncer) embeddedPackageVersion() string {
-	return app.EmbeddedPackageVersionOf(s.deckhouseVersion)
 }
 
 // sync runs the passes in order: the repositories first, so the version stubs find them in place,
