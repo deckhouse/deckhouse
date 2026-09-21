@@ -681,7 +681,7 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
     @include breakpoints.min-w(xl) {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 16px;
     }
 
     @include breakpoints.min-w(xxl) {
@@ -1143,11 +1143,12 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
   // adaptive/header-mobile.js works to), so the 1024-1199 band reuses the site's
   // 1200 values and is allowed to wrap rather than overflow.
   // The reference never wraps this row - it switches to the burger before the row runs
-  // out of space. Gap is 8px from 1200 and 24px from 1440, exactly as there.
+  // out of space. Gap is 16px from 1200 and 24px from 1440, as there: the reference
+  // widened the first step from .5rem to 1rem, and the row below follows it.
   .header__nav--top {
     @include breakpoints.min-w(xl) {
       flex-wrap: nowrap;
-      gap: 8px;
+      gap: 16px;
     }
 
     @include breakpoints.min-w(xxl) {
@@ -1165,7 +1166,7 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
   // gap: .82rem 1rem from 1200 up; a two-class selector loses to it.
   // Four classes on purpose: carrying .container in the markup brought the legacy
   // ".header__product-menu .container .header__nav.nav" into range, and a two-class
-  // selector loses to it. 8px from 1200 and 24px from 1440, as on the reference.
+  // selector loses to it. 16px from 1200 and 24px from 1440, as on the reference.
   .header__product-menu--ru .header__nav--bottom.nav {
     // Column plus wrap plus a capped height means a long menu turns into a second column
     // instead of scrolling - and the panel grows sideways off the screen. The desktop row
@@ -1173,12 +1174,12 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
     // decides; the same goes for the gap below.
     flex-wrap: nowrap;
     // Zero inside the panel - there the rhythm is the links' padding-block - then the
-    // flat 8/24 of the desktop row.
+    // flat 16/24 of the desktop row.
     gap: 0;
 
     @include breakpoints.min-w(xl) {
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 16px;
     }
 
     @include breakpoints.min-w(xxl) {
