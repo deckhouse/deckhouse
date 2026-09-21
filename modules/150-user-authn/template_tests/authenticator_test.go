@@ -482,11 +482,11 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-with-resources-dex-authenticator")
 			Expect(deployment.Exists()).To(BeTrue())
 
-			// Init limits = sum of explicitly set main container limits (only dex here: 200m / 256Mi)
+			// The init container carries fixed resources, independent of the CR.
 			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.cpu").String()).To(Equal("10m"))
 			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.memory").String()).To(Equal("10Mi"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("200m"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("256Mi"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("25Mi"))
 
 			// Check dex-authenticator container resources
 			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("100m"))
@@ -499,9 +499,9 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-with-resources-both-dex-authenticator")
 			Expect(deployment.Exists()).To(BeTrue())
 
-			// Init limits = sum of dex + redis limits
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("400m"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("512Mi"))
+			// The init container carries fixed resources, independent of the CR.
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("25Mi"))
 
 			// Check dex-authenticator container resources
 			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("150m"))
@@ -526,31 +526,36 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.memory").Exists()).To(BeFalse())
 		})
 
-		It("Should sum fractional limits into the init container limits", func() {
+		It("Should give the init container fixed resources whatever the CR asks for", func() {
+			// The limits of the init container used to be the sum of the main container limits,
+			// which produced a limit below its own requests whenever the sum was zero or tiny,
+			// and the API server rejects such a Deployment. The fixed values are accounted the
+			// same way, because a quota counts a pod as max(max(init), sum(app)).
+			for _, name := range []string{
+				"test-fractional-resources-dex-authenticator",
+				"test-tiny-resources-dex-authenticator",
+				"test-with-resources-both-dex-authenticator",
+				"test-without-resources-dex-authenticator",
+			} {
+				deployment := hec.KubernetesResource("Deployment", "d8-test", name)
+				Expect(deployment.Exists()).To(BeTrue(), name)
+
+				init := "spec.template.spec.initContainers.0.resources."
+				Expect(deployment.Field(init+"requests.cpu").String()).To(Equal("10m"), name)
+				Expect(deployment.Field(init+"requests.memory").String()).To(Equal("10Mi"), name)
+				Expect(deployment.Field(init+"limits.cpu").String()).To(Equal("10m"), name)
+				Expect(deployment.Field(init+"limits.memory").String()).To(Equal("25Mi"), name)
+			}
+		})
+
+		It("Should pass the CR limits to the main containers untouched", func() {
 			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-fractional-resources-dex-authenticator")
 			Expect(deployment.Exists()).To(BeTrue())
 
-			// Fractional quantities are valid for the CRD schema, so 0.5 + 0.5 must give 1000m,
-			// not 0m, which would be below the init container requests and rejected by the API server.
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.cpu").String()).To(Equal("10m"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("1000m"))
-
-			// 0.5Gi + 512Mi = 1024Mi.
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.requests.memory").String()).To(Equal("10Mi"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("1024Mi"))
-
-			// Main container limits are passed through untouched.
 			Expect(deployment.Field("spec.template.spec.containers.0.resources.limits.cpu").String()).To(Equal("0.5"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.limits.memory").String()).To(Equal("0.5Gi"))
 			Expect(deployment.Field("spec.template.spec.containers.1.resources.limits.cpu").String()).To(Equal("0.5"))
-		})
-
-		It("Should keep the init container limits at or above its requests", func() {
-			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-tiny-resources-dex-authenticator")
-			Expect(deployment.Exists()).To(BeTrue())
-
-			// The sum of the limits is below the hardcoded init container requests, so it is raised to them.
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("10m"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("10Mi"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.limits.memory").String()).To(Equal("512Mi"))
 		})
 
 		It("Should use default resources when VPA disabled and resources not specified", func() {
@@ -560,9 +565,9 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-without-resources-dex-authenticator")
 			Expect(deployment.Exists()).To(BeTrue())
 
-			// Init limits = sum of defaults (10m+10m, 25Mi+25Mi)
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("20m"))
-			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("50Mi"))
+			// The init container carries fixed resources, independent of the CR.
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.initContainers.0.resources.limits.memory").String()).To(Equal("25Mi"))
 
 			// Check dex-authenticator container resources
 			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("10m"))
