@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package nodeconfig renders a NodeConfig object for every node of a Deckhouse Engine
-// NodeGroup: the on-node agent reconciles the node towards it. This controller
-// writes that desired state from the NodeGroup plus live cluster state.
+// Package nodeconfig renders a NodeConfig object for every node: the on-node
+// agent reconciles the node towards it. An Engine node's is the whole desired
+// state; a bashible node's carries only what bashible does not apply itself.
 package nodeconfig
 
 import (
@@ -146,9 +146,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.reconcileNode(ctx, req.Name, logger, newPass())
 }
 
-// reconcileAllNodes re-renders every node of every immutable group. One failure
-// does not stop the others; failures are counted, not logged one by one, and
-// the first error is returned so the pass is retried with backoff.
+// reconcileAllNodes re-renders every node of every group. One failure does not
+// stop the others; failures are counted, not logged one by one, and the first
+// error is returned so the pass is retried with backoff.
 func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) (ctrl.Result, error) {
 	nodes := &corev1.NodeList{}
 	if err := r.Client.List(ctx, nodes); err != nil {
@@ -222,9 +222,9 @@ func nodeIsReady(node *corev1.Node) bool {
 	return false
 }
 
-// reconcileNode brings one node's NodeConfig in line with its NodeGroup. A node
-// that is gone, ungrouped, or in a bashible-managed group has no NodeConfig of
-// ours; any leftover object is removed.
+// reconcileNode brings one node's NodeConfig in line with its NodeGroup. Both
+// kinds of group get one; a node that is gone or ungrouped has none, and any
+// leftover object is removed.
 func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger logr.Logger, p *pass) (ctrl.Result, error) {
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
@@ -257,7 +257,7 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 	}
 
 	if ng.Spec.SystemType != v1.SystemTypeImmutable {
-		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
+		return ctrl.Result{}, r.reconcileMutableNode(ctx, ng, node, logger, p)
 	}
 
 	inputs, err := r.clusterInputs(ctx, ng, p)
@@ -290,6 +290,9 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get NodeConfig %s: %w", desired.Name, err)
+	}
+	if removed, err := r.removeOnSystemTypeChange(ctx, existing, desired, logger); removed || err != nil {
+		return nil, err
 	}
 
 	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec)

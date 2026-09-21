@@ -1306,33 +1306,34 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	It("leaves nodes of a bashible-managed group alone", func(ctx context.Context) {
-		ngName := testenv.UniqueName("workers-mutable")
-		ng := &deckhousev1.NodeGroup{
-			ObjectMeta: metav1.ObjectMeta{Name: ngName},
-			Spec: deckhousev1.NodeGroupSpec{
-				NodeType:   deckhousev1.NodeTypeCloudEphemeral,
-				SystemType: deckhousev1.SystemTypeMutable,
-				CloudInstances: &deckhousev1.CloudInstancesSpec{
-					MinPerZone: 1,
-					MaxPerZone: 3,
-					ClassReference: deckhousev1.ClassReference{
-						Kind: "DVPInstanceClass",
-						Name: "worker",
-					},
-				},
-			},
-		}
-		Expect(k8sClient.Create(ctx, ng)).To(Succeed())
-		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, ng) })
-
+	It("gives a node of a Mutable group a document of its own", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-mut")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.SystemType = deckhousev1.SystemTypeMutable
+		})
 		nodeName := testenv.UniqueName("node")
 		createNode(ctx, nodeName, ngName)
 
+		settled := ""
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeMutable))
+			g.Expect(nc.Spec.NodeName).To(Equal(nodeName))
+			g.Expect(nc.Spec.APIServerEndpoints).NotTo(BeEmpty())
+			// Nothing bashible also writes: a field both applied would be
+			// rewritten by each in turn.
+			g.Expect(nc.Spec.Extensions).To(BeEmpty())
+			g.Expect(nc.Spec.OSImage).To(BeZero())
+			settled = nc.ResourceVersion
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// The API server defaults kubelet and containerRuntime on the stored
+		// object. A later pass that wrote them back empty would have them
+		// defaulted again and patch the node once a pass for ever.
+		By("re-rendering the node with nothing changed")
+		touchNodeGroup(ctx, ngName)
 		Consistently(func(g Gomega) {
-			nc := &internalv1alpha1.NodeConfig{}
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, nc)
-			g.Expect(err).To(HaveOccurred())
+			g.Expect(getNodeConfig(ctx, g, nodeName).ResourceVersion).To(Equal(settled))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
