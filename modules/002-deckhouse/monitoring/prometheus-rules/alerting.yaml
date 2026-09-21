@@ -341,9 +341,33 @@
       summary: |
         Conflict detected for module {{ $labels.module }}.
       description: |
-        Deckhouse has detected conflicting sources for the {{ $labels.module }} module.
+        Deckhouse has detected conflicting sources for the {{ $labels.module }} module: it is available from more than one ModuleSource and no source is selected, so the module is not deployed.
 
-        To resolve this issue, specify the correct source in the module configuration.
+        To resolve this issue, follow these steps:
+
+        1. List the sources that provide the module:
+
+           ```bash
+           d8 k get module {{ $labels.module }} -o jsonpath='{.properties.availableSources}{"\n"}'
+           ```
+
+        1. Compare what each source offers, so you pick the one you actually want:
+
+           ```bash
+           d8 k get modulerelease -l module={{ $labels.module }}
+           ```
+
+        1. Select the source in the module configuration:
+
+           ```bash
+           d8 k patch moduleconfig {{ $labels.module }} --type=merge -p '{"spec":{"source":"<SOURCE_NAME>"}}'
+           ```
+
+        1. Verify that the module has left the `Conflict` phase. The `SOURCE` and `PHASE` columns show the result:
+
+           ```bash
+           d8 k get module {{ $labels.module }}
+           ```
 
   - alert: ModuleConfigObsoleteVersion
     expr: max by (name, version, latest) (d8_module_config_obsolete_version) >= 1
@@ -477,4 +501,24 @@
       summary: |
         Module `{{ $labels.module }}` is deprecated.
       description: |
-        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in the future, so please disable it in a controlled manner.
+        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in a future release, so disable it in a controlled manner rather than waiting for it to disappear.
+
+        To resolve this issue, follow these steps:
+
+        1. Check the module state before changing anything. The `STAGE` column reads `Deprecated`, and the conditions show whether anything still runs:
+
+           ```bash
+           d8 k get module {{ $labels.module }}
+           ```
+
+        1. Find out whether other modules declare a dependency on it:
+
+           ```bash
+           d8 k get modules -o json | jq -r '.items[] | select(.properties.requirements.modules | has("{{ $labels.module }}")) | .metadata.name'
+           ```
+
+        1. Once nothing depends on it and its workloads are no longer needed, disable the module:
+
+           ```bash
+           d8 k patch moduleconfig {{ $labels.module }} --type=merge -p '{"spec":{"enabled":false}}'
+           ```
