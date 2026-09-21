@@ -1,8 +1,8 @@
 # copy.bara.sky
 #
 # Example / test Copybara config for the copybara-mirror GitLab CI template
-# (.gitlab/copybara-mirror.yml). See .gitlab/copybara-mirror.spec.md for the
-# full design rationale behind the template.
+# (ci-templates/copybara-mirror.yml). See .gitlab/copybara-mirror.spec.md for
+# the full design rationale behind the template.
 #
 # Contract with the template (do not break these when editing this file):
 #   - it must define exactly one workflow named "mirror" — that's the name
@@ -16,7 +16,8 @@
 #
 # Origin is the runner's own checkout of this project (folder.origin), not a
 # remote git URL: the CI job already delivers the right codebase — that's
-# what GIT_STRATEGY: clone in copybara-mirror.yml is for — so copybara reads
+# what GIT_STRATEGY: clone in ci-templates/copybara-mirror.yml is for — so
+# copybara reads
 # it straight from disk instead of fetching it again over the network. This
 # also means the template needs no read credentials for the origin side, and
 # works the same way for any project regardless of whether it has a public
@@ -30,7 +31,7 @@
 #    path (this file, at the project root):
 #
 #      include:
-#        - local: '.gitlab/copybara-mirror.yml'
+#        - local: 'ci-templates/copybara-mirror.yml'
 #          inputs:
 #            destination: 'https://fox.flant.com/deckhouse/deckhouse-test-1.git'
 #            vault_path: '<vault-engine-path>/deckhouse-test-1-gitlab/writetoken/token@projects'
@@ -39,7 +40,7 @@
 #    config path and a custom pipeline stage:
 #
 #      include:
-#        - local: '.gitlab/copybara-mirror.yml'
+#        - local: 'ci-templates/copybara-mirror.yml'
 #          inputs:
 #            config: 'copy.bara.sky'
 #            destination: 'https://github.com/deckhouse/deckhouse-test-2.git'
@@ -73,6 +74,7 @@ core.workflow(
             ".github/**",
             ".gitlab/**",
             ".git/**",
+            "ci-templates/**",
         ],
     ),
     mode = "SQUASH",
