@@ -145,6 +145,27 @@ var _ = Describe("Modules :: nodeManager :: hooks :: kubelet_csr_approver ::", f
 		})
 	})
 
+	Context("Cluster with csr for another signer", func() {
+		BeforeEach(func() {
+			csrUsages := []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageKeyEncipherment, cv1.UsageClientAuth}
+			csr := newKubeCSR("system:masters", "kubernetes-admin", nil, nil, csrUsages)
+			csr.Spec.SignerName = cv1.KubeAPIServerClientSignerName
+			csrYaml, _ := yaml.Marshal(csr)
+
+			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
+			_, _ = f.KubeClient().CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
+
+			f.RunHook()
+		})
+
+		It("Must be executed successfully and don't approve csr", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			csr, err := f.KubeClient().CertificatesV1().CertificateSigningRequests().Get(context.TODO(), "kubelet-csr", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(csr.Status.Conditions).To(BeNil())
+		})
+	})
+
 	Context("Cluster with wrong csr (Organization must match 'system:nodes')", func() {
 		BeforeEach(func() {
 			csrUsages := []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageKeyEncipherment, cv1.UsageServerAuth}
