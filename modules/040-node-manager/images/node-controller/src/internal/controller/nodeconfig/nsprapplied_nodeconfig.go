@@ -25,9 +25,9 @@ import (
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
-// nsprOutcome is what the fleet reports back about one static pod, counted per
-// source and added up by mergeOutcomes. Same shape and counting loop as
-// nerOutcome/readNEROutcomes (nerapplied.go); kept apart because the join differs.
+// nsprOutcome is what the fleet reports back about one static pod. Same shape
+// and counting loop as nerOutcome/readNEROutcomes (nerapplied.go); kept apart
+// because the join differs.
 type nsprOutcome struct {
 	applied int32
 	failed  int32
@@ -41,9 +41,9 @@ type nsprOutcome struct {
 // The key is the pod's name, which is the NodeStaticPodRequest's own name — the
 // render copies it across unchanged, so no other join is needed.
 //
-// Which nodes are its own is not a question this source has to ask: a NodeConfig
-// is what an Engine node has and a bashible node does not, so the listing is the
-// set. Hence no NodeGroups, no labels and no systemType here.
+// Which nodes are its own is not a question this source has to ask: every node
+// of every group has a NodeConfig, and its status.staticPods is the one report.
+// Hence no NodeGroups, no labels and no systemType here.
 //
 // The manifest on disk is the whole of what the node owes the pod, so
 // status.staticPods[] is the whole of the answer, and it has two states: Written
@@ -90,27 +90,4 @@ func staticPodFailure(status internalv1alpha1.StaticPodStatus) string {
 	default:
 		return status.Reason + ": " + status.Message
 	}
-}
-
-// mergeOutcomes adds one source's counts into another's and returns the result.
-// Counts add; a message already in hand wins, since a source that reports no
-// refusals has nothing better to say.
-//
-// This is the whole of what the two sources share. When the last bashible node
-// is gone, nsprapplied_annotation.go is deleted and this keeps working with one
-// argument — that is the point of it being here rather than inside a loop.
-func mergeOutcomes(into, from map[string]nsprOutcome) map[string]nsprOutcome {
-	if into == nil {
-		into = map[string]nsprOutcome{}
-	}
-	for name, add := range from {
-		outcome := into[name]
-		outcome.applied += add.applied
-		outcome.failed += add.failed
-		if outcome.message == "" {
-			outcome.message = add.message
-		}
-		into[name] = outcome
-	}
-	return into
 }

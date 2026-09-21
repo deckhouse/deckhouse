@@ -29,6 +29,7 @@ import (
 // +kubebuilder:resource:scope=Cluster,shortName=ner
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Phase,jsonPath=.status.phase,type=string
+// +kubebuilder:printcolumn:name=Matched,jsonPath=.status.matchedNodes,type=integer
 // +kubebuilder:printcolumn:name=Age,jsonPath=.metadata.creationTimestamp,type=date
 type NodeExtensionRequest struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -150,6 +151,13 @@ type NodeExtensionRequestStatus struct {
 	AppliedNodes int32 `json:"appliedNodes,omitempty"`
 	// +optional
 	FailedNodes int32 `json:"failedNodes,omitempty"`
+
+	// MatchedNodes is how many nodes the selected groups hold; PendingNodes how
+	// many of them have reported neither success nor refusal yet.
+	// +optional
+	MatchedNodes int32 `json:"matchedNodes,omitempty"`
+	// +optional
+	PendingNodes int32 `json:"pendingNodes,omitempty"`
 
 	// FailureMessage is what the nodes say about the refusal, taken from one of
 	// them. A bad image fails the same way everywhere, so one message is the

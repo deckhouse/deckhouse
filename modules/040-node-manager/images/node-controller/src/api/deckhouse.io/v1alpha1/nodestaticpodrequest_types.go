@@ -45,6 +45,7 @@ import (
 // +kubebuilder:resource:scope=Cluster,shortName=nspr
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Phase,jsonPath=.status.phase,type=string
+// +kubebuilder:printcolumn:name=Matched,jsonPath=.status.matchedNodes,type=integer
 // +kubebuilder:printcolumn:name=Applied,jsonPath=.status.appliedNodes,type=integer
 // +kubebuilder:printcolumn:name=Failed,jsonPath=.status.failedNodes,type=integer
 // +kubebuilder:printcolumn:name=Age,jsonPath=.metadata.creationTimestamp,type=date
@@ -110,6 +111,13 @@ type NodeStaticPodRequestStatus struct {
 	AppliedNodes int32 `json:"appliedNodes,omitempty"`
 	// +optional
 	FailedNodes int32 `json:"failedNodes,omitempty"`
+
+	// MatchedNodes is how many nodes the selected groups hold; PendingNodes how
+	// many of them have reported neither success nor refusal yet.
+	// +optional
+	MatchedNodes int32 `json:"matchedNodes,omitempty"`
+	// +optional
+	PendingNodes int32 `json:"pendingNodes,omitempty"`
 
 	// FailureMessage is what the nodes say about the refusal, taken from one of
 	// them: a bad manifest fails the same way everywhere.
