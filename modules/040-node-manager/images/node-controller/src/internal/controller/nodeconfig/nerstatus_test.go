@@ -45,6 +45,9 @@ func TestNERStatusIsNotPublishedFromAFleetThatCouldNotBeRead(t *testing.T) {
 	require.NoError(t, v1.AddToScheme(scheme))
 	require.NoError(t, deckhousev1alpha1.AddToScheme(scheme))
 	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
+	// The pass lists Nodes for the denominator: without this it would stay green
+	// because the scheme refused the listing, not because the fleet read failed.
+	require.NoError(t, corev1.AddToScheme(scheme))
 
 	ner := &deckhousev1alpha1.NodeExtensionRequest{
 		ObjectMeta: metav1.ObjectMeta{Name: "bob-request"},
