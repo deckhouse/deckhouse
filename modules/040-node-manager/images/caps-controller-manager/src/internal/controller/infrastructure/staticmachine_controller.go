@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -326,6 +327,17 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
 	}
 
+	// A StaticMachine that never got a ProviderID never ran anything on the host: the id is
+	// assigned in setStaticInstancePhaseToBootstrapping only after both the TCP and the ssh
+	// check pass, and the bootstrap script is spawned only for a non-empty ProviderID. The
+	// remote cleanup script would `rm -rf /var/lib/bashible` and reboot such a host, so skip
+	// it and hand the instance back to the pool instead.
+	if staticMachine.Spec.ProviderID == "" && staticInstance.Status.NodeRef == nil {
+		logger.Info("StaticMachine never reached the host, skipping remote cleanup")
+		staticInstance.ToPending()
+		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
+	}
+
 	if phase != deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning && staticInstance.Status.NodeRef != nil {
 		staticMachine.Status.Ready = false
 		staticMachine.Status.Initialization.Provisioned = ptr.To(false)
@@ -409,6 +421,16 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Conte
 			staticMachine.Status.FailureReason = ptr.To("CreateError")
 			staticMachine.Status.FailureMessage = ptr.To(ErrStaticMachineBootstrapTimedOut.Error())
 			r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceBootstrapTimeoutReached", "Timed out waiting for StaticInstance to bootstrap")
+
+			// Nothing was executed on the host while ProviderID is empty, so the instance goes
+			// back to the pool right away instead of waiting for MHC remediation plus the
+			// cleanup timeout. An instance whose host was already touched keeps its
+			// reservation: handing it over dirty to another StaticMachine is exactly what the
+			// MHC path, with its cleanup, exists for.
+			if staticMachine.Spec.ProviderID == "" {
+				staticInstance.ToPending()
+			}
+
 			return ctrl.Result{}, ErrStaticMachineBootstrapTimedOut
 		}
 		return r.HostClient.Bootstrap(ctx, staticInstance, staticMachine, machine)
@@ -497,6 +519,7 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 				return nil
 			}
 
+			instanceLabels := labels.Set(staticInstance.GetLabels())
 			requests := make([]reconcile.Request, 0, len(machines.Items))
 
 			for _, machine := range machines.Items {
@@ -505,6 +528,19 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 				}
 
 				if machine.Status.Initialization.Provisioned != nil && *machine.Status.Initialization.Provisioned {
+					continue
+				}
+
+				// Only the StaticMachines that could actually pick this StaticInstance are
+				// interested in it becoming Pending. Enqueueing every non-ready StaticMachine
+				// multiplies a single release into a cluster-wide reconcile burst.
+				selector, err := machine.StaticInstanceSelector()
+				if err != nil {
+					logger.Error(err, "failed to get StaticMachine label selector", "staticMachine", machine.Name)
+					continue
+				}
+
+				if !selector.Matches(instanceLabels) {
 					continue
 				}
 
