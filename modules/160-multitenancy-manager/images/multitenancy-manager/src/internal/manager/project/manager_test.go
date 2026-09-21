@@ -337,6 +337,18 @@ func TestDelete_KeepsFinalizerWhileNamespaceExists(t *testing.T) {
 	if !got.IsConditionFalse(v1alpha3.ProjectConditionNamespaceDeleted) {
 		t.Fatalf("the project must say it waits for its namespace, conditions: %+v", got.Status.Conditions)
 	}
+	// The same situation on the next poll must not produce a new revision: a namespace stuck for
+	// good would otherwise cost an etcd write per poll.
+	if _, err := m.Delete(context.Background(), got); err != nil {
+		t.Fatalf("second Delete: %v", err)
+	}
+	again := new(v1alpha3.Project)
+	if err := c.Get(context.Background(), client.ObjectKey{Name: "proj"}, again); err != nil {
+		t.Fatal(err)
+	}
+	if again.ResourceVersion != got.ResourceVersion {
+		t.Fatalf("an unchanged deletion wait must not write the status again: rv %s -> %s", got.ResourceVersion, again.ResourceVersion)
+	}
 
 	// The namespace is gone -- Kubernetes drops it once its own finalizers are cleared. The fake
 	// client keeps a deleting object around while it has finalizers, exactly like the real API

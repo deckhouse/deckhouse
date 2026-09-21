@@ -424,6 +424,17 @@ func (p *Project) SetConditionTrue(condName string) {
 	})
 }
 
+// IsConditionFalseWithMessage reports whether the condition is already False with exactly this
+// message, so that a caller can skip a status write that would change nothing but the probe time.
+func (p *Project) IsConditionFalseWithMessage(condName, message string) bool {
+	for _, cond := range p.Status.Conditions {
+		if cond.Type == condName {
+			return cond.Status == corev1.ConditionFalse && cond.Message == message
+		}
+	}
+	return false
+}
+
 func (p *Project) SetConditionFalse(condName, message string) {
 	for idx, cond := range p.Status.Conditions {
 		if cond.Type == condName {

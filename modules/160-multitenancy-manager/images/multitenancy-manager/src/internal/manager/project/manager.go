@@ -429,19 +429,23 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		}
 		// Terminating: Kubernetes is purging the contents, or something in there holds a finalizer
 		// and the namespace never finishes. Say so where "kubectl describe project" shows it, and
-		// check less and less often the longer it takes.
+		// check less and less often the longer it takes. The message names the moment the
+		// namespace started terminating rather than the time elapsed, so an unchanged situation
+		// produces an identical condition and no status write: a namespace stuck for good must not
+		// cost an etcd revision per poll.
 		terminatingFor := time.Since(namespace.DeletionTimestamp.Time)
-		summary := namespaceTerminationSummary(namespace)
-		project.SetConditionFalse(v1alpha3.ProjectConditionNamespaceDeleted,
-			fmt.Sprintf("waiting for the '%s' namespace to be deleted (terminating for %s); %s",
-				project.Name, terminatingFor.Round(time.Second), summary))
-		if err := m.updateProjectStatus(ctx, project); err != nil {
-			// The status is a courtesy; the deletion itself does not depend on it.
-			m.logger.Error(err, "failed to record the namespace deletion status", "project", project.Name)
+		message := fmt.Sprintf("waiting for the '%s' namespace to be deleted (terminating since %s); %s",
+			project.Name, namespace.DeletionTimestamp.UTC().Format(time.RFC3339), namespaceTerminationSummary(namespace))
+		if !project.IsConditionFalseWithMessage(v1alpha3.ProjectConditionNamespaceDeleted, message) {
+			project.SetConditionFalse(v1alpha3.ProjectConditionNamespaceDeleted, message)
+			if err := m.updateProjectStatus(ctx, project); err != nil {
+				// The status is a courtesy; the deletion itself does not depend on it.
+				m.logger.Error(err, "failed to record the namespace deletion status", "project", project.Name)
+			}
 		}
 		poll := namespaceDeletionPollFor(terminatingFor)
 		m.logger.Info("the project namespace is still terminating, waiting",
-			"project", project.Name, "terminatingFor", terminatingFor.Round(time.Second), "nextCheck", poll, "remaining", summary)
+			"project", project.Name, "terminatingFor", terminatingFor.Round(time.Second), "nextCheck", poll)
 		return ctrl.Result{RequeueAfter: poll}, nil
 	case !apierrors.IsNotFound(err):
 		return ctrl.Result{}, fmt.Errorf("get the '%s' namespace: %w", project.Name, err)

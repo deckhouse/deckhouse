@@ -14,6 +14,12 @@
   identity that bypasses them is system:sudouser -- the same identity the heritage
   ValidatingAdmissionPolicy exempts -- so an administrator who has to bypass a check does it on
   purpose, by impersonating that user, and the bypass is visible in the audit log.
+
+  The exclusion applies to the Project and ProjectTemplate webhooks only. Nothing in the platform
+  renders a ProjectRoleBinding, a ProjectNamespace or a ClusterProjectRoleBinding, so no release can
+  deadlock on their webhooks, and the exclusion would only drop the managed-by and escalation checks
+  for platform service accounts and system:sudouser. Those three webhooks see every request; their
+  handler privileges the controller and Deckhouse service accounts and nobody else.
 */ -}}
 {{- $excludeSystemWriters := `matchConditions:
 - name: exclude-system-writers
@@ -74,7 +80,6 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- $excludeSystemWriters | nindent 4 }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
@@ -98,7 +103,6 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- $excludeSystemWriters | nindent 4 }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
@@ -123,7 +127,6 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- $excludeSystemWriters | nindent 4 }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
