@@ -221,11 +221,17 @@ func checkEtcdClusterHealthy(ctx context.Context, kubeGetter kubernetes.KubeClie
 			return err
 		}
 
-		if unhealthy := unhealthyEndpoints(endpoints, memberEndpoints(members, skippedNode)); len(unhealthy) > 0 {
+		unhealthy, checked := unhealthyEndpoints(endpoints, memberEndpoints(members, skippedNode))
+		if len(unhealthy) > 0 {
 			return fmt.Errorf("%w: %s", errEtcdClusterIsNotHealthy, strings.Join(unhealthy, "; "))
 		}
 
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Etcd cluster is healthy on all %d endpoints", len(endpoints)))
+		// An empty report proves nothing, and silence must not pass for health here.
+		if checked == 0 {
+			return fmt.Errorf("%w: no endpoint answered the health call", errEtcdClusterIsNotHealthy)
+		}
+
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Etcd cluster is healthy on all %d endpoints", checked))
 
 		return nil
 	})
@@ -392,16 +398,21 @@ func memberEndpoints(members []etcdMember, nodeName string) map[string]struct{} 
 }
 
 // unhealthyEndpoints names the endpoints `etcdctl endpoint health --cluster` refused to
-// call healthy, with the reason it gave for each.
-func unhealthyEndpoints(endpoints []endpointHealth, ignored map[string]struct{}) []string {
-	unhealthy := make([]string, 0, len(endpoints))
+// call healthy, with the reason it gave for each, and reports how many endpoints were
+// required to answer at all.
+//
+//nolint:nonamedreturns
+func unhealthyEndpoints(endpoints []endpointHealth, ignored map[string]struct{}) (unhealthy []string, checked int) {
+	unhealthy = make([]string, 0, len(endpoints))
 
 	for _, e := range endpoints {
-		if e.Health {
+		if _, ok := ignored[strings.TrimSuffix(e.Endpoint, "/")]; ok {
 			continue
 		}
 
-		if _, ok := ignored[strings.TrimSuffix(e.Endpoint, "/")]; ok {
+		checked++
+
+		if e.Health {
 			continue
 		}
 
@@ -413,7 +424,7 @@ func unhealthyEndpoints(endpoints []endpointHealth, ignored map[string]struct{})
 		unhealthy = append(unhealthy, fmt.Sprintf("%s: %s", e.Endpoint, reason))
 	}
 
-	return unhealthy
+	return unhealthy, checked
 }
 
 // hasVotingMember answers for the name, not for the first entry carrying it: a

@@ -122,8 +122,6 @@ func TestCheckControlPlaneNodesReadyTransportError(t *testing.T) {
 	}
 }
 
-// IsReadyAll must not abort on the impersonation denial that started this: it keeps polling and
-// succeeds as soon as the apiserver serves the list again.
 // The master on its way out is not required to answer for itself: it is the one being
 // removed, and its ControlPlaneNode is what the removal is often about.
 func TestCheckControlPlaneNodesReadyExcludesTheLeavingMaster(t *testing.T) {
@@ -216,6 +214,8 @@ func TestManagerReadinessCheckerIsReadyAllExceptSkipsExcludedUnreadyNode(t *test
 	require.NoError(t, checker.IsReadyAllExcept(ctx, "master-1"))
 }
 
+// IsReadyAll must not abort on the impersonation denial that started this: it keeps polling and
+// succeeds as soon as the apiserver serves the list again.
 func TestIsReadyAllRidesOutImpersonationDenial(t *testing.T) {
 	const failedAttempts = 3
 

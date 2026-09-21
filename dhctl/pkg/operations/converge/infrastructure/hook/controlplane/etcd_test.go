@@ -72,14 +72,14 @@ func TestEtcdQuorumBeforeRemoval(t *testing.T) {
 
 		voting, served := etcdQuorumBeforeRemoval(members, "cluster-master-2", threeMasters)
 		require.Equal(t, 2, voting)
-		require.GreaterOrEqual(t, served, voting/2+1, "3 -> 2 must pass")
+		require.Equal(t, 2, served, "3 -> 2 must pass")
 
 		oneMaster := map[string]struct{}{"cluster-master-0": {}}
 		members = []etcdMember{{Name: "cluster-master-0"}, {Name: "cluster-master-1"}}
 
 		voting, served = etcdQuorumBeforeRemoval(members, "cluster-master-1", oneMaster)
 		require.Equal(t, 1, voting)
-		require.GreaterOrEqual(t, served, voting/2+1, "2 -> 1 must pass")
+		require.Equal(t, 1, served, "2 -> 1 must pass")
 	})
 
 	t.Run("orphan members count against the quorum", func(t *testing.T) {
@@ -138,15 +138,16 @@ func TestUnhealthyEndpoints(t *testing.T) {
 	var endpoints []endpointHealth
 	require.NoError(t, json.Unmarshal([]byte(endpointHealthWithFailure), &endpoints))
 
-	unhealthy := unhealthyEndpoints(endpoints, nil)
+	unhealthy, checked := unhealthyEndpoints(endpoints, nil)
 
+	require.Equal(t, 2, checked)
 	require.Len(t, unhealthy, 1)
 	require.Contains(t, unhealthy[0], "https://10.12.1.11:2379")
 	require.Contains(t, unhealthy[0], "context deadline exceeded")
 }
 
 func TestUnhealthyEndpointsReportsSilentFailure(t *testing.T) {
-	unhealthy := unhealthyEndpoints([]endpointHealth{
+	unhealthy, _ := unhealthyEndpoints([]endpointHealth{
 		{Endpoint: "https://10.12.1.10:2379", Health: true},
 		{Endpoint: "https://10.12.1.12:2379"},
 	}, nil)
@@ -167,6 +168,26 @@ func TestUnhealthyEndpointsSkipsTheLeavingMember(t *testing.T) {
 		{Endpoint: "https://10.12.1.12:2379", Error: "context deadline exceeded"},
 	}
 
-	require.Empty(t, unhealthyEndpoints(endpoints, memberEndpoints(members, "cluster-master-2")))
-	require.Len(t, unhealthyEndpoints(endpoints, memberEndpoints(members, "cluster-master-0")), 1)
+	unhealthy, checked := unhealthyEndpoints(endpoints, memberEndpoints(members, "cluster-master-2"))
+	require.Empty(t, unhealthy)
+	require.Equal(t, 1, checked)
+
+	unhealthy, _ = unhealthyEndpoints(endpoints, memberEndpoints(members, "cluster-master-0"))
+	require.Len(t, unhealthy, 1)
+}
+
+// An empty report is not a healthy cluster: nothing answered, so nothing was checked.
+func TestUnhealthyEndpointsCountsNothingWhenAllAreIgnored(t *testing.T) {
+	members := []etcdMember{
+		{Name: "cluster-master-0", ClientURLs: []string{"https://10.12.1.10:2379"}},
+	}
+	endpoints := []endpointHealth{{Endpoint: "https://10.12.1.10:2379", Health: true}}
+
+	unhealthy, checked := unhealthyEndpoints(endpoints, memberEndpoints(members, "cluster-master-0"))
+	require.Empty(t, unhealthy)
+	require.Zero(t, checked)
+
+	unhealthy, checked = unhealthyEndpoints(nil, nil)
+	require.Empty(t, unhealthy)
+	require.Zero(t, checked)
 }
