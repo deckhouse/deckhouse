@@ -306,6 +306,15 @@ done
 # 098_cleanup at the end of a successful run, exactly as after a first bootstrap.
 touch "${BOOTSTRAP_DIR}/first_run"
 
+# d8-shutdown-inhibitor holds a systemd delay lock on shutdown and decides when
+# it is safe to let go by listing the pods on its node - through kubelet's client
+# certificate, which this script has just removed. Left running it retries that
+# call forever and the reboot never happens, leaving the machine with no identity,
+# no Node object and nothing coming to fix it. The node is drained by now, so
+# there is nothing left for it to protect.
+log "stopping d8-shutdown-inhibitor so it cannot hold the reboot back"
+systemctl stop d8-shutdown-inhibitor.service >/dev/null 2>&1 || true
+
 log "rebooting; the node will come back as '${new_name}'"
 log "bashible runs on boot, registers the node under the new name, and brings the CNI up on the subnet the new Node is given."
 systemctl reboot
