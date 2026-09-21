@@ -1,4 +1,4 @@
-From c6e8999469d77d1d8c2fe19e794de2217986792c Mon Sep 17 00:00:00 2001
+From 99b044930f688535a8d583e81265e6e0bd44bfd2 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 14 Sep 2026 16:41:46 +0300
 Subject: [PATCH] metrics: export the worst BPF program's verifier complexity

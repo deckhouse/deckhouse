@@ -1,11 +1,21 @@
-From 846a8014233991b413fa3bdb1a813fa5988cbae8 Mon Sep 17 00:00:00 2001
+From cdd93f373ef1cfa27f0f40a1e296fe42ac6bf7d1 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 7 Sep 2026 17:48:12 +0300
-Subject: [PATCH] ipam: pin a pod's address with cni.cilium.io/ipAddress
+Subject: [PATCH] ipam: pin a pod's address with an annotation
 
-Deckhouse Virtualization needs a pod to be able to request a specific address:
+Deckhouse Virtualization needs a pod to be able to request a specific address.
+Two annotations carry the request:
 
+    network.deckhouse.io/networks-spec: [{"type":"Main","ipAddress":"10.10.10.10"}]
     cni.cilium.io/ipAddress: 10.10.10.10
+
+networks-spec describes every network attached to the pod, and the entry of type
+"Main" is the one this CNI honours. It wins over cni.cilium.io/ipAddress, which
+is the older single-valued form and remains the fallback -- including when
+networks-spec is present but names no primary network. A networks-spec that
+cannot be parsed fails the allocation rather than falling through to the other
+annotation, for the same reason a malformed address does: the request was made
+and cannot be read.
 
 The driving case is VM live migration. DVP migrates a virtual machine by running
 a second pod for it on the target node while the first is still running on the
@@ -84,16 +94,16 @@ different one: that is the only outcome that fails an allocation, because it is
 the only one where a request was made and cannot be honoured.
 
 Upstream: https://github.com/cilium/cilium/pull/24098
-Test: ~/src/kind/d8-1.20-tests/001-request-ip/run.sh
+Test: ~/src/kind/d8-1.20-tests/request-ip/run.sh
 ---
- daemon/cmd/endpoint_restore.go |  50 +++++++++-
- pkg/annotation/k8s.go          |   5 +
- pkg/ipam/allocator.go          |  97 ++++++++++++++++++-
+ daemon/cmd/endpoint_restore.go |  50 +++++++-
+ pkg/annotation/k8s.go          |  11 ++
+ pkg/ipam/allocator.go          |  97 +++++++++++++-
  pkg/ipam/cell/cell.go          |   3 +
  pkg/ipam/ipam.go               |   3 +
- pkg/ipam/requested_ip.go       | 172 +++++++++++++++++++++++++++++++++
+ pkg/ipam/requested_ip.go       | 228 +++++++++++++++++++++++++++++++++
  pkg/ipam/types.go              |   5 +
- 7 files changed, 331 insertions(+), 4 deletions(-)
+ 7 files changed, 393 insertions(+), 4 deletions(-)
  create mode 100644 pkg/ipam/requested_ip.go
 
 diff --git a/daemon/cmd/endpoint_restore.go b/daemon/cmd/endpoint_restore.go
@@ -183,10 +193,10 @@ index fadac4d0c5..ffb2ccc616 100644
  			return fmt.Errorf("unable to reallocate %s IPv4 address: %w", ep.IPv4, err)
  		}
 diff --git a/pkg/annotation/k8s.go b/pkg/annotation/k8s.go
-index d34d2338a0..c2636b99eb 100644
+index d34d2338a0..0fb936d451 100644
 --- a/pkg/annotation/k8s.go
 +++ b/pkg/annotation/k8s.go
-@@ -44,6 +44,11 @@ const (
+@@ -44,6 +44,17 @@ const (
  	// PodAnnotationMAC is used to store the MAC address of the Pod.
  	PodAnnotationMAC = CNIPrefix + "/mac-address"
  
@@ -194,6 +204,12 @@ index d34d2338a0..c2636b99eb 100644
 +	// this address instead of the next free one. Used for workloads whose
 +	// address is part of their identity, e.g. virtual machines.
 +	PodAnnotationIPAddress = CNIPrefix + "/ipAddress"
++
++	// PodAnnotationNetworksSpec pins the Pod's address too, as one entry of a
++	// JSON list describing every network attached to the Pod. It takes
++	// precedence over PodAnnotationIPAddress, which is the older single-valued
++	// form of the same request.
++	PodAnnotationNetworksSpec = "network.deckhouse.io/networks-spec"
 +
  	// PolicyName / PolicyNameAlias is an optional annotation to the NetworkPolicy
  	// resource which specifies the name of the policy node to which all
@@ -407,16 +423,17 @@ index 42444f7060..a70f3f5e7d 100644
  }
 diff --git a/pkg/ipam/requested_ip.go b/pkg/ipam/requested_ip.go
 new file mode 100644
-index 0000000000..5a4b8423ae
+index 0000000000..ba1c8c5002
 --- /dev/null
 +++ b/pkg/ipam/requested_ip.go
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,228 @@
 +// SPDX-License-Identifier: Apache-2.0
 +// Copyright Authors of Cilium
 +
 +package ipam
 +
 +import (
++	"encoding/json"
 +	"fmt"
 +	"net/netip"
 +	"strings"
@@ -427,7 +444,7 @@ index 0000000000..5a4b8423ae
 +	"github.com/cilium/cilium/pkg/time"
 +)
 +
-+// Pinning a pod's address with the cni.cilium.io/ipAddress annotation.
++// Pinning a pod's address with an annotation.
 +//
 +// Deckhouse needs a pod to come up with an address chosen by the caller instead
 +// of the next free one. The consumer is DVP: a virtual machine's address
@@ -442,6 +459,8 @@ index 0000000000..5a4b8423ae
 +//	                                           ingress, restored endpoints)
 +//	pod table not wired up                  -> allocate normally
 +//	pod carries no annotation               -> allocate normally
++//	networks-spec has no primary entry      -> fall back to cni.cilium.io/ipAddress
++//	networks-spec is not a JSON list        -> fail the allocation
 +//	annotation is for the other family      -> allocate normally for this family
 +//	pod not in the table within the wait    -> allocate normally, warn
 +//	annotation is not an IP address         -> fail the allocation
@@ -531,7 +550,10 @@ index 0000000000..5a4b8423ae
 +		return netip.Addr{}, nil
 +	}
 +
-+	value := pod.Annotations[annotation.PodAnnotationIPAddress]
++	value, source, err := requestedAddressOf(pod)
++	if err != nil {
++		return netip.Addr{}, fmt.Errorf("pod %s: %w", owner, err)
++	}
 +	if value == "" {
 +		return netip.Addr{}, nil
 +	}
@@ -539,7 +561,7 @@ index 0000000000..5a4b8423ae
 +	addr, err := netip.ParseAddr(value)
 +	if err != nil {
 +		return netip.Addr{}, fmt.Errorf("pod %s: annotation %s: %q is not an IP address",
-+			owner, annotation.PodAnnotationIPAddress, value)
++			owner, source, value)
 +	}
 +	addr = addr.Unmap()
 +
@@ -582,6 +604,56 @@ index 0000000000..5a4b8423ae
 +			return k8sTables.LocalPod{}, false
 +		}
 +	}
++}
++
++// networkSpec is one entry of the annotation.PodAnnotationNetworksSpec list.
++// Only the fields that decide an address are decoded; an entry describes a
++// whole network attachment and carries more than this.
++type networkSpec struct {
++	Type      string `json:"type"`
++	IPAddress string `json:"ipAddress"`
++}
++
++// clusterNetworkPrimaryCNIType marks the entry in the networks-spec list that
++// describes the address this CNI is expected to hand out. Entries of any other
++// type belong to additional networks that something else attaches, and are not
++// this allocator's business.
++const clusterNetworkPrimaryCNIType = "Main"
++
++// requestedAddressOf returns the address a pod pins, and the annotation it came
++// from so that an error can name it.
++//
++// Two annotations can carry the request. networks-spec is the richer one, a
++// list describing every network attached to the pod, and it wins: a pod that
++// has one is managed by something that knows about all of its networks.
++// cni.cilium.io/ipAddress is the older single-valued form and remains the
++// fallback -- including when networks-spec is present but says nothing about
++// the primary network, which is a pod whose other networks are specified and
++// whose primary address is not.
++//
++// A networks-spec that cannot be parsed is an error rather than a fallback. It
++// is a request that was made and cannot be read, and the one thing this code
++// must never do is silently hand out a different address than the one asked
++// for.
++func requestedAddressOf(pod k8sTables.LocalPod) (value, source string, err error) {
++	if spec := pod.Annotations[annotation.PodAnnotationNetworksSpec]; spec != "" {
++		var networks []networkSpec
++		if err := json.Unmarshal([]byte(spec), &networks); err != nil {
++			return "", "", fmt.Errorf("annotation %s: %q is not a list of network specs: %w",
++				annotation.PodAnnotationNetworksSpec, spec, err)
++		}
++		for _, n := range networks {
++			if n.Type == clusterNetworkPrimaryCNIType && n.IPAddress != "" {
++				return n.IPAddress, annotation.PodAnnotationNetworksSpec, nil
++			}
++		}
++	}
++
++	if v := pod.Annotations[annotation.PodAnnotationIPAddress]; v != "" {
++		return v, annotation.PodAnnotationIPAddress, nil
++	}
++
++	return "", "", nil
 +}
 diff --git a/pkg/ipam/types.go b/pkg/ipam/types.go
 index bbd74fd9f2..ce247b26a4 100644

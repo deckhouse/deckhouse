@@ -1,4 +1,4 @@
-From 18124e6b51d440e34aef0c6773f60522f17ad45f Mon Sep 17 00:00:00 2001
+From 3cac465cae2b46ea81f2d7a436f68435eada8fc4 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Wed, 9 Sep 2026 19:28:14 +0300
 Subject: [PATCH] bpf: DHCP server for pods

@@ -1,4 +1,4 @@
-From 484a22535b56a13efeebadf51521850b5e28e707 Mon Sep 17 00:00:00 2001
+From 15e2c52ad3ced26a022f5db29c8435cf3b1468d2 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 14 Sep 2026 16:24:46 +0300
 Subject: [PATCH] daemon: conntrack import/export HTTP endpoints

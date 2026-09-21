@@ -1,4 +1,4 @@
-From 9a2892744647589df31299b156ca4ac634b52c60 Mon Sep 17 00:00:00 2001
+From 7f487ec05062a479d1d1457e81ad06e98fe28e5e Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Fri, 11 Sep 2026 12:35:02 +0300
 Subject: [PATCH] ctmap: keep local clients' conntrack when an address migrates

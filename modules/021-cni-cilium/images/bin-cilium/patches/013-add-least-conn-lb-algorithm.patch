@@ -1,4 +1,4 @@
-From 5705b4c558eca0d681fdc99af25958b5c2775b95 Mon Sep 17 00:00:00 2001
+From 86b97cb8ff3f939653d7529a2811ca2cdf0b788b Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Wed, 16 Sep 2026 16:34:33 +0300
 Subject: [PATCH] lb: least-conn backend selection algorithm

@@ -1,4 +1,4 @@
-From 1188a8727bde071d0e4da21a7630546ad3c1babe Mon Sep 17 00:00:00 2001
+From 2ce530c885ebc6f6a491ff8b2a245874e4484550 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Wed, 9 Sep 2026 18:15:55 +0300
 Subject: [PATCH] mtu: give endpoint devices RouteMTU instead of DeviceMTU

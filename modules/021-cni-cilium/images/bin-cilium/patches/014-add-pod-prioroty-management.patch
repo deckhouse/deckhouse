@@ -1,4 +1,4 @@
-From 2a25fcde4facfb940287452ba7d50434dc1d5cb4 Mon Sep 17 00:00:00 2001
+From 00d1486d018712bc1e46c7a34310d815134f2731 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 21 Sep 2026 14:07:11 +0300
 Subject: [PATCH] ces: give a shared pod address a single owner

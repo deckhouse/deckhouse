@@ -1,4 +1,4 @@
-From d441961da2ad84886be669b2017e50bde4536770 Mon Sep 17 00:00:00 2001
+From 135f826b74e5111ff5b29a0530838ae88ea7a186 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 14 Sep 2026 18:01:49 +0300
 Subject: [PATCH] lb: answer ICMP echo for LoadBalancer service IPs

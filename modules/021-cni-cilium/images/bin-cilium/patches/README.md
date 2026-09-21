@@ -28,9 +28,17 @@ and diffing `go.mod`/`go.sum`.
 
 ## 001-request-ip.patch
 
-Add the opportunity to request specific IP-address using annotation:
+Add the opportunity to request a specific IP address using an annotation. Two
+carry the request, the first winning:
 
+    network.deckhouse.io/networks-spec: [{"type":"Main","ipAddress":"10.10.10.10"}]
     cni.cilium.io/ipAddress: 10.10.10.10
+
+`networks-spec` describes every network attached to the pod and its `Main` entry
+is the one this CNI honours; `cni.cilium.io/ipAddress` is the older
+single-valued form and the fallback, including when `networks-spec` names no
+primary network. One that cannot be parsed fails the allocation rather than
+falling through.
 
 Needed by DVP, where the address is part of a VM's identity: live migration runs
 two pods for one VM on two nodes, both holding that address, so a requested
