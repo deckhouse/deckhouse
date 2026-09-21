@@ -27,6 +27,12 @@ $text-secondary: #42424c;  // --text-secondary
 $text-brand: #0a6eff;      // --text-brand
 $brand-container: #004df2; // --bg-brand-container
 $accent-lime: #c8ff50;     // --bg-accent-lime
+// The card is the shape Figma exports for frame 51:4197, drawn in --bg-accent-lime. It
+// lives here rather than in the markup because the include that carries the artwork has
+// to exist twice - see _includes/error404-media_ru.html - and a path this long is not
+// worth keeping in two files. preserveAspectRatio='none' lets it stretch with the box,
+// which costs nothing: the box keeps the path's own 551.31x345.792 proportions anyway.
+$card: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 551.31 345.792' preserveAspectRatio='none'%3E%3Cpath fill='%23c8ff50' d='M1.01285 0C20.1084 2.46882 73.0482 4.96921 94.1696 6.30753L283.382 18.0836C346.326 22.1955 409.31 26.1356 472.33 29.9034C498.35 31.3864 524.451 33.7865 550.623 34.0425C551.625 44.6282 550.636 59.4971 550.624 70.489L550.585 144.156L550.591 265.362C550.614 280.487 551.602 296.447 551.224 311.354C535.145 313.039 511.587 313.155 493.318 314.831C461.938 316.248 425.753 318.904 394.341 320.923L255.675 329.619C171.578 334.981 84.2249 339.542 0.71344 345.792C-0.433025 319.654 0.438045 291.715 0.440131 265.426L0.467255 117.989L0.523604 38.8765C0.515259 28.8732 -0.927478 9.08502 1.01285 0Z'/%3E%3C/svg%3E");
 
 $media-gap: 44px;  // --spacing-group, the gap between the text column and the artwork
 // The artwork's column: half the row, less half the gap, and never wider than the 638px
@@ -260,12 +266,8 @@ html[lang="ru"] {
     left: 50%;
     width: 86.38%;
     height: 83.52%;
-    color: $accent-lime;
+    background: $card no-repeat center / 100% 100%;
     transform: translate(-50%, -50%) scaleX(-1);
-
-    svg {
-      display: block;
-    }
   }
 
   .error404__number {

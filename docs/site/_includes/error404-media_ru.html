@@ -1,17 +1,17 @@
 {%- comment -%}
-  Decorative artwork for the Russian 404 page, ported from deckhouse.ru (the markup of
-  .error404__media there is identical). Styled by _sass/components/_error-ru.scss, which
-  scopes everything under html[lang="ru"] so the English 404 page keeps /images/404.svg.
+  Decorative artwork for the Russian 404 page, the markup deckhouse.ru uses for
+  .error404__media. Everything it draws - the blue stripe, the lime card, the proportions
+  of the box - comes from _sass/components/_error-ru.scss, which scopes it all under
+  html[lang="ru"] so the English 404 page keeps /images/404.svg.
 
-  The card outline is the shape Figma exports for frame 51:4197; it is drawn with
-  fill="currentColor" so the lime comes from the stylesheet rather than from the file.
-
-  documentation/_includes/error404-media_ru.html is a symlink to this file, the way the
-  shared header includes are wired - the documentation and website-docs images are built
-  from documentation/ and resolve their includes there.
+  KEEP IN SYNC with documentation/_includes/error404-media_ru.html, which is a copy of
+  this file rather than a symlink to it. Pages under documentation/pages/ are rendered by
+  the documentation and website-docs images, both built out of documentation/, and only
+  the first of the two copies site/ into itself; a symlink in its place fails the
+  website-docs build. The markup is kept to four elements so the copy stays cheap.
 {%- endcomment -%}
 <div class="error404__media" aria-hidden="true">
   <span class="error404__stripe"></span>
-  <span class="error404__card"><svg width="100%" height="100%" viewBox="0 0 551.31 345.792" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.01285 0C20.1084 2.46882 73.0482 4.96921 94.1696 6.30753L283.382 18.0836C346.326 22.1955 409.31 26.1356 472.33 29.9034C498.35 31.3864 524.451 33.7865 550.623 34.0425C551.625 44.6282 550.636 59.4971 550.624 70.489L550.585 144.156L550.591 265.362C550.614 280.487 551.602 296.447 551.224 311.354C535.145 313.039 511.587 313.155 493.318 314.831C461.938 316.248 425.753 318.904 394.341 320.923L255.675 329.619C171.578 334.981 84.2249 339.542 0.71344 345.792C-0.433025 319.654 0.438045 291.715 0.440131 265.426L0.467255 117.989L0.523604 38.8765C0.515259 28.8732 -0.927478 9.08502 1.01285 0Z" fill="currentColor"/></svg></span>
+  <span class="error404__card"></span>
   <span class="error404__number">404</span>
 </div>
