@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package envconfig
 
 import (
 	"os"
@@ -20,12 +20,17 @@ import (
 	"time"
 )
 
-// Environment variable names the deckhouse controller reads at runtime. They are
-// the contract with the controller Deployment manifest
-// (modules/002-deckhouse/templates/deployment.yaml). A few overlap the
-// addon-operator config and are also parsed into *Config by the envconfig
-// package; they are read directly here only for early-startup and pod-identity
-// needs, before that config is built.
+// Environment variable names the deckhouse controller reads directly, outside
+// the addon-operator *Config that Load builds. They are the same contract with
+// the controller Deployment manifest (modules/002-deckhouse/templates/deployment.yaml),
+// so they live in this package alongside it.
+//
+// A few names also appear as Config fields in envconfig.go. Those are read
+// twice on purpose: Load parses them into addon-operator's config, while the
+// entrypoint and the pod-identity helpers below need them before that config
+// exists, or from code that never sees it. Go struct tags take literals only,
+// so the Config fields cannot reference these constants — when a name changes,
+// both places have to change.
 const (
 	// EnvBundle selects the always-on module set: Default, Minimal or Managed.
 	EnvBundle = "DECKHOUSE_BUNDLE"
@@ -51,8 +56,9 @@ const (
 	EnvSkipEntrypoint = "SKIP_ENTRYPOINT_EXECUTION"
 
 	// EnvShellChrootDir and EnvModulesDir belong to the addon-operator config
-	// contract (also parsed by envconfig). They are read directly in the entrypoint
-	// to prepare the shell chroot and locate modules before the operator starts.
+	// contract (Config.ShellChrootDir, Config.ModulesDir). They are read directly
+	// in the entrypoint, to prepare the shell chroot and locate modules before the
+	// operator starts.
 	EnvShellChrootDir = "ADDON_OPERATOR_SHELL_CHROOT_DIR"
 	EnvModulesDir     = "MODULES_DIR"
 
@@ -62,11 +68,34 @@ const (
 	EnvTracingOTLPInsecure      = "TRACING_OTLP_INSECURE"
 	EnvTracingOTLPTLSSkipVerify = "TRACING_OTLP_TLS_SKIP_VERIFY"
 
-	// Options forwarded to the embedded dhctl CLI.
+	// Options forwarded to the embedded dhctl CLI. EnvDhctlCLIFile backs dhctl's
+	// own --file flag; the controller reads it only to tell whether the user named
+	// an input source at all.
 	EnvLoggerType          = "DECKHOUSE_LOGGER_TYPE"
 	EnvEditor              = "DECKHOUSE_EDITOR"
 	EnvKubeConfigInCluster = "DECKHOUSE_KUBE_CONFIG_IN_CLUSTER"
 	EnvTmpDir              = "DECKHOUSE_TMP_DIR"
+	EnvDhctlCLIFile        = "DHCTL_CLI_FILE"
+
+	// Helm engine settings the nelm client picks up. EnvKubeContext is also
+	// Config.KubeContext.
+	EnvHelmDriver  = "HELM_DRIVER"
+	EnvKubeContext = "KUBE_CONTEXT"
+
+	// Endpoints the "deckhouse-controller debug" subcommands talk to.
+	// EnvDebugHTTPServerAddr is also Config.DebugHTTPServerAddr;
+	// EnvPackagesDebugUnixSocket is the packages-side socket and is the default of
+	// the --debug-unix-socket flag.
+	EnvDebugHTTPServerAddr     = "DEBUG_HTTP_SERVER_ADDR"
+	EnvPackagesDebugUnixSocket = "PACKAGES_DEBUG_UNIX_SOCKET"
+
+	// EnvIsTestsEnvironment holds "true" in test runs, where it pins values that
+	// would otherwise vary per run (e.g. measured durations).
+	EnvIsTestsEnvironment = "D8_IS_TESTS_ENVIRONMENT"
+
+	// EnvPackageNelmTimeout bounds each nelm release operation on the packages
+	// path (render, apply, uninstall). A Go duration string (e.g. "30m").
+	EnvPackageNelmTimeout = "PACKAGE_NELM_TIMEOUT"
 
 	// EnvDocumentationBuildTimeout caps a single upload+build round-trip from the
 	// module-documentation controller to a docs-builder. Every build triggers a
@@ -143,6 +172,23 @@ func TracingOTLPInsecure() bool { return os.Getenv(EnvTracingOTLPInsecure) == "t
 
 // TracingOTLPTLSSkipVerify reports whether OTLP exporter TLS verification is skipped.
 func TracingOTLPTLSSkipVerify() bool { return os.Getenv(EnvTracingOTLPTLSSkipVerify) == "true" }
+
+// IsTestsEnvironment reports whether the process runs under the test harness.
+func IsTestsEnvironment() bool { return os.Getenv(EnvIsTestsEnvironment) == "true" }
+
+// defaultPackageNelmTimeout applies when EnvPackageNelmTimeout is unset,
+// unparseable, or not positive.
+const defaultPackageNelmTimeout = 30 * time.Minute
+
+// PackageNelmTimeout is the timeout the packages path applies to one nelm
+// release operation. Defaults to 30m when PACKAGE_NELM_TIMEOUT is unset,
+// unparseable, or not positive.
+func PackageNelmTimeout() time.Duration {
+	if d := EnvDurationOr(EnvPackageNelmTimeout, defaultPackageNelmTimeout); d > 0 {
+		return d
+	}
+	return defaultPackageNelmTimeout
+}
 
 // DocumentationBuildTimeout is the per-request timeout the module-documentation
 // controller applies to docs-builder upload/build calls. Defaults to 120s when

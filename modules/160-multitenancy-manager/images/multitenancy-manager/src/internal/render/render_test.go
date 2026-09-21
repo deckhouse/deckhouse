@@ -27,6 +27,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/naming"
 )
 
 // TestManifestsFanOutMultiNamespace proves the namespaced objects (NetworkPolicy, PodLoggingConfig)
@@ -224,4 +225,46 @@ func TestManifestsKeepsOperationPolicyByDefault(t *testing.T) {
 	out, err := Manifests(tmpl, project)
 	require.NoError(t, err)
 	require.Contains(t, out, "kind: OperationPolicy")
+}
+
+// TestManifestsDedicatedPlacementBeatsMirroredAnnotation: adoption mirrors the placement annotations
+// a namespace already had into the namespace parameter, so a template that declares nodeSelector or
+// tolerations of its own must still win. Otherwise moving such a project onto a template with
+// dedicated nodes reports Deployed while the pods keep landing where the stale mirror says.
+func TestManifestsDedicatedPlacementBeatsMirroredAnnotation(t *testing.T) {
+	t.Parallel()
+	tmpl := &v1alpha2.ProjectTemplate{
+		Spec: v1alpha2.ProjectTemplateSpec{
+			NodeSelector: v1alpha2.LiteralParam(map[string]string{"dedicated": "team"}),
+			NamespaceMetadata: &v1alpha2.NamespaceMetadata{
+				Annotations: v1alpha2.LiteralParam(map[string]string{
+					naming.NodeSelectorAnnotation: "stale=mirror",
+					"team":                        "blue",
+				}),
+			},
+		},
+	}
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "placed"}}
+
+	out, err := Manifests(tmpl, project)
+	require.NoError(t, err)
+
+	found := false
+	for _, doc := range strings.Split(out, "---\n") {
+		var obj map[string]any
+		if strings.TrimSpace(doc) == "" {
+			continue
+		}
+		require.NoError(t, yaml.Unmarshal([]byte(doc), &obj))
+		if obj["kind"] != "Namespace" {
+			continue
+		}
+		found = true
+		md, _ := obj["metadata"].(map[string]any)
+		ann, _ := md["annotations"].(map[string]any)
+		require.Equal(t, "dedicated=team", ann[naming.NodeSelectorAnnotation],
+			"spec.nodeSelector must outrank the mirrored annotation")
+		require.Equal(t, "blue", ann["team"], "the rest of the mirrored annotations survive")
+	}
+	require.True(t, found, "the render must contain the project namespace")
 }

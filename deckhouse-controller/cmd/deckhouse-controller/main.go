@@ -192,10 +192,10 @@ func main() {
 	// remaining argv to a kingpin Application built on the fly.
 	{
 		dhctlOpts := options.New()
-		dhctlOpts.Global.LoggerType = app.EnvOr(app.EnvLoggerType, "json")
-		dhctlOpts.Render.Editor = app.EnvOr(app.EnvEditor, "vim")
-		dhctlOpts.Kube.InCluster = app.EnvBoolOr(app.EnvKubeConfigInCluster, true)
-		dhctlOpts.Global.TmpDir = app.EnvOr(app.EnvTmpDir, os.TempDir())
+		dhctlOpts.Global.LoggerType = envconfig.EnvOr(envconfig.EnvLoggerType, "json")
+		dhctlOpts.Render.Editor = envconfig.EnvOr(envconfig.EnvEditor, "vim")
+		dhctlOpts.Kube.InCluster = envconfig.EnvBoolOr(envconfig.EnvKubeConfigInCluster, true)
+		dhctlOpts.Global.TmpDir = envconfig.EnvOr(envconfig.EnvTmpDir, os.TempDir())
 
 		// Pin the dhctl content directories to the deckhouse image layout
 		// (/deckhouse/...). The legacy kingpin entrypoint relied on

@@ -42,6 +42,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/drift"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -55,23 +57,9 @@ const (
 	// conversionWebhookKind is the token a chart must mention to render a
 	// ConversionWebhook; charts that never mention it are skipped without a render.
 	conversionWebhookKind = "ConversionWebhook"
-
-	// managedByAnnotation marks a release as owned by this service.
-	managedByAnnotation      = "packages.deckhouse.io/managed-by"
-	managedByAnnotationValue = "deckhouse"
-
-	packageLabel  = "packages.deckhouse.io/package"
-	instanceLabel = "packages.deckhouse.io/instance"
 )
 
 const (
-	// envPackageNelmTimeout is the env var (set on the Deckhouse deployment) that
-	// bounds each nelm release operation on the packages path. Its value is a Go
-	// duration, e.g. "30m".
-	envPackageNelmTimeout = "PACKAGE_NELM_TIMEOUT"
-	// defaultPackageNelmTimeout applies when envPackageNelmTimeout is unset or malformed.
-	defaultPackageNelmTimeout = 30 * time.Minute
-
 	// timeoutGrace keeps nelm's own deadline behind ours: both bound the same
 	// apply, but only ours cancels with a cause naming what it waited for.
 	timeoutGrace = time.Minute
@@ -142,14 +130,14 @@ type Service struct {
 
 // NewService creates a new nelm service for managing Helm releases.
 func NewService(kubeClient *klient.Client, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
-	timeout := resolveTimeout()
+	timeout := envconfig.PackageNelmTimeout()
 
 	nelmClient := nelm.New(logger,
 		nelm.WithResourcesLabels(map[string]string{
 			"heritage": "deckhouse",
 		}),
 		nelm.WithReleaseAnnotations(map[string]string{
-			managedByAnnotation: managedByAnnotationValue,
+			v1alpha1.PackageAnnotationManagedBy: v1alpha1.PackageAnnotationManagedByValue,
 		}),
 		// nelm's deadline is a backstop behind ours: a non-zero Timeout is what makes
 		// ReleaseInstall return context.Cause rather than its own unwind error.
@@ -334,8 +322,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	// The maintenance marker lives on the resources, so toggling it changes the
 	// rendered-manifest checksum and forces exactly one upgrade on enter/leave.
 	resourcesLabels := map[string]string{
-		health.LabelKey: pkg.GetName(),
-		packageLabel:    pkg.GetName(),
+		health.LabelKey:              pkg.GetName(),
+		v1alpha1.PackageLabelPackage: pkg.GetName(),
 	}
 	if state == NoResourceReconciliation {
 		resourcesLabels[nelm.ReleaseLabelMaintenance] = ""
@@ -346,9 +334,9 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	}
 
 	if app, ok := pkg.(application); ok {
-		resourcesLabels[instanceLabel] = app.GetInstance()
+		resourcesLabels[v1alpha1.PackageLabelInstance] = app.GetInstance()
 		// application has separate package name
-		resourcesLabels[packageLabel] = app.GetPackage()
+		resourcesLabels[v1alpha1.PackageLabelPackage] = app.GetPackage()
 	} else {
 		// options needed for modules
 		trackingOptions.NoFinalTracking = true
@@ -552,7 +540,7 @@ func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, p
 // One release failing to uninstall does not stop the others; every failure is returned.
 func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) error {
 	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
-		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},
+		Selector: map[string]string{v1alpha1.PackageAnnotationManagedBy: v1alpha1.PackageAnnotationManagedByValue},
 	})
 	if err != nil {
 		return fmt.Errorf("list releases: %w", err)
@@ -690,17 +678,6 @@ func (s *Service) isHelmChart(path string) (bool, error) {
 	s.logger.Warn("no helm chart found in path", slog.String("path", path))
 
 	return false, nil
-}
-
-// resolveTimeout returns the nelm release-operation timeout: the PACKAGE_NELM_TIMEOUT
-// value (a Go duration such as "30m") when it is set and positive, otherwise
-// defaultPackageNelmTimeout.
-func resolveTimeout() time.Duration {
-	if d, err := time.ParseDuration(os.Getenv(envPackageNelmTimeout)); err == nil && d > 0 {
-		return d
-	}
-
-	return defaultPackageNelmTimeout
 }
 
 // withApplyDeadline bounds ctx by the service timeout, cancelling it with a cause

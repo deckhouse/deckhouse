@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
@@ -124,6 +125,33 @@ func applyDexAuthenticatorSecretFilter(obj *unstructured.Unstructured) (go_hook.
 	}, nil
 }
 
+const (
+	// skippedAuthenticatorMetric is set to 1 for every DexAuthenticator the release leaves out because
+	// its namespace accepts no objects. It is the only durable trace of that state: the hook runs on
+	// every event and cannot log once, and a namespace stuck in Terminating holds the state for good.
+	skippedAuthenticatorMetric      = "d8_user_authn_dex_authenticator_skipped"
+	skippedAuthenticatorMetricGroup = "d8_user_authn_dex_authenticator_skipped"
+)
+
+// applicationNamespace is a namespace an authenticator can be rendered into. Only the two fields
+// that decide that are kept: the snapshot holds one entry per namespace in the cluster.
+type applicationNamespace struct {
+	Name          string `json:"name"`
+	IsTerminating bool   `json:"isTerminating"`
+}
+
+func applyApplicationNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	phase, _, err := unstructured.NestedString(obj.Object, "status", "phase")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get status.phase from namespace %s: %v", obj.GetName(), err)
+	}
+
+	return applicationNamespace{
+		Name:          obj.GetName(),
+		IsTerminating: phase == string(v1.NamespaceTerminating),
+	}, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/user-authn",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -132,6 +160,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "deckhouse.io/v2alpha1",
 			Kind:       "DexAuthenticator",
 			FilterFunc: applyDexAuthenticatorFilter,
+		},
+		{
+			Name:       "namespaces",
+			ApiVersion: "v1",
+			Kind:       "Namespace",
+			FilterFunc: applyApplicationNamespaceFilter,
 		},
 		{
 			Name:       "credentials",
@@ -187,6 +221,42 @@ func sharedKubernetesClientSecret(input *go_hook.HookInput) (string, error) {
 	return string(secretContent), nil
 }
 
+// renderableNamespaces returns the namespaces an authenticator can be rendered into, and whether
+// the answer is usable at all.
+//
+// A namespace that is gone, or that is terminating, accepts no new objects: the API server refuses
+// every create in it. Keeping an authenticator of such a namespace in the values makes the whole
+// module release fail on that one object, and the failing ModuleRun then sits at the head of the
+// main queue and retries, which stops every other module from being applied.
+//
+// The second return value is false when the snapshot carries no namespace at all. In a cluster that
+// does not happen: shell-operator lists every binding synchronously while enabling it, before the
+// Synchronization run, and a cluster cannot lose its last namespace afterwards. The guard is
+// insurance for the day that assumption breaks somewhere: an empty snapshot then means "do not
+// filter" instead of "drop every authenticator and delete the objects of healthy namespaces". Tests
+// that declare no Namespace objects take this branch.
+func renderableNamespaces(input *go_hook.HookInput) (map[string]struct{}, bool, error) {
+	snapshots := input.Snapshots.Get("namespaces")
+	if len(snapshots) == 0 {
+		return nil, false, nil
+	}
+
+	renderable := make(map[string]struct{}, len(snapshots))
+	for namespace, err := range sdkobjectpatch.SnapshotIter[applicationNamespace](snapshots) {
+		if err != nil {
+			return nil, false, fmt.Errorf("cannot convert namespace: failed to iterate over 'namespaces' snapshot: %w", err)
+		}
+
+		if namespace.IsTerminating {
+			continue
+		}
+
+		renderable[namespace.Name] = struct{}{}
+	}
+
+	return renderable, true, nil
+}
+
 func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 	authenticators := input.Snapshots.Get("authenticators")
 	credentials := input.Snapshots.Get("credentials")
@@ -211,6 +281,12 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 		return err
 	}
 
+	renderable, namespacesKnown, err := renderableNamespaces(input)
+	if err != nil {
+		return err
+	}
+	input.MetricsCollector.Expire(skippedAuthenticatorMetricGroup)
+
 	dexAuthenticators := make([]DexAuthenticator, 0, len(authenticators))
 	// Build computed names map: key "<name>@<namespace>" => {name, truncated, hash}
 	namesMap := make(map[string]interface{})
@@ -218,6 +294,23 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 	for dexAuthenticator, err := range sdkobjectpatch.SnapshotIter[DexAuthenticator](authenticators) {
 		if err != nil {
 			return fmt.Errorf("cannot convert dex authenticaor: failed to iterate over 'authenticators' snapshot: %w", err)
+		}
+
+		if _, alive := renderable[dexAuthenticator.Namespace]; namespacesKnown && !alive {
+			// The namespace is terminating: the authenticator is still being deleted with it, or a
+			// finalizer holds it and the namespace never finishes. The two snapshots are also fed by
+			// independent informers, so for a moment the namespace may already be gone here while
+			// the authenticator is still in its snapshot. Either way the release must not carry it.
+			// The metric drives the alert; the log line repeats on every run and is a detail.
+			input.MetricsCollector.Set(skippedAuthenticatorMetric, 1, map[string]string{
+				"name":      dexAuthenticator.Name,
+				"namespace": dexAuthenticator.Namespace,
+			}, metrics.WithGroup(skippedAuthenticatorMetricGroup))
+			input.Logger.Info("Skipping DexAuthenticator of a namespace that accepts no objects",
+				slog.String("dexauthenticator", dexAuthenticator.Name),
+				slog.String("namespace", dexAuthenticator.Namespace))
+
+			continue
 		}
 
 		existedCredentials, ok := credentialsByID[fmt.Sprintf("dex-authenticator-%s", dexAuthenticator.ID)]

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,8 +29,6 @@ const (
 	ModuleKind     = "Module"
 
 	ModuleFinalizerStatisticRegistered = "module.deckhouse.io/statistic-registered"
-
-	ModuleAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
 
 	// ModuleAnnotationDev marks a module restored from a development pull override.
 	ModuleAnnotationDev = "modules.deckhouse.io/dev"

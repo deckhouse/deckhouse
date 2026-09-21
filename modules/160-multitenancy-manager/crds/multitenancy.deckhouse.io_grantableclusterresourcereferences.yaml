@@ -149,12 +149,15 @@ spec:
                 properties:
                   apiGroups:
                     description: |-
-                      API groups of Kubernetes resources.
+                      API groups of Kubernetes resources. The core group is the empty string.
 
-                      Use `*` to select all API groups.
+                      `*` is not accepted: the admission webhook is registered for the listed groups only, so a wildcard would silently intercept nothing.
                     items:
                       type: string
                     type: array
+                    x-kubernetes-validations:
+                      - rule: "!('*' in self)"
+                        message: "apiGroups must list the groups explicitly; '*' is not intercepted by the webhook"
                   apiVersions:
                     description: |-
                       API versions of Kubernetes resources.

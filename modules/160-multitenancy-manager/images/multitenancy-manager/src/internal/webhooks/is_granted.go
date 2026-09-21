@@ -43,6 +43,8 @@ import (
 // system:serviceaccounts:d8-user-authz) deadlocks. Unlike protect.go's broader systemBypassGroups,
 // system:masters is absent here: the handler itself still polices a cluster-admin (unit tests call
 // the handler directly). In-cluster, matchConditions skip system:masters before this code runs.
+// The matchConditions of every admission point live in hooks/configure_grant_validation_webhook.go
+// (systemWriterMatchConditions) and templates/admission/validation.yaml.
 var automatedSystemWriterGroups = map[string]struct{}{
 	"system:nodes":                         {},
 	"system:serviceaccounts:kube-system":   {},
@@ -151,7 +153,7 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	}
 	project := resolve.ProjectName(ns)
 
-	grants, err := resolve.GrantsForLabels(ctx, v.cl, ns.Labels)
+	grants, err := resolve.GrantsForNamespace(ctx, v.cl, ns)
 	if err != nil {
 		return nil, fmt.Errorf("applicable grants: %w", err)
 	}

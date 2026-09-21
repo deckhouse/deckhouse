@@ -237,9 +237,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 	// Check whether the package image exists in the registry and label accordingly.
 	// The image may legitimately not exist (e.g. metadata-only bundle), so both outcomes are valid.
 	if _, err = r.registry.GetImageDigest(ctx, remote, mpv.Spec.PackageName, version); err != nil {
-		mpv.Labels[v1alpha1.ModulePackageVersionLabelExistInRegistry] = "false"
+		mpv.Labels[v1alpha1.PackageLabelExistInRegistry] = "false"
 	} else {
-		mpv.Labels[v1alpha1.ModulePackageVersionLabelExistInRegistry] = "true"
+		mpv.Labels[v1alpha1.PackageLabelExistInRegistry] = "true"
 	}
 
 	// Finalizer prevents deletion while Modules reference this version.
@@ -253,7 +253,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 		return fmt.Errorf("set controller reference '%s': %w", mpv.Name, err)
 	}
 
-	delete(mpv.Labels, v1alpha1.ModulePackageVersionLabelDraft)
+	delete(mpv.Labels, v1alpha1.PackageLabelDraft)
 
 	if err = r.client.Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch '%s': %w", mpv.Name, err)

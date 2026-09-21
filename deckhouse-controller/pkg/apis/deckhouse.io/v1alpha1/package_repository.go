@@ -31,8 +31,6 @@ const (
 
 	PackageRepositoryFinalizerPackageVersionExists = "packages.deckhouse.io/package-version-exists"
 
-	PackageRepositoryAnnotationRegistryChecksum = "packages.deckhouse.io/registry-spec-checksum"
-
 	PackageRepositoryConditionLastScanSucceeded = "LastScanSucceeded"
 )
 
@@ -58,8 +56,9 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
 // +kubebuilder:printcolumn:name=Scan,type=date,JSONPath=.status.lastScanTime
+// +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.registry.repo
+// +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
-// +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 // +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)."
 // +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)."
 

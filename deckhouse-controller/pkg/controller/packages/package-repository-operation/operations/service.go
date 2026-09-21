@@ -389,8 +389,8 @@ type missingVersion struct {
 // is marked gone. Both CR kinds are queried because the package type is not known yet at this point.
 func (s *OperationService) collectProcessedVersions(ctx context.Context, packageName string) processedVersions {
 	matchLabels := client.MatchingLabels{
-		v1alpha1.ApplicationPackageVersionLabelRepository: s.repo.Name,
-		v1alpha1.ApplicationPackageVersionLabelPackage:    packageName,
+		v1alpha1.PackageLabelRepository: s.repo.Name,
+		v1alpha1.PackageLabelPackage:    packageName,
 	}
 
 	var (
@@ -444,7 +444,7 @@ func parseProcessedVersion(tag string, hasMetadata bool) *semver.Version {
 // parseMissingVersion parses tag as semver, but only for a version whose image is marked gone.
 // The label carries the same key for both CR kinds.
 func parseMissingVersion(tag string, labels map[string]string) *semver.Version {
-	if labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] != "false" {
+	if labels[v1alpha1.PackageLabelExistInRegistry] != "false" {
 		return nil
 	}
 
@@ -526,7 +526,7 @@ func (s *OperationService) walkModuleReleases(ctx context.Context, packageName s
 	slices.SortFunc(foundTags, func(a, b *semver.Version) int { return b.Compare(a) })
 
 	legacyLabels := map[string]string{
-		v1alpha1.ModulePackageVersionLabelLegacy: "true",
+		v1alpha1.PackageLabelLegacy: "true",
 	}
 
 	result := &Result{PackageType: PackageTypeModule}
@@ -717,10 +717,10 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 		ObjectMeta: metav1.ObjectMeta{
 			Name: apvName,
 			Labels: map[string]string{
-				"heritage": "deckhouse",
-				v1alpha1.ApplicationPackageVersionLabelRepository: s.repo.Name,
-				v1alpha1.ApplicationPackageVersionLabelPackage:    packageName,
-				v1alpha1.ApplicationPackageVersionLabelDraft:      "true",
+				"heritage":                      "deckhouse",
+				v1alpha1.PackageLabelRepository: s.repo.Name,
+				v1alpha1.PackageLabelPackage:    packageName,
+				v1alpha1.PackageLabelDraft:      "true",
 			},
 		},
 		Spec: v1alpha1.ApplicationPackageVersionSpec{
@@ -743,7 +743,7 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 // rediscoverApplicationPackageVersion clears the "not in registry" mark of an existing version once
 // its bundle image is back in the registry. Reports whether the mark was cleared.
 func (s *OperationService) rediscoverApplicationPackageVersion(ctx context.Context, pkgVersion *v1alpha1.ApplicationPackageVersion, packageName, version string) (bool, error) {
-	isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry]
+	isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.PackageLabelExistInRegistry]
 	if !ok || isBundleExistInRegistry != "false" {
 		return false, nil
 	}
@@ -766,8 +766,8 @@ func (s *OperationService) rediscoverApplicationPackageVersion(ctx context.Conte
 
 	original := pkgVersion.DeepCopy()
 
-	pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "true"
-	pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelDraft] = "true"
+	pkgVersion.Labels[v1alpha1.PackageLabelExistInRegistry] = "true"
+	pkgVersion.Labels[v1alpha1.PackageLabelDraft] = "true"
 
 	if err := s.client.Patch(ctx, pkgVersion, client.MergeFrom(original)); err != nil {
 		return false, fmt.Errorf("update application package version: %w", err)
@@ -794,10 +794,10 @@ func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packa
 	}
 
 	labels := map[string]string{
-		"heritage": "deckhouse",
-		v1alpha1.ModulePackageVersionLabelRepository: s.repo.Name,
-		v1alpha1.ModulePackageVersionLabelPackage:    packageName,
-		v1alpha1.ModulePackageVersionLabelDraft:      "true",
+		"heritage":                      "deckhouse",
+		v1alpha1.PackageLabelRepository: s.repo.Name,
+		v1alpha1.PackageLabelPackage:    packageName,
+		v1alpha1.PackageLabelDraft:      "true",
 	}
 	maps.Copy(labels, extraLabels)
 
@@ -830,7 +830,7 @@ func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packa
 // rediscoverModulePackageVersion clears the "not in registry" mark of an existing version once its
 // image is back in the registry. Reports whether the mark was cleared.
 func (s *OperationService) rediscoverModulePackageVersion(ctx context.Context, pkgVersion *v1alpha1.ModulePackageVersion, packageName, version string) (bool, error) {
-	isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.ModulePackageVersionLabelExistInRegistry]
+	isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.PackageLabelExistInRegistry]
 	if !ok || isBundleExistInRegistry != "false" {
 		return false, nil
 	}
@@ -853,8 +853,8 @@ func (s *OperationService) rediscoverModulePackageVersion(ctx context.Context, p
 
 	original := pkgVersion.DeepCopy()
 
-	pkgVersion.Labels[v1alpha1.ModulePackageVersionLabelExistInRegistry] = "true"
-	pkgVersion.Labels[v1alpha1.ModulePackageVersionLabelDraft] = "true"
+	pkgVersion.Labels[v1alpha1.PackageLabelExistInRegistry] = "true"
+	pkgVersion.Labels[v1alpha1.PackageLabelDraft] = "true"
 
 	if err := s.client.Patch(ctx, pkgVersion, client.MergeFrom(original)); err != nil {
 		return false, fmt.Errorf("update module package version: %w", err)

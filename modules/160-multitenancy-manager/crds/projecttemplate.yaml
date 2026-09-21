@@ -238,8 +238,9 @@ spec:
                     - Restricted — heavily restricted, current Pod hardening best practices.
 
                     A literal string (`Privileged`/`Baseline`/`Restricted`) or a parameter reference
-                    `{fromParam: "<name>"}` pointing at a `parametersSchema` property. The literal value
-                    and the referenced parameter are validated by the admission webhook.
+                    `{fromParam: "<name>"}` pointing at a `parametersSchema` property. A literal outside
+                    the three values and a reference to an undeclared or mistyped parameter are refused by
+                    the admission webhook (the field is untyped in the schema, so it carries no CEL rule).
                   x-kubernetes-preserve-unknown-fields: true
                 networkPolicy:
                   description: Default network isolation of the project namespaces.
@@ -250,7 +251,8 @@ spec:
                         - Isolated — deny all traffic by default except in-project, DNS, Prometheus scraping and ingress-nginx.
                         - NotRestricted — allow all traffic by default.
 
-                        A literal string or a parameter reference `{fromParam: "<name>"}`.
+                        A literal string (`Isolated`/`NotRestricted`) or a parameter reference `{fromParam: "<name>"}`.
+                        A literal outside the two values is refused by the admission webhook.
                       x-kubernetes-preserve-unknown-fields: true
                 nodeSelector:
                   description: |

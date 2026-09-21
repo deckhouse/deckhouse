@@ -31,11 +31,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/api/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/jsonpath"
 	"controller/internal/namespaces"
 	"controller/internal/naming"
 	"controller/internal/resolve"
@@ -45,10 +49,16 @@ import (
 // (recomputed from live granted objects, not all watched) does not drift unbounded.
 const ResyncInterval = 2 * time.Minute
 
-// ProjectReconciler materializes AvailableClusterResource catalogs for project namespaces.
+// ProjectReconciler materializes AvailableClusterResource catalogs for project namespaces and
+// recounts the grant-violation metric of each namespace it reconciles.
 type ProjectReconciler struct {
 	client.Client
 	Mapper meta.RESTMapper
+	// Usage reads the objects a GrantableClusterResourceReference governs. It is the uncached API
+	// reader in the controller; when nil (tests of the catalog alone) violations are not scanned.
+	Usage client.Reader
+	// Factory compiles the field paths of the references; shared with the webhooks.
+	Factory jsonpath.Factory
 }
 
 // Reconcile reconciles a single (project) namespace.
@@ -59,14 +69,22 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	ns := &corev1.Namespace{}
 	if err := r.Get(ctx, types.NamespacedName{Name: req.Name}, ns); err != nil {
 		if k8serrors.IsNotFound(err) {
+			clearViolations(req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("get namespace: %w", err)
+	}
+	// A namespace on its way out takes its catalog with it; writing into it only produces
+	// "unable to create new content in namespace ... because it is being terminated" and a retry.
+	if ns.DeletionTimestamp != nil {
+		clearViolations(ns.Name)
+		return ctrl.Result{}, nil
 	}
 	// Only project namespaces (carrying the project label) get a catalog. Any other namespace —
 	// the default namespace, system namespaces, namespaces of "virtual" projects — must not, even
 	// when a registration's defaultAvailability is All. Clean up any catalog that lingers there.
 	if _, isProjectNS := ns.Labels[naming.ProjectLabel]; !isProjectNS {
+		clearViolations(ns.Name)
 		return ctrl.Result{}, r.cleanupCatalog(ctx, ns.Name)
 	}
 
@@ -95,13 +113,20 @@ func (r *ProjectReconciler) cleanupCatalog(ctx context.Context, ns string) error
 // reconcileCatalog upserts an AvailableClusterResource per registration for the namespace, deleting
 // catalogs that became empty.
 func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Namespace, project string) error {
-	grants, err := resolve.GrantsForLabels(ctx, r.Client, ns.Labels)
+	grants, err := resolve.GrantsForNamespace(ctx, r.Client, ns)
 	if err != nil {
 		return err
 	}
 	regList := &v1alpha1.GrantableClusterResourceDefinitionList{}
 	if err := r.List(ctx, regList); err != nil {
 		return err
+	}
+	if r.Usage != nil && r.Factory != nil {
+		violations, err := scanViolations(ctx, r.Client, r.Usage, r.Mapper, r.Factory, ns.Name, grants, regList.Items)
+		if err != nil {
+			return fmt.Errorf("scan grant violations: %w", err)
+		}
+		publishViolations(ns.Name, violations)
 	}
 	for i := range regList.Items {
 		reg := &regList.Items[i]
@@ -111,10 +136,11 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 			return err
 		}
 		available := resolved.Available()
-		if len(available) == 0 {
-			// Nothing available here: ensure no stale catalog object lingers.
-			_ = r.Delete(ctx, &v1alpha1.AvailableClusterResource{ObjectMeta: metav1.ObjectMeta{Name: reg.Name, Namespace: ns.Name}})
-			continue
+		if available == nil {
+			// An empty catalog is kept as an object with an empty list: a reader (the Console
+			// among them) can then tell "nothing is available here" from "not reconciled yet",
+			// which a missing object could not say.
+			available = []v1alpha1.AvailableObject{}
 		}
 		kind := ""
 		if reg.Spec.GrantedResource != nil {
@@ -181,6 +207,35 @@ func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&v1alpha1.ClusterResourceGrantPolicy{}, enqueueProjectNamespaces).
 		Watches(&v1alpha1.GrantableClusterResourceDefinition{}, enqueueProjectNamespaces).
 		Watches(&v1alpha1.GrantableClusterResourceReference{}, enqueueProjectNamespaces).
+		// The policies are matched against the union of Project and namespace labels, so a label
+		// change on the Project has to re-evaluate its namespaces; nothing else about a Project
+		// matters here, hence the label predicate.
+		Watches(&v1alpha3.Project{}, handler.EnqueueRequestsFromMapFunc(r.namespacesOfProject),
+			builder.WithPredicates(predicate.LabelChangedPredicate{})).
 		Named("project-grants").
 		Complete(r)
+}
+
+// namespacesOfProject maps a Project to the reconcile requests of its namespaces: every namespace
+// labelled with the project, plus the one named after it (the main namespace carries the label as
+// well, but a project whose namespace is still being created does not have it yet).
+func (r *ProjectReconciler) namespacesOfProject(ctx context.Context, obj client.Object) []reconcile.Request {
+	nsList := &corev1.NamespaceList{}
+	if err := r.List(ctx, nsList, client.MatchingLabels{naming.ProjectLabel: obj.GetName()}); err != nil {
+		return nil
+	}
+	reqs := make([]reconcile.Request, 0, len(nsList.Items)+1)
+	seen := map[string]struct{}{}
+	for i := range nsList.Items {
+		name := nsList.Items[i].Name
+		if namespaces.IsSystem(name) {
+			continue
+		}
+		seen[name] = struct{}{}
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
+	}
+	if _, ok := seen[obj.GetName()]; !ok && !namespaces.IsSystem(obj.GetName()) {
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.GetName()}})
+	}
+	return reqs
 }

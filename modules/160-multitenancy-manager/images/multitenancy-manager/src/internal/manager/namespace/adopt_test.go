@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/naming"
 )
 
 func TestTemplateFor(t *testing.T) {
@@ -230,4 +231,23 @@ func TestNeedsTemplate(t *testing.T) {
 			assert.Equal(t, tt.want, needsTemplate(tt.project))
 		})
 	}
+}
+
+// TestFilterUserMeta_KeepsPlacementAnnotations: the module owns the scheduler annotations on a
+// project namespace, so a user cannot edit them there; they are rendered from the template's
+// nodeSelector/tolerations, and adoption never picks a template that declares either. Dropping them
+// on adoption would leave an adopted namespace pinned to nodes with no way to change it, so they are
+// mirrored into the namespace parameter and stay editable through the Project.
+func TestFilterUserMeta_KeepsPlacementAnnotations(t *testing.T) {
+	got := filterUserMeta(map[string]string{
+		naming.NodeSelectorAnnotation: "disk=ssd",
+		naming.TolerationsAnnotation:  `[{"key":"dedicated"}]`,
+		"meta.helm.sh/release-name":   "foo",
+		"team":                        "blue",
+	})
+	assert.Equal(t, map[string]string{
+		naming.NodeSelectorAnnotation: "disk=ssd",
+		naming.TolerationsAnnotation:  `[{"key":"dedicated"}]`,
+		"team":                        "blue",
+	}, got)
 }

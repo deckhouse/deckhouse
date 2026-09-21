@@ -21,6 +21,7 @@ import (
 
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha2"
+	deckhousev1beta1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1beta1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -30,6 +31,7 @@ type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	DeckhouseV1alpha1() deckhousev1alpha1.DeckhouseV1alpha1Interface
 	DeckhouseV1alpha2() deckhousev1alpha2.DeckhouseV1alpha2Interface
+	DeckhouseV1beta1() deckhousev1beta1.DeckhouseV1beta1Interface
 }
 
 // Clientset contains the clients for groups.
@@ -37,6 +39,7 @@ type Clientset struct {
 	*discovery.DiscoveryClient
 	deckhouseV1alpha1 *deckhousev1alpha1.DeckhouseV1alpha1Client
 	deckhouseV1alpha2 *deckhousev1alpha2.DeckhouseV1alpha2Client
+	deckhouseV1beta1  *deckhousev1beta1.DeckhouseV1beta1Client
 }
 
 // DeckhouseV1alpha1 retrieves the DeckhouseV1alpha1Client
@@ -47,6 +50,11 @@ func (c *Clientset) DeckhouseV1alpha1() deckhousev1alpha1.DeckhouseV1alpha1Inter
 // DeckhouseV1alpha2 retrieves the DeckhouseV1alpha2Client
 func (c *Clientset) DeckhouseV1alpha2() deckhousev1alpha2.DeckhouseV1alpha2Interface {
 	return c.deckhouseV1alpha2
+}
+
+// DeckhouseV1beta1 retrieves the DeckhouseV1beta1Client
+func (c *Clientset) DeckhouseV1beta1() deckhousev1beta1.DeckhouseV1beta1Interface {
+	return c.deckhouseV1beta1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -101,6 +109,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
+	cs.deckhouseV1beta1, err = deckhousev1beta1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
@@ -124,6 +136,7 @@ func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.deckhouseV1alpha1 = deckhousev1alpha1.New(c)
 	cs.deckhouseV1alpha2 = deckhousev1alpha2.New(c)
+	cs.deckhouseV1beta1 = deckhousev1beta1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
