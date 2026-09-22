@@ -197,6 +197,7 @@ type bootstrapContext struct {
 	devicePath                string
 	resourcesTemplateData     map[string]any
 	resourcesToCreateBefore   template.Resources
+	resourcesToCreateModules  template.Resources
 	resourcesToCreateProvider template.Resources
 	resourcesToCreateAfter    template.Resources
 	installDeckhouseResult    *InstallDeckhouseResult
@@ -1196,13 +1197,14 @@ func (b *ClusterBootstrapper) bootstrapParseResources(ctx context.Context, bctx 
 		return err
 	}
 
-	before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+	before, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
 		ctx, parsedResources, nodesComeFromResources(bctx.metaConfig), bctx.metaConfig.ProviderName,
 	)
 
 	applyMasterNodeGroupDefaults(provider)
 
 	bctx.resourcesToCreateBefore = before
+	bctx.resourcesToCreateModules = modules
 	bctx.resourcesToCreateProvider = provider
 	bctx.resourcesToCreateAfter = after
 
@@ -1352,6 +1354,16 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
 				bctx.resourcesToCreateBefore,
+				nil,
+				true,
+				b.Options.Bootstrap.ResourcesTimeout,
+			)
+		},
+		AfterManifestsTask: func() error {
+			return createResources(
+				ctx,
+				&client.KubernetesClient{KubeClient: kubeCl},
+				bctx.resourcesToCreateModules,
 				nil,
 				true,
 				b.Options.Bootstrap.ResourcesTimeout,
@@ -1716,7 +1728,11 @@ func nodesComeFromResources(metaConfig *config.MetaConfig) bool {
 	return metaConfig.ClusterType == config.CloudClusterType && !metaConfig.HasLegacyProviderConfig()
 }
 
-func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, nodesFromResources bool, providerName string) (template.Resources, template.Resources, template.Resources) {
+// The module queue is returned separately from the node queue because the two are applied at
+// different moments: the modules while the Deckhouse controller is still starting, the nodes only
+// once it is Ready. Handing them back joined is what left the provider module behind the readiness
+// wait that its own cloud-controller-manager has to clear.
+func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, nodesFromResources bool, providerName string) (template.Resources, template.Resources, template.Resources, template.Resources) {
 	before := make(template.Resources, 0, len(resourcesToCreate))
 	modules := make(template.Resources, 0)
 	provider := make(template.Resources, 0, len(resourcesToCreate))
@@ -1764,9 +1780,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 		return moduleApplyOrder(a) - moduleApplyOrder(b)
 	})
 
-	provider = slices.Concat(modules, provider)
-
-	return before, provider, after
+	return before, modules, provider, after
 }
 
 // A ModuleConfig proves it on its own here: this function only sees the resource documents, and a

@@ -145,7 +145,7 @@ func TestSplitResources_CredentialSecretGoesToBefore(t *testing.T) {
 	})
 	regularResource := newResource(t, "deckhouse.io/v1alpha1", "ModuleConfig", "user-authn", "", nil)
 
-	before, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, regularResource}, true, "dvp")
+	before, _, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, regularResource}, true, "dvp")
 
 	// before queue must contain the credential Secret AND a namespace stub for d8-cloud-provider-dvp.
 	require.Len(t, before, 2)
@@ -163,7 +163,7 @@ func TestSplitResources_NonCredentialSecretGoesToAfter(t *testing.T) {
 		"type": "Opaque",
 	})
 
-	before, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{plainSecret}, true, "dvp")
+	before, _, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{plainSecret}, true, "dvp")
 
 	require.Empty(t, before)
 	require.Len(t, after, 1)
@@ -176,7 +176,7 @@ func TestSplitResources_BeforeAnnotationStillRespected(t *testing.T) {
 		"dhctl.deckhouse.io/bootstrap-resource-place": "before-deckhouse",
 	})
 
-	before, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{annotated}, true, "dvp")
+	before, _, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{annotated}, true, "dvp")
 
 	require.Empty(t, after)
 	// Namespace stub for kube-system is added even though kube-system always exists; harmless.
@@ -194,7 +194,7 @@ func TestSplitResources_ExplicitNamespaceNotDuplicated(t *testing.T) {
 		"dhctl.deckhouse.io/bootstrap-resource-place": "before-deckhouse",
 	})
 
-	before, _, _ := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, explicitNS}, true, "dvp")
+	before, _, _, _ := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, explicitNS}, true, "dvp")
 
 	// Only one Namespace entry — the user-provided one, no auto-stub.
 	nsCount := 0
@@ -321,7 +321,7 @@ func TestSplitResources_ProviderNodeResourcesGoToProviderQueue(t *testing.T) {
 	instanceClass := newResource(t, "deckhouse.io/v1alpha1", "DVPInstanceClass", "master-dvp", "", nil)
 	moduleConfig := newResource(t, "deckhouse.io/v1alpha1", "ModuleConfig", "user-authn", "", nil)
 
-	before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+	before, _, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
 		context.TODO(), template.Resources{masterNg, ephemeralNg, instanceClass, moduleConfig}, true, "dvp")
 
 	require.Empty(t, before)
@@ -343,7 +343,7 @@ func TestSplitResources_StaticClusterKeepsProviderResourcesInAfter(t *testing.T)
 		"spec": map[string]any{"nodeType": "CloudEphemeral"},
 	})
 
-	before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+	before, _, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
 		context.TODO(), template.Resources{instanceClass, ephemeralNg}, false, "dvp")
 
 	require.Empty(t, before)
@@ -516,13 +516,18 @@ spec:
 func TestSplitResources_ExternalProviderModuleLeadsTheProviderQueue(t *testing.T) {
 	resources := parseResourceDocs(t, providerModuleSourceDoc+providerModuleConfigDoc+providerNodeDocs+userModuleConfigDoc)
 
-	before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), resources, true, "dvp")
+	before, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), resources, true, "dvp")
 
 	require.Empty(t, before)
 
+	// The module queue is applied while Deckhouse is still starting, the node queue only after it
+	// is Ready, so the two cannot share a slice.
 	require.Equal(t, []string{
 		"ModuleSource/deckhouse",
 		"ModuleConfig/cloud-provider-dvp",
+	}, resourceNames(modules))
+
+	require.Equal(t, []string{
 		"DVPInstanceClass/master-dvp",
 		"NodeGroup/master",
 	}, resourceNames(provider))
@@ -547,12 +552,15 @@ spec:
 `
 	resources := parseResourceDocs(t, providerModuleConfigDoc+overrideDoc+providerModuleSourceDoc+providerNodeDocs)
 
-	_, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), resources, true, "dvp")
+	_, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), resources, true, "dvp")
 
 	require.Equal(t, []string{
 		"ModuleSource/deckhouse",
 		"ModulePullOverride/cloud-provider-dvp",
 		"ModuleConfig/cloud-provider-dvp",
+	}, resourceNames(modules))
+
+	require.Equal(t, []string{
 		"DVPInstanceClass/master-dvp",
 		"NodeGroup/master",
 	}, resourceNames(provider))
@@ -626,7 +634,7 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			resources := parseResourceDocs(t, tt.docs)
 
-			before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+			before, _, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
 				context.TODO(), resources, tt.nodesFromResources, tt.providerName)
 
 			require.Empty(t, before)
