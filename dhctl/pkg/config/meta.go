@@ -58,6 +58,9 @@ type MetaConfig struct {
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
+	// True when the control-plane-manager ModuleConfig could not be read, which makes a missing
+	// value there "unknown" rather than "not set".
+	CPMModuleConfigUnreadable bool `json:"-"`
 
 	CloudProviderVars *CloudProviderVars `json:"-"`
 	// Operation propagates the dhctl entry point (bootstrap/converge/destroy/

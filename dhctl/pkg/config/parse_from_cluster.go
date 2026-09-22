@@ -148,9 +148,11 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 	// ClusterConfiguration on this path — m.ModuleConfigs never has an entry to find — so once a
 	// field is migrated and removed from ClusterConfiguration, the Terraform variable ends up
 	// with no such attribute at all instead of the value the cluster actually runs with.
-	if cpm := loadControlPlaneManagerModuleConfig(ctx, f.kubeCl); cpm != nil {
+	cpm, cpmRead := loadControlPlaneManagerModuleConfig(ctx, f.kubeCl)
+	if cpm != nil {
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, cpm)
 	}
+	metaConfig.CPMModuleConfigUnreadable = !cpmRead
 
 	pcc, err := loadLegacyProviderClusterConfig(ctx, f.kubeCl, f.schemaStore)
 	if err != nil {
@@ -203,26 +205,29 @@ func loadGlobalModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient
 // spec.settings.network (network parameter resolution, MetaConfig.Network()); a not-found
 // control-plane-manager ModuleConfig is not an error. This must not be able to block
 // converge/destroy.
-func loadControlPlaneManagerModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient) *ModuleConfig {
+// The bool reports whether the read succeeded; NotFound counts as success, the object is genuinely
+// absent. A failed read is not "not set": callers must not resolve a default from it.
+func loadControlPlaneManagerModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient) (*ModuleConfig, bool) {
 	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, "control-plane-manager", metav1.GetOptions{})
 	if err != nil {
-		if !k8serrors.IsNotFound(err) {
-			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-				"failed to read control-plane-manager ModuleConfig, falling back to the deprecated ClusterConfiguration network fields: %v", err))
+		if k8serrors.IsNotFound(err) {
+			return nil, true
 		}
-		return nil
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+			"failed to read control-plane-manager ModuleConfig, falling back to the deprecated ClusterConfiguration network fields: %v", err))
+		return nil, false
 	}
 	raw, err := json.Marshal(obj.Object)
 	if err != nil {
 		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to marshal control-plane-manager ModuleConfig: %v", err))
-		return nil
+		return nil, false
 	}
 	mc := &ModuleConfig{}
 	if err := json.Unmarshal(raw, mc); err != nil {
 		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to parse control-plane-manager ModuleConfig: %v", err))
-		return nil
+		return nil, false
 	}
-	return mc
+	return mc, true
 }
 
 func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, schemaStore *SchemaStore) (*ModuleConfig, error) {
@@ -289,9 +294,11 @@ func parseLegacyProviderClusterConfig(ctx context.Context, secret *corev1.Secret
 }
 
 func (f *fromClusterMetaConfigFiller) Static(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
-	if cpm := loadControlPlaneManagerModuleConfig(ctx, f.kubeCl); cpm != nil {
+	cpm, cpmRead := loadControlPlaneManagerModuleConfig(ctx, f.kubeCl)
+	if cpm != nil {
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, cpm)
 	}
+	metaConfig.CPMModuleConfigUnreadable = !cpmRead
 
 	// The configuration may be absent entirely: auto-discovery covers it.
 	staticClusterConfig, err := f.kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-static-cluster-configuration", metav1.GetOptions{})

@@ -60,6 +60,10 @@ func loadConfigForRender(ctx context.Context, command string, opts *options.Opti
 		return nil, err
 	}
 
+	if err := metaConfig.RequireClusterDomain(); err != nil {
+		return nil, err
+	}
+
 	return metaConfig, nil
 }
 

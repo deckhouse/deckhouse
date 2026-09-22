@@ -78,8 +78,8 @@ func TestClusterParams(t *testing.T) {
 		require.Equal(t, config.DefaultPodSubnetNodeCIDRPrefix, params.PodSubnetNodeCIDRPrefix)
 	})
 
-	// clusterDomain has the same fallback shape: ClusterConfigMap's resolver
-	// (ModuleConfig, then this deprecated field, then the schema default) always sets it.
+	// ClusterConfigMap resolves the domain (ModuleConfig, then this field, then cluster.local),
+	// so it is never empty here.
 	t.Run("missing clusterDomain defaults to cluster.local", func(t *testing.T) {
 		metaConfig := testMetaConfig(t)
 		delete(metaConfig.ClusterConfig, "clusterDomain")

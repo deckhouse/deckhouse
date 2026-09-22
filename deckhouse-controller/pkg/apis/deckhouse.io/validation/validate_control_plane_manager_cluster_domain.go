@@ -21,7 +21,12 @@ import (
 	"fmt"
 
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
@@ -99,6 +104,19 @@ func (v *moduleConfigValidator) rejectClusterDomainRemoval(
 	}
 
 	return rejectResult(message(ccDomain))
+}
+
+// Presence, not value. A read error reports false, which keeps ClusterConfiguration validated - the
+// safe direction.
+func moduleConfigOwnsClusterDomain(ctx context.Context, cli client.Client) bool {
+	cfg := new(v1alpha1.ModuleConfig)
+	if err := cli.Get(ctx, client.ObjectKey{Name: controlPlaneManagerModuleName}, cfg); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Warn("cannot read the control-plane-manager ModuleConfig, validating ClusterConfiguration.clusterDomain anyway", log.Err(err))
+		}
+		return false
+	}
+	return settingsClusterDomain(rawModuleConfigSettings(cfg)) != ""
 }
 
 // A missing map, group or non-string value all read as "not set".

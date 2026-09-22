@@ -36,6 +36,25 @@ func (m *MetaConfig) ClusterDomainResolved() string {
 	return DefaultClusterDomain
 }
 
+// ClusterDomainKnown is false only when the ModuleConfig could not be read and ClusterConfiguration
+// carries no domain: resolving the default then would render a wrong service-account issuer.
+func (m *MetaConfig) ClusterDomainKnown() bool {
+	return !m.CPMModuleConfigUnreadable || m.clusterConfigString("clusterDomain") != ""
+}
+
+// Fails when the domain is set in neither document. Bootstrap and render only: the in-cluster hook
+// parses without ModuleConfig documents, where this would reject every migrated cluster.
+func (m *MetaConfig) RequireClusterDomain() error {
+	if m.moduleConfigClusterDomain() != "" || m.clusterConfigString("clusterDomain") != "" {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"clusterDomain is not set: add spec.settings.network.clusterDomain to ModuleConfig " +
+			"control-plane-manager (the deprecated ClusterConfiguration.clusterDomain is still " +
+			"accepted, but raises a migration alert)")
+}
+
 // Set in both documents at once is unresolvable at bootstrap, even though ClusterDomainResolved
 // would silently pick the ModuleConfig one.
 func (m *MetaConfig) RequireClusterDomainSingleSource() error {

@@ -436,11 +436,11 @@ properties:
         description: |
           Cluster domain (used for local routing).
 
-          This is the preferred place to manage the cluster domain. The value is resolved in the following order: this parameter, then the deprecated `ClusterConfiguration.clusterDomain`, then `cluster.local`.
+          Set the cluster domain here. The same field in `ClusterConfiguration` is deprecated and will be removed in a future release.
 
           **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `clusterDomain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
 
-          When migrating from the deprecated field, the value must match the one the cluster currently runs with; admission rejects a mismatch. Changing it afterwards is allowed but requires the [documented procedure](/modules/kube-dns/faq.html#how-to-change-cluster-domain-with-minimal-downtime).
+          When moving the value from `ClusterConfiguration`, keep it exactly as it is now: a different value is rejected. To change the domain later, follow the [documented procedure](/modules/kube-dns/faq.html#how-to-change-cluster-domain-with-minimal-downtime).
         x-examples:
           - "cluster.local"
       podSubnetCIDR:

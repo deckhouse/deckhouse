@@ -601,7 +601,7 @@ dhctl bootstrap \
 Список проверок, выполняемых установщиком перед началом установки Deckhouse Platform:
 
 1. Общие проверки:
-   - Значения параметров [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) не совпадают.
+   - Значения параметров [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) (или устаревшего [`ClusterConfiguration.clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain)) не совпадают.
    - Данные аутентификации для хранилища образов, указанные в конфигурации установки, корректны.
    - Имя хоста соответствует следующим требованиям:
      - длина не более 63 символов;

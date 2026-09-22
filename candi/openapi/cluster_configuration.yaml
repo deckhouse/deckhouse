@@ -147,7 +147,7 @@ apiVersions:
 
           > If you need to change a parameter in a running cluster, it is recommended to use [instructions](/modules/kube-dns/faq.html#how-to-change-cluster-domain-with-minimal-downtime)
 
-          If the parameter is set in neither place, `cluster.local` is used.
+          The field still works, but it will be removed in a future release. Until the value is moved to the ModuleConfig, the cluster reports the `D8ObsoleteClusterDomainInClusterConfiguration` alert. Remove it here only after the ModuleConfig carries the domain.
       defaultCRI:
         type: string
         description: |

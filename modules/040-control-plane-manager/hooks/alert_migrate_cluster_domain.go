@@ -31,12 +31,11 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-// Reads the Secret directly: global.clusterConfiguration.clusterDomain carries the resolved value and
-// is never empty, so it cannot tell whether the deprecated field is still there.
-// DefaultClusterDomain is what the cluster resolves to when neither ModuleConfig nor the deprecated
-// ClusterConfiguration field sets the domain.
+// DefaultClusterDomain is used when neither document sets the domain.
 const DefaultClusterDomain = "cluster.local"
 
+// Reads the Secret directly: global.clusterConfiguration.clusterDomain carries the resolved value and
+// is never empty, so it cannot tell whether the deprecated field is still there.
 const (
 	obsoleteClusterDomainMetricGroup = "D8ObsoleteClusterDomainInClusterConfiguration"
 	obsoleteClusterDomainMetricName  = "d8_obsolete_cluster_domain_in_cluster_configuration"
