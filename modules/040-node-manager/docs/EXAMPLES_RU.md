@@ -238,7 +238,9 @@ spec:
    ```
 
    Узел войдёт в кластер под hostname машины. Чтобы он вошёл под собственным именем, не
-   меняя hostname, задайте `D8_NODE_NAME`:
+   меняя hostname, задайте `D8_NODE_NAME` (только для группы узлов с `nodeType: Static`:
+   узел `CloudStatic` облако находит по имени узла, поэтому он обязан сохранять имя своей
+   машины):
 
    ```shell
    echo <Base64-КОД-СКРИПТА> | base64 -d | D8_NODE_NAME=worker-rack3-07 bash

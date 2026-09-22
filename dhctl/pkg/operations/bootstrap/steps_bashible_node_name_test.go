@@ -16,6 +16,9 @@ package bootstrap
 
 import (
 	"context"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -49,5 +52,48 @@ func TestRequestNodeNameIsANoOpWithoutAName(t *testing.T) {
 		if err := requestNodeName(context.Background(), nil, cfg, ""); err != nil {
 			t.Fatalf("%s: %v", clusterType, err)
 		}
+	}
+}
+
+// The command does not run on the node as written: dhctl wraps it for sudo and
+// hands the result to a shell, and a backslash does not survive that - a
+// printf '%s\n' arrives as printf '%sn' and names the node <name>n. Nothing
+// downstream can catch that, since <name>n is a perfectly good node name, so the
+// command must carry no backslash at all.
+func TestNodeNameCommandCarriesNothingAShellCouldEat(t *testing.T) {
+	cmd := nodeNameRemoteCommand("/var/lib/bashible", "master-alpha-01")
+
+	if strings.Contains(cmd, `\`) {
+		t.Errorf("the command carries a backslash, which the transport eats: %s", cmd)
+	}
+	// The write is read back, so a mangled name fails loudly instead of naming
+	// the node something nobody asked for.
+	if !strings.Contains(cmd, "cat /var/lib/bashible/node-name") {
+		t.Errorf("the command does not read the name back: %s", cmd)
+	}
+}
+
+// What the command does when it does arrive intact.
+func TestNodeNameCommandWritesTheName(t *testing.T) {
+	for _, name := range []string{"master-alpha-01", "worker-rack3-07", "node.with.dots"} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+
+			out, err := exec.Command("bash", "-c", nodeNameRemoteCommand(dir, name)).Output()
+			if err != nil {
+				t.Fatalf("running the command: %v", err)
+			}
+			if got := strings.TrimSpace(string(out)); got != name {
+				t.Errorf("the command printed back %q, want %q", got, name)
+			}
+
+			written, err := os.ReadFile(filepath.Join(dir, "node-name"))
+			if err != nil {
+				t.Fatalf("reading what was written: %v", err)
+			}
+			if got := strings.TrimSpace(string(written)); got != name {
+				t.Errorf("node-name holds %q, want %q", got, name)
+			}
+		})
 	}
 }

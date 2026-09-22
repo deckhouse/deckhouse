@@ -307,9 +307,16 @@ Applying the changes will take some time.
 
 By default a node joins the cluster under the hostname of its machine. Where the
 hostnames are not yours to choose — assigned by an imaging pipeline, by DHCP, or
-simply not unique across the fleet — a static node can be given a name of its own
-instead. The hostname of the machine is left alone: only the Node object is named
-this way.
+simply not unique across the fleet — a `Static` node can be given a name of its
+own instead. The hostname of the machine is left alone: only the Node object is
+named this way.
+
+A `Static` node is the only kind this applies to. A `CloudStatic` node is left to
+the cloud controller manager to initialize, and the CCM has nothing but the node's
+name to find the machine by — a `CloudStatic` node carries no `providerID` at all.
+Named anything else, it keeps the `node.cloudprovider.kubernetes.io/uninitialized`
+taint for good, is never given its addresses or its zone labels and never goes
+Ready; bootstrap refuses such a name rather than leave a node in that state.
 
 The name has to be an RFC 1123 DNS subdomain (lowercase letters, digits, `-` and
 `.`) and unique across the cluster. It is fixed the first time the node is
@@ -371,8 +378,8 @@ d8 k get node <node_name> \
 A Node object cannot be renamed, so a node is renamed by re-registering it: the
 Node object of the old name is removed, and the machine registers again under the
 new one. The machine itself stays where it is — its disks, its container runtime
-and its hostname are untouched. This works for static and CloudStatic nodes,
-master nodes of a static or hybrid cluster included.
+and its hostname are untouched. This works for `Static` nodes, master nodes of a
+static or hybrid cluster included.
 
 {% alert level="warning" %}
 **The machine is rebooted** as part of the rename, and the Node object of the old
@@ -396,12 +403,14 @@ For a master node, rename one at a time and wait for etcd to report all members
 healthy before starting the next.
 {% endalert %}
 
-Nodes created by the cloud — `CloudEphemeral` and `CloudPermanent` — cannot be
-renamed, and `rename_node.sh` is not installed on them. Their name is how the rest
+Every other kind of node — `CloudEphemeral`, `CloudPermanent` and `CloudStatic` —
+cannot be renamed, and `rename_node.sh` is not installed on them. Their name is how the rest
 of the cluster finds the machine behind them: `machine-controller-manager` matches
 a Machine to its Node by name, and the infrastructure state `dhctl converge` works
-from is kept in a `d8-node-terraform-state-<node-name>` Secret. A renamed node
-would read as a machine that vanished and a node that appeared from nowhere.
+from is kept in a `d8-node-terraform-state-<node-name>` Secret; and a `CloudStatic`
+node, carrying no `providerID`, is how the cloud controller manager finds the
+machine it has to initialize. A renamed node would read as a machine that vanished
+and a node that appeared from nowhere.
 
 A node of a cluster that routes the pod network through the cloud cannot be
 renamed either, and for the same reason: its route is created for the name it has
@@ -448,8 +457,13 @@ volumes bound to a node that no longer exists; move or recreate them.
    brings its CNI up on the subnet the new Node is given. Watch for it with
    `d8 k get nodes -w`.
 
-If the node is managed by CAPS, also update `spec.nodeName` on its StaticInstance
-so the two agree; CAPS itself finds the node again by its provider ID, not by name.
+A node managed by [CAPS](./#cluster-api-provider-static) cannot be renamed this
+way, and `rename_node.sh` refuses to run on one. Such a node is named by its
+StaticInstance, and CAPS is watching: the moment the Node object goes away it
+re-bootstraps the machine under the name
+[`spec.nodeName`](cr.html#staticinstance-v1alpha2-spec-nodename) carries, so the
+rename is undone within the minute, having cost a reboot. To give such a machine
+another name, remove its StaticInstance and add it again with the name you want.
 
 ## How to clean up a node for adding to the cluster?
 

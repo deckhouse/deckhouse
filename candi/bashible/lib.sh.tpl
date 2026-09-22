@@ -327,6 +327,24 @@ bb-discover-node-name() {
     name="$(hostname)"
   fi
 
+{{- if eq .nodeGroup.nodeType "CloudStatic" }}
+  # A CloudStatic node is the one kind of node that is left to the cloud
+  # controller manager to initialize, and the CCM has only the node's name to
+  # find the machine by: unlike a CAPS node it is given no providerID, and
+  # unlike a Static node it is given no static:// either. Named anything but
+  # its machine, it is never matched: it keeps the
+  # node.cloudprovider.kubernetes.io/uninitialized taint for good, is never
+  # given its addresses or its zone labels, and never goes Ready.
+  case "$source" in
+    "${requested_name}"|"the D8_NODE_NAME environment variable")
+      >&2 echo "ERROR: a CloudStatic node cannot be given a name of its own (asked for '${name}' through ${source})."
+      >&2 echo "The cloud finds the machine behind such a node by the node's name, so the name has to stay the name of the machine."
+      >&2 echo "A node whose name is its own business is a Static one: put it in a NodeGroup with nodeType: Static."
+      return 1
+      ;;
+  esac
+{{- end }}
+
   name="$(bb-d8-node-name-normalize "$name")"
   bb-d8-node-name-validate "$name" "$source" || return 1
 

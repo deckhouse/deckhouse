@@ -13,13 +13,17 @@
 # limitations under the License.
 # bashible: parallel-group=light-prep
 
-{{- if and (eq .runType "Normal") (or (eq .nodeGroup.nodeType "Static") (eq .nodeGroup.nodeType "CloudStatic")) }}
+{{- if and (eq .runType "Normal") (eq .nodeGroup.nodeType "Static") }}
 {{- /*
-  Renaming is offered only where the node's name is the node's own business. A
-  CloudEphemeral node is named after the machine object that owns it, and
-  machine-controller-manager finds it again by that name; a CloudPermanent node's
-  infrastructure state is kept in a Secret named after it. A rename there would
-  orphan the machine rather than rename the node.
+  Renaming is offered only where the node's name is the node's own business,
+  which is a Static node and nothing else. Every other kind of node is found
+  through its name by something in the cloud: a CloudEphemeral node by
+  machine-controller-manager, which matches a Machine to its Node by name; a
+  CloudPermanent node by the d8-node-terraform-state-<name> Secret its
+  infrastructure state lives in; a CloudStatic node by the cloud controller
+  manager, which has nothing but the name to find the machine it must initialize
+  by - a CloudStatic node carries no providerID at all. A rename there orphans
+  the machine rather than renaming the node.
 */}}
 bb-sync-file /var/lib/bashible/rename_node.sh - << "RENAME_NODE_SCRIPT_EOF"
 #!/bin/bash
@@ -191,6 +195,17 @@ kube_body() {
   done
   return 1
 }
+
+# A node the Cluster API Provider Static manages is named by its StaticInstance,
+# and CAPS is watching: the moment the Node object goes away it re-bootstraps the
+# machine and writes spec.nodeName back over whatever was pinned here. The rename
+# would be undone within the minute, having cost a reboot. node-spec-provider-id
+# is written by CAPS and by nothing else.
+if [[ -s /var/lib/bashible/node-spec-provider-id ]]; then
+  fail "this node is managed by the Cluster API Provider Static, which names it from spec.nodeName of its StaticInstance.
+  Renaming it here would be undone: CAPS re-bootstraps the machine as soon as the Node object goes away, under the name the StaticInstance carries.
+  To give this machine another name, remove its StaticInstance and add it again with the name you want."
+fi
 
 log "checking the new name against the cluster"
 found=""

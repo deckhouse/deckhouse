@@ -154,7 +154,10 @@ func TestWaitsWhileTheNodeIsStillReporting(t *testing.T) {
 }
 
 func TestRefusesANodeNamedByItsInfrastructure(t *testing.T) {
-	for _, nt := range []string{"CloudEphemeral", "CloudPermanent"} {
+	// CloudStatic belongs here too: it is given no providerID, so the cloud
+	// controller manager has nothing but the node's name to find the machine it
+	// has to initialize by.
+	for _, nt := range []string{"CloudEphemeral", "CloudPermanent", "CloudStatic"} {
 		t.Run(nt, func(t *testing.T) {
 			r, rec := newReconciler(t, newNode("cloud-node", renameTo("new-name"), ready(false), nodeType(nt)))
 

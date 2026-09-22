@@ -319,6 +319,29 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 	})
 }
 
+// nodeNameDir is where bb-discover-node-name looks for a name asked for before
+// the node was bootstrapped.
+const nodeNameDir = "/var/lib/bashible"
+
+// nodeNameRemoteCommand writes the name into dir/node-name on the node and prints
+// back what landed there.
+//
+// echo rather than printf '%s\n': the command travels to the node through a shell
+// of its own, which eats a backslash on the way - a printf '%s\n' arrives as
+// printf '%sn' and names the node <name>n. Nothing downstream could notice, since
+// that is a perfectly good node name, so the caller reads the file back rather
+// than take the write on trust.
+//
+// The name has already been through app.ValidateNodeName, so it holds nothing a
+// shell would look at. The quoting is here so that stays true of a caller that has
+// not.
+func nodeNameRemoteCommand(dir, nodeName string) string {
+	quoted := strings.ReplaceAll(nodeName, "'", `'\''`)
+
+	return fmt.Sprintf("mkdir -p %s && echo '%s' > %s/node-name && cat %s/node-name",
+		dir, quoted, dir, dir)
+}
+
 // requestNodeName asks the machine to register under a name of its own instead of
 // its hostname, by leaving the name where bb-discover-node-name looks for it. The
 // hostname of the machine is not touched: from here on the two are separate, and
@@ -344,11 +367,7 @@ func requestNodeName(ctx context.Context, nodeInterface libcon.Interface, cfg *c
 	ctx, span := telemetry.StartSpan(ctx, "requestNodeName")
 	defer span.End()
 
-	// The name has already been through app.ValidateNodeName, so it holds nothing
-	// a shell would look at. The quoting is here so that stays true of a caller
-	// that has not.
-	remote := fmt.Sprintf("mkdir -p /var/lib/bashible && printf '%%s\\n' '%s' > /var/lib/bashible/node-name",
-		strings.ReplaceAll(nodeName, "'", `'\''`))
+	remote := nodeNameRemoteCommand(nodeNameDir, nodeName)
 
 	p := retry.NewEmptyParams(
 		retry.WithName("Set the node name to %s", nodeName),
@@ -360,8 +379,12 @@ func requestNodeName(ctx context.Context, nodeInterface libcon.Interface, cfg *c
 	return retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 		cmd := nodeInterface.Command("bash", "-c", remote)
 		cmd.Sudo(ctx)
-		if _, stderr, err := cmd.Output(ctx); err != nil {
+		stdout, stderr, err := cmd.Output(ctx)
+		if err != nil {
 			return fmt.Errorf("write /var/lib/bashible/node-name: %w (stderr: %s)", err, string(stderr))
+		}
+		if got := strings.TrimSpace(string(stdout)); got != nodeName {
+			return fmt.Errorf("asked the node to register as %q, but /var/lib/bashible/node-name reads %q", nodeName, got)
 		}
 		return nil
 	})

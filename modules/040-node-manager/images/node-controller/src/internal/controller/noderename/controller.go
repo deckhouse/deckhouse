@@ -59,8 +59,7 @@ const (
 	// rename_node.sh sets it, with kubelet already stopped.
 	RenameToAnnotation = "node.deckhouse.io/rename-to"
 
-	nodeTypeStatic      = "Static"
-	nodeTypeCloudStatic = "CloudStatic"
+	nodeTypeStatic = "Static"
 
 	// How long to wait before looking again at a node that has asked but is
 	// still reporting. Node events do not fire when a node merely goes quiet:
@@ -126,13 +125,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 // refuse returns why the request cannot be carried out, or "" if it can.
 func (r *Reconciler) refuse(node *corev1.Node, newName string) string {
-	switch node.Labels[nodecommon.NodeTypeLabel] {
-	case nodeTypeStatic, nodeTypeCloudStatic:
-	default:
-		// A cloud node is named by whatever created it, and that name is how the
-		// machine behind it is found again.
-		return fmt.Sprintf("a %s node is named by the infrastructure that created it",
-			node.Labels[nodecommon.NodeTypeLabel])
+	if nodeType := node.Labels[nodecommon.NodeTypeLabel]; nodeType != nodeTypeStatic {
+		// Every other kind of node is found through its name by something in the
+		// cloud: machine-controller-manager matches a Machine to its Node that way,
+		// and a CloudStatic node - which is given no providerID at all - is how the
+		// cloud controller manager finds the machine it has to initialize. Renamed,
+		// such a node is matched by nothing.
+		return fmt.Sprintf("a %s node is found by the cloud through the node's name", nodeType)
 	}
 
 	if newName == node.Name {
