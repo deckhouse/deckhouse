@@ -13,3 +13,4 @@ Deckhouse hardening of the upstream ACME DNS-01 webhook:
 - resolve zone via `ChallengeRequest.ResolvedZone` + pagination + exact public-zone match
 - reject unsafe characters in zone names used in the Yandex filter expression
 - unit tests for `normalizeZone` / `getDNSZone`
+- keep `go.mod` / `go.sum` in sync so the image build can use `go mod download` without `go mod tidy`
