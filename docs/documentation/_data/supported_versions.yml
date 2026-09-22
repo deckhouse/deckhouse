@@ -39,6 +39,11 @@ osDistributions:
               <li><b>linux-image-6.1-debug</b> – cni-cilium, runtime-audit-engine;</li>
               <li><b>linux-image-6.6</b> – cni-cilium.</li>
             </ul>
+      - version: '1.8.3'
+        editions: [ce, cse, be, se, se-plus, ee]
+        note_content:
+          ru: |
+            Для работы виртуализации требуется версия ОС не ниже <b>1.8.3</b>.
   centos:
     name: CentOS
     url: https://www.centos.org/download/
