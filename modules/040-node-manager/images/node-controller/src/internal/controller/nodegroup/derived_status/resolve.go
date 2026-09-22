@@ -54,11 +54,6 @@ func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup) (Resol
 	}
 	check := Validate(ng, snap)
 
-	// Publish/refresh the preemptible-unsupported metric on every reconcile so the alert reflects
-	// the current InstanceClass state. Cleanup on NodeGroup deletion is done by the Status
-	// reconciler on IsNotFound (see internal/controller/nodegroup/controller.go).
-	SyncPreemptibleUnsupported(ng, snap)
-
 	in := ResolveInput{
 		Name:            ng.Name,
 		ManualRolloutID: ng.GetAnnotations()[manualRolloutIDAnnotation],

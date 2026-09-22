@@ -126,10 +126,6 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	ng, err := nodecommon.GetNodeGroup(ctx, r.Client, req.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Clear the openstack preemptible-unsupported metric for this NG so its alert
-			// stops firing at delete time instead of hanging around until controller restart.
-			// No-op for NGs that never referenced OpenStackInstanceClass.
-			derivedstatus.DeletePreemptibleUnsupported(req.Name)
 			logger.V(1).Info("NodeGroup not found, skipping", "name", req.Name)
 			return ctrl.Result{}, nil
 		}
