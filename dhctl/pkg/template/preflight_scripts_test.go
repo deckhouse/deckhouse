@@ -254,9 +254,14 @@ func TestCheckDeckhouseUserScript(t *testing.T) {
 				assert.Contains(t, out, tt.wantOut)
 			}
 			if tt.wantCode != 0 {
-				// Every failure has to carry the way out; this is the check an operator
-				// most often meets on a node they are reusing.
-				assert.Contains(t, out, "cleanup_static_node.sh")
+				// What it found, and nothing else. The way out belongs to the report dhctl
+				// prints (checks.deckhouseUserFailure), which names the cleanup script by path:
+				// advice from here arrived as a paragraph glued onto the end of one line of that
+				// report, and kept in both places the two drift apart.
+				assert.NotContains(t, out, "cleanup_static_node.sh",
+					"the way out is the report's to print")
+				assert.Equal(t, 1, len(strings.Split(strings.TrimSpace(out), "\n")),
+					"the script reports one line, got: %q", out)
 			}
 		})
 	}
