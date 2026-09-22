@@ -108,6 +108,10 @@ spec:
     applicationHTTPRouteListenerSetName: my-listenerset
 ```
 
+The DexAuthenticator HTTPRoute references its ListenerSet explicitly, so it does not require a default Gateway. Dex itself must still be published through Ingress or through its own ListenerSet and HTTPRoute attached to a configured or discovered Gateway, otherwise browser redirects to Dex cannot work.
+
+An application that specifies only `gatewayAPI` gets no Ingress. If Gateway API is disabled in the module or global settings, or the `gateway.networking.k8s.io/v1/HTTPRoute` API is unavailable in the cluster, such an application gets no HTTPRoute either and stays unpublished; the remaining applications are rendered as usual.
+
 {% endtab %}
 {% endtabs %}
 

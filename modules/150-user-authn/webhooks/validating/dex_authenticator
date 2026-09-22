@@ -44,6 +44,7 @@ kubernetes:
     executeHookOnSynchronization: false
     keepFullObjectsInMemory: false
     jqFilter: |
+      .metadata.namespace as \$namespace |
       {
         "name": .metadata.name,
         "namespace": .metadata.namespace,
@@ -51,7 +52,21 @@ kubernetes:
         "ingressClass": .spec.applicationIngressClassName,
         "additionalDomains": [
           .spec.additionalApplications[]? | [.domain, .ingressClassName]
-        ]
+        ],
+        "gatewayDomains": ([
+          {
+            "domain": .spec.applicationDomain,
+            "listenerSetName": .spec.gatewayAPI.applicationHTTPRouteListenerSetName,
+            "listenerSetNamespace": (.spec.gatewayAPI.applicationHTTPRouteListenerSetNamespace // \$namespace),
+            "sectionName": (.spec.gatewayAPI.applicationHTTPRouteListenerSetSectionName // "")
+          },
+          (.spec.additionalApplications[]? | {
+            "domain": .domain,
+            "listenerSetName": .gatewayAPI.httpRouteListenerSetName,
+            "listenerSetNamespace": (.gatewayAPI.httpRouteListenerSetNamespace // \$namespace),
+            "sectionName": (.gatewayAPI.httpRouteListenerSetSectionName // "")
+          })
+        ] | map(select(.listenerSetName != null)))
       }
 kubernetesValidating:
 - name: dexauthenticators-unique.deckhouse.io
@@ -75,37 +90,73 @@ function __main__() {
   
   if [[ "$apiVersion" == "deckhouse.io/v2alpha1" ]]; then
 
-    while IFS=$'\t' read -r domain ingressClass fieldPath; do
-      if [[ "$domain" != "null" && "$ingressClass" != "null" && "$fieldPath" != "null" ]]; then
-        domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$fieldPath")
+    while IFS=$'\t' read -r domain ingressClass listenerSet fieldPath; do
+      if [[ "$domain" != "null" && "$fieldPath" != "null" ]]; then
+        domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$listenerSet"$'\t'"$fieldPath")
       fi
-    done < <(context::jq -r '.review.request.object.spec.applications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t.spec.applications[\(.key)].domain"')
+    done < <(context::jq -r '.review.request.object.spec.applications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t\(.value.gatewayAPI.httpRouteListenerSetName)\t.spec.applications[\(.key)].domain"')
   else
 
     main_domain=$(context::jq -r '.review.request.object.spec.applicationDomain')
     main_ingress_class=$(context::jq -r '.review.request.object.spec.applicationIngressClassName')
-    domains_to_check+=("$main_domain"$'\t'"$main_ingress_class"$'\t'".spec.applicationDomain")
+    main_listener_set=$(context::jq -r '.review.request.object.spec.gatewayAPI.applicationHTTPRouteListenerSetName')
+    domains_to_check+=("$main_domain"$'\t'"$main_ingress_class"$'\t'"$main_listener_set"$'\t'".spec.applicationDomain")
 
 
-    while IFS=$'\t' read -r domain ingressClass fieldPath; do
-      if [[ "$domain" != "null" && "$ingressClass" != "null" && "$fieldPath" != "null" ]]; then
-        domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$fieldPath")
+    while IFS=$'\t' read -r domain ingressClass listenerSet fieldPath; do
+      if [[ "$domain" != "null" && "$fieldPath" != "null" ]]; then
+        domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$listenerSet"$'\t'"$fieldPath")
       fi
-    done < <(context::jq -r '.review.request.object.spec.additionalApplications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t.spec.additionalApplications[\(.key)].domain"')
+    done < <(context::jq -r '.review.request.object.spec.additionalApplications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t\(.value.gatewayAPI.httpRouteListenerSetName)\t.spec.additionalApplications[\(.key)].domain"')
   fi
   
 
+  # Applications after the first one take a resource-name suffix derived from sha256(domain), so
+  # two of them sharing a domain would name two objects of one kind alike. The first application
+  # carries no suffix, and an Ingress and an HTTPRoute may share a name, so the domains are
+  # tracked per publication path rather than globally.
+  seen_ingress_domains=" "
+  seen_route_domains=" "
+
   for domain_pair in "${domains_to_check[@]}"; do
-    IFS=$'\t' read -r domain ingressClass fieldPath <<< "$domain_pair"
+    IFS=$'\t' read -r domain ingressClass listenerSet fieldPath <<< "$domain_pair"
 
     if is_ip_address "$domain"; then
       msg="DexAuthenticator '$newAuthNamespace/$newAuthName' is invalid: '$fieldPath' must be a DNS name, not an IP address ('$domain')"
       jq -n --arg msg "$msg" '{allowed:false, message:$msg}' > "$VALIDATING_RESPONSE_PATH"
       return 0
     fi
-    
-    result=$(context::jq -r --arg domain "$domain" --arg class "$ingressClass" '
+
+    if [[ "$fieldPath" != ".spec.applicationDomain" && "$fieldPath" != ".spec.applications[0].domain" ]]; then
+      duplicate_kind=""
+      if [[ "$ingressClass" != "null" && "$seen_ingress_domains" == *" $domain "* ]]; then
+        duplicate_kind="Ingress"
+      elif [[ "$listenerSet" != "null" && "$seen_route_domains" == *" $domain "* ]]; then
+        duplicate_kind="HTTPRoute"
+      fi
+
+      if [[ -n "$duplicate_kind" ]]; then
+        msg="DexAuthenticator '$newAuthNamespace/$newAuthName' is invalid: '$fieldPath' repeats domain '$domain', so it would name a second $duplicate_kind after another additional application of this DexAuthenticator"
+        jq -n --arg msg "$msg" '{allowed:false, message:$msg}' > "$VALIDATING_RESPONSE_PATH"
+        return 0
+      fi
+
+      if [[ "$ingressClass" != "null" ]]; then
+        seen_ingress_domains+="$domain "
+      fi
+      if [[ "$listenerSet" != "null" ]]; then
+        seen_route_domains+="$domain "
+      fi
+    fi
+
+    if [[ "$ingressClass" == "null" ]]; then
+      continue
+    fi
+
+    result=$(context::jq -r --arg domain "$domain" --arg class "$ingressClass" \
+      --arg namespace "$newAuthNamespace" --arg name "$newAuthName" '
       .snapshots.dexauthenticators[].filterResult | 
+      select(.namespace != $namespace or .name != $name) |
       select(
         .applicationDomain == $domain and .ingressClass == $class or
         (.additionalDomains | arrays | any(.[0] == $domain and .[1] == $class))
@@ -116,15 +167,53 @@ function __main__() {
       existingAuth=$(echo "$result" | jq -r '.namespace + "/" + .name')
       
 
-      if [[ "$existingAuth" == "$newAuthNamespace/$newAuthName" ]]; then
-        continue
-      fi
-      
       msg="Desired DexAuthenticator '$newAuthNamespace/$newAuthName' conflicts with the existing DexAuthenticator '$existingAuth' for domain '$domain'"
       jq -n --arg msg "$msg" '{allowed:false, message:$msg}' > "$VALIDATING_RESPONSE_PATH"
       return 0
     fi
   done
+
+  # Compare ListenerSet references and overlapping sections only. Detecting conflicts
+  # across different ListenerSets attached to one Gateway requires Gateway topology.
+  if ! gatewayConflict=$(context::jq -r '
+    . as $context |
+    .review.request.object as $object |
+    [
+      (if $object.apiVersion == "deckhouse.io/v2alpha1" then
+        $object.spec.applications
+      else
+        [{
+          domain: $object.spec.applicationDomain,
+          gatewayAPI: {
+            httpRouteListenerSetName: $object.spec.gatewayAPI.applicationHTTPRouteListenerSetName,
+            httpRouteListenerSetNamespace: $object.spec.gatewayAPI.applicationHTTPRouteListenerSetNamespace,
+            httpRouteListenerSetSectionName: $object.spec.gatewayAPI.applicationHTTPRouteListenerSetSectionName
+          }
+        }] + ($object.spec.additionalApplications // [])
+      end)[] |
+      select(.gatewayAPI.httpRouteListenerSetName != null) |
+      .domain as $domain |
+      .gatewayAPI.httpRouteListenerSetName as $listenerSetName |
+      (.gatewayAPI.httpRouteListenerSetNamespace // $object.metadata.namespace) as $listenerSetNamespace |
+      (.gatewayAPI.httpRouteListenerSetSectionName // "") as $sectionName |
+      $context.snapshots.dexauthenticators[].filterResult |
+      select(.namespace != $object.metadata.namespace or .name != $object.metadata.name) |
+      select(any(.gatewayDomains[]?;
+        .domain == $domain and
+        .listenerSetName == $listenerSetName and
+        .listenerSetNamespace == $listenerSetNamespace and
+        (.sectionName == $sectionName or .sectionName == "" or $sectionName == "")
+      )) |
+      "Desired DexAuthenticator \u0027\($object.metadata.namespace)/\($object.metadata.name)\u0027 conflicts with the existing DexAuthenticator \u0027\(.namespace)/\(.name)\u0027 for domain \u0027\($domain)\u0027 on ListenerSet \u0027\($listenerSetNamespace)/\($listenerSetName)\u0027"
+    ] | first // empty
+  '); then
+    return 1
+  fi
+
+  if [[ -n "$gatewayConflict" ]]; then
+    jq -n --arg msg "$gatewayConflict" '{allowed:false, message:$msg}' > "$VALIDATING_RESPONSE_PATH"
+    return 0
+  fi
   
   jq -n '{allowed:true}' > "$VALIDATING_RESPONSE_PATH"
 }

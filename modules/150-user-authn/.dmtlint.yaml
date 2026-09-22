@@ -23,6 +23,17 @@ linters-settings:
         - kind: Deployment
           name: test-dex-authenticator
           container: redis
+  templates:
+    exclude-rules:
+      gateway-enablement:
+        files:
+          # The rule demands helm_lib_module_gateway_enabled, which also requires a resolvable
+          # module Gateway. This route names its ListenerSet explicitly in parentRefs, so it has
+          # no use for one: requiring it is exactly what kept DexAuthenticators from working in
+          # clusters that publish applications through their own ListenerSets and have no
+          # IngressClass at all. The gatewayAPI.enabled switches the rule cares about are still
+          # honoured, through user_authn_gateway_api_enabled in templates/_helpers.tpl.
+          - templates/dex-authenticator/httproute.yaml
   openapi:
     exclude-rules:
       enum:

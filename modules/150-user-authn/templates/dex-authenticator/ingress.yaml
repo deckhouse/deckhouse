@@ -6,6 +6,9 @@
     {{- continue }}
   {{- end }}
   {{- range $idx, $app := $crd.spec.applications }}
+  {{- if not $app.ingressClassName }}
+    {{- continue }}
+  {{- end }}
   {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
   {{- $nameSuffix := "" }}
   {{- if ne $idx 0 }}

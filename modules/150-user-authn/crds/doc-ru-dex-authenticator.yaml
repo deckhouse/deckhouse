@@ -41,6 +41,8 @@ spec:
                 applicationIngressClassName:
                   description: |
                     Название Ingress-класса, которое будет использоваться в Ingress-ресурсе (должно совпадать с названием Ingress-класса для домена приложения).
+
+                    Обязательно, если не указан `gatewayAPI`. Если класс не указан, Ingress-ресурсы для приложения не создаются. Можно указать оба поля.
                 gatewayAPI:
                   description: |
                     Набор параметров для настройки создаваемого объекта HTTPRoute.
@@ -55,6 +57,8 @@ spec:
                     applicationHTTPRouteListenerSetNamespace:
                       description: |
                         Имя неймспейса, в котором располагается объект ListenerSet из Gateway API, на который будет ссылаться создаваемый HTTPRoute.
+
+                        Если не указано, используется пространство имен объекта `DexAuthenticator`.
                     applicationHTTPRouteListenerSetSectionName:
                       description: |
                         Имя секции объекта ListenerSet из Gateway API, на которую будет ссылаться создаваемый HTTPRoute.
@@ -199,6 +203,27 @@ spec:
                       ingressClassName:
                         description: |
                           Название Ingress-класса, которое будет использоваться в Ingress-ресурсе (должно совпадать с названием Ingress-класса для домена приложения).
+
+                          Обязательно, если не указан `gatewayAPI`. Если класс не указан, Ingress-ресурсы для приложения не создаются. Можно указать оба поля.
+                      gatewayAPI:
+                        description: |
+                          Набор параметров для настройки создаваемого объекта HTTPRoute.
+
+                          > **Внимание.** Используется только в кластерах с поддержкой Gateway API.
+
+                          > **Внимание.** Должен быть указан тот же объект ListenerSet, который используется для домена приложения.
+                        properties:
+                          httpRouteListenerSetName:
+                            description: |
+                              Имя объекта ListenerSet из Gateway API, на который будет ссылаться создаваемый HTTPRoute.
+                          httpRouteListenerSetNamespace:
+                            description: |
+                              Имя неймспейса, в котором располагается объект ListenerSet из Gateway API, на который будет ссылаться создаваемый HTTPRoute.
+
+                              Если не указано, используется пространство имен объекта `DexAuthenticator`.
+                          httpRouteListenerSetSectionName:
+                            description: |
+                              Имя секции объекта ListenerSet из Gateway API, на которую будет ссылаться создаваемый HTTPRoute.
                       signOutURL:
                         description: |
                           URL для завершения сеанса аутентификации.
@@ -321,6 +346,8 @@ spec:
                       ingressClassName:
                         description: |
                           Название Ingress-класса, которое будет использоваться в Ingress-ресурсе (должно совпадать с названием Ingress-класса для домена приложения).
+
+                          Обязательно, если не указан `gatewayAPI`. Если класс не указан, Ingress-ресурсы для приложения не создаются. Можно указать оба поля.
                       signOutURL:
                         description: |
                           URL для завершения сеанса аутентификации.
@@ -345,6 +372,8 @@ spec:
                           httpRouteListenerSetNamespace:
                             description: |
                               Имя неймспейса, в котором располагается объект ListenerSet из Gateway API, на который будет ссылаться создаваемый HTTPRoute.
+
+                              Если не указано, используется пространство имен объекта `DexAuthenticator`.
                           httpRouteListenerSetSectionName:
                             description: |
                               Имя секции объекта ListenerSet из Gateway API, на которую будет ссылаться создаваемый HTTPRoute.
