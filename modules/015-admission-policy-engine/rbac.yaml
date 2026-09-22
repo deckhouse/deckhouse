@@ -1,4 +1,0 @@
-allowedResources:
-  - group: templates.gatekeeper.sh
-    resources:
-      - constrainttemplates
