@@ -1,0 +1,21 @@
+module: ee/modules/030-cloud-provider-vcd
+registration:
+  capiClusterAPIVersion: infrastructure.cluster.x-k8s.io/v1beta2
+  capiClusterKind: VCDCluster
+  capiClusterName: test-vapp
+renderData:
+  cluster:
+    name: test-vapp
+    namespace: d8-cloud-instance-manager
+  controlPlane:
+  - host: 192.0.2.10
+    port: 6443
+  prefix: ""
+  provider:
+    apiToken: token
+    mainNetwork: test-network
+    organization: test-org
+    password: pass
+    server: https://vcd.example/
+    username: user
+    virtualDataCenter: test-ovdc

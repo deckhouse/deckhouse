@@ -51,14 +51,13 @@ func TestBuildSnapshot_StaticNodeGroupReadsStaticConfigOnly(t *testing.T) {
 	require.Nil(t, snap.DefaultZones, "zones belong to the cloud overlay a Static NodeGroup never gets")
 }
 
-// An unpublished version leaves the InstanceClass unread rather than read at a guessed version: a
-// guess goes through the provider's conversion webhook, changes the spec, and renames the immutable
-// machine template the checksum points at.
-func TestBuildSnapshot_CloudEphemeralWithoutPublishedVersionSkipsInstanceClass(t *testing.T) {
-	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
-		"type":              []byte(`aws`),
-		"instanceClassKind": []byte(`AWSInstanceClass`),
-	}))
+// The registration is an input contract: guessing a missing version can rename immutable
+// templates, so nothing is read at a guessed version. The snapshot still builds for the rest of
+// the cluster — Validate reports the missing field per NodeGroup instead of failing the whole read.
+func TestBuildSnapshot_CloudEphemeralReportsMissingPublishedVersion(t *testing.T) {
+	registration := validMCMRegistrationData("aws", "AWSInstanceClass", "v1")
+	delete(registration, "instanceClassAPIVersion")
+	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, registration))
 	ng := &v1.NodeGroup{}
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
@@ -69,9 +68,24 @@ func TestBuildSnapshot_CloudEphemeralWithoutPublishedVersionSkipsInstanceClass(t
 	snap, err := s.BuildSnapshot(t.Context(), ng)
 
 	require.NoError(t, err)
-	require.Empty(t, snap.Provider.InstanceClassAPIVersion)
-	require.Nil(t, snap.InstanceClass)
-	require.Nil(t, snap.KnownClassNames)
+	require.Nil(t, snap.InstanceClass, "no version to read the class at")
+	require.Contains(t, Validate(ng, snap).Error, "instanceClassAPIVersion")
+}
+
+// One provider field the cluster context does not need must not take the context down. Rendering
+// paths validate the registration themselves.
+func TestBuildSnapshot_IncompleteRegistrationStillDescribesTheNodeGroup(t *testing.T) {
+	registration := validMCMRegistrationData("aws", "AWSInstanceClass", "v1")
+	delete(registration, "region")
+	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, registration))
+	ng := &v1.NodeGroup{}
+	ng.Name = "worker"
+	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
+
+	snap, err := s.BuildSnapshot(t.Context(), ng)
+
+	require.NoError(t, err)
+	require.Equal(t, "AWSInstanceClass", snap.Provider.InstanceClassKind)
 }
 
 // A cluster with no cloud provider at all yields an empty snapshot, not an error: that is a static
@@ -107,11 +121,11 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(existing, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
-			"type":                    []byte(`aws`),
-			"instanceClassKind":       []byte(kind),
-			"instanceClassAPIVersion": []byte(`v1`),
-		})).
+		WithObjects(existing, testSecret(
+			cloudProviderSecretNamespace,
+			cloudProviderSecretName,
+			validMCMRegistrationData("aws", kind, "v1"),
+		)).
 		WithInterceptorFuncs(interceptor.Funcs{
 			// The List still returns it; the Get no longer does.
 			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -230,11 +244,11 @@ func newDVPTestService(t *testing.T, className string, cores int64, memory strin
 
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(ic, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
-			"type":                    []byte(`dvp`),
-			"instanceClassKind":       []byte(kind),
-			"instanceClassAPIVersion": []byte(`v1`),
-		})).
+		WithObjects(ic, testSecret(
+			cloudProviderSecretNamespace,
+			cloudProviderSecretName,
+			validCAPIRegistrationData("dvp", kind, "v1"),
+		)).
 		Build()
 
 	return &Service{Client: c}

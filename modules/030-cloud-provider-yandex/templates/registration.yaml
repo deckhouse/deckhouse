@@ -5,18 +5,16 @@
 type: {{ b64enc "yandex" | quote }}
 region: {{ $context.Values.cloudProviderYandex.internal.providerDiscoveryData.region | b64enc | quote }}
 zones: {{ include "yandex_zones" $context | b64enc | quote }}
-# Storage version of the InstanceClass CRD (spec.versions with storage: true). Not any served
-# version: node-controller hashes what it reads into a checksum that names an immutable template.
+# Served InstanceClass version that node-controller must use. Change it only after adding the
+# version and conversions: it affects the checksum that names an immutable machine template.
 instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 instanceClassKind: {{ b64enc "YandexInstanceClass" | quote }}
 machineClassKind: {{ b64enc "YandexMachineClass" | quote }}
 capiClusterKind: {{ b64enc "YandexCluster" | quote }}
 capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
-capiClusterAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
 capiClusterName: {{ b64enc "yandex" | quote }}
 capiMachineTemplateKind: {{ b64enc "YandexMachineTemplate" | quote }}
 capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
-capiMachineTemplateAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
 {{- $sshPublicKey := dig "nodes" "parameters" "sshPublicKey" "" $context.Values.cloudProviderYandex }}
 {{- if $sshPublicKey }}
 sshPublicKey: {{ $sshPublicKey | b64enc | quote }}
