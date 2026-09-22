@@ -48,6 +48,9 @@ func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.
 func newTestSyncerWithGlobal(t *testing.T, version, embeddedDir, globalDir string, objects ...client.Object) (*syncer, client.Client) {
 	t.Helper()
 
+	// the module pass is gated off by default, and these tests drive it
+	t.Setenv(app.EnvEnableModulePackageSync, "true")
+
 	setDeckhouseVersion(t, version)
 
 	sc, err := project.Scheme()
