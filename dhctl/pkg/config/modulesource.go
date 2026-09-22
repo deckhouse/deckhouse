@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -432,6 +434,27 @@ func moduleImageTag(version string) string {
 	return "v" + version
 }
 
+// registryRequestTimeout bounds one registry request on its own. LoadConfigFromFile passes a
+// context with no deadline, so a registry that accepts the connection and then stalls would hang
+// dhctl at config load. The value and the REGISTRY_TIMEOUT override are what go_lib/dependency/cr
+// applied before this moved to pkg/registry. A var so tests can shorten it.
+var registryRequestTimeout = 120 * time.Second
+
+// registryTimeout reads the override an operator may set for a slow registry.
+func registryTimeout() (time.Duration, error) {
+	raw := os.Getenv("REGISTRY_TIMEOUT")
+	if raw == "" {
+		return registryRequestTimeout, nil
+	}
+
+	timeout, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("parse REGISTRY_TIMEOUT: %w", err)
+	}
+
+	return timeout, nil
+}
+
 // splitHostPath splits "host/a/b" into "host" and "a/b". A bare host yields an empty path,
 // which is what strings.Cut already returns when the separator is absent.
 func splitHostPath(repo string) (string, string) {
@@ -446,12 +469,18 @@ func splitHostPath(repo string) (string, string) {
 // catalog.Module. log.Default() rather than the context logger on purpose: lib-dhctl already holds
 // it at fatal level and opens it to debug, routed to the log file, under DHCTL_DEBUG.
 var moduleCatalog = func(conf *image.RegistryConfig, repo string) (*module.Catalog, error) {
+	timeout, err := registryTimeout()
+	if err != nil {
+		return nil, err
+	}
+
 	host, rest := splitHostPath(repo)
 
 	cli := registry.Client(client.New(host,
 		client.WithLoginPassword(conf.GetUsername(), conf.GetPassword()),
 		client.WithCA(conf.GetCA()),
 		client.WithInsecure(strings.EqualFold(conf.GetScheme(), "HTTP")),
+		client.WithTimeout(timeout),
 		client.WithLogger(log.Default()),
 	))
 	if rest != "" {

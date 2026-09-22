@@ -18,6 +18,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"time"
 	"os"
 	"path"
 	"path/filepath"
@@ -425,6 +428,46 @@ spec:
 	require.NoError(t, err)
 	require.Equal(t, "r.example.com/test/modules", repo)
 	require.Equal(t, "test-user", conf.GetUsername())
+}
+
+// LoadConfigFromFile hands resolveModuleProviderBundle a context with no deadline, so the only
+// thing bounding a registry request is the client's own timeout. A registry that accepts the
+// connection and then answers nothing is the case that matters: without a deadline dhctl hangs at
+// config load instead of failing.
+func TestModuleCatalogRequestHasItsOwnDeadline(t *testing.T) {
+	stalled := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		<-stalled
+	}))
+	t.Cleanup(func() {
+		close(stalled)
+		srv.Close()
+	})
+
+	orig := registryRequestTimeout
+	registryRequestTimeout = 150 * time.Millisecond
+	t.Cleanup(func() { registryRequestTimeout = orig })
+
+	repo := strings.TrimPrefix(srv.URL, "http://") + "/modules"
+
+	conf, err := image.NewRegistryConfig("HTTP", repo, "", "", "")
+	require.NoError(t, err)
+
+	catalog, err := moduleCatalog(conf, repo)
+	require.NoError(t, err)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := catalog.Module("cloud-provider-dvp").Releases().Fetch(context.Background(), "stable")
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		require.Error(t, err, "a stalled registry must not answer successfully")
+	case <-time.After(5 * time.Second):
+		t.Fatal("the registry request outlived the client timeout: it has no deadline of its own")
+	}
 }
 
 // A token-auth registry denies anything outside the identity's scope whether or not the target
