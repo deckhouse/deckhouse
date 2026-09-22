@@ -175,3 +175,21 @@ Only the source change is carried, the upstream test case is dropped.
 carried on 1.34 (`014`), 1.35 (`014`) and 1.36 (`013`) only.
 
 > Upstream PR https://github.com/kubernetes/kubernetes/pull/141100
+
+### order-sandbox-by-attempt-or-create-time.patch (1.32-1.34)
+
+Makes `podSandboxByCreated.Less` order sandboxes by `Metadata.Attempt` instead of
+`CreatedAt`, falling back to `CreatedAt` when either sandbox has no metadata
+(`pkg/kubelet/kuberuntime/helpers.go`).
+
+A system clock rollback (common at boot, when NTP starts around the static pods)
+can make an older sandbox look newer than the current one. Kubelet then picks the
+stale sandbox as the latest one, and the runtime refuses to create a new sandbox
+because the pod name is still reserved by the previous attempt. The attempt
+counter is monotonic and immune to clock jumps, so it is the correct ordering key.
+
+Only the source change is carried, the upstream test case is dropped. k8s 1.35+
+already ship this code, so the patch is carried on 1.32 (`015`), 1.33 (`014`) and
+1.34 (`015`) only.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/130551
