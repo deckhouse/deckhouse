@@ -1,29 +1,26 @@
 # Metric contract for the rules below.
 #
-# The absence of a series is meaningful here, and it is the only way "there is
-# no limit" is expressed:
-#
-#   * d8_license_effective_limit        - absent for an unlimited resource, and
-#                                         for a resource no key grants at all.
-#                                         Never 0 for "unlimited": 0 is a real
-#                                         quota of nothing.
-#   * d8_license_limit_after_reduction  - absent when no reduction is upcoming,
-#     d8_license_next_reduction_seconds   or when the resource stays unlimited
-#                                         after it.
-#   * d8_license_record_expires_in_seconds
-#                                       - absent for a perpetual record and for
-#                                         a record already renewed by a
-#                                         successor. It reaches 0 and stops,
-#                                         it never goes negative.
-#
-# Every comparison below is therefore written as `consumption > on(resource)
-# limit`: an absent limit drops the pair and the rule stays silent, which is
-# exactly what an unlimited resource should do. Emitting 0 instead of nothing
-# would fire every one of these rules on the customers who bought the most.
+#   * d8_license_limit                  - the current quota of a metric, +Inf
+#                                         while the metric is unlimited. A
+#                                         comparison against +Inf is silent,
+#                                         which is what an unlimited metric
+#                                         should do; 0 would fire on the
+#                                         customers who bought the most.
+#   * d8_license_nodes{billing}         - the node allocation. The unlicensed
+#                                         group is the only way the license can
+#                                         be exceeded: nodes that do not fit the
+#                                         server licences fall through to the
+#                                         pool, so no single metric is ever
+#                                         "over" on its own.
+#   * d8_license_over_limit_seconds     - how long unlicensed nodes have been
+#                                         there, 0 while every node is covered.
+#   * d8_license_key_expires_in_seconds - absent for a key that never expires.
+#                                         It reaches 0 and stops, it never goes
+#                                         negative.
 - name: d8.deckhouse.licensing
   rules:
-  - alert: D8LicenseConsumptionOverLimit
-    expr: d8_license_consumption{kind="instant"} > on(resource) d8_license_effective_limit
+  - alert: D8LicenseUnlicensedNodes
+    expr: d8_license_nodes{billing="Unlicensed"} > 0
     for: 1h
     labels:
       severity_level: "5"
@@ -33,72 +30,22 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_labels_as_annotations: "resource"
-      summary: Resource consumption exceeds the license limit.
+      summary: Some nodes are not covered by the cluster license.
       description: |
-        Current consumption of `{{ $labels.resource }}` is above the quota granted by the installed license keys.
+        The cluster runs more nodes than the license key covers.
 
         The alert waits for one hour on purpose: adding a replacement node before draining the old one
-        briefly puts the cluster over the limit, and that is a normal rotation, not a violation.
-        If it keeps firing, the excess is real.
+        briefly leaves a node uncovered, and that is a normal rotation, not a violation.
 
-        What to do:
-
-        1. Compare consumption with the quota:
-
-           ```bash
-           d8 k get effectivelicense dkp -o yaml
-           ```
-
-        2. Either reduce consumption, or obtain an additional license key from the supplier.
-
-  - alert: D8LicenseExtrapolatedOverLimit
-    expr: d8_license_consumption{kind="extrapolated"} > on(resource) d8_license_effective_limit
-    for: 6h
-    labels:
-      severity_level: "7"
-      tier: cluster
-      d8_module: deckhouse
-      d8_component: deckhouse
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_labels_as_annotations: "resource"
-      summary: Resource consumption is projected to exceed the license limit.
-      description: |
-        Consumption of `{{ $labels.resource }}` grows steadily and, extrapolated to the nearest license
-        expiration, ends up above the quota. Nothing is violated yet — this is an early warning
-        that arrives weeks before the average crosses the limit.
-
-        Plan the additional quota now, while it can still be ordered without a rush.
-
-  - alert: D8LicenseQuotaReductionAhead
-    expr: d8_license_consumption{kind="avg_7d"} > on(resource) d8_license_limit_after_reduction and on() d8_license_next_reduction_seconds < 60 * 24 * 3600
-    for: 1h
-    labels:
-      severity_level: "6"
-      tier: cluster
-      d8_module: deckhouse
-      d8_component: deckhouse
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_labels_as_annotations: "resource"
-      summary: The license quota will drop below the current consumption.
-      description: |
-        One of the license keys expires within 60 days, and after that the quota for `{{ $labels.resource }}`
-        becomes lower than the average consumption over the last 7 days.
-
-        Nothing is wrong right now, and nothing breaks at the moment of the reduction either —
-        but from that date on the cluster is over the limit.
-
-        Check the reduction date and the resulting quota:
+        After seven days of uninterrupted excess the cluster moves into violation. Check how long it has
+        been going on and which nodes are affected:
 
         ```bash
-        d8 k get effectivelicense dkp -o jsonpath='{.status.nextReduction}'
+        d8 k get effectivelicense deckhouse-platform -o jsonpath='{.status.allocation}{"\n"}{.status.overLimitSince}{"\n"}'
+        d8 system licenses nodes
         ```
 
-        Renew the expiring key, or order the missing quota before that date.
+        Either reduce the cluster, or reissue the license key for the current size.
 
   # d8_license_compliance_state carries a `reason` label, and it is what keeps
   # these two rules honest. A cluster that was never registered sits in
@@ -127,7 +74,7 @@
         Install a valid license key:
 
         ```bash
-        d8 k get clusterlicenses
+        d8 system licenses
         ```
 
   - alert: D8LicenseComplianceViolation
@@ -144,16 +91,17 @@
       plk_labels_as_annotations: "reason"
       summary: The cluster license is violated.
       description: |
-        The license rights of the cluster have run out and the grace period is over.
+        The license of the cluster is violated: either the rights ran out and the grace period is over,
+        or nodes have been uncovered for seven days without interruption.
 
-        Workloads keep running: the platform is not blocked. Contact the supplier and install a valid
-        license key — loading a new key is the way out of the violation.
+        Workloads keep running: the platform is not blocked. Reissue the license key — loading a new key
+        is the way out of the violation.
 
-  - alert: D8LicenseRecordExpiresSoon
+  - alert: D8LicenseKeyExpiresSoon
     # The lower bound is not cosmetic: the series reaches 0 at the expiry, and
-    # an already expired record is the business of D8LicenseComplianceGrace and
+    # an already expired key is the business of D8LicenseComplianceGrace and
     # D8LicenseComplianceViolation, not of an "expires soon" warning.
-    expr: (d8_license_record_expires_in_seconds > 0) and (d8_license_record_expires_in_seconds < 30 * 24 * 3600)
+    expr: (d8_license_key_expires_in_seconds > 0) and (d8_license_key_expires_in_seconds < 30 * 24 * 3600)
     for: 1h
     labels:
       severity_level: "7"
@@ -163,22 +111,18 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_labels_as_annotations: "record_id,license"
-      summary: A license record expires soon.
+      summary: The cluster license expires soon.
       description: |
-        Record `{{ $labels.record_id }}` of the license key `{{ $labels.license }}` expires within 30 days.
+        The license key of the cluster expires within 30 days.
 
-        Only active, not-renewed records are counted here: a record already renewed by a successor
-        does not raise this alert.
-
-        Renew the key before the date shown in:
+        Reissue it before the date shown in:
 
         ```bash
-        d8 k get clusterlicense {{ $labels.license }} -o yaml
+        d8 k get effectivelicense deckhouse-platform -o jsonpath='{.status.key.validUntil}{"\n"}'
         ```
 
   - alert: D8LicenseRejectedRecords
-    expr: sum(d8_license_records{status!~"accepted|UnsupportedType|Renewed|Superseded|Expired"}) > 0
+    expr: sum(d8_license_records{status!~"accepted|UnsupportedType|Renewed|Superseded|Expired|NotYetValid"}) > 0
     for: 30m
     labels:
       severity_level: "6"
@@ -193,11 +137,11 @@
         At least one record of an installed license key was rejected for a reason that does not resolve
         by itself: a cluster mismatch, a revocation, a duplicate or a malformed record.
 
-        Records that are merely renewed, superseded, expired or of an unknown type are excluded —
-        those are normal states.
+        Records that are merely renewed, superseded, expired, not yet valid or of an unknown type are
+        excluded — those are normal states.
 
         Find the rejected records and their reasons:
 
         ```bash
-        d8 k get clusterlicenses -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.records}{"\n"}{end}'
+        d8 system licenses --keys
         ```

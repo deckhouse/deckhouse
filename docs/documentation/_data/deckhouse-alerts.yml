@@ -2420,6 +2420,101 @@ alerts:
         Kubernetes version {{ $labels.k8s_version }} is deprecated.
       severity: "7"
       markupFormat: markdown
+    - name: D8LicenseComplianceGrace
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        The license rights of the cluster have run out and the grace period is running.
+        When it ends, the cluster moves into violation.
+
+        Install a valid license key:
+
+        ```bash
+        d8 system licenses
+        ```
+      summary: |
+        The cluster license is in the grace period.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8LicenseComplianceViolation
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        The license of the cluster is violated: either the rights ran out and the grace period is over,
+        or nodes have been uncovered for seven days without interruption.
+
+        Workloads keep running: the platform is not blocked. Reissue the license key — loading a new key
+        is the way out of the violation.
+      summary: |
+        The cluster license is violated.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8LicenseKeyExpiresSoon
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        The license key of the cluster expires within 30 days.
+
+        Reissue it before the date shown in:
+
+        ```bash
+        d8 k get effectivelicense deckhouse-platform -o jsonpath='{.status.key.validUntil}{"\n"}'
+        ```
+      summary: |
+        The cluster license expires soon.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8LicenseRejectedRecords
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        At least one record of an installed license key was rejected for a reason that does not resolve
+        by itself: a cluster mismatch, a revocation, a duplicate or a malformed record.
+
+        Records that are merely renewed, superseded, expired, not yet valid or of an unknown type are
+        excluded — those are normal states.
+
+        Find the rejected records and their reasons:
+
+        ```bash
+        d8 system licenses --keys
+        ```
+      summary: |
+        There are rejected license records.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8LicenseUnlicensedNodes
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        The cluster runs more nodes than the license key covers.
+
+        The alert waits for one hour on purpose: adding a replacement node before draining the old one
+        briefly leaves a node uncovered, and that is a normal rotation, not a violation.
+
+        After seven days of uninterrupted excess the cluster moves into violation. Check how long it has
+        been going on and which nodes are affected:
+
+        ```bash
+        d8 k get effectivelicense deckhouse-platform -o jsonpath='{.status.allocation}{"\n"}{.status.overLimitSince}{"\n"}'
+        d8 system licenses nodes
+        ```
+
+        Either reduce the cluster, or reissue the license key for the current size.
+      summary: |
+        Some nodes are not covered by the cluster license.
+      severity: "5"
+      markupFormat: markdown
     - name: D8MachineControllerManagerPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/machine-controller-manager.tpl
       moduleUrl: 040-node-manager
