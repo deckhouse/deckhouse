@@ -38,6 +38,8 @@ chat_script_url:
 social_links:
   ru:
     telegram: https://t.me/deckhouse_ru
+    # TODO: placeholder, replace with the real Deckhouse channel URL.
+    youtube: https://www.youtube.com/
   en:
     telegram: https://t.me/deckhouse
 

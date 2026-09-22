@@ -27,6 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
@@ -37,6 +38,9 @@ import (
 type Discoverer struct {
 	logger *log.Logger
 	region string
+	// nodeInstanceProfileName selects the instances of this cluster when their IMDS state is
+	// checked. Empty when the module has not passed it, in which case the check is skipped.
+	nodeInstanceProfileName string
 }
 
 func NewDiscoverer(logger *log.Logger) *Discoverer {
@@ -45,9 +49,17 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 		logger.Fatal("AWS_REGION not found")
 	}
 
+	nodeInstanceProfileName := os.Getenv("AWS_NODE_IAM_INSTANCE_PROFILE")
+	if nodeInstanceProfileName == "" {
+		logger.Warn("AWS_NODE_IAM_INSTANCE_PROFILE not found, the IMDS state of the instances will not be checked")
+	} else {
+		registerIMDSMetrics()
+	}
+
 	return &Discoverer{
-		logger: logger,
-		region: region,
+		logger:                  logger,
+		region:                  region,
+		nodeInstanceProfileName: nodeInstanceProfileName,
 	}
 }
 
@@ -113,7 +125,29 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 		}
 	}
 
+	// The IMDS state of the instances is observed here because this is the one method the
+	// reconciler calls on every discovery period. It is exported as a metric rather than
+	// returned as a condition: allowing IMDSv1 is the supported default, it only becomes a
+	// problem once the cluster asked for IMDSv2, and that is known to the module, not here.
+	d.updateIMDSMetrics(ctx, ec2Client)
+
 	return res, nil
+}
+
+func (d *Discoverer) updateIMDSMetrics(ctx context.Context, ec2Client ec2iface.EC2API) {
+	if d.nodeInstanceProfileName == "" {
+		return
+	}
+
+	count, err := countInstancesAllowingIMDSv1(ctx, ec2Client, d.nodeInstanceProfileName)
+	if err != nil {
+		// A failed check must not hide the permission conditions gathered above, and keeping
+		// the previous value is better than reporting a made up one.
+		d.logger.Error("Error occurred while checking the IMDS state of the instances", "error", err)
+		return
+	}
+
+	imdsv1AllowedInstances.Set(float64(count))
 }
 
 func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, error) {

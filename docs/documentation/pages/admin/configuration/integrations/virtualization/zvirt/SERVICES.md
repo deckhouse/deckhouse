@@ -8,7 +8,7 @@ Integration with zVirt is in experimental status.
 Interfaces and functionality may change in the future.
 {% endalert %}
 
-Deckhouse Kubernetes Platform supports integration with zVirt infrastructure,
+Deckhouse Platform supports integration with zVirt infrastructure,
 enabling the provisioning, management, and removal of virtual machines using definitions in the [ZvirtInstanceClass](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass) resource.
 
 ## Key features

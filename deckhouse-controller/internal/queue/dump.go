@@ -17,62 +17,60 @@ package queue
 import (
 	"slices"
 	"time"
-
-	"sigs.k8s.io/yaml"
 )
 
-type dump struct {
-	Queues map[string]dumpQueue `json:"queues" yaml:"queues"`
+// Dump is a snapshot of the queues and the tasks waiting in them.
+type Dump struct {
+	Queues map[string]QueueDump `json:"queues"`
 }
 
-type dumpQueue struct {
-	Length int        `json:"length" yaml:"length"`
-	Tasks  []dumpTask `json:"tasks,omitempty" yaml:"tasks,omitempty"`
+// QueueDump is a snapshot of one queue.
+type QueueDump struct {
+	Length int        `json:"length"`
+	Tasks  []TaskDump `json:"tasks,omitempty"`
 }
 
-type dumpTask struct {
-	Index     int     `json:"index" yaml:"index"`
-	Name      string  `json:"name" yaml:"name"`
-	Enqueued  string  `json:"enqueued" yaml:"enqueued"`
-	NextRetry string  `json:"next_retry" yaml:"next_retry"`
-	Error     *string `json:"error,omitempty" yaml:"error,omitempty"`
+// TaskDump is a snapshot of one task waiting in a queue.
+type TaskDump struct {
+	Index     int     `json:"index"`
+	Name      string  `json:"name"`
+	Enqueued  string  `json:"enqueued"`
+	NextRetry string  `json:"next_retry"`
+	Error     *string `json:"error,omitempty"`
 }
 
-// Dump creates dump of all queues
-func (s *Service) Dump(include ...string) []byte {
+// Dump creates dump of all queues.
+func (s *Service) Dump(include ...string) Dump {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	queues := make(map[string]dumpQueue, len(s.queues))
+	queues := make(map[string]QueueDump, len(s.queues))
 	for name, q := range s.queues {
 		if len(include) == 0 || slices.Contains(include, q.name) {
 			queues[name] = q.dump()
 		}
 	}
 
-	d := dump{
+	return Dump{
 		Queues: queues,
 	}
-
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
 }
 
-// dump creates queue dump for debug
-func (q *queue) dump() dumpQueue {
+// dump creates the snapshot of one queue
+func (q *queue) dump() QueueDump {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
 	tasks := q.getTasksDump()
 
-	return dumpQueue{
+	return QueueDump{
 		Length: len(tasks),
 		Tasks:  tasks,
 	}
 }
 
-func (q *queue) getTasksDump() []dumpTask {
-	var tasks []dumpTask // nolint:prealloc
+func (q *queue) getTasksDump() []TaskDump {
+	var tasks []TaskDump // nolint:prealloc
 
 	index := 1
 	for wrapper := range q.deque.Iter() {
@@ -82,7 +80,7 @@ func (q *queue) getTasksDump() []dumpTask {
 			errStr = &s
 		}
 
-		tasks = append(tasks, dumpTask{
+		tasks = append(tasks, TaskDump{
 			Index:     index,
 			Name:      wrapper.task.String(),
 			Enqueued:  time.Since(wrapper.enqueuedAt).String(),

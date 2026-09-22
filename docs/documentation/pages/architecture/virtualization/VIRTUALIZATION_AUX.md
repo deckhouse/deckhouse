@@ -2,7 +2,7 @@
 title: Auxiliary components
 permalink: en/architecture/virtualization/auxiliary.html
 search: virtualization-audit, virtualization-dra, dra
-description: Architecture of auxiliary components of virtualization module in Deckhouse Kubernetes Platform.
+description: Architecture of auxiliary components of virtualization module in Deckhouse Platform.
 ---
 
 The [`virtualization`](/modules/virtualization/) module uses components that implement the following auxiliary functions:
@@ -25,7 +25,7 @@ The following simplifications are made in the diagram:
 - Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module auxiliary components for security events audit and their interactions with other components of DKP is shown in the following diagram:
+The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module auxiliary components for security events audit and their interactions with other components of DP is shown in the following diagram:
 
 ![Architecture of the virtualization-audit component of the virtualization module](../../images/architecture/virtualization/c4-l2-virtualization-audit.png)
 
@@ -53,7 +53,7 @@ The following external components interact with virtualization-audit:
 
 ### Architecture
 
-The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/) module auxiliary components and their interactions with other components of DKP is shown in the following diagram:
+The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/) module auxiliary components and their interactions with other components of DP is shown in the following diagram:
 
 ![Architecture of other virtualization module auxiliary components](../../images/architecture/virtualization/c4-l2-virtualization-misc.png)
 
@@ -76,7 +76,7 @@ The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/
 
 1. **Vm-route-forge**: A controller that monitors [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) custom resources of the `virtualization.deckhouse.io` API group and updates network routes on the node via Linux netlink/eBPF in routing tables used by [CNI Cilium](/modules/cni-cilium/) for routing traffic between VMs.
 
-1. **Pre-delete-hook** (Job): A Job started by the Deckhouse controller before the [`virtualization`](/modules/virtualization/) module is deleted. It removes the InternalVirtualizationKubeVirt and InternalVirtualizationCDI custom resources named `config`.
+1. **Pre-delete-hook** (Job): A Job started by the Deckhouse controller before the [`virtualization`](/modules/virtualization/) module is deleted. It removes the InternalVirtualizationKubeVirt custom resource named `config`.
 
 ### Interactions
 
@@ -92,7 +92,7 @@ Vm-route-forge interacts with the following components:
 
 Pre-delete-hook interacts with the following components:
 
-1. **Kube-apiserver**: Deletes InternalVirtualizationKubeVirt and InternalVirtualizationCDI resources named `config`.
+1. **Kube-apiserver**: Deletes InternalVirtualizationKubeVirt resource named `config`.
 
 The following external components interact with Virtualization-dra:
 

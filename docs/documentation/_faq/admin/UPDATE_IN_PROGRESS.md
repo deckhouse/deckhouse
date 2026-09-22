@@ -9,4 +9,4 @@ During an update:
 
 - The [`DeckhouseUpdating`](../reference/alerts.html#deckhouse-deckhouseupdating) alert is active.
 - The `deckhouse` Pod is not in the `Ready` state.
-  If the Pod stays in a non-`Ready` state for a long time, it may indicate an issue with DKP that requires investigation.
+  If the Pod stays in a non-`Ready` state for a long time, it may indicate an issue with DP that requires investigation.

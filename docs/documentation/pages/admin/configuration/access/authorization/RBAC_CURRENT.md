@@ -1,14 +1,14 @@
 ---
 title: "Current authorization model"
 permalink: en/admin/configuration/access/authorization/rbac-current.html
-description: "Configure current RBAC authorization model in Deckhouse Kubernetes Platform. User-authz module setup, ClusterRole management, and role-based access control configuration."
+description: "Configure current RBAC authorization model in Deckhouse Platform. User-authz module setup, ClusterRole management, and role-based access control configuration."
 ---
 
 To use the current role model, the [`user-authz`](/modules/user-authz/) module must be enabled in the cluster.
 This module creates a set of cluster roles (ClusterRole) suitable for most user and group access management tasks.
 
 {% alert level="warning" %}
-Starting from Deckhouse Kubernetes Platform v1.64, the module includes an experimental role-based access model.
+Starting from Deckhouse Platform v1.64, the module includes an experimental role-based access model.
 The current role model will continue to function, but it will be deprecated in the future.
 
 The current and experimental role-based access models are incompatible.
@@ -118,6 +118,8 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
+get,patch:
+    - pods/resize
 read-write:
     - apps/deployments
     - apps/statefulsets
@@ -142,6 +144,8 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
+create:
+    - serviceaccounts/token
 create,patch,update:
     - pods
 delete,deletecollection:
@@ -171,6 +175,15 @@ write:
 ```text
 read-write:
     - deckhouse.io/clusterauthorizationrules
+    - nodes/configz
+    - nodes/healthz
+    - nodes/log
+    - nodes/metrics
+    - nodes/pods
+    - nodes/proxy
+    - nodes/stats
+update:
+    - namespaces/finalize
 write:
     - limitranges
     - namespaces

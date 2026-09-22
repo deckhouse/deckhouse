@@ -2,7 +2,7 @@
 title: Csi-vsphere module
 permalink: en/architecture/storage/external/csi-vsphere.html
 search: csi-vsphere, vmware vsphere
-description: Architecture of the csi-vsphere module in Deckhouse Kubernetes Platform.
+description: Architecture of the csi-vsphere module in Deckhouse Platform.
 ---
 
 The `csi-vsphere` module provides [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) support for VMware vSphere environments, enabling dynamic provisioning and management of persistent storage volumes in Kubernetes clusters running on vSphere infrastructure.
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`csi-vsphere`](/modules/csi-vsphere/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`csi-vsphere`](/modules/csi-vsphere/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![csi-vsphere architecture](../../../images/architecture/storage/c4-l2-csi-vsphere.png)
 

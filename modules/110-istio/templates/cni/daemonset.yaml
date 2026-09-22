@@ -6,7 +6,6 @@ memory: 100Mi
 {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 {{- $version := $.Values.istio.internal.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-{{- $fullVersion := get $versionInfo "fullVersion" }}
 {{- $imageSuffix := get $versionInfo "imageSuffix" }}
 {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 
@@ -60,18 +59,14 @@ spec:
         k8s-app: istio-cni-node
         sidecar.istio.io/inject: "false"
         security.deckhouse.io/security-policy-exception: istio-cni-node
-        {{- if (semverCompare ">= 1.25.0" $fullVersion) }}
         istio.io/dataplane-mode: none
-        {{- end }}
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
         sidecar.istio.io/inject: "false"
-        {{- if (semverCompare ">= 1.25.0" $fullVersion) }}
         prometheus.io/scrape: "true"
         prometheus.io/port: "15014"
         prometheus.io/path: "/metrics"
         container.apparmor.security.beta.kubernetes.io/install-cni: unconfined
-        {{- end }}
     spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       automountServiceAccountToken: true
@@ -91,12 +86,10 @@ spec:
         - name: install-cni
           image: {{ include "helm_lib_module_image" (list $ (printf "cni%s" $imageSuffix)) }}
           imagePullPolicy: IfNotPresent
-          {{- if (semverCompare ">= 1.25.0" $fullVersion) }}
           ports:
             - containerPort: 15014
               name: metrics
               protocol: TCP
-          {{- end }}
           readinessProbe:
             failureThreshold: 3
             httpGet:
@@ -115,18 +108,6 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 1
-          {{- if semverCompare "< 1.25.0" $fullVersion }}
-          securityContext:
-            {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
-            privileged: true
-            {{- else }}
-            allowPrivilegeEscalation: false
-            {{- end }}
-            readOnlyRootFilesystem: true
-            runAsNonRoot: false
-            runAsUser: 0
-            runAsGroup: 0
-          {{- else }}
           securityContext:
             privileged: false
             readOnlyRootFilesystem: true
@@ -153,18 +134,9 @@ spec:
               # This can cause problems if the hostPath mounts we use, which we require write access into,
               # are owned by non-root. DAC_OVERRIDE bypasses these and gives us write access into any folder.
               - DAC_OVERRIDE
-          {{- end }}
           command: ["install-cni"]
           args:
             - --log_output_level=default:info
-            {{- if semverCompare "< 1.25.0" $fullVersion }}
-            # Before Istio 1.25: hostPath mounted under /tmp for readOnlyRootFilesystem + containerd v2.
-            # CNI JSON on the node still lists /var/run/istio-cni/*.sock.
-            - --log-uds-address=/tmp/istio-cni/log.sock
-            {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
-            - --cni-event-address=/tmp/istio-cni/pluginevent.sock
-            {{- end }}
-            {{- end }}
           envFrom:
           - configMapRef:
               name: cni-config
@@ -215,7 +187,7 @@ spec:
             {{- end }}
             - mountPath: /host/etc/cni/net.d
               name: cni-net-dir
-            - mountPath: {{ ternary "/tmp/istio-cni" "/var/run/istio-cni" (semverCompare "< 1.25.0" $fullVersion) }}
+            - mountPath: /var/run/istio-cni
               name: cni-socket-dir
             {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
             - mountPath: /host/var/run/netns
@@ -223,10 +195,6 @@ spec:
               name: cni-netns-dir
             - mountPath: /var/run/ztunnel
               name: cni-ztunnel-sock-dir
-            {{- end }}
-            {{- if semverCompare "< 1.25.0" $fullVersion }}
-            - mountPath: /run/istio-cni
-              name: cni-socket-dir
             {{- end }}
             - mountPath: /tmp
               name: install-cni-tmp

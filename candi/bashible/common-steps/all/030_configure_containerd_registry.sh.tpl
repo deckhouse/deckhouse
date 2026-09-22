@@ -12,7 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
+{{- /*
+  Skipped entirely when the node agent owns this directory.
+  
+  The agent points the runtime at itself once, through the `_default` fallback, and
+  routes every registry from there. Writing per-registry directories alongside it would
+  not merely be redundant: an explicit host directory takes precedence over `_default`,
+  so anything written here would route pulls around the agent and around the in-cluster
+  cache with it.
+  
+  Which writer owns the directory is therefore decided by the configuration, not by the
+  order the steps run in. The agent removes what this step left behind, using the same
+  state file it writes below.
+*/}}
+{{- if and ( or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") ) ( not .registry.agent ) }}
 {{- $exist_registry_host_list := list }}
 
 # PR: https://github.com/deckhouse/deckhouse/pull/11939
@@ -68,6 +81,15 @@ EOF
 {{- end }}
 
 # Create hosts.toml files for registries
+#
+# The heredoc is deliberately unquoted: in Local and Proxy mode a mirror host is
+# ${discovered_node_ip}:5001, and the shell resolving it here is what makes the
+# bootstrap mirror reachable. Quoting the delimiter would leave the placeholder
+# in hosts.toml verbatim. Because the body is expanded, the values in it are
+# subject to parameter and command substitution as root -- what keeps that safe
+# is helpers.MirrorHost in go_lib/registry/helpers/validate.go, which admits a
+# registry host and that one placeholder and nothing else. The CA heredoc above
+# stays quoted: a certificate needs no expansion.
 bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
 [host]
 {{- range $mirror := $host_values.mirrors }}
@@ -110,12 +132,12 @@ EOF
       {{- $exist_registry_host_list = append $exist_registry_host_list $host_name }}
 
 # Sync module sources host.toml and ca.crt
-mkdir -p "/etc/containerd/registry.d/{{ $host_name }}"
-bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/ca.crt" - << "EOF"
+mkdir -p '/etc/containerd/registry.d/{{ $host_name }}'
+bb-sync-file '/etc/containerd/registry.d/{{ $host_name }}/ca.crt' - << "EOF"
 {{ $CA }}
 EOF
 
-bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
+bb-sync-file '/etc/containerd/registry.d/{{ $host_name }}/hosts.toml' - << "EOF"
 server = {{ $host_name | quote }}
 ca = ["/etc/containerd/registry.d/{{ $host_name }}/ca.crt"]
 capabilities = ["pull", "resolve"]

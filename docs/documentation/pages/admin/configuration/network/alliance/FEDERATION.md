@@ -6,7 +6,7 @@ permalink: en/admin/configuration/network/alliance/federation.html
 ## Federation with Istio (Service Mesh)
 
 {% alert level="info" %}
-Available only in DKP Enterprise Edition (EE).
+Available only in DP Enterprise Edition (EE) and DP Ultimate.
 {% endalert %}
 
 ### Requirements for clusters
@@ -26,6 +26,10 @@ Available only in DKP Enterprise Edition (EE).
   > - For TCP requests — destination IP address and port number.
   >
   > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
+
+{% alert level="warning" %}
+Only sidecar-mode workloads can take part in a federation. For details, refer to [Ambient mesh limitations](/modules/istio/#ambient-mesh-limitations).
+{% endalert %}
 
 ### General principles of federation
 

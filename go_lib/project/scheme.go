@@ -25,11 +25,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 )
 
 var schemaBuilder = runtime.NewSchemeBuilder(
 	v1alpha1.AddToScheme,
 	v1alpha2.AddToScheme,
+	v1beta1.AddToScheme,
 	coordv1.AddToScheme,
 	appsv1.AddToScheme,
 	corev1.AddToScheme,

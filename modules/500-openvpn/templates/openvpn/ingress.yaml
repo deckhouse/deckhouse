@@ -1,6 +1,7 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if eq (include "helm_lib_module_ingress_enabled" .) "true" }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -12,8 +13,8 @@ metadata:
     web.deckhouse.io/export-name: "openvpn"
     web.deckhouse.io/export-icon: "/public/img/openvpn.png"
 {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.openvpn.auth.externalAuthentication }}
-    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.openvpn.auth.externalAuthentication.authSignInURL }}
-    nginx.ingress.kubernetes.io/auth-url: {{ .Values.openvpn.auth.externalAuthentication.authURL }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.openvpn.auth.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.openvpn.auth.externalAuthentication.authURL | quote }}
 {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
@@ -48,7 +49,8 @@ spec:
             name: {{ .Chart.Name }}
             port:
               name: https
-  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+{{- end }}
+  {{- if and (eq (include "helm_lib_module_ingress_enabled" .) "true") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -66,7 +68,7 @@ spec:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
   {{- end }}
-  {{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+  {{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
   {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
   {{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
     {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}

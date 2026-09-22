@@ -24,7 +24,6 @@ import (
 	"sort"
 	"strings"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	addonvalidation "github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/kube-client/manifest/releaseutil"
 	"github.com/iancoleman/strcase"
@@ -33,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
@@ -209,7 +209,14 @@ func (hec *Config) HelmRender(options ...Option) {
 	}
 
 	// set some common values
-	hec.values.SetByPath("global.modulesImages.registry.base", "registry.example.com")
+	//
+	// A default rather than an override: set unconditionally, this silently replaced whatever
+	// the test had put there, so a spec that varied the registry images render from asserted
+	// against a value it never actually set — and passed or failed for reasons unrelated to
+	// what it was about.
+	if !hec.values.Get("global.modulesImages.registry.base").Exists() {
+		hec.values.SetByPath("global.modulesImages.registry.base", "registry.example.com")
+	}
 	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.cert", "test")
 	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.key", "test")
 	hec.values.SetByPathFromYAML("global.modules.placement", []byte("{}"))

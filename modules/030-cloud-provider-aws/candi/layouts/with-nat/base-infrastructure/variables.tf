@@ -50,4 +50,6 @@ locals {
   public_network_allow_list = lookup(var.providerClusterConfiguration, "publicNetworkAllowList", ["0.0.0.0/0"])
   additional_role_policies = lookup(var.providerClusterConfiguration, "additionalRolePolicies", [])
   disable_default_sg = lookup(var.providerClusterConfiguration, "disableDefaultSecurityGroup", false)
+  imdsv2 = lookup(var.providerClusterConfiguration, "imdsv2", false)
+  imdsv2_managed = contains(keys(var.providerClusterConfiguration), "imdsv2")
 }

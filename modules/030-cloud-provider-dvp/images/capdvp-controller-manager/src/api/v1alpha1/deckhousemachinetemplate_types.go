@@ -81,6 +81,10 @@ type DeckhouseMachineSpecTemplate struct {
 	// +kubebuilder:validation:Enum=Manual;Never;AlwaysSafe;PreferSafe;AlwaysForced;PreferForced
 	// +optional
 	LiveMigrationPolicy string `json:"liveMigrationPolicy,omitempty"`
+
+	// AdditionalVMLabels holds extra labels to apply to the VirtualMachine object in the parent DVP cluster.
+	// +optional
+	AdditionalVMLabels map[string]string `json:"additionalVMLabels,omitempty"`
 }
 
 // DeckhouseMachineTemplateStatus defines the observed state of DeckhouseMachineTemplate.

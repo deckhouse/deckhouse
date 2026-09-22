@@ -252,7 +252,7 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 		// Degrade rather than fail: this error reaches both the DeckhouseRelease reconciler and its
 		// webhook, so one hand-broken key would stop all release processing cluster-wide.
 		log.Warn("cannot parse the cluster kubernetes ConfigMap spec, treating the update mode as unknown",
-			slog.String("configMap", deckhouseClusterKubernetesConfigMap), log.Err(err))
+			slog.String("config_map", deckhouseClusterKubernetesConfigMap), log.Err(err))
 		return nil
 	}
 	c.clusterKubernetesUpdateMode = spec.UpdateMode

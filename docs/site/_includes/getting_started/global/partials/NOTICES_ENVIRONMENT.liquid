@@ -39,6 +39,9 @@ The {{ page.title_main }} installation is not available in the Community Edition
 Для модуля `update-hostname` рекомендуется изменить частоту запуска на `once-per-instance`. Рекомендации по настройке приведены в [документации модуля `cloud-provider-dvp`](/modules/cloud-provider-dvp/environment.html).
 {%- endif %}
 - В шаблоне виртуальной машины присутствует только один диск.
+{%- if page.platform_code == "azure" or page.platform_code == "gcp" or page.platform_code == "yandex" %}
+- Правила межсетевого экрана и группы безопасности разрешают UDP-трафик между узлами кластера. Новый кластер по умолчанию использует CNI Cilium с туннелированием трафика подов через VXLAN. Для работы Cilium на узлах требуется ядро Linux версии 5.8 или новее, а список портов приведён в разделе [«Сетевое взаимодействие компонентов платформы»](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
+{%- endif %}
 {%- if page.platform_code == "vcd" %}
 - В VMware Cloud Director отключена vApp/Guest OS Customization для шаблона и ВМ кластера.
 {%- endif %}
@@ -84,6 +87,9 @@ Before installation, ensure the following:
 It is recommended to change the run frequency of the `update-hostname` module to `once-per-instance`. For configuration recommendations, see the [`cloud-provider-dvp` module documentation](/modules/cloud-provider-dvp/environment.html).
 {%- endif %}
 - The virtual machine template contains only one disk.
+{%- if page.platform_code == "azure" or page.platform_code == "gcp" or page.platform_code == "yandex" %}
+- Firewall rules and security groups allow UDP traffic between cluster nodes. A new cluster uses the Cilium CNI by default with pod traffic tunneling over VXLAN. Cilium requires Linux kernel 5.8 or newer on the nodes, and the list of ports is available in [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
+{%- endif %}
 {%- if page.platform_code == "vcd" %}
 - In VMware Cloud Director, vApp/Guest OS Customization is disabled for the cluster template and VMs.
 {%- endif %}

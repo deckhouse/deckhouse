@@ -146,9 +146,12 @@ fallback. Минимум одна запись; fallback рекомендует�
 
 ### ClusterResourceGrantPolicy (без изменений)
 
-Per-проект allow-list и дефолт; выбирает проекты по меткам неймспейсов через `projectSelector`, на
+Per-проект allow-list и дефолт; `projectSelector` вычисляется для каждого неймспейса по объединению
+меток Project и меток неймспейса (при совпадении ключа побеждает неймспейс), так что метка на Project
+выбирает все его неймспейсы (`internal/resolve.GrantsForNamespace`, общий для вебхуков и catalog
+reconciler), на
 ресурс (`resourceName`) задаёт `allowed`/`allowedSelector`/`denied`/`deniedSelector`/`default`/
-`availabilityDefault`. Allow-лист подразумевает базу `None`.
+`availabilityDefault`. Непустой allow-лист или `allowedSelector` подразумевает базу `None`; пустой `allowed: []` — нет.
 
 ### AvailableClusterResource (без изменений)
 
@@ -182,9 +185,12 @@ Per-путь (`fieldPaths[].defaulting`):
   `cert-manager.io/cluster-issuer`).
 - `FillEmpty` — на CREATE дозаполнить пустое поле дефолтом проекта.
 - `Coerce` — `FillEmpty` плюс переписать недопустимое значение в дефолт (поля, предзаполняемые
-  встроенным admission, напр. `DefaultStorageClass` у PVC).
+  встроенным admission, напр. `DefaultStorageClass` у PVC). О замене автору сообщается admission
+  warning с исходным и подставленным значением.
 
-Значение дефолта берётся из `default` политики, fallback — `defaultFrom` definition.
+Значение дефолта берётся из `default` политики, fallback — `defaultFrom` definition; `defaultFrom`
+принимает объект, только если значение аннотации — `true` (без учёта регистра), так что класс с
+`is-default-class: "false"` дефолтом не является.
 
 ## Вебхуки
 
@@ -204,6 +210,14 @@ Per-путь (`fieldPaths[].defaulting`):
 - **Binding reconciler** (по `GrantableClusterResourceReference` и
   `GrantableClusterResourceDefinition`) — проставляет `reference.status.bound`/condition `Bound` и
   обратный индекс `definition.status.references`/`referenceCount`.
+- **Policy reconciler** (по `ClusterResourceGrantPolicy`) — выставляет `SelectorsValid` (селектор,
+  который схема принимает, а библиотека селекторов отвергает, иначе молча не матчил бы ничего) и
+  `AllowedEffective` (allowed-имя, которое фильтр `excluded` definition всё равно отвергает, ничего не
+  даёт; для ClusterRole сообщение называет лейбл `rbac.deckhouse.io/delegatable`).
+- **Скан нарушений** (внутри catalog reconciler) — после каждого рендера каталога обходит
+  перехватываемые объекты неймспейса и отдаёт `d8_cluster_objects_grant_violated{project,grant,
+  violating_resource,violating_object_name,violating_field}` на метрик-эндпоинте контроллера `:9091` для
+  объектов, чьё имя больше недоступно (на UPDATE они grandfather'ятся, так что видны только здесь).
 
 ## Примеры
 
@@ -334,7 +348,8 @@ spec:
   excluded:
     - matchExpressions:
         - key: rbac.deckhouse.io/delegatable
-          operator: DoesNotExist
+          operator: NotIn
+          values: ["true"]
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference

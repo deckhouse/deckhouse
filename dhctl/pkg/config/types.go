@@ -70,8 +70,13 @@ type MasterNodeGroupSpec struct {
 }
 
 type TerraNodeGroupSpec struct {
-	Replicas     int            `json:"replicas"`
-	Name         string         `json:"name"`
+	Replicas int    `json:"replicas"`
+	Name     string `json:"name"`
+	// SystemType is the group's spec.systemType, empty where the NodeGroup does not
+	// set one. It decides how the machines of the group are configured: an immutable
+	// node takes a NodeConfig handed to its maintenance port and understands no
+	// bashible cloud config.
+	SystemType   string         `json:"systemType,omitempty"`
 	NodeTemplate map[string]any `json:"nodeTemplate"`
 }
 

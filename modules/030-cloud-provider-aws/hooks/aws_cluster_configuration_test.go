@@ -91,6 +91,7 @@ nodeGroups:
       node-role.kubernetes.io/qqq: ""
   replicas: 1
 vpcNetworkCIDR: 10.222.0.0/16
+imdsv2: true
 provider:
   providerAccessKeyId: keyzzz
   providerSecretAccessKey: secretzzz
@@ -163,6 +164,7 @@ data:
 			Expect(b).To(ExecuteSuccessfully())
 
 			Expect(b.ValuesGet("cloudProviderAws.internal.region").String()).To(Equal("eu-zzz"))
+			Expect(b.ValuesGet("cloudProviderAws.internal.imdsv2").Bool()).To(BeTrue())
 			Expect(b.ValuesGet("cloudProviderAws.internal.providerAccessKeyId").String()).To(Equal("keyzzz"))
 			Expect(b.ValuesGet("cloudProviderAws.internal.providerSecretAccessKey").String()).To(Equal("secretzzz"))
 			Expect(b.ValuesGet("cloudProviderAws.internal.zones").String()).To(MatchJSON(`["zz-zzz-1z", "xx-xxx-1x", "cc-ccc-1c"]`))

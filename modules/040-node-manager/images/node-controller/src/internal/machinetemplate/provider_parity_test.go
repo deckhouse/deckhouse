@@ -88,7 +88,11 @@ func providerFixtures() []providerFixture {
 
 			registrationPath: "../../../../../../030-cloud-provider-dvp/templates/registration.yaml",
 			contractPath:     "../../../../../../030-cloud-provider-dvp/capi/template.yaml",
-			providerConfig:   map[string]any{},
+			providerConfig: map[string]any{
+				"additionalVMLabels": map[string]any{
+					"network-access": "bastion",
+				},
+			},
 			instanceClass: map[string]any{
 				"virtualMachine": map[string]any{
 					"virtualMachineClassName": "generic-vm-class",
@@ -106,11 +110,15 @@ func providerFixtures() []providerFixture {
 				},
 				"etcdDisk": map[string]any{"size": "20Gi", "storageClass": "linstor-thin-r1"},
 			},
+			rolloutExceptions: map[string]string{
+				"additionalVMLabels":                "additionalVMLabels is a new provider-config field introduced with the v2 contract; v1 did not hash it, but changing VM labels must create a new template generation.",
+				"additionalVMLabels.network-access": "additionalVMLabels is a new provider-config field introduced with the v2 contract; v1 did not hash it, but changing VM labels must create a new template generation.",
+			},
 			manualRolloutIDIgnoredByV1: true,
 		},
 		{
 			name:    "yandex",
-			crdPath: "../../../../../../030-cloud-provider-yandex/candi/openapi/instance_class.yaml",
+			crdPath: "../../../../../../030-cloud-provider-yandex/crds/instance_class.yaml",
 
 			registrationPath: "../../../../../../030-cloud-provider-yandex/templates/registration.yaml",
 			contractPath:     "../../../../../../030-cloud-provider-yandex/capi/template.yaml",
@@ -262,8 +270,10 @@ func TestProviderRenderParity(t *testing.T) {
 				Provider:      fixture.providerConfig,
 				Zone:          parityZone,
 				NodeGroupName: parityNodeGroup,
-				ClusterUUID:   parityClusterUUID,
-				PodSubnet:     parityPodSubnet,
+				Cluster: ClusterFacts{
+					UUID:      parityClusterUUID,
+					PodSubnet: parityPodSubnet,
+				},
 			})
 			require.NoError(t, err, "v2 template must render")
 
@@ -323,6 +333,10 @@ func TestProviderConfigRolloutParity(t *testing.T) {
 
 			for _, path := range providerMutationPaths(fixture, contract) {
 				t.Run(path, func(t *testing.T) {
+					if reason, documented := fixture.rolloutExceptions[path]; documented {
+						t.Skip(reason)
+					}
+
 					mutated := mutateSpec(t, fixture.providerConfig, path)
 
 					mutatedChecksum := renderLegacyChecksumWithProvider(t, fixture, checksumTemplate, fixture.instanceClass, mutated, "")
@@ -551,8 +565,10 @@ func renderV2Spec(fixture providerFixture, contract *Contract, instanceClass map
 		Provider:      fixture.providerConfig,
 		Zone:          parityZone,
 		NodeGroupName: parityNodeGroup,
-		ClusterUUID:   parityClusterUUID,
-		PodSubnet:     parityPodSubnet,
+		Cluster: ClusterFacts{
+			UUID:      parityClusterUUID,
+			PodSubnet: parityPodSubnet,
+		},
 	})
 }
 

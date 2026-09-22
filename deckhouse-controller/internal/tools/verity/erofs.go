@@ -22,7 +22,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -120,12 +123,58 @@ func CreateImageByTar(ctx context.Context, rc io.ReadCloser, imagePath string) e
 	return nil
 }
 
-// IsSupported scans /proc/filesystems for erofs type, it returns whether erofs is supported
+// IsSupported reports whether the erofs+dm-verity module backend can be
+// used. The result is computed once per process (memoized) via a real
+// self-test rather than passive inspection.
 func IsSupported() bool {
+	return isSupported()
+}
+
+var isSupported = sync.OnceValue(func() bool {
 	content, err := os.ReadFile("/proc/filesystems")
+	if err != nil || !strings.Contains(string(content), erofsType) {
+		return false
+	}
+
+	return selfTestDMVerity()
+})
+
+// selfTestDMVerity actually attempts to open a dm-verity mapping for a tiny
+// scratch file, and reports whether that succeeded.
+//
+// This can't be answered by passively inspecting /proc or /sys: the kernel
+// only autoloads the "verity" device-mapper target on a real table-load
+// attempt (which is exactly what CreateMapper below does), not when merely
+// listing already-loaded targets (e.g. via "dmsetup targets"). A kernel
+// where dm-verity is a not-yet-loaded module would look unsupported to any
+// such passive check, even though the real operation would succeed - the
+// self-test avoids that false negative by doing the real thing.
+func selfTestDMVerity() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	dir, err := os.MkdirTemp("", "verity-selftest-")
+	if err != nil {
+		return false
+	}
+	defer os.RemoveAll(dir)
+
+	imagePath := filepath.Join(dir, "test.img")
+	if err := os.WriteFile(imagePath, make([]byte, 4096), 0o600); err != nil {
+		return false
+	}
+
+	hash, err := CreateImageHash(ctx, imagePath)
 	if err != nil {
 		return false
 	}
 
-	return strings.Contains(string(content), erofsType)
+	name := fmt.Sprintf("verity-selftest-%d", os.Getpid())
+	if err := CreateMapper(ctx, name, imagePath, hash); err != nil {
+		return false
+	}
+
+	_ = CloseMapper(ctx, name)
+
+	return true
 }

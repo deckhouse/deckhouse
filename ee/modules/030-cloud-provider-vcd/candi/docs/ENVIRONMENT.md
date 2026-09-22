@@ -26,10 +26,75 @@ Network (internal network) can be configured either by your VMware Cloud Directo
 
 ### User permissions
 
-The user accessing the VMware Cloud Director API must have the following permissions:
+For access to the VMware Cloud Director API, one of the following options is sufficient:
 
-* The role of `Organization Administrator` with the additional permission `Preserve All ExtraConfig Elements During OVF Import and Export`.
-* The permission `Preserve All ExtraConfig Elements During OVF Import and Export` must be duplicated in the user's `Right Bundle`.
+* The `Organization Administrator` role with the `Preserve All ExtraConfig Elements During OVF Import and Export` right. This option does not require configuring a separate role, but grants the user full administrative access to the organization.
+* A custom role with the set of rights listed [below](#user-rights). This set is sufficient to create a cluster, provision nodes (including CloudEphemeral with static addressing and DHCP), and work with CSI disks and StorageClass without granting additional administrative rights.
+
+In VMware Cloud Director, user permissions come from the role and from a **Rights Bundle** — a set of rights published to the organization. Add the `Preserve All ExtraConfig Elements During OVF Import and Export` right both to the role and to the organization's Rights Bundle.
+
+{% alert level="warning" %}
+Without the `Preserve All ExtraConfig Elements During OVF Import and Export` right in both the role and the organization's Rights Bundle, `userdata` is not passed to the virtual machines of ephemeral nodes.
+{% endalert %}
+
+To create a custom role, enable the rights as shown below. Right names match the VCD UI.
+
+{: #user-rights .anchored}
+
+1. In the "ACCESS CONTROL" and "ADMINISTRATION" sections, enable the following rights:
+
+   * Organization → View: `View Organization Administrative Details`, `View vApp ACL`
+   * User → Manage: `Manage user's own API token`
+   * General → View: `View Certificates Library`, `Administrator View`, `View Quota Policy Capabilities`
+   * General → Manage: `Administrator Control`
+
+   ![User permissions, Access Control and Administration](images/role-setup/access-control.png)
+
+1. In the "COMPUTE" → "Organization VDC" section, enable all View rights and the following Manage rights:
+
+   * `Edit Disk IOPS`
+   * `Edit Tenant Kubernetes Policy`
+   * `Change Owner`
+   * `Create a Disk`
+   * `Delete a Disk`
+   * `Edit Disk Properties`
+   * `Move a Disk`
+   * `Create a Shared Disk`
+
+   In the "Provider VDC" → View section, enable `Limited Provider VDC Storage Policy View` and `Limited Provider VDC View`:
+
+   ![User permissions, Organization VDC](images/role-setup/compute-organization-vdc.png)
+
+1. In the "COMPUTE" → "vApp" section, enable the rights as shown in the screenshot. Make sure that `Preserve All ExtraConfig Elements During OVF Import and Export` is enabled. In the verified role, View includes `View Encryption Status of VMs and VM's disks` and `View VM metrics`; `View vApp Shadow VMs` and the other Preserve ExtraConfig options are not enabled:
+
+   ![User permissions, vApp](images/role-setup/compute-vapp.png)
+
+1. In the "LIBRARIES" section, enable the following rights:
+
+   * Catalog → View: `View Private and Shared Catalogs within Current Organization`, `View Shared Catalogs from Other Organizations` (to use images from shared catalogs)
+   * Catalog → Manage: `Add a vApp from My Cloud`
+   * Catalog Item → View: `View vApp Templates / Media`
+   * Catalog Item → Manage: `Copy / Move a vApp Template / Media`, `Edit vApp Template / Media Properties`, `Add to My Cloud`
+
+   In the "VMware Cloud Director Extension" → View section, enable `View Tenant Portal Plugin Information`:
+
+   ![User permissions, Libraries](images/role-setup/libraries.png)
+
+1. In the "NETWORKING" section, enable the following rights:
+
+   * Edge Gateway → View: `View Gateway`
+   * Edge Gateway Services → View: all items
+   * Edge Gateway Services → Manage: `Load Balancer Configure`, `NAT Configure`
+   * IP Spaces → View: `View IP Spaces`
+   * IP Spaces → Manage: `Allocate IP Spaces`, `Manage IP Spaces`
+   * Organization VDC Network → View: `View Properties`
+   * Organization VDC Network → Manage: `Edit Properties` (required to create networks in the organization)
+
+   ![User permissions, Networking](images/role-setup/networking.png)
+
+1. In the "Provider Gateway Services" section, enable all View rights. In the "KubeClusterExtension" section, enable all View and Manage rights:
+
+   ![User permissions, Provider Gateway and KubeClusterExtension](images/role-setup/provider-gateway-kubecluster.png)
 
 ### Adding a network
 
@@ -217,7 +282,7 @@ The provider is confirmed to work with Ubuntu 22.04-based virtual machine templa
 {% endalert %}
 
 {% alert level="warning" %}
-Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. DKP performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
+Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. DP performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
 {% endalert %}
 
 {% include notice_envinronment.liquid %}
@@ -358,15 +423,15 @@ shutdown -P now
 
 * VCD supports CSI; disks are created as VCD Independent Disks.
 * The `disk.EnableUUID` guest property must be set for the virtual machine templates in use.
-* Deckhouse Kubernetes Platform supports disk resizing as of v1.59.1.
+* Deckhouse Platform supports disk resizing as of v1.59.1.
 
 ## Using the LoadBalancer
 
-- DKP components support `Service` resources of type `LoadBalancer` when deployed on VMware Cloud Director (VCD).
+- DP components support `Service` resources of type `LoadBalancer` when deployed on VMware Cloud Director (VCD).
 - VMware NSX Advanced Load Balancer (ALB or Avi Networks) is used as the load balancer.
 - Support is available **only** when using the `NSX-T` network virtualization platform.
 - The load balancer functionality must be enabled on the Edge Gateway by your VCD provider. You can verify this under **Edge Gateway → Load Balancer → General Settings** — the `State` parameter must be `Active`.
-- If the load balancer was enabled after the DKP cluster was successfully created, the components will automatically pick up the changes within an hour (no additional actions are required).
+- If the load balancer was enabled after the DP cluster was successfully created, the components will automatically pick up the changes within an hour (no additional actions are required).
 - For each open port, a **Pool + Virtual Service** pair is created.
 - If a firewall is in place, you must create an allow rule for the load balancer’s external IP address and the corresponding ports.
 

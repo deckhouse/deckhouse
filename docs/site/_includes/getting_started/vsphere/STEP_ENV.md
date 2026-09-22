@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-To install Deckhouse Kubernetes Platform on VMware vSphere, you need vSphere version `7.x` or `8.x` with support for the [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) mechanism.
+To install Deckhouse Platform on VMware vSphere, you need vSphere version `7.x` or `8.x` with support for the [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) mechanism.
 
 ## List of required vSphere resources
 

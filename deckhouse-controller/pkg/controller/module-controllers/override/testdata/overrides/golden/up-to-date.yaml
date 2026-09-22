@@ -1,0 +1,33 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  finalizers:
+  - modules.deckhouse.io/mpo-finalizer
+  name: test-module
+  resourceVersion: "999"
+spec:
+  imageTag: main
+  scanInterval: 15s
+status:
+  imageDigest: sha256:cafe
+  message: Ready
+  updatedAt: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+  resourceVersion: "1004"
+properties:
+  source: dev
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: EnabledByModuleConfig
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: IsOverridden

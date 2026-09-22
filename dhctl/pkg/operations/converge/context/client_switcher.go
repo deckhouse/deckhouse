@@ -581,6 +581,18 @@ func (s *KubeClientSwitcher) inCommander(action string) bool {
 	return false
 }
 
+// sshless skips what only SSH can do. The NodeUser this switcher creates is delivered
+// by bashible, and an sshless converge has neither bashible nor a way to log in, so the
+// wait for it would never end.
+func (s *KubeClientSwitcher) sshless(action string) bool {
+	if s.ctx.SSHless() {
+		s.warn("%s skipped. Converge runs over the Kubernetes API, with no SSH access to nodes", action)
+		return true
+	}
+
+	return false
+}
+
 func (s *KubeClientSwitcher) switchDisbled(action string) bool {
 	if s.params.DisableSwitch {
 		s.warn("%s skipped. Switch disabled", action)
@@ -592,6 +604,10 @@ func (s *KubeClientSwitcher) switchDisbled(action string) bool {
 
 func (s *KubeClientSwitcher) isSkipOrLogStart(action string, strict bool) (bool, error) {
 	if s.inCommander(action) {
+		return true, nil
+	}
+
+	if s.sshless(action) {
 		return true, nil
 	}
 

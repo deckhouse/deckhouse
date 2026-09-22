@@ -14,9 +14,29 @@
         summary: More than one CNI is enabled in the cluster.
         description: |
           Deckhouse has detected that multiple CNIs are enabled in the cluster.
-          For the cluster to work correctly, only one CNI must be enabled.
+          For the cluster to work correctly, exactly one CNI must be enabled.
 
-          To resolve this issue, disable any unnecessary CNI.
+          To resolve this issue, follow these steps:
+
+          1. List the CNI modules and their enabled state:
+
+             ```bash
+             d8 k get moduleconfig -o custom-columns='NAME:.metadata.name,ENABLED:.spec.enabled' | grep -E 'NAME|cni-'
+             ```
+
+          1. Decide which CNI the cluster must keep. Check which one actually serves the nodes before disabling anything:
+
+             ```bash
+             d8 k -n d8-cni-cilium get pods 2>/dev/null; d8 k -n d8-cni-flannel get pods 2>/dev/null; d8 k -n d8-cni-simple-bridge get pods 2>/dev/null
+             ```
+
+          1. Disable every other CNI module, one at a time:
+
+             ```bash
+             d8 k patch moduleconfig <CNI_MODULE_NAME> --type=merge -p '{"spec":{"enabled":false}}'
+             ```
+
+          Changing the CNI of a running cluster disrupts pod networking. If you are unsure which CNI to keep, contact support before disabling anything.
 
     - alert: D8CNIMisconfigured
       expr: max(cniMisconfigured{}) by(cni, module) == 1

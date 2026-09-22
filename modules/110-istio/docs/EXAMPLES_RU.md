@@ -364,7 +364,7 @@ spec:
         memory: 128Mi
   ```
 
-- `VPA` — [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) изменяет запросы в заданных пределах `min`/`max`. Начиная с версии DKP 1.75, рекомендуемым режимом VPA является `InPlaceOrRecreate`: он изменяет ресурсы пода «на месте» (in-place), если это поддерживается кластером, и пересоздаёт под в противном случае (устаревший режим `Auto` всегда пересоздаёт под):
+- `VPA` — [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) изменяет запросы в заданных пределах `min`/`max`. Начиная с версии DP 1.75, рекомендуемым режимом VPA является `InPlaceOrRecreate`: он изменяет ресурсы пода «на месте» (in-place), если это поддерживается кластером, и пересоздаёт под в противном случае (устаревший режим `Auto` всегда пересоздаёт под):
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -677,7 +677,9 @@ spec:
 
 ## Устройство федерации из двух кластеров с помощью кастомного ресурса IstioFederation
 
-{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition, Ultimate, Certified Security Edition Pro, DP Certified Pro.{% endalert %}
+
+{% alert level="warning" %}Федерация работает только с рабочими нагрузками в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).{% endalert %}
 
 Cluster A:
 
@@ -705,7 +707,9 @@ spec:
 
 ## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
 
-{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition, Ultimate, Certified Security Edition Pro, DP Certified Pro.{% endalert %}
+
+{% alert level="warning" %}Мультикластер работает только с рабочими нагрузками в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).{% endalert %}
 
 Cluster A:
 
@@ -734,6 +738,8 @@ spec:
 {% alert level="warning" %}Доступно только в Enterprise Edition и Certified Security Edition Pro.{% endalert %}
 
 {% alert level="warning" %}Поддержка ambient mesh является экспериментальной и не рекомендуется для использования в production-окружении.{% endalert %}
+
+{% alert level="warning" %}Рабочие нагрузки в режиме ambient не могут участвовать в федерации и мультикластере. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).{% endalert %}
 
 Упоминаемые в этом подразделе компоненты ambient mesh описаны [на странице с основным описанием модуля](./#ambient-mesh).
 
@@ -815,7 +821,7 @@ d8 k -n myns label service myservice istio.io/use-waypoint=main
 ### Отключение ambient mesh
 
 {% alert level="warning" %}
-Перед отключением режима ambient удалите все ресурсы WaypointInstance. При отключенном режиме ambient контроллер waypoint не запускается и не может согласовывать или удалять ресурсы waypoint. Это приводит к появлению orphan-ресурсов, о чём Deckhouse Kubernetes Platform (DKP) сигнализирует алертом [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled).
+Перед отключением режима ambient удалите все ресурсы WaypointInstance. При отключенном режиме ambient контроллер waypoint не запускается и не может согласовывать или удалять ресурсы waypoint. Это приводит к появлению orphan-ресурсов, о чём Deckhouse Platform (DP) сигнализирует алертом [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled).
 {% endalert %}
 
 Чтобы отключить режим ambient, выполните следующие шаги:
@@ -874,7 +880,7 @@ spec:
       enabled: true
 ```
 
-Дождитесь применения манифеста `Istio` / `IstioOperator` в неймспейсе `d8-istio` и обновления конфигурации сайдкаров; при необходимости перезапустите прикладные поды после появления трафика, если метрики ещё не видны на дашбордах.
+Дождитесь применения манифеста `Istio` в неймспейсе `d8-istio` и обновления конфигурации сайдкаров; при необходимости перезапустите прикладные поды после появления трафика, если метрики ещё не видны на дашбордах.
 
 ### Проверка метрик и логов
 
@@ -960,7 +966,7 @@ spec:
           address: "jaeger-collector.observability.svc.cluster.local:9411"
 ```
 
-Дождитесь применения CR `Istio`/`IstioOperator` из `d8-istio`; при проблемах с дашбордами перегенерируйте трафик и перепроверьте сайдкары.
+Дождитесь применения CR `Istio` из `d8-istio`; при проблемах с дашбордами перегенерируйте трафик и перепроверьте сайдкары.
 
 #### Kiali
 
@@ -968,7 +974,7 @@ spec:
 
 #### Пример — mesh-wide OTLP через ModuleConfig
 
-Разверните Collector, доступный из меша, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер `deckhouse-tracing` и `spec.tracing` в `d8-main` — не дописывайте OTLP вручную в `meshConfig` CR `Istio` / `IstioOperator`.
+Разверните Collector, доступный из меша, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер `deckhouse-tracing` и `spec.tracing` в `d8-main` — не дописывайте OTLP вручную в `meshConfig` CR `Istio`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1016,7 +1022,7 @@ spec:
 
 #### Пример — отключить отправку спанов (например, у ingress)
 
-В DKP при включённом модуле `ingress-nginx` модуль Istio дополнительно создаёт `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx` и выставляет `tracing.disableSpanReporting`, чтобы контроллер с `istio-proxy` не отправлял спаны в бэкенд трассировки. Другие случаи — своим объектом:
+В DP при включённом модуле `ingress-nginx` модуль Istio дополнительно создаёт `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx` и выставляет `tracing.disableSpanReporting`, чтобы контроллер с `istio-proxy` не отправлял спаны в бэкенд трассировки. Другие случаи — своим объектом:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -1042,7 +1048,7 @@ spec:
 
 ## Диагностика Istio с помощью istioctl из debug-контейнера
 
-В debug-контейнер DKP входят бинарные файлы `istioctl` для поддерживаемых версий Istio. Используйте их, когда нужно проверить конфигурацию Istio, запустить анализаторы или получить конфигурацию Envoy из прикладных подов.
+В debug-контейнер DP входят бинарные файлы `istioctl` для поддерживаемых версий Istio. Используйте их, когда нужно проверить конфигурацию Istio, запустить анализаторы или получить конфигурацию Envoy из прикладных подов.
 
 Перед запуском debug-контейнера создайте отдельный ServiceAccount и выдайте ему права, необходимые для команд `istioctl`, которые вы планируете запускать. Например, следующий манифест предоставляет права, необходимые для выполнения команды `istioctl proxy-config` для подов в одном прикладном неймспейсе:
 
@@ -1144,7 +1150,7 @@ UID `1337` зарезервирован Istio для сайдкар-контей
 
 ### Обновление control plane Istio
 
-* DKP позволяет установить несколько версий control plane одновременно:
+* DP позволяет установить несколько версий control plane одновременно:
   * Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [`globalVersion`](configuration.html#parameters-globalversion).
   * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x27`). Настраиваются параметром [`additionalVersions`](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
@@ -1171,7 +1177,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x25" \
 
 ### Автоматическое обновление data plane Istio
 
-{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition, Ultimate, Certified Security Edition Pro, DP Certified Pro.{% endalert %}
 
 Для автоматизации обновления istio-сайдкаров установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
 

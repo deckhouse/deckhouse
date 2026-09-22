@@ -154,14 +154,13 @@ kind: ClusterConfiguration
 metadata:
   name: deckhouse
 `,
-			// kubernetesVersion is deliberately absent from this list: the field moved to
-			// ModuleConfig control-plane-manager and was dropped from the ClusterConfiguration
-			// `required` set, so a document without it is now schema-valid on that point.
-			errContains: `ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed: 4 errors occurred:
+			// kubernetesVersion, podSubnetCIDR and serviceSubnetCIDR are deliberately absent from
+			// this list: all three moved to ModuleConfig control-plane-manager and were dropped
+			// from the ClusterConfiguration `required` set, so a document without them is now
+			// schema-valid on that point.
+			errContains: `ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed: 2 errors occurred:
 	* .metadata is a forbidden property
 	* .clusterType is required
-	* .podSubnetCIDR is required
-	* .serviceSubnetCIDR is required
 
 ; unknown kind, expected one of ("InitConfiguration", "ModuleConfig")`,
 		},
@@ -273,12 +272,13 @@ clusterType: Static
 }
 
 func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
-	// CI builds candi/cloud-providers from modules/030-cloud-provider-*
-	// (see tools/build_includes/candi-cloud-providers-CE.yaml); skip locally
-	// when the prepared tree is not materialised.
-	const schemasDir = "./../../../candi/cloud-providers"
+	// Yandex is an external provider: its candi is no longer copied into
+	// candi/cloud-providers at build time (see externalCloudProviders in
+	// tools/build.go), so the module's own candi is the only source of the
+	// YandexClusterConfiguration schema.
+	const schemasDir = "./../../../modules/030-cloud-provider-yandex/candi/openapi"
 	if info, err := os.Stat(schemasDir); err != nil || !info.IsDir() {
-		t.Skipf("%s not present; run `make test` after werf bundles cloud-providers, or skip", schemasDir)
+		t.Skipf("%s not present; skip", schemasDir)
 	}
 	newStore := newSchemaStore(&options.New().Global, []string{schemasDir})
 

@@ -9,7 +9,7 @@ lang: ru
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%BC%D1%83%D0%BB%D1%8C%D1%82%D0%B8%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80 -->
 
 {% alert level="info" %}
-Доступно только в DKP Enterprise Edition (EE) и DKP Certified Security Edition Pro (CSE Pro).
+Доступно только в DP Enterprise Edition (EE), DP Ultimate, DP Certified Security Edition Pro (CSE Pro), DP Certified Pro.
 {% endalert %}
 
 ### Требования к кластерам
@@ -25,6 +25,10 @@ lang: ru
   > Пересечение подсетей сервисов и подов не рекомендуется (подробнее — [в документации Istio](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
   >
   > Istio работает в режиме [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) — поды разных кластеров взаимодействуют друг с другом только через Istio ingress gateway. Прямое взаимодействие между подами разных кластеров не поддерживается.
+
+{% alert level="warning" %}
+В мультикластере могут участвовать только рабочие нагрузки в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](/modules/istio/#ограничения-ambient-mesh).
+{% endalert %}
 
 ### Общие принципы
 

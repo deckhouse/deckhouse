@@ -20,6 +20,10 @@ spec:
         resources:   ["*"]
         scope: "*"
   matchConditions:
+    # Only cluster components are excluded, and deliberately so: a template-owned object belongs to
+    # the project controller alone. Cluster administrators are exempt from the other protections
+    # around project namespaces (see the user-authz system-resource webhook) but not from this one —
+    # to change such an object, change the ProjectTemplate or the Project.
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
@@ -47,14 +51,54 @@ spec:
     # static message, and a denied delete would lose the name of the project it belongs to.
     - name: subject
       expression: 'object == null ? oldObject : object'
+    # The labels and annotations of a project namespace that the module owns: the controller or its
+    # Helm release sets them from the Project and its template, so a direct edit would be undone or
+    # would lie about the project. Everything else on the namespace -- istio-injection, a Pod
+    # Security label, an Argo CD tracking annotation, kubectl's last-applied-configuration -- belongs
+    # to whoever runs the cluster, and the rule below lets them change it. Spelled out as literals
+    # rather than derived from the label map: iterating an unbounded map does not fit the CEL cost
+    # budget, and a fixed list is what a reader of the denial needs anyway. The Go side of the list is
+    # naming.ManagedNamespaceLabels/ManagedNamespaceAnnotations; a test keeps the two identical.
+    - name: managedLabels
+      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
+    - name: managedAnnotations
+      expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations"]'
+    - name: isNamespaceUpdate
+      expression: 'object != null && oldObject != null && request.kind.kind == "Namespace" && request.operation == "UPDATE"'
+    - name: oldLabels
+      expression: 'oldObject != null && has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}'
+    - name: newLabels
+      expression: 'object != null && has(object.metadata.labels) ? object.metadata.labels : {}'
+    - name: oldAnnotations
+      expression: 'oldObject != null && has(oldObject.metadata.annotations) ? oldObject.metadata.annotations : {}'
+    - name: newAnnotations
+      expression: 'object != null && has(object.metadata.annotations) ? object.metadata.annotations : {}'
+    # A managed key is untouched when it is present on both sides with the same value or absent on both.
+    - name: managedLabelsUntouched
+      expression: 'variables.managedLabels.all(k, (k in variables.oldLabels) == (k in variables.newLabels) && (!(k in variables.oldLabels) || variables.oldLabels[k] == variables.newLabels[k]))'
+    - name: managedAnnotationsUntouched
+      expression: 'variables.managedAnnotations.all(k, (k in variables.oldAnnotations) == (k in variables.newAnnotations) && (!(k in variables.oldAnnotations) || variables.oldAnnotations[k] == variables.newAnnotations[k]))'
+    # The namespace itself (spec.finalizers) and its finalizers stay the controller's: a user may
+    # relabel a project namespace, not reshape it.
+    - name: namespaceBodyUntouched
+      expression: '(has(object.spec) ? object.spec : {}) == (has(oldObject.spec) ? oldObject.spec : {}) && (has(object.metadata.finalizers) ? object.metadata.finalizers : []) == (has(oldObject.metadata.finalizers) ? oldObject.metadata.finalizers : [])'
+    - name: namespaceMetadataEdit
+      expression: 'variables.isNamespaceUpdate && variables.namespaceBodyUntouched && variables.managedLabelsUntouched && variables.managedAnnotationsUntouched'
   validations:
-    - expression: 'request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"'
+    # Two doors: the controller, and -- on a project namespace only -- a metadata edit that leaves the
+    # keys the module owns alone. Adoption turns every user namespace into a project namespace, so
+    # without the second door `kubectl label ns` and every GitOps re-apply of a Namespace manifest
+    # would be refused to cluster administrators for the life of the cluster.
+    # An update that drops the heritage label itself is not seen here at all (the binding selects a
+    # Namespace by the labels of the NEW object); the namespace-ownership policy below refuses it.
+    - expression: 'request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" || variables.namespaceMetadataEdit'
       reason: Forbidden
       message: 'This resource is managed by the multitenancy-manager module. Manual modification is forbidden.'
       # A cluster-scoped object has no namespace to name, and now that CREATE is matched it reaches
       # this expression as well.
-      messageExpression: 'variables.subject.kind == ''Namespace'' ? ''This resource is managed
-            by '' + variables.subject.metadata.name + '' Project. Manual modification is forbidden.''
+      messageExpression: 'variables.subject.kind == ''Namespace'' ? (variables.isNamespaceUpdate
+            ? ''The namespace belongs to the '' + variables.subject.metadata.name + '' Project: its spec, finalizers and the labels and annotations the module sets (heritage, projects.deckhouse.io/*, security.deckhouse.io/pod-policy, extended-monitoring.deckhouse.io/enabled, security-scanning.deckhouse.io/enabled, app.kubernetes.io/managed-by, meta.helm.sh/*, scheduler.alpha.kubernetes.io/node-selector, scheduler.alpha.kubernetes.io/defaultTolerations) are changed through the Project and its ProjectTemplate. Other labels and annotations may be changed directly.''
+            : ''This resource is managed by '' + variables.subject.metadata.name + '' Project. Manual modification is forbidden.'')
             : (has(variables.subject.metadata.namespace) && variables.subject.metadata.namespace != ''''
             ? ''This resource is managed by '' + variables.subject.metadata.namespace + '' Project. Manual modification is forbidden.''
             : ''This resource is managed by the multitenancy-manager module. Manual modification is forbidden.'')'
@@ -74,4 +118,76 @@ spec:
     objectSelector:
       matchLabels:
         heritage: multitenancy-manager
+---
+# The projects.deckhouse.io/project label on a Namespace is the ownership mark the controller reads
+# to decide whose namespace it is. Only the controller (and Deckhouse itself, which installs the
+# module) may put it there or change it: a namespace created by hand with the label of a project
+# was neither adopted nor reconciled nor protected -- it merely looked owned -- and a label change
+# could hand a namespace to another project. Nobody else is exempt, cluster administrators
+# included; a namespace without the label is not this policy's business, so `kubectl create ns`
+# keeps working and adoption picks the namespace up.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-namespace-ownership
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   [""]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["namespaces"]
+  matchConditions:
+    - name: 'exclude-owners'
+      expression: '!(request.userInfo.username in ["system:serviceaccount:d8-multitenancy-manager:multitenancy-manager", "system:serviceaccount:d8-system:deckhouse"])'
+  variables:
+    - name: newOwner
+      expression: 'has(object.metadata.labels) && "projects.deckhouse.io/project" in object.metadata.labels ? object.metadata.labels["projects.deckhouse.io/project"] : ""'
+    - name: oldOwner
+      expression: 'oldObject != null && has(oldObject.metadata.labels) && "projects.deckhouse.io/project" in oldObject.metadata.labels ? oldObject.metadata.labels["projects.deckhouse.io/project"] : ""'
+    # The heritage policy above cannot guard the module-owned keys of a Namespace on its own: its
+    # binding selects the namespace by the heritage label, and for a Namespace object the API server
+    # evaluates that selector against the labels of the object under review -- the NEW object. An
+    # update that drops the heritage label therefore falls outside the binding and is never seen by
+    # that policy. This policy has no selector, so it is the one that holds the module-owned keys of
+    # a namespace the module owned before the request. Same lists as above; the Go side is
+    # naming.ManagedNamespaceLabels/ManagedNamespaceAnnotations and a test keeps every copy identical.
+    - name: managedLabels
+      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
+    - name: managedAnnotations
+      expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations"]'
+    - name: oldLabels
+      expression: 'oldObject != null && has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}'
+    - name: newLabels
+      expression: 'has(object.metadata.labels) ? object.metadata.labels : {}'
+    - name: oldAnnotations
+      expression: 'oldObject != null && has(oldObject.metadata.annotations) ? oldObject.metadata.annotations : {}'
+    - name: newAnnotations
+      expression: 'has(object.metadata.annotations) ? object.metadata.annotations : {}'
+    - name: wasModuleOwned
+      expression: 'oldObject != null && "heritage" in variables.oldLabels && variables.oldLabels["heritage"] == "multitenancy-manager"'
+    - name: managedKeysUntouched
+      expression: 'variables.managedLabels.all(k, (k in variables.oldLabels) == (k in variables.newLabels) && (!(k in variables.oldLabels) || variables.oldLabels[k] == variables.newLabels[k])) && variables.managedAnnotations.all(k, (k in variables.oldAnnotations) == (k in variables.newAnnotations) && (!(k in variables.oldAnnotations) || variables.oldAnnotations[k] == variables.newAnnotations[k]))'
+  validations:
+    # Setting the label where there was none, or changing its value, is the controller's alone.
+    # Removing it from a namespace the module does not own is not refused: an orphan namespace that
+    # never got a project heals that way.
+    - expression: 'variables.newOwner == "" || variables.newOwner == variables.oldOwner'
+      reason: Forbidden
+      messageExpression: '''The projects.deckhouse.io/project label is set by the multitenancy-manager controller when it creates or adopts a namespace; it cannot be set to "'' + variables.newOwner + ''" by hand. Create a Project, or a ProjectNamespace inside one, instead.'''
+    # On a namespace the module owned before this request, the keys the module sets stay as they are.
+    - expression: '!variables.wasModuleOwned || variables.managedKeysUntouched'
+      reason: Forbidden
+      messageExpression: '''The namespace belongs to the '' + variables.oldOwner + '' Project: the labels and annotations the module sets (heritage, projects.deckhouse.io/*, security.deckhouse.io/pod-policy, extended-monitoring.deckhouse.io/enabled, security-scanning.deckhouse.io/enabled, app.kubernetes.io/managed-by, meta.helm.sh/*, scheduler.alpha.kubernetes.io/node-selector, scheduler.alpha.kubernetes.io/defaultTolerations) are changed through the Project and its ProjectTemplate. Other labels and annotations may be changed directly.'''
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-namespace-ownership
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-namespace-ownership
+  validationActions: [Deny, Audit]
 {{- end }}

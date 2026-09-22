@@ -1,7 +1,7 @@
 ---
 title: Планирование большого количества подов на узле
 permalink: ru/guides/high-pod-density.html
-description: Рекомендации по подготовке узлов Deckhouse Kubernetes Platform к запуску большого количества подов (сотни и тысячи на узел).
+description: Рекомендации по подготовке узлов Deckhouse Platform к запуску большого количества подов (сотни и тысячи на узел).
 lang: ru
 layout: sidebar-guides
 ---
@@ -17,12 +17,12 @@ layout: sidebar-guides
 - используйте лёгкие образы приложений с минимальным количеством слоёв (например, `distroless`).
 {% endalert %}
 
-Компоненты control plane для подобных сценариев Deckhouse Kubernetes Platform (DKP) настраивает автоматически — дополнительная ручная настройка не требуется.
+Компоненты control plane для подобных сценариев Deckhouse Platform (DP) настраивает автоматически — дополнительная ручная настройка не требуется.
 
 ## Лимит подов на узел
 
 {% alert %}
-Лимит подов на узел в DKP вычисляется на основе размера подсети узла, задаваемого параметром [`podSubnetNodeCIDRPrefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix). Чтобы узел вмещал до 1000 подов, при развёртывании кластера задайте значение ≤ `21`.
+Лимит подов на узел в DP вычисляется на основе размера подсети узла, задаваемого параметром [`podSubnetNodeCIDRPrefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix). Чтобы узел вмещал до 1000 подов, при развёртывании кластера задайте значение ≤ `21`.
 {% endalert %}
 
 Размер подсети, выделяемой узлу, определяет максимальное количество подов, которые могут быть на нём размещены:

@@ -29,6 +29,7 @@ whitelist = [
     "control-plane-manager/kube-apiserver.*",
     "control-plane-manager/kube-controller-manager.*",
     "control-plane-manager/kube-scheduler.*",
+    "terraform-manager/terraform-manager.*",
     "deckhouse/webhook-handler",
     "dev-prebuild",
     "dev",
@@ -43,6 +44,7 @@ whitelist = [
     "prometheus/grafana-dashboard-provisioner",
     "registrypackages/kubectl.*",
     "registrypackages/kubelet.*",
+    "release-channel-version",
     "release-channel-version-prebuild",
     "tests-prebuild",
     "tests",
@@ -51,8 +53,13 @@ whitelist = [
 ]
 
 # Find and read build reports
-editions = [i.removeprefix('build_report_') for i in os.listdir() if i.startswith('build_report_')]
+editions = [
+    i.removeprefix('build_report_')
+    for i in os.listdir()
+    if i.startswith('build_report_') and i != 'build_report_CSE'
+]
 print(f"Found editions: {editions}")
+
 if len(editions) <= 1:
     print(f"Not enough editions to compare. Exit.")
     sys.exit()

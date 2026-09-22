@@ -18,7 +18,6 @@ package helm
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -27,29 +26,31 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 )
 
-var (
-	ErrNamespaceOverride = errors.New("objects that defined in different namespaces will still be deployed to project namespace")
-)
-
+// postRenderer is the Helm post-renderer the project release goes through. The chart itself renders
+// to nothing; the objects come from manifests, rendered natively from the structured ProjectTemplate
+// (controller/internal/render). The post-renderer stamps the ownership labels, drops the kinds the
+// cluster does not serve, pins every namespaced object to a namespace of the project and records what
+// was rendered in the project status.
 type postRenderer struct {
-	project        *v1alpha2.Project
-	versions       map[string]struct{}
-	logger         logr.Logger
-	warning        error
-	isFirstInstall bool
+	project  *v1alpha3.Project
+	versions map[string]struct{}
+	logger   logr.Logger
+	// manifests, when non-empty, is the source the post-renderer processes instead of the chart's
+	// rendered output.
+	manifests string
 }
 
-func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, logger logr.Logger, isFirstInstall bool) *postRenderer {
+func newPostRenderer(project *v1alpha3.Project, versions map[string]struct{}, logger logr.Logger) *postRenderer {
 	return &postRenderer{
-		project:        project,
-		versions:       versions,
-		logger:         logger.WithName("post-renderer"),
-		isFirstInstall: isFirstInstall,
+		project:  project,
+		versions: versions,
+		logger:   logger.WithName("post-renderer"),
 	}
 }
 
@@ -57,11 +58,16 @@ func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, lo
 // or will add a project namespace if it does not exist in manifests
 func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// clear resources
-	r.project.Status.Resources = make(map[string]map[string]v1alpha2.ResourceKind)
+	r.project.Status.Resources = make(map[string]map[string]v1alpha3.ResourceKind)
+
+	source := renderedManifests.String()
+	if r.manifests != "" {
+		source = r.manifests
+	}
 
 	var core *unstructured.Unstructured
 	builder := strings.Builder{}
-	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
+	for _, manifest := range releaseutil.SplitManifests(source) {
 		object := new(unstructured.Unstructured)
 		if err := yaml.Unmarshal([]byte(manifest), object); err != nil {
 			r.logger.Info("failed to unmarshal manifest", "project", r.project.Name, "manifest", manifest, "error", err.Error())
@@ -73,79 +79,9 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 			continue
 		}
 
-		// skip resource that not present in the cluster
-		if r.versions != nil {
-			version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
-			if _, ok := r.versions[version]; !ok {
-				r.project.AddResource(object, false)
-				r.logger.Info("the resource skipped during render project", "project", r.project.Name, "resource", object.GetName(), "version", version)
-				continue
-			}
+		if err := r.processObject(object, &core, &builder); err != nil {
+			return renderedManifests, err
 		}
-
-		labels := object.GetLabels()
-		if len(labels) == 0 {
-			labels = make(map[string]string)
-		}
-
-		// check if resource should be excluded from management
-		isUnmanaged := false
-		if _, ok := labels[v1alpha2.ResourceLabelUnmanaged]; ok {
-			isUnmanaged = true
-			// Include unmanaged resources only on first install to create them once
-			// On subsequent upgrades, skip them so they won't be updated
-			if !r.isFirstInstall {
-				r.logger.Info("the resource is unmanaged and will be skipped (not first install)", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
-				continue
-			}
-			// On first install, include unmanaged resources but mark them to not be tracked
-			r.logger.Info("the resource is unmanaged but will be created on first install", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
-			// Add Helm resource-policy annotation to prevent deletion on release uninstall
-			annotations := object.GetAnnotations()
-			if len(annotations) == 0 {
-				annotations = make(map[string]string)
-			}
-			annotations["helm.sh/resource-policy"] = "keep"
-			object.SetAnnotations(annotations)
-		}
-
-		// inject multitenancy-manager labels
-		// For unmanaged resources, only add project and template labels, not heritage
-		// For other resources, skip heritage label if ResourceLabelSkipHeritage is set
-		if !isUnmanaged {
-			if _, skipHeritage := labels[v1alpha2.ResourceLabelSkipHeritage]; !skipHeritage {
-				labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
-			}
-		}
-		labels[v1alpha2.ResourceLabelProject] = r.project.Name
-		labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
-
-		object.SetLabels(labels)
-
-		if object.GetKind() == "Namespace" {
-			// skip other namespaces
-			if object.GetName() == r.project.Name {
-				r.project.AddResource(object, true)
-				core = object
-			}
-
-			continue
-		}
-
-		if len(object.GetNamespace()) > 1 && object.GetNamespace() != r.project.Name {
-			r.warning = ErrNamespaceOverride
-		}
-
-		object.SetNamespace(r.project.Name)
-
-		// Track resource in project status only if it's not unmanaged
-		// Unmanaged resources are created once but not tracked/updated
-		if _, isUnmanaged := labels[v1alpha2.ResourceLabelUnmanaged]; !isUnmanaged {
-			r.project.AddResource(object, true)
-		}
-
-		data, _ := yaml.Marshal(object.Object)
-		builder.WriteString("\n---\n" + string(data))
 	}
 
 	buf := bytes.NewBuffer(nil)
@@ -154,13 +90,95 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 	if core == nil {
 		buf.WriteString("\n---\n" + string(r.newNamespace(r.project.Name)))
 	} else {
-		data, _ := yaml.Marshal(core.Object)
+		data, err := yaml.Marshal(core.Object)
+		if err != nil {
+			return renderedManifests, fmt.Errorf("marshal core namespace: %w", err)
+		}
 		buf.WriteString("\n---\n" + string(data))
 	}
 
 	buf.WriteString(builder.String())
 
 	return buf, nil
+}
+
+// processObject renders a single object into builder, applying label injection. List wrappers
+// (kind: List) are expanded recursively because Helm flattens lists after post-rendering.
+func (r *postRenderer) processObject(object *unstructured.Unstructured, core **unstructured.Unstructured, builder *strings.Builder) error {
+	if object.IsList() {
+		return object.EachListItem(func(item runtime.Object) error {
+			nested, ok := item.(*unstructured.Unstructured)
+			if !ok {
+				return nil
+			}
+			return r.processObject(nested, core, builder)
+		})
+	}
+
+	// skip resource that not present in the cluster
+	if r.versions != nil {
+		version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
+		if _, ok := r.versions[version]; !ok {
+			r.project.AddResource(object, false)
+			r.logger.Info("the resource skipped during render project", "project", r.project.Name, "resource", object.GetName(), "version", version)
+			return nil
+		}
+	}
+
+	labels := object.GetLabels()
+	if len(labels) == 0 {
+		labels = make(map[string]string)
+	}
+
+	// inject multitenancy-manager labels
+	labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
+	labels[v1alpha3.ResourceLabelProject] = r.project.Name
+	labels[v1alpha3.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
+
+	object.SetLabels(labels)
+
+	if object.GetKind() == "Namespace" {
+		// skip other namespaces
+		if object.GetName() == r.project.Name {
+			r.project.AddResource(object, true)
+			*core = object
+		}
+
+		return nil
+	}
+
+	// Namespaced objects may target ANY namespace of the project (main + additional): the renderer
+	// emits NetworkPolicy/PodLoggingConfig once per project namespace. The render and this
+	// post-renderer derive the project namespace set from the same project.Status.Namespaces, so every
+	// rendered target is allowed here (no duplicates). An empty namespace defaults to main, and so
+	// does a namespace outside the project -- nothing the renderer emits targets one, so this is a
+	// backstop, not a feature.
+	if ns := object.GetNamespace(); ns == "" || !r.isProjectNamespace(ns) {
+		object.SetNamespace(r.project.Name)
+	}
+
+	r.project.AddResource(object, true)
+
+	data, err := yaml.Marshal(object.Object)
+	if err != nil {
+		return fmt.Errorf("marshal rendered object %s/%s: %w", object.GetKind(), object.GetName(), err)
+	}
+	builder.WriteString("\n---\n" + string(data))
+	return nil
+}
+
+// isProjectNamespace reports whether ns is the project's main namespace or one of its additional
+// namespaces (from status.namespaces).
+func (r *postRenderer) isProjectNamespace(ns string) bool {
+	if ns == r.project.Name {
+		return true
+	}
+	for _, s := range r.project.Status.Namespaces {
+		if s.Name == ns {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *postRenderer) newNamespace(name string) []byte {
@@ -175,10 +193,10 @@ func (r *postRenderer) newNamespace(name string) []byte {
 		},
 	}
 
-	obj.Labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
-	obj.Labels[v1alpha2.ResourceLabelProject] = r.project.Name
-	obj.Labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
+	obj.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
+	obj.Labels[v1alpha3.ResourceLabelProject] = r.project.Name
+	obj.Labels[v1alpha3.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
 
-	data, _ := yaml.Marshal(obj)
+	data, _ := yaml.Marshal(obj) //nolint:errcheck // marshaling a static in-memory corev1.Namespace cannot fail
 	return data
 }

@@ -27,9 +27,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
+// setupController wires one controller into the manager. The number of workers
+// it is built with is not always the number asked for: a reconciler that is only
+// correct below some number holds that number itself (NeedsMaxConcurrentReconciles)
+// and wins over the flag, which one typo anywhere silently discards.
 func setupController(ctx context.Context, mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
-	if maxConcurrentReconciles < 1 {
-		maxConcurrentReconciles = 1
+	setupLog := ctrl.Log.WithName("setup")
+	workers := max(maxConcurrentReconciles, 1)
+	if v, ok := r.(NeedsMaxConcurrentReconciles); ok {
+		if capped := v.MaxConcurrentReconciles(); capped >= 1 && capped < workers {
+			setupLog.Info("controller caps its own concurrency",
+				"controller", name, "requested", workers, "maxConcurrentReconciles", capped)
+			workers = capped
+		}
 	}
 
 	if v, ok := r.(NeedsClient); ok {
@@ -52,7 +62,7 @@ func setupController(ctx context.Context, mgr ctrl.Manager, c client.Client, nam
 	b := ctrl.NewControllerManagedBy(mgr).
 		Named(name).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: maxConcurrentReconciles,
+			MaxConcurrentReconciles: workers,
 		})
 	if v, ok := r.(NeedsForPredicates); ok {
 		b = b.For(obj, builder.WithPredicates(v.ForPredicates()...))
@@ -67,5 +77,9 @@ func setupController(ctx context.Context, mgr ctrl.Manager, c client.Client, nam
 		return fmt.Errorf("build controller %s: %w", name, err)
 	}
 
+	// The number logged is the one the controller runs with, not the one that was
+	// asked for: a log line saying otherwise sends an operator looking for a
+	// concurrency the controller never had.
+	setupLog.Info("controller enabled", "controller", name, "maxConcurrentReconciles", workers)
 	return nil
 }

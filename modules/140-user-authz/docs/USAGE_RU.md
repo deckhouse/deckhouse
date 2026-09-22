@@ -5,10 +5,10 @@ title: "Модуль user-authz: примеры конфигурации"
 ## Пример назначения прав администратору кластера
 
 {% alert level="info" %}
-Пример использует [экспериментальную ролевую модель](./#экспериментальная-ролевая-модель).
+Пример использует [гранулярную ролевую модель](./#гранулярная-ролевая-модель).
 {% endalert %}
 
-Для назначения прав администратору кластера используйте роль `d8:manage:all:manager` в `ClusterRoleBinding`.
+Для назначения прав администратору кластера используйте роль `d8:system:manager` в ClusterRoleBinding.
 
 Пример назначения прав администратору кластера (User `jane`):
 
@@ -23,7 +23,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:manager
+  name: d8:system:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -31,7 +31,7 @@ roleRef:
 Права, которые получит пользователь, будут ограничены рамками пространств имён, начинающихся с `d8-` или `kube-`.
 
 Пользователю будут доступны следующие права:
-- Просмотр, изменение, удаление и создание ресурсов Kubernetes и модулей DKP.
+- Просмотр, изменение, удаление и создание ресурсов Kubernetes и модулей DP.
 - Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов `moduleConfig`).
 - Выполнение следующих команд к подам и сервисам:
   - `kubectl attach`;
@@ -43,10 +43,10 @@ roleRef:
 ## Пример назначения прав сетевому администратору
 
 {% alert level="info" %}
-Пример использует [экспериментальную ролевую модель](./#экспериментальная-ролевая-модель).
+Пример использует [гранулярную ролевую модель](./#гранулярная-ролевая-модель).
 {% endalert %}
 
-Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:manage:networking:manager` в `ClusterRoleBinding`.
+Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:subsystem:networking:manager` в ClusterRoleBinding.
 
 Пример назначения прав сетевому администратору (User `jane`):
 
@@ -61,12 +61,12 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:networking:manager
+  name: d8:subsystem:networking:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
 {% offtopic title="Список прав, которые получит пользователь" %}
-Права, которые получит пользователь, будут ограничены следующим списком пространств имён модулей DKP из подсистемы `networking` (фактический список зависит от списка включённых в кластере модулей):
+Права, которые получит пользователь, будут ограничены следующим списком пространств имён модулей DP из подсистемы `networking` (фактический список зависит от списка включённых в кластере модулей):
 - `d8-cni-cilium`;
 - `d8-cni-flannel`;
 - `d8-cni-simple-bridge`;
@@ -153,15 +153,15 @@ roleRef:
   - `kubectl proxy`.
 {% endofftopic %}
 
-## Пример назначения административных прав пользователю в рамках пространства имён
+## Пример назначения административных прав пользователю в рамках неймспейса
 
 {% alert level="info" %}
-Пример использует [экспериментальную ролевую модель](./#экспериментальная-ролевая-модель).
+Пример использует [гранулярную ролевую модель](./#гранулярная-ролевая-модель).
 {% endalert %}
 
-Для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DKP, используйте роль `d8:use:role:admin` в `RoleBinding` в соответствующем пространстве имён.
+Для назначения прав на управление ресурсами приложений в неймспейсе (включая некоторые namespaced-ресурсы модулей DP, например DexAuthenticator) используйте роль `d8:namespace:admin` в RoleBinding в соответствующем неймспейсе. Кластерная настройка модулей в эту роль не входит.
 
-Пример назначения прав разработчику приложений (User `app-developer`) в пространстве имён `myapp`:
+Пример назначения прав разработчику приложений (User `app-developer`) в неймспейсе `myapp`:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -175,12 +175,13 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:use:role:admin
+  name: d8:namespace:admin
   apiGroup: rbac.authorization.k8s.io
 ```
 
 {% offtopic title="Список прав, которые получит пользователь" %}
-В рамках пространства имён `myapp` пользователю будут доступны следующие права:
+В рамках неймспейса `myapp` пользователю будут доступны следующие права:
+
 - Просмотр, изменение, удаление и создание ресурсов Kubernetes. Например, следующих ресурсов (список не полный):
   - `Certificate`;
   - `CertificateRequest`;
@@ -211,7 +212,7 @@ roleRef:
   - `StatefulSet`;
   - `VerticalPodAutoscaler`;
   - `VolumeSnapshot`.
-- Просмотр, изменение, удаление и создание следующих ресурсов модулей DKP:
+- Просмотр, изменение, удаление и создание следующих ресурсов модулей DP:
   - `DexAuthenticator`;
   - `DexClient`;
   - `PodLogginConfig`.
@@ -220,7 +221,34 @@ roleRef:
   - `kubectl exec`;
   - `kubectl port-forward`;
   - `kubectl proxy`.
+
+Пользователю **не** будут доступны операции, зарезервированные за уровнем `superadmin` (подробнее — в разделе [«Ограничения уровня admin и права superadmin»](./#ограничения-уровня-admin-и-права-superadmin)): выпуск токенов ServiceAccount'ов, выполнение запросов от имени ServiceAccount'ов, изменение системных ресурсов платформы в этом неймспейсе и подключение к системным подам.
 {% endofftopic %}
+
+## Пример назначения прав на все неймспейсы проекта
+
+{% alert level="info" %}
+Пример использует [гранулярную ролевую модель](./#гранулярная-ролевая-модель) и модуль [multitenancy-manager](../multitenancy-manager/).
+{% endalert %}
+
+Если неймспейсы объединены в [проект](/modules/multitenancy-manager/), роль можно выдать сразу на весь проект — она автоматически будет действовать во всех его неймспейсах, включая создаваемые позже. Для этого вместо RoleBinding используйте [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) в основном неймспейсе проекта:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: team-developers
+  namespace: my-project
+spec:
+  subjects:
+    - kind: Group
+      name: developers
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:user
+```
+
+Подробнее о привязках ролей в проектах — [в документации модуля multitenancy-manager](../multitenancy-manager/usage.html#предоставление-доступа-внутри-проекта).
 
 ## Пример `ClusterAuthorizationRule`
 
@@ -255,10 +283,92 @@ spec:
         team: frontend
 ```
 
+Субъект типа `User` или `Group` сопоставляется по имени с идентичностью пользователя из токена. При этом локально управляемая идентичность не отличается от полученной от внешнего провайдера аутентификации. По этой причине нельзя создать ресурс [User](/modules/user-authn/cr.html#user) со значением `spec.email` или [Group](/modules/user-authn/cr.html#group) со значением `spec.name`, совпадающим с субъектом существующего правила ClusterAuthorizationRule или AuthorizationRule. Это предотвращает незаметное предоставление прав идентичности.
+
+Если совпадение сделано намеренно, например, если правило ClusterAuthorizationRule написано заранее, установите на User или Group аннотацию `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"`. Аннотация только подтверждает совпадение имени. Она не позволяет назначить роли, которые запрашивающий не покрывает или которые вне его диапазона can-assign.
+
+Для субъектов типа `User` указывайте email в нижнем регистре. Он записывается в токен в нижнем регистре, поэтому, например, субъект `Admin@Example.com` не совпадёт с `admin@example.com`. Имена субъектов типа `Group` сравнивается точно, поскольку имена групп не приводятся к нижнему регистру.
+
+Ограничение действует при создании User или Group и при изменении их `spec.email` или `spec.name`. Удаление User или Group, чьё имя всё ещё получает права от правила, разрешено с предупреждением: имя остаётся в правиле, и повторное создание объекта возвращает права. Ограничение не запрещает добавлять существующих пользователей и группы в ClusterAuthorizationRule или AuthorizationRule. Если соответствующий User или Group уже существует, после добавления его в правило права будут предоставлены сразу.
+
+## Управление правами через CLI
+
+Команда [`d8 iam access`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-access) позволяет управлять правилами авторизации без написания YAML-манифестов. Она создаёт и удаляет ресурсы [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) и [AuthorizationRule](cr.html#authorizationrule).
+
+Доступные уровни доступа: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
+
+Примеры назначения прав с помощью команды `d8 iam access`:
+
+Назначить роль Admin пользователю в неймспейсе `dev`:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev
+```
+
+Назначить пользователю роль Admin в нескольких неймспейсах:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev -n stage
+```
+
+Назначить пользователю кластерную роль (без системных неймспейсов):
+
+```shell
+d8 iam access grant user anton --access-level ClusterAdmin --scope cluster
+```
+
+Назначить пользователю кластерную роль во всех неймспейсах (включая системные)
+
+```shell
+d8 iam access grant user anton --access-level ClusterAdmin --scope all-namespaces
+```
+
+Назначить членам группы роль по label-селектору неймспейсов:
+
+```shell
+d8 iam access grant group admins --access-level Editor --scope labels=team=platform,tier=prod
+```
+
+Назначить членам группы роль с дополнительными возможностями:
+
+```shell
+d8 iam access grant group admins --access-level Editor -n dev --port-forwarding --allow-scale
+```
+
+Предпросмотр манифеста без применения:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev --dry-run -o yaml
+```
+
+Отозвать права пользователя в неймспейсе:
+
+```shell
+d8 iam access revoke user anton -n dev
+```
+
+Отозвать права пользователя на уровне кластера:
+
+```shell
+d8 iam access revoke user anton --scope cluster
+```
+
+Посмотреть все правила доступа в кластере:
+
+```shell
+d8 iam list rules
+```
+
+Посмотреть детальную информацию о конкретном правиле:
+
+```shell
+d8 iam get rule <имя>
+```
+
 ## Пример выдачи прав на все неймспейсы
 
 {% alert level="info" %}
-Пример относится к [текущей ролевой модели](./#текущая-ролевая-модель).
+Пример относится к [упрощённой ролевой модели](./#упрощённая-ролевая-модель).
 {% endalert %}
 
 В режиме [multi-tenancy](configuration.html#parameters-enablemultitenancy) (`userAuthz.enableMultiTenancy`) ограничение доступа по неймспейсам задаётся полями ресурса [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
@@ -285,16 +395,16 @@ spec:
 
 - **Разрешить доступ во все неймспейсы, кроме системных**. Чтобы разрешить пользователю доступ во все неймспейсы, кроме системных, при создании ClusterAuthorizationRule не указывайте ни `namespaceSelector`, ни `limitNamespaces`, ни `allowAccessToSystemNamespaces`. Перечень системных неймспейсов — в [описании полей CR](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-> Уровень доступа `SuperAdmin` **не снимает** ограничения по нейспейсам, заданные в параметрах `namespaceSelector` и `limitNamespaces`. При необходимости предоставления доступа ко всем неймспейсам задайте область явно, в том числе через [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+> Уровень доступа `SuperAdmin` **не снимает** ограничения по неймспейсам, заданные в параметрах `namespaceSelector` и `limitNamespaces`. При необходимости предоставления доступа ко всем неймспейсам задайте область явно, в том числе через [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-Если одному субъекту соответствует несколько ресурсов `ClusterAuthorizationRule`, набор разрешённых нейспейсов **объединяется**; эффективный `accessLevel` — **самый сильный** среди всех подходящих правил. Подробнее — в [FAQ](faq.html#что-если-два-clusterauthorizationrules-подходят-для-одного-пользователя).
+Если одному субъекту соответствует несколько ресурсов `ClusterAuthorizationRule`, набор разрешённых неймспейсов **объединяется**; эффективный `accessLevel` — **самый сильный** среди всех подходящих правил. Подробнее — в [FAQ](faq.html#что-если-два-clusterauthorizationrules-подходят-для-одного-пользователя).
 
 {% alert level="warning" %}
-Ограничения по неймспейсам из `ClusterAuthorizationRule` реализованы в цепочке авторизации с вебхуком. Если вебхук недоступен, эти ограничения **не применяются**, пока вебхук снова не станет доступен. Подробнее — в [описании модуля](./#текущая-ролевая-модель).
+Ограничения по неймспейсам из ClusterAuthorizationRule реализованы в цепочке авторизации с вебхуком. Если вебхук недоступен, эти ограничения **не применяются**, пока вебхук снова не станет доступен. Подробнее — в [описании модуля](./#упрощённая-ролевая-модель).
 {% endalert %}
 
-{% offtopic title="Экспериментальная ролевая модель" %}
-Роли `d8:use:role:*` назначаются только через `RoleBinding` в **конкретном** неймспейсе — отдельное `RoleBinding` нужно на каждый неймспейс (или автоматизируйте выдачу). Роли `d8:manage:*` не распространяются на неймспейсы пользовательских приложений — только на системные (`d8-*`, `kube-*`) в рамках подсистемы.
+{% offtopic title="Гранулярная ролевая модель" %}
+Роли `d8:namespace:*` назначаются только через RoleBinding в **конкретном** неймспейсе — отдельное RoleBinding нужно на каждый неймспейс (или автоматизируйте выдачу). Роли `d8:system:*` / `d8:subsystem:*` не распространяются на неймспейсы пользовательских приложений — только на системные (`d8-*`, `kube-*`) в рамках подсистемы.
 {% endofftopic %}
 
 ## Создание пользователя
@@ -739,7 +849,9 @@ EOF
 
 ## Настройка прав высокоуровневых ролей
 
-Если требуется добавить прав для определённой [высокоуровневой роли](./#текущая-ролевая-модель), достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
+Если требуется добавить прав для определённой [высокоуровневой роли](./#упрощённая-ролевая-модель), достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
+
+Модуль автоматически выставляет на такие ClusterRole лейбл `user-authz.deckhouse.io/access-level` и включает их правила в агрегированную ClusterRole `user-authz:<access-level>:custom`. Лейбл служебный: модуль приводит его в соответствие с аннотацией и снимает, если аннотации нет, поэтому задавать его вручную не нужно. В журнале аудита доступ, выданный через аннотированную ClusterRole, приписывается этой агрегированной роли.
 
 Пример:
 

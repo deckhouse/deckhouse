@@ -1,0 +1,623 @@
+# E2E pipelines via e2e-framework (Commander).
+# Start: GitLab UI "New pipeline" (web) or Pipelines API (api).
+
+include:
+  - project: 'deckhouse/ssdlc-tools/e2e-framework'
+    file: '/ci-templates/e2e-framework.gitlab-ci.yml'
+    ref: 'main'
+    inputs:
+      runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
+      vault_role: deckhouse
+      branch: $BRANCH
+      note_id: $NOTE_ID
+      merge_request_iid: $MERGE_REQUEST_IID
+      comment_token: $COMMENT_TOKEN
+
+variables:
+  E2E_PROVIDER:
+    value: "Yandex"
+    options:
+      - "Yandex"
+      - "AWS"
+      - "Azure"
+      - "GCP"
+      - "OpenStack"
+      - "Vsphere"
+      - "DVP"
+      - "Zvirt"
+      - "VCD"
+      - "Huawei"
+      - "Static"
+      - "DVPCSE"
+      - "StaticCSE"
+    description: "Cloud provider for e2e-framework."
+
+  E2E_EDITION:
+    value: "FE"
+    options:
+      # Same set as .github/scripts/js/constants.js knownEditions / e2e/use/edition/*
+      - "FE"
+      - "CE"
+      - "EE"
+      - "BE"
+      - "SE"
+      - "SE-plus"
+      - "CSE"
+    description: "Deckhouse edition to install (maps to build_* job / image tag suffix)."
+
+  KUBERNETES_VERSION:
+    value: "Automatic"
+    options:
+      - "Automatic"
+      - "1.32"
+      - "1.33"
+      - "1.34"
+      - "1.35"
+      - "1.36"
+    description: "Kubernetes version (candi/version_map.yml)."
+
+  BRANCH:
+    value: ""
+    description: "Custom image tag for e2e-framework. Empty = auto-detect from this pipeline's build."
+
+# ---------------------------------------------------------------------------
+# Find edition build on existing branch/tag pipeline and play/wait if needed
+# ---------------------------------------------------------------------------
+
+e2e-ensure-build:
+  extends:
+    - .rules:on_e2e
+  stage: e2e-ensure-build
+  timeout: 4h
+  interruptible: false
+  needs: []
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/curl:${CI_IMAGES_TAG}
+  variables:
+    DOTENV_FILE: e2e-build.env
+    GIT_STRATEGY: fetch
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    FOX_TOKEN:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN/foxtoken@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - chmod +x .gitlab/scripts/e2e-ensure-build.sh .gitlab/scripts/e2e-notify.sh
+    - .gitlab/scripts/e2e-ensure-build.sh
+  artifacts:
+    access: none  # dotenv now carries COMMENT_TOKEN; needs:artifacts inheritance still works, only UI/API download is blocked.
+    reports:
+      dotenv: e2e-build.env
+    expire_in: 3 days
+
+# ---------------------------------------------------------------------------
+# Shared e2e job wiring
+# ---------------------------------------------------------------------------
+
+.e2e-needs-build:
+  interruptible: false
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+
+e2e-prestart:
+  extends:
+    - .e2e-prestart
+    - .rules:on_e2e
+    - .e2e-needs-build
+  stage: e2e-prestart
+  variables:
+    DOTENV_FILE: dotenv-e2e.env
+
+.e2e-provider-create:
+  interruptible: false
+  stage: e2e-create
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  after_script:
+    - chmod +x .gitlab/scripts/e2e-notify.sh
+    - .gitlab/scripts/e2e-notify.sh finish
+  before_script:
+    - |
+      # A job-level BRANCH is already statically set via the e2e-framework include
+      # (inputs.branch, baked in at pipeline-compile time), which GitLab always
+      # prioritizes over a same-named dotenv variable from `needs` artifacts --
+      # dotenv report artifacts aren't even downloaded as files, only injected
+      # as CI/CD variables, and a same-named job-level variable wins that
+      # injection outright. That silently drops the real BRANCH resolved by
+      # e2e-ensure-build whenever the pipeline BRANCH input is left empty (the
+      # default/auto-detect case). RESOLVED_BRANCH carries the same value under
+      # an unclaimed name, so re-export it here to win back the collision.
+      if [ -n "${RESOLVED_BRANCH:-}" ]; then
+        export BRANCH="${RESOLVED_BRANCH}"
+        echo "BRANCH=${BRANCH} (from RESOLVED_BRANCH via e2e-ensure-build)"
+      else
+        echo "RESOLVED_BRANCH not set; BRANCH stays as statically configured" >&2
+      fi
+    - !reference [.import_secrets, before_script]
+
+.e2e-provider-delete:
+  interruptible: false
+  after_script:
+    - chmod +x .gitlab/scripts/e2e-notify.sh
+    - .gitlab/scripts/e2e-notify.sh delete
+
+# ---------------------------------------------------------------------------
+# Per-provider jobs (PROVIDER values from e2e-framework CloudProviderFactory,
+# excluding Custom).
+# ---------------------------------------------------------------------------
+
+# --- Yandex ---
+e2e-yandex-create:
+  extends:
+    - .e2e-yandex-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex"
+
+e2e-yandex-delete:
+  extends:
+    - .e2e-yandex-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex"
+
+e2e-yandex-delete-auto:
+  extends:
+    - .e2e-yandex-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-yandex-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex"
+
+# --- AWS ---
+e2e-aws-create:
+  extends:
+    - .e2e-aws-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS"
+
+e2e-aws-delete:
+  extends:
+    - .e2e-aws-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS"
+
+e2e-aws-delete-auto:
+  extends:
+    - .e2e-aws-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-aws-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS"
+
+# --- Azure ---
+e2e-azure-create:
+  extends:
+    - .e2e-azure-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure"
+
+e2e-azure-delete:
+  extends:
+    - .e2e-azure-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure"
+
+e2e-azure-delete-auto:
+  extends:
+    - .e2e-azure-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-azure-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure"
+
+# --- GCP ---
+e2e-gcp-create:
+  extends:
+    - .e2e-gcp-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP"
+
+e2e-gcp-delete:
+  extends:
+    - .e2e-gcp-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP"
+
+e2e-gcp-delete-auto:
+  extends:
+    - .e2e-gcp-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-gcp-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP"
+
+# --- OpenStack ---
+e2e-openstack-create:
+  extends:
+    - .e2e-openstack-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack"
+
+e2e-openstack-delete:
+  extends:
+    - .e2e-openstack-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack"
+
+e2e-openstack-delete-auto:
+  extends:
+    - .e2e-openstack-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-openstack-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack"
+
+# --- Vsphere ---
+e2e-vsphere-create:
+  extends:
+    - .e2e-vsphere-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere"
+
+e2e-vsphere-delete:
+  extends:
+    - .e2e-vsphere-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere"
+
+e2e-vsphere-delete-auto:
+  extends:
+    - .e2e-vsphere-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-vsphere-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere"
+
+# --- DVP ---
+e2e-dvp-create:
+  extends:
+    - .e2e-dvp-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP"
+
+e2e-dvp-delete:
+  extends:
+    - .e2e-dvp-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP"
+
+e2e-dvp-delete-auto:
+  extends:
+    - .e2e-dvp-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-dvp-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP"
+
+# --- Zvirt ---
+e2e-zvirt-create:
+  extends:
+    - .e2e-zvirt-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt"
+
+e2e-zvirt-delete:
+  extends:
+    - .e2e-zvirt-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt"
+
+e2e-zvirt-delete-auto:
+  extends:
+    - .e2e-zvirt-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-zvirt-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt"
+
+# --- VCD ---
+e2e-vcd-create:
+  extends:
+    - .e2e-vcd-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD"
+
+e2e-vcd-delete:
+  extends:
+    - .e2e-vcd-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD"
+
+e2e-vcd-delete-auto:
+  extends:
+    - .e2e-vcd-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-vcd-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD"
+
+# --- Huawei ---
+e2e-huawei-create:
+  extends:
+    - .e2e-huawei-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei"
+
+e2e-huawei-delete:
+  extends:
+    - .e2e-huawei-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei"
+
+e2e-huawei-delete-auto:
+  extends:
+    - .e2e-huawei-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-huawei-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei"
+
+# --- StaticPrivate ---
+e2e-static-private-create:
+  extends:
+    - .e2e-static-private-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Static"
+
+e2e-static-private-delete:
+  extends:
+    - .e2e-static-private-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Static"
+
+e2e-static-private-delete-auto:
+  extends:
+    - .e2e-static-private-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-static-private-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Static"
+
+# --- StaticCSE ---
+e2e-static-cse-create:
+  extends:
+    - .e2e-static-cse-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticCSE"
+
+e2e-static-cse-delete:
+  extends:
+    - .e2e-static-cse-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticCSE"
+
+e2e-static-cse-delete-auto:
+  extends:
+    - .e2e-static-cse-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-static-cse-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticCSE"
+
+# --- DVPCSE ---
+e2e-dvp-cse-create:
+  extends:
+    - .e2e-dvp-cse-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVPCSE"
+
+e2e-dvp-cse-delete:
+  extends:
+    - .e2e-dvp-cse-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVPCSE"
+
+e2e-dvp-cse-delete-auto:
+  extends:
+    - .e2e-dvp-cse-delete-cluster
+    - .e2e-provider-delete
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-dvp-cse-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVPCSE"

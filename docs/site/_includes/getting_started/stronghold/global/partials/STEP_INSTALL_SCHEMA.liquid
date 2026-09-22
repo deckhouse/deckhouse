@@ -24,7 +24,7 @@ The `{{ layout.name }}` layout will be used during the installation.
 {% if include.presentation -%}
 The presentation contains an overview of the actions required to install Deckhouse.
 
-<div data-presentation="{{ include.presentation }}"></div>
+<div data-presentation="{{ include.presentation }}" class="pdf-slider__small"></div>
 {%- endif %}
 
 {% if page.platform_type == "existing" %}

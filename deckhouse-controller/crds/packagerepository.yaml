@@ -21,13 +21,15 @@ spec:
     - jsonPath: .status.lastScanTime
       name: Scan
       type: date
-    - jsonPath: .status.conditions[?(@.type=='LastScanSucceeded')].message
-      name: MSG
+    - jsonPath: .spec.registry.repo
+      name: Repository
       type: string
     - jsonPath: .status.packagesCount
       name: Packages
-      priority: 1
       type: integer
+    - jsonPath: .status.conditions[?(@.type=='LastScanSucceeded')].message
+      name: MSG
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:

@@ -7,8 +7,8 @@ title: "Встроенные правила аудита"
 
 ## Что такое Audit Policy
 
-Audit Policy — это YAML-файл, который определяет, какие события должен записывать API-сервер.  
-Когда происходит запрос, Kubernetes проверяет его на соответствие правилам в файле.  
+Audit Policy — это YAML-файл, который определяет, какие события должен записывать API-сервер.
+Когда происходит запрос, Kubernetes проверяет его на соответствие правилам в файле.
 **Первое сработавшее правило** определяет уровень логирования.
 
 ## Структура политики
@@ -70,7 +70,7 @@ rules:                       # Набор правил для аудита
 
 ## Встроенные правила аудита
 
-В Deckhouse Kubernetes Platform (DKP) по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.  
+В Deckhouse Platform (DP) по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.
 
 В этой политике реализованы следующие правила:
 - [Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.](#rule-1)
@@ -301,6 +301,7 @@ users:
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-data-discoverer
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter
+  - system:serviceaccount:d8-cloud-provider-yandex:validation-webhook
   - system:serviceaccount:d8-cloud-provider-zvirt:capz-controller-manager
   - system:serviceaccount:d8-cloud-provider-zvirt:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-zvirt:cloud-data-discoverer
@@ -337,13 +338,16 @@ users:
   - system:serviceaccount:d8-system:deckhouse
   - system:serviceaccount:d8-system:documentation
   - system:serviceaccount:d8-system:network-policy-engine
+  - system:serviceaccount:d8-system:registry-controller
   - system:serviceaccount:d8-system:registry-nodeservices
+  - system:serviceaccount:d8-system:registry-storage
   - system:serviceaccount:d8-system:terraform-auto-converger
   - system:serviceaccount:d8-system:terraform-state-exporter
   - system:serviceaccount:d8-system:webhook-handler
   - system:serviceaccount:d8-user-authn:basic-auth-proxy
   - system:serviceaccount:d8-user-authn:controller
   - system:serviceaccount:d8-user-authn:dex
+  - system:serviceaccount:d8-user-authz:controller
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
   - system:serviceaccount:d8-user-authz:webhook
   - system:serviceaccount:kube-system:d8-control-plane-manager
@@ -779,6 +783,7 @@ rules:
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-data-discoverer
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter
+      - system:serviceaccount:d8-cloud-provider-yandex:validation-webhook
       - system:serviceaccount:d8-cloud-provider-zvirt:capz-controller-manager
       - system:serviceaccount:d8-cloud-provider-zvirt:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-zvirt:cloud-data-discoverer
@@ -815,13 +820,16 @@ rules:
       - system:serviceaccount:d8-system:deckhouse
       - system:serviceaccount:d8-system:documentation
       - system:serviceaccount:d8-system:network-policy-engine
+      - system:serviceaccount:d8-system:registry-controller
       - system:serviceaccount:d8-system:registry-nodeservices
+      - system:serviceaccount:d8-system:registry-storage
       - system:serviceaccount:d8-system:terraform-auto-converger
       - system:serviceaccount:d8-system:terraform-state-exporter
       - system:serviceaccount:d8-system:webhook-handler
       - system:serviceaccount:d8-user-authn:basic-auth-proxy
       - system:serviceaccount:d8-user-authn:controller
       - system:serviceaccount:d8-user-authn:dex
+      - system:serviceaccount:d8-user-authz:controller
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
       - system:serviceaccount:d8-user-authz:webhook
       - system:serviceaccount:kube-system:d8-control-plane-manager

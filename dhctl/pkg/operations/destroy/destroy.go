@@ -257,6 +257,15 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 		return err
 	}
 
+	// Refused here rather than by the cluster-type dispatch below, which would report a misleading
+	// "Unsupported cluster type: ''" for what is really an absent ClusterConfiguration. Keyed on
+	// the same field DoByClusterType dispatches on, so it can never reject a config that dispatch
+	// would have accepted.
+	if metaConfig.ClusterType == "" {
+		return fmt.Errorf("dhctl destroy does not support managed Kubernetes clusters: " +
+			"destroying a cluster whose control plane dhctl did not create is not implemented")
+	}
+
 	destroyer, err := config.DoByClusterType(ctx, metaConfig, d.infraProvider)
 	if err != nil {
 		return err

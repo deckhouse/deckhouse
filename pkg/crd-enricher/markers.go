@@ -21,24 +21,27 @@ import (
 
 // markerPrefix namespaces every marker owned by the enricher. It is the single,
 // canonical root every enricher marker carries; no bare or legacy forms are
-// honoured. Three shapes are recognised:
+// honoured. These shapes are recognised:
 //
-//	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
+//	+crd-enricher:raw:<key>=<value>                          // raw schema injection
+//	+crd-enricher:unset:<key>                                // raw schema removal
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
 //	+crd-enricher:crd:<key>[=<value>]                        // CRD-level setting
 //	+crd-enricher:deckhouse:sensitive-data                   // sensitive field flag
 //
-// The raw entity lives directly under the prefix because it injects a standard
-// schema field rather than deckhouse-specific documentation. The documentation
-// entities (examples, deprecated, default) carry the extra
-// "deckhouse:documentation" sub-namespace. The sensitive-data entity configures
-// the schema and carries the shorter "deckhouse" sub-namespace. The crd entity
-// lives directly under the prefix (no sub-namespace). Every shape is reduced to
-// the bare entity name during parsing so the rest of the enricher matches on it.
+// The raw and unset entities live directly under the prefix because they inject
+// and remove a standard schema field rather than deckhouse-specific
+// documentation. The documentation entities (examples, deprecated, default)
+// carry the extra "deckhouse:documentation" sub-namespace. The sensitive-data
+// entity configures the schema and carries the shorter "deckhouse"
+// sub-namespace. The crd entity lives directly under the prefix (no
+// sub-namespace). Every shape is reduced to the bare entity name during parsing
+// so the rest of the enricher matches on it.
 const markerPrefix = "crd-enricher:"
 
 // docSubPrefix is the "deckhouse:documentation" sub-namespace stripped from the
-// documentation entities after markerPrefix. The raw entity does not carry it.
+// documentation entities after markerPrefix. The raw and unset entities do not
+// carry it.
 const docSubPrefix = "deckhouse:documentation:"
 
 // deckhouseSubPrefix is the "deckhouse" sub-namespace stripped from the
@@ -101,6 +104,58 @@ const (
 // into nested schema nodes.
 const rawMarkerPrefix = "raw:"
 
+// unsetMarkerPrefix is the entity that deletes a standard schema field named by
+// the <key> that follows it, the mirror of rawMarkerPrefix. It takes no value:
+//
+//	+crd-enricher:unset:items.description
+//
+// It exists because raw: can only overwrite. A node controller-gen fills in from
+// a vendored type -- items.description on a []metav1.Condition field is the
+// worked example -- can be given different text with raw:, but not taken out, and
+// a hand-curated manifest that never carried the field cannot be reproduced from
+// the Go types while the field is there. A dotted <key> walks into nested schema
+// nodes, exactly as raw: does, and a key that is already absent is reported as a
+// warning rather than silently accepted, so a marker left behind by a generator
+// bump does not pass for a working one.
+const unsetMarkerPrefix = "unset:"
+
+// structuralKeys are the schema fields apiextensions requires to be there: an
+// array node must declare its items, and every node must declare its type.
+// Removing one produces a document the apiserver rejects at apply time
+// ("must be specified"), with nothing in the failure to point back at the marker
+// that caused it -- so unset: refuses these rather than obeying.
+var structuralKeys = map[string]bool{
+	"type":  true,
+	"items": true,
+}
+
+// validationKeys are the schema fields that decide what the apiserver accepts.
+// Removing one is legal -- the resulting document applies cleanly -- and that is
+// the problem: the API silently starts admitting values it used to reject, and the
+// crds/ re-render gate cannot notice, because the committed manifest and the render
+// both come from the same marker. So unset: obeys here and says so, rather than
+// refusing as it does for structuralKeys.
+var validationKeys = map[string]bool{
+	"enum":                     true,
+	"exclusiveMaximum":         true,
+	"exclusiveMinimum":         true,
+	"format":                   true,
+	"maxItems":                 true,
+	"maxLength":                true,
+	"maxProperties":            true,
+	"maximum":                  true,
+	"minItems":                 true,
+	"minLength":                true,
+	"minProperties":            true,
+	"minimum":                  true,
+	"multipleOf":               true,
+	"nullable":                 true,
+	"pattern":                  true,
+	"required":                 true,
+	"uniqueItems":              true,
+	"x-kubernetes-validations": true,
+}
+
 // crdMarker is the type-level entity that configures CRD-level settings that
 // controller-gen cannot express (preserveUnknownFields, the minimal style and
 // schema format stripping) and switches the document to the hand-curated
@@ -147,10 +202,62 @@ const sensitiveDataMarker = "sensitive-data"
 // sensitiveDataKey is the schema field the sensitiveDataMarker renders to.
 const sensitiveDataKey = "x-kubernetes-sensitive-data"
 
-// rootMarker is the controller-gen marker that designates a Go type as the
-// root object of a CRD. The enricher relies on it to know which types map to a
-// generated CRD.
+// rootMarker is the controller-gen marker that declares a Go type an object
+// root. Beware: it does NOT gate CRD generation -- see isCRDRoot for the rule
+// controller-gen's CRD generator actually applies. It is honoured here only as a
+// secondary signal, for types that announce themselves as objects without
+// embedding the metav1 structs (the enricher's own fixtures, for one).
 const rootMarker = "kubebuilder:object:root"
+
+// legacyRootMarker is the pre-kubebuilder spelling of rootMarker, declaring that
+// deepcopy-gen should give the type a DeepCopyObject method. controller-gen's
+// deepcopy generator still honours it (pkg/deepcopy/gen.go, genObjectInterface),
+// so the enricher recognises it for the same reason it recognises rootMarker.
+const legacyRootMarker = "k8s:deepcopy-gen:interfaces"
+
+// runtimeObject is the interface the legacy marker has to name for the type to
+// be an object root rather than merely deep-copyable. controller-gen compares
+// the whole marker value against this path, so a comma-separated list of
+// interfaces does not match there either -- matching it here would diverge.
+const runtimeObject = "k8s.io/apimachinery/pkg/runtime.Object"
+
+// isRootObject reports whether the markers declare an object root, by either
+// spelling controller-gen accepts.
+//
+// The value of the kubebuilder marker is honoured, so "object:root=false" makes
+// this return false -- but that is not an opt-out from CRD generation, and
+// isCRDRoot is where that distinction is handled.
+func isRootObject(markers []marker) bool {
+	for _, m := range markers {
+		switch m.name {
+		case rootMarker:
+			if m.hasValue && !isTrue(m.rawValue) {
+				continue
+			}
+			return true
+		case legacyRootMarker:
+			if strings.TrimSpace(m.rawValue) == runtimeObject {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// isTrue reports whether a marker value spells the boolean true.
+//
+// Only the lowercase spelling counts, because that is the only one that can reach
+// here: controller-tools' own marker scanner (pkg/markers) parses a bool as the Go
+// literal "true" or "false" and errors on anything else, so a type written
+// "object:root=True" fails generation before the enricher sees the document.
+// Accepting more would make this the only place in the toolchain where such a
+// value means something.
+//
+// A value-less marker is true by convention, which isRootObject handles before
+// calling this.
+func isTrue(raw string) bool {
+	return strings.TrimSpace(raw) == "true"
+}
 
 // marker is a single parsed comment marker, for example
 // "+crd-enricher:deckhouse:documentation:default=3m".
@@ -176,6 +283,18 @@ type marker struct {
 // node or to the CRD.
 func (m marker) isDoc() bool {
 	return m.enricher
+}
+
+// hasEnricherMarker reports whether the slice holds a marker the enricher acts
+// on. Everything else in it -- +optional, the kubebuilder markers -- belongs to
+// another generator, so its presence is not a reason to say anything.
+func hasEnricherMarker(markers []marker) bool {
+	for _, m := range markers {
+		if m.isDoc() {
+			return true
+		}
+	}
+	return false
 }
 
 // parseMarkerLine turns a single trimmed comment line into a marker. The
@@ -257,14 +376,4 @@ func commentLines(text string) []string {
 	default:
 		return []string{text}
 	}
-}
-
-// hasMarker reports whether the slice contains a marker with the given name.
-func hasMarker(markers []marker, name string) bool {
-	for _, m := range markers {
-		if m.name == name {
-			return true
-		}
-	}
-	return false
 }

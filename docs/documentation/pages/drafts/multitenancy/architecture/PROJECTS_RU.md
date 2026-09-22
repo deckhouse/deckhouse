@@ -11,7 +11,7 @@ lang: ru
 > - Алгоритмы, структуры данных, интерфейсы.
 > - Детали реализации.
 
-В данном разделе описаны детали реализации [проектов](../concepts/glossary.html#проект) в Deckhouse Kubernetes Platform (DKP).
+В данном разделе описаны детали реализации [проектов](../concepts/glossary.html#проект) в Deckhouse Platform (DP).
 
 ## Механизмы изоляции
 
@@ -27,9 +27,9 @@ lang: ru
 
 [Проекты](../concepts/glossary.html#проект) добавляют разграничение доступа пользователей к различным **возможностям проекта (Project Features)** внутри экосистемы Deckhouse. Для каждого проекта можно задать определённый уровень доступа:
 
-- Deckhouse Kubernetes Platform;
+- Deckhouse Platform;
 - Deckhouse Virtualization Platform;
-- Deckhouse Kubernetes Platform + Deckhouse Virtualization Platform.
+- Deckhouse Platform + Deckhouse Virtualization Platform.
 
 Таким образом, проекты определяют, кто и как может использовать возможности экосистемы Deckhouse, обеспечивая как безопасность, так и удобство при совместной работе над инфраструктурой.
 

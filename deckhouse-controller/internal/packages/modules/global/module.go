@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -30,14 +29,12 @@ import (
 	"github.com/ettle/strcase"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
-	"github.com/goccy/go-yaml"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -50,6 +47,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -189,18 +187,14 @@ func (m *Module) GetPath() string {
 	return m.path
 }
 
-// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
-// If include is provided, only hooks matching those names are included.
-func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]any)
-	for _, h := range m.hooks.GetHooks() {
-		if len(include) == 0 || slices.Contains(include, h.GetName()) {
-			d[h.GetName()] = h.GetHookController().SnapshotsDump()
-		}
+// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+func (m *Module) GetHookSnapshotsDump() map[string]any {
+	snapshots := make(map[string]any)
+	for _, hook := range m.hooks.GetHooks() {
+		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshots
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -229,17 +223,14 @@ func (m *Module) GetValues() addonutils.Values {
 }
 
 // ValidateSettings converts settings to the latest schema version (if a converter
-// is available and settingsVersion > 0), then validates against OpenAPI schema.
+// is available), then validates against OpenAPI schema.
 func (m *Module) ValidateSettings(_ context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
-	// Convert to latest schema version before validation
-	if m.converter != nil && settingsVersion > 0 {
-		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
-		if err != nil {
-			return settingscheck.Result{}, fmt.Errorf("convert settings: %w", err)
-		}
+	settings, err := m.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return settingscheck.Result{}, err
 	}
-	if err := m.values.ValidateSettings(settings); err != nil {
+
+	if err = m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
 
@@ -259,15 +250,41 @@ func (m *Module) ValidateSettings(_ context.Context, settingsVersion int, settin
 // ApplySettings converts settings to the latest schema version (if a converter
 // is available), then applies them to the values storage.
 func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) error {
-	// Convert to latest schema version before applying
-	if m.converter != nil && settingsVersion > 0 {
-		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
-		if err != nil {
-			return fmt.Errorf("convert settings: %w", err)
-		}
+	settings, err := m.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return err
 	}
+
 	return m.values.ApplySettings(settings)
+}
+
+// convertSettings converts settings to the latest schema version, as it does for a
+// module: global carries conversions of its own (x-config-version 2), so a
+// ModuleConfig that omits spec.version must go through the chain all the same.
+// A zero settingsVersion is therefore read as version 1 - the chain is what
+// materializes fields the latest schema requires, so skipping it leaves an
+// unversioned config permanently invalid.
+func (m *Module) convertSettings(settingsVersion int, settings addonutils.Values) (addonutils.Values, error) {
+	if m.converter == nil {
+		return settings, nil
+	}
+
+	if settingsVersion == 0 {
+		settingsVersion = 1
+	}
+
+	// the converter skips a nil document, and an absent spec.settings is exactly
+	// the case the chain has to fill in
+	if settings == nil {
+		settings = addonutils.Values{}
+	}
+
+	_, converted, err := m.converter.ConvertToLatest(settingsVersion, settings)
+	if err != nil {
+		return nil, fmt.Errorf("convert settings: %w", err)
+	}
+
+	return converted, nil
 }
 
 // GetSettings returns the effective settings: user config merged with

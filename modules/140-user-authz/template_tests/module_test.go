@@ -18,6 +18,8 @@ package template_tests
 
 import (
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -32,103 +34,35 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-const (
-	customClusterRolesFlat = `---
-admin:
-  - cert-manager:user-authz:user
-editor:
-- cert-manager:user-authz:editor
-`
-
-	testCLusterRoleCRDsWithLimitNamespaces = `---
-- name: testenev
-  spec:
-    accessLevel: Admin
-    allowScale: true
-    limitNamespaces:
-    - default
-    - .*
-    subjects:
-    - kind: User
-      name: Efrem Testenev
-    additionalRoles:
-    - apiGroup: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: cluster-write-all
-`
-
-	testCLusterRoleCRDsWithAllowAccessToSystemNamespaces = `---
-- name: testenev
-  spec:
-    accessLevel: Admin
-    allowScale: true
-    allowAccessToSystemNamespaces: true
-    subjects:
-    - kind: User
-      name: Efrem Testenev
-    additionalRoles:
-    - apiGroup: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: cluster-write-all
-`
-
-	// Mirrors the config.json rendered by webhook/configmap.yaml: CARs in
-	// "crds", ARs in "ars".
-	testCLusterRoleCRDsWithCRDsKey = `---
-crds:
-  - name: testenev
-    spec:
-      accessLevel: Admin
-      allowScale: true
-      limitNamespaces:
-      - default
-      - .*
-      subjects:
-      - kind: User
-        name: Efrem Testenev
-      additionalRoles:
-      - apiGroup: rbac.authorization.k8s.io
-        kind: ClusterRole
-        name: cluster-write-all
-ars:
-  - name: testenev-namespaced
-    namespace: testenv
-    spec:
-      accessLevel: Editor
-      allowScale: true
-      subjects:
-      - kind: User
-        name: Namespace Testenev
-`
-
-	testRoleCRDs = `---
-- name: testenev-namespaced
-  namespace: testenv
-  spec:
-    accessLevel: Editor
-    allowScale: true
-    subjects:
-      - kind: User
-        name: Namespace Testenev
-`
-)
-
-var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCLusterRoleCRDsWithCRDsKey))
-
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
+	// The BE-edition templates live under ee/be; link them into the module so the render covers
+	// them. Paths are derived from this file rather than from the hardcoded /deckhouse checkout
+	// path. Note that the suite still needs the CI layout: charts/helm_lib is a symlink to
+	// /deckhouse/helm_lib, which does not exist in a plain local checkout.
+	_, thisFile, _, _ := runtime.Caller(0)
+	moduleDir := filepath.Join(filepath.Dir(thisFile), "..")
+	repoRoot := filepath.Join(moduleDir, "..", "..")
+
+	// relink replaces whatever is at link (a symlink left by an interrupted run) with a symlink to
+	// target, so the suite does not fail on its own leftovers.
+	relink := func(target, link string) {
+		if err := os.Remove(link); err != nil && !os.IsNotExist(err) {
+			Expect(err).ShouldNot(HaveOccurred())
+		}
+		Expect(os.Symlink(target, link)).ShouldNot(HaveOccurred())
+	}
+
 	BeforeSuite(func() {
-		err := os.Symlink("/deckhouse/ee/be/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/be/modules/140-user-authz/templates/permission-browser-apiserver", "/deckhouse/modules/140-user-authz/templates/permission-browser-apiserver")
-		Expect(err).ShouldNot(HaveOccurred())
+		relink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/webhook"), filepath.Join(moduleDir, "templates/webhook"))
+		relink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/permission-browser-apiserver"), filepath.Join(moduleDir, "templates/permission-browser-apiserver"))
 	})
 
 	AfterSuite(func() {
-		err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
+		err := os.Remove(filepath.Join(moduleDir, "templates/webhook"))
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Remove("/deckhouse/modules/140-user-authz/templates/permission-browser-apiserver")
+		err = os.Remove(filepath.Join(moduleDir, "templates/permission-browser-apiserver"))
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -139,13 +73,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		// Ensure the root userAuthz object exists (some EE templates access .Values.userAuthz.* directly).
 		f.ValuesSet("userAuthz.enableMultiTenancy", false)
 
-		// Minimal defaults to avoid nil-pointer panics in EE templates when rendering without explicitly
-		// setting all userAuthz.internal.* values in a particular test context.
-		// - webhook/configmap.yaml iterates over .Values.userAuthz.internal.clusterAuthRuleCrds even when enableMultiTenancy=false
-		// - webhook/secret.yaml requires webhookCertificate when enableMultiTenancy=true
-		f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", `[]`)
-		f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", `[]`)
-		f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", `{}`)
+		// webhook/secret.yaml requires webhookCertificate when enableMultiTenancy=true.
 
 		f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
 		f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
@@ -159,12 +87,36 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
 	})
 
+	Context("With enabledMultiTenancy and highAvailability", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus"]`)
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+			f.ValuesSet("global.highAvailability", true)
+			f.ValuesSet("userAuthz.enableMultiTenancy", true)
+			f.HelmRender()
+		})
+
+		// In HA the aggregated API server keeps two replicas and rolls them one at a time with no
+		// surge, as before; the existing budget (maxUnavailable 1) keeps one of them through
+		// voluntary disruptions.
+		It("Should keep two permission-browser replicas and one always available", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
+			Expect(deployment.Field("spec.strategy.rollingUpdate.maxSurge").Int()).To(BeEquivalentTo(0))
+			Expect(deployment.Field("spec.strategy.rollingUpdate.maxUnavailable").Int()).To(BeEquivalentTo(1))
+
+			pdb := f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "permission-browser-apiserver")
+			Expect(pdb.Exists()).To(BeTrue())
+			Expect(pdb.Field("spec.maxUnavailable").Int()).To(BeEquivalentTo(1))
+		})
+	})
+
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
-			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
-			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
-			f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", customClusterRolesFlat)
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus"]`)
 
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
@@ -182,139 +134,154 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.HelmRender()
 		})
 
-		It("Should create a ClusterRoleBinding for each additionalRole", func() {
+		It("Should render the RBACv2 role and capability framework", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:additional-role:cluster-write-all")
-			Expect(crb.Exists()).To(BeTrue())
+			systemRole := f.KubernetesGlobalResource("ClusterRole", "d8:system:manager")
+			Expect(systemRole.Exists()).To(BeTrue())
+			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("role"))
+			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/scope`).String()).To(Equal("system"))
+			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/use-role`).String()).To(Equal("admin"))
+			Expect(systemRole.Field("aggregationRule.clusterRoleSelectors").Array()).ToNot(BeEmpty())
 
-			Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-write-all"))
-			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+			subsystemRole := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:networking:viewer")
+			Expect(subsystemRole.Exists()).To(BeTrue())
+			Expect(subsystemRole.Field(`metadata.labels.rbac\.deckhouse\.io/scope`).String()).To(Equal("subsystem"))
+			Expect(subsystemRole.Field(`metadata.labels.rbac\.deckhouse\.io/subsystem`).String()).To(Equal("networking"))
+
+			for _, name := range []string{
+				"d8:namespace:viewer", "d8:namespace:user", "d8:namespace:manager", "d8:namespace:admin", "d8:namespace:superadmin",
+			} {
+				namespaceRole := f.KubernetesGlobalResource("ClusterRole", name)
+				Expect(namespaceRole.Exists()).To(BeTrue(), "expected ClusterRole %s to be rendered", name)
+				Expect(namespaceRole.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("role"))
+				Expect(namespaceRole.Field(`metadata.labels.rbac\.deckhouse\.io/scope`).String()).To(Equal("namespace"))
+				Expect(namespaceRole.Field(`metadata.labels.rbac\.deckhouse\.io/delegatable`).String()).To(Equal("true"))
+				Expect(namespaceRole.Field("rules").Array()).To(BeEmpty())
+			}
+
+			capability := f.KubernetesGlobalResource("ClusterRole", "d8:namespace-capability:kubernetes:view_resources")
+			Expect(capability.Exists()).To(BeTrue())
+			Expect(capability.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("capability"))
+			Expect(capability.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-namespace-as`).String()).To(Equal("viewer"))
+			Expect(capability.Field("rules").Array()).ToNot(BeEmpty())
+			Expect(capability.Field(`metadata.annotations.en\.meta\.deckhouse\.io/title`).String()).ToNot(BeEmpty())
+			Expect(capability.Field(`metadata.annotations.ru\.meta\.deckhouse\.io/title`).String()).ToNot(BeEmpty())
+
+			dict := f.KubernetesGlobalResource("ClusterRole", "d8:dict")
+			Expect(dict.Exists()).To(BeTrue())
+
+			// The legacy role names are kept for one release as deprecated compatibility aliases so
+			// existing bindings to them keep working; they must carry the deprecation marker.
+			legacyManage := f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:manager")
+			Expect(legacyManage.Exists()).To(BeTrue())
+			Expect(legacyManage.Field(`metadata.labels.rbac\.deckhouse\.io/deprecated`).String()).To(Equal("true"))
+			// an alias repeats the can-assign range of its target, so holders of the old name keep
+			// the right to assign roles for the compatibility release
+			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-scope`).String()).To(Equal("system"))
+			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("admin"))
+			legacySecurity := f.KubernetesGlobalResource("ClusterRole", "d8:manage:security:manager")
+			Expect(legacySecurity.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).String()).To(Equal("security"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:viewer").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-basic-max`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:system:superadmin").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("superadmin"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:security:superadmin").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).String()).To(Equal("security"))
+			legacyUse := f.KubernetesGlobalResource("ClusterRole", "d8:use:role:admin")
+			Expect(legacyUse.Exists()).To(BeTrue())
+			Expect(legacyUse.Field(`metadata.labels.rbac\.deckhouse\.io/deprecated`).String()).To(Equal("true"))
+			// a use-role alias stays delegatable (existing RoleBindings keep working) but may not be
+			// the target of a NEW project role binding: the webhooks read this annotation
+			Expect(legacyUse.Field(`metadata.labels.rbac\.deckhouse\.io/delegatable`).String()).To(Equal("true"))
+			Expect(legacyUse.Field(`metadata.annotations.rbac\.deckhouse\.io/disabled-for-direct-use-in-projects`).String()).To(Equal("true"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:role:admin:kubernetes").Field(`metadata.annotations.rbac\.deckhouse\.io/disabled-for-direct-use-in-projects`).String()).To(Equal("true"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:namespace:admin").Field(`metadata.annotations.rbac\.deckhouse\.io/disabled-for-direct-use-in-projects`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:manager").Field(`metadata.annotations.rbac\.deckhouse\.io/disabled-for-direct-use-in-projects`).Exists()).To(BeFalse())
+
+			// d8:use:dict has no alias: its bindings are migrated to d8:dict by the dict-bindings hook.
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:dict").Exists()).To(BeFalse())
 		})
 
-		It("Should create a ClusterRoleBinding to an appropriate ClusterRole", func() {
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin")
-			Expect(crb.Exists()).To(BeTrue())
-
-			Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:admin"))
-			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+		It("Should create aggregated custom ClusterRoles with cascading selectors and no rules of their own", func() {
+			levels := []string{"User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin"}
+			names := []string{"user", "privileged-user", "editor", "admin", "cluster-editor", "cluster-admin"}
+			for i, name := range names {
+				role := f.KubernetesGlobalResource("ClusterRole", "user-authz:"+name+":custom")
+				Expect(role.Exists()).To(BeTrue(), name)
+				Expect(role.Field("rules").Exists()).To(BeFalse(), "%s: rules are owned by the aggregation controller", name)
+				selectors := role.Field("aggregationRule.clusterRoleSelectors").Array()
+				Expect(selectors).To(HaveLen(i+1), name)
+				for j, selector := range selectors {
+					Expect(selector.Get("matchLabels.user-authz\\.deckhouse\\.io/access-level").String()).To(Equal(levels[j]), name)
+				}
+			}
 		})
 
-		It("Should create a RoleBinding to an appropriate Role", func() {
-			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor")
-			Expect(rb.Exists()).To(BeTrue())
-
-			Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:editor"))
-			Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
+		It("Should not render bindings for rules: user-authz-controller owns them", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:additional-role:cluster-write-all").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor").Exists()).To(BeFalse())
 		})
 
-		It("Should create additional ClusterRoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom-cluster-role:cert-manager:user-authz:user")
-			Expect(crb.Exists()).To(BeTrue())
+		It("Should deploy user-authz-controller with its RBAC", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			Expect(crb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:user"))
-			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "user-authz-controller")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.serviceAccountName").String()).To(Equal("controller"))
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("user-authz-controller"))
+			Expect(f.KubernetesResource("ServiceAccount", "d8-user-authz", "controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
+			// The alert rules select job="user-authz-controller": the PodMonitor takes the job name from
+			// the app label of the pods, so both must stay in place.
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "user-authz-controller")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
+			Expect(deployment.Field("spec.template.metadata.labels.app").String()).To(Equal("user-authz-controller"))
+			Expect(deployment.Field("spec.template.spec.containers.0.env").String()).ToNot(ContainSubstring("HA_MODE"))
+			// readyz runs cache-sync and api-access in sequence, 2 s each; the probe must outlast both.
+			Expect(deployment.Field("spec.template.spec.containers.0.readinessProbe.timeoutSeconds").Int()).To(BeNumerically(">=", 5))
+
+			role := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:controller")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules/status"))
+			Expect(role.Field("rules").String()).To(ContainSubstring(`"bind"`))
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:controller").Field("subjects.0.name").String()).To(Equal("controller"))
+
+			// The leader-election lease lives in the module's own namespace, so its grant is a Role
+			// and must not be part of the ClusterRole: cluster-wide, it would let the controller
+			// take over the lease of any other component in the cluster.
+			Expect(role.Field("rules").String()).NotTo(ContainSubstring("leases"))
+			lease := f.KubernetesResource("Role", "d8-user-authz", "controller")
+			Expect(lease.Exists()).To(BeTrue())
+			Expect(lease.Field("rules").String()).To(ContainSubstring("leases"))
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "controller").
+				Field("subjects.0.name").String()).To(Equal("controller"))
 		})
 
-		It("Should create additional RoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-cluster-role:cert-manager:user-authz:editor")
-			Expect(rb.Exists()).To(BeTrue())
+		// The other half of "no component, no alerts": with multi-tenancy on, the components exist
+		// and so must the rules that watch them.
+		It("Should render the alerts of the components multi-tenancy deploys", func() {
+			webhook := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-user-authz-webhook")
+			Expect(webhook.Exists()).To(BeTrue())
+			Expect(webhook.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzWebhookTargetDown"))
 
-			Expect(rb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:editor"))
-			Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
+			browser := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-permission-browser-apiserver")
+			Expect(browser.Exists()).To(BeTrue())
+			Expect(browser.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzPermissionBrowserUnavailable"))
 		})
 
-		Context("portForwarding option is set in a CAR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.portForwarding", true)
-				f.HelmRender()
-			})
-
-			It("Should create a port-forward ClusterRoleBinding", func() {
-				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:port-forward")
-				Expect(crb.Exists()).To(BeTrue())
-
-				Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:port-forward"))
-				Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-				Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
-			})
-		})
-
-		Context("portForwarding option is set in a AR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.authRuleCrds.0.spec.portForwarding", true)
-				f.HelmRender()
-			})
-
-			It("Should create a port-forward RoleBinding", func() {
-				rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:port-forward")
-				Expect(rb.Exists()).To(BeTrue())
-
-				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:port-forward"))
-				Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-				Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
-			})
-		})
-
-		Context("allowScale option is set to true in a CAR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.allowScale", true)
-				f.HelmRender()
-			})
-
-			It("Should create a scale RoleBinding", func() {
-				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:scale")
-				Expect(crb.Exists()).To(BeTrue())
-
-				Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:scale"))
-				Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-				Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
-			})
-		})
-
-		Context("allowScale option is set to true in a AR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.authRuleCrds.0.spec.allowScale", true)
-				f.HelmRender()
-			})
-
-			It("Should create a scale RoleBinding", func() {
-				rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:scale")
-				Expect(rb.Exists()).To(BeTrue())
-
-				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:scale"))
-				Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-				Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
-			})
-		})
-
-		Context("allowScale option is set to false in a CAR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.allowScale", false)
-				f.HelmRender()
-			})
-
-			It("Should not create a scale RoleBinding", func() {
-				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:scale")
-				Expect(crb.Exists()).To(BeFalse())
-			})
-		})
-
-		Context("allowScale option is set to false in a AR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.allowScale", false)
-				f.HelmRender()
-			})
-
-			It("Should not create a scale RoleBinding", func() {
-				rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev:scale")
-				Expect(rb.Exists()).To(BeFalse())
-			})
+		// An instance that is not ready is precisely the one the alerts are about — its rules are
+		// unlisted or no longer tracking the cluster. Dropping it from the scrape would leave
+		// RulesNotSynced, RulesWatchErrors, DirectoryDiverged and RulePropagationLag blind at the
+		// moment each became true.
+		It("Should scrape instances that are not ready", func() {
+			for _, name := range []string{"user-authz-webhook", "permission-browser-apiserver"} {
+				pm := f.KubernetesResource("PodMonitor", "d8-monitoring", name)
+				Expect(pm.Exists()).To(BeTrue())
+				Expect(pm.Field("spec.podMetricsEndpoints").String()).
+					NotTo(ContainSubstring("pod_ready"), "PodMonitor %s must not drop unready pods", name)
+			}
 		})
 
 		It("Should deploy authorization webhook and supporting objects", func() {
@@ -323,8 +290,14 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "apiserver-authentication-requestheader-client-ca").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Secret", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
 
-			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCRDsKeyJSON))
+			// The rendered config.json is gone: both consumers read the rules from the API. Its
+			// absence is asserted rather than merely unmentioned, because bringing it back would
+			// quietly restore a second, slower source of the same truth.
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook").
+				Field("spec.template.spec.volumes").String()).NotTo(ContainSubstring("user-authz-webhook-config"))
+			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").
+				Field("spec.template.spec.volumes").String()).NotTo(ContainSubstring("user-authz-webhook-config"))
 
 			// Mirrors enableMultiTenancy for the multitenancy.py validating webhook — rendered
 			// in the same block (and thus the same apply) as the namespace above.
@@ -373,6 +346,132 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(manifest).To(ContainSubstring("hostPorts:"))
 			Expect(manifest).To(ContainSubstring("port: 40443"))
 			Expect(manifest).To(ContainSubstring("protocol: TCP"))
+		})
+
+		It("Should probe the webhook without depending on the API server for liveness", func() {
+			ds := f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook")
+			Expect(ds.Exists()).To(BeTrue())
+
+			// Every probe needs an explicit timeout: /healthcheck talks over the network, and the
+			// kubelet's default for an exec probe is one second.
+			for _, probe := range []string{"livenessProbe", "readinessProbe"} {
+				field := "spec.template.spec.containers.0." + probe
+				Expect(ds.Field(field).Exists()).To(BeTrue(), probe)
+				Expect(ds.Field(field+".timeoutSeconds").Int()).To(BeNumerically(">=", 5), probe)
+			}
+
+			// Liveness must ask the local question and readiness the one that involves the API
+			// server; swapping them is what let the kubelet kill the webhook during an API server
+			// restart.
+			Expect(ds.Field("spec.template.spec.containers.0.livenessProbe.exec.command").String()).To(ContainSubstring("healthz"))
+			Expect(ds.Field("spec.template.spec.containers.0.readinessProbe.exec.command").String()).To(ContainSubstring("readyz"))
+
+			// And there must be no startupProbe. It ran readyz, which needs the API server, and
+			// killed the container after five minutes of it failing - so a master coming back
+			// without its API server yet put the fail-closed authorizer into CrashLoopBackOff.
+			// It guarded nothing: liveness asks healthz, which answers from the process alone.
+			Expect(ds.Field("spec.template.spec.containers.0.startupProbe").Exists()).To(BeFalse())
+
+			// The metrics sidecar needs the same explicit timeout: a flapping sidecar makes the
+			// Pod unready, which holds the rollout of the whole DaemonSet.
+			for _, probe := range []string{"livenessProbe", "readinessProbe"} {
+				field := "spec.template.spec.containers.1." + probe
+				Expect(ds.Field(field).Exists()).To(BeTrue(), probe)
+				Expect(ds.Field(field+".timeoutSeconds").Int()).To(BeNumerically(">=", 5), probe)
+			}
+		})
+
+		It("Should expose the webhook metrics for Prometheus", func() {
+			ds := f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook")
+			Expect(ds.Exists()).To(BeTrue())
+
+			// The webhook serves metrics on 127.0.0.1 and the sidecar publishes them on the node.
+			Expect(ds.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			Expect(ds.Field("spec.template.spec.containers.1.ports.0.containerPort").Int()).To(Equal(int64(4233)))
+			Expect(ds.Field("spec.template.spec.containers.1.ports.0.name").String()).To(Equal("https-metrics"))
+			Expect(ds.Field("spec.template.spec.containers.1.args").String()).To(ContainSubstring(":4233"))
+			Expect(ds.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("http://127.0.0.1:4243/metrics"))
+			// The sidecar authorizes scrapers against the virtual subresource granted in rbac-to-us.
+			Expect(ds.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("prometheus-metrics"))
+			role := f.KubernetesResource("Role", "d8-user-authz", "access-to-webhook-prometheus-metrics")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(ContainSubstring("daemonsets/prometheus-metrics"))
+			Expect(role.Field("rules").String()).To(ContainSubstring("user-authz-webhook"))
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "access-to-webhook-prometheus-metrics").Exists()).To(BeTrue())
+			// The sidecar needs d8:rbac-proxy to ask the API server about the scraper.
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:webhook:rbac-proxy").Exists()).To(BeTrue())
+
+			// The alert rules select job="user-authz-webhook": the PodMonitor takes the job name from
+			// the app label of the pods, so both must stay in place.
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "user-authz-webhook")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
+			Expect(podMonitor.Field("spec.podMetricsEndpoints.0.port").String()).To(Equal("https-metrics"))
+			Expect(ds.Field("spec.template.metadata.labels.app").String()).To(Equal("user-authz-webhook"))
+
+			rule := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-user-authz-webhook")
+			Expect(rule.Exists()).To(BeTrue())
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzWebhookRulesQuarantined"))
+			// Field().String() hands back JSON, so the selector's quotes arrive escaped.
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring(`job=\"user-authz-webhook\"`))
+		})
+
+		// A rollout of the single non-HA replica used to take the aggregated API down: the strategy
+		// was hardcoded to maxSurge 0 / maxUnavailable 1, so the only pod was removed before its
+		// replacement existed and the APIService had no endpoints for the whole restart (16 s
+		// measured). Without HA the Deployment now keeps the default strategy, which surges first.
+		It("Should roll permission-browser without taking its API down when there is one replica", func() {
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
+			Expect(deployment.Field("spec.strategy").Exists()).To(BeFalse(),
+				"no strategy at all: the Deployment default surges a pod before removing the old one; an explicit Recreate would take the API down harder")
+
+			// The budget the chart already carries: with one replica it permits the eviction of
+			// that replica, which is the same as a minAvailable of zero.
+			pdb := f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "permission-browser-apiserver")
+			Expect(pdb.Exists()).To(BeTrue())
+			Expect(pdb.Field("spec.maxUnavailable").Int()).To(BeEquivalentTo(1))
+		})
+
+		It("Should expose the permission-browser metrics for Prometheus", func() {
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			// The apiserver's own port is behind the aggregation layer, so the metrics come out of a
+			// loopback endpoint through the sidecar instead.
+			Expect(deployment.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			Expect(deployment.Field("spec.template.spec.containers.1.ports.0.containerPort").Int()).To(Equal(int64(4276)))
+			Expect(deployment.Field("spec.template.spec.containers.1.ports.0.name").String()).To(Equal("https-metrics"))
+			// The upstream is a different port from the one the sidecar listens on. They used to be
+			// the same number, which works only because one is bound to the pod IP and the other to
+			// loopback: a sidecar told to listen on 0.0.0.0 would collide with the apiserver's own
+			// listener and proxy to itself.
+			Expect(deployment.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("http://127.0.0.1:4277/metrics"))
+			Expect(deployment.Field("spec.template.spec.containers.1.env").String()).NotTo(ContainSubstring("http://127.0.0.1:4276/metrics"))
+
+			role := f.KubernetesResource("Role", "d8-user-authz", "access-to-permission-browser-apiserver-prometheus-metrics")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(ContainSubstring("deployments/prometheus-metrics"))
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "access-to-permission-browser-apiserver-prometheus-metrics").Exists()).To(BeTrue())
+
+			// The alert rules select job="permission-browser-apiserver"; the PodMonitor takes the job
+			// name from the app label of the pods.
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "permission-browser-apiserver")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
+			Expect(deployment.Field("spec.template.metadata.labels.app").String()).To(Equal("permission-browser-apiserver"))
+		})
+
+		It("Should let the webhook and permission-browser watch the ClusterAuthorizationRules", func() {
+			// Both read the multi-tenancy options straight from the rules instead of a rendered file.
+			webhookRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:webhook")
+			Expect(webhookRole.Exists()).To(BeTrue())
+			Expect(webhookRole.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules"))
+
+			browserRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:permission-browser-apiserver")
+			Expect(browserRole.Exists()).To(BeTrue())
+			Expect(browserRole.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules"))
 		})
 
 		It("Should deploy permission-browser-apiserver and supporting objects", func() {
@@ -425,15 +524,55 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
-	Context("With CAR (incl. limitNamespaces) and not enabledMultiTenancy", func() {
+	// Both of these contexts used to be named for a ClusterAuthorizationRule they set up through
+	// userAuthz.internal.crds. The rules do not travel through values any more - the webhook reads
+	// them from the API - so the setup quietly became empty and the two tests rendered the
+	// defaults, twice, under names that promised otherwise. What is still true and worth pinning
+	// is what multi-tenancy being off does to the render, so that is what this checks, once.
+	Context("With multi-tenancy off", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.HelmRender()
 		})
 
-		It("Helm should fail", func() {
-			Expect(f.RenderError).Should(HaveOccurred())
-			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources."))
+		// A rule whose multi-tenancy options cannot take effect used to stop the whole module from
+		// rendering. One rule, which anybody allowed to create them can write, then froze every
+		// other change to the module, and the message reached only whoever read the release logs.
+		// The condition is reported by the alert_multitenancy_disabled hook instead.
+		It("Should render, and deploy nothing that enforces the options that cannot take effect", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook").Exists()).To(BeFalse(),
+				"the webhook that would enforce those options is not deployed with multi-tenancy off")
+			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeFalse(),
+				"and neither is the apiserver that reports them")
+			// Their PodMonitors go with them: a scrape target for a component that is not there is
+			// what made the TargetDown alerts fire on every cluster with the default settings.
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "user-authz-webhook").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "permission-browser-apiserver").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Without enabledMultiTenancy", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+			f.HelmRender()
+		})
+
+		// user-authz-controller is rendered whether or not MultiTenancy is on, so the objects
+		// it needs — the namespace it lives in and the secret it pulls its image with — have
+		// to be unconditional as well. While they were gated, the release could not converge:
+		// server-side apply rejected the controller with `namespaces "d8-user-authz" not found`.
+		It("Should create the namespace and registry secret the controller needs", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesGlobalResource("Namespace", "d8-user-authz").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-user-authz", "deckhouse-registry").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
+		})
+
+		It("Should not mirror the multitenancy state, so the webhook reads it as disabled", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "d8-user-authz-multitenancy-state").Exists()).To(BeFalse())
 		})
 	})
 
@@ -516,10 +655,20 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated").Exists()).To(BeFalse())
 			})
 
-			It("Should render permission-browser availability alert", func() {
-				rule := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-permission-browser-apiserver")
-				Expect(rule.Exists()).To(BeTrue())
-				Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzPermissionBrowserUnavailable"))
+			// The alerts must NOT be installed here. Permission Browser and the authorization
+			// webhook are rendered only with multi-tenancy on, and these rules used to be plain
+			// YAML shipped either way — so on every cluster with the default
+			// enableMultiTenancy: false there was no target to scrape, absent(up{...}) stayed
+			// true, and TargetDown fired permanently five minutes after install. An alert about a
+			// component that is not deployed is noise by construction.
+			It("Should not render alerts about components multi-tenancy does not deploy", func() {
+				for _, name := range []string{
+					"user-authz-permission-browser-apiserver",
+					"user-authz-user-authz-webhook",
+				} {
+					Expect(f.KubernetesResource("PrometheusRule", "d8-system", name).Exists()).
+						To(BeFalse(), "PrometheusRule %s must not exist without multi-tenancy", name)
+				}
 			})
 		})
 
@@ -662,19 +811,25 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
-	Context("With CAR (incl. limitNamespaces) and not enabledMultiTenancy", func() {
+	Context("namespaces/finalize access", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithAllowAccessToSystemNamespaces)
 			f.HelmRender()
 		})
 
-		It("Helm should fail", func() {
-			Expect(f.RenderError).Should(HaveOccurred())
-			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources."))
+		It("user-authz:cluster-admin should have namespaces/finalize access", func() {
+			cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:cluster-admin")
+			Expect(cr.Exists()).To(BeTrue())
+			Expect(cr.Field("rules").String()).To(ContainSubstring("namespaces/finalize"))
+		})
+
+		It("user-authz:cluster-editor should not have namespaces/finalize access", func() {
+			cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:cluster-editor")
+			Expect(cr.Exists()).To(BeTrue())
+			Expect(cr.Field("rules").String()).NotTo(ContainSubstring("namespaces/finalize"))
 		})
 	})
 
-	Context("RBACv2 manage permission roles", func() {
+	Context("RBACv2 subsystem capabilities", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
 			f.ValuesSet("global.deckhouseEdition", "EE")
@@ -684,7 +839,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		It("view_resources should not grant any node subresource", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			cr := f.KubernetesGlobalResource("ClusterRole", "d8:manage:permission:subsystem:kubernetes:view_resources")
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem-capability:kubernetes:view_resources")
 			Expect(cr.Exists()).To(BeTrue())
 
 			rules := cr.Field("rules").String()

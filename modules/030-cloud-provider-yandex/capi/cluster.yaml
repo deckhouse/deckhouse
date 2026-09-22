@@ -1,15 +1,18 @@
-{{- $zoneToSubnetIdMap := .Values.nodeManager.internal.cloudProvider.yandex.zoneToSubnetIdMap -}}
-{{- $defaultZone := first (keys $zoneToSubnetIdMap | sortAlpha) -}}
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-kind: YandexCluster
-metadata:
-  name: {{ .clusterName | default "yandex" | quote }}
-  namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
-spec:
-  folderID: {{ .Values.nodeManager.internal.cloudProvider.yandex.folderID | quote }}
-  loadBalancer:
-    type: "ALB"
-    listener:
-      subnet:
-        id: {{ index $zoneToSubnetIdMap $defaultZone | quote }}
+version: v1
+template: |
+  {{- $zoneToSubnetIDMap := .provider.zoneToSubnetIdMap | required "provider.zoneToSubnetIdMap is required" }}
+  {{- $defaultZone := first (keys $zoneToSubnetIDMap | sortAlpha) }}
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: YandexCluster
+  metadata:
+    name: {{ .cluster.name | quote }}
+    namespace: {{ .cluster.namespace | quote }}
+    labels:
+      app: capi-controller-manager
+  spec:
+    folderID: {{ .provider.folderID | quote }}
+    loadBalancer:
+      type: "ALB"
+      listener:
+        subnet:
+          id: {{ index $zoneToSubnetIDMap $defaultZone | quote }}

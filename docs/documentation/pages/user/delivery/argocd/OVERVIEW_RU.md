@@ -1,7 +1,7 @@
 ---
 title: "Доставка приложений с помощью Argo CD"
 permalink: ru/user/delivery/argocd/
-description: "Доставка приложений с помощью Argo CD в Deckhouse Kubernetes Platform."
+description: "Доставка приложений с помощью Argo CD в Deckhouse Platform."
 lang: ru
 search: argocd, доставка приложений
 relatedLinks:
@@ -11,13 +11,13 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-В этом разделе описано, как организовать доставку приложений с помощью Argo CD в Deckhouse Kubernetes Platform (DKP).
+В этом разделе описано, как организовать доставку приложений с помощью Argo CD в Deckhouse Platform (DP).
 
 Argo CD позволяет описывать приложения декларативно и синхронизировать их состояние с содержимым Git-репозитория.
 Пользователь задаёт источник манифестов, целевой кластер, неймспейс и параметры синхронизации,
 после чего Argo CD развёртывает приложение и поддерживает его в целевом состоянии.
 
-В DKP экземпляры Argo CD разворачиваются с помощью модуля [operator-argo](/modules/operator-argo/).
+В DP экземпляры Argo CD разворачиваются с помощью модуля [operator-argo](/modules/operator-argo/).
 Работа с Argo CD обычно включает:
 
 - создание или использование существующего объекта [AppProject](/modules/operator-argo/cr.html#appproject);
@@ -25,6 +25,10 @@ Argo CD позволяет описывать приложения деклар�
 - создание объекта [Application](/modules/operator-argo/cr.html#application), описывающего источник приложения и правила синхронизации;
 - создание приложения через веб-интерфейс Argo CD;
 - создание приложения с помощью CLI-утилиты `argocd`.
+
+{% alert level="info" %}
+Вы можете скачать CLI-утилиту `argocd` в разделе «Documentation» веб-интерфейса Argo CD. Инструкцию по работе с CLI-утилитой можно получить, выполнив `argocd --help`.
+{% endalert %}
 
 ## Предварительные условия
 

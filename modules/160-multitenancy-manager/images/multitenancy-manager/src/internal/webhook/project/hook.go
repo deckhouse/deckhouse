@@ -18,42 +18,49 @@ package project
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
 
-	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
-	"controller/internal/helm"
+	"controller/apis/deckhouse.io/v1alpha3"
 	projectmanager "controller/internal/manager/project"
 	"controller/internal/validate"
+	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
 
-func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
-	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), helmClient: helmClient}}
-	runtimeManager.GetWebhookServer().Register("/validate/v1alpha2/projects", hook)
+func Register(runtimeManager manager.Manager) {
+	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient()}}
+	runtimeManager.GetWebhookServer().Register("/validate/v1alpha3/projects", hook)
 }
 
 type validator struct {
-	client     client.Client
-	helmClient *helm.Client
+	client client.Client
 }
 
-func (v *validator) Handle(_ context.Context, req admission.Request) admission.Response {
-	project := new(v1alpha2.Project)
+func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	project := new(v1alpha3.Project)
 	if err := yaml.Unmarshal(req.Object.Raw, project); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
+
+	// Only the controller/Deckhouse may perform privileged operations: auto-wrapping an existing
+	// namespace into a managed-by-namespace project (Create) and editing a managed-by-namespace
+	// project (Update). system:masters never reaches this handler at all: the webhook's
+	// matchConditions skip it at the API server (templates/admission/validation.yaml).
+	privileged := req.UserInfo.Username == rolebindingwebhook.ControllerServiceAccount ||
+		req.UserInfo.Username == rolebindingwebhook.DeckhouseServiceAccount
 
 	if req.Operation == admissionv1.Create {
 		// pass virtual projects
@@ -65,33 +72,65 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 			return admission.Denied("Projects cannot start with 'd8-' or 'kube-'")
 		}
 
-		namespaces := new(corev1.NamespaceList)
-		if err := v.client.List(context.Background(), namespaces); err != nil {
+		// The project's main namespace is named after the project, so a single Get is enough; a full
+		// namespace List would scan the whole cluster on every project create.
+		namespace := new(corev1.Namespace)
+		switch err := v.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace); {
+		case err == nil:
+			// The controller adopts every namespace that belongs to no project, so a same-name
+			// namespace is expected when the request comes from the controller itself. A user still
+			// cannot claim an existing namespace by creating a project over it.
+			if !privileged {
+				return admission.Denied(fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name))
+			}
+		case !apierrors.IsNotFound(err):
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		for _, namespace := range namespaces.Items {
-			if namespace.Name == project.Name {
-				if _, ok := namespace.Annotations[v1alpha2.NamespaceAnnotationAdopt]; ok {
-					continue
-				}
 
-				msg := fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name)
-				return admission.Denied(msg)
+		// prefix collisions: the "<project>-*" name space is reserved for the additional namespaces
+		// of an existing project, so neither "foo-bar" (when "foo" exists) nor "foo" (when "foo-bar"
+		// exists) may be created.
+		projects := new(v1alpha3.ProjectList)
+		if err := v.client.List(ctx, projects); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		for _, existing := range projects.Items {
+			if existing.Name == project.Name {
+				continue
+			}
+			if strings.HasPrefix(project.Name, existing.Name+"-") {
+				return admission.Denied(fmt.Sprintf(
+					"project name %q conflicts with project %q: %q-* names are reserved for additional namespaces of project %q",
+					project.Name, existing.Name, existing.Name, existing.Name))
+			}
+			if strings.HasPrefix(existing.Name, project.Name+"-") {
+				return admission.Denied(fmt.Sprintf(
+					"project name %q conflicts with project %q: %q-* names are reserved for additional namespaces of project %q",
+					project.Name, existing.Name, project.Name, project.Name))
 			}
 		}
 	}
 
+	// validate the standard fields (cheap checks before the OpenAPI validation)
+	if denied := validateStandardFields(project); denied != "" {
+		return admission.Denied(denied)
+	}
+
 	if req.Operation == admissionv1.Update {
 		// pass triggered projects
-		if annotations := project.Annotations; annotations != nil {
-			require, ok := annotations[v1alpha2.ProjectAnnotationRequireSync]
-			if ok && require == "true" {
-				return admission.Allowed("")
+		if privileged {
+			if annotations := project.Annotations; annotations != nil {
+				if require, ok := annotations[v1alpha3.ProjectAnnotationRequireSync]; ok && require == "true" {
+					return admission.Allowed("")
+				}
 			}
 		}
 
-		// pass error projects
-		if project.Status.State == v1alpha2.ProjectStateError {
+		// pass error projects (the status subresource is controller-managed). Gated to privileged
+		// requests so the controller can keep re-reconciling an already-erroring project, while a
+		// non-privileged user editing such a project still goes through full template/render
+		// validation instead of slipping further invalid spec edits past admission.
+		if privileged && project.Status.State == v1alpha3.ProjectStateError {
 			return admission.Allowed("").WithWarnings("The project skip validation due to the status")
 		}
 	}
@@ -101,7 +140,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		return admission.Allowed("")
 	}
 
-	template, err := v.projectTemplateByName(context.Background(), project.Spec.ProjectTemplateName)
+	template, err := v.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -109,31 +148,82 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		return admission.Allowed("").WithWarnings("The project template not found")
 	}
 
-	// validate the project against the template
+	// validate the project parameters against the template schema. The render itself is not
+	// rehearsed here: a structured template renders from its fields and the resolved parameters,
+	// and both are validated on their own -- the fields by the template webhook, the parameters
+	// just above.
 	if err = validate.Project(project, template); err != nil {
-		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
-	}
-
-	// validate helm render
-	if err = v.helmClient.ValidateRender(project, template); err != nil {
-		// warning errors allow deploying the project
-		if errors.Is(err, helm.ErrNamespaceOverride) {
-			return admission.Allowed("").WithWarnings(err.Error())
-		}
-
 		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
 	}
 
 	return admission.Allowed("")
 }
 
-func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
-	template := new(v1alpha1.ProjectTemplate)
+// byteQuantityUnitRE matches a Kubernetes Quantity that carries an explicit byte-scale unit.
+// Milli/micro/nano suffixes (m/u/n) and bare numbers are intentionally excluded: for memory and
+// storage a bare "5" is 5 bytes, which is almost always a mistake.
+var byteQuantityUnitRE = regexp.MustCompile(`(Ki|Mi|Gi|Ti|Pi|Ei|[kMGTPE])$`)
+
+// validateStandardFields performs cheap validation of the Project standard fields. It returns a
+// non-empty denial message when the project is invalid.
+func validateStandardFields(project *v1alpha3.Project) string {
+	for _, admin := range project.Spec.Administrators {
+		if admin.Kind != "User" && admin.Kind != "Group" {
+			return fmt.Sprintf("administrator %q has invalid kind %q: must be User or Group", admin.Name, admin.Kind)
+		}
+		if admin.Name == "" {
+			return "administrator name must not be empty"
+		}
+	}
+	if msg := validateQuotaByteUnits(project.Spec.Quota); msg != "" {
+		return msg
+	}
+	return ""
+}
+
+// resourceNameRequiresByteUnit reports whether a ResourceQuota hard key is a memory/storage
+// quantity that must include an explicit unit suffix (Gi, Mi, …). hugepages-* are page counts and
+// are left alone; cpu/pods/count/* stay numeric.
+func resourceNameRequiresByteUnit(name corev1.ResourceName) bool {
+	s := string(name)
+	if strings.Contains(s, "hugepages-") {
+		return false
+	}
+	return strings.HasSuffix(s, "memory") || strings.HasSuffix(s, "storage")
+}
+
+func hasByteUnitSuffix(q resource.Quantity) bool {
+	return byteQuantityUnitRE.MatchString(q.String())
+}
+
+func validateQuotaByteUnits(quota corev1.ResourceList) string {
+	for name, quantity := range quota {
+		if !resourceNameRequiresByteUnit(name) {
+			continue
+		}
+		if hasByteUnitSuffix(quantity) {
+			continue
+		}
+		return fmt.Sprintf(
+			"%s must include a unit suffix, e.g. 2Gi (bare numbers are interpreted as bytes)",
+			name,
+		)
+	}
+	return ""
+}
+
+// projectTemplateByName reads the template at v1alpha2, the served version. Asking for v1alpha1 --
+// which this did -- worked only while that version was served: the apiserver converted the stored
+// object on every call, and once v1alpha1 stopped being served the lookup began failing with "no
+// matches for kind ProjectTemplate in version deckhouse.io/v1alpha1", which denied every project write.
+func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1alpha2.ProjectTemplate, error) {
+	template := new(v1alpha2.ProjectTemplate)
 	if err := v.client.Get(ctx, client.ObjectKey{Name: name}, template); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get the '%s' project template: %w", name, err)
 	}
+
 	return template, nil
 }

@@ -34,6 +34,7 @@ type Client struct {
 	taskManagerCtx      context.Context
 	taskManagerCancel   context.CancelFunc
 	tcpCheckRateLimiter workqueue.TypedRateLimiter[string]
+	sshCheckRateLimiter workqueue.TypedRateLimiter[string]
 
 	client   k8sClient.Client
 	recorder *event.Recorder
@@ -47,6 +48,7 @@ func NewClient(recorder *event.Recorder, client k8sClient.Client) *Client {
 		taskManagerCancel:   cancel,
 		taskManager:         task.NewTaskManager(),
 		tcpCheckRateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[string](250*time.Millisecond, time.Minute),
+		sshCheckRateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[string](250*time.Millisecond, time.Minute),
 		client:              client,
 		recorder:            recorder,
 	}

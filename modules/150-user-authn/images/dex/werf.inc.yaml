@@ -77,4 +77,9 @@ shell:
     - chown 64535:64535 dex
     - chmod 0700 dex
 ---
+{{- $_ := set . "FuzzEngine" "go" }}
+{{- $_ := set . "FuzzSrcImage" (printf "%s/%s-dex-artifact" .ModuleName .ImageName) }}
+{{- $_ := set . "FuzzPackages" "./server" }}
+{{- include "fuzz image" . }}
+---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

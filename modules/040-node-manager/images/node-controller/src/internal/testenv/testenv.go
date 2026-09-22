@@ -45,6 +45,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
@@ -183,6 +184,7 @@ func newManager(ctx context.Context, cfg *rest.Config, scheme *runtime.Scheme, w
 	// the suite itself registers.
 	for _, add := range []func(*runtime.Scheme) error{
 		apiextensionsv1.AddToScheme,
+		bootstrapv1alpha1.AddToScheme,
 		capiv1beta2.AddToScheme,
 		mcmv1alpha1.AddToScheme,
 	} {

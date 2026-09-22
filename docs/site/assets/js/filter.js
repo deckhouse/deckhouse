@@ -19,9 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const urlSearch = 'search';
   const urlEdition = 'edition';
+  const urlExtension = 'extension';
   const urlStage = 'stage';
   const urlTag = 'tag';
+  const urlCertification = 'certification';
   const urlParamAll = '__all__';
+
+  // The value of the tag indicating the inclusion of the module in the evaluation object (certification).
+  const certifiedTag = 'certified';
 
   const description = {
     ru: {
@@ -47,14 +52,21 @@ document.addEventListener('DOMContentLoaded', () => {
   let fullResetHandler = null;
 
   const editionTitles = {
-    'ce': 'Community Edition',
+    'ce': 'Open/Community Edition',
+    'core': 'Core',
     'be': 'Basic Edition',
     'se': 'Standard Edition',
     'se-plus': 'Standard Edition+',
-    'ee': 'Enterprise Edition',
-    'cse-lite': 'CSE Lite',
-    'cse-pro': 'CSE Pro'
+    'ee': 'Ultimate/Enterprise Edition',
+    'cse-lite': 'Certified Core/CSE Lite',
+    'cse-pro': 'Certified Pro/CSE Pro'
   };
+
+  // Extension titles are localized in the sidebar markup (data/helpers.yaml -> extensions), so they are taken from the labels.
+  function getExtensionTitle(value) {
+    const label = document.querySelector(`.filter__container--extensions label[for="extension-${value}"]`);
+    return label ? label.textContent.trim() : value;
+  }
 
   const stageTitles = {
     'experimental': 'Experimental',
@@ -62,6 +74,67 @@ document.addEventListener('DOMContentLoaded', () => {
     'generalAvailability': 'General Availability',
     'deprecated': 'Deprecated'
   };
+
+  const certificationTitles = {
+    ru: {
+      'certified': 'Сертифицирован',
+      'notCertified': 'Не сертифицирован'
+    },
+    en: {
+      'certified': 'Included in the evaluation scope',
+      'notCertified': 'Not included in the evaluation scope'
+    }
+  };
+
+  function getCertificationTitle(value) {
+    const localizedTitles = certificationTitles[lang] || certificationTitles.en;
+    return localizedTitles[value] || value;
+  }
+
+  // Localized tag titles. The key is the tag value in lowercase.
+  // If there is no translation, auto-formatting is used via capitalizeWords.
+  const tagTitles = {
+    ru: {},
+    en: {}
+  };
+
+  function getTagTitle(tag) {
+    const normalized = (tag || '').trim();
+    const localizedTitles = tagTitles[lang] || {};
+    return localizedTitles[normalized.toLowerCase()] || capitalizeWords(normalized);
+  }
+
+  // Localized tooltip texts for tags. The key is the tag value in lowercase.
+  // If there is no text, the tooltip is not displayed.
+  const tagTooltips = {
+    ru: {
+      'ssdlc': 'Разработка модуля ведется в соответствии с процессами по разработке безопасного программного обеспечения согласно ГОСТ РФ.'
+    },
+    en: {
+      'ssdlc': 'Module development is carried out in accordance with the processes for developing secure software.'
+    }
+  };
+
+  function getTagTooltip(tag) {
+    const normalized = (tag || '').trim();
+    const localizedTooltips = tagTooltips[lang] || {};
+    return localizedTooltips[normalized.toLowerCase()] || '';
+  }
+
+  // Localized tooltip texts for certification filter items. The key is the checkbox value.
+  // If there is no text, the tooltip is not displayed.
+  const certificationTooltips = {
+    ru: {
+      'certified': 'Модуль входит в объект оценки и прошёл сертификацию на соответствие требованиям ФСТЭК.',
+      'notCertified': 'Модуль не входит в объект оценки и не проходил сертификацию на соответствие требованиям ФСТЭК, но должен устанавливаться из доверенного источника.'
+    },
+    en: {}
+  };
+
+  function getCertificationTooltip(value) {
+    const localizedTooltips = certificationTooltips[lang] || {};
+    return localizedTooltips[value] || '';
+  }
 
   function isSectionSelectAllCheckbox(checkbox) {
     return checkbox?.dataset?.selectAll === 'true';
@@ -124,11 +197,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const availableTags = new Set();
     const availableStages = new Set();
     const availableEditions = new Set();
+    const availableExtensions = new Set();
+    const availableCertifications = new Set();
 
     Array.from(articles).forEach(article => {
-      article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2').forEach(tag => {
-        availableTags.add(tag.textContent);
-      });
+      const articleTags = Array.from(
+        article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')
+      ).map(tag => tag.textContent);
+
+      articleTags.forEach(tag => availableTags.add(tag));
+
+      availableCertifications.add(articleTags.includes(certifiedTag) ? 'certified' : 'notCertified');
 
       article.querySelectorAll('[class*="button-tile__stage-"]').forEach(el => {
         el.classList.forEach(cls => {
@@ -154,6 +233,16 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       }
+
+      const extensions = (article.dataset.extensions || '').trim().toLowerCase();
+      if (extensions) {
+        extensions.split(',').forEach(extension => {
+          const trimmedExtension = extension.trim();
+          if (trimmedExtension) {
+            availableExtensions.add(trimmedExtension);
+          }
+        });
+      }
     });
 
     document.querySelectorAll('.filter__container input[type="checkbox"]').forEach(checkbox => {
@@ -168,8 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
         isAvailable = availableTags.has(checkbox.value);
       } else if (container?.classList.contains('filter__container--editions')) {
         isAvailable = availableEditions.has((checkbox.value || '').trim().toLowerCase());
+      } else if (container?.classList.contains('filter__container--extensions')) {
+        isAvailable = availableExtensions.has((checkbox.value || '').trim().toLowerCase());
       } else if (container?.classList.contains('filter__container--stages')) {
         isAvailable = availableStages.has(checkbox.value);
+      } else if (container?.classList.contains('filter__container--certification')) {
+        isAvailable = availableCertifications.has(checkbox.value);
       }
 
       if (!isAvailable) {
@@ -213,6 +306,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tags = new Set();
     articles.forEach(article => {
       article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2').forEach(tag => {
+        // The certified tag is processed in a separate "certification" filter group.
+        if (tag.textContent === certifiedTag) return;
         tags.add(tag.textContent);
       });
     });
@@ -229,11 +324,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const label = document.createElement('label');
     label.htmlFor = tag;
-    label.textContent = capitalizeWords(tag);
-
+    label.textContent = getTagTitle(tag);
 
     filterCheckboxesTags.appendChild(input);
     filterCheckboxesTags.appendChild(label);
+
+    const tooltip = getTagTooltip(tag);
+    if (tooltip) {
+      initTooltip(label, getTagTitle(tag), tooltip);
+    }
   }
 
   function createFilters() {
@@ -276,6 +375,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     appendSectionParams('.filter__container--editions', urlEdition);
+    appendSectionParams('.filter__container--extensions', urlExtension);
+    appendSectionParams('.filter__container--certification', urlCertification);
     appendSectionParams('.filter__container--stages', urlStage);
     appendSectionParams('.filter__container--tags', urlTag);
 
@@ -296,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyFiltersFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    if (!params.has(urlSearch) && !params.has(urlEdition) && !params.has(urlStage) && !params.has(urlTag)) {
+    if (!params.has(urlSearch) && !params.has(urlEdition) && !params.has(urlExtension) && !params.has(urlCertification) && !params.has(urlStage) && !params.has(urlTag)) {
       return;
     }
 
@@ -313,6 +414,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const wantedEditions = parseSectionValues(urlEdition, value => value.trim().toLowerCase());
+    const wantedExtensions = parseSectionValues(urlExtension, value => value.trim().toLowerCase());
+    const wantedCertifications = parseSectionValues(urlCertification, value => value.trim());
     const wantedStages = parseSectionValues(urlStage, value => value.trim());
     const wantedTags = parseSectionValues(urlTag, value => value.trim());
 
@@ -336,6 +439,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     applySectionParams('.filter__container--editions', wantedEditions, value => value.trim().toLowerCase());
+    applySectionParams('.filter__container--extensions', wantedExtensions, value => value.trim().toLowerCase());
+    applySectionParams('.filter__container--certification', wantedCertifications, value => value.trim());
     applySectionParams('.filter__container--stages', wantedStages, value => value.trim());
     applySectionParams('.filter__container--tags', wantedTags, value => value.trim());
 
@@ -393,6 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
       groupedFilters.forEach((entry, filterName) => {
         const filterContainer = entry.checkboxes[0]?.closest('.filter__container');
         const isEditionsFilter = filterContainer?.classList.contains('filter__container--editions');
+        const isExtensionsFilter = filterContainer?.classList.contains('filter__container--extensions');
+        const isCertificationFilter = filterContainer?.classList.contains('filter__container--certification');
         const isStagesFilter = filterContainer?.classList.contains('filter__container--stages');
         const isTagsFilter = filterContainer?.classList.contains('filter__container--tags');
         const totalSectionCheckboxes = filterContainer ? getFilterContainerCheckboxes(filterContainer).length : 0;
@@ -405,10 +512,14 @@ document.addEventListener('DOMContentLoaded', () => {
           valuesText = `${selectedCount} ${texts.values}`;
         } else if (isEditionsFilter) {
           valuesText = Array.from(entry.values).map(code => editionTitles[code] || code).join(', ');
+        } else if (isExtensionsFilter) {
+          valuesText = Array.from(entry.values).map(value => getExtensionTitle(value)).join(', ');
+        } else if (isCertificationFilter) {
+          valuesText = Array.from(entry.values).map(value => getCertificationTitle(value)).join(', ');
         } else if (isStagesFilter) {
           valuesText = Array.from(entry.values).map(code => stageTitles[code] || code).join(', ');
         } else if (isTagsFilter) {
-          valuesText = Array.from(entry.values).map(value => capitalizeWords(value)).join(', ');
+          valuesText = Array.from(entry.values).map(value => getTagTitle(value)).join(', ');
         }
 
         const checkboxText = `${filterName}: ${valuesText}`;
@@ -448,6 +559,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkboxesEditionlChecked = document.querySelectorAll('.filter__container--editions input[type="checkbox"]:checked:not([data-select-all="true"])');
     const selectedEditions = Array.from(checkboxesEditionlChecked).map(checkbox => checkbox.value);
 
+    const checkboxesExtensionsChecked = document.querySelectorAll('.filter__container--extensions input[type="checkbox"]:checked:not([data-select-all="true"])');
+    const selectedExtensions = Array.from(checkboxesExtensionsChecked).map(checkbox => checkbox.value);
+
+    const checkboxesCertificationChecked = document.querySelectorAll('.filter__container--certification input[type="checkbox"]:checked:not([data-select-all="true"])');
+    const selectedCertifications = Array.from(checkboxesCertificationChecked).map(checkbox => checkbox.value);
+
     const checkboxesStagesChecked = document.querySelectorAll('.filter__container--stages input[type="checkbox"]:checked:not([data-select-all="true"])');
     const selectedStages = Array.from(checkboxesStagesChecked).map(checkbox => checkbox.value);
 
@@ -473,6 +590,30 @@ document.addEventListener('DOMContentLoaded', () => {
           return articleEditions.includes(normalizedSelected);
         });
         if(!matchesEditions) {
+          return false;
+        }
+      }
+
+      if(selectedExtensions.length > 0) {
+        const articleExtensionsStr = (article.dataset.extensions || '').trim().toLowerCase();
+        const articleExtensions = articleExtensionsStr
+          ? articleExtensionsStr.split(',').map(e => e.trim()).filter(e => e)
+          : [];
+        const matchesExtensions = selectedExtensions.some(selectedExtension => {
+          const normalizedSelected = (selectedExtension || '').trim().toLowerCase();
+          return articleExtensions.includes(normalizedSelected);
+        });
+        if(!matchesExtensions) {
+          return false;
+        }
+      }
+
+      if(selectedCertifications.length > 0) {
+        const isCertified = Array.from(
+          article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')
+        ).some(tag => tag.textContent === certifiedTag);
+        const articleCertification = isCertified ? 'certified' : 'notCertified';
+        if(!selectedCertifications.includes(articleCertification)) {
           return false;
         }
       }
@@ -597,8 +738,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return container;
   }
 
-  function initTooltip(selector, titleText, descriptionText) {
-    const elements = document.querySelectorAll(selector);
+  function initTooltip(target, titleText, descriptionText) {
+    const elements = typeof target === 'string'
+      ? document.querySelectorAll(target)
+      : [].concat(target);
     if (elements.length === 0) return;
 
     elements.forEach(element => {
@@ -631,4 +774,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initTooltip('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img', 'Experimental', texts.experimental);
   initTooltip('.filter__container label[for="preview"] > img, .button-tile__stage-preview > img', 'Preview', texts.preview);
   initTooltip('.filter__container label[for="deprecated"] > img, .button-tile__stage-deprecated > img', 'Deprecated', texts.deprecated);
+
+  document.querySelectorAll('.filter__container--certification input[type="checkbox"]').forEach(checkbox => {
+    if (isSectionSelectAllCheckbox(checkbox)) return;
+    const tooltip = getCertificationTooltip(checkbox.value);
+    if (!tooltip) return;
+    const label = document.querySelector(`.filter__container--certification label[for="${checkbox.id}"]`);
+    if (label) {
+      initTooltip(label, getCertificationTitle(checkbox.value), tooltip);
+    }
+  });
 })

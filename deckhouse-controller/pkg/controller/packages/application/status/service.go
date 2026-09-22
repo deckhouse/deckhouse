@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"strings"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -105,6 +106,13 @@ func (s *Service) handleEvent(ctx context.Context, ev string) error {
 	// Get the package status from the operator and compute conditions
 	s.computeAndApplyConditions(ev, app)
 
+	// The resync republishes every package on a timer, so most events compute a
+	// status identical to the published one. Patching it anyway would bump
+	// resourceVersion on every tick and wake every watcher for nothing.
+	if apiequality.Semantic.DeepEqual(original.Status, app.Status) {
+		return nil
+	}
+
 	if err := s.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch application status: %w", err)
 	}
@@ -121,6 +129,10 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 
 	versionChanged := app.Status.CurrentVersion.Version != "" && app.Status.CurrentVersion.Version != packageStatus.Version
 	mapperStatus := s.buildMapperStatus(versionChanged, app.Status.Conditions, packageStatus.Conditions)
+
+	// The CR is the authority here: the runtime status is dropped when the last
+	// teardown task drains, and never exists at all after a restart mid-deletion.
+	mapperStatus.Deleting = !app.DeletionTimestamp.IsZero()
 
 	// Apply mapped conditions (external user-facing conditions)
 	for _, cond := range s.mapper.Map(mapperStatus) {
@@ -139,7 +151,10 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 		})
 	}
 
-	if packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
+	// Nothing about a live install is committed onto a resource on its way out.
+	// The runtime freezes its own status on removal, but the CR's timestamp is
+	// authoritative even for a package the runtime never tracked.
+	if !mapperStatus.IsDeleting() && packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
 		app.Status.CurrentVersion.Version = packageStatus.Version
 
 		app.Status.URLs = nil

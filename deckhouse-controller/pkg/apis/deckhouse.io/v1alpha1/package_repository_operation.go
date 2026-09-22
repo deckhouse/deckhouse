@@ -38,16 +38,8 @@ const (
 	PackageRepositoryOperationReasonScanSucceeded = "ScanSucceeded"
 	PackageRepositoryOperationReasonScanFailed    = "ScanFailed"
 
-	// PackagesRepositoryOperationLabelRepository is the label used to identify PackageRepositoryOperations
-	// that belong to a specific PackageRepository
-	PackagesRepositoryOperationLabelRepository = "packages.deckhouse.io/repository"
-
-	PackagesRepositoryOperationLabelOperationType                                = "packages.deckhouse.io/operation-type"
-	PackageRepositoryOperationTypeUpdate          PackageRepositoryOperationType = "Update"
-
-	PackagesRepositoryOperationLabelOperationTrigger = "packages.deckhouse.io/operation-trigger"
-	PackagesRepositoryTriggerManual                  = "manual"
-	PackagesRepositoryTriggerAuto                    = "auto"
+	// PackageRepositoryOperation types, mirrored onto the operation by PackageLabelOperationType
+	PackageRepositoryOperationTypeUpdate PackageRepositoryOperationType = "Update"
 )
 
 var (

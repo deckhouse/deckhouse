@@ -21,14 +21,12 @@ import (
 	"encoding/json"
 	"math"
 	"os"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -36,20 +34,22 @@ const (
 	cloudInstanceManagerNS = "d8-cloud-instance-manager"
 	kubeSystemNS           = "kube-system"
 
-	packagesProxyTokenSecretName = "registry-packages-proxy-token"
+	// Exported because the bootstrap-secrets controller watches this Secret: it is a
+	// legacy ServiceAccount token, created empty and filled by kube-controller-manager
+	// moments later, and the render must not keep the empty reading.
+	PackagesProxyTokenSecretName = "registry-packages-proxy-token"
 
 	controlPlaneArgsSecretName = "d8-control-plane-manager-control-plane-arguments"
 
 	apiProxyCertSecretName = "kubernetes-api-proxy-discovery-cert"
 
 	cloudProviderSecretName = ngcommon.CloudProviderSecretName
-
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
 )
 
-// rootCAFiles are the candidate locations of the projected service-account CA, canonical path
-// first. See readKubernetesCA.
-var rootCAFiles = []string{
+// RootCAFiles are the candidate locations of the projected service-account CA, canonical path
+// first; see ReadKubernetesCA. Exported only because no test process has either path: the
+// envtest suites point it at a committed fixture. Nothing in production assigns to it.
+var RootCAFiles = []string{
 	"/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 	"/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 }
@@ -74,7 +74,7 @@ func (s *Service) reader() client.Reader {
 	return s.Client
 }
 
-func (s *Service) readCloudProvider(ctx context.Context) map[string]interface{} {
+func (s *Service) ReadCloudProvider(ctx context.Context) map[string]interface{} {
 	secret := &corev1.Secret{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: cloudProviderSecretName}, secret); err != nil {
 		return nil
@@ -95,9 +95,9 @@ func decodeSecretData(data map[string][]byte) map[string]interface{} {
 	return res
 }
 
-func (s *Service) readPackagesProxyToken(ctx context.Context) string {
+func (s *Service) ReadPackagesProxyToken(ctx context.Context) string {
 	secret := &corev1.Secret{}
-	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: packagesProxyTokenSecretName}, secret); err != nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: PackagesProxyTokenSecretName}, secret); err != nil {
 		return ""
 	}
 	return string(secret.Data["token"])
@@ -162,13 +162,13 @@ func (s *Service) readAPIServerProxyCerts(ctx context.Context) apiserverProxyCer
 	}
 }
 
-// readKubernetesCA reads the projected service-account CA. The kubelet mounts it under
+// ReadKubernetesCA reads the projected service-account CA. The kubelet mounts it under
 // /var/run/..., which resolves to /run/... only in images where /var/run is a symlink — the
 // hook this was ported from ran in the deckhouse image (where it is), node-controller runs on
 // distroless. Both spellings are therefore tried, so the CA never silently ends up empty in the
 // bashible context.
-func (s *Service) readKubernetesCA() string {
-	paths := rootCAFiles
+func (s *Service) ReadKubernetesCA() string {
+	paths := RootCAFiles
 	if s.RootCAFile != "" {
 		paths = []string{s.RootCAFile}
 	}
@@ -181,58 +181,12 @@ func (s *Service) readKubernetesCA() string {
 	return ""
 }
 
+// readBootstrapTokens keeps the Service's read-or-nothing style: input.yaml is
+// rendered from whatever could be read, and a missing token is a missing key.
 func (s *Service) readBootstrapTokens(ctx context.Context) map[string]string {
-	req, err := labels.NewRequirement(bootstrapTokenNGLabel, selection.Exists, nil)
+	tokens, err := nodecommon.BootstrapTokens(ctx, s.reader())
 	if err != nil {
 		return map[string]string{}
 	}
-	secrets := &corev1.SecretList{}
-	if err := s.reader().List(ctx, secrets,
-		client.InNamespace(kubeSystemNS),
-		client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*req)},
-	); err != nil {
-		return map[string]string{}
-	}
-
-	type candidate struct {
-		token   string
-		created time.Time
-	}
-	newest := make(map[string]candidate)
-
-	for i := range secrets.Items {
-		sec := &secrets.Items[i]
-		if sec.Type != corev1.SecretTypeBootstrapToken {
-			continue
-		}
-		ng := sec.Labels[bootstrapTokenNGLabel]
-		if ng == "" {
-			continue
-		}
-
-		if raw, ok := sec.Data["expiration"]; ok {
-			expire, err := time.Parse(time.RFC3339, string(raw))
-			if err != nil || time.Until(expire) < 0 {
-				continue
-			}
-		}
-
-		id, hasID := sec.Data["token-id"]
-		secretPart, hasSecret := sec.Data["token-secret"]
-		if !hasID || !hasSecret {
-			continue
-		}
-		token := string(id) + "." + string(secretPart)
-
-		created := sec.CreationTimestamp.Time
-		if cur, ok := newest[ng]; !ok || created.After(cur.created) {
-			newest[ng] = candidate{token: token, created: created}
-		}
-	}
-
-	res := make(map[string]string, len(newest))
-	for ng, c := range newest {
-		res[ng] = c.token
-	}
-	return res
+	return tokens
 }

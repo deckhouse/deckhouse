@@ -1,0 +1,26 @@
+{{- /*
+  Link rewriter — tag formatter. Thin wrapper over helpers/rewrite-href.html:
+  applies the decision and emits either the <a> tag or the bare link text.
+
+  Input (dict):
+    href  (string, required) — the link URL
+    inner (string, required) — inner HTML of the <a> (link text/markup)
+    attrs (string, optional) — extra raw attributes, pre-formatted with a leading
+                               space, e.g. ` target="_blank" rel="noopener noreferrer"`
+    keep  (bool,   optional) — force-keep the link untouched (opt-out)
+
+  Output: `<a href="...">inner</a>` when kept, or `inner` when the link is stripped.
+
+  Use this for links whose inner content is a simple value. For links with a large
+  multi-line inner block, call helpers/rewrite-href.html directly and branch in-place.
+
+  Callers:
+    - layouts/_markup/render-link.html (Markdown links)
+    - HTML templates/partials that emit navigational <a> tags
+*/ -}}
+{{- $r := partial "helpers/rewrite-href" (dict "href" .href "keep" (.keep | default false)) -}}
+{{- if $r.strip -}}
+{{- .inner | safeHTML -}}
+{{- else -}}
+{{- printf "<a href=\"%s\"%s>%s</a>" $r.href (.attrs | default "") (.inner | default "") | safeHTML -}}
+{{- end -}}

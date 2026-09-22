@@ -266,6 +266,30 @@ You cannot change the IP address in the `StaticInstance` resource. If an incorre
 
 You need to [clean up the node](#how-do-i-clean-up-a-static-node-manually), then [hand over](#how-do-i-add-a-static-node-to-a-cluster-cluster-api-provider-static) the node under CAPS control.
 
+### Why are the SSH key and the sudo password of SSHCredentials shown as `<omitted>`?
+
+The [`privateSSHKey`](cr.html#sshcredentials-v1alpha1-spec-privatesshkey), [`sudoPassword`](cr.html#sshcredentials-v1alpha1-spec-sudopassword) (`v1alpha1`), and [`sudoPasswordEncoded`](cr.html#sshcredentials-v1alpha2-spec-sudopasswordencoded) (`v1alpha2`) fields of the [SSHCredentials](cr.html#sshcredentials) resource contain sensitive data and are protected from viewing.
+
+If a user has no permissions to read sensitive SSHCredentials data, the API returns `<omitted>` instead of the actual value. The other fields — [`user`](cr.html#sshcredentials-v1alpha1-spec-user), [`sshPort`](cr.html#sshcredentials-v1alpha1-spec-sshport), [`sshExtraArgs`](cr.html#sshcredentials-v1alpha1-spec-sshextraargs) — and the resource metadata remain available to users who are allowed to read SSHCredentials.
+
+Additionally, kube-apiserver protects this data as follows:
+
+- removes the `kubectl.kubernetes.io/last-applied-configuration` annotation from API responses if it may contain a copy of sensitive values;
+- replaces sensitive values with `"******"` in [audit events](/products/kubernetes-platform/documentation/v1/admin/configuration/security/events/kubernetes-api-audit.html), regardless of user permissions and audit level;
+- encrypts the resource in etcd using the same mechanism as for Kubernetes Secrets, if the [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) parameter of the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
+
+Unmasked values are available to the [CAPS](./#cluster-api-provider-static) controller, which needs them to connect to the node over SSH, as well as to users with the [`SuperAdmin`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-current.html#high-level-roles-used-in-the-current-model) access level and members of the [`kubeadm:cluster-admins`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/cluster-admin-access-model.html) group.
+
+The [`d8:manage:infrastructure:viewer`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#role-model-subsystems) and [`d8:manage:infrastructure:manager`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#role-model-subsystems) roles allow reading the SSHCredentials resource, but do not grant access to the SSH key or the sudo password.
+
+To check whether a user can read sensitive SSHCredentials data, run:
+
+```shell
+d8 k auth can-i get sshcredentials/sensitive --as=<user>
+```
+
+The `<omitted>` value means the actual value is hidden from the current user. This behavior applies to both `v1alpha1` and `v1alpha2`, so using a different API version does not reveal the hidden data.
+
 ## How do I change the NodeGroup of a static node?
 
 Note that if a node is under [CAPS](./#cluster-api-provider-static) control, you **cannot** change the `NodeGroup` membership of such a node. The only alternative is to [delete StaticInstance](#can-i-delete-a-staticinstance) and create a new one.
@@ -756,7 +780,7 @@ Additional node configuration steps are set via the [NodeGroupConfiguration](cr.
 When adding a node to the cluster, the labels specified in the files will be automatically affixed to the node.
 
 {% alert level="warning" %}
-Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
+Please note that it is not possible to add labels used in DP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
 {% endalert %}
 
 ## How to deploy custom containerd configuration?
@@ -769,7 +793,7 @@ The example of `NodeGroupConfiguration` uses functions of the script [032_config
 Adding custom settings causes a restart of the containerd service.
 {% endalert %}
 
-Bashible on nodes merges main DKP containerd configuration with the following configuration files:
+Bashible on nodes merges main DP containerd configuration with the following configuration files:
 
 - `/etc/containerd/conf.d/*.toml`: If containerd v1 is used as the CRI on the cluster nodes.
 - `/etc/containerd/conf2.d/*.toml`: If containerd v2 is used as the CRI on the cluster nodes.
@@ -1545,11 +1569,11 @@ Node reboots may be required after configuration changes. For example, after cha
 ## How to enable a delay before a node shutdown or restart while critical pods are running on it?
 
 {% alert level="info" %}
-Available in the **EE** edition.
+Available in the EE and Ultimate editions.
 {% endalert %}
 
 {% alert level="warning" %}
-To decide whether to block a node shutdown, DKP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
+To decide whether to block a node shutdown, DP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
 {% endalert %}
 
 To enable the mechanism that delays a pod's restart or shutdown, add the label `pod.deckhouse.io/inhibit-node-shutdown` to the Pod (for a Deployment, specify the label in the pod template).
@@ -1636,7 +1660,7 @@ If you observe a scenario where a node with `fencing` enabled returns to the clu
 ## How do I work with GPU nodes?
 
 {% alert level="info" %}
-GPU-node management is available in DKP Enterprise Edition only.
+GPU-node management is available in DP Enterprise Edition and DP Ultimate.
 {% endalert %}
 
 ### Step-by-step procedure for adding a GPU node to the cluster
@@ -1899,7 +1923,7 @@ To add a GPU node to the cluster, perform the following steps:
 
 ## How to monitor GPUs?
 
-Deckhouse Kubernetes Platform automatically deploys **DCGM Exporter**; GPU metrics are scraped by Prometheus and available in Grafana.
+Deckhouse Platform automatically deploys **DCGM Exporter**; GPU metrics are scraped by Prometheus and available in Grafana.
 
 ## Which GPU modes are supported?
 
@@ -1991,4 +2015,4 @@ A separate `custom-<ng>-<hash>` configuration is created for each group of nodes
 
 ## Are AMD or Intel GPUs supported?
 
-At this time, Deckhouse Kubernetes Platform automatically configures **NVIDIA GPUs only**. Support for **AMD (ROCm)** and **Intel GPUs** is being worked on and is planned for future releases.
+At this time, Deckhouse Platform automatically configures **NVIDIA GPUs only**. Support for **AMD (ROCm)** and **Intel GPUs** is being worked on and is planned for future releases.

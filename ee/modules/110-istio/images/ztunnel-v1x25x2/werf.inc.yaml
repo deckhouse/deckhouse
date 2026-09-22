@@ -9,16 +9,16 @@ import:
     owner: 1337
     group: 1337
     before: install
-  - from: {{ index $.Images "libs/glibc-v2.41" }}
-    add: /lib64/libc.so.6
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+    add: /out/lib64/libc.so.6
     to: /lib64/libc.so.6
     before: install
-  - from: {{ index $.Images "libs/glibc-v2.41" }}
-    add: /lib64/libm.so.6
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+    add: /out/lib64/libm.so.6
     to: /lib64/libm.so.6
     before: install
-  - from: {{ index $.Images "libs/glibc-v2.41" }}
-    add: /lib64/ld-linux-x86-64.so.2
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+    add: /out/lib64/ld-linux-x86-64.so.2
     to: /lib64/ld-linux-x86-64.so.2
     before: install
   - from: {{ index $.Images "libs/xz-v5.8.1" }}
@@ -80,4 +80,11 @@ git:
 - url: {{ .SOURCE_REPO }}/istio/ztunnel
   tag: {{ $istioVersion }}
   to: /src/ztunnel
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+shell:
+  beforeInstall:
+  - pm install libc@2.43 -d /out
 ---

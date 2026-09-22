@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -134,21 +135,36 @@ func main() {
 		tlsProvider.CACertsFromSystem()
 	}
 
-	zvirtClient, err := ovsdk.New(
+	// The connection is not verified here: this runs before mgr.Start, i.e. before the health
+	// probes are served, so a call to an unavailable zVirt engine could only end in a pod
+	// killed by the liveness probe and restarted forever, with the error nowhere to be seen.
+	zvirtClient, err := ovsdk.NewWithVerify(
 		zvirtCredentials.URL,
 		zvirtCredentials.User,
 		zvirtCredentials.Password,
 		tlsProvider,
 		ovirt_logger.NewKLogr(),
+		nil,
 		nil)
 	if err != nil {
-		setupLog.Error(err, "zVirt connection cannot be established")
+		setupLog.Error(err, "zVirt client cannot be created")
 		os.Exit(1)
 	}
 
 	tg := tagger.NewTagger(zvirtClient)
-	if err = tg.InitTags(context.Background(), strings.Fields(os.Getenv("ZVIRT_VM_TAGS"))); err != nil {
-		setupLog.Error(err, "zVirt tags cannot be initialized")
+
+	// Creating the tags is the first call to the zVirt engine and it runs once the manager
+	// is up, so that a failure is reported by a pod that stays alive instead of killing it
+	// before it can say anything. The error is logged and not returned, as the manager
+	// stops on a runnable error.
+	if err = mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		if err := tg.InitTags(ctx, strings.Fields(os.Getenv("ZVIRT_VM_TAGS"))); err != nil {
+			setupLog.Error(err, "zVirt tags cannot be initialized")
+		}
+
+		return nil
+	})); err != nil {
+		setupLog.Error(err, "unable to add tag initialization to manager")
 		os.Exit(1)
 	}
 

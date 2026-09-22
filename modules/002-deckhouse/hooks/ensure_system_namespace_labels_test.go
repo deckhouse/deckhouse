@@ -94,6 +94,8 @@ metadata:
 
 			ns := f.KubernetesGlobalResource("Namespace", "d8-system")
 			for name, value := range map[string]string{
+				`pod-security\.kubernetes\.io/enforce`:                 "privileged",
+				`pod-security\.kubernetes\.io/enforce-version`:         "latest",
 				`security\.deckhouse\.io/pod-policy`:                   "restricted",
 				`security\.deckhouse\.io/pod-policy-action`:            "warn",
 				`security\.deckhouse\.io/enable-security-policy-check`: "true",

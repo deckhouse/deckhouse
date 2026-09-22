@@ -106,7 +106,17 @@ func (a *App) overrideInhibitDelayMax() error {
 	}
 
 	if currentInhibitDelay < a.config.InhibitDelayMax {
-		return fmt.Errorf("overrideInhibitDelayMax: unable to override inhibit delay to %s, current value of InhibitDelayMaxSec (%v) is less than requested", a.config.InhibitDelayMax.Truncate(time.Second).String(), currentInhibitDelay.Truncate(time.Second).String())
+		// Another logind drop-in sorts after ours and wins. Degrade instead of dying: the delay
+		// lock still buys currentInhibitDelay, and the power key inhibitor takes mode=block, which
+		// InhibitDelayMaxSec does not bound at all. Exiting here leaves the node with no protection
+		// and, with Restart=always/RestartSec=10, loops forever.
+		dlog.Warn(
+			"inhibit delay override lost to another logind drop-in, continuing with the lower value",
+			slog.String("current", currentInhibitDelay.Truncate(time.Second).String()),
+			slog.String("requested", a.config.InhibitDelayMax.Truncate(time.Second).String()),
+			slog.String("hint", "systemd-analyze cat-config systemd/logind.conf"),
+		)
+		return nil
 	}
 
 	dlog.Info(

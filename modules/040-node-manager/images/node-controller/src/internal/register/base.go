@@ -52,3 +52,12 @@ type NeedsSetup interface {
 type NeedsForPredicates interface {
 	ForPredicates() []predicate.Predicate
 }
+
+// NeedsMaxConcurrentReconciles lets a reconciler cap the number of workers it is
+// run with, for the ones whose correctness depends on that number rather than on
+// how they happen to be deployed. The cap wins over the flag: a reconciler that
+// is only correct single-threaded says so here, once, instead of depending on an
+// argument that one typo anywhere in the same string silently discards.
+type NeedsMaxConcurrentReconciles interface {
+	MaxConcurrentReconciles() int
+}

@@ -2,7 +2,7 @@
 title: "CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy"
 permalink: ru/admin/configuration/network/policy/cilium_networkpolicy.html
 description: |
-  Описание расширений Cilium для сетевых политик в Deckhouse Kubernetes Platform: entities, правила L7, FQDN-правила, deny-правила, режим policyAuditMode.
+  Описание расширений Cilium для сетевых политик в Deckhouse Platform: entities, правила L7, FQDN-правила, deny-правила, режим policyAuditMode.
 lang: ru
 relatedLinks:
   - title: "Network Policy — документация Cilium"
@@ -317,7 +317,7 @@ spec:
 ```
 
 {% alert level="info" %}
-В DNS-правиле используется `toEntities: cluster`, а не селектор по лейблам `kube-dns`. В DKP наряду с основным DNS-сервисом работает DaemonSet `node-local-dns`, поэтому реальный путь DNS-трафика от пода может проходить через локальный экземпляр `node-local-dns`. Использование `toEntities: cluster` надёжно покрывает любой DNS-эндпоинт внутри кластера.
+В DNS-правиле используется `toEntities: cluster`, а не селектор по лейблам `kube-dns`. В DP наряду с основным DNS-сервисом работает DaemonSet `node-local-dns`, поэтому реальный путь DNS-трафика от пода может проходить через локальный экземпляр `node-local-dns`. Использование `toEntities: cluster` надёжно покрывает любой DNS-эндпоинт внутри кластера.
 {% endalert %}
 
 ## Deny-правила
@@ -378,7 +378,7 @@ spec:
 ```
 
 {% alert level="info" %}
-В DNS-правиле используется `toEntities: cluster`, а не селектор по лейблам `kube-dns`. В DKP наряду с основным DNS-сервисом работает DaemonSet `node-local-dns`, поэтому реальный путь DNS-трафика от пода может проходить через локальный экземпляр `node-local-dns`. Использование `toEntities: cluster` надёжно покрывает любой DNS-эндпоинт внутри кластера.
+В DNS-правиле используется `toEntities: cluster`, а не селектор по лейблам `kube-dns`. В DP наряду с основным DNS-сервисом работает DaemonSet `node-local-dns`, поэтому реальный путь DNS-трафика от пода может проходить через локальный экземпляр `node-local-dns`. Использование `toEntities: cluster` надёжно покрывает любой DNS-эндпоинт внутри кластера.
 {% endalert %}
 
 ## Режим аудита (`policyAuditMode`)

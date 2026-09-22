@@ -30,7 +30,6 @@ import (
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -52,10 +51,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
@@ -73,6 +75,7 @@ import (
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
@@ -100,6 +103,8 @@ type DeckhouseController struct {
 	moduleLoader   *moduleloader.Loader
 	packageRuntime *packageruntime.Runtime
 
+	dc dependency.Container
+
 	deckhouseConfigCh <-chan utils.Values
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
@@ -122,6 +127,7 @@ func NewDeckhouseController(
 		coordv1.AddToScheme,
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
+		v1beta1.AddToScheme,
 		appsv1.AddToScheme,
 		discoveryv1.AddToScheme,
 	}
@@ -218,11 +224,15 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
 	}
 
-	// Module package controllers (feature flag)
-	if app.ModulePackagesEnabled() {
+	// Module package sync (feature flag)
+	if app.ModulePackageSyncEnabled() {
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
+	}
+
+	// Module v2 controller (feature flag)
+	if app.ModulePackagesEnabled() {
+		opts.Cache.ByObject[&v1beta1.Module{}] = cache.ByObject{}
 	}
 
 	admission, serveWebhooks := app.TakeOverAdmissionServer()
@@ -258,7 +268,7 @@ func NewDeckhouseController(
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
 	// set chrooted environment for modules
-	if len(os.Getenv(app.EnvShellChrootDir)) > 0 {
+	if len(os.Getenv(envconfig.EnvShellChrootDir)) > 0 {
 		setModulesEnvironment(operator)
 	}
 
@@ -386,7 +396,9 @@ func NewDeckhouseController(
 	if app.PackageSystemEnabled() {
 		logger.Info("Package system controllers are enabled")
 
-		pkgRuntime.Run()
+		if err = pkgRuntime.Run(); err != nil {
+			return nil, fmt.Errorf("run package runtime: %w", err)
+		}
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {
@@ -409,14 +421,19 @@ func NewDeckhouseController(
 		}
 	}
 
-	// Module package controllers (feature flag)
-	if app.ModulePackagesEnabled() {
-		logger.Info("Module package controllers are enabled")
+	// Module package sync (feature flag)
+	if app.ModulePackageSyncEnabled() {
+		logger.Info("Module package sync is enabled")
 
 		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register module package version controller: %w", err)
 		}
+	}
+
+	// Module v2 controller (feature flag)
+	if app.ModulePackagesEnabled() {
+		logger.Info("Module v2 controller is enabled")
 
 		err = module.RegisterController(preflightCountDown, runtimeManager, pkgRuntime, logger)
 		if err != nil {
@@ -447,6 +464,8 @@ func NewDeckhouseController(
 		packageRuntime:     pkgRuntime,
 		preflightCountDown: preflightCountDown,
 
+		dc: dc,
+
 		deckhouseConfigCh: deckhouseConfigCh,
 
 		embeddedPolicy: embeddedPolicy,
@@ -464,6 +483,25 @@ func setModulesEnvironment(operator *addonoperator.AddonOperator) {
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
 func (c *DeckhouseController) Start(ctx context.Context) error {
+	// give the old module stack its package system objects before any
+	// controller runs; the sync reads through the API reader, so it does not
+	// need the manager cache
+	if app.ModulePackageSyncEnabled() {
+		if err := pkgsync.Sync(
+			ctx,
+			c.runtimeManager.GetAPIReader(),
+			c.runtimeManager.GetClient(),
+			c.dc,
+			app.Version,
+			c.defaultReleaseChannel,
+			app.EmbeddedModulesDir,
+			app.GlobalHooksDir,
+			c.log.Named("pkgsync"),
+		); err != nil {
+			return fmt.Errorf("sync package objects: %w", err)
+		}
+	}
+
 	// run preflight check
 	c.startModulesControllers(ctx)
 

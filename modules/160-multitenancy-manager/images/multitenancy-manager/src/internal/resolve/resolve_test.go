@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -30,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"controller/api/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha3"
 )
 
 func testMapper() meta.RESTMapper {
@@ -46,7 +48,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		storagev1.AddToScheme, rbacv1.AddToScheme, v1alpha1.AddToScheme,
+		corev1.AddToScheme, storagev1.AddToScheme, rbacv1.AddToScheme, v1alpha1.AddToScheme, v1alpha3.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
@@ -170,6 +172,45 @@ func TestDecideExcludedUnion(t *testing.T) {
 	}
 	cl := newClient(t, objs...)
 	resolved, err := Resolve(context.Background(), cl, testMapper(), reg, nil)
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	for _, c := range cases {
+		if got := resolved.Decide(c.name); got != c.want {
+			t.Fatalf("%s: got available=%v want %v", c.name, got, c.want)
+		}
+	}
+}
+
+// The selector the module ships for clusterroles (templates/cluster-objects-controller/
+// grantable-resources.yaml) keeps the delegatable roles and nothing else. The value matters: the
+// admission webhook that guards the label accepts "true" and judges nothing else, so a role
+// labelled "false" was never validated as delegatable and must not reach a project either. An
+// exclusion by absence alone would have let exactly that role through.
+func TestDecideDelegatableMarkerNeedsTheValue(t *testing.T) {
+	reg := roleReg([]v1alpha1.ResourceFilter{
+		{MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "rbac.deckhouse.io/delegatable", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"true"}},
+		}},
+	})
+
+	cases := []struct {
+		name string
+		lbls map[string]string
+		want bool
+	}{
+		{"delegatable-true", map[string]string{"rbac.deckhouse.io/delegatable": "true"}, true},
+		{"delegatable-false", map[string]string{"rbac.deckhouse.io/delegatable": "false"}, false},
+		{"delegatable-garbage", map[string]string{"rbac.deckhouse.io/delegatable": "yes"}, false},
+		{"no-marker", map[string]string{}, false},
+	}
+
+	objs := make([]client.Object, 0, len(cases))
+	for _, c := range cases {
+		objs = append(objs, clusterRole(c.name, c.lbls))
+	}
+
+	resolved, err := Resolve(context.Background(), newClient(t, objs...), testMapper(), reg, nil)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}

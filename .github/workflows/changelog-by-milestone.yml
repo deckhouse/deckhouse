@@ -98,9 +98,24 @@ jobs:
         run: |
           milestones="$(gh api 'repos/${{ github.repository }}/milestones?state=open&per_page=100')"
 
-          count="$(echo $milestones | jq '. | length')"
+          filtered="[]"
+          while IFS= read -r milestone; do
+            title="$(echo "$milestone" | jq -r '.title')"
+            if [[ "$title" =~ ^v([0-9]+)\.([0-9]+)\.[0-9]+$ ]]; then
+              branch="release-${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+              if gh api "repos/${{ github.repository }}/branches/${branch}" --silent 2>/dev/null; then
+                filtered="$(echo "$filtered" | jq -c --argjson m "$milestone" '. + [$m]')"
+              else
+                echo "::notice::Skipping milestone ${title}: branch ${branch} does not exist yet"
+              fi
+            else
+              echo "::warning::Skipping milestone ${title}: title is not in vX.Y.Z format"
+            fi
+          done < <(echo "$milestones" | jq -c '.[]')
 
-          echo "list=${milestones}" >> $GITHUB_OUTPUT
+          count="$(echo "$filtered" | jq '. | length')"
+
+          echo "list=${filtered}" >> $GITHUB_OUTPUT
           echo "count=${count}" >> $GITHUB_OUTPUT
 
     outputs:

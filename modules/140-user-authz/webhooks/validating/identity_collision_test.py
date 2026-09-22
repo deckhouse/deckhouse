@@ -102,8 +102,8 @@ class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
             "groups.deckhouse.io", ".spec.name", group_name, factories.CLUSTER_RULE_DESCRIPTION))
 
     # Group.spec.name is not normalised anywhere between the Group object and the "groups" claim
-    # (modules/150-user-authn/hooks/get_dex_user_crds.go, makeUserGroupsMap builds the claim from
-    # group.Spec.Name verbatim), so a case-only difference is a genuinely different group and
+    # (user-authn-controller internal/controller/user/groups.go builds the claim from
+    # Group.spec.name verbatim), so a case-only difference is a genuinely different group and
     # reporting it either way round would be a false positive.
     def test_group_allowed_when_name_differs_from_the_subject_only_by_case(self):
         out = self.run_hook(factories.prepare_group_binding_context(
@@ -163,7 +163,7 @@ class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
             "users.deckhouse.io", ".spec.email", email, factories.CLUSTER_RULE_DESCRIPTION))
 
     # Email case. Deckhouse lowercases spec.email before it reaches the Password object
-    # (modules/150-user-authn/hooks/get_dex_user_crds.go:276), and the username claim the API
+    # (user-authn-controller internal/controller/user/controller.go), and the username claim the API
     # server consumes is that email (modules/040-control-plane-manager/templates/
     # _authentication_configuration.tpl:18-20). The two directions are therefore not symmetric.
 
@@ -235,6 +235,87 @@ class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
         out = self.run_hook(factories.prepare_group_binding_context(
             "harmless-group", operation="DELETE"))
         self.assert_allowed_without_warnings(out)
+
+
+class TestPlatformIdentitiesAreExempt(unittest.TestCase):
+    """
+    The installer applies the initial rule and the User it names from one manifest, and on a
+    retried bootstrap the rule is already there when the User is created again. The platform's
+    own identities are therefore not subject to the check, neither in the API server pre-filter
+    nor in the hook itself.
+    """
+
+    def run_hook(self, context_json: str):
+        return hook.testrun(identity_collision.main, [DotMap(json.loads(context_json))])
+
+    def assert_silently_allowed(self, out):
+        self.assertEqual(len(out.validations.data), 1)
+        self.assertTrue(out.validations.data[0]["allowed"])
+        self.assertNotIn("warnings", out.validations.data[0])
+
+    INSTALLER = {"username": "dhctl", "groups": ["system:masters", "system:authenticated"]}
+    ADMIN_CONF = {"username": "kubernetes-admin", "groups": ["system:masters"]}
+    DECKHOUSE = {"username": "system:serviceaccount:d8-system:deckhouse",
+                 "groups": ["system:serviceaccounts", "system:serviceaccounts:d8-system"]}
+    KUBE_SYSTEM_SA = {"username": "system:serviceaccount:kube-system:argocd",
+                      "groups": ["system:serviceaccounts:kube-system"]}
+    COMMANDER = {"username": "system:serviceaccount:d8-commander:cluster-manager",
+                 "groups": ["system:serviceaccounts", "system:serviceaccounts:d8-commander"]}
+    COMMANDER_BACKEND = {"username": "system:serviceaccount:d8-commander:backend",
+                         "groups": ["system:serviceaccounts", "system:serviceaccounts:d8-commander"]}
+
+    def test_installer_recreates_user_named_by_an_existing_rule(self):
+        out = self.run_hook(factories.prepare_user_binding_context(
+            factories.CLUSTER_RULE_USER_SUBJECT, user_info=self.INSTALLER))
+        self.assert_silently_allowed(out)
+
+    def test_installer_recreates_group_named_by_an_existing_rule(self):
+        out = self.run_hook(factories.prepare_group_binding_context(
+            factories.CLUSTER_RULE_GROUP_SUBJECT, user_info=self.INSTALLER))
+        self.assert_silently_allowed(out)
+
+    def test_admin_kubeconfig_is_exempt_by_group(self):
+        out = self.run_hook(factories.prepare_user_binding_context(
+            factories.CLUSTER_RULE_USER_SUBJECT, user_info=self.ADMIN_CONF))
+        self.assert_silently_allowed(out)
+
+    def test_deckhouse_and_kube_system_serviceaccounts_are_exempt(self):
+        for info in (self.DECKHOUSE, self.KUBE_SYSTEM_SA):
+            out = self.run_hook(factories.prepare_user_binding_context(
+                factories.CLUSTER_RULE_USER_SUBJECT, user_info=info))
+            self.assert_silently_allowed(out)
+
+    def test_commander_cluster_manager_is_exempt_but_not_its_namespace(self):
+        out = self.run_hook(factories.prepare_user_binding_context(
+            factories.CLUSTER_RULE_USER_SUBJECT, user_info=self.COMMANDER))
+        self.assert_silently_allowed(out)
+        out = self.run_hook(factories.prepare_user_binding_context(
+            factories.CLUSTER_RULE_USER_SUBJECT, user_info=self.COMMANDER_BACKEND))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_exempt_delete_raises_no_warning(self):
+        out = self.run_hook(factories.prepare_user_binding_context(
+            factories.CLUSTER_RULE_USER_SUBJECT, operation="DELETE", user_info=self.INSTALLER))
+        self.assert_silently_allowed(out)
+
+    def test_ordinary_requester_is_still_denied(self):
+        out = self.run_hook(factories.prepare_user_binding_context(
+            factories.CLUSTER_RULE_USER_SUBJECT,
+            user_info={"username": "helpdesk@example.com", "groups": ["system:authenticated"]}))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_match_conditions_mirror_the_in_hook_list(self):
+        config = yaml.safe_load(identity_collision.CONFIG)
+        for webhook in config["kubernetesValidating"]:
+            conditions = {c["name"]: c["expression"] for c in webhook["matchConditions"]}
+            self.assertEqual(len(conditions), len(webhook["matchConditions"]), "duplicate names")
+            joined = " ".join(conditions.values())
+            for user in identity_collision.EXEMPT_USERS:
+                self.assertIn(f'("{user}" != request.userInfo.username)', joined, user)
+            for group in identity_collision.EXEMPT_GROUPS:
+                self.assertIn(f'!("{group}" in request.userInfo.groups)', joined, group)
+            self.assertEqual(len(conditions),
+                             len(identity_collision.EXEMPT_USERS) + len(identity_collision.EXEMPT_GROUPS))
 
 
 @unittest.skipUnless(shutil.which("jq"), "jq is required to execute the hook's jqFilter programs")

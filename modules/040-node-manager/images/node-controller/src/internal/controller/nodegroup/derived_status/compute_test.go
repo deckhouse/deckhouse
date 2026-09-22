@@ -17,6 +17,7 @@ limitations under the License.
 package derived_status
 
 import (
+	"context"
 	"hash/fnv"
 	"strconv"
 	"testing"
@@ -25,7 +26,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
@@ -86,7 +89,7 @@ func TestDefaultCloudEphemeralEngine(t *testing.T) {
 	}
 }
 
-func TestComputeEngine(t *testing.T) {
+func TestEngine_PinAndDefaults(t *testing.T) {
 	mcmProvider := CloudProviderRegistration{MachineClassKind: "AWSInstanceClass"}
 	capiProvider := CloudProviderRegistration{CAPIClusterKind: "DVPCluster"}
 
@@ -141,7 +144,7 @@ func TestComputeEngine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, ComputeEngine(tc.ng, tc.reg))
+			assert.Equal(t, tc.want, engineFrom(tc.ng, tc.reg, machineDeployments{}))
 		})
 	}
 }
@@ -262,4 +265,103 @@ func TestSerializeTaints(t *testing.T) {
 		}}}}
 		assert.Equal(t, "dedicated=gpu:NoSchedule,reserved:NoExecute", serializeTaints(ng))
 	})
+}
+
+func TestEngine_ExistingMachineDeploymentsWin(t *testing.T) {
+	bothCapable := CloudProviderRegistration{
+		MachineClassKind: "YandexMachineClass",
+		CAPIClusterKind:  "YandexCluster",
+	}
+
+	cloudEphemeral := func() *v1.NodeGroup {
+		return &v1.NodeGroup{
+			ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+			Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
+		}
+	}
+
+	t.Run("MCM machines keep an unpinned group on MCM, against the CAPI default", func(t *testing.T) {
+		assert.Equal(t, engineMCM, engineFrom(cloudEphemeral(), bothCapable, machineDeployments{MCM: true}))
+	})
+
+	t.Run("CAPI machines answer CAPI", func(t *testing.T) {
+		assert.Equal(t, engineCAPI, engineFrom(cloudEphemeral(), bothCapable, machineDeployments{CAPI: true}))
+	})
+
+	// The only case where the CAPI branch changes the answer: the annotation would say MCM, but
+	// the group demonstrably runs CAPI machines, and an annotation does not migrate a live group.
+	t.Run("CAPI machines outrank the use-mcm annotation", func(t *testing.T) {
+		ng := cloudEphemeral()
+		ng.Annotations = map[string]string{useMCMAnnotation: "true"}
+		assert.Equal(t, engineCAPI, engineFrom(ng, bothCapable, machineDeployments{CAPI: true}))
+	})
+
+	t.Run("MCM wins when both kinds are present", func(t *testing.T) {
+		live := machineDeployments{MCM: true, CAPI: true}
+		assert.Equal(t, engineMCM, engineFrom(cloudEphemeral(), bothCapable, live))
+	})
+
+	t.Run("no machines at all falls back to the provider default", func(t *testing.T) {
+		assert.Equal(t, engineCAPI, engineFrom(cloudEphemeral(), bothCapable, machineDeployments{}))
+	})
+
+	// The pin is what the group was already told to be; machines that contradict it are the
+	// symptom of something else and must not flip the engine, which would recreate every node.
+	t.Run("the pin outranks the machines", func(t *testing.T) {
+		ng := cloudEphemeral()
+		ng.Status.Engine = engineCAPI
+		assert.Equal(t, engineCAPI, engineFrom(ng, bothCapable, machineDeployments{MCM: true}))
+	})
+
+	t.Run("use-mcm decides a group that has no machines yet", func(t *testing.T) {
+		ng := cloudEphemeral()
+		ng.Annotations = map[string]string{useMCMAnnotation: "true"}
+		assert.Equal(t, engineMCM, engineFrom(ng, bothCapable, machineDeployments{}))
+	})
+
+	t.Run("static groups never consult machines", func(t *testing.T) {
+		ng := cloudEphemeral()
+		ng.Spec.NodeType = v1.NodeTypeStatic
+		assert.Equal(t, engineNone, engineFrom(ng, bothCapable, machineDeployments{MCM: true}))
+	})
+}
+
+func TestEngineUndecided(t *testing.T) {
+	bothCapable := CloudProviderRegistration{MachineClassKind: "YandexMachineClass", CAPIClusterKind: "YandexCluster"}
+	capiOnly := CloudProviderRegistration{CAPIClusterKind: "DVPCluster"}
+
+	ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
+	assert.True(t, engineUndecided(ng, bothCapable), "an unpinned cloud group on a both-kinds provider is the only case worth a list")
+	assert.False(t, engineUndecided(ng, capiOnly), "a single-kind provider has no default to second-guess")
+
+	pinned := ng.DeepCopy()
+	pinned.Status.Engine = engineMCM
+	assert.False(t, engineUndecided(pinned, bothCapable))
+
+	static := ng.DeepCopy()
+	static.Spec.NodeType = v1.NodeTypeStatic
+	assert.False(t, engineUndecided(static, bothCapable))
+}
+
+// An apiserver that does not serve a MachineDeployment kind must not read as "no machines": that
+// would pin the provider default on a group that may run on the other engine, irreversibly.
+func TestResolveEngine_UnservedKindIsAnError(t *testing.T) {
+	bothCapable := CloudProviderRegistration{MachineClassKind: "YandexMachineClass", CAPIClusterKind: "YandexCluster"}
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
+	}
+
+	_, err := ResolveEngine(t.Context(), noMatchReader{}, ng, bothCapable)
+	require.Error(t, err)
+	require.True(t, meta.IsNoMatchError(err), "the no-match must survive wrapping: %v", err)
+}
+
+// noMatchReader answers every List the way a RESTMapper does for a kind the apiserver does not
+// serve. Get is never reached by ResolveEngine.
+type noMatchReader struct{ client.Reader }
+
+func (noMatchReader) List(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+	gvk := list.GetObjectKind().GroupVersionKind()
+	return &meta.NoKindMatchError{GroupKind: gvk.GroupKind(), SearchedVersions: []string{gvk.Version}}
 }

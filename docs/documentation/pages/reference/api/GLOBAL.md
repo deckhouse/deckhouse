@@ -1,11 +1,11 @@
 ---
 title: "Global configuration"
 permalink: en/reference/api/global.html
-description: "Deckhouse Kubernetes Platform global settings."
+description: "Deckhouse Platform global settings."
 module-kebab-name: global
 ---
 
-Global configuration settings allow you to customize parameters that are used by default by all modules and components of the Deckhouse Kubernetes Platform. Some modules may override some of these parameters (this can be found in the settings section of the respective module's documentation).
+Global configuration settings allow you to customize parameters that are used by default by all modules and components of the Deckhouse Platform. Some modules may override some of these parameters (this can be found in the settings section of the respective module's documentation).
 
 The global configuration settings are stored in the ModuleConfig `global`.
 

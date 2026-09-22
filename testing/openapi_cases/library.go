@@ -21,9 +21,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"sigs.k8s.io/yaml"
+
+	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 const FocusFieldName = "x-test-focus"

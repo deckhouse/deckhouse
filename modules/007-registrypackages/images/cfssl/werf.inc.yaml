@@ -10,6 +10,11 @@ git:
     stageDependencies:
       install:
         - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 secrets:
   - id: SOURCE_REPO
     value: "{{ $.SOURCE_REPO }}"
@@ -19,6 +24,7 @@ shell:
     - chmod +x /src/scripts/*
     - git config --global advice.detachedHead false
     - git clone --depth 1 --single-branch --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/cloudflare/cfssl.git /src/cfssl
+    - cd /src/cfssl && git apply /patches/*.patch --verbose
     - rm -rf /src/cfssl/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
@@ -40,6 +46,7 @@ shell:
     - export GOARCH=amd64
     - export CGO_ENABLED=0
     - cd /src/cfssl
+    - go mod vendor
     - make
     - chmod +x ./bin/*
     - mv ./bin/* /

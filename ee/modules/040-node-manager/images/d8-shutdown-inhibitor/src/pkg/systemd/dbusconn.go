@@ -185,8 +185,13 @@ func (bus *DBusCon) CurrentInhibitDelay() (time.Duration, error) {
 }
 
 const (
-	logindConfigDirectory   = "/etc/systemd/logind.conf.d/"
-	d8ShutdownInhibitorConf = "99-node-d8-shutdown-inhibitor.conf" // "node" prefix to apply after 99-kubelet.conf
+	logindConfigDirectory = "/etc/systemd/logind.conf.d/"
+	// logind merges *.conf.d drop-ins from all search dirs sorted by FILE NAME (strcmp on the
+	// basename), and the last assignment of a value wins. The directory only breaks ties between
+	// identical names, so a file in /etc does not outrank a vendor file in /usr/lib. The "zz-"
+	// prefix sorts after kubelet's 99-kubelet.conf and after vendor drop-ins such as
+	// unattended-upgrades-logind-maxdelay.conf (InhibitDelayMaxSec=30 on Debian/Ubuntu).
+	d8ShutdownInhibitorConf = "zz-d8-shutdown-inhibitor.conf"
 )
 
 // OverrideInhibitDelay writes a config file to logind overriding InhibitDelayMaxSec to the value desired.

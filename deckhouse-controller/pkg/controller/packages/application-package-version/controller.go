@@ -220,9 +220,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	// Check whether the package image exists in the registry and label accordingly.
 	// The image may legitimately not exist (e.g. metadata-only bundle), so both outcomes are valid.
 	if _, err = r.registry.GetImageDigest(ctx, remote, apv.Spec.PackageName, version); err != nil {
-		apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "false"
+		apv.Labels[v1alpha1.PackageLabelExistInRegistry] = "false"
 	} else {
-		apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "true"
+		apv.Labels[v1alpha1.PackageLabelExistInRegistry] = "true"
 	}
 
 	// Finalizer prevents deletion while Applications reference this version.
@@ -230,7 +230,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		controllerutil.AddFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer)
 	}
 
-	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
+	delete(apv.Labels, v1alpha1.PackageLabelDraft)
 
 	if err = r.client.Patch(ctx, apv, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch '%s': %w", apv.Name, err)

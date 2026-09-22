@@ -1,4 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const header = document.querySelector('header');
+
+    function updateHeaderOffset() {
+        const headerHeight = header ? header.getBoundingClientRect().height : 0;
+        document.documentElement.style.setProperty('--header-offset', `${headerHeight}px`);
+        return headerHeight;
+    }
+
+    updateHeaderOffset();
+
+    if (header) {
+        new ResizeObserver(updateHeaderOffset).observe(header);
+    }
+
     const navigationContainer = document.querySelector('.navigation__container');
 
     if (!navigationContainer) {
@@ -6,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const sidebarAndToc = document.querySelectorAll('.sidebar__wrapper-inner');
-    const header = document.querySelector('header');
     let lastScroll = window.scrollY;
     let rafPending = false;
 

@@ -24,9 +24,14 @@ spec:
     - containerName: webhook
       minAllowed:
         {{- include "webhook_resources" . | nindent 8 }}
+      # The ceiling has to bound the informer caches, not the idle baseline: the webhook now holds
+      # the ClusterAuthorizationRules and the RBAC objects of the cluster, which at a few thousand
+      # rules and tens of thousands of bindings is an order of magnitude more than the old
+      # config.json. A ceiling equal to minAllowed would leave VPA unable to raise anything.
       maxAllowed:
-        cpu: 50m
-        memory: 50Mi
+        cpu: 500m
+        memory: 500Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
   {{- end }}
 
 {{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
@@ -52,8 +57,14 @@ spec:
       - port: 40443
         protocol: TCP
         metadata:
-          description: Node-local authorization webhook listener.    
-{{- end }}   
+          description: Node-local authorization webhook listener.
+      # kube-rbac-proxy exposes the webhook metrics on the node IP for Prometheus; the webhook itself
+      # serves them only on 127.0.0.1. hostNetwork pods must declare their host ports.
+      - port: 4233
+        protocol: TCP
+        metadata:
+          description: Metrics endpoint fronted by kube-rbac-proxy.
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -99,27 +110,117 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "6443"
         volumeMounts:
-        - mountPath: /etc/user-authz-webhook/
-          name: user-authz-webhook-config
-          readOnly: true
         - mountPath: /etc/ssl/user-authz-webhook
           name: user-authz-webhook-secret
         - mountPath: /etc/ssl/apiserver-authentication-requestheader-client-ca
           name: apiserver-authentication-requestheader-client-ca
+        # There is deliberately no startupProbe.
+        #
+        # It used to run /healthcheck readyz for up to five minutes, on the reasoning that the
+        # caches take a while to fill on a large cluster and liveness would otherwise kill a
+        # container that is making progress. Liveness cannot: it asks healthz, which answers from
+        # this process alone and returns 200 as soon as the listener is open - which happens before
+        # the caches are warm, on purpose. So the probe protected against nothing, and the one
+        # thing it could still do was kill the container after five minutes of readyz failing.
+        # readyz fails when the API server is unreachable, which on a rebooting master is the
+        # normal state for a while, so the probe turned "the API server is not up yet" into
+        # CrashLoopBackOff - on the fail-closed authorizer the cluster's every request waits for.
+        # Readiness alone gives what the design wants here: the rollout stops, nothing is killed.
+        #
+        # Liveness asks this process alone whether it is still serving. It must not depend on the
+        # API server: the webhook keeps deciding from its caches while the API server is away, and
+        # restarting it then only throws those caches away.
         livenessProbe:
           exec:
             command:
             - /healthcheck
-          # Wait for one minute before restarting the container to avoid crashloopbackoofs in case if apiserver restarts
+            - healthz
           initialDelaySeconds: 5
           periodSeconds: 10
           successThreshold: 1
           failureThreshold: 6
+          # Without this the kubelet applies its 1s default, and the probe fails whenever the node
+          # is merely busy. 15s is what kube-apiserver's own probes use.
+          timeoutSeconds: 15
+        # Readiness does consult the API server, and holds the rollout on this master while it is
+        # unreachable. The probe has to be an exec for the same reason the others are: the listener
+        # requires a client certificate.
+        readinessProbe:
+          exec:
+            command:
+            - /healthcheck
+            - readyz
+          initialDelaySeconds: 2
+          periodSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          timeoutSeconds: 15
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "webhook_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4233"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        # Use the node-local kube-apiserver endpoint for the same reason the webhook does: hostNetwork
+        # pods may be blocked from the "kubernetes" ClusterIP.
+        - name: KUBERNETES_SERVICE_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6443"
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:4243/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: user-authz-webhook
+        ports:
+        - containerPort: 4233
+          name: https-metrics
+          protocol: TCP
+        # Both probes need an explicit timeout for the same reason the webhook's do: the kubelet
+        # defaults to one second, and a master that is merely busy then fails them. A flapping
+        # sidecar makes the Pod unready, which holds the rollout of the component the cluster's
+        # authorization depends on, and restarts the only path its metrics take out.
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4233
+            scheme: HTTPS
+          timeoutSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4233
+            scheme: HTTPS
+          timeoutSeconds: 15
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
       volumes:
       - name: user-authz-webhook-secret
@@ -128,7 +229,4 @@ spec:
       - name: apiserver-authentication-requestheader-client-ca
         configMap:
           name: apiserver-authentication-requestheader-client-ca
-      - name: user-authz-webhook-config
-        configMap:
-          name: user-authz-webhook
 {{- end }}

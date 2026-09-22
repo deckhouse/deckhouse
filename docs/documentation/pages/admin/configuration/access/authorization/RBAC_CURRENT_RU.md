@@ -1,14 +1,14 @@
 ---
 title: "Текущая модель авторизации"
 permalink: ru/admin/configuration/access/authorization/rbac-current.html
-description: "Настройка текущей модели RBAC авторизации в Deckhouse Kubernetes Platform. Настройка модуля user-authz, управление ClusterRole и конфигурация ролевого доступа."
+description: "Настройка текущей модели RBAC авторизации в Deckhouse Platform. Настройка модуля user-authz, управление ClusterRole и конфигурация ролевого доступа."
 lang: ru
 ---
 
 Для реализации текущей ролевой модели в кластере должен быть включён модуль [`user-authz`](/modules/user-authz/).
 Модуль создаёт набор кластерных ролей (ClusterRole), подходящий для большинства задач по управлению доступом пользователей и групп.
 
-{% alert level="warning" %} С версии Deckhouse Kubernetes Platform v1.64 в модуле реализована экспериментальная модель ролевого доступа. Текущая модель ролевого доступа продолжит работать, но в будущем будет объявлена устаревшей (deprecated).
+{% alert level="warning" %} С версии Deckhouse Platform v1.64 в модуле реализована экспериментальная модель ролевого доступа. Текущая модель ролевого доступа продолжит работать, но в будущем будет объявлена устаревшей (deprecated).
 
 Функциональности экспериментальной и текущей моделей ролевого доступа несовместимы. Автоматическая конвертация ресурсов невозможна.
 {% endalert %}
@@ -114,6 +114,8 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
+get,patch:
+    - pods/resize
 read-write:
     - apps/deployments
     - apps/statefulsets
@@ -138,6 +140,8 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
+create:
+    - serviceaccounts/token
 create,patch,update:
     - pods
 delete,deletecollection:
@@ -167,6 +171,15 @@ write:
 ```text
 read-write:
     - deckhouse.io/clusterauthorizationrules
+    - nodes/configz
+    - nodes/healthz
+    - nodes/log
+    - nodes/metrics
+    - nodes/pods
+    - nodes/proxy
+    - nodes/stats
+update:
+    - namespaces/finalize
 write:
     - limitranges
     - namespaces

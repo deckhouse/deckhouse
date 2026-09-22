@@ -160,15 +160,15 @@ masterNodeGroup:
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
 # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
 sshPublicKey: *!CHANGE_SSH_KEY*
-# [<en>] Contains settings to connect to the Deckhouse Kubernetes Platform API.
-# [<ru>] Содержит настройки для подключения к API Deckhouse Kubernetes Platform.
+# [<en>] Contains settings to connect to the Deckhouse Platform API.
+# [<ru>] Содержит настройки для подключения к API Deckhouse Platform.
 provider:
-  # [<en>] Kubeconfig to connect to Deckhouse Kubernetes Platform API, Base64-encoded.
-  # [<ru>] Kubeconfig для подключения к API Deckhouse Kubernetes Platform в кодировке Base64.
+  # [<en>] Kubeconfig to connect to Deckhouse Platform API, Base64-encoded.
+  # [<ru>] Kubeconfig для подключения к API Deckhouse Platform в кодировке Base64.
   kubeconfigDataBase64: *!CHANGE_KUBERNETES_CONFIG_BASE64*
-  # [<en>] Namespace in which DKP cluster resources will be created.
+  # [<en>] Namespace in which DP cluster resources will be created.
   # [<en>] You might consider changing this.
-  # [<ru>] Пространство имён, в котором будут созданы ресурсы кластера DKP.
+  # [<ru>] Пространство имён, в котором будут созданы ресурсы кластера DP.
   # [<ru>] Возможно, захотите изменить.
   namespace: demo
 ---

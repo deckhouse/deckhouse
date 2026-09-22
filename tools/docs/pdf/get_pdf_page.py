@@ -907,10 +907,13 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
     # - Kubernetes: удалить первую колонку с иконками (SVG не рендерятся в PDF)
     for table in soup.find_all("table", class_="supported_versions"):
         classes = table.get("class", [])
-        is_revision = "table__small" in classes
+        # stability__table тоже несёт table__small, но у неё двухуровневая шапка
+        # с colspan — расчёт ширин по первому <tr> дал бы 2 колонки вместо 6.
+        is_stability = "stability__table" in classes
+        is_revision = "table__small" in classes and not is_stability
         is_kubernetes = ("supported_versions__kubernetes" in classes
                          and "supported_versions__kubernetes-container" not in classes)
-        is_linux = (not is_revision and not is_kubernetes
+        is_linux = (not is_revision and not is_kubernetes and not is_stability
                     and "supported_versions__kubernetes-container" not in classes)
 
         # Убрать table-layout из инлайн-стиля (зададим ниже явно)
@@ -973,6 +976,26 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
             for w in widths:
                 col = soup.new_tag("col")
                 col["style"] = f"width: {w};"
+                colgroup.append(col)
+            table.insert(0, colgroup)
+            table["style"] = "table-layout: fixed;"
+
+        # stability__table: стадия жизненного цикла + каналы обновлений поровну.
+        # Иконки задаются фоном из сайтового CSS, которого в PDF нет, поэтому
+        # смысл ячейки несёт подпись .stability__table-label из разметки.
+        if is_stability:
+            col_count = _col_count(table)
+            first_pct = 25
+            rest = col_count - 1
+            if rest > 0:
+                widths = [first_pct] + [(100 - first_pct) // rest] * rest
+            else:
+                widths = [100]
+            widths[0] += 100 - sum(widths)
+            colgroup = soup.new_tag("colgroup")
+            for w in widths:
+                col = soup.new_tag("col")
+                col["style"] = f"width: {w}%;"
                 colgroup.append(col)
             table.insert(0, colgroup)
             table["style"] = "table-layout: fixed;"

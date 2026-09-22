@@ -3,7 +3,7 @@ title: "Encrypting traffic between pods"
 permalink: en/admin/configuration/network/internal/encrypting-pods.html
 ---
 
-To encrypt traffic between pods in Deckhouse Kubernetes Platform (DKP),
+To encrypt traffic between pods in Deckhouse Platform (DP),
 you can use mTLS provided by Istio (via the [`istio`](/modules/istio/) module).
 
 mTLS (mutual TLS) enables mutual authentication between services using TLS certificates:

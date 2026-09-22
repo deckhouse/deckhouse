@@ -20,8 +20,18 @@ const (
 	MachineNamespace                 = "d8-cloud-instance-manager"
 	ConfigurationChecksumsSecretName = "configuration-checksums"
 
+	// KubeSystemNamespace holds the cluster-wide objects a node is built from:
+	// the bootstrap tokens, the cluster configuration, the projected CA.
+	KubeSystemNamespace = "kube-system"
+
+	// ClusterUUIDConfigMapName holds the cluster UUID that seeds hashed resource names and the
+	// update epoch. Four packages read it, and a name that drifts in one of them reads as a
+	// cluster with no UUID: renamed MachineClasses, a shifted epoch.
+	ClusterUUIDConfigMapName = "d8-cluster-uuid"
+	ClusterUUIDConfigMapKey  = "cluster-uuid"
+
 	CloudProviderSecretName      = "d8-node-manager-cloud-provider"
-	CloudProviderSecretNamespace = "kube-system"
+	CloudProviderSecretNamespace = KubeSystemNamespace
 
 	// CloudProviderRegistrationLabel marks every registration Secret a cloud provider module
 	// publishes. CloudProviderSecretName above is only the legacy fixed name — each provider also
@@ -32,8 +42,8 @@ const (
 	InstanceClassKindKey = "instanceClassKind"
 
 	// InstanceClassAPIVersionKey names the API version every InstanceClass read and watch must
-	// use: the storage version of the provider's CRD, published in the registration Secret next
-	// to instanceClassKind. An absent key means the provider has not registered yet; callers must
+	// use: the version the provider serves its InstanceClass at, published in the registration
+	// Secret next to instanceClassKind. An absent key means the provider has not registered yet; callers must
 	// wait rather than pick a version of their own.
 	//
 	// The version is deliberately data, never resolved from discovery. Two independent things

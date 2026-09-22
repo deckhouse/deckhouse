@@ -33,10 +33,11 @@ import (
 )
 
 type providerOptions struct {
-	connectionConfig    string
-	kubeFlagsDefined    bool
-	requireKubeProvider bool
-	kubeConfig          *kube.Config
+	connectionConfig     string
+	connectionConfigOnly bool
+	kubeFlagsDefined     bool
+	requireKubeProvider  bool
+	kubeConfig           *kube.Config
 }
 
 type ProviderOptions func(o *providerOptions)
@@ -44,6 +45,12 @@ type ProviderOptions func(o *providerOptions)
 func WithConnectionConfig(s string) ProviderOptions {
 	return func(o *providerOptions) {
 		o.connectionConfig = s
+	}
+}
+
+func WithConnectionConfigOnly() ProviderOptions {
+	return func(o *providerOptions) {
+		o.connectionConfigOnly = true
 	}
 }
 
@@ -79,7 +86,6 @@ func GetSSHProviderInitializer(ctx context.Context, params settings.ProviderPara
 	return getProviderInitializer(ctx, baseProviderSettings, opts...)
 }
 
-// func to initialize both SSHProviderInitializer and KubeProvider
 func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, libcon.KubeProvider, error) {
 	options := newProviderOptions(opts...)
 	baseProviderSettings := settings.NewBaseProviders(params)
@@ -89,7 +95,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 		return nil, nil, err
 	}
 
-	cfg, err := resolveKubeConfig(baseProviderSettings, options)
+	cfg, err := resolveKubeConfig(ctx, baseProviderSettings, options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -120,9 +126,11 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 // skip lib-connection's parser entirely. Otherwise we fall back to the legacy
 // flag-parsing path for callers that don't have a parsed options struct
 // (notably the server path that drives connections from a config blob).
-func resolveKubeConfig(baseProviderSettings *settings.BaseProviders, options *providerOptions) (*kube.Config, error) {
+// Whichever source it comes from, a kubeconfig is turned into the impersonating
+// client configuration dhctl acts under - see impersonateKubeConfig.
+func resolveKubeConfig(ctx context.Context, baseProviderSettings *settings.BaseProviders, options *providerOptions) (*kube.Config, error) {
 	if options.kubeConfig != nil {
-		return options.kubeConfig, nil
+		return impersonateKubeConfig(ctx, options.kubeConfig)
 	}
 
 	parser := kube.NewFlagsParser(baseProviderSettings)
@@ -131,11 +139,20 @@ func resolveKubeConfig(baseProviderSettings *settings.BaseProviders, options *pr
 	if err != nil {
 		return nil, err
 	}
-	return flags.ExtractConfig()
+
+	cfg, err := flags.ExtractConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return impersonateKubeConfig(ctx, cfg)
 }
 
 func getProviderInitializer(ctx context.Context, baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	options := newProviderOptions(opts...)
+	if options.connectionConfigOnly && options.connectionConfig == "" {
+		return nil, nil
+	}
 
 	var config *libcon_config.ConnectionConfig
 	var err error

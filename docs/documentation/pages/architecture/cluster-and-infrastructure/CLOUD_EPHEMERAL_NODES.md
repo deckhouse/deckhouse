@@ -16,7 +16,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) module and its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown in the following diagram:
+The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) module and its interactions with other Deckhouse Platform (DP) components are shown in the following diagram:
 
 ![Node-manager architecture for CloudEphemeral nodes](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-ephemeral-nodes.png)
 

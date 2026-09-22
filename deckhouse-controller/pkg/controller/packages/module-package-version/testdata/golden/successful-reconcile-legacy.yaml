@@ -10,6 +10,13 @@ metadata:
     packages.deckhouse.io/package: test-module
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-module-v1.0.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
   resourceVersion: "3"
 spec:
   packageName: test-module
@@ -28,12 +35,24 @@ status:
       - Legacy feature
     description:
       en: Legacy test module
+    disableOptions:
+      confirmation: true
+      messages:
+        en: Fallback disable message
+        ru: RU disable message
     requirements:
       deckhouse:
         constraint: '>= 1.60'
       kubernetes:
         constraint: '>= 1.27'
     stage: Sandbox
+  packageSchemas:
+    settingsSchema:
+      openAPIV3Schema:
+        properties:
+          legacyOption:
+            type: boolean
+        type: object
   used: false
 ---
 apiVersion: deckhouse.io/v1alpha1

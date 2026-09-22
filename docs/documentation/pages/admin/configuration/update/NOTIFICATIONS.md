@@ -1,23 +1,23 @@
 ---
 title: Configuring notifications on new releases
 permalink: en/admin/configuration/update/notifications.html
-description: "Configure update notifications in Deckhouse Kubernetes Platform. Alert setup, external system integration, and automated notification management for platform updates."
+description: "Configure update notifications in Deckhouse Platform. Alert setup, external system integration, and automated notification management for platform updates."
 ---
 
-Deckhouse Kubernetes Platform (DKP) generates [alerts](#alerts-in-the-monitoring-system) in the monitoring system
+Deckhouse Platform (DP) generates [alerts](#alerts-in-the-monitoring-system) in the monitoring system
 and can automatically send notifications about upcoming minor updates to external systems.
 This helps you plan updates and prepare for them in advance.
 
 Conditions for sending notifications to external systems:
 
-- DKP is operating in [automatic update mode](configuration.html#automatic-update-mode).
+- DP is operating in [automatic update mode](configuration.html#automatic-update-mode).
 - A minor version update is planned (notifications are not sent for patch versions).
 - A webhook for notifications is configured.
 
 ## Alerts in the monitoring system
 
 If an update requires making changes to the cluster (for example, updating the Kubernetes or OS version),
-DKP generates designated alerts.
+DP generates designated alerts.
 These alerts include:
 
 - [`D8NodeHasDeprecatedOSVersion`](../../../reference/alerts.html#deckhouse-d8nodehasdeprecatedosversion): Nodes with an unsupported OS version have been detected in the cluster.
@@ -29,7 +29,7 @@ This helps avoid disruptions and ensures the cluster remains stable after the up
 
 ## Configuring notifications
 
-In the `Auto` update mode, you can [configure](/modules/deckhouse/configuration.html#parameters-update-notification) a webhook call to receive a notification about an upcoming minor DKP version update.
+In the `Auto` update mode, you can [configure](/modules/deckhouse/configuration.html#parameters-update-notification) a webhook call to receive a notification about an upcoming minor DP version update.
 
 Additionally, notifications are generated not only for Deckhouse updates but also for updates of any modules, including individual ones.  
 In some cases, the system may initiate multiple notifications simultaneously (10–20 notifications) at approximately 15-second intervals.
@@ -42,13 +42,13 @@ Notifications are available only in the `Auto` update mode; they are not generat
 Specifying a webhook is optional: if the [`update.notification.webhook`](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) parameter is not set but the [`update.notification.minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is specified, the update will still be postponed for the defined duration. In this case, the appearance of the [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource in the cluster, named after the new version, can be considered the notification.
 {% endalert %}
 
-After a new minor DKP version appears in the selected update channel but before it is applied in the cluster, a [POST request](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) will be sent to the configured webhook address.
+After a new minor DP version appears in the selected update channel but before it is applied in the cluster, a [POST request](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) will be sent to the configured webhook address.
 
 The [minimalNotificationTime](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows postponing the update installation for a defined period, providing time to react to the notification while respecting update windows.  
 If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same amount, which may lead to the update being indefinitely deferred.
 
 {% alert level="warning" %}
-If your webhook returns any status code out of 2xx range, DKP retries sending the notification up to five times with exponential backoff. If all attempts fail, the release is blocked until the webhook becomes available again.
+If your webhook returns any status code out of 2xx range, DP retries sending the notification up to five times with exponential backoff. If all attempts fail, the release is blocked until the webhook becomes available again.
 {% endalert %}
 
 For easier error handling and debugging, when returning error codes the webhook should return a JSON response with the following structure:
@@ -56,7 +56,7 @@ For easier error handling and debugging, when returning error codes the webhook 
 - `code` — optional internal error code for programmatic handling;
 - `message` — a human-readable description of what went wrong.
 
-If the webhook returns a successful HTTP status (2xx), DKP treats the notification as successful regardless of the response body.
+If the webhook returns a successful HTTP status (2xx), DP treats the notification as successful regardless of the response body.
 
 {% offtopic title="Minimal Go webhook example..." %}
 
@@ -193,7 +193,7 @@ spec:
 ## Notification format
 
 When the conditions for sending notifications are met,
-DKP sends a POST request to the specified webhook with the header `Content-Type: application/json`.
+DP sends a POST request to the specified webhook with the header `Content-Type: application/json`.
 
 Example request body for Deckhouse release:
 

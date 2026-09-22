@@ -45,6 +45,11 @@ message ConvergeStart {
   string state = 4;
   string approve_destruction_change_id = 5;
   ConvergeStartOptions options = 6;
+  // kubeconfig points the kube provider straight at the API server. A request that sets it may
+  // leave connection_config empty: the cluster is then driven over the API server only and no
+  // SSH provider is created. A mutable master NodeGroup is still converged over ssh and needs
+  // connection_config.
+  string kubeconfig = 7;
 }
 
 message ConvergePhaseEnd {

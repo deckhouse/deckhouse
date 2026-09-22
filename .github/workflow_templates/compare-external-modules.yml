@@ -45,4 +45,5 @@ jobs:
           DECKHOUSE_REGISTRY: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           EDITIONS_FILE: "./editions.yaml"
           VERSIONS_TO_COMPARE : ${{ inputs.versions_to_compare || 1 }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: python .github/scripts/python/compare_external_modules.py

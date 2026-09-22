@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -40,6 +39,12 @@ const validatingWebhookConfigurationName = "cluster-objects-grants-validator"
 // the configured resources in every namespace — including system ones — which
 // can deadlock the cluster. The in-handler IsSystem check remains as
 // defense-in-depth.
+//
+// Every namespace outside a project is adopted into one now, so this selector covers namespaces
+// that used to be orphans as well. The basic-model RoleBindings (user-authz:*) that
+// user-authz-controller emits for AuthorizationRules targeting such a namespace do not deadlock on
+// that: the controller's service account is excluded by systemWriterMatchConditions below at the
+// apiserver, before any call reaches this webhook.
 var projectNamespaceSelector = &v1.LabelSelector{
 	MatchLabels: map[string]string{"heritage": "multitenancy-manager"},
 }
@@ -48,14 +53,18 @@ var projectNamespaceSelector = &v1.LabelSelector{
 // writers — evaluated locally (CEL), BEFORE any network call to the webhook backend. This is the
 // anti-deadlock guarantee: the grant allow-list exists to police PROJECT USERS, but every module's
 // resources land in project namespaces via that module's Helm release applied by the
-// deckhouse-controller (system:serviceaccount:d8-system:deckhouse). With failurePolicy: Fail, if the
+// deckhouse-controller (system:serviceaccount:d8-system:deckhouse), or, for the AuthorizationRule
+// bindings, via user-authz-controller (system:serviceaccount:d8-user-authz:controller). With failurePolicy: Fail, if the
 // webhook is denied OR merely unreachable/slow, that server-side apply fails and addon-operator
 // retries it forever, locking the module's queue (observed: user-authz emitting
 // "RoleBinding/...:d8:user-authz:*:user" into every project namespace -> "webhook retry timed out
 // after 2m0s"). Excluding system writers at the apiserver level removes the lock unconditionally —
 // it holds even when the webhook backend is completely down, because the apiserver never calls it for
-// these requests. Project users are still policed (and get a fast, terminal denial). The in-handler
-// isSystemRequest bypass mirrors this as defense-in-depth.
+// these requests. Project users are still policed (and get a fast, terminal denial).
+// Handler-level backstops differ: /defaults and /protect use isSystemRequest (usernames + groups,
+// including system:masters); /is-granted uses the narrower isAutomatedSystemWriter (three groups,
+// no usernames, no system:masters). In-cluster, matchConditions already skip system:masters
+// before any handler runs.
 var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 	{
 		Name:       "exclude-apiserver",
@@ -70,8 +79,14 @@ var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 		Expression: `request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"`,
 	},
 	{
+		// user-authz-controller writes the RoleBindings of AuthorizationRules into project namespaces,
+		// the very objects the chart used to apply as the deckhouse-controller.
+		Name:       "exclude-user-authz-controller",
+		Expression: `request.userInfo.username != "system:serviceaccount:d8-user-authz:controller"`,
+	},
+	{
 		Name:       "exclude-system-serviceaccounts",
-		Expression: `!request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system")`,
+		Expression: `!request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz")`,
 	},
 	{
 		Name:       "exclude-cluster-admins-and-nodes",
@@ -82,6 +97,7 @@ var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/160-multitenancy-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
+		admissionWebhookCertWatch(),
 		{
 			Name:       "registrations",
 			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
@@ -97,7 +113,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(configureGrantValidationWebhook))
 
+func newGrantValidatingWebhook() admissionregistrationv1.ValidatingWebhook {
+	return admissionregistrationv1.ValidatingWebhook{
+		Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", validatingWebhookConfigurationName),
+		ClientConfig: admissionregistrationv1.WebhookClientConfig{
+			Service: &admissionregistrationv1.ServiceReference{
+				Name:      "multitenancy-manager",
+				Namespace: "d8-multitenancy-manager",
+				Path:      ptr.To("/is-granted"),
+				Port:      ptr.To(int32(9443)),
+			},
+		},
+		NamespaceSelector:       projectNamespaceSelector,
+		MatchConditions:         systemWriterMatchConditions,
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		AdmissionReviewVersions: []string{"v1"},
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		TimeoutSeconds:          ptr.To(int32(10)),
+		Rules:                   []admissionregistrationv1.RuleWithOperations{},
+	}
+}
+
 func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	caBundle, err := admissionWebhookCABundle(input)
+	if err != nil {
+		return err
+	}
+
 	kube, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -112,46 +154,30 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	)
 	switch {
 	case k8serrors.IsNotFound(err):
-		caBundle := input.Values.Get("multitenancyManager.internal.admissionWebhookCert.ca").String()
-		if caBundle == "" {
-			return errors.New("webhook certificate is not issued yet")
-		}
-
 		whConfigExists = false
 		whConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: v1.ObjectMeta{Name: validatingWebhookConfigurationName},
-			Webhooks: []admissionregistrationv1.ValidatingWebhook{
-				{
-					Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", validatingWebhookConfigurationName),
-					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Name:      "multitenancy-manager",
-							Namespace: "d8-multitenancy-manager",
-							Path:      ptr.To("/is-granted"),
-							Port:      ptr.To(int32(9443)),
-						},
-						CABundle: []byte(caBundle),
-					},
-					NamespaceSelector:       projectNamespaceSelector,
-					MatchConditions:         systemWriterMatchConditions,
-					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-					AdmissionReviewVersions: []string{"v1"},
-					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-					TimeoutSeconds:          ptr.To(int32(10)),
-					Rules:                   []admissionregistrationv1.RuleWithOperations{},
-				},
-			},
 		}
 	case err != nil:
 		return fmt.Errorf("read ValidatingWebhookConfiguration: %w", err)
 	}
 
-	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
-	// Reconcile selector/match-conditions/timeout on existing configurations too (e.g. upgrades), so a
-	// cluster that already has the webhook without the system-writer exclusion is healed in place.
-	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
-	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
-	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
+	// Replace the whole list so Name/Service/SideEffects and a hand-emptied
+	// or extra webhooks[1:] cannot drift. Keep the cluster CA only when the
+	// cert is not issued yet — publishing Fail without caBundle would reject
+	// matching requests in project namespaces.
+	wh := newGrantValidatingWebhook()
+	wh.Rules = grantableWebhookRules(input)
+	switch {
+	case caBundle != "":
+		wh.ClientConfig.CABundle = []byte(caBundle)
+	case whConfigExists && len(whConfig.Webhooks) > 0 && len(whConfig.Webhooks[0].ClientConfig.CABundle) > 0:
+		wh.ClientConfig.CABundle = whConfig.Webhooks[0].ClientConfig.CABundle
+	default:
+		return errWebhookCertNotIssued
+	}
+	whConfig.Webhooks = []admissionregistrationv1.ValidatingWebhook{wh}
+
 	if whConfigExists {
 		_, err = admissionClient.Update(ctx, whConfig, v1.UpdateOptions{})
 	} else {

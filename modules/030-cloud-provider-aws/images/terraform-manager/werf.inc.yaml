@@ -61,6 +61,7 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
+  - make fmt
   - GO_VER=go CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ $version }}"
   - mv /go/bin/terraform-provider-aws /terraform-provider-aws
   - strip /terraform-provider-aws

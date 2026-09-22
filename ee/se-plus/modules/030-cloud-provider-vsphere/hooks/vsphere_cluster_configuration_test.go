@@ -70,6 +70,28 @@ cloudProviderVsphere:
     password: pass
     host: host
 `
+		filledValuesWithCABundle = `
+global:
+  discovery: {}
+cloudProviderVsphere:
+  internal: {}
+  host: override
+  username: override
+  password: override
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    override-ca
+    -----END CERTIFICATE-----
+  regionTagCategory: override
+  zoneTagCategory: override
+  internalNetworkNames: [override1, override2]
+  externalNetworkNames: [override1, override2]
+  disableTimesync: false
+  vmFolderPath: override
+  sshKeys: [override1, override2]
+  region: override
+  zones: [override1, override2]
+`
 	)
 
 	var (
@@ -134,6 +156,32 @@ internalNetworkNames:
 - override2
 provider:
   insecure: true
+  password: override
+  server: override
+  username: override
+region: override
+regionTagCategory: override
+sshPublicKey: override1
+vmFolderPath: override
+vmFolderExists: false
+zoneTagCategory: override
+zones:
+- override1
+- override2
+`
+		stateAClusterConfigurationCABundle = `
+disableTimesync: false
+externalNetworkNames:
+- override1
+- override2
+internalNetworkNames:
+- override1
+- override2
+provider:
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    override-ca
+    -----END CERTIFICATE-----
   password: override
   server: override
   username: override
@@ -217,6 +265,150 @@ zoneTagCategory: k8s-zone
 zones:
 - test
 `
+		stateAClusterConfigurationSecretCABundle = `
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+disableTimesync: true
+layout: Standard
+provider:
+  server: test
+  username: test
+  password: test
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    secret-ca
+    -----END CERTIFICATE-----
+vmFolderPath: test
+vmFolderExists: false
+regionTagCategory: test
+zoneTagCategory: test
+region: test
+internalNetworkCIDR: 192.168.199.0/24
+sshPublicKey: test
+internalNetworkNames: [test1, test2]
+externalNetworkNames: [test1, test2]
+zones: [test1, test2]
+masterNodeGroup:
+  replicas: 1
+  zones:
+  - test
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: dev/lun_1
+    mainNetwork: k8s-msk/test_187
+nodeGroups:
+- name: khm
+  replicas: 1
+  zones:
+  - test
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: dev/lun_1
+    mainNetwork: k8s-msk/test_187
+`
+		stateAClusterConfigurationProviderCABundleInsecure = `
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+disableTimesync: true
+layout: Standard
+provider:
+  server: test
+  username: test
+  password: test
+  insecure: true
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    conflict-ca
+    -----END CERTIFICATE-----
+vmFolderPath: test
+vmFolderExists: false
+regionTagCategory: test
+zoneTagCategory: test
+region: test
+internalNetworkCIDR: 192.168.199.0/24
+sshPublicKey: test
+internalNetworkNames: [test1, test2]
+externalNetworkNames: [test1, test2]
+zones: [test1, test2]
+masterNodeGroup:
+  replicas: 1
+  zones:
+  - test
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: dev/lun_1
+    mainNetwork: k8s-msk/test_187
+nodeGroups:
+- name: khm
+  replicas: 1
+  zones:
+  - test
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: dev/lun_1
+    mainNetwork: k8s-msk/test_187
+`
+		stateAClusterConfigurationNsxtCABundleInsecure = `
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+disableTimesync: true
+layout: Standard
+provider:
+  server: test
+  username: test
+  password: test
+  insecure: true
+vmFolderPath: test
+vmFolderExists: false
+regionTagCategory: test
+zoneTagCategory: test
+region: test
+internalNetworkCIDR: 192.168.199.0/24
+sshPublicKey: test
+internalNetworkNames: [test1, test2]
+externalNetworkNames: [test1, test2]
+zones: [test1, test2]
+masterNodeGroup:
+  replicas: 1
+  zones:
+  - test
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: dev/lun_1
+    mainNetwork: k8s-msk/test_187
+nodeGroups:
+- name: khm
+  replicas: 1
+  zones:
+  - test
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: dev/lun_1
+    mainNetwork: k8s-msk/test_187
+nsxt:
+  defaultIpPoolName: pool1
+  tier1GatewayPath: /host/tier1
+  user: nsxt
+  password: pass
+  host: host
+  insecureFlag: true
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    conflict-nsxt-ca
+    -----END CERTIFICATE-----
+`
 		nsxt = `
 nsxt:
   defaultIpPoolName: pool1
@@ -273,6 +465,39 @@ data:
   "cloud-provider-cluster-configuration.yaml": %s
   "cloud-provider-discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration1+nsxt2)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+
+		notEmptyProviderClusterConfigurationStateCABundle = fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfigurationSecretCABundle)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+
+		notEmptyProviderClusterConfigurationStateProviderCABundleInsecure = fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfigurationProviderCABundleInsecure)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+
+		notEmptyProviderClusterConfigurationStateNsxtCABundleInsecure = fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfigurationNsxtCABundleInsecure)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
 
 		emptyProviderClusterConfigurationState = `
 apiVersion: v1
@@ -505,6 +730,59 @@ zones:
 			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.resourcePoolPath").String()).To(Equal("module-pool"))
 			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.datacenter").String()).To(Equal("MODULE-DC"))
 			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["module-zone"]`))
+		})
+	})
+
+	g := HookExecutionConfigInit(filledValuesWithCABundle, `{}`)
+	Context("Cluster with module configuration containing caBundle, with empty secret", func() {
+		BeforeEach(func() {
+			g.BindingContexts.Set(g.KubeStateSet(emptyProviderClusterConfigurationState))
+			g.RunHook()
+		})
+
+		It("Should propagate caBundle from module configuration to provider", func() {
+			Expect(g).To(ExecuteSuccessfully())
+			Expect(g.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfigurationCABundle))
+			Expect(g.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration.provider.caBundle").String()).To(ContainSubstring("BEGIN CERTIFICATE"))
+			Expect(g.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
+		})
+	})
+
+	h := HookExecutionConfigInit(emptyValues, `{}`)
+	Context("Cluster without module configuration, with secret containing provider caBundle", func() {
+		BeforeEach(func() {
+			h.BindingContexts.Set(h.KubeStateSet(notEmptyProviderClusterConfigurationStateCABundle))
+			h.RunHook()
+		})
+
+		It("Should keep caBundle from the secret", func() {
+			Expect(h).To(ExecuteSuccessfully())
+			Expect(h.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration.provider.caBundle").String()).To(ContainSubstring("secret-ca"))
+			Expect(h.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration.provider.insecure").Exists()).To(BeFalse())
+		})
+	})
+
+	i := HookExecutionConfigInit(emptyValues, `{}`)
+	Context("Cluster with secret where provider has both caBundle and insecure: true", func() {
+		BeforeEach(func() {
+			i.BindingContexts.Set(i.KubeStateSet(notEmptyProviderClusterConfigurationStateProviderCABundleInsecure))
+			i.RunHook()
+		})
+
+		It("Should fail validation because caBundle conflicts with insecure: true", func() {
+			Expect(i).ToNot(ExecuteSuccessfully())
+		})
+	})
+
+	j := HookExecutionConfigInit(emptyValues, `{}`)
+	Context("Cluster with secret where nsxt has both caBundle and insecureFlag: true", func() {
+		BeforeEach(func() {
+			j.BindingContexts.Set(j.KubeStateSet(notEmptyProviderClusterConfigurationStateNsxtCABundleInsecure))
+			j.RunHook()
+		})
+
+		It("Should fail validation because caBundle conflicts with insecureFlag: true", func() {
+			Expect(j).ToNot(ExecuteSuccessfully())
 		})
 	})
 })

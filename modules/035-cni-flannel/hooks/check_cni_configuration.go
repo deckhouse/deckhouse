@@ -247,6 +247,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 				secretMatchesMC = false
 			}
 		default:
+			//nolint:sloglint
 			input.Logger.Warn("An unknown flannel podNetworkMode was specified in the d8-cni-configuration secret, so the default cni podNetworkMode will be used instead.", slog.String("specified podNetworkMode", cniSecret.Flannel.PodNetworkMode))
 		}
 

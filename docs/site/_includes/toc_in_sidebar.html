@@ -2,8 +2,10 @@
     $(document).ready(function () {
         // Handler for .ready() called.
 
-        const headerHeight = $('header').outerHeight(true) || 0;
-        
+        function getHeaderOffset() {
+            return $('header').outerHeight(true) || 0;
+        }
+
         const $toc = $('#toc-sidebar');
 
         $toc.toc({
@@ -23,7 +25,7 @@
             if (window.innerWidth < 1024) {
                 const target = decodeURI($(this).attr('href'));
                 const targetElement = $(target);
-                const scrollOffset = targetElement.offset().top - headerHeight;
+                const scrollOffset = targetElement.offset().top - getHeaderOffset();
 
                 $('html, body').animate({
                     scrollTop: scrollOffset - 10
@@ -39,10 +41,10 @@
         const sections = $(sectionClasses);
         const visibleOffset = 20;
         const nav = $('.toc-sidebar');
-        const navHeight = $('.header').outerHeight();
 
         $(window).on('scroll', function () {
             const currentPosition = $(this).scrollTop();
+            const navHeight = getHeaderOffset();
 
             sections.each(function () {
                 const top = $(this).offset().top - navHeight - visibleOffset;
@@ -81,7 +83,7 @@
                 const targetElement = $(target);
 
                 if(targetElement.length && targetElement.offset()) {
-                    const scrollOffset = targetElement.offset().top - headerHeight;
+                    const scrollOffset = targetElement.offset().top - getHeaderOffset();
 
                     $('html, body').animate({
                         scrollTop: scrollOffset - 10

@@ -101,6 +101,11 @@ properties:
         type: string
         x-examples:
         - myregion
+      imdsv2:
+        type: boolean
+        default: false
+        x-examples:
+        - true
       tags:
         type: object
         additionalProperties:

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/name212/govalue"
+
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
@@ -45,16 +47,44 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 	if err != nil {
 		return nil, err
 	}
-	return &client.KubernetesClient{KubeClient: kubeCl}, nil
+
+	// The connection the API is reached over is carried along, because destroying a cluster that keeps
+	// its own registry means pulling the infrastructure tooling out of that registry — and the only
+	// address the cluster knows for it is one that resolves nowhere but inside. A local forward on this
+	// same connection is what makes it reachable; see registrydata.mirrorThroughNode.
+	//
+	// Absent when destroying without SSH (a kubeconfig against a static cluster), which changes nothing:
+	// the tunnel path is skipped and the caller behaves as it did.
+	return (&client.KubernetesClient{KubeClient: kubeCl}).WithSSHClient(p.sshClient(ctx)), nil
+}
+
+// sshClient returns the connection to the cluster, or nil when this destroy has none.
+func (p *kubeClientProvider) sshClient(ctx context.Context) libcon.SSHClient {
+	if p.sshProvider == nil {
+		return nil
+	}
+
+	sshCl, err := p.sshProvider.Client(ctx)
+	if err != nil {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(
+			"no ssh connection to reach the cluster store through: %v", err))
+		return nil
+	}
+
+	return sshCl
 }
 
 func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
-	err := p.kubeProvider.Cleanup(ctx)
-	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to clean up kube provider: %v", err), "\n"))
+	// Either provider can legitimately be absent: a kubeconfig-driven destroy builds no SSH
+	// provider, and a request that built no providers at all reaches this with neither.
+	if govalue.NotNil(p.kubeProvider) {
+		err := p.kubeProvider.Cleanup(ctx)
+		if err != nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to clean up kube provider: %v", err), "\n"))
+		}
 	}
 
-	if stopSSH {
+	if stopSSH && govalue.NotNil(p.sshProvider) {
 		err := p.sshProvider.Cleanup(ctx)
 		if err != nil {
 			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to clean up ssh provider: %v", err))

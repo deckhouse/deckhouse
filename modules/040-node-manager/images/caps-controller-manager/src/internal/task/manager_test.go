@@ -60,8 +60,8 @@ func TestSpawn_SingleExecution(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	if atomic.LoadInt32(&counter) != 1 {
-		t.Fatalf("expected task to run once, got %d", counter)
+	if got := atomic.LoadInt32(&counter); got != 1 {
+		t.Fatalf("expected task to run once, got %d", got)
 	}
 }
 
@@ -192,11 +192,37 @@ func TestSpawn_TaskRemovedAfterCompletion(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 
 	mgr.mu.Lock()
-	_, exists := mgr.tasks["id"]
+	_, exists := mgr.tasks[taskKey("id", "test")]
 	mgr.mu.Unlock()
 
 	if exists {
 		t.Fatalf("task should be removed after completion")
+	}
+}
+
+// countingTask returns a task that counts its runs and signals every one of them.
+//
+// The signal is what the test synchronises on. A fixed sleep would both race with the task
+// goroutine and go flaky on a loaded machine, and polling Spawn instead is worse than either:
+// once a slot is free, Spawn starts the task itself, so a key collision would be papered over
+// by the very call meant to observe it.
+func countingTask(counter *int32, ran chan<- struct{}) Task {
+	return func(_ context.Context, _ any) error {
+		atomic.AddInt32(counter, 1)
+		ran <- struct{}{}
+
+		return nil
+	}
+}
+
+// awaitTaskRun waits for a task to report a run, failing if it never does.
+func awaitTaskRun(t *testing.T, ran <-chan struct{}, name string) {
+	t.Helper()
+
+	select {
+	case <-ran:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("task %q never ran: its slot is held by another task", name)
 	}
 }
 
@@ -210,23 +236,45 @@ func TestSpawn_DifferentTaskTypesDoNotConflict(t *testing.T) {
 	var test1Count int32
 	var test2Count int32
 
-	test1 := func(ctx context.Context, data any) error {
-		atomic.AddInt32(&test1Count, 1)
-		return nil
+	test1Ran := make(chan struct{}, 1)
+	test2Ran := make(chan struct{}, 1)
+
+	// NOTE: this test will FAIL if you key only by taskID.
+	// Both are spawned before either is awaited: keyed by id alone, the second Spawn would
+	// find the slot occupied and test2 would never run.
+	mgr.Spawn(ctx, "same", "test1", nil, countingTask(&test1Count, test1Ran))
+	mgr.Spawn(ctx, "same", "test2", nil, countingTask(&test2Count, test2Ran))
+
+	awaitTaskRun(t, test1Ran, "test1")
+	awaitTaskRun(t, test2Ran, "test2")
+
+	if got1, got2 := atomic.LoadInt32(&test1Count), atomic.LoadInt32(&test2Count); got1 != 1 || got2 != 1 {
+		t.Fatalf("task types are conflicting: test1Count=%d test2Count=%d", got1, got2)
+	}
+}
+
+// Without a separator in the key, ("x", "yz") and ("xy", "z") land in the same map entry and
+// the second task never runs while the first one owns the slot.
+func TestSpawn_IDAndTaskTypeBoundaryDoesNotCollide(t *testing.T) {
+	mgr := &Manager{
+		tasks: make(map[string]*taskEntry),
 	}
 
-	test2 := func(ctx context.Context, data any) error {
-		atomic.AddInt32(&test2Count, 1)
-		return nil
-	}
+	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
 
-	// NOTE: this test will FAIL if you key only by taskID
-	mgr.Spawn(ctx, "same", "test1", nil, test1)
-	mgr.Spawn(ctx, "same", "test2", nil, test2)
+	var firstCount int32
+	var secondCount int32
 
-	time.Sleep(50 * time.Millisecond)
+	firstRan := make(chan struct{}, 1)
+	secondRan := make(chan struct{}, 1)
 
-	if test1Count != 1 || test2Count != 1 {
-		t.Fatalf("task types are conflicting: test1Count=%d test2Count=%d", test1Count, test2Count)
+	mgr.Spawn(ctx, "machine", "cleanup", nil, countingTask(&firstCount, firstRan))
+	mgr.Spawn(ctx, "machinecl", "eanup", nil, countingTask(&secondCount, secondRan))
+
+	awaitTaskRun(t, firstRan, "machine/cleanup")
+	awaitTaskRun(t, secondRan, "machinecl/eanup")
+
+	if got1, got2 := atomic.LoadInt32(&firstCount), atomic.LoadInt32(&secondCount); got1 != 1 || got2 != 1 {
+		t.Fatalf("keys are colliding: firstCount=%d secondCount=%d", got1, got2)
 	}
 }

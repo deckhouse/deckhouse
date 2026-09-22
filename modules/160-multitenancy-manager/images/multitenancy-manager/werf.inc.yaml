@@ -10,10 +10,6 @@ import:
   add: /src/templates
   to: /templates
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/helmlib
-  to: /helmlib
-  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:
@@ -29,16 +25,12 @@ git:
       - '**/*.go'
       - '**/go.mod'
       - '**/go.sum'
-      - '**/helmlib/*.yaml'
-      - '**/helmlib/*.tpl'
       - '**/templates/*.yaml'
     stageDependencies:
       install:
         - '**/*.go'
         - '**/go.mod'
         - '**/go.sum'
-        - '**/helmlib/*.yaml'
-        - '**/helmlib/*.tpl'
         - '**/templates/*.yaml'
 shell:
   install:

@@ -1,5 +1,5 @@
 {{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
-  {{- if .Values.global.modules.publicDomainTemplate }}
+  {{- if and .Values.global.modules.publicDomainTemplate (eq (include "helm_lib_module_ingress_enabled" .) "true") }}
     {{- if eq (include "helm_lib_module_https_mode" .) "Disabled" }}
       {{- fail "HTTPS is mandatory for spiffe endpoint" }}
     {{- end }}

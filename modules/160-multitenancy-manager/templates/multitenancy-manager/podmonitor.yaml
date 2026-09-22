@@ -1,0 +1,33 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+# The controller serves d8_cluster_objects_grant_violated, the series behind the
+# ClusterResourceGrantPolicyViolation alert and the "Cluster Resource Grant Violations" dashboard.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: multitenancy-manager
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  selector:
+    matchLabels:
+      app: multitenancy-manager
+  namespaceSelector:
+    matchNames:
+    - d8-{{ $.Chart.Name }}
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    relabelings:
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+{{- end }}

@@ -32,7 +32,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	corev1 "k8s.io/api/core/v1"
@@ -50,6 +49,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -269,7 +269,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, nil
 		}
 		r.log.Error("failed to get module release", slog.String("release", req.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	r.resetConfigurationErrorMetric(release)
@@ -303,7 +303,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	if err != nil {
 		r.log.Error("failed to update module release before handling", slog.String("release", release.GetName()), log.Err(err))
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	if !res.IsZero() {
@@ -315,9 +315,9 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
 		if err := r.client.Update(ctx, release); err != nil {
 			r.log.Error("failed to add metrics finalizer to module release", slog.String("release", release.GetName()), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	switch release.GetPhase() {
@@ -326,10 +326,10 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		release.Status.TransitionTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		if err = r.client.Status().Update(ctx, release); err != nil {
 			r.log.Error("failed to update module release status", slog.String("release", release.GetName()), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 		// process to the next phase
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 
 	case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseSkipped:
 		if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != strings.ToLower(release.GetPhase())) {
@@ -339,7 +339,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 			release.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(release.GetPhase())
 			if err = r.client.Update(ctx, release); err != nil {
 				r.log.Error("failed to update module release status", slog.String("release", release.GetName()), log.Err(err))
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 			}
 		}
 
@@ -351,7 +351,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 			r.log.With(
 				slog.String("module_name", release.GetModuleName()),
 				slog.String("release_name", release.GetName()),
-				slog.String("source", release.GetModuleSource()),
+				slog.String("module_source", release.GetModuleSource()),
 			).Debug("result of handle deployed release", log.Err(err))
 
 			return res, err
@@ -364,7 +364,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	exists, err := utils.ModulePullOverrideExists(ctx, r.client, release.GetModuleName())
 	if err != nil {
 		r.log.Error("failed to get module pull override", slog.String("module", release.GetModuleName()), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 	if exists {
 		r.log.Info("module is overridden, skip release processing", slog.String("module", release.GetModuleName()))
@@ -377,7 +377,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		r.log.With(
 			slog.String("module_name", release.GetModuleName()),
 			slog.String("release_name", release.GetName()),
-			slog.String("source", release.GetModuleSource()),
+			slog.String("module_source", release.GetModuleSource()),
 		).Debug("result of handle pending release", log.Err(err))
 
 		return res, err
@@ -402,7 +402,7 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 			return ctrl.Result{}, fmt.Errorf("update with retry: %w", err)
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -602,7 +602,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 			return res, fmt.Errorf("update module release: %w", err)
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists) {
@@ -744,7 +744,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 //   - Maintenance window compliance for disruption minimization
 //   - Manual approval workflows for controlled deployments
 //   - Notification delivery for stakeholder awareness
-//   - Cooldown period enforcement between major releases
 //   - Canary deployment scheduling for gradual rollouts
 //
 // Side Effects:
@@ -784,7 +783,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	logger := r.log.With(
 		slog.String("module_name", release.GetModuleName()),
 		slog.String("release_name", release.GetName()),
-		slog.String("source", release.GetModuleSource()),
+		slog.String("module_source", release.GetModuleSource()),
 	)
 
 	logger.Debug("handle pending release")
@@ -1646,7 +1645,7 @@ type TimeResult struct {
 //
 // Minor Release Workflow:
 //   - Higher risk profile requires additional safety measures
-//   - Evaluated conditions: Cooldown periods, canary settings, notifications, windows, approvals
+//   - Evaluated conditions: Canary settings, notifications, windows, approvals
 //   - Disruption approval validation through specialized checker
 //   - Enhanced notification workflow with detailed change communication
 //   - Extended validation period before deployment authorization
@@ -1832,7 +1831,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	// The metric is already reset in the handleRelease function, so we can release the finalizer

@@ -29,7 +29,6 @@ import (
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -40,7 +39,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -51,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -283,6 +282,16 @@ func BuildName(namespace, name string) string {
 	return fmt.Sprintf("%s.%s", namespace, name)
 }
 
+// GetInstance returns the application instance name.
+func (a *Application) GetInstance() string {
+	return a.instance
+}
+
+// GetPackage returns the application package name.
+func (a *Application) GetPackage() string {
+	return a.definition.Name
+}
+
 // GetNamespace returns the application namespace.
 func (a *Application) GetNamespace() string {
 	return a.namespace
@@ -325,15 +334,14 @@ func (a *Application) GetHooksQueues() []string {
 	return slices.Compact(res)
 }
 
-// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
-func (a *Application) GetHookSnapshotsDump() []byte {
-	d := make(map[string]interface{})
-	for _, h := range a.hooks.GetHooks() {
-		d[h.GetName()] = h.GetHookController().SnapshotsDump()
+// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+func (a *Application) GetHookSnapshotsDump() map[string]any {
+	snapshots := make(map[string]any)
+	for _, hook := range a.hooks.GetHooks() {
+		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshots
 }
 
 // GetValuesChecksum returns a checksum of the current values.

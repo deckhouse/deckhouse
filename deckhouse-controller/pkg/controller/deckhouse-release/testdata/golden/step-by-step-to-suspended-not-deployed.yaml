@@ -1,0 +1,32 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/change-cause: check release (step-by-step)
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "false"
+  name: v1.76.11
+  resourceVersion: "4"
+spec:
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.76.11
+  version: v1.76.11
+status:
+  approved: false
+  message: Release is suspended
+  phase: Suspended
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.76.9
+  resourceVersion: "999"
+spec:
+  version: v1.76.9
+status:
+  approved: false
+  phase: Deployed
+  transitionTime: null

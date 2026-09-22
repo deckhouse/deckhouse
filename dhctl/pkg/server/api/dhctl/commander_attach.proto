@@ -45,6 +45,10 @@ message CommanderAttachStart {
   string resources_template = 3;
   google.protobuf.Struct resources_values = 4;
   CommanderAttachStartOptions options = 5;
+  // kubeconfig points the kube provider straight at the API server. A request that sets it may
+  // leave connection_config empty: the cluster is then driven over the API server only and no
+  // SSH provider is created.
+  string kubeconfig = 6;
 }
 
 message CommanderAttachPhaseEnd {

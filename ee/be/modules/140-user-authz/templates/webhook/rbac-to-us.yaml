@@ -1,0 +1,35 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
+---
+# The Prometheus scraper reaches the webhook metrics through the kube-rbac-proxy sidecar, which
+# authorizes it against this virtual daemonsets/prometheus-metrics subresource.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-to-webhook-prometheus-metrics
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
+rules:
+- apiGroups: ["apps"]
+  resources: ["daemonsets/prometheus-metrics"]
+  resourceNames: ["user-authz-webhook"]
+  verbs: ["get"]
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-to-webhook-prometheus-metrics
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-to-webhook-prometheus-metrics
+subjects:
+- kind: User
+  name: d8-monitoring:scraper
+- kind: ServiceAccount
+  name: prometheus
+  namespace: d8-monitoring
+{{- end }}
+{{- end }}

@@ -117,7 +117,7 @@ tags:
 
 ## Назначение AWSClusterConfiguration
 
-[Ресурс AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) описывает параметры кластера и используется Deckhouse Kubernetes Platform (DKP) для:
+[Ресурс AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) описывает параметры кластера и используется Deckhouse Platform (DP) для:
 
 - задания схемы размещения и сетевых CIDR;
 - конфигурации master- и рабочих узлов;
@@ -162,15 +162,25 @@ vpcNetworkCIDR: 10.241.0.0/16
 
 ## Группы безопасности
 
-Группы безопасности (security groups) в AWS используются для управления входящим и исходящим сетевым трафиком на виртуальные машины. В DKP они позволяют:
+Группы безопасности (security groups) в AWS используются для управления входящим и исходящим сетевым трафиком на виртуальные машины. В DP они позволяют:
 
 - разрешить подключение к узлам кластера с других подсетей;
 - открыть доступ к приложениям, размещённым на статических узлах;
 - ограничить или разрешить доступ к внешним ресурсам в соответствии с требованиями безопасности.
 
-{% alert level="info" %}
-DKP не создаёт группы безопасности автоматически. В конфигурации кластера следует указывать уже существующие security groups, созданные вручную через AWS Console или иным способом.
-{% endalert %}
+Если задан параметр [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера DP создаёт группы безопасности по умолчанию:
+
+- `<CLUSTER_PREFIX>-node` — назначается узлам кластера:
+  - разрешение любого исходящего трафика в `0.0.0.0/0`;
+  - разрешение любого входящего трафика от группы `<CLUSTER_PREFIX>-loadbalancer`;
+  - разрешение любого входящего трафика от узлов той же группы `<CLUSTER_PREFIX>-node`;
+  - разрешение входящего трафика по протоколу ICMP из CIDR, указанных в [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (по умолчанию `0.0.0.0/0`).
+- `<CLUSTER_PREFIX>-loadbalancer` — используется балансировщиками нагрузки:
+  - разрешение любого входящего трафика из CIDR, указанных в [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist);
+  - разрешение любого исходящего трафика к группе `<CLUSTER_PREFIX>-node`.
+- `<CLUSTER_PREFIX>-ssh-accessible` — создаётся, если задан [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist), и разрешает входящий трафик по протоколу TCP и порту `22` из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается master-узлам или bastion-хосту в схеме WithNAT.
+
+Помимо групп по умолчанию, к узлам можно подключить собственные группы безопасности, созданные в облаке заранее.
 
 Дополнительные группы безопасности можно назначить в следующих случаях:
 
@@ -225,7 +235,7 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 - bastion-хост требуется поставить в свежесозданной VPC:
   1. Создайте базовую инфраструктуру кластера — `dhctl bootstrap-phase base-infra`.
-  1. Запустите вручную bastion-хост в подсети `<prefix>-public-0`.
+  1. Запустите вручную bastion-хост в подсети `<CLUSTER_PREFIX>-public-0`.
   1. Продолжите установку с указанием bastion-хоста — `dhctl bootstrap --ssh-bastion...`.
 
 ### Создание кластера в новом VPC с доступом через имеющийся bastion-хост
@@ -252,7 +262,7 @@ IPv4 CIDR у обоих VPC должен различаться.
    dhctl bootstrap-phase base-infra --config config
    ```
 
-1. Запустите вручную bastion-хост в подсети `<prefix>-public-0`.
+1. Запустите вручную bastion-хост в подсети `<CLUSTER_PREFIX>-public-0`.
 
 1. Продолжите установку кластера. На вопрос про кеш Terraform ответьте `y`:
 
@@ -262,7 +272,7 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 ## Использование существующего VPC (existingVPCID)
 
-[Параметр `existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) в ресурсе AWSClusterConfiguration позволяет использовать уже существующий VPC для развертывания кластера DKP, вместо создания нового VPC автоматически.
+[Параметр `existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) в ресурсе AWSClusterConfiguration позволяет использовать уже существующий VPC для развертывания кластера DP, вместо создания нового VPC автоматически.
 
 Этот параметр может быть полезен в случаях, когда:
 
@@ -271,7 +281,7 @@ IPv4 CIDR у обоих VPC должен различаться.
 - политика безопасности или архитектурные требования запрещают автоматическое создание VPC.
 
 {% alert level="warning" %}
-Если в существующем VPC уже есть Internet Gateway, попытка развертывания базовой инфраструктуры завершится ошибкой. В текущей версии DKP не поддерживается повторное использование уже существующего Internet Gateway.
+Если в существующем VPC уже есть Internet Gateway, попытка развертывания базовой инфраструктуры завершится ошибкой. В текущей версии DP не поддерживается повторное использование уже существующего Internet Gateway.
 {% endalert %}
 
 Совместимость с другими параметрами:

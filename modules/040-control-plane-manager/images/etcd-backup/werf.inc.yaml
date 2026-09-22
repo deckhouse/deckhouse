@@ -1,7 +1,6 @@
-{{- $binaries := "/bin/sh /bin/mv /bin/df /bin/du /bin/tail /bin/awk /bin/tar /bin/gzip /bin/chmod" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: {{ index $.Images "base/distroless-fin" }}
 git:
 - add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint.sh
   to: /entrypoint.sh
@@ -15,23 +14,30 @@ import:
   to: /bin/etcdctl
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /usr/lib/locale/C.utf8
-  before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /relocate
+  add: /out
   to: /
   before: setup
-shell:
-  setup:
-  - set -e
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /coreutils
+  to: /
+  includePaths:
+  - usr/bin/chmod
+  - usr/bin/df
+  - usr/bin/mv
+  - usr/bin/tail
+  before: setup
 imageSpec:
   config:
     entrypoint: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  beforeInstall:
+  - pm install bash gzip tar gawk gnu-glibc -d /out
+  - pm install coreutils -d /coreutils
+  - mkdir -p /out/bin
+  - ln -sf /usr/bin/bash /out/bin/bash
+  - ln -sf /usr/bin/bash /out/bin/sh
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -5,10 +5,10 @@ title: "The user-authz module: usage"
 ## Example of assigning rights to a cluster administrator
 
 {% alert level="info" %}
-The example uses the [experimental role-based](./#experimental-role-based-model).
+The example uses the [granular role-based](./#granular-role-based-model).
 {% endalert %}
 
-To grant access to a cluster administrator, use the role `d8:manage:all:manager` in `ClusterRoleBinding`.
+To grant access to a cluster administrator, use the role `d8:system:manager` in ClusterRoleBinding.
 
 Example of assigning rights to a cluster administrator (User `jane`):
 
@@ -23,7 +23,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:manager
+  name: d8:system:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -31,7 +31,7 @@ roleRef:
 The rights that the user will get will be limited to namespaces starting with `d8-` or `kube-`.
 
 The user will be able to:
-- View, modify, delete, and create Kubernetes resources and DKP modules;
+- View, modify, delete, and create Kubernetes resources and DP modules;
 - Modify module configurations (view, modify, delete, and create `moduleConfig` resources);
 - Execute the following commands on pods and services:
   - `kubectl attach`
@@ -43,10 +43,10 @@ The user will be able to:
 ## Example of assigning rights to a network administrator
 
 {% alert level="info" %}
-The example uses the [experimental role-based](./#experimental-role-based-model).
+The example uses the [granular role-based](./#granular-role-based-model).
 {% endalert %}
 
-To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:manager` in `ClusterRoleBinding`.
+To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:subsystem:networking:manager` in ClusterRoleBinding.
 
 Example of assigning rights to a network administrator (User `jane`):
 
@@ -61,12 +61,13 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:networking:manager
+  name: d8:subsystem:networking:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
 {% offtopic title="The rights that the user will get" %}
-The rights that the user will get will be limited to the following list of DKP module namespaces from the `networking` subsystem (the actual list depends on the list of modules included in the cluster):
+The rights that the user will get will be limited to the following list of DP module namespaces from the `networking` subsystem (the actual list depends on the list of modules included in the cluster):
+
 - `d8-cni-cilium`
 - `d8-cni-flannel`
 - `d8-cni-simple-bridge`
@@ -156,10 +157,10 @@ The user will be able to:
 ## Example of assigning administrative rights to a user within a namespace
 
 {% alert level="info" %}
-The example uses the [experimental role-based](./#experimental-role-based-model).
+The example uses the [granular role-based](./#granular-role-based-model).
 {% endalert %}
 
-To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:use:role:admin` in `RoleBinding` in the corresponding namespace.
+To assign rights to a user to manage application resources within a namespace (including some namespaced DP module resources such as DexAuthenticator), use the role `d8:namespace:admin` in a RoleBinding in the corresponding namespace. Cluster-wide module configuration is not included.
 
 Example of assigning rights to an application developer (User `app-developer`) in namespace `myapp`:
 
@@ -175,7 +176,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:use:role:admin
+  name: d8:namespace:admin
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -211,7 +212,7 @@ In the `myapp` namespace, the user will be able to:
   - `StatefulSet`
   - `VerticalPodAutoscaler`
   - `VolumeSnapshot`
-- View, edit, delete, and create the following DKP module resources:
+- View, edit, delete, and create the following DP module resources:
   - `DexAuthenticator`
   - `DexClient`
   - `PodLogginConfig`
@@ -220,7 +221,34 @@ In the `myapp` namespace, the user will be able to:
   - `kubectl exec`
   - `kubectl port-forward`
   - `kubectl proxy`
+
+The user will **not** get the operations reserved for the `superadmin` level (see the section [Admin level restrictions and superadmin rights](./#admin-level-restrictions-and-superadmin-rights)): minting ServiceAccount tokens, making requests on behalf of ServiceAccounts, modifying platform system resources in this namespace, and connecting to system pods.
 {% endofftopic %}
+
+## An example of assigning rights across all namespaces of a project
+
+{% alert level="info" %}
+The example uses the [granular role-based model](./#granular-role-based-model) and the [multitenancy-manager](../multitenancy-manager/) module.
+{% endalert %}
+
+If the namespaces are grouped into a [project](/modules/multitenancy-manager/), a role can be granted for the whole project at once — it will automatically apply in all of its namespaces, including those created later. To do that, use a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) in the main namespace of the project instead of RoleBinding:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: team-developers
+  namespace: my-project
+spec:
+  subjects:
+    - kind: Group
+      name: developers
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:user
+```
+
+For more details on role bindings in projects, see [the multitenancy-manager module documentation](../multitenancy-manager/usage.html#granting-access-within-a-project).
 
 ## An example of `ClusterAuthorizationRule`
 
@@ -255,10 +283,92 @@ spec:
         team: frontend
 ```
 
+A `User` or `Group` subject is matched by name against the user identity in the token. A locally managed identity is indistinguishable from one asserted by an external authentication provider. Because of that, you can't create a [User](/modules/user-authn/cr.html#user) whose `spec.email` or a [Group](/modules/user-authn/cr.html#group) whose `spec.name` matches a subject of an existing ClusterAuthorizationRule or AuthorizationRule. This prevents any unnoticed attempt to grant the identity privileges.
+
+If the match is intentional, for example, if the ClusterAuthorizationRule has been written in advance, set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on the User or Group. The annotation only acknowledges the name collision. It does not let a requester assign roles they cannot cover or that sit outside their can-assign range.
+
+Write an email for the `User` subject in lowercase. It's recorded to the token in lowercase so a subject spelled `Admin@Example.com` won't match `admin@example.com`. A `Group`-type subject names are matched exactly, since group names are not lowercased anywhere.
+
+This restriction is applied when a User or Group is created and when its `spec.email` or `spec.name` is changed. Deleting a User or Group whose name a rule still grants privileges to is allowed with a warning: the name stays granted, and recreating the object restores the privileges. The restriction doesn't prevent adding existing users or groups to a ClusterAuthorizationRule or AuthorizationRule. If a matching User or Group already exists, it receives the privileges immediately after it's added to the rule.
+
+## Managing permissions via CLI
+
+The [`d8 iam access`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-access) command provides a convenient way to manage authorization rules without writing YAML manifests. It creates and deletes [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) and [AuthorizationRule](cr.html#authorizationrule) resources.
+
+Available access levels: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
+
+Examples of granting permissions with the `d8 iam access` command:
+
+Grant the Admin role to a user in the `dev` namespace:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev
+```
+
+Grant the Admin role to a user in multiple namespaces:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev -n stage
+```
+
+Grant a cluster-wide role to a user (excluding system namespaces):
+
+```shell
+d8 iam access grant user anton --access-level ClusterAdmin --scope cluster
+```
+
+Grant a cluster-wide role to a user in all namespaces (including system namespaces):
+
+```shell
+d8 iam access grant user anton --access-level ClusterAdmin --scope all-namespaces
+```
+
+Grant a role to group members by a namespace label selector:
+
+```shell
+d8 iam access grant group admins --access-level Editor --scope labels=team=platform,tier=prod
+```
+
+Grant a role to group members with additional capabilities:
+
+```shell
+d8 iam access grant group admins --access-level Editor -n dev --port-forwarding --allow-scale
+```
+
+Preview the manifest without applying it:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev --dry-run -o yaml
+```
+
+Revoke a user's permissions in a namespace:
+
+```shell
+d8 iam access revoke user anton -n dev
+```
+
+Revoke a user's cluster-wide permissions:
+
+```shell
+d8 iam access revoke user anton --scope cluster
+```
+
+List all access rules in the cluster:
+
+```shell
+d8 iam list rules
+```
+
+Show detailed information about a specific rule:
+
+```shell
+d8 iam get rule <name>
+```
+
 ## Example of granting access to all namespaces
 
 {% alert level="info" %}
-The example refers to the [current role-based model](./#current-role-based-model).
+The example refers to the [basic role-based model](./#basic-role-based-model).
 {% endalert %}
 
 In [multi-tenancy](configuration.html#parameters-enablemultitenancy) mode (`userAuthz.enableMultiTenancy`), namespace-based restrictions are configured using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) resource fields.
@@ -287,14 +397,14 @@ Configuration options:
 
 > The `SuperAdmin` access level **does not lift** the namespace restrictions specified in the `namespaceSelector` and `limitNamespaces` parameters. If you need to grant access to all namespaces, specify the scope explicitly, including via [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **unioned**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-to-a-single-user).
+If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **combined**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-to-a-single-user).
 
 {% alert level="warning" %}
-Namespace restrictions from `ClusterAuthorizationRule` are enforced by the authorization webhook chain. If the webhook is unavailable, these restrictions **do not apply** until the webhook is reachable again. For more information, see the [module description](./#current-role-based-model).
+Namespace restrictions from ClusterAuthorizationRule are enforced by the authorization webhook chain. If the webhook is unavailable, these restrictions **do not apply** until the webhook is reachable again. For more information, see the [module description](./#basic-role-based-model).
 {% endalert %}
 
-{% offtopic title="Experimental role-based model" %}
-`d8:use:role:*` roles must be bound with `RoleBinding` in a **specific** namespace — use one `RoleBinding` per namespace (or automate the process). `d8:manage:*` roles do not cover namespaces for user workloads; they only apply to system namespaces (`d8-*`, `kube-*`) within the subsystem.
+{% offtopic title="Granular role-based model" %}
+`d8:namespace:*` roles must be bound with RoleBinding in a **specific** namespace — use one RoleBinding per namespace (or automate the process). `d8:system:*` / `d8:subsystem:*` roles do not cover namespaces for user workloads; they only apply to system namespaces (`d8-*`, `kube-*`) within the subsystem.
 {% endofftopic %}
 
 ## Creating a user
@@ -739,7 +849,9 @@ The `allowed: false` message means that the webhook doesn't block access. In cas
 
 ## Customizing rights of high-level roles
 
-If you want to grant more privileges to a specific [high-level role](./#current-role-based-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
+If you want to grant more privileges to a specific [high-level role](./#basic-role-based-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
+
+The module automatically sets the `user-authz.deckhouse.io/access-level` label on such ClusterRoles and includes their rules in the aggregated ClusterRole `user-authz:<access-level>:custom`. The label is internal: the module keeps it equal to the annotation and removes it when the annotation is absent, so there is no need to set it by hand. In audit logs, access granted through an annotated ClusterRole is attributed to that aggregated role.
 
 An example:
 

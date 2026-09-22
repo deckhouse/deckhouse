@@ -226,6 +226,19 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 		}, eventually, poll).Should(BeTrue(), "the CRD must be established before objects of that kind are created")
 	}
 
+	// suiteRegistration snapshots the Secret before the first spec here rewrites it. Restoring
+	// field by field broke the suite: DVP is both the fixture's own provider and one of the
+	// contracts below, so deleting "the subtree this spec added" deleted the fixture's subtree.
+	var suiteRegistration map[string][]byte
+
+	copyData := func(data map[string][]byte) map[string][]byte {
+		copied := make(map[string][]byte, len(data))
+		for key, value := range data {
+			copied[key] = append([]byte(nil), value...)
+		}
+		return copied
+	}
+
 	// publishProvider points the whole cluster at one provider: its discovery secret and its real
 	// contract file. The suite's own DVP-shaped fixture is restored afterwards.
 	publishProvider := func(p providerContract) {
@@ -236,6 +249,9 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
 			Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
 		}, discovery)).To(Succeed())
+		if suiteRegistration == nil {
+			suiteRegistration = copyData(discovery.Data)
+		}
 		discovery.Data["type"] = jsonBytes(p.name)
 		discovery.Data["instanceClassKind"] = []byte(p.instanceClassKind)
 		discovery.Data["capiMachineTemplateKind"] = []byte(p.templateKind)
@@ -280,16 +296,16 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 		Expect(k8sClient.Update(suiteCtx, templates)).To(Succeed())
 	}
 
-	restoreSuiteProvider := func(p providerContract) {
+	// restoreSuiteProvider puts the registration back byte for byte, whatever this spec did to it.
+	restoreSuiteProvider := func(_ providerContract) {
+		if suiteRegistration == nil {
+			return
+		}
 		discovery := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
 			Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
 		}, discovery)).To(Succeed())
-		discovery.Data["type"] = jsonBytes("dvp")
-		discovery.Data["instanceClassKind"] = []byte("DVPInstanceClass")
-		discovery.Data["capiMachineTemplateKind"] = []byte("DeckhouseMachineTemplate")
-		discovery.Data["capiMachineTemplateAPIVersion"] = []byte("infrastructure.cluster.x-k8s.io/v1alpha1")
-		delete(discovery.Data, p.name)
+		discovery.Data = copyData(suiteRegistration)
 		Expect(k8sClient.Update(suiteCtx, discovery)).To(Succeed())
 	}
 

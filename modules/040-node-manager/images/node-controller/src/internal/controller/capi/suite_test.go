@@ -36,6 +36,7 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -63,6 +64,10 @@ spec:
       vmClassName: test
 `
 
+// suiteClusterUUID is what the fixture stamps the cluster with; specs that assert
+// on a rendered artifact compare against it.
+const suiteClusterUUID = "11111111-2222-3333-4444-555555555555"
+
 // instanceClassChecksumFixture keeps the checksum stable per NodeGroup, matching the
 // contract that a changed instance class changes the checksum (irrelevant for this suite).
 const instanceClassChecksumFixture = `{{ .nodeGroup.name }}`
@@ -70,6 +75,14 @@ const instanceClassChecksumFixture = `{{ .nodeGroup.name }}`
 func testdataDir() string {
 	_, self, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(self), "testdata")
+}
+
+// The machine-class render builds its own bashiblecontext.Service, which reads the
+// cluster CA from the pod's projected service-account volume — a path no test process
+// has, and BuildInput refuses an empty CA. In init, so both the specs and the plain
+// tests of this package see the fixture.
+func init() {
+	bashiblecontext.RootCAFiles = []string{filepath.Join(testdataDir(), "ca.crt")}
 }
 
 // TestCAPIMachineDeploymentControllerEnvtest runs the envtest-backed integration suite for
@@ -96,13 +109,15 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping the envtest environment with the NodeGroup and provider CRDs")
 	var err error
+	crdPaths := append(
+		testenv.CRDPaths(testenv.WithNodeGroupCRDFile(), testenv.WithMachineSetCRDFile()),
+		filepath.Join(testdataDir(), "dvpinstanceclass-crd.yaml"),
+		filepath.Join(testdataDir(), "deckhousemachinetemplate-crd.yaml"),
+	)
+	crdPaths = append(crdPaths, testenv.ModuleCRDPaths("030-cloud-provider-dvp/crds/external/deckhouseclusters.yaml")...)
 	testEnv, cfg, k8sClient, err = testenv.Start(
 		scheme,
-		append(
-			testenv.CRDPaths(testenv.WithNodeGroupCRDFile(), testenv.WithMachineSetCRDFile()),
-			filepath.Join(testdataDir(), "dvpinstanceclass-crd.yaml"),
-			filepath.Join(testdataDir(), "deckhousemachinetemplate-crd.yaml"),
-		)...,
+		crdPaths...,
 	)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -120,10 +135,16 @@ var _ = BeforeSuite(func() {
 	cloudProvider.Labels = map[string]string{common.CloudProviderRegistrationLabel: ""}
 	cloudProvider.Data = map[string][]byte{
 		"type": []byte(`"dvp"`),
+		// The provider subtree and region are part of the core contract every provider
+		// publishes, and the rendering paths validate it. Without them the suite would
+		// exercise a registration production never produces.
+		"region": []byte(`"default"`),
+		"dvp":    []byte(`{}`),
 		// Raw, unquoted, exactly as the registration template's b64enc writes it.
 		"instanceClassKind":             []byte("DVPInstanceClass"),
 		"instanceClassAPIVersion":       []byte("v1alpha1"),
 		"capiClusterKind":               []byte(`"DeckhouseCluster"`),
+		"capiClusterAPIVersion":         []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
 		"capiClusterName":               []byte("dvp"),
 		"capiMachineTemplateKind":       []byte("DeckhouseMachineTemplate"),
 		"capiMachineTemplateAPIVersion": []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
@@ -145,7 +166,7 @@ var _ = BeforeSuite(func() {
 	// The derived-status service and the pod-subnet reader resolve this secret by its
 	// production name, so the fixture name must match exactly.
 	clusterCfg.Data = map[string][]byte{
-		"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\n"),
+		"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\nserviceSubnetCIDR: 10.222.0.0/16\nclusterDomain: cluster.local\n"),
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, clusterCfg))).To(Succeed())
 
@@ -156,6 +177,16 @@ var _ = BeforeSuite(func() {
 	templates.Data = map[string][]byte{
 		"machine-template.yaml":   []byte(capiMachineTemplateFixture),
 		"instance-class.checksum": []byte(instanceClassChecksumFixture),
+		"cluster.yaml": []byte(`version: v1
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: DeckhouseCluster
+  metadata:
+    name: {{ .cluster.name }}
+    namespace: {{ .cluster.namespace }}
+    labels:
+      app: capdvp-controller-manager
+`),
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, templates))).To(Succeed())
 
@@ -163,7 +194,7 @@ var _ = BeforeSuite(func() {
 	uuidCM := &corev1.ConfigMap{}
 	uuidCM.Namespace = clusterUUIDConfigMapNS
 	uuidCM.Name = clusterUUIDConfigMapName
-	uuidCM.Data = map[string]string{"cluster-uuid": "11111111-2222-3333-4444-555555555555"}
+	uuidCM.Data = map[string]string{"cluster-uuid": suiteClusterUUID}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, uuidCM))).To(Succeed())
 
 	By("publishing the cluster-kubernetes configmap")

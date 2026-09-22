@@ -163,3 +163,37 @@ See issues:
 ### 014-cel-go-two-var-comprehensions.patch (1.32 only)
 
 Adapts `staging/src/k8s.io/apiserver/pkg/cel/environment/base.go` to `github.com/google/cel-go` v0.29.0, which is required to fix GHSA-gcjh-h69q-9w9g. In v0.29.0 `ext.TwoVarComprehensions` became variadic (`func(...TwoVarComprehensionsOption) cel.EnvOption`), so the `UnversionedLib(ext.TwoVarComprehensions)` tripwire no longer compiles. The call is replaced with a direct `ext.TwoVarComprehensions()` invocation, mirroring the upstream change from commit 8a3d0d68a20 ("Update the env option."), part of the k8s PR "Bump cel-go to v0.23.2" ([kubernetes/kubernetes#129844](https://github.com/kubernetes/kubernetes/pull/129844)), which introduced the variadic API and switched `base.go` to the direct call. Only 1.32 needs this patch; k8s 1.33+ already ship the adapted code.
+
+### fix-container-memory-usage-in-resize-validation.patch (1.34+)
+
+Fixes a kubelet panic in `validateMemoryResizeAction`
+(`pkg/kubelet/kuberuntime/kuberuntime_manager.go`): the per-container check
+dereferences `podUsageStats.Memory.UsageBytes` instead of
+`cStats.Memory.UsageBytes`. That pointer is nil-checked only in the
+`podLimitDecreasing` branch, so an in-place resize decreasing **only a
+container** memory limit panics kubelet when the runtime reports no pod-level
+memory stats.
+
+Only the source change is carried, the upstream test case is dropped.
+`validateMemoryResizeAction` does not exist in 1.32/1.33, so the patch is
+carried on 1.34 (`014`), 1.35 (`014`) and 1.36 (`013`) only.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/141100
+
+### order-sandbox-by-attempt-or-create-time.patch (1.32-1.34)
+
+Makes `podSandboxByCreated.Less` order sandboxes by `Metadata.Attempt` instead of
+`CreatedAt`, falling back to `CreatedAt` when either sandbox has no metadata
+(`pkg/kubelet/kuberuntime/helpers.go`).
+
+A system clock rollback (common at boot, when NTP starts around the static pods)
+can make an older sandbox look newer than the current one. Kubelet then picks the
+stale sandbox as the latest one, and the runtime refuses to create a new sandbox
+because the pod name is still reserved by the previous attempt. The attempt
+counter is monotonic and immune to clock jumps, so it is the correct ordering key.
+
+Only the source change is carried, the upstream test case is dropped. k8s 1.35+
+already ship this code, so the patch is carried on 1.32 (`015`), 1.33 (`014`) and
+1.34 (`015`) only.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/130551

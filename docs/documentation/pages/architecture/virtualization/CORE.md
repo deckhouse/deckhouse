@@ -2,7 +2,7 @@
 title: The virtualization core
 permalink: en/architecture/virtualization/core.html
 search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, kubevirt, virt-operator, core
-description: Architecture of the virtualization module core in Deckhouse Kubernetes Platform.
+description: Architecture of the virtualization module core in Deckhouse Platform.
 ---
 
 The [`Virtualization`](/modules/virtualization/) module core is directly responsible for working with virtual machines (VMs). The core is based on the KubeVirt project. [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage VMs using Kubernetes as an orchestration platform. It enables a cooperation between traditional VMs and container workloads in the same Kubernetes cluster, providing a single control plane. A [fork](https://github.com/deckhouse/3p-kubevirt) of KubeVirt from the company "Flant" is used in the [`virtualization`](/modules/virtualization/) module.
@@ -44,7 +44,7 @@ The following simplifications are made in the diagram:
 - Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module core and its interactions with other components of DKP are shown in the following diagrams:
+The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module core and its interactions with other components of DP are shown in the following diagrams:
 
 ![Architecture of the virtualization module core](../../images/architecture/virtualization/c4-l2-virtualization-core.png)
 
@@ -68,7 +68,7 @@ The module core consists of the following components:
 
    - **virt-controller**: Main container.
    - **proxy** (aka **kube-api-rewriter**): A sidecar container that performs modification of API requests passing through it (described above).
-   - **kube-rbac-proxy**: A sidecar container providing authorized access to the metrics of the cdi-apiserver and proxy containers (described above).
+   - **kube-rbac-proxy**: A sidecar container providing authorized access to the metrics of the virt-controller and proxy containers (described above).
 
 1. **Virt-handler** (DaemonSet): A separate controller that runs on all nodes of the cluster. Virt-handler performs the following functions:
 
@@ -117,8 +117,6 @@ The module core interacts with the following components:
    - Watches for KubeVirt custom resources and manages KubeVirt components.
    - Watches for VirtualMachineInstance custom resources, updates their status, and manages the associated pods.
    - Authorizes requests for metrics.
-
-1. [**CDI (Containerized-Data-Importer)**](cdi.html): KubeVirt creates a DataVolume resource based on the disk specification and a link to the VM image in the `DataVolumeTemplate` section of the VirtualMachine resource. CDI imports a disk image to PVC from the source specified in the DataVolume. The created PVC is a disk of a virtual machine managed by KubeVirt.
 
 The following external components interact with the module core:
 

@@ -79,6 +79,12 @@ type ResolvedNodeGroup struct {
 	// not: the schema belongs to a cloud-provider module and unknown keys must survive verbatim.
 	InstanceClass map[string]any
 	NodeCapacity  *capacity.InstanceType
+
+	// TemplateCapacity is what the MachineDeployment's capacity.cluster-autoscaler.kubernetes.io
+	// annotations are built from. Unlike NodeCapacity it is resolved for every NodeGroup that can
+	// hold a machine, and ToMap deliberately does not publish it: the element it would land in is
+	// hashed into every node's configurationChecksum.
+	TemplateCapacity *capacity.InstanceType
 }
 
 func ResolveNodeGroup(in ResolveInput, r Result) ResolvedNodeGroup {
@@ -104,6 +110,7 @@ func ResolveNodeGroup(in ResolveInput, r Result) ResolvedNodeGroup {
 		resolved.Zones = r.Zones
 		resolved.InstanceClass = r.InstanceClass
 		resolved.NodeCapacity = r.NodeCapacity
+		resolved.TemplateCapacity = r.TemplateCapacity
 	}
 
 	return resolved

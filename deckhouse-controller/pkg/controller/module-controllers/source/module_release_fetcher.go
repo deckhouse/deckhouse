@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -120,7 +121,8 @@ func (r *reconciler) fetchModuleReleases(
 
 	// client watch only one channel
 	// registry.deckhouse.io/deckhouse/ce/modules/$module/release:$release
-	registryClient, err := r.dc.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
+	registryClient, err := r.dc.GetRegistryClient(
+		path.Join(utils.Dial(source.Spec.Registry.Repo), moduleName), opts...)
 	if err != nil {
 		return fmt.Errorf("get registry client: %w", err)
 	}
@@ -263,8 +265,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 	logger.Debug("Checking release channel",
 		slog.String("channel", f.releaseChannel),
-		slog.String("ltsChannel", ltsReleaseChannel),
-		slog.Bool("isLTS", isLTSChannel))
+		slog.String("lts_channel", ltsReleaseChannel),
+		slog.Bool("is_lts", isLTSChannel))
 
 	if isLTSChannel {
 		logger.Debug("LTS channel detected, creating release directly without intermediate versions")

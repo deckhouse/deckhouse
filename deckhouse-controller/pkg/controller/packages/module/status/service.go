@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -80,7 +81,7 @@ func (s *Service) Start(ctx context.Context, queue workqueue.TypedRateLimitingIn
 // The event is a plain module name. A returned error is retryable; nil means
 // done — including a missing Module, which never becomes valid on retry.
 func (s *Service) handleEvent(ctx context.Context, name string) error {
-	module := new(v1alpha2.Module)
+	module := new(v1beta1.Module)
 	if err := s.client.Get(ctx, client.ObjectKey{Name: name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -93,6 +94,13 @@ func (s *Service) handleEvent(ctx context.Context, name string) error {
 	// Get the package status from the operator and compute conditions
 	s.computeAndApplyConditions(name, module)
 
+	// The resync republishes every package on a timer, so most events compute a
+	// status identical to the published one. Patching it anyway would bump
+	// resourceVersion on every tick and wake every watcher for nothing.
+	if apiequality.Semantic.DeepEqual(original.Status, module.Status) {
+		return nil
+	}
+
 	if err := s.client.Status().Patch(ctx, module, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch module status: %w", err)
 	}
@@ -100,15 +108,19 @@ func (s *Service) handleEvent(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *Service) computeAndApplyConditions(name string, module *v1alpha2.Module) {
+func (s *Service) computeAndApplyConditions(name string, module *v1beta1.Module) {
 	packageStatus := s.getter(name)
 
 	if module.Status.CurrentVersion == nil {
-		module.Status.CurrentVersion = new(v1alpha2.ModuleStatusVersion)
+		module.Status.CurrentVersion = new(v1beta1.ModuleStatusVersion)
 	}
 
 	versionChanged := module.Status.CurrentVersion.Version != "" && module.Status.CurrentVersion.Version != packageStatus.Version
 	mapperStatus := s.buildMapperStatus(versionChanged, module.Status.Conditions, packageStatus.Conditions)
+
+	// The CR is the authority here: the runtime status is dropped when the last
+	// teardown task drains, and never exists at all after a restart mid-deletion.
+	mapperStatus.Deleting = !module.DeletionTimestamp.IsZero()
 
 	// Apply mapped conditions (external user-facing conditions)
 	for _, cond := range s.mapper.Map(mapperStatus) {
@@ -127,7 +139,10 @@ func (s *Service) computeAndApplyConditions(name string, module *v1alpha2.Module
 		})
 	}
 
-	if packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
+	// Nothing about a live install is committed onto a resource on its way out.
+	// The runtime freezes its own status on removal, but the CR's timestamp is
+	// authoritative even for a package the runtime never tracked.
+	if !mapperStatus.IsDeleting() && packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
 		module.Status.CurrentVersion.Version = packageStatus.Version
 
 		if packageStatus.Settings != nil {
@@ -149,7 +164,7 @@ func (s *Service) computeAndApplyConditions(name string, module *v1alpha2.Module
 	// disabled-module helpers, so the two cannot drift, and reads the internal
 	// conditions directly instead of reverse-deriving reasons.
 	state, message, tip := summarize(mapperStatus)
-	module.Status.Summary = &v1alpha2.ModuleStatusSummary{
+	module.Status.Summary = &v1beta1.ModuleStatusSummary{
 		State:   state,
 		Message: message,
 		Tip:     tip,

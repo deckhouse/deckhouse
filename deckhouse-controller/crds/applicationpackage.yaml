@@ -57,6 +57,15 @@ spec:
                 items:
                   type: string
                 type: array
+              releaseChannels:
+                additionalProperties:
+                  additionalProperties:
+                    type: string
+                  type: object
+                description: |-
+                  Versions the release channels of each repository point to, keyed by repository name and then
+                  by release channel name.
+                type: object
               usedBy:
                 description: Information about applications using this package.
                 items:
@@ -68,6 +77,9 @@ spec:
                       type: string
                     namespace:
                       description: Namespace where the application is installed.
+                      type: string
+                    repositoryName:
+                      description: Used PackageRepository.
                       type: string
                     version:
                       description: Version of the package used by this application.

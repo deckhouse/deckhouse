@@ -60,6 +60,8 @@ spec:
               import data.lib.check_subset.check_container_subset
               import data.lib.check_subset.check_container_superset
               import data.lib.common.input_containers
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.message.violation_message
 
               violation contains {"msg": msg, "details": {}} if {
@@ -71,8 +73,8 @@ spec:
                   "capabilities.add",
                   input.parameters.allowedCapabilities,
                   ["spec", "securityContext", "capabilities", "allowedValues", "add"],
-                  object.get(input.review.object, ["metadata", "labels"], {}),
-                  object.get(input.review.object, ["metadata", "namespace"], ""),
+                  object_labels,
+                  object_namespace,
                   {"case_insensitive": true}
                 )
                 not result.allowed
@@ -88,8 +90,8 @@ spec:
                   "capabilities.drop",
                   input.parameters.requiredDropCapabilities,
                   ["spec", "securityContext", "capabilities", "allowedValues", "drop"],
-                  object.get(input.review.object, ["metadata", "labels"], {}),
-                  object.get(input.review.object, ["metadata", "namespace"], ""),
+                  object_labels,
+                  object_namespace,
                   {"case_insensitive": true}
                 )
                 not result.allowed

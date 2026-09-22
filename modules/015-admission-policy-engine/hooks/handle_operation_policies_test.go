@@ -332,6 +332,32 @@ spec:
 			Expect(n2.Get("spec.policies.requiredAnnotations.watchKinds").Exists()).To(BeTrue())
 			Expect(n2.Get("spec.policies.requiredAnnotations.watchKinds").Array()).ToNot(BeEmpty())
 		})
+
+		It("should omit gpuResourceRestriction when not specified", func() {
+			o := runAndGet(operationPolicyYAML(""))
+			Expect(o.Get("spec.policies.gpuResourceRestriction").Exists()).To(BeFalse())
+		})
+
+		It("should preserve gpuResourceRestriction when set with all fields", func() {
+			n := runAndGet(operationPolicyYAML("    gpuResourceRestriction:\n      namespaceLabel:\n        key: gpu.deckhouse.io/enabled\n        value: \"true\"\n      gpuResourcePatterns:\n        - nvidia.com/.*\n        - amd.com/gpu"))
+			Expect(n.Get("spec.policies.gpuResourceRestriction").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.gpuResourceRestriction.namespaceLabel.key").String()).To(Equal("gpu.deckhouse.io/enabled"))
+			Expect(n.Get("spec.policies.gpuResourceRestriction.namespaceLabel.value").String()).To(Equal("true"))
+			Expect(n.Get("spec.policies.gpuResourceRestriction.gpuResourcePatterns").Array()).ToNot(BeEmpty())
+			Expect(n.Get("spec.policies.gpuResourceRestriction.gpuResourcePatterns").Array()).To(HaveLen(2))
+		})
+
+		It("should preserve gpuResourceRestriction when set with namespaceLabel only", func() {
+			n := runAndGet(operationPolicyYAML("    gpuResourceRestriction:\n      namespaceLabel:\n        key: custom.io/gpu-allowed\n        value: \"yes\""))
+			Expect(n.Get("spec.policies.gpuResourceRestriction").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.gpuResourceRestriction.namespaceLabel.key").String()).To(Equal("custom.io/gpu-allowed"))
+			Expect(n.Get("spec.policies.gpuResourceRestriction.namespaceLabel.value").String()).To(Equal("yes"))
+		})
+
+		It("should preserve gpuResourceRestriction when set as empty object", func() {
+			n := runAndGet(operationPolicyYAML("    gpuResourceRestriction: {}"))
+			Expect(n.Get("spec.policies.gpuResourceRestriction").Exists()).To(BeTrue())
+		})
 	})
 })
 

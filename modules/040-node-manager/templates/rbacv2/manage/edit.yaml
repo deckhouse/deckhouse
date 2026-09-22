@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: node-manager
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.node-manager.edit"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-instance-manager
-  name: d8:manage:permission:module:node-manager:edit
+  name: d8:system-capability:node-manager:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module node-manager: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль node-manager: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the node-manager module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля node-manager."
 rules:
 - apiGroups:
   - deckhouse.io
@@ -28,6 +34,14 @@ rules:
   - patch
   - delete
   - deletecollection
+# The spec of an operation is immutable, so update and patch would grant nothing.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations
+  verbs:
+  - create
+  - delete
 - apiGroups:
   - deckhouse.io
   resourceNames:
@@ -39,3 +53,13 @@ rules:
   - update
   - patch
   - delete
+# A rendered template carries a live bootstrap token, so reading one is the
+# right to join a machine to the cluster. It belongs with the write verbs, not
+# with the read-only role.
+- apiGroups:
+  - templates.internal.deckhouse.io
+  resources:
+  - nodeconfigtemplates
+  verbs:
+  - get
+  - list
