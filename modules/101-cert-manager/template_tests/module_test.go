@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
@@ -758,24 +759,46 @@ namespace: d8-ingress-gateway
 		It("gives namespaced Issuer write to Admin and keeps Certificate write on Editor", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
+			// The templates are generated from rbac.yaml with the rules in group/resource order, so
+			// the checks look a resource up instead of relying on the position of its rule.
 			editor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cert-manager:editor")
 			Expect(editor.Exists()).To(BeTrue())
-			Expect(editor.Field("rules.0.resources").String()).To(MatchJSON(`["certificates"]`))
+			Expect(verbsOn(editor, "certificates")).To(ContainElements("create", "update", "delete"))
 			Expect(editor.Field("rules").String()).NotTo(ContainSubstring("issuers"))
 
 			admin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cert-manager:admin")
 			Expect(admin.Exists()).To(BeTrue())
-			Expect(admin.Field("rules.0.resources").String()).To(MatchJSON(`["issuers"]`))
+			Expect(verbsOn(admin, "issuers")).To(ContainElements("create", "update", "delete"))
 
 			useEdit := f.KubernetesGlobalResource("ClusterRole", "d8:namespace-capability:cert-manager:edit")
 			Expect(useEdit.Exists()).To(BeTrue())
-			Expect(useEdit.Field("rules.0.resources").String()).To(MatchJSON(`["certificates"]`))
+			Expect(verbsOn(useEdit, "certificates")).To(ContainElements("create", "update", "delete"))
 			Expect(useEdit.Field("rules").String()).NotTo(ContainSubstring("issuers"))
 
 			useAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:namespace-capability:cert-manager:admin")
 			Expect(useAdmin.Exists()).To(BeTrue())
 			Expect(useAdmin.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-namespace-as`).String()).To(Equal("admin"))
-			Expect(useAdmin.Field("rules.0.resources").String()).To(MatchJSON(`["issuers"]`))
+			Expect(verbsOn(useAdmin, "issuers")).To(ContainElements("create", "update", "delete"))
 		})
 	})
 })
+
+// verbsOn collects the verbs every rule of the role grants on the resource, whatever the order of
+// the rules.
+func verbsOn(role object_store.KubeObject, resource string) []string {
+	var verbs []string
+
+	for _, rule := range role.Field("rules").Array() {
+		for _, r := range rule.Get("resources").Array() {
+			if r.String() != resource {
+				continue
+			}
+
+			for _, v := range rule.Get("verbs").Array() {
+				verbs = append(verbs, v.String())
+			}
+		}
+	}
+
+	return verbs
+}
