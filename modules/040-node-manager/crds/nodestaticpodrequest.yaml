@@ -65,7 +65,7 @@ spec:
                 nodeGroupSelector:
                   type: object
                   description: |
-                    Narrows the pod to nodes of the named NodeGroups. Naming none selects every NodeGroup there is, bashible ones included: the node agent runs on every kind of node and writes the manifest from that node's NodeConfig.
+                    Narrows the pod to nodes of the named NodeGroups. Naming none selects every NodeGroup with `systemType: Immutable`: the node agent writes the manifest from that node's NodeConfig, and bashible groups have none.
                   properties:
                     matchNames:
                       type: array

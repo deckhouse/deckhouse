@@ -229,27 +229,24 @@ func nodeInGroup(name, group string) corev1.Node {
 		Labels: map[string]string{nodecommon.NodeGroupLabel: group}}}
 }
 
-// A static pod reaches bashible groups too, and after task 10 their nodes report
-// through a NodeConfig like every other: the denominator counts them, and a node
-// yet to answer is pending rather than missing.
-func TestNSPRStatusCountsTheNodesOfEveryMatchedGroup(t *testing.T) {
-	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{
-		NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: []string{"mutable-workers"}},
-	})
-	mutableNode := nodeInGroup("mutable-0", "mutable-workers")
-	pendingNode := nodeInGroup("mutable-1", "mutable-workers")
-	otherNode := nodeInGroup("worker-0", "worker")
+// Only Immutable groups have a NodeConfig for the pod to land in: a bashible
+// node never answers, so counting it would leave the object pending for ever.
+func TestNSPRStatusCountsOnlyTheNodesOfImmutableGroups(t *testing.T) {
+	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	engineNode := nodeInGroup("engine-0", "engine")
+	pendingNode := nodeInGroup("engine-1", "engine")
+	bashibleNode := nodeInGroup("worker-0", "worker")
 	cl := fake.NewClientBuilder().
 		WithScheme(nsprStatusScheme(t)).
 		WithObjects(
 			&object,
-			immutableGroup("worker"),
+			immutableGroup("engine"),
 			&v1.NodeGroup{
-				ObjectMeta: metav1.ObjectMeta{Name: "mutable-workers"},
+				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, SystemType: v1.SystemTypeMutable},
 			},
-			&mutableNode, &pendingNode, &otherNode,
-			nodeConfigWithPod("mutable-0",
+			&engineNode, &pendingNode, &bashibleNode,
+			nodeConfigWithPod("engine-0",
 				[]internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}},
 				[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}}),
 		).
@@ -262,11 +259,10 @@ func TestNSPRStatusCountsTheNodesOfEveryMatchedGroup(t *testing.T) {
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
-	require.Equal(t, []string{"mutable-workers"}, fresh.Status.MatchedNodeGroups)
-	require.Equal(t, int32(2), fresh.Status.MatchedNodes, "the node of the group it does not select is not a denominator")
+	require.Equal(t, []string{"engine"}, fresh.Status.MatchedNodeGroups, "a bashible group is not a target")
+	require.Equal(t, int32(2), fresh.Status.MatchedNodes)
 	require.Equal(t, int32(1), fresh.Status.AppliedNodes)
 	require.Equal(t, int32(1), fresh.Status.PendingNodes)
-	require.Contains(t, meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Message, "1 of 2 node(s)")
 }
 
 // An object this controller refused was handed to no node, so nobody is late

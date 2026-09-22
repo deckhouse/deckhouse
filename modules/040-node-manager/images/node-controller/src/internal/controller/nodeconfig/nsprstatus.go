@@ -48,13 +48,13 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 
 	ordered := orderedNSPRs(nsprs.Items)
 	rejected := rejectedNSPRs(ordered)
-	groups, err := r.allNodeGroupNames(ctx)
+	groups, err := r.immutableNodeGroupNames(ctx)
 	if err != nil {
 		return err
 	}
 
 	// What the fleet made of these pods, from the one place the answer lives:
-	// every node has a NodeConfig, Engine or bashible. Nothing is published
+	// the NodeConfig of every node in an Immutable group. Nothing is published
 	// without it: counts absent read as counts zero, so a transient read failure
 	// would turn "every node refused it" into a clean Ready and lose the reason.
 	outcomes, err := readNodeConfigOutcomes(ctx, r.Client)
