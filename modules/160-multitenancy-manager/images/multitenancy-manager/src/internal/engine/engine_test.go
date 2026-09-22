@@ -17,6 +17,7 @@ limitations under the License.
 package engine
 
 import (
+	"slices"
 	"testing"
 
 	"controller/api/v1alpha1"
@@ -258,5 +259,84 @@ func TestEvalMatch(t *testing.T) {
 	predIn := &v1alpha1.MatchPredicate{FieldPath: "$.spec.type", In: []string{"NodePort", "LoadBalancer"}}
 	if ok, _ := EvalMatch(factory(), predIn, obj); !ok {
 		t.Fatal("expected in[] match")
+	}
+}
+
+func TestParsePathSegments(t *testing.T) {
+	cases := []struct {
+		path string
+		want []string // nil = ok=false
+	}{
+		// Not a single member chain, or not RFC 9535 at all.
+		{"$", nil},
+		{"$.", nil},
+		{"$.a.", nil},
+		{"$..a", nil},
+		{"$.a[*]", nil},
+		{"$.a[0]", nil},
+		{"$.a[?(@.x)]", nil},
+		{"$.*", nil},
+		{"$.a['b", nil},
+		{`$.a["b']`, nil},
+		{"a.b", nil},
+		{"$['a','b']", nil},
+		{"$['']", nil},   // RFC accepts it, but it would patch an empty root key
+		{"$.a['']", nil}, // same, one level down
+		// Shorthand names follow the RFC 9535 name-first/name-char rules.
+		{"$.a-b", nil},
+		{"$.a b", nil},
+		{"$.1abc", nil},
+		{`$['a\q']`, nil}, // an escape RFC 9535 does not define
+		// Member chains.
+		{"$['a']", []string{"a"}},
+		{`$["a"]`, []string{"a"}},
+		{"$.a['b.c']", []string{"a", "b.c"}},
+		{"$.spec.storageClassName", []string{"spec", "storageClassName"}},
+		{"$.metadata.annotations['cert-manager.io/cluster-issuer']", []string{"metadata", "annotations", "cert-manager.io/cluster-issuer"}},
+		{"$._a1.b_", []string{"_a1", "b_"}},
+		// Escapes in quotes are decoded the way the evaluator decodes them, not kept literally.
+		{`$['a\u0041']`, []string{"aA"}},
+		{`$['a\/b']`, []string{"a/b"}},
+		{`$['a\\b']`, []string{`a\b`}},
+		{`$['it\'s']`, []string{"it's"}},
+	}
+	f := factory()
+	for _, c := range cases {
+		t.Run(c.path, func(t *testing.T) {
+			got, ok := ParsePathSegments(f, c.path)
+			if ok != (c.want != nil) || !slices.Equal(got, c.want) {
+				t.Fatalf("ParsePathSegments(%q) = %q, %v; want %q", c.path, got, ok, c.want)
+			}
+			if !ok {
+				return
+			}
+			// Property: an accepted path is one the RFC 9535 evaluator accepts too, and it selects the
+			// very field the segments name — the one /defaults would patch.
+			parsed, err := f.Path(c.path)
+			if err != nil {
+				t.Fatalf("accepted %q, but the RFC 9535 parser refuses it: %v", c.path, err)
+			}
+			var obj any = "target"
+			for i := len(got) - 1; i >= 0; i-- {
+				obj = map[string]any{got[i]: obj}
+			}
+			if nodes := parsed.Select(obj); len(nodes) != 1 || nodes[0] != "target" {
+				t.Fatalf("%q with segments %q selects %v, want the field the segments name", c.path, got, nodes)
+			}
+		})
+	}
+}
+
+func TestDefaultingActive(t *testing.T) {
+	cases := map[v1alpha1.DefaultingMode]bool{
+		"":                           false,
+		v1alpha1.DefaultingNone:      false,
+		v1alpha1.DefaultingFillEmpty: true,
+		v1alpha1.DefaultingCoerce:    true,
+	}
+	for mode, want := range cases {
+		if got := DefaultingActive(v1alpha1.FieldPath{Path: "$.a", Defaulting: mode}); got != want {
+			t.Errorf("DefaultingActive(%q) = %v, want %v", mode, got, want)
+		}
 	}
 }

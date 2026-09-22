@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +36,7 @@ import (
 
 	"controller/api/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/jsonpath"
 	"controller/internal/naming"
 )
 
@@ -157,7 +159,7 @@ func TestBindingStatus(t *testing.T) {
 	cl := buildClient(t, def, boundRef, danglingRef)
 	ctx := context.Background()
 
-	refRec := &ReferenceReconciler{Client: cl}
+	refRec := &ReferenceReconciler{Client: cl, Factory: jsonpath.NewWithCache()}
 	defRec := &DefinitionReconciler{Client: cl}
 
 	// Reference binding status.
@@ -184,5 +186,79 @@ func TestBindingStatus(t *testing.T) {
 	}
 	if gotDef.Status.ReferenceCount != 1 || len(gotDef.Status.References) != 1 || gotDef.Status.References[0].Name != "sc-pvc" {
 		t.Fatalf("definition references = %+v (count %d)", gotDef.Status.References, gotDef.Status.ReferenceCount)
+	}
+}
+
+func TestFieldPathsValidCondition(t *testing.T) {
+	def := &v1alpha1.GrantableClusterResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "priorityclasses"}}
+	rule := v1alpha1.UsageRule{APIGroups: []string{"batch"}, APIVersions: []string{"v1"}, Resources: []string{"jobs", "cronjobs"}}
+	valid := &v1alpha1.GrantableClusterResourceReference{
+		ObjectMeta: metav1.ObjectMeta{Name: "valid", Generation: 1},
+		Spec: v1alpha1.GrantableClusterResourceReferenceSpec{
+			GrantableClusterResourceName: "priorityclasses",
+			Rule:                         rule,
+			FieldPaths:                   []v1alpha1.FieldPath{{Path: "$.spec.template.spec.priorityClassName"}},
+		},
+	}
+	// Stored past the webhook: a path that does not compile and a hole for cronjobs.
+	invalid := &v1alpha1.GrantableClusterResourceReference{
+		ObjectMeta: metav1.ObjectMeta{Name: "invalid", Generation: 1},
+		Spec: v1alpha1.GrantableClusterResourceReferenceSpec{
+			GrantableClusterResourceName: "priorityclasses",
+			Rule:                         rule,
+			FieldPaths:                   []v1alpha1.FieldPath{{Resources: []string{"jobs"}, Path: "$.spec.foo-bar"}},
+		},
+	}
+	cl := buildClient(t, def, valid, invalid)
+	ctx := context.Background()
+	rec := &ReferenceReconciler{Client: cl, Factory: jsonpath.NewWithCache()}
+
+	condition := func(name string) *metav1.Condition {
+		t.Helper()
+		if _, err := rec.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+			t.Fatalf("reconcile %s: %v", name, err)
+		}
+		got := &v1alpha1.GrantableClusterResourceReference{}
+		if err := cl.Get(ctx, types.NamespacedName{Name: name}, got); err != nil {
+			t.Fatal(err)
+		}
+		c := meta.FindStatusCondition(got.Status.Conditions, "FieldPathsValid")
+		if c == nil {
+			t.Fatalf("%s has no FieldPathsValid condition: %+v", name, got.Status.Conditions)
+		}
+		if c.ObservedGeneration != got.Generation {
+			t.Fatalf("%s: observedGeneration %d, want %d", name, c.ObservedGeneration, got.Generation)
+		}
+		return c
+	}
+
+	if c := condition("valid"); c.Status != metav1.ConditionTrue || c.Reason != "Valid" {
+		t.Fatalf("valid: %+v", c)
+	}
+
+	c := condition("invalid")
+	if c.Status != metav1.ConditionFalse || c.Reason != "InvalidFieldPaths" {
+		t.Fatalf("invalid: %+v", c)
+	}
+	for _, want := range []string{
+		`'spec.fieldPaths[0].path' "$.spec.foo-bar" is not a valid RFC 9535 JSONPath`,
+		`(apiGroup "batch", apiVersion "v1", resource "cronjobs")`,
+	} {
+		if !strings.Contains(c.Message, want) {
+			t.Fatalf("invalid: message %q lacks %q", c.Message, want)
+		}
+	}
+
+	// Fixing the spec turns the condition True.
+	fixed := &v1alpha1.GrantableClusterResourceReference{}
+	if err := cl.Get(ctx, types.NamespacedName{Name: "invalid"}, fixed); err != nil {
+		t.Fatal(err)
+	}
+	fixed.Spec.FieldPaths = []v1alpha1.FieldPath{{Path: "$.spec.template.spec.priorityClassName"}}
+	if err := cl.Update(ctx, fixed); err != nil {
+		t.Fatal(err)
+	}
+	if c := condition("invalid"); c.Status != metav1.ConditionTrue || c.Reason != "Valid" {
+		t.Fatalf("fixed: %+v", c)
 	}
 }
