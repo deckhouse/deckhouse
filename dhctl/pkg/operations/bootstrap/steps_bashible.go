@@ -342,6 +342,18 @@ func nodeNameRemoteCommand(dir, nodeName string) string {
 		dir, quoted, dir, dir)
 }
 
+// lastLine is the last line of output that holds anything, or "" if none does.
+func lastLine(out string) string {
+	lines := strings.Split(out, "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if line := strings.TrimSpace(lines[i]); line != "" {
+			return line
+		}
+	}
+
+	return ""
+}
+
 // requestNodeName asks the machine to register under a name of its own instead of
 // its hostname, by leaving the name where bb-discover-node-name looks for it. The
 // hostname of the machine is not touched: from here on the two are separate, and
@@ -383,8 +395,10 @@ func requestNodeName(ctx context.Context, nodeInterface libcon.Interface, cfg *c
 		if err != nil {
 			return fmt.Errorf("write /var/lib/bashible/node-name: %w (stderr: %s)", err, string(stderr))
 		}
-		if got := strings.TrimSpace(string(stdout)); got != nodeName {
-			return fmt.Errorf("asked the node to register as %q, but /var/lib/bashible/node-name reads %q", nodeName, got)
+		// The last line only: sudo announces itself on the same stream, so what
+		// the node read back is the line under that.
+		if got := lastLine(string(stdout)); got != nodeName {
+			return fmt.Errorf("asked the node to register as %q, but /var/lib/bashible/node-name read back %q", nodeName, got)
 		}
 		return nil
 	})

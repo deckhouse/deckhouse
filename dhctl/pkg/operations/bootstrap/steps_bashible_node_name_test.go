@@ -97,3 +97,21 @@ func TestNodeNameCommandWritesTheName(t *testing.T) {
 		})
 	}
 }
+
+// The command runs under a sudo wrapper that announces itself on the same
+// stream, so the name read back is the last line of the output and not the whole
+// of it. Comparing the whole output failed a bootstrap whose node-name file was
+// perfectly correct.
+func TestLastLineIsWhatTheNodeReadBack(t *testing.T) {
+	for _, tc := range []struct{ out, want string }{
+		{"SUDO-SUCCESS\nmaster-alpha-01\n", "master-alpha-01"},
+		{"master-alpha-01\n", "master-alpha-01"},
+		{"SUDO-SUCCESS\nmaster-alpha-01", "master-alpha-01"},
+		{"\n\n", ""},
+		{"", ""},
+	} {
+		if got := lastLine(tc.out); got != tc.want {
+			t.Errorf("lastLine(%q) = %q, want %q", tc.out, got, tc.want)
+		}
+	}
+}
