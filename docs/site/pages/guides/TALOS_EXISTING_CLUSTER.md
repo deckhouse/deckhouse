@@ -15,7 +15,7 @@ relatedLinks:
     url: "https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/patching"
 ---
 
-This guide applies to an existing, operational Talos cluster: the control plane is running, worker nodes have joined the cluster, a CNI is installed, and the Kubernetes API is accessible with `d8 k`.
+This guide applies to an existing, operational Kubernetes cluster based on [Talos Linux](https://www.siderolabs.com/talos-linux): the control plane is running, worker nodes have joined the cluster, a CNI is installed, and the Kubernetes API is accessible with `d8 k`.
 
 Deckhouse Platform (DP) is installed on top of the existing Kubernetes cluster in existing-cluster mode. This example uses Deckhouse Platform Open, the [`EarlyAccess` release channel](/modules/deckhouse/configuration.html#parameters-releasechannel), and the [`Managed` bundle](/modules/deckhouse/configuration.html#parameters-bundle).
 
@@ -30,7 +30,7 @@ In this setup:
 The `bundle` value is selected during installation and cannot be changed afterwards. You cannot install `Managed` and then switch it to `Minimal` or `Default` with a regular patch.
 {% endalert %}
 
-## 1. Prerequisites
+## Prerequisites
 
 The following tools and access are required on the computer from which the installation will be performed:
 
@@ -46,7 +46,7 @@ SSH access to Talos nodes is not required: the installer communicates with the c
 
 Before installation, it is recommended to create an etcd snapshot using Talos and save the original talosconfig and kubeconfig.
 
-## 2. Set the working paths
+## Setting the working paths
 
 Create a separate directory for the installation files and change to it:
 
@@ -71,13 +71,13 @@ The files are used as follows:
 | `TALOSCONFIG` | `talosctl` configuration for accessing the Talos API |
 | `ADMIN_KUBECONFIG` | Administrative kubeconfig for running `d8 k` on the computer |
 | `INSTALLER_KUBECONFIG` | Portable copy of the administrative kubeconfig for the Docker container |
-| `CONFIG_FILE` | DP installation configuration |
+| `CONFIG_FILE` | Deckhouse Platform installation configuration |
 
-If you open a new terminal, return to this directory and repeat the block that defines the four variables.
+If you open a new terminal, return to the working directory and define the four variables from the block above.
 
-## 3. Prepare an administrative kubeconfig
+## Preparing an administrative kubeconfig
 
-Choose how to obtain the administrative kubeconfig depending on whether you already have one.
+The next steps depend on whether you already have an administrative kubeconfig.
 
 ### If you already have a kubeconfig
 
@@ -88,7 +88,9 @@ cp <ADMIN_KUBECONFIG_PATH> "$ADMIN_KUBECONFIG"
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
-This must be a kubeconfig for `d8 k`, not a talosconfig file for `talosctl`.
+{% alert level="info" %}
+This refers to a kubeconfig for `d8 k`, not a talosconfig file for `talosctl`.
+{% endalert %}
 
 ### If you need to obtain a kubeconfig through Talos
 
@@ -102,7 +104,7 @@ chmod 600 "$TALOSCONFIG"
 Specify the address of a control-plane node:
 
 ```bash
-CONTROL_PLANE_ADDRESS=<CONTROL_PLANE_ADDRESS>
+CONTROL_PLANE_ADDRESS=<CONTROL_PLANE_IP_OR_DNS>
 ```
 
 Obtain an administrative kubeconfig:
@@ -124,15 +126,15 @@ By default, `talosctl` uses the Talos API endpoints from the current talosconfig
 
 Use `--force` only when you intentionally want to overwrite an existing file.
 
-### Verify permissions
+### Verifying permissions
 
-Check which identity Kubernetes sees:
+Check how Kubernetes identifies the user:
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth whoami
 ```
 
-Installation requires stable administrative access. A Talos administrative kubeconfig usually uses the `system:masters` group. Using an OIDC user kubeconfig for the installer is not recommended: after the DP `user-authz` module is enabled, that user's access to system namespaces may change.
+Installation requires stable administrative access. A Talos administrative kubeconfig usually uses the `system:masters` group. Using an OIDC user kubeconfig for the installation is not recommended: after the DP `user-authz` module is enabled, that user's access to system namespaces may change.
 
 Verify the required permissions:
 
@@ -149,7 +151,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
 
 All three commands must return `yes`.
 
-## 4. Verify the existing cluster
+## Verifying the existing cluster
 
 Check the nodes:
 
@@ -181,11 +183,13 @@ Before installing DP, the following components must already be running:
 - kube-proxy, if it is used by the selected network setup
 - Control-plane components
 
-Also make sure that the Kubernetes version is supported by the selected DP version.
+Also make sure that the Kubernetes version is [supported](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) by the selected DP version.
 
-## 5. Verify component ownership
+## Verifying component ownership
 
 DP must not manage the same components as Talos or an external provisioner.
+
+The table below lists the components and their owners after installation:
 
 | Component | Owner after installation |
 | --- | --- |
@@ -209,9 +213,11 @@ The following DP modules must remain disabled:
 - `cloud-provider-*` modules
 - `registry-packages-proxy`
 
+{% alert level="warning" %}
 If Cilium is already installed in the Talos cluster, do not enable the DP `cni-cilium` module: two operators must not manage the same CNI at the same time.
+{% endalert %}
 
-The `Managed` bundle includes ingress, cert-manager, local-path-provisioner, VPA, monitoring, and the `user-authz` module. Before installation, check whether external equivalents are already present in the cluster:
+The `Managed` bundle includes `ingress-nginx`, `cert-manager`, `local-path-provisioner`, VPA, monitoring, and the `user-authz` module. Before installation, check whether external equivalents are already present in the cluster:
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get storageclass
@@ -220,10 +226,10 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get deployments -A
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get crd
 ```
 
-If a component is already installed, choose a single owner before proceeding. Do not run two ingress controllers, two cert-manager installations, or two VPA installations at the same time.
+If a component is already installed, choose a single owner before proceeding. Do not run two ingress controllers, two `cert-manager` installations, or two VPA installations at the same time.
 If an external solution remains responsible for the component, explicitly disable the corresponding DP module using a ModuleConfig with `spec.enabled: false`. If DP is to manage the component, disable or remove the external counterpart before installation.
 
-## 6. Prepare a kubeconfig for the installer container
+## Preparing a kubeconfig for the installer container
 
 The installer runs inside Docker. It requires a portable kubeconfig that does not reference certificate and key files available only on the user's computer.
 
@@ -265,7 +271,7 @@ This address must be reachable from the Docker container. A reachable Kubernetes
 
 If the address is `https://127.0.0.1:6443`, the installer cannot use it directly: inside the container, `127.0.0.1` refers to the container itself. Make the Kubernetes API accessible from the container before continuing with the installation.
 
-## 7. Create the configuration file
+## Creating the configuration file
 
 Create the `$CONFIG_FILE` file with the following content and replace `example.com` with your domain:
 
@@ -306,7 +312,7 @@ grep -n $'\t' "$CONFIG_FILE"
 
 The first command must print `YAML OK`; the second command must not print anything.
 
-## 8. Run the Deckhouse Platform Open installer
+## Running the Deckhouse Platform Open installer
 
 The installer tag must match the `releaseChannel` in the configuration. The `early-access` tag is used for `EarlyAccess`.
 
@@ -326,6 +332,8 @@ docker run --pull=always -it \
   bash
 ```
 
+The installer image path still uses the `ce` designation for Deckhouse Platform Open.
+
 Inside the installer container, run:
 
 ```bash
@@ -334,18 +342,18 @@ dhctl bootstrap-phase install-deckhouse \
   --config=/config.yml
 ```
 
-Do not close the terminal until the bootstrap process completes. Installation usually takes between 5 and 30 minutes.
+Do not close the terminal until the bootstrap process completes. Installation can take anywhere from 5 to 30 minutes.
 
-## 9. Monitor the installation
+## Monitoring the installation
 
-In a separate terminal, change to the same working directory and define the variables from section 2 again. Then monitor DP:
+In a separate terminal, change to the same working directory and define the variables from the "Setting the working paths" section again. Run the command:
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
   -n d8-system get deployment,replicaset,pods -w
 ```
 
-If a Pod is not created, check the events:
+If the `deckhouse` Pod is not created, check the events:
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
@@ -362,7 +370,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
   -n <NAMESPACE> describe pod <POD_NAME>
 ```
 
-## 10. Verify the installation
+## Verifying the installation
 
 Wait for the main Deployment to become ready:
 
@@ -411,7 +419,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
 
 An old warning does not necessarily indicate a current problem. Consider the event timestamp, repetition count, and the current state of the related resource.
 
-### Verify that DP does not manage Talos components
+### Verifying that DP does not manage Talos components
 
 Verify that DP modules that can manage Talos components remain disabled.
 
@@ -450,7 +458,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
 
 All Talos nodes must remain `Ready`. The original CNI, CoreDNS, and control-plane components must continue to run; kube-proxy must also continue to run if it was used before the DP installation.
 
-## 11. Successful installation criteria
+## Successful installation criteria
 
 The installation is considered successful when all of the following conditions are met:
 
