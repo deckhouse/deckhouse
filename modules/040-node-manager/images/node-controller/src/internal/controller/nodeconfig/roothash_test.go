@@ -21,10 +21,11 @@ import (
 	"errors"
 	"testing"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+
 	registry "github.com/deckhouse/deckhouse/pkg/registry"
 	registryclient "github.com/deckhouse/deckhouse/pkg/registry/client"
 	"github.com/deckhouse/deckhouse/pkg/registry/fake"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )

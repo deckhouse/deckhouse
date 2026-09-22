@@ -28,10 +28,11 @@ import (
 	"sync"
 	"time"
 
-	registry "github.com/deckhouse/deckhouse/pkg/registry"
-	registryclient "github.com/deckhouse/deckhouse/pkg/registry/client"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	registry "github.com/deckhouse/deckhouse/pkg/registry"
+	registryclient "github.com/deckhouse/deckhouse/pkg/registry/client"
 
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
@@ -225,8 +226,11 @@ func rootHashFromContent(content io.Reader) (string, error) {
 // dialRegistry builds the client from what the cluster's registry secret already
 // gave the reader: the same host, path, scheme, CA and credentials a node is handed.
 func dialRegistry(reg *internalv1alpha1.Registry, repo string) (imageSource, error) {
+	// Insecure rather than the deprecated WithScheme, and it says the same thing:
+	// the client treats "http" as insecure anyway, so the scheme this carries is
+	// only ever the choice between plain HTTP and TLS.
 	opts := []registryclient.Option{
-		registryclient.WithScheme(strings.ToLower(reg.Scheme)),
+		registryclient.WithInsecure(strings.EqualFold(reg.Scheme, "HTTP")),
 	}
 	if reg.CA != "" {
 		opts = append(opts, registryclient.WithCA(reg.CA))
@@ -334,10 +338,10 @@ func (w *rootHashWatcher) tick(ctx context.Context) {
 		return
 	}
 
-	registry, imagesRepo, err := w.sources.readRegistry(ctx)
+	reg, imagesRepo, err := w.sources.readRegistry(ctx)
 	if err != nil {
 		logger.Info("could not read the registry while resolving the OS image root hash", "error", err)
 		return
 	}
-	w.resolver.refresh(ctx, registry, imagesRepo, digest)
+	w.resolver.refresh(ctx, reg, imagesRepo, digest)
 }
