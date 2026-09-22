@@ -5,7 +5,7 @@ search: alb, application load balancer, gateway api
 description: Architecture of the alb module in Deckhouse Platform.
 ---
 
-The [`alb`](/modules/alb/) module implements an application load balancer (ALB, Application Load Balancer) in Deckhouse Platform (DP) and lets you publish applications using the [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/). It deploys and configures the infrastructure for accepting and routing external requests, and validates the user's Gateway API configuration.
+The [`alb`](/modules/alb/) module implements an application load balancer (ALB, Application Load Balancer) in Deckhouse Platform (DP) and lets you publish applications using the [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/). It deploys and configures the infrastructure for accepting and routing external requests, and validates the user's Gateway API configuration. ALB is based on the [Envoy](https://github.com/envoyproxy/envoy) Open Source project.
 
 The module works with the following custom resources of the `network.deckhouse.io` API group:
 
@@ -31,27 +31,34 @@ The Level 2 C4 architecture of the [`alb`](/modules/alb/) module and its interac
 
 The module consists of the following components:
 
-1. **Proxy-configurator** (Deployment): The Gateway API control-plane component, built from Istio Pilot (istiod) configured to work with Gateway API only (sidecar injection and istiod's built-in Gateway API infrastructure-provisioning mechanism are disabled).
-
-   The component serves configuration to the Envoy proxies over the xDS protocol and issues certificates for them via a built-in CA server. It also validates and updates the status of Gateway, HTTPRoute, GRPCRoute, TCPRoute, UDPRoute, TLSRoute, and ListenerSet resources.
-
-   It consists of a single **proxy-configurator** container.
-
 1. **Gateway-controller** (Deployment): the module's central controller, which performs the following actions:
 
    * Manages the ClusterALBInstance and ALBInstance custom resources.
-   * Installs Gateway API CRDs (`*.gateway.networking.k8s.io`).
+   * Installs Gateway API CRDs (the `gateway.networking.k8s.io` API group).
    * Implements the Gateway API controller for the `d8-alb` GatewayClass and creates a Gateway for every instance.
-   * Serves the admission webhooks that validate them.
+   * Validates the ClusterALBInstance and ALBInstance custom resources and the `gateway.networking.k8s.io` API group resources using the [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
    * Creates temporary Ingress objects for the cert-manager HTTP-01 challenge on top of HTTPRoute when migrating from [`ingress-nginx`](/modules/ingress-nginx/).
    * Creates and removes the proxy and geoproxy components for every ClusterALBInstance/ALBInstance.
+   * Provides a Graph API interface for retrieving the relationship graph, used by the [console](/modules/console/) module.
 
    It consists of the following containers:
 
    * **gateway-controller**: Main container.
    * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC, providing secure access to gateway-controller metrics and the graph API.
 
-1. **Proxy** (Deployment or DaemonSet): an Envoy data-plane instance that accepts and routes external traffic according to configuration received from proxy-configurator over the xDS protocol.
+1. **Proxy-configurator** (Deployment): the Gateway API control-plane component, built from Istio Pilot (istiod) configured to work with Gateway API only (sidecar injection and istiod's built-in Gateway API infrastructure-provisioning mechanism are disabled).
+
+   The component provides the following capabilities:
+
+   * Implements the traffic management control plane.
+   * Builds and validates the Envoy proxy configuration based on Gateway, HTTPRoute, GRPCRoute, TCPRoute, UDPRoute, TLSRoute, and ListenerSet resources.
+   * Issues and renews certificates for the Envoy proxies using a built-in CA server.
+   * Distributes the Envoy proxy configuration to the proxy components using the [xDS protocol](https://github.com/cncf/xds) (a family of standardized API protocols for dynamically configuring data-plane components).
+   * Updates the status of Gateway, HTTPRoute, GRPCRoute, TCPRoute, UDPRoute, TLSRoute, and ListenerSet resources.
+
+   It consists of a single **proxy-configurator** container.
+
+1. **Proxy** (Deployment or DaemonSet): an Envoy instance that implements the traffic management data plane, accepting and routing external traffic according to configuration received from proxy-configurator over the xDS protocol.
 
    The gateway-controller creates this component dynamically (not via a Helm template) for every ClusterALBInstance or ALBInstance custom resource. The workload kind depends on the resource type: a ClusterALBInstance is deployed as a DaemonSet, an ALBInstance as a Deployment behind a Service.
 
@@ -84,23 +91,20 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-   * Installs resources of the `*.gateway.networking.k8s.io` API group.
+   * Installs resources of the `gateway.networking.k8s.io` API group.
    * Manages DaemonSet, Deployment, StatefulSet, Service, Secret, and ConfigMap resources.
    * Reads and updates Node and Namespace resources.
-   * Manages the ClusterALBInstance and ALBInstance custom resources, Ingress resources, and Gateway API resources (the `*.gateway.networking.k8s.io` API group).
-   * Authorizes requests for gateway-controller metrics and the graph API, and for proxy metrics.
+   * Manages the ClusterALBInstance and ALBInstance custom resources, Ingress resources, and Gateway API resources (the `gateway.networking.k8s.io` API group).
+   * Authorizes requests for the gateway-controller component's metrics and graph API, and for the proxy component's metrics.
 
 1. **GeoIP data source** (MaxMind provider or mirror): Downloads the GeoIP database.
 
 The following external components interact with the module:
 
-1. **Kube-apiserver**: Calls validation for the ClusterALBInstance and ALBInstance custom resources and for Gateway API resources (the `*.gateway.networking.k8s.io` API group).
+1. **Kube-apiserver**: Validates the ClusterALBInstance and ALBInstance custom resources and Gateway API resources (the `gateway.networking.k8s.io` API group).
 
-1. **Prometheus-main**:
+1. **Prometheus-main**: Collects metrics from the gateway-controller and proxy components.
 
-   * Collects gateway-controller metrics.
-   * Collects proxy metrics.
-
-1. **Load balancer**: Balances HTTP/HTTPS traffic between instances of the proxy component.
+1. **Load balancer**: Balances incoming traffic between instances of the proxy component.
 
 1. **[Deckhouse web UI](/modules/console/)**: Requests the Gateway API resource relationship graph for visualization.
