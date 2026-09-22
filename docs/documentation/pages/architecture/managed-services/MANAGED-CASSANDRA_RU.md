@@ -6,12 +6,12 @@ search: managed-cassandra, cassandra
 description: Архитектура модуля managed-cassandra в Deckhouse Platform.
 ---
 
-Модуль [`managed-cassandra`](/modules/managed-cassandra/) управляет экземплярами распределённой системы управления базами данных класса NoSQL с открытым исходным кодом [Apache Cassandra](https://github.com/apache/cassandra) в Deckhouse Platform (DP). Он предоставляет:
+Модуль [`managed-cassandra`](/modules/managed-cassandra/) управляет инстансами распределённой системы управления базами данных класса NoSQL с открытым исходным кодом [Apache Cassandra](https://github.com/apache/cassandra) в Deckhouse Platform (DP). Он предоставляет:
 
-* **Автоматическое развёртывание** — создаёт экземпляр Cassandra при помощи простой YAML-конфигурации;
-* **Standalone** — поддерживает установку одиночного экземпляра;
+* **Автоматическое развёртывание** — создаёт инстанс Cassandra при помощи простой YAML-конфигурации;
+* **Standalone** — поддерживает установку одиночного инстанса;
 * **Управление конфигурацией** — отдельный ресурс [CassandraClass](/modules/managed-cassandra/cr.html#cassandraclass) для шаблонизации создания сервиса и гибкой валидации пользовательских параметров;
-* **Статус** — отображает текущее состояние развёрнутого экземпляра Cassandra.
+* **Статус** — отображает текущее состояние развёрнутого инстанса Cassandra.
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться [в документации модуля](/modules/managed-cassandra/).
 
@@ -34,13 +34,13 @@ description: Архитектура модуля managed-cassandra в Deckhouse 
 
 1. **Managed-cassandra-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Cassandra](/modules/managed-cassandra/cr.html#cassandra) во всех пользовательских неймспейсах. Кастомные ресурсы Cassandra и CassandraClass определяют настройки экземпляра Cassandra;
+   - согласование состояния кастомных ресурсов [Cassandra](/modules/managed-cassandra/cr.html#cassandra) во всех пользовательских неймспейсах. Кастомные ресурсы Cassandra и CassandraClass определяют настройки инстанса Cassandra;
 
-   - создание и управление ресурсами StatefulSet, Service, Secret и PersistentVolumeClaim, относящимися к экземпляру Cassandra;
+   - создание и управление ресурсами StatefulSet, Service, Secret и PersistentVolumeClaim, относящимися к инстансу Cassandra;
 
    - валидация и мутация кастомных ресурсов Cassandra с помощью механизмов [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-1. **D8ms-cas-\<INSTANCE_NAME>** (StatefulSet) — компонент, включающий один контейнер **cassandra** и отвечающий за запуск и работу экземпляра Cassandra. Создаётся компонентом managed-cassandra-operator для каждого кастомного ресурса Cassandra.
+1. **D8ms-cas-\<INSTANCE_NAME>** (StatefulSet) — компонент, включающий один контейнер **cassandra** и отвечающий за запуск и работу инстанса Cassandra. Создаётся компонентом managed-cassandra-operator для каждого кастомного ресурса Cassandra.
 
 ## Взаимодействия модуля
 
@@ -54,4 +54,4 @@ description: Архитектура модуля managed-cassandra в Deckhouse 
 
 1. **Kube-apiserver** — валидирует и мутирует кастомные ресурсы Cassandra.
 
-1. **Пользовательские приложения** — отправляют запросы к экземпляру Cassandra.
+1. **Пользовательские приложения** — отправляют запросы к инстансу Cassandra.

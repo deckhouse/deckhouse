@@ -6,12 +6,12 @@ search: managed-hive-metastore, hive-metastore
 description: Архитектура модуля managed-hive-metastore в Deckhouse Platform.
 ---
 
-Модуль [`managed-hive-metastore`](/modules/managed-hive-metastore/) управляет экземплярами централизованного хранилища метаданных в экосистеме больших данных [Hive Metastore (HMS)](https://github.com/apache/hive) в Deckhouse Platform (DP). Он предоставляет:
+Модуль [`managed-hive-metastore`](/modules/managed-hive-metastore/) управляет инстансами централизованного хранилища метаданных в экосистеме больших данных [Hive Metastore (HMS)](https://github.com/apache/hive) в Deckhouse Platform (DP). Он предоставляет:
 
-* **Автоматическое развёртывание** — создаёт экземпляр HMS при помощи простой YAML-конфигурации;
-* **Standalone** — поддерживает установку одиночного экземпляра;
+* **Автоматическое развёртывание** — создаёт инстанс HMS при помощи простой YAML-конфигурации;
+* **Standalone** — поддерживает установку одиночного инстанса;
 * **Управление конфигурацией** — отдельный ресурс [HiveMetastoreClass](/modules/managed-hive-metastore/cr.html#hive-metastoreclass) для шаблонизации создания сервиса и гибкой валидации пользовательских параметров;
-* **Статус** — отображает текущее состояние развёрнутого экземпляра HMS.
+* **Статус** — отображает текущее состояние развёрнутого инстанса HMS.
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться [в документации модуля](/modules/managed-hive-metastore/).
 
@@ -34,13 +34,13 @@ description: Архитектура модуля managed-hive-metastore в Deckh
 
 1. **Managed-hive-metastore-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [HiveMetastore](/modules/managed-hive-metastore/cr.html#hive-metastore) во всех пользовательских неймспейсах. Кастомные ресурсы HiveMetastore и HiveMetastoreClass определяют настройки экземпляра HMS;
+   - согласование состояния кастомных ресурсов [HiveMetastore](/modules/managed-hive-metastore/cr.html#hive-metastore) во всех пользовательских неймспейсах. Кастомные ресурсы HiveMetastore и HiveMetastoreClass определяют настройки инстанса HMS;
 
-   - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами Deployment, Service и Secret, относящимися к экземпляру HMS;
+   - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами Deployment, Service и Secret, относящимися к инстансу HMS;
 
    - валидация и мутация кастомных ресурсов HiveMetastore с помощью механизмов [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-1. **D8ms-hms-\<INSTANCE_NAME>** (Deployment) — компонент, отвечающий за запуск и работу экземпляра HMS.
+1. **D8ms-hms-\<INSTANCE_NAME>** (Deployment) — компонент, отвечающий за запуск и работу инстанса HMS.
 
    Состоит из следующих контейнеров:
 
@@ -52,7 +52,7 @@ description: Архитектура модуля managed-hive-metastore в Deckh
 
 Модуль взаимодействует со следующими компонентами:
 
-1. **Экземпляр PostgreSQL** — обрабатывает метаданные на сервере базы данных.
+1. **Инстанс PostgreSQL** — обрабатывает метаданные на сервере базы данных.
 
 1. **S3 (объектное хранилище)** — обрабатывает хранящиеся данные.
 
@@ -66,4 +66,4 @@ description: Архитектура модуля managed-hive-metastore в Deckh
 
 1. **Kube-apiserver** — валидирует и мутирует кастомные ресурсы HiveMetastore.
 
-1. **Пользовательские приложения** — отправляют запросы к экземпляру HMS.
+1. **Пользовательские приложения** — отправляют запросы к инстансу HMS.

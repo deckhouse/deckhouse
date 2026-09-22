@@ -6,13 +6,13 @@ search: managed-valkey, valkey
 description: Архитектура модуля managed-valkey в Deckhouse Platform.
 ---
 
-Модуль [`managed-valkey`](/modules/managed-valkey/) управляет экземплярами [Valkey](https://github.com/valkey-io/valkey) (Redis-совместимое хранилище данных в оперативной памяти) в Deckhouse Platform (DP). Он предоставляет:
+Модуль [`managed-valkey`](/modules/managed-valkey/) управляет инстансами [Valkey](https://github.com/valkey-io/valkey) (Redis-совместимое хранилище данных в оперативной памяти) в Deckhouse Platform (DP). Он предоставляет:
 
-* **Автоматическое развёртывание** — создаёт экземпляр Valkey при помощи простой YAML-конфигурации;
-* **Standalone** — поддерживает установку одиночного экземпляра;
+* **Автоматическое развёртывание** — создаёт инстанс Valkey при помощи простой YAML-конфигурации;
+* **Standalone** — поддерживает установку одиночного инстанса;
 * **Persistent Storage** — позволяет сконфигурировать разные варианты хранения данных: `AOF`, `RDB`, `AOF+RDB`;
 * **Управление конфигурацией** — отдельный ресурс [ValkeyClass](/modules/managed-valkey/cr.html#valkeyclass) для шаблонизации создания сервиса и гибкой валидации пользовательских параметров;
-* **Статус** — отображает текущее состояние развёрнутого экземпляра Valkey.
+* **Статус** — отображает текущее состояние развёрнутого инстанса Valkey.
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться [в документации модуля](/modules/managed-valkey/).
 
@@ -35,15 +35,15 @@ description: Архитектура модуля managed-valkey в Deckhouse Pla
 
 1. **Managed-valkey-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Valkey](/modules/managed-valkey/cr.html#valkey) во всех пользовательских неймспейсах. Кастомные ресурсы Valkey и ValkeyClass определяют настройки экземпляра Valkey;
+   - согласование состояния кастомных ресурсов [Valkey](/modules/managed-valkey/cr.html#valkey) во всех пользовательских неймспейсах. Кастомные ресурсы Valkey и ValkeyClass определяют настройки инстанса Valkey;
 
-   - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Secret, ConfigMap и PersistentVolumeClaim, относящимися к экземпляру Valkey.
+   - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Secret, ConfigMap и PersistentVolumeClaim, относящимися к инстансу Valkey.
 
 1. **Managed-valkey-webhook** (Deployment) — компонент, состоящий из одного контейнера **manager**.
 
    Компонент выполняет валидацию и мутацию кастомных ресурсов [Valkey](/modules/managed-valkey/cr.html#valkey), а также мутацию кастомных ресурсов [ValkeyClass](/modules/managed-valkey/cr.html#valkeyclass) с помощью механизмов [Validating Admission Controller и Mutating Admission Controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-1. **D8ms-valkey-\<INSTANCE_NAME>** (StatefulSet) — компонент выполняет запуск и подготовку экземпляра Valkey. Создаётся компонентом managed-valkey-operator.
+1. **D8ms-valkey-\<INSTANCE_NAME>** (StatefulSet) — компонент выполняет запуск и подготовку инстанса Valkey. Создаётся компонентом managed-valkey-operator.
 
    Состоит из двух контейнеров:
 
@@ -63,4 +63,4 @@ description: Архитектура модуля managed-valkey в Deckhouse Pla
 
 1. **Prometheus-main** — собирает метрики компонентов managed-valkey-operator и managed-valkey-webhook.
 
-1. **Пользовательские приложения** — отправляют запросы к экземпляру Valkey.
+1. **Пользовательские приложения** — отправляют запросы к инстансу Valkey.

@@ -11,7 +11,7 @@ description: Архитектура подсистемы Managed Services в Dec
 В подсистему Managed Services входят следующие модули:
 
 * [`managed-cassandra`](/modules/managed-cassandra/) — управляет кластерами Cassandra;
-* [`managed-clickhouse`](/modules/managed-clickhouse/) — управляет экземплярами ClickHouse;
+* [`managed-clickhouse`](/modules/managed-clickhouse/) — управляет инстансами ClickHouse;
 * [`managed-hive-metastore`](/modules/managed-hive-metastore/) — управляет кластерами Hive Metastore;
 * [`managed-kafka`](/modules/managed-kafka/) — управляет инстансами Kafka;
 * [`managed-memcached`](/modules/managed-memcached/) — управляет инстансами Memcached;

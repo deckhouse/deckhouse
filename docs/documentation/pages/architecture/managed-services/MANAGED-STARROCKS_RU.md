@@ -6,14 +6,14 @@ search: managed-starrocks, starrocks
 description: Архитектура модуля managed-starrocks в Deckhouse Platform.
 ---
 
-Модуль [`managed-starrocks`](/modules/managed-starrocks/) управляет экземплярами [StarRocks](https://github.com/starrocks/starrocks) в Deckhouse Platform (DP). StarRocks — высокопроизводительная OLAP-СУБД для аналитики в реальном времени, хранилищ данных и BI-нагрузок.
+Модуль [`managed-starrocks`](/modules/managed-starrocks/) управляет инстансами [StarRocks](https://github.com/starrocks/starrocks) в Deckhouse Platform (DP). StarRocks — высокопроизводительная OLAP-СУБД для аналитики в реальном времени, хранилищ данных и BI-нагрузок.
 
 Модуль предоставляет:
 
-* **Автоматическое развёртывание** — создаёт экземпляр StarRocks при помощи простой YAML-конфигурации;
+* **Автоматическое развёртывание** — создаёт инстанс StarRocks при помощи простой YAML-конфигурации;
 * **Управление конфигурацией** — отдельный ресурс [StarrocksClass](/modules/managed-starrocks/cr.html#starrocksclass) для шаблонизации создания сервиса и гибкой валидации пользовательских параметров;
 * **Настройка под аналитику** — поддерживает указание параметров загрузки данных (`streamingLoadMaxMb`, `loadProcessMaxMemoryLimitPercent`) и управления каталогом (`catalogTrashExpireSecond`);
-* **Статус** — отображает текущее состояние развёрнутого экземпляра StarRocks.
+* **Статус** — отображает текущее состояние развёрнутого инстанса StarRocks.
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться [в документации модуля](/modules/managed-starrocks/).
 
@@ -36,19 +36,19 @@ description: Архитектура модуля managed-starrocks в Deckhouse 
 
 1. **Managed-starrocks-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Starrocks](/modules/managed-starrocks/cr.html#starrocks) во всех пользовательских неймспейсах. Кастомные ресурсы Starrocks и StarrocksClass определяют настройки экземпляра StarRocks;
+   - согласование состояния кастомных ресурсов [Starrocks](/modules/managed-starrocks/cr.html#starrocks) во всех пользовательских неймспейсах. Кастомные ресурсы Starrocks и StarrocksClass определяют настройки инстанса StarRocks;
 
-   - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Service, Secret, ConfigMap и PersistentVolumeClaim, относящимися к экземпляру StarRocks.
+   - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Service, Secret, ConfigMap и PersistentVolumeClaim, относящимися к инстансу StarRocks.
 
 1. **Managed-starrocks-webhook** (Deployment) — компонент, состоящий из одного контейнера **manager**.
 
    Компонент выполняет валидацию и мутацию кастомных ресурсов [Starrocks](/modules/managed-starrocks/cr.html#starrocks), а также мутацию кастомного ресурса [StarrocksClass](/modules/managed-starrocks/cr.html#starrocksclass) с помощью механизмов [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-1. **D8ms-sr-\<INSTANCE_NAME>** (StatefulSet) — компонент, отвечающий за запуск и работу экземпляра StarRocks. Создаётся компонентом managed-starrocks-operator.
+1. **D8ms-sr-\<INSTANCE_NAME>** (StatefulSet) — компонент, отвечающий за запуск и работу инстанса StarRocks. Создаётся компонентом managed-starrocks-operator.
 
    Состоит из следующих контейнеров:
 
-   - **agent** — сайдкар-контейнер, который отслеживает и обновляет статус TLS-сертификата, а также выполняет настройку экземпляра;
+   - **agent** — сайдкар-контейнер, который отслеживает и обновляет статус TLS-сертификата, а также выполняет настройку инстанса;
    - **starrocks** — основной контейнер.
 
 ## Взаимодействия модуля
@@ -63,4 +63,4 @@ description: Архитектура модуля managed-starrocks в Deckhouse 
 
 1. **Kube-apiserver** — валидирует и мутирует кастомные ресурсы Starrocks, мутирует кастомные ресурсы StarrocksClass.
 
-1. **Пользовательские приложения** — отправляют запросы к экземпляру StarRocks.
+1. **Пользовательские приложения** — отправляют запросы к инстансу StarRocks.

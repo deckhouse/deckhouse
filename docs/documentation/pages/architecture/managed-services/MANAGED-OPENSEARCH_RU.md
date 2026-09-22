@@ -6,15 +6,15 @@ search: managed-opensearch, opensearch
 description: Архитектура модуля managed-opensearch в Deckhouse Platform.
 ---
 
-Модуль [`managed-opensearch`](/modules/managed-opensearch/) управляет экземплярами [OpenSearch](https://github.com/opensearch-project/opensearch) в Deckhouse Platform (DP). OpenSearch — это поисковая система и аналитический движок с открытым исходным кодом, предназначенный для работы с большими объёмами данных в реальном времени.
+Модуль [`managed-opensearch`](/modules/managed-opensearch/) управляет инстансами [OpenSearch](https://github.com/opensearch-project/opensearch) в Deckhouse Platform (DP). OpenSearch — это поисковая система и аналитический движок с открытым исходным кодом, предназначенный для работы с большими объёмами данных в реальном времени.
 
 Модуль предоставляет:
 
-* **Автоматическое развёртывание** — создаёт экземпляр OpenSearch при помощи простой YAML-конфигурации;
+* **Автоматическое развёртывание** — создаёт инстанс OpenSearch при помощи простой YAML-конфигурации;
 * **Управление конфигурацией** — отдельный ресурс [OpensearchClass](/modules/managed-opensearch/cr.html#opensearchclass) для шаблонизации создания сервиса и гибкой валидации пользовательских параметров;
 * **Класс-ориентированное управление** — поддерживает sizing-политики и CEL-валидации;
 * **Долговременное хранение** — поддерживает параметры PersistentVolumeClaim для данных;
-* **Статус** — отображает текущее состояние развёрнутого экземпляра OpenSearch.
+* **Статус** — отображает текущее состояние развёрнутого инстанса OpenSearch.
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться [в документации модуля](/modules/managed-opensearch/).
 
@@ -37,15 +37,15 @@ description: Архитектура модуля managed-opensearch в Deckhouse
 
 1. **Managed-opensearch-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Opensearch](/modules/managed-opensearch/cr.html#opensearch) во всех пользовательских неймспейсах. Кастомные ресурсы Opensearch и OpensearchClass определяют настройки экземпляра OpenSearch;
+   - согласование состояния кастомных ресурсов [Opensearch](/modules/managed-opensearch/cr.html#opensearch) во всех пользовательских неймспейсах. Кастомные ресурсы Opensearch и OpensearchClass определяют настройки инстанса OpenSearch;
 
-   - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Service, Secret и PersistentVolumeClaim, относящимися к экземпляру OpenSearch.
+   - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Service, Secret и PersistentVolumeClaim, относящимися к инстансу OpenSearch.
 
 1. **Managed-opensearch-webhook** (Deployment) — компонент, состоящий из одного контейнера **manager**.
 
    Компонент выполняет валидацию и мутацию кастомных ресурсов [Opensearch](/modules/managed-opensearch/cr.html#opensearch) с помощью механизмов [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-1. **D8ms-osch-\<INSTANCE_NAME>** (StatefulSet) — компонент, состоящий из одного контейнера **opensearch** и отвечающий за запуск и работу экземпляра OpenSearch. Создаётся компонентом managed-opensearch-operator.
+1. **D8ms-osch-\<INSTANCE_NAME>** (StatefulSet) — компонент, состоящий из одного контейнера **opensearch** и отвечающий за запуск и работу инстанса OpenSearch. Создаётся компонентом managed-opensearch-operator.
 
 ## Взаимодействия модуля
 
@@ -59,4 +59,4 @@ description: Архитектура модуля managed-opensearch в Deckhouse
 
 1. **Kube-apiserver** — валидирует и мутирует кастомные ресурсы Opensearch.
 
-1. **Пользовательские приложения** — отправляют запросы к экземпляру OpenSearch.
+1. **Пользовательские приложения** — отправляют запросы к инстансу OpenSearch.
