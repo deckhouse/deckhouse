@@ -1,69 +1,32 @@
 - name: d8.kubelet-checkpoint-state-reset
   rules:
-    - alert: D8KubeletCheckpointStateReset
-      # A reset happens only while kubelet starts, so a non-zero counter already means this kubelet reset a
-      # checkpoint. increase() would need a sample from before the reset and misses one after a long Node downtime.
+    - alert: D8KubeletCheckpointStateUnpinnedContainers
+      # A gauge, so this is the live state and not a trace of an event: it resolves when the container is gone,
+      # whoever made it go, and it survives a kubelet restart because kubelet keeps the list on the Node.
       expr: |
-        max by (node, manager, reason) (
-          kubelet_checkpoint_state_reset_total{job="kubelet"}
+        max by (node, namespace, pod, container) (
+          kubelet_checkpoint_state_unpinned_containers{job="kubelet"}
         ) > 0
-        and on (node)
-        (
-          time() - max by (node) (process_start_time_seconds{job="kubelet"})
-        ) < 3600
-      for: 5m
-      labels:
-        tier: cluster
-        severity_level: "6"
-      annotations:
-        plk_markup_format: markdown
-        plk_protocol_version: "1"
-        summary: Kubelet on Node {{ $labels.node }} reset the {{ $labels.manager }} manager checkpoint.
-        description: |
-          Kubelet on Node `{{ $labels.node }}` was started less than an hour ago and, while starting, found the `{{ $labels.manager }}` manager checkpoint unusable (reason `{{ $labels.reason }}`). It reset the checkpoint instead of refusing to start.
-
-          Running containers that held exclusive CPUs or NUMA memory zones in the reset state were stopped, so kubelet recreates them and assigns the resources again. Expect restarts of Guaranteed Pods on this Node.
-
-          A reset right after a Node reboot is expected, for example, because of per-NUMA memory drift. Repeated resets, or resets on many Nodes at once, may indicate a kubelet configuration problem.
-
-          The alert is resolved an hour after this kubelet start, or earlier if kubelet restarts without a reset.
-
-          To find the affected Pods:
-
-          ```shell
-          d8 k get events -A --field-selector reason=NUMACheckpointReset
-          ```
-
-          The details are also stored on the Node in `/var/lib/kubelet/d8-numa-selfheal.json`.
-
-    - alert: D8KubeletCheckpointStateResetStopFailed
-      expr: |
-        max by (node, manager) (
-          kubelet_checkpoint_state_reset_stop_failures_total{job="kubelet"}
-        ) > 0
-      for: 5m
+      for: 10m
       labels:
         tier: cluster
         severity_level: "4"
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
-        summary: Kubelet on Node {{ $labels.node }} failed to stop containers after a {{ $labels.manager }} manager checkpoint reset.
+        plk_create_group_if_not_exists__d8_kubelet_unpinned_containers: "D8KubeletCheckpointStateUnpinnedContainers,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_kubelet_unpinned_containers: "D8KubeletCheckpointStateUnpinnedContainers,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Container {{ $labels.container }} in Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one kubelet recorded for it.
         description: |
-          After resetting the `{{ $labels.manager }}` manager checkpoint on Node `{{ $labels.node }}`, kubelet failed to stop some containers that held exclusive CPUs or NUMA memory zones.
+          Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded a new NUMA zone for container `{{ $labels.container }}` of Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Kubelet sets the zone only when it creates a container, so the container keeps running in the zone it had before the reset, which may be a different one.
 
-          Such a container keeps running with the resources it had before the reset, while kubelet has assigned it resources again from the reset state. The new assignment may not match what the container actually uses, so the same CPUs or NUMA zone may end up assigned to another Guaranteed Pod.
+          Kubelet may then give the zone the container really uses to another Guaranteed Pod, and both Pods share its memory. With the Topology Manager enabled, the container's CPUs may also be moved to the recorded zone while its memory stays in the old one.
 
-          To find the affected Pods:
+          Kubelet does not stop such a container by itself. Restoring the isolation means recreating it, and whether this Pod may be restarted, and when, is a decision about the workload rather than about the Node.
 
-          ```shell
-          d8 k get events -A --field-selector reason=NUMACheckpointResetFailed
-          ```
+          What to do, whichever suits the workload:
 
-          The details are also stored on the Node in `/var/lib/kubelet/d8-numa-selfheal.json`.
+          - Delete the Pod, or drain the Node, so the container is recreated in a zone from the current state.
+          - If the Pod is a virtual machine, you can also live migrate it to another Node. The machine keeps running and gets its resources assigned again on arrival.
 
-          Delete the affected Pods or drain the Node, so their containers are recreated with new assignments. The alert is resolved after kubelet restarts on the Node:
-
-          ```shell
-          systemctl restart kubelet
-          ```
+          The alert resolves by itself within a few minutes of the container going away. No kubelet restart is needed.

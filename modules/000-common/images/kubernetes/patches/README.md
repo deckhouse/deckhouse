@@ -33,32 +33,6 @@ Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
 
 Add resource quota ignore mechanism for k8s pvc and pod based on labels
 
-### kubelet-graceful-shutdown-cleanup-memory-manager-state (1.32 only -- removed on 1.33+)
-
-This patch ensures that the Memory Manager state file is removed during a graceful node shutdown.
-
-The Memory Manager stores the node memory state in a file. After a reboot, the amount of used memory may slightly differ from the previous state, which can make the stored state invalid and prevent the kubelet from starting. Removing the state file before shutdown ensures that the Memory Manager starts with a clean state after the reboot.
-See issue: https://github.com/kubernetes/kubernetes/issues/131253
-
-**Removed on 1.33 through 1.36**, superseded by `kubelet-checkpoint-state-self-heal`, which repairs the
-divergence at kubelet start regardless of how the node went down -- including a power cut, which
-this patch never covered.
-
-Removing it is not only cleanup. Deleting the state file produces a state the self-heal patch
-cannot detect: with no file, `restoreState` takes the `ErrCheckpointNotFound` branch, writes a
-fresh state, and `validateState` then compares it against `getDefaultMachineState()` and finds
-them equal -- no error, so no reset, nothing stopped and no signal. That matters because the deletion
-fires as soon as a shutdown event arrives, and a shutdown can still be **cancelled**: the file is
-already gone while the kubelet keeps running, and the next kubelet restart silently initialises
-the memory manager from scratch while pinned containers are still holding their NUMA zones.
-
-Dropping it required re-rolling two patches that carried `cleanupMemoryManagerState()` in their
-context: CE `fix-scheduler-node-graceful-shutdown` (its hunk only normalised the block's
-indentation and became meaningless) and EE
-`100-kubelet-graceful-shutdown-wait-for-external-inhibitors` (it relocated the call). The EE patch
-keeps its own feature -- waiting for external inhibit locks -- untouched; only the references to
-the removed function are gone.
-
 ### kubelet-disable-k-panic-check
 
 Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regardless of kubelet settings, only a warning is used. The `kernel.panic` parameter itself is strictly controlled by the DKP platform
@@ -216,38 +190,15 @@ already ship this code, so the patch is carried on 1.32 (`015`), 1.33 (`014`) an
 1.34 (`015`) only.
 
 > Upstream PR https://github.com/kubernetes/kubernetes/pull/130551
-### 016-kubelet-checkpoint-state-self-heal.patch
+
 ### kubelet-checkpoint-state-self-heal.patch (1.33+)
 
-Lets the kubelet start when the CPU manager or the memory manager finds its
-checkpoint unusable, instead of exiting. Upstream propagates the error from
-`staticPolicy.Start` up to `initializeRuntimeDependentModules`, which calls
-`os.Exit(1)`, so the node ends up in a restart loop and needs a human — while the
-causes are ordinary: a changed online-CPU set, changed hugepages, a changed NUMA
-zone count, a torn checkpoint write, or per-NUMA `MemTotal` drift across reboots.
+When the CPU or memory manager checkpoint is unusable, the kubelet resets that manager's state
+and starts instead of exiting. Running containers are not stopped.
 
-The affected manager (only that one) drops its state, and the containers whose
-assignments lived in it are stopped, so the normal kubelet lifecycle recreates them
-and the manager pins them again from a clean state. The stop is synchronous, inside
-`containerManagerImpl.Start` before the runtime is marked synced, so no pod can be
-admitted while CPUs and NUMA zones look free in the state but are still occupied.
-Each container is stopped with its own pod's `terminationGracePeriodSeconds`, read from the CRI
-container annotations since pod specs are not loaded that early; preStop hooks are not run, the
-stop bypasses kubelet's kill path. A stop request that fails while the runtime finished stopping
-the container anyway is counted as a stop, not a failure.
-
-A reset is reported by the metrics `kubelet_checkpoint_state_reset_total{manager,reason}`,
-`..._stopped_containers_total{manager}`, `..._stop_failures_total{manager}`, by the pod
-events `NUMACheckpointReset` and `NUMACheckpointResetFailed`, and by the report file
-`/var/lib/kubelet/d8-numa-selfheal.json`, which the kubelet writes but never removes —
-deleting it belongs to whoever reads it and decides whether the node needs a drain. The
-failed variants are the ones needing attention: such a container keeps running while its
-CPUs or NUMA zone are already given away in the reset state.
-
-Carried on 1.33 (`014`), 1.34 (`015`), 1.35 (`015`) and 1.36 (`014`) — the numbers follow
-each version's chain, the added `pkg/kubelet/cm/checkpointselfheal` package is identical
-across all four. The unconditional `rm` of both checkpoints in
-`candi/bashible/common-steps/all/069_start_kubelet.sh.tpl` is removed together with it: it
-was the workaround this replaces.
+The CPU manager moves running containers onto their new CPUs by itself. The memory manager
+cannot change a running container's NUMA zone, so such containers are reported until they are
+recreated: gauge `kubelet_checkpoint_state_unpinned_containers`, event `NUMACheckpointReset`
+and alert `D8KubeletCheckpointStateUnpinnedContainers`.
 
 See issue: https://github.com/kubernetes/kubernetes/issues/131253

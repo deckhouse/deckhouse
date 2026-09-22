@@ -367,7 +367,7 @@ index 00000000000..5f6e9f99674
 +	}
 +}
 diff --git a/pkg/kubelet/cm/container_manager_linux.go b/pkg/kubelet/cm/container_manager_linux.go
-index ace30752d8f..a0fa304e534 100644
+index 7c744da1645..3f7ffd934dc 100644
 --- a/pkg/kubelet/cm/container_manager_linux.go
 +++ b/pkg/kubelet/cm/container_manager_linux.go
 @@ -50,6 +50,7 @@ import (
@@ -378,7 +378,7 @@ index ace30752d8f..a0fa304e534 100644
  	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager"
  	"k8s.io/kubernetes/pkg/kubelet/cm/devicemanager"
  	"k8s.io/kubernetes/pkg/kubelet/cm/dra"
-@@ -668,6 +669,10 @@ func (cm *containerManagerImpl) Start(ctx context.Context, node *v1.Node,
+@@ -632,6 +633,10 @@ func (cm *containerManagerImpl) Start(ctx context.Context, node *v1.Node,
  		return fmt.Errorf("start memory manager error: %w", err)
  	}
  
@@ -390,46 +390,46 @@ index ace30752d8f..a0fa304e534 100644
  	// allocatable of the node
  	cm.nodeInfo = node
 diff --git a/pkg/kubelet/cm/cpumanager/cpu_manager.go b/pkg/kubelet/cm/cpumanager/cpu_manager.go
-index 7d003862b56..ebe8984ebb9 100644
+index 8b59ba67121..2a2becc0488 100644
 --- a/pkg/kubelet/cm/cpumanager/cpu_manager.go
 +++ b/pkg/kubelet/cm/cpumanager/cpu_manager.go
-@@ -33,6 +33,7 @@ import (
+@@ -29,6 +29,7 @@ import (
+ 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
  	"k8s.io/klog/v2"
  
- 	kubefeatures "k8s.io/kubernetes/pkg/features"
 +	"k8s.io/kubernetes/pkg/kubelet/cm/checkpointselfheal"
  	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
  	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/state"
  	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/topology"
-@@ -241,6 +242,11 @@ func (m *manager) Start(ctx context.Context, activePods ActivePodsFunc, sourcesR
+@@ -227,6 +228,11 @@ func (m *manager) Start(activePods ActivePodsFunc, sourcesReady config.SourcesRe
  	m.containerMap = initialContainers
  
- 	stateImpl, err := state.NewCheckpointState(logger, m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
+ 	stateImpl, err := state.NewCheckpointState(m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
 +	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName, err) {
 +		// Upstream gives up here and kubelet exits. Drop the unusable file and
 +		// start from scratch instead.
-+		stateImpl, err = state.NewCheckpointState(logger, m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
++		stateImpl, err = state.NewCheckpointState(m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
 +	}
  	if err != nil {
- 		logger.Error(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
+ 		klog.ErrorS(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
  		return err
-@@ -248,6 +254,14 @@ func (m *manager) Start(ctx context.Context, activePods ActivePodsFunc, sourcesR
+@@ -234,6 +240,14 @@ func (m *manager) Start(activePods ActivePodsFunc, sourcesReady config.SourcesRe
  	m.state = stateImpl
  
- 	err = m.policy.Start(logger, m.state)
+ 	err = m.policy.Start(m.state)
 +	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName, err) {
 +		// Here the state was restored, but the policy rejected it, e.g. after a
 +		// CPU hotplug, so policy.Start is retried as well. At most one of the two
 +		// resets fires: an empty state always passes validateState.
-+		if m.state, err = state.NewCheckpointState(logger, m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap); err == nil {
-+			err = m.policy.Start(logger, m.state)
++		if m.state, err = state.NewCheckpointState(m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap); err == nil {
++			err = m.policy.Start(m.state)
 +		}
 +	}
  	if err != nil {
- 		logger.Error(err, "Policy start error")
+ 		klog.ErrorS(err, "Policy start error")
  		return err
 diff --git a/pkg/kubelet/cm/memorymanager/memory_manager.go b/pkg/kubelet/cm/memorymanager/memory_manager.go
-index 9e11d24627f..a19b96c0e4c 100644
+index 572f58599a0..b28076d444a 100644
 --- a/pkg/kubelet/cm/memorymanager/memory_manager.go
 +++ b/pkg/kubelet/cm/memorymanager/memory_manager.go
 @@ -32,6 +32,7 @@ import (
@@ -440,7 +440,7 @@ index 9e11d24627f..a19b96c0e4c 100644
  	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
  	"k8s.io/kubernetes/pkg/kubelet/cm/memorymanager/state"
  	"k8s.io/kubernetes/pkg/kubelet/cm/topologymanager"
-@@ -195,6 +196,10 @@ func (m *manager) Start(ctx context.Context, activePods ActivePodsFunc, sourcesR
+@@ -192,6 +193,10 @@ func (m *manager) Start(ctx context.Context, activePods ActivePodsFunc, sourcesR
  	m.containerMap = initialContainers
  
  	stateImpl, err := state.NewCheckpointState(logger, m.stateFileDirectory, memoryManagerStateFileName, m.policy.Name())
@@ -451,16 +451,16 @@ index 9e11d24627f..a19b96c0e4c 100644
  	if err != nil {
  		logger.Error(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
  		return err
-@@ -202,6 +207,14 @@ func (m *manager) Start(ctx context.Context, activePods ActivePodsFunc, sourcesR
+@@ -199,6 +204,14 @@ func (m *manager) Start(ctx context.Context, activePods ActivePodsFunc, sourcesR
  	m.state = stateImpl
  
- 	err = m.policy.Start(logger, m.state)
+ 	err = m.policy.Start(ctx, m.state)
 +	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerMemory, m.stateFileDirectory, memoryManagerStateFileName, err) {
 +		// Here the state was restored, but the policy rejected it, e.g. after a
 +		// memory hotplug, so policy.Start is retried as well. At most one of the
 +		// two resets fires: an empty state always passes validateState.
 +		if m.state, err = state.NewCheckpointState(logger, m.stateFileDirectory, memoryManagerStateFileName, m.policy.Name()); err == nil {
-+			err = m.policy.Start(logger, m.state)
++			err = m.policy.Start(ctx, m.state)
 +		}
 +	}
  	if err != nil {
