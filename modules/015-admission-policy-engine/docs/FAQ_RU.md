@@ -464,7 +464,7 @@ spec:
 ## Проверка подписи образов
 
 {% alert level="warning" %}
-Доступно в следующих редакциях DP: SE+, EE, Ultimate, CSE Lite, CSE Pro, Certified Pro, Certified Lite.
+Доступно в следующих редакциях DP: SE+, EE, Ultimate, CSE Lite, CSE Pro, Certified Pro, Certified Core.
 
 Поддерживается Cosign не выше v2. Версии v3 и выше не поддерживаются.
 {% endalert %}
