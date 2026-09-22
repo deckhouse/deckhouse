@@ -414,31 +414,37 @@ build_ce:mr:
   extends:
     - .build_ce
     - .rules:on_merge_request_manual
+  allow_failure: true
 
 build_ee:mr:
   extends:
     - .build_ee
     - .rules:on_merge_request_manual
+  allow_failure: true
 
 build_be:mr:
   extends:
     - .build_be
     - .rules:on_merge_request_manual
+  allow_failure: true
 
 build_se:mr:
   extends:
     - .build_se
     - .rules:on_merge_request_manual
+  allow_failure: true
 
 build_se_plus:mr:
   extends:
     - .build_se_plus
     - .rules:on_merge_request_manual
+  allow_failure: true
 
 build_cse:mr:
   extends:
     - .build_cse
     - .rules:on_merge_request_manual
+  allow_failure: true
 
 # ---------------------------------------------------------------------------
 # release-x.xx: FE + tests automatic; other editions manual

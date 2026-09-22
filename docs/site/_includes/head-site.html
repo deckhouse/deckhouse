@@ -2,8 +2,14 @@
 <!-- favicon -->
 {%- comment -%}
   The Russian site carries the new brand mark, the English one does not, so the three
-  files the new brand ships are served from favicon/ru for ru pages only. There is no new
-  .ico - the live site does not link one either - so the shortcut icon below stays shared.
+  files the new brand ships are served from favicon/ru for ru pages only.
+
+  The shared favicon.ico is the old rhombus and is NOT linked on Russian pages. Chrome
+  prefers a multi-resolution .ico over an SVG when both are offered - verified by reading
+  its own favicon database after a clean profile visited the live page: with the 15KB
+  favicon.ico linked it maps the page to that file, without it to logo.svg. Firefox takes
+  the SVG either way, which is why the two browsers showed different marks. Anything with
+  no SVG favicon support now falls back to the origin's /favicon.ico, still the old mark.
 {%- endcomment -%}
 {%- assign faviconDir = "/images/favicon" -%}
 {%- if page.lang == "ru" -%}{%- assign faviconDir = "/images/favicon/ru" -%}{%- endif -%}
@@ -11,7 +17,9 @@
 <link rel="icon" type="image/svg+xml" href="{{ site.urls[page.lang] }}{{ faviconDir }}/logo.svg">
 <link rel="icon" type="image/svg+xml" media="(prefers-color-scheme: dark)" href="{{ site.urls[page.lang] }}{{ faviconDir }}/logo-on-white.svg">
 
+{%- unless page.lang == "ru" %}
 <link rel="shortcut icon" href="{{ site.urls[page.lang] }}/images/favicon/favicon.ico">
+{%- endunless %}
 <link rel="manifest" href="/site.webmanifest">
 <link rel="mask-icon" href="{{ site.urls[page.lang] }}/safari-pinned-tab.svg" color="#004DF2">
 <meta name="msapplication-TileColor" content="#004DF2">

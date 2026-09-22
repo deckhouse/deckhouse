@@ -57,6 +57,7 @@ import (
 	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
@@ -74,6 +75,7 @@ import (
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
@@ -125,6 +127,7 @@ func NewDeckhouseController(
 		coordv1.AddToScheme,
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
+		v1beta1.AddToScheme,
 		appsv1.AddToScheme,
 		discoveryv1.AddToScheme,
 	}
@@ -229,7 +232,7 @@ func NewDeckhouseController(
 
 	// Module v2 controller (feature flag)
 	if app.ModulePackagesEnabled() {
-		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1beta1.Module{}] = cache.ByObject{}
 	}
 
 	admission, serveWebhooks := app.TakeOverAdmissionServer()
@@ -265,7 +268,7 @@ func NewDeckhouseController(
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
 	// set chrooted environment for modules
-	if len(os.Getenv(app.EnvShellChrootDir)) > 0 {
+	if len(os.Getenv(envconfig.EnvShellChrootDir)) > 0 {
 		setModulesEnvironment(operator)
 	}
 

@@ -57,7 +57,8 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 
 	// Only the controller/Deckhouse may perform privileged operations: auto-wrapping an existing
 	// namespace into a managed-by-namespace project (Create) and editing a managed-by-namespace
-	// project (Update).
+	// project (Update). system:masters never reaches this handler at all: the webhook's
+	// matchConditions skip it at the API server (templates/admission/validation.yaml).
 	privileged := req.UserInfo.Username == rolebindingwebhook.ControllerServiceAccount ||
 		req.UserInfo.Username == rolebindingwebhook.DeckhouseServiceAccount
 

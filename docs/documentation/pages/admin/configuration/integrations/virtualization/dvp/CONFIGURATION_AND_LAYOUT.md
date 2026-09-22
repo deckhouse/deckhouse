@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration in Deckhouse Virtualization Platform
+title: Layouts and configuration in built-in virtualization
 permalink: en/admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
 ---
 
@@ -89,7 +89,7 @@ spec:
 
 ## Configuration
 
-The DVP cloud provider parameters are set in four resources:
+The built-in virtualization cloud provider parameters are set in four resources:
 
 - The [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) of the `cloud-provider-dvp` module defines the layout and the parent cluster connection parameters.
 - The `d8-credentials` Secret in the `d8-cloud-provider-dvp` namespace stores the credentials for accessing the parent cluster API. Its format is covered in the [Credentials Secret](authorization.html#credentials-secret) section.

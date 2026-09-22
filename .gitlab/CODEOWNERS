@@ -51,7 +51,7 @@
 035-cni-flannel/ @andrey.pavlov @andrey.polovov
 035-cni-simple-bridge/ @andrey.pavlov @andrey.polovov
 036-kube-proxy/ @andrey.pavlov @andrey.polovov
-038-registry/ @maksim.nabokikh @vadim.martynov
+038-registry/ @borg-z @090809
 039-registry-packages-proxy/ @nikolay.zykov @georgy.kargin
 040-control-plane-manager/ @nikolay.gorbatov
 **/040-control-plane-manager/hooks/audit_policy* @maksim.nabokikh @aleksandr.sinichkin

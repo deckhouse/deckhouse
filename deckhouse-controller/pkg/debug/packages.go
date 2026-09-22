@@ -21,6 +21,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 )
 
 var packagesDebugSocket = "/tmp/deckhouse-debug.socket"
@@ -128,7 +130,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 
 func definePackagesDebugSocketFlag(cmd *cobra.Command) {
 	defaultSocket := packagesDebugSocket
-	if v, ok := os.LookupEnv("PACKAGES_DEBUG_UNIX_SOCKET"); ok && v != "" {
+	if v, ok := os.LookupEnv(envconfig.EnvPackagesDebugUnixSocket); ok && v != "" {
 		defaultSocket = v
 		packagesDebugSocket = v
 	}

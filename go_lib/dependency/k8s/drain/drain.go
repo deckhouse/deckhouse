@@ -417,7 +417,7 @@ func waitForDelete(params waitForDeleteParams) ([]corev1.Pod, error) {
 		pendingPods := []corev1.Pod{}
 		for i, pod := range pods {
 			p, err := params.getPodFn(pod.Namespace, pod.Name)
-			if apierrors.IsNotFound(err) || (p != nil && p.ObjectMeta.UID != pod.ObjectMeta.UID) {
+			if apierrors.IsNotFound(err) || (err == nil && p != nil && p.ObjectMeta.UID != pod.ObjectMeta.UID) {
 				if params.onFinishFn != nil {
 					params.onFinishFn(&pod, params.usingEviction, nil)
 				} else if params.onDoneFn != nil {

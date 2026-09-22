@@ -31,8 +31,10 @@ func testRenderContext() RenderContext {
 		Provider:      map[string]any{"instances": map[string]any{"sshKeyPairName": "deckhouse"}},
 		Zone:          "ru-1a",
 		NodeGroupName: "worker",
-		ClusterUUID:   "cluster-uuid",
-		PodSubnet:     "10.111.0.0/16",
+		Cluster: ClusterFacts{
+			UUID:      "cluster-uuid",
+			PodSubnet: "10.111.0.0/16",
+		},
 	}
 }
 

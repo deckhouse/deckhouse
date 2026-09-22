@@ -298,11 +298,6 @@ func main() {
 
 	initGlobalVars()
 
-	if err := telemetry.Bootstrap(appContext); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
 	registerOnShutdown("Leave alternate screen if needed", logger.RestoreTerminal)
 	defer logger.RestoreTerminal()
@@ -348,6 +343,10 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 		return kpcontext.SetContextToAction(
 			providerinitializer.WithKubeAuthMode(ctx, &opts.Kube),
 		)(c)
+	})
+
+	kpApp.Action(func(c *kingpin.ParseContext) error {
+		return telemetry.Bootstrap(kpcontext.ExtractContext(c))
 	})
 
 	kpApp.Action(kptelemetry.StartCommand)

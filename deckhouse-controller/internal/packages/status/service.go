@@ -110,6 +110,11 @@ type Service struct {
 
 	// moduleQueue carries names of modules whose status changed.
 	moduleQueue workqueue.TypedRateLimitingInterface[string]
+
+	// resyncStop ends the resync goroutine, resyncDone reports that it exited.
+	// Shutdown waits on resyncDone before shutting the queues down.
+	resyncStop chan struct{}
+	resyncDone chan struct{}
 }
 
 // Status represents the current state of a package
@@ -147,6 +152,7 @@ type Condition struct {
 	Message string                 `json:"message,omitempty"`
 }
 
+// NewService creates the package status tracker with fresh queues and maps.
 func NewService() *Service {
 	return &Service{
 		appQueue: workqueue.NewTypedRateLimitingQueueWithConfig(
@@ -159,6 +165,8 @@ func NewService() *Service {
 		),
 		statuses:      make(map[string]*Status),
 		pendingHealth: make(map[string]health.Event),
+		resyncStop:    make(chan struct{}),
+		resyncDone:    make(chan struct{}),
 	}
 }
 
@@ -187,8 +195,13 @@ func (s *Service) queueFor(name string) workqueue.TypedRateLimitingInterface[str
 	return s.moduleQueue
 }
 
-// Shutdown stops the notification queue; the consumer loop exits on the next Get.
+// Shutdown stops the periodic resync and then the notification queues; the
+// consumer loop exits on the next Get. The resync goroutine is fully stopped
+// first, so it cannot add a key to a queue that is already shutting down.
+// Called once, paired with the StartResync in Runtime.Run.
 func (s *Service) Shutdown() {
+	s.stopResync()
+
 	s.appQueue.ShutDown()
 	s.moduleQueue.ShutDown()
 }

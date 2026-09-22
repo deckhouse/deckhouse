@@ -39,12 +39,23 @@ var instanceClassCRDPaths = []string{
 }
 
 var publishedAPIVersionRe = regexp.MustCompile(InstanceClassAPIVersionKey + `:\s*{{\s*b64enc\s+"([^"]+)"`)
+var providerTypeRe = regexp.MustCompile(`(?m)^type:\s*{{\s*b64enc\s+"([^"]+)"`)
+var machineClassKindRe = regexp.MustCompile(`(?m)^machineClassKind:\s*{{\s*b64enc\s+"([^"]*)"`)
+
+var commonRegistrationKeys = []string{
+	"type", "region", "zones", "instanceClassKind", InstanceClassAPIVersionKey,
+}
+
+var capiRegistrationKeys = []string{
+	"capiClusterName", "capiClusterKind", "capiClusterAPIVersion",
+	"capiMachineTemplateKind", "capiMachineTemplateAPIVersion",
+}
 
 // A provider that publishes the wrong version, or none, is not visible in review — it simply stops
-// rendering, or worse renders through a conversion webhook whose answer depends on whether the
-// webhook is wired yet. Both move the instance-class checksum, and the checksum names an immutable
-// MachineTemplate whose rename recreates every node in the NodeGroup.
-func TestEveryCloudProviderPublishesInstanceClassAPIVersion(t *testing.T) {
+// rendering. Changing the version also moves the instance-class checksum, and the checksum names
+// an immutable MachineTemplate whose rename recreates every node in the NodeGroup. The registered
+// version is allowed to differ from the storage version, but it must remain served by the CRD.
+func TestEveryCloudProviderPublishesValidRegistrationContract(t *testing.T) {
 	// Every tree a cloud provider module can live in.
 	registrationGlobs := []string{
 		"modules/030-cloud-provider-*/templates/registration.yaml",
@@ -68,6 +79,26 @@ func TestEveryCloudProviderPublishesInstanceClassAPIVersion(t *testing.T) {
 			raw, err := os.ReadFile(path)
 			require.NoError(t, err)
 			content := string(raw)
+			for _, key := range commonRegistrationKeys {
+				require.Regexp(t, regexp.MustCompile(`(?m)^`+regexp.QuoteMeta(key)+`:`), content,
+					"%s must publish required registration key %s", path, key)
+			}
+			typeMatch := providerTypeRe.FindStringSubmatch(content)
+			require.NotNil(t, typeMatch, "%s must publish a literal provider type", path)
+			require.Regexp(t, regexp.MustCompile(`(?m)^`+regexp.QuoteMeta(typeMatch[1])+`:`), content,
+				"%s must publish the provider-owned %s subtree", path, typeMatch[1])
+
+			hasCAPI := strings.Contains(content, "capiClusterKind:")
+			if hasCAPI {
+				for _, key := range capiRegistrationKeys {
+					require.Regexp(t, regexp.MustCompile(`(?m)^`+regexp.QuoteMeta(key)+`:`), content,
+						"%s must publish the complete CAPI registration group; missing %s", path, key)
+				}
+			}
+			machineClassMatch := machineClassKindRe.FindStringSubmatch(content)
+			hasMCM := machineClassMatch != nil && machineClassMatch[1] != ""
+			require.True(t, hasCAPI || hasMCM,
+				"%s must enable at least one of CAPI or MCM", path)
 
 			if !strings.Contains(content, "instanceClassKind:") {
 				t.Skip("provider does not publish an InstanceClass kind")
@@ -75,11 +106,11 @@ func TestEveryCloudProviderPublishesInstanceClassAPIVersion(t *testing.T) {
 
 			match := publishedAPIVersionRe.FindStringSubmatch(content)
 			require.NotNil(t, match,
-				"%s publishes instanceClassKind, so it must publish %s (the storage version of its "+
-					"InstanceClass CRD) next to it", path, InstanceClassAPIVersionKey)
+				"%s publishes instanceClassKind, so it must publish %s next to it",
+				path, InstanceClassAPIVersionKey)
 
-			require.Equal(t, storageVersionOfInstanceClassCRD(t, moduleDir), match[1],
-				"%s publishes an InstanceClass version that is not the CRD's storage version", path)
+			require.True(t, instanceClassCRDServesVersion(t, moduleDir, match[1]),
+				"%s publishes InstanceClass version %q, but the CRD does not serve it", path, match[1])
 
 			// node-controller finds registrations by this label, not by the Secret name; both
 			// rendered Secrets (the legacy fixed-name one and the per-provider one) must carry it.
@@ -89,14 +120,14 @@ func TestEveryCloudProviderPublishesInstanceClassAPIVersion(t *testing.T) {
 	}
 }
 
-func storageVersionOfInstanceClassCRD(t *testing.T, moduleDir string) string {
+func instanceClassCRDServesVersion(t *testing.T, moduleDir, wantedVersion string) bool {
 	t.Helper()
 
 	var crd struct {
 		Spec struct {
 			Versions []struct {
-				Name    string `json:"name"`
-				Storage bool   `json:"storage"`
+				Name   string `json:"name"`
+				Served bool   `json:"served"`
 			} `json:"versions"`
 		} `json:"spec"`
 	}
@@ -110,13 +141,13 @@ func storageVersionOfInstanceClassCRD(t *testing.T, moduleDir string) string {
 		require.NoError(t, sigsyaml.Unmarshal(raw, &crd))
 
 		for _, version := range crd.Spec.Versions {
-			if version.Storage {
-				return version.Name
+			if version.Name == wantedVersion {
+				return version.Served
 			}
 		}
-		require.Fail(t, "no storage version", "%s declares no version with storage: true", rel)
+		return false
 	}
 
 	require.Fail(t, "no InstanceClass CRD", "%s has none of %v", moduleDir, instanceClassCRDPaths)
-	return ""
+	return false
 }

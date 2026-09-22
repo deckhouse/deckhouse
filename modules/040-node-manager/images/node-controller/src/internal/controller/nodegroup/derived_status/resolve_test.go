@@ -74,6 +74,29 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
+func validMCMRegistrationData(provider, instanceClassKind, instanceClassVersion string) map[string][]byte {
+	return map[string][]byte{
+		"type":                                []byte(provider),
+		"region":                              []byte("test-region"),
+		"zones":                               []byte(`["test-zone"]`),
+		"instanceClassKind":                   []byte(instanceClassKind),
+		nodecommon.InstanceClassAPIVersionKey: []byte(instanceClassVersion),
+		"machineClassKind":                    []byte("TestMachineClass"),
+		provider:                              []byte(`{"project":"test"}`),
+	}
+}
+
+func validCAPIRegistrationData(provider, instanceClassKind, instanceClassVersion string) map[string][]byte {
+	data := validMCMRegistrationData(provider, instanceClassKind, instanceClassVersion)
+	delete(data, "machineClassKind")
+	data["capiClusterName"] = []byte(provider)
+	data["capiClusterKind"] = []byte("TestCluster")
+	data["capiClusterAPIVersion"] = []byte("infrastructure.cluster.x-k8s.io/v1alpha1")
+	data["capiMachineTemplateKind"] = []byte("TestMachineTemplate")
+	data["capiMachineTemplateAPIVersion"] = []byte("infrastructure.cluster.x-k8s.io/v1alpha1")
+	return data
+}
+
 func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -197,10 +220,11 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 }
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
-	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
-		"instanceClassKind":       []byte(`"YandexInstanceClass"`),
-		"instanceClassAPIVersion": []byte("v1alpha1"),
-	}))
+	s := newTestService(t, testSecret(
+		cloudProviderSecretNamespace,
+		cloudProviderSecretName,
+		validCAPIRegistrationData("yandex", "YandexInstanceClass", "v1alpha1"),
+	))
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec: v1.NodeGroupSpec{

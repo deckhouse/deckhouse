@@ -78,7 +78,7 @@ func extractEndpointURLs(renderedManifests string) []status.URL {
 			continue
 		}
 
-		value, set := ing.Metadata.Annotations[v1alpha1.ApplicationAnnotationEndpointDescription]
+		value, set := ing.Metadata.Annotations[v1alpha1.PackageAnnotationEndpointDescription]
 		if !set || value == "false" {
 			continue
 		}

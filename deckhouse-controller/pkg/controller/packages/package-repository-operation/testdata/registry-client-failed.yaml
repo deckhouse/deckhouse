@@ -27,4 +27,7 @@ metadata:
 spec:
   registry:
     repo: registry.example.com/test
+    # Unparsable on purpose. Absent credentials are no longer a failure — the node agent asks for none,
+    # and a client for it is built without any — so a case about failing to BUILD the client needs a
+    # configuration that cannot be read at all.
     dockerCfg: "incorrect_base64_string"
