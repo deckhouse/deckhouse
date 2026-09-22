@@ -4,36 +4,62 @@ Date: Mon, 22 Sep 2026 21:00:00 +0300
 Subject: [PATCH] Expose TLS iPXE endpoint when Ironic TLS is enabled
 
 The ironic image enables its iPXE TLS vhost when the serving certificate is
-available at /certs/ipxe. Mount the existing Ironic TLS Secret there and expose
-the corresponding host-network port.
+available at /certs/ipxe. Mount the Ironic TLS Secret there and expose the
+corresponding host-network port. Project only ca.crt into a separate volume
+for custom firmware download init containers.
 
 ---
- pkg/ironic/containers.go | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ pkg/ironic/containers.go | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
 
 diff --git a/pkg/ironic/containers.go b/pkg/ironic/containers.go
-index 0f4d1b2..489cd72 100644
+index 4549070..ade0001 100644
 --- a/pkg/ironic/containers.go
 +++ b/pkg/ironic/containers.go
-@@ -34,6 +34,7 @@ const (
- 	authDir   = "/auth"
- 	certsDir  = "/certs"
- 	sharedDir = "/shared"
+@@ -33,9 +33,10 @@ const (
+ 	keepalivedUser  int64 = 65532
+ 	keepalivedGroup int64 = 65532
+ 
+-	authDir   = "/auth"
+-	certsDir  = "/certs"
+-	sharedDir = "/shared"
++	authDir     = "/auth"
++	certsDir    = "/certs"
++	sharedDir   = "/shared"
 +	ipxeTLSPort = 8084
+ 
  	metricsPort            = 9608
  	defaultMetricsBindAddr = "0.0.0.0"
-@@ -534,6 +535,12 @@ func buildIronicVolumesAndMounts(resources Resources) (volumes []corev1.Volume,
- 				ReadOnly:  true,
+@@ -554,6 +555,16 @@ func buildIronicVolumesAndMounts(resources Resources) (volumes []corev1.Volume,
+ 					},
+ 				},
  			},
++			corev1.Volume{
++				Name: "cert-ipxe-ca",
++				VolumeSource: corev1.VolumeSource{
++					Secret: &corev1.SecretVolumeSource{
++						SecretName:  resources.TLSSecret.Name,
++						DefaultMode: ptr.To(corev1.SecretVolumeSourceDefaultMode),
++						Items:       []corev1.KeyToPath{{Key: "ca.crt", Path: "ca.crt"}},
++					},
++				},
++			},
  		)
+ 		mounts = append(mounts,
+ 			corev1.VolumeMount{
+@@ -571,6 +582,11 @@ func buildIronicVolumesAndMounts(resources Resources) (volumes []corev1.Volume,
+ 				},
+ 			)
+ 		}
 +		mounts = append(mounts, corev1.VolumeMount{
 +			Name:      "cert-ironic",
 +			MountPath: certsDir + "/ipxe",
 +			ReadOnly:  true,
 +		})
  	}
+ 
  	if maybeVolume := volumeForSecretOrConfigMap(bmcCAVolumeName, resources.BMCCASecret, resources.BMCCAConfigMap); maybeVolume != nil {
-@@ -591,6 +598,12 @@ func buildIronicHttpdPorts(ironic *metal3api.Ironic) (ironicPorts []corev1.Cont
+@@ -633,6 +649,12 @@ func buildIronicHttpdPorts(ironic *metal3api.Ironic) (ironicPorts []corev1.Conta
  				HostPort:      ironic.Spec.Networking.ImageServerTLSPort,
  			})
  		}

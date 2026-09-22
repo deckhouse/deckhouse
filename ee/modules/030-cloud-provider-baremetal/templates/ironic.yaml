@@ -42,7 +42,8 @@ spec:
         download() {
           url="$1" checksum="$2" destination="$3"
           temporary="${destination}.tmp"
-          curl --fail --location --proto '=https' --tlsv1.2 --output "$temporary" "$url"
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            --cacert /certs/ipxe/ca.crt --output "$temporary" "$url"
           echo "${checksum}  ${temporary}" | sha256sum --check --status
           chmod 0644 "$temporary"
           mv "$temporary" "$destination"
@@ -55,6 +56,10 @@ spec:
       volumeMounts:
       - name: ironic-shared
         mountPath: /shared
+      # IRSO projects only ca.crt into this volume.
+      - name: cert-ipxe-ca
+        mountPath: /certs/ipxe
+        readOnly: true
     {{- end }}
   networking:
     interface: {{ $provisioningNetwork.interface | quote }}
