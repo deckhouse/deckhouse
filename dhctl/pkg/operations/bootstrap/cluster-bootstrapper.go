@@ -1743,7 +1743,12 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 	// An external provider module ships the *InstanceClass CRDs the rest of the provider queue is
 	// written against, so it has to reach the cluster ahead of that queue - otherwise dhctl waits
 	// out ResourcesTimeout on a CRD no module was told to install.
-	divertModules := nodesFromResources && slices.ContainsFunc(resourcesToCreate, func(resource *template.Resource) bool {
+	//
+	// Deliberately not gated on nodesFromResources: the cloud-controller-manager that clears
+	// node.cloudprovider.kubernetes.io/uninitialized ships inside that same module, and a cluster
+	// described the legacy way - with a provider *ClusterConfiguration - stalls on that taint just
+	// as hard. The module's own documents are the evidence, not how the nodes are written.
+	divertModules := slices.ContainsFunc(resourcesToCreate, func(resource *template.Resource) bool {
 		return declaresExternalProviderModule(resource, providerModule)
 	})
 

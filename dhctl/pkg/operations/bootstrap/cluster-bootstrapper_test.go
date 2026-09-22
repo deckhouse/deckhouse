@@ -535,6 +535,21 @@ func TestSplitResources_ExternalProviderModuleLeadsTheProviderQueue(t *testing.T
 	require.Equal(t, []string{"ModuleConfig/user-authn"}, resourceNames(after))
 }
 
+// The cloud-controller-manager that clears node.cloudprovider.kubernetes.io/uninitialized ships
+// inside the provider module in every shape of the configuration, not only the one where the nodes
+// come from resource documents. A cluster that still carries a provider *ClusterConfiguration
+// deadlocks exactly the same way if its module waits behind the node queue, so the module queue is
+// filled on the module's own evidence and not on how the nodes are described.
+func TestSplitResources_ProviderModuleLeadsEvenWithLegacyProviderConfig(t *testing.T) {
+	resources := parseResourceDocs(t, providerModuleConfigDoc+providerNodeDocs)
+
+	_, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), resources, false, "dvp")
+
+	require.Equal(t, []string{"ModuleConfig/cloud-provider-dvp"}, resourceNames(modules))
+	require.Empty(t, provider, "a legacy provider config keeps the node documents in the final queue")
+	require.Equal(t, []string{"DVPInstanceClass/master-dvp", "NodeGroup/master"}, resourceNames(after))
+}
+
 // A ModulePullOverride is the one reason to pin which build of the module gets installed, so it
 // has to be in the cluster before the module is installed at all - a phase later, and it can only
 // replace what the release channel already deployed. The order inside the queue is the order the
