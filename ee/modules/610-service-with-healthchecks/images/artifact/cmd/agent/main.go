@@ -16,11 +16,15 @@ import (
 
 	"github.com/go-logr/logr"
 	_ "go.uber.org/automaxprocs" // To automatically adjust GOMAXPROCS
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.) to ensure that exec-entrypoint and run can make use of them.
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -103,6 +107,28 @@ func main() {
 		PprofBindAddress:       pprofAddr,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         false,
+		// The agent runs as a DaemonSet and only ever works with pods scheduled to its own
+		// node — the reconciler lists pods with a spec.nodeName filter and its pod-watch
+		// handler drops pods from other nodes. Scoping the Pod informer to this node makes
+		// the API server do the filtering, so each agent lists, watches and caches only the
+		// pods of its own node instead of every pod in the cluster. In large clusters this
+		// removes N-1 copies of every pod from memory and the corresponding watch traffic.
+		// spec.nodeName is one of the field selectors the API server supports for pods.
+		//
+		// The agent reads only PostgreSQL credential secrets, so the Secret informer is scoped
+		// by type the same way. Without this the informer caches every Secret in the cluster on
+		// every node (the reconcile event filter narrows events, not what is cached). type is a
+		// field selector the API server supports for secrets.
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Pod{}: {
+					Field: fields.OneTermEqualSelector("spec.nodeName", nodeName),
+				},
+				&corev1.Secret{}: {
+					Field: fields.OneTermEqualSelector("type", agent.SecretTypePostgreSQLCredentials),
+				},
+			},
+		},
 	})
 	if err != nil {
 		setupLog.Error("unable to start manager", log.Err(err))
