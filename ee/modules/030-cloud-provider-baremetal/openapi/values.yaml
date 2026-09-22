@@ -26,6 +26,10 @@ properties:
                   - dhcp
                 - required:
                   - ramdiskImageRef
+                - required:
+                  - ipxeFirmwareRef
+                - required:
+                  - provisioningTLS
             - required:
               - provisioningNetwork
               - dhcp
@@ -219,6 +223,37 @@ properties:
                     type: string
                     minLength: 1
                     maxLength: 253
+              ipxeFirmwareRef:
+                type: object
+                additionalProperties: false
+                required:
+                - kind
+                - name
+                properties:
+                  kind:
+                    type: string
+                    enum:
+                    - BareMetalIPXEFirmware
+                  name:
+                    type: string
+                    minLength: 1
+                    maxLength: 253
+              provisioningTLS:
+                type: object
+                additionalProperties: false
+                required:
+                - certificateRef
+                properties:
+                  certificateRef:
+                    type: object
+                    additionalProperties: false
+                    required:
+                    - name
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                        maxLength: 253
   internal:
     type: object
     default: {}
@@ -284,6 +319,25 @@ properties:
                 type: string
               initramfsURL:
                 type: string
+      resolvedIPXEFirmware:
+        type: object
+        additionalProperties: false
+        properties:
+          bios:
+            type: object
+            properties:
+              url: {type: string}
+              sha256: {type: string}
+          uefiX86_64:
+            type: object
+            properties:
+              url: {type: string}
+              sha256: {type: string}
+          uefiArm64:
+            type: object
+            properties:
+              url: {type: string}
+              sha256: {type: string}
       providerDiscoveryData:
         type: object
         default: {}

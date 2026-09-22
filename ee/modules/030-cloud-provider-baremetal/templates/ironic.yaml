@@ -4,6 +4,8 @@
 {{- $dhcp := $bareMetal.dhcp | default dict -}}
 {{- $internalDHCP := $dhcp.internal | default dict -}}
 {{- $resolvedRamdisk := dig "internal" "resolvedRamdiskImage" "direct" dict .Values.cloudProviderBaremetal -}}
+{{- $resolvedIPXE := dig "internal" "resolvedIPXEFirmware" dict .Values.cloudProviderBaremetal -}}
+{{- $provisioningTLS := $bareMetal.provisioningTLS | default dict -}}
 {{- if and $internalDHCP.serveDNS $internalDHCP.dnsAddress -}}
 {{- fail "cloudProviderBaremetal.nodes.parameters.ironic.dhcp.internal.serveDNS and dnsAddress cannot be used together" -}}
 {{- end }}
@@ -29,6 +31,31 @@ spec:
       kernel: {{ printf "http://%s:6180/images/ironic-python-agent.kernel" $provisioningNetwork.ipAddress | quote }}
       initramfs: {{ printf "http://%s:6180/images/ironic-python-agent.initramfs" $provisioningNetwork.ipAddress | quote }}
       {{- end }}
+    {{- if $resolvedIPXE }}
+    initContainers:
+    - name: ipxe-firmware-downloader
+      image: {{ include "helm_lib_module_image" (list . "ironic") | quote }}
+      command: ["/bin/bash", "-ec"]
+      args:
+      - |
+        mkdir -p /shared/custom_ipxe_firmware
+        download() {
+          url="$1" checksum="$2" destination="$3"
+          temporary="${destination}.tmp"
+          curl --fail --location --proto '=https' --tlsv1.2 --output "$temporary" "$url"
+          echo "${checksum}  ${temporary}" | sha256sum --check --status
+          chmod 0644 "$temporary"
+          mv "$temporary" "$destination"
+        }
+        download {{ $resolvedIPXE.bios.url | quote }} {{ $resolvedIPXE.bios.sha256 | quote }} /shared/custom_ipxe_firmware/undionly.kpxe
+        download {{ $resolvedIPXE.uefiX86_64.url | quote }} {{ $resolvedIPXE.uefiX86_64.sha256 | quote }} /shared/custom_ipxe_firmware/snponly-x86_64.efi
+        {{- if $resolvedIPXE.uefiArm64 }}
+        download {{ $resolvedIPXE.uefiArm64.url | quote }} {{ $resolvedIPXE.uefiArm64.sha256 | quote }} /shared/custom_ipxe_firmware/snponly-arm64.efi
+        {{- end }}
+      volumeMounts:
+      - name: ironic-shared
+        mountPath: /shared
+    {{- end }}
   networking:
     interface: {{ $provisioningNetwork.interface | quote }}
     ipAddress: {{ $provisioningNetwork.ipAddress | quote }}
@@ -48,4 +75,8 @@ spec:
       {{- end }}
       serveDNS: {{ $internalDHCP.serveDNS | default false }}
     {{- end }}
+  {{- if $provisioningTLS }}
+  tls:
+    certificateName: {{ $provisioningTLS.certificateRef.name | quote }}
+  {{- end }}
 {{- end }}
