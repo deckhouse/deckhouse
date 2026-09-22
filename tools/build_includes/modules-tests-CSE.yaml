@@ -694,6 +694,16 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/cse/modules/002-deckhouse/openapi/config-values.yaml
+  to: /deckhouse/modules/002-deckhouse/openapi/config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/002-deckhouse/openapi/doc-ru-config-values.yaml
+  to: /deckhouse/modules/002-deckhouse/openapi/doc-ru-config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/015-admission-policy-engine/openapi/config-values.yaml
   to: /deckhouse/modules/015-admission-policy-engine/openapi/config-values.yaml
   stageDependencies:

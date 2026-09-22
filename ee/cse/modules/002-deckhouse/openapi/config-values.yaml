@@ -33,12 +33,12 @@ properties:
 
   releaseChannel:
     type: string
-    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
-    x-examples: ["Stable"]
+    enum: ["LTS"]
+    x-examples: ["LTS"]
     description: |
       Target Deckhouse release channel (Deckhouse will [switch](/products/kubernetes-platform/documentation/v1/architecture/updating.html) to it when such an opportunity appears).
 
-      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `LTS`.
 
   update:
     type: object
