@@ -1453,6 +1453,98 @@ modules:
     namespace: d8-system
     subsystems:
     - networking
+  neuvector:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:neuvector:view
+        rules:
+        - apiGroups:
+          - neuvector.com
+          resources:
+          - nvadmissioncontrolsecurityrules
+          - nvclustersecurityrules
+          - nvcomplianceprofiles
+          - nvdlpsecurityrules
+          - nvvulnerabilityprofiles
+          - nvwafsecurityrules
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - susecloud.net
+          resources:
+          - cspadapterusagerecords
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - neuvector
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:neuvector:edit
+        rules:
+        - apiGroups:
+          - neuvector.com
+          resources:
+          - nvadmissioncontrolsecurityrules
+          - nvclustersecurityrules
+          - nvcomplianceprofiles
+          - nvdlpsecurityrules
+          - nvvulnerabilityprofiles
+          - nvwafsecurityrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - neuvector
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use:
+      - name: d8:use:capability:module:neuvector:view
+        rules:
+        - apiGroups:
+          - neuvector.com
+          resources:
+          - nvgroupdefinitions
+          - nvsecurityrules
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:neuvector:edit
+        rules:
+        - apiGroups:
+          - neuvector.com
+          resources:
+          - nvgroupdefinitions
+          - nvsecurityrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: d8-neuvector
+    subsystems:
+    - security
   node-local-dns:
     capabilities:
       manage:
@@ -1649,7 +1741,7 @@ modules:
       - name: d8:manage:permission:module:operator-trivy:view
         rules:
         - apiGroups:
-          - aquasecurity.github.io
+          - trivy.deckhouse.io
           resources:
           - clustercompliancereports
           - clusterconfigauditreports
@@ -1657,6 +1749,25 @@ modules:
           - clusterrbacassessmentreports
           - clustersbomreports
           - clustervulnerabilityreports
+          - nodevulnerabilityreports
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clustersecurityscores
+          - registryimagevulnerabilityreports
+          - registryscantargets
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - spdx.softwarecomposition.kubescape.io
+          resources:
+          - knownservers
           verbs:
           - get
           - list
@@ -1674,20 +1785,32 @@ modules:
       - name: d8:manage:permission:module:operator-trivy:edit
         rules:
         - apiGroups:
-          - aquasecurity.github.io
+          - trivy.deckhouse.io
           resources:
-          - clustercompliancereports
           - clusterconfigauditreports
           - clusterinfraassessmentreports
           - clusterrbacassessmentreports
           - clustersbomreports
           - clustervulnerabilityreports
           verbs:
-          - create
-          - update
-          - patch
           - delete
           - deletecollection
+        - apiGroups:
+          - trivy.deckhouse.io
+          resources:
+          - clustercompliancereports
+          verbs:
+          - create
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clustersecurityscores
+          verbs:
+          - get
+          - list
+          - watch
         - apiGroups:
           - deckhouse.io
           resourceNames:
@@ -1703,7 +1826,7 @@ modules:
       - name: d8:use:capability:module:operator-trivy:view
         rules:
         - apiGroups:
-          - aquasecurity.github.io
+          - trivy.deckhouse.io
           resources:
           - configauditreports
           - exposedsecretreports
@@ -1715,10 +1838,29 @@ modules:
           - get
           - list
           - watch
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - securityscores
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - spdx.softwarecomposition.kubescape.io
+          resources:
+          - applicationprofiles
+          - networkneighborhoods
+          - generatednetworkpolicies
+          - seccompprofiles
+          verbs:
+          - get
+          - list
+          - watch
       - name: d8:use:capability:module:operator-trivy:edit
         rules:
         - apiGroups:
-          - aquasecurity.github.io
+          - trivy.deckhouse.io
           resources:
           - configauditreports
           - exposedsecretreports
@@ -1727,9 +1869,24 @@ modules:
           - sbomreports
           - vulnerabilityreports
           verbs:
-          - create
-          - update
-          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - securityscores
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - spdx.softwarecomposition.kubescape.io
+          resources:
+          - applicationprofiles
+          - networkneighborhoods
+          - generatednetworkpolicies
+          - seccompprofiles
+          verbs:
           - delete
           - deletecollection
     namespace: d8-operator-trivy
@@ -1982,16 +2139,6 @@ modules:
         rules:
         - apiGroups:
           - deckhouse.io
-          resources:
-          - falcoauditrules
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-          - deletecollection
-        - apiGroups:
-          - deckhouse.io
           resourceNames:
           - runtime-audit-engine
           resources:
@@ -2001,6 +2148,18 @@ modules:
           - update
           - patch
           - delete
+      - name: d8:manage:permission:module:runtime-audit-engine:manage_rules
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - falcoauditrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
       use: null
     namespace: d8-runtime-audit-engine
     subsystems:
@@ -2035,6 +2194,120 @@ modules:
           - delete
       use: null
     namespace: ""
+    subsystems:
+    - security
+  security-events-manager:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:security-events-manager:view
+        rules:
+        - apiGroups:
+          - security.deckhouse.io
+          resources:
+          - clustersecurityeventalertrules
+          - clustersecurityeventconfigs
+          - clustersecurityeventdestinations
+          - clustersecurityeventenrichmentplugins
+          - clustersecurityeventloggingtransformationrules
+          - clustersecurityeventshippers
+          - securityeventdefinitions
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - security-events-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:security-events-manager:edit
+        rules:
+        - apiGroups:
+          - security.deckhouse.io
+          resources:
+          - clustersecurityeventalertrules
+          - clustersecurityeventconfigs
+          - clustersecurityeventenrichmentplugins
+          - clustersecurityeventloggingtransformationrules
+          - securityeventdefinitions
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - security-events-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      - name: d8:manage:permission:module:security-events-manager:manage_shippers
+        rules:
+        - apiGroups:
+          - security.deckhouse.io
+          resources:
+          - clustersecurityeventshippers
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - security.deckhouse.io
+          resources:
+          - clustersecurityeventdestinations
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - security.deckhouse.io
+          resources:
+          - clustersecurityeventdestinations/sensitive
+          verbs:
+          - get
+          - list
+          - watch
+      use:
+      - name: d8:use:capability:module:security-events-manager:view
+        rules:
+        - apiGroups:
+          - security.deckhouse.io
+          resources:
+          - podsecurityeventshippers
+          - securityeventloggingtransformationrules
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:security-events-manager:edit
+        rules:
+        - apiGroups:
+          - security.deckhouse.io
+          resources:
+          - podsecurityeventshippers
+          - securityeventloggingtransformationrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: d8-security-events-manager
     subsystems:
     - security
   static-routing-manager:
@@ -2455,9 +2728,10 @@ subsystems:
     - user-authz
     - user-authn
     - secret-copier
+    - security-events-manager
+    - neuvector
     namespaces:
     - d8-admission-policy-engine
     - d8-cert-manager
-    - d8-operator-trivy
     - d8-runtime-audit-engine
     - d8-user-authn
