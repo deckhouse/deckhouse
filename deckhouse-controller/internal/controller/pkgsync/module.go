@@ -24,6 +24,7 @@ import (
 	"slices"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,6 +35,16 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+// legacyModuleConditions are the conditions the addon-operator stack wrote. The package runtime
+// owns the status now and never touches a condition type of its own, so they linger until dropped.
+var legacyModuleConditions = []string{
+	v1alpha1.ModuleConditionEnabledByModuleManager,
+	v1alpha1.ModuleConditionEnabledByModuleConfig,
+	v1alpha1.ModuleConditionIsReady,
+	v1alpha1.ModuleConditionLastReleaseDeployed,
+	v1alpha1.ModuleConditionIsOverridden,
+}
 
 // syncModules writes a Module for every module the cluster runs. The last pass to write a name
 // wins, so the order below is the precedence: embedded over an override over a deployed release.
@@ -64,6 +75,10 @@ func (s *syncer) syncModules(ctx context.Context) error {
 
 	if err := s.syncGlobalModule(ctx, configs); err != nil {
 		return fmt.Errorf("sync global module: %w", err)
+	}
+
+	if err := s.dropLegacyConditions(ctx); err != nil {
+		return fmt.Errorf("drop legacy conditions: %w", err)
 	}
 
 	return nil
@@ -441,4 +456,47 @@ func applyModuleConfig(module *v1beta1.Module, moduleConfig *v1alpha1.ModuleConf
 	module.Spec.Settings = moduleConfig.Spec.Settings
 	module.Spec.SettingsVersion = moduleConfig.Spec.Version
 	module.Spec.Maintenance = moduleConfig.Spec.Maintenance
+}
+
+// dropLegacyConditions removes the conditions of the old module stack from all modules.
+func (s *syncer) dropLegacyConditions(ctx context.Context) error {
+	modules := new(v1beta1.ModuleList)
+	if err := s.reader.List(ctx, modules); err != nil {
+		return fmt.Errorf("list modules: %w", err)
+	}
+
+	for _, module := range modules.Items {
+		if err := s.dropModuleLegacyConditions(ctx, &module); err != nil {
+			return fmt.Errorf("drop legacy conditions for the '%s' module: %w", module.Name, err)
+		}
+	}
+
+	return nil
+}
+
+// dropModuleLegacyConditions removes the conditions of the old module stack from a module the package
+// runtime now owns. A module carrying none is not patched.
+func (s *syncer) dropModuleLegacyConditions(ctx context.Context, module *v1beta1.Module) error {
+	patch := client.MergeFrom(module.DeepCopy())
+
+	for _, conditionType := range legacyModuleConditions {
+		metautils.RemoveStatusCondition(&module.Status.Conditions, conditionType)
+	}
+
+	patchData, err := patch.Data(module)
+	if err != nil {
+		return fmt.Errorf("build the status patch for the '%s' module: %w", module.Name, err)
+	}
+
+	if string(patchData) == "{}" {
+		return nil
+	}
+
+	if err = s.writer.Status().Patch(ctx, module, client.RawPatch(patch.Type(), patchData)); err != nil {
+		return fmt.Errorf("patch the status of the '%s' module: %w", module.Name, err)
+	}
+
+	s.logger.Debug("legacy module conditions dropped", slog.String("name", module.Name))
+
+	return nil
 }
