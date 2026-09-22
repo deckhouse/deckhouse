@@ -256,4 +256,3 @@ func isNonSelectelAuthURL(authURL string) bool {
 	lc := strings.ToLower(authURL)
 	return !strings.Contains(lc, "selcloud.ru") && !strings.Contains(lc, "selectel")
 }
-
