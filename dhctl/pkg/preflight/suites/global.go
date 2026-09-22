@@ -30,7 +30,7 @@ type GlobalDeps struct {
 func NewGlobalSuite(deps GlobalDeps) preflight.Suite {
 	return preflight.NewSuite(
 		checks.PublicDomainTemplate(deps.MetaConfig),
-		checks.RegistryCredentials(deps.MetaConfig, deps.InstallConfig),
+		checks.RegistryImageAvailability(deps.MetaConfig, deps.InstallConfig),
 		checks.DhctlEdition(deps.MetaConfig, deps.InstallConfig, deps.BuildInfo),
 		checks.CidrIntersection(deps.MetaConfig),
 		checks.NetworkSingleSource(deps.MetaConfig),

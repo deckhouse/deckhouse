@@ -662,7 +662,7 @@ dhctl bootstrap \
 - `--preflight-skip-check=registry-access-through-proxy` — пропуск проверки доступа к хранилищу образов через прокси-сервер;
 - `--preflight-skip-check=public-domain-template` — пропуск проверки шаблона `publicDomain`;
 - `--preflight-skip-check=static-ssh-credential` — пропуск проверки учетных данных SSH-пользователя;
-- `--preflight-skip-check=registry-credentials` — пропуск проверки учетных данных для доступа к хранилищу образов;
+- `--preflight-skip-check=registry-credentials` — пропуск проверки доступности образа Deckhouse в хранилище образов;
 - `--preflight-skip-check=python-modules` — пропуск проверки наличия Python;
 - `--preflight-skip-check=sudo-allowed` — пропуск проверки прав доступа для выполнения команды `sudo`;
 - `--preflight-skip-check=static-system-requirements` — пропуск проверки соответствия системным требованиям;

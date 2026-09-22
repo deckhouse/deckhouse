@@ -648,7 +648,7 @@ To skip a specific check, use the `--preflight-skip-check` flag and pass the pre
 - `--preflight-skip-check=registry-access-through-proxy`: Skip the check for accessing the registry through a proxy server.
 - `--preflight-skip-check=public-domain-template`: Skip the check for the `publicDomain` template.
 - `--preflight-skip-check=static-ssh-credential`: Skip the check for SSH user credentials.
-- `--preflight-skip-check=registry-credentials`: Skip the check for registry access credentials.
+- `--preflight-skip-check=registry-credentials`: Skip the Deckhouse image availability check in the registry.
 - `--preflight-skip-check=python-modules`: Skip the check for Python installation.
 - `--preflight-skip-check=sudo-allowed`: Skip the check for `sudo` privileges.
 - `--preflight-skip-check=static-system-requirements`: Skip the check for meeting system requirements.
