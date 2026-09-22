@@ -7,10 +7,15 @@ import:
   to: /
   before: setup
   includePaths:
+  # libs
   - bin
+  - usr/lib
+  - lib
+  - lib64
+
   - usr/bin/sh
   - usr/bin/bash
-  
+
   - usr/bin/chown
   - usr/bin/chmod
   - usr/bin/ls
@@ -21,10 +26,6 @@ import:
   - usr/bin/true
 
   - usr/bin/nc
-  - usr/lib/libc.so.*
-  - usr/lib/ld-linux-x86-64.so*
-  - lib
-  - lib64
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
