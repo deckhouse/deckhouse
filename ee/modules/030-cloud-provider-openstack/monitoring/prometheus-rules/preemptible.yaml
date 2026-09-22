@@ -1,7 +1,6 @@
 - name: d8.cloud-provider-openstack.preemptible
   rules:
     # The metric is published per NodeGroup by node-controller (see
-    # modules/040-node-manager/images/node-controller/src/internal/controller/nodegroup/derived_status/preemptible_metric.go).
     # It is set to 1 only when the operator has requested spec.preemptible: true on an
     # OpenStackInstanceClass but the request cannot reach Nova as a working preemption tag:
     # either the NodeGroup runs on the MCM engine (no MCM analogue for a raw Nova tag) or the
