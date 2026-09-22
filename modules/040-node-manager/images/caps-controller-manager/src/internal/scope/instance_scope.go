@@ -114,20 +114,25 @@ func (i *InstanceScope) GetPhase() deckhousev1.StaticInstanceStatusCurrentStatus
 }
 
 // SetPhase sets the current phase of the static instance.
+//
+// LastUpdateTime is refreshed only on a real phase transition: rewriting it on every
+// call makes the patch helper see a diff on every reconcile, which turns into a write
+// to etcd, a watch event and an immediate re-reconcile. It also keeps the phase
+// timeouts (bootstrap, cleanup) from ever being reached.
 func (i *InstanceScope) SetPhase(phase deckhousev1.StaticInstanceStatusCurrentStatusPhase) {
 	prevPhase := i.GetPhase()
 
 	if i.Instance.Status.CurrentStatus == nil {
 		i.Instance.Status.CurrentStatus = &deckhousev1.StaticInstanceStatusCurrentStatus{}
+	} else if prevPhase == phase {
+		return
 	}
 
 	i.Instance.Status.CurrentStatus.Phase = phase
 	i.Instance.Status.CurrentStatus.LastUpdateTime = metav1.NewTime(time.Now().UTC())
 	i.setLoggerContext()
 
-	if prevPhase != phase {
-		i.Logger.Info("StaticInstance phase changed", "from", prevPhase, "to", phase)
-	}
+	i.Logger.Info("StaticInstance phase changed", "from", prevPhase, "to", phase)
 }
 
 // Patch updates the StaticInstance resource.
@@ -147,11 +152,23 @@ func (i *InstanceScope) Patch(ctx context.Context) error {
 	return nil
 }
 
-func (i *InstanceScope) ToPending(ctx context.Context) error {
+// SetPending returns the StaticInstance to the pool in memory, without persisting it.
+//
+// The phase is left untouched when it is already Pending: dropping status.currentStatus
+// and letting SetPhase rebuild it would rewrite lastUpdateTime on every call, which the
+// patch helper sees as a diff and turns into a write to etcd.
+func (i *InstanceScope) SetPending() {
 	i.Instance.Status.MachineRef = nil
 	i.Instance.Status.NodeRef = nil
-	i.Instance.Status.CurrentStatus = nil
 	i.setLoggerContext()
+
+	// The connectivity checks belong to the StaticMachine being detached, and nothing else
+	// clears them: metadata.generation cannot be used to tell a stale one from a fresh one,
+	// because the status subresource keeps it pinned for the whole life of the object. A
+	// leftover CheckTcpConnection=True would make the next StaticMachine skip the TCP check
+	// and go straight to ssh against a host that may well be gone.
+	conditions.Delete(i.Instance, infrav1.StaticInstanceCheckTCPConnection)
+	conditions.Delete(i.Instance, infrav1.StaticInstanceCheckSSHCondition)
 
 	conditions.Set(i.Instance, metav1.Condition{
 		Type:               infrav1.StaticInstanceBootstrapSucceededCondition,
@@ -162,6 +179,10 @@ func (i *InstanceScope) ToPending(ctx context.Context) error {
 	})
 
 	i.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
+}
+
+func (i *InstanceScope) ToPending(ctx context.Context) error {
+	i.SetPending()
 
 	err := i.Patch(ctx)
 	if err != nil {

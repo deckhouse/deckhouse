@@ -17,12 +17,22 @@ limitations under the License.
 package ssh
 
 import (
+	"context"
 	"io"
+	"time"
 
 	"caps-controller-manager/internal/scope"
 )
 
+const (
+	// ConnectTimeout bounds the ssh handshake so that an unreachable or hung host
+	// cannot occupy a task slot forever.
+	ConnectTimeout = 30 * time.Second
+	// CommandTimeout bounds the execution of a single remote command.
+	CommandTimeout = 30 * time.Minute
+)
+
 type SSH interface {
-	ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error
-	ExecSSHCommandToString(instanceScope *scope.InstanceScope, command string) (string, error)
+	ExecSSHCommand(ctx context.Context, instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error
+	ExecSSHCommandToString(ctx context.Context, instanceScope *scope.InstanceScope, command string) (string, error)
 }
