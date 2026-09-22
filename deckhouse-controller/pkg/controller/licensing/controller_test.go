@@ -75,7 +75,7 @@ func platformRecord(id, start, expire string, limits map[string]any) map[string]
 		"expire_at":  expire,
 		"cluster_id": testClusterID,
 		"origin":     "self-service",
-		"platform":   map[string]any{"dkp": map[string]any{"edition": "EE", "resource_limits": limits}},
+		"platform":   map[string]any{"edition": "EE", "resource_limits": limits},
 	}
 }
 

@@ -151,8 +151,8 @@ func recordStatus(rec licensing.RecordStatus) v1alpha1.LicenseRecordStatus {
 	if rec.ExpireAt != nil {
 		out.ExpireAt = ptr.To(metav1.NewTime(*rec.ExpireAt))
 	}
-	if rec.Platform != nil && rec.Platform.DKP != nil && rec.Platform.DKP.ResourceLimits != nil {
-		out.Grants = rec.Platform.DKP.ResourceLimits
+	if rec.Platform != nil && rec.Platform.ResourceLimits != nil {
+		out.Grants = rec.Platform.ResourceLimits
 	}
 	return out
 }

@@ -123,8 +123,8 @@ func (r *reconciler) publishRecordMetrics(res licensing.Result, owners map[strin
 		group.GaugeSet(metrics.LicensingGroup, metrics.D8LicenseRecordActive, boolGauge(active), labels)
 		group.GaugeSet(metrics.LicensingGroup, metrics.D8LicenseRecordAccepted, boolGauge(rec.Accepted), labels)
 
-		if rec.Platform != nil && rec.Platform.DKP != nil {
-			for name, grant := range rec.Platform.DKP.ResourceLimits {
+		if rec.Platform != nil {
+			for name, grant := range rec.Platform.ResourceLimits {
 				value := math.Inf(1)
 				if grant != nil {
 					value = float64(*grant)

@@ -62,21 +62,16 @@ type Record struct {
 	Supersedes           []string   `json:"supersedes"`
 }
 
-// Platform is the body of a Platform record.
+// Platform is the body of a Platform record. A nil ResourceLimits map means the
+// record says nothing about quotas; an empty map means "no limits" explicitly.
 type Platform struct {
-	DKP *DKPLimits `json:"dkp"`
+	Edition        string            `json:"edition"`
+	ResourceLimits map[string]*int64 `json:"resource_limits"`
 	// Expansions and ExtraComponents are maps of scopes. This iteration does not
 	// interpret them; it only requires them to be JSON objects, so that a
 	// package issued for a newer fleet still applies here.
 	Expansions      json.RawMessage `json:"expansions"`
 	ExtraComponents json.RawMessage `json:"extra_components"`
-}
-
-// DKPLimits carries the platform scope. A nil ResourceLimits map means the
-// record says nothing about quotas; an empty map means "no limits" explicitly.
-type DKPLimits struct {
-	Edition        string            `json:"edition"`
-	ResourceLimits map[string]*int64 `json:"resource_limits"`
 }
 
 // Revocation reasons. Only the commercial ones turn the cluster red: a reissue
@@ -302,11 +297,9 @@ func checkRecord(raw json.RawMessage, ctx VerifyContext) RecordStatus {
 		if err := requireObject("platform.extra_components", r.Platform.ExtraComponents); err != nil {
 			return reject(ReasonSchemaViolation, "%s", err)
 		}
-		if r.Platform.DKP != nil {
-			for _, name := range sortedLimitNames(r.Platform.DKP.ResourceLimits) {
-				if v := r.Platform.DKP.ResourceLimits[name]; v != nil && *v < 0 {
-					return reject(ReasonSchemaViolation, "resource_limits[%q] is %d, must not be negative", name, *v)
-				}
+		for _, name := range sortedLimitNames(r.Platform.ResourceLimits) {
+			if v := r.Platform.ResourceLimits[name]; v != nil && *v < 0 {
+				return reject(ReasonSchemaViolation, "resource_limits[%q] is %d, must not be negative", name, *v)
 			}
 		}
 	}

@@ -41,14 +41,14 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 	}{
 		{
 			name:         "P1 valid platform",
-			record:       platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50, "nodes": 10})),
+			record:       platformOf(recordA, platformLimits(map[string]any{"vCPU": 50, "nodes": 10})),
 			ctx:          base,
 			wantAccepted: true,
 		},
 		{
 			name: "P2 another cluster",
 			record: func() map[string]any {
-				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, platformLimits(map[string]any{"vCPU": 50}))
 				r["cluster_id"] = otherClusterID
 				return r
 			}(),
@@ -58,7 +58,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "P3 thumbprint mismatch",
 			record: func() map[string]any {
-				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, platformLimits(map[string]any{"vCPU": 50}))
 				r["cluster_key_thumbprint"] = "Zm9yZWlnbi10aHVtYnByaW50LXZhbHVlLXBsYWNlaG9s"
 				return r
 			}(),
@@ -68,7 +68,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "P3 thumbprint match",
 			record: func() map[string]any {
-				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, platformLimits(map[string]any{"vCPU": 50}))
 				r["cluster_key_thumbprint"] = ckt
 				return r
 			}(),
@@ -106,9 +106,9 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 			wantReason: ReasonUnsupportedType,
 		},
 		{
-			name: "P15 unknown field in platform.dkp",
+			name: "P15 unknown field in platform",
 			record: platformOf(recordA, map[string]any{
-				"dkp": map[string]any{"edition": "Core", "resource_limits": map[string]any{"vCPU": 50}, "quantum_cores": 7},
+				"edition": "Core", "resource_limits": map[string]any{"vCPU": 50}, "quantum_cores": 7,
 			}),
 			ctx:          base,
 			wantAccepted: true,
@@ -116,8 +116,8 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "P16 unknown key in platform",
 			record: platformOf(recordA, map[string]any{
-				"dkp":          map[string]any{"resource_limits": map[string]any{"vCPU": 50}},
-				"applications": map[string]any{"whatever": true},
+				"resource_limits": map[string]any{"vCPU": 50},
+				"applications":    map[string]any{"whatever": true},
 			}),
 			ctx:          base,
 			wantAccepted: true,
@@ -125,7 +125,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "P17 expansions map",
 			record: platformOf(recordA, map[string]any{
-				"dkp": map[string]any{"resource_limits": map[string]any{"vCPU": 50}},
+				"resource_limits": map[string]any{"vCPU": 50},
 				"expansions": map[string]any{
 					"AdvancedNetworking": map[string]any{},
 					"AdvancedStorage":    map[string]any{"resource_limits": map[string]any{"storage_tb": 100}},
@@ -137,8 +137,8 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "P17a expansions as a list",
 			record: platformOf(recordA, map[string]any{
-				"dkp":        map[string]any{"resource_limits": map[string]any{"vCPU": 50}},
-				"expansions": []any{"AdvancedNetworking"},
+				"resource_limits": map[string]any{"vCPU": 50},
+				"expansions":      []any{"AdvancedNetworking"},
 			}),
 			ctx:        base,
 			wantReason: ReasonSchemaViolation,
@@ -146,7 +146,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "P17b extra_components map",
 			record: platformOf(recordA, map[string]any{
-				"dkp":              map[string]any{"resource_limits": map[string]any{"vCPU": 50}},
+				"resource_limits":  map[string]any{"vCPU": 50},
 				"extra_components": map[string]any{"metallb": map[string]any{"feature_flags": []any{"metallb/BGPAdvanced"}}},
 			}),
 			ctx:          base,
@@ -155,7 +155,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "P19 perpetual record",
 			record: func() map[string]any {
-				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, platformLimits(map[string]any{"vCPU": 50}))
 				r["expire_at"] = nil
 				return r
 			}(),
@@ -165,7 +165,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "P20 expire_at before start_at",
 			record: func() map[string]any {
-				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, platformLimits(map[string]any{"vCPU": 50}))
 				r["expire_at"] = "2025-01-01T00:00:00Z"
 				return r
 			}(),
@@ -175,7 +175,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "expire_at equal to start_at",
 			record: func() map[string]any {
-				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, platformLimits(map[string]any{"vCPU": 50}))
 				r["expire_at"] = r["start_at"]
 				return r
 			}(),
@@ -185,7 +185,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 		{
 			name: "id is not a UUID",
 			record: func() map[string]any {
-				r := platformOf("not-a-uuid", dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf("not-a-uuid", platformLimits(map[string]any{"vCPU": 50}))
 				return r
 			}(),
 			ctx:        base,
@@ -213,7 +213,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 	}
 
 	// P23: an unknown field at the package level is ignored.
-	payload := pkgOf(platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50})))
+	payload := pkgOf(platformOf(recordA, platformLimits(map[string]any{"vCPU": 50})))
 	payload["catalog_version"] = "2026.1"
 	pkg, statuses, err := ParsePackage(issue(t, priv, payload), base)
 	if err != nil {
@@ -225,7 +225,7 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 
 	// P17, P17b: the raw bodies are preserved verbatim for the status.
 	rec := platformOf(recordA, map[string]any{
-		"dkp":              map[string]any{"resource_limits": map[string]any{"vCPU": 50}},
+		"resource_limits":  map[string]any{"vCPU": 50},
 		"expansions":       map[string]any{"AdvancedStorage": map[string]any{"resource_limits": map[string]any{"storage_tb": 100}}},
 		"extra_components": map[string]any{"metallb": map[string]any{}},
 	})
@@ -245,9 +245,9 @@ func TestParsePackageRecordVerdicts(t *testing.T) {
 func TestParsePackageIsolatesBadRecords(t *testing.T) {
 	pub, priv := newKey(t)
 
-	broken := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+	broken := platformOf(recordA, platformLimits(map[string]any{"vCPU": 50}))
 	broken["cluster_id"] = otherClusterID
-	good := platformOf(recordB, dkpLimits(map[string]any{"vCPU": 40}))
+	good := platformOf(recordB, platformLimits(map[string]any{"vCPU": 40}))
 
 	_, statuses, err := ParsePackage(issue(t, priv, pkgOf(broken, good)), ctxFor(pub))
 	if err != nil {
@@ -267,8 +267,8 @@ func TestValidPackageSurvivesABadSignatureElsewhere(t *testing.T) {
 	pub, priv := newKey(t)
 	_, impostor := newKey(t)
 
-	good := issue(t, priv, pkgOf(platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))))
-	forged := issue(t, impostor, pkgOf(platformOf(recordB, dkpLimits(map[string]any{"vCPU": 40}))))
+	good := issue(t, priv, pkgOf(platformOf(recordA, platformLimits(map[string]any{"vCPU": 50}))))
+	forged := issue(t, impostor, pkgOf(platformOf(recordB, platformLimits(map[string]any{"vCPU": 40}))))
 
 	if _, _, err := ParsePackage(forged, ctxFor(pub)); !errors.Is(err, ErrBadSignature) {
 		t.Fatalf("forged package: err = %v, want ErrBadSignature", err)
@@ -292,8 +292,8 @@ func TestValidPackageSurvivesABadSignatureElsewhere(t *testing.T) {
 func TestOnlyOwnClusterRecordsContribute(t *testing.T) {
 	pub, priv := newKey(t)
 
-	mine := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
-	theirs := platformOf(recordB, dkpLimits(map[string]any{"vCPU": 40}))
+	mine := platformOf(recordA, platformLimits(map[string]any{"vCPU": 50}))
+	theirs := platformOf(recordB, platformLimits(map[string]any{"vCPU": 40}))
 	theirs["cluster_id"] = otherClusterID
 
 	_, statuses, err := ParsePackage(issue(t, priv, pkgOf(mine, theirs)), ctxFor(pub))

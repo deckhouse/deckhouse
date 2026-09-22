@@ -158,14 +158,14 @@ func activeAt(base []RecordStatus, t time.Time) []RecordStatus {
 func limits(active []RecordStatus) (Limits, map[string][]string) {
 	speaking := make([]RecordStatus, 0, len(active))
 	for _, r := range active {
-		if r.Platform != nil && r.Platform.DKP != nil && r.Platform.DKP.ResourceLimits != nil {
+		if r.Platform != nil && r.Platform.ResourceLimits != nil {
 			speaking = append(speaking, r)
 		}
 	}
 
 	names := make(map[string]bool)
 	for _, r := range speaking {
-		for m := range r.Platform.DKP.ResourceLimits {
+		for m := range r.Platform.ResourceLimits {
 			names[m] = true
 		}
 	}
@@ -176,7 +176,7 @@ func limits(active []RecordStatus) (Limits, map[string][]string) {
 		var sum int64
 		unlimited := false
 		for _, r := range speaking {
-			v, ok := r.Platform.DKP.ResourceLimits[m]
+			v, ok := r.Platform.ResourceLimits[m]
 			if !ok || v == nil {
 				unlimited = true
 				granted[m] = append(granted[m], fmt.Sprintf("record:%s (unlimited)", r.ID))

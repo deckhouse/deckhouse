@@ -96,7 +96,7 @@ func TestComputeEffectiveLimits(t *testing.T) {
 			wantUnlimited: true,
 		},
 		{
-			name: "A10a a record without dkp stays silent",
+			name: "A10a a record without resource_limits stays silent",
 			keys: oneKey(
 				RecordStatus{Record: Record{Type: TypePlatform, ID: recordA, StartAt: ts("2026-01-01T00:00:00Z"),
 					Platform: &Platform{Expansions: []byte(`{"AdvancedStorage":{}}`)}}, Accepted: true},
@@ -108,7 +108,7 @@ func TestComputeEffectiveLimits(t *testing.T) {
 			name: "A10b edition only does not touch the quota",
 			keys: oneKey(
 				RecordStatus{Record: Record{Type: TypePlatform, ID: recordA, StartAt: ts("2026-01-01T00:00:00Z"),
-					Platform: &Platform{DKP: &DKPLimits{Edition: "Ultimate"}}}, Accepted: true},
+					Platform: &Platform{Edition: "Ultimate"}}, Accepted: true},
 				active(recordB, map[string]*int64{MetricVCPU: i64(40)}),
 			),
 			wantVCPU: i64(40),

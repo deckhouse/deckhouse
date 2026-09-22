@@ -76,8 +76,8 @@ func platformOf(id string, platform map[string]any) map[string]any {
 	}
 }
 
-func dkpLimits(limits map[string]any) map[string]any {
-	return map[string]any{"dkp": map[string]any{"edition": "Core", "resource_limits": limits}}
+func platformLimits(limits map[string]any) map[string]any {
+	return map[string]any{"edition": "Core", "resource_limits": limits}
 }
 
 func ctxFor(pub ed25519.PublicKey) VerifyContext {
@@ -116,7 +116,7 @@ func wl(id, start, expire string, limits map[string]*int64) RecordStatus {
 		r.ExpireAt = tsp(expire)
 	}
 	if limits != nil {
-		r.Platform = &Platform{DKP: &DKPLimits{Edition: "Core", ResourceLimits: limits}}
+		r.Platform = &Platform{Edition: "Core", ResourceLimits: limits}
 	}
 	return RecordStatus{Record: r, Accepted: true}
 }
