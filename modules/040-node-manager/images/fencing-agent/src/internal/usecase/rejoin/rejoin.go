@@ -36,8 +36,8 @@ type Params struct {
 }
 
 type Deps struct {
-	Attempt   func(ctx context.Context) error
-	HasQuorum func() bool
+	Attempt      func(ctx context.Context) error
+	HasQuorum    func() bool
 	NotMember    func(err error) bool
 	APIReachable func() bool
 	Changed      <-chan struct{}
@@ -45,9 +45,9 @@ type Deps struct {
 }
 
 type Loop struct {
-	params Params
-	deps   Deps
-	logger *log.Logger
+	params            Params
+	deps              Deps
+	logger            *log.Logger
 	reportedNotMember bool
 }
 

@@ -71,7 +71,7 @@ type stubStore struct {
 	states   []v1alpha1.FencingFailedNodeState
 	calls    []string
 	sections []v1alpha1.FencingFailedNodeStateFallback
-	lists int
+	lists    int
 
 	failHeartbeat     error
 	failCreate        error
@@ -777,7 +777,6 @@ func TestOwnRecordIsRemovedOnceTheCacheSyncs(t *testing.T) {
 		t.Errorf("calls = %v, want the own record deleted once the cache synced", h.store.calls)
 	}
 }
-
 
 func TestStaleVerdictClosesTheGate(t *testing.T) {
 	h := newHarness(t, newStore())

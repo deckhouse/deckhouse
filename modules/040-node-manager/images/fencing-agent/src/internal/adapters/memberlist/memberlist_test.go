@@ -22,7 +22,6 @@ import (
 	"time"
 
 	hcml "github.com/hashicorp/memberlist"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
