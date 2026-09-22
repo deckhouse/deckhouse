@@ -319,14 +319,67 @@ func TestMalformedClusterKeyIsNotReplaced(t *testing.T) {
 }
 
 // requeueAfter picks the soonest moment the policy can change on its own.
+// TestRequestRefreshesBeforeTheAntiReplayWindow covers D10/D11: a cluster whose
+// fleet and keys never change still republishes the file before the license
+// server starts rejecting it.
+func TestRequestRefreshesBeforeTheAntiReplayWindow(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		elapsed time.Duration
+		rebuilt bool
+	}{
+		{name: "23h keeps the published request", elapsed: 23 * time.Hour},
+		{name: "25h rebuilds it", elapsed: 25 * time.Hour, rebuilt: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			license, vendorKey := licenseObject(t)
+			worker := node("worker", "4", true)
+
+			env := newTestEnv(t, vendorKey, license, &worker, discoverySecret())
+			ctx := context.Background()
+
+			if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+				t.Fatalf("first reconcile: %v", err)
+			}
+			before := requestClaims(t, publishedRequest(t, env))
+
+			env.at(testNow.Add(tc.elapsed))
+			if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+				t.Fatalf("second reconcile: %v", err)
+			}
+			after := requestClaims(t, publishedRequest(t, env))
+
+			if !tc.rebuilt {
+				if after["jti"] != before["jti"] || after["iat"] != before["iat"] || after["seq"] != before["seq"] {
+					t.Fatalf("request rebuilt after %s on identical inputs: %v -> %v", tc.elapsed, before, after)
+				}
+				return
+			}
+			if after["jti"] == before["jti"] {
+				t.Fatalf("jti = %v twice, want a fresh one per request", after["jti"])
+			}
+			if after["iat"] == before["iat"] {
+				t.Fatalf("iat = %v twice, want the time of the rebuild", after["iat"])
+			}
+			if after["seq"].(float64) != before["seq"].(float64)+1 {
+				t.Fatalf("seq = %v, want %v + 1", after["seq"], before["seq"])
+			}
+			if got := storedSeq(t, env); float64(got) != after["seq"].(float64) {
+				t.Fatalf("stored seq = %d, want %v", got, after["seq"])
+			}
+		})
+	}
+}
+
 func TestRequeueAfter(t *testing.T) {
 	th := licensing.DefaultThresholds()
+	noRequest := time.Time{}
 	expire := testNow.Add(30 * time.Minute)
 	res := licensing.Result{Records: []licensing.RecordStatus{{
 		Record: licensing.Record{StartAt: testNow.Add(-time.Hour), ExpireAt: &expire},
 	}}}
 
-	if got := requeueAfter(res, th, testNow); got != 30*time.Minute {
+	if got := requeueAfter(res, th, noRequest, testNow); got != 30*time.Minute {
 		t.Fatalf("requeueAfter = %s, want the record expiry in 30m", got)
 	}
 
@@ -334,23 +387,28 @@ func TestRequeueAfter(t *testing.T) {
 	far := testNow.Add(3 * time.Hour)
 	if got := requeueAfter(licensing.Result{Records: []licensing.RecordStatus{{
 		Record: licensing.Record{StartAt: testNow.Add(-time.Hour), ExpireAt: &far},
-	}}}, th, testNow); got != resyncPeriod {
+	}}}, th, noRequest, testNow); got != resyncPeriod {
 		t.Fatalf("requeueAfter = %s, want the resync period", got)
 	}
 
 	since := testNow.Add(-7*24*time.Hour + 30*time.Minute)
 	over := licensing.Result{OverLimitSince: &since}
-	if got := requeueAfter(over, th, testNow); got != 30*time.Minute {
+	if got := requeueAfter(over, th, noRequest, testNow); got != 30*time.Minute {
 		t.Fatalf("requeueAfter = %s, want the end of the over-limit window in 30m", got)
 	}
 
 	// Nothing ahead at all still resyncs, and a breakpoint on top of us does not
 	// turn into a hot loop.
-	if got := requeueAfter(licensing.Result{}, th, testNow); got != resyncPeriod {
+	if got := requeueAfter(licensing.Result{}, th, noRequest, testNow); got != resyncPeriod {
 		t.Fatalf("requeueAfter = %s, want the resync period", got)
 	}
 	now := expire.Add(-time.Second)
-	if got := requeueAfter(res, th, now); got != time.Minute {
+	if got := requeueAfter(res, th, noRequest, now); got != time.Minute {
 		t.Fatalf("requeueAfter = %s, want the one minute floor", got)
+	}
+
+	issued := testNow.Add(-requestMaxAge + 30*time.Minute)
+	if got := requeueAfter(licensing.Result{}, th, issued, testNow); got != 30*time.Minute {
+		t.Fatalf("requeueAfter = %s, want the request refresh in 30m", got)
 	}
 }

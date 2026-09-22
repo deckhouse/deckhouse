@@ -254,7 +254,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 
 	r.publishMetrics(res, owners, now)
 
-	return ctrl.Result{RequeueAfter: requeueAfter(res, r.thresholds, now)}, nil
+	return ctrl.Result{RequeueAfter: requeueAfter(res, r.thresholds, requestIssuedAt(request), now)}, nil
 }
 
 // registrationRequest returns the cluster data file to publish, rebuilding it
@@ -269,7 +269,7 @@ func (r *reconciler) registrationRequest(
 	res licensing.Result,
 	now time.Time,
 ) (string, error) {
-	if published != "" && !requestStale(published, res) {
+	if published != "" && !requestStale(published, res, now) {
 		return published, nil
 	}
 

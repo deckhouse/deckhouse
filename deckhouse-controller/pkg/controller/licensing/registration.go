@@ -35,8 +35,14 @@ import (
 
 // requestPayload is the part of a published registration request this controller
 // reads back, to decide whether the published one still describes the cluster.
+// requestMaxAge keeps the published request inside the anti-replay window of
+// the license server (it rejects an iat older than 48 hours): once the file is
+// this old it is rebuilt even when nothing about the cluster changed.
+const requestMaxAge = 24 * time.Hour
+
 type requestPayload struct {
 	Seq        uint64           `json:"seq"`
+	IAT        string           `json:"iat"`
 	Metrics    map[string]int64 `json:"metrics"`
 	ActiveKeys []string         `json:"active_keys"`
 	Records    []string         `json:"records"`
@@ -61,9 +67,30 @@ func decodeRequest(request string) (*requestPayload, map[string]any, bool) {
 // describes the cluster. The license server reads the records and the installed
 // keys out of it to issue a reissue, and the metrics to show the customer what
 // the cluster consumes, so all three have to be current (specification 10.6).
-func requestStale(request string, res licensing.Result) bool {
+// issuedAt reports the iat of a request the controller signed itself, so the
+// payload is read without checking the signature. A zero time means unusable.
+func (p *requestPayload) issuedAt() time.Time {
+	iat, err := time.Parse(time.RFC3339, p.IAT)
+	if err != nil {
+		return time.Time{}
+	}
+	return iat
+}
+
+func requestIssuedAt(request string) time.Time {
+	payload, _, ok := decodeRequest(request)
+	if !ok {
+		return time.Time{}
+	}
+	return payload.issuedAt()
+}
+
+func requestStale(request string, res licensing.Result, now time.Time) bool {
 	payload, header, ok := decodeRequest(request)
 	if !ok {
+		return true
+	}
+	if iat := payload.issuedAt(); iat.IsZero() || !now.Before(iat.Add(requestMaxAge)) {
 		return true
 	}
 	_, hasJWK := header["jwk"]
@@ -175,7 +202,7 @@ func (r *reconciler) saveSeq(ctx context.Context, seq uint64) error {
 // requeueAfter is the soonest moment the policy can change on its own: the next
 // record boundary, the end of the over-limit window, or the resync that bounds
 // how stale anything can get while nothing happens (specification 10.6).
-func requeueAfter(res licensing.Result, th licensing.Thresholds, now time.Time) time.Duration {
+func requeueAfter(res licensing.Result, th licensing.Thresholds, issuedAt, now time.Time) time.Duration {
 	next := resyncPeriod
 
 	consider := func(at time.Time) {
@@ -195,6 +222,7 @@ func requeueAfter(res licensing.Result, th licensing.Thresholds, now time.Time) 
 	if res.Key != nil && res.Key.ValidUntil != nil {
 		consider(res.Key.ValidUntil.Add(-th.ExpiringSoon))
 	}
+	consider(issuedAt.Add(requestMaxAge))
 
 	// A breakpoint that is seconds away is not worth a hot loop around it.
 	if next < time.Minute {
