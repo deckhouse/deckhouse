@@ -145,22 +145,22 @@ func TestIsUserPod(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "a pod in an application namespace is user workload",
+			name: "a pod in an application namespace is user platform",
 			pod:  corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "shop", Name: "api"}},
 			want: true,
 		},
 		{
-			name: "a pod in a d8 namespace is platform workload",
+			name: "a pod in a d8 namespace is platform platform",
 			pod:  corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "deckhouse"}},
 			want: false,
 		},
 		{
-			name: "a pod in a kube namespace is platform workload",
+			name: "a pod in a kube namespace is platform platform",
 			pod:  corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "kube-proxy"}},
 			want: false,
 		},
 		{
-			name: "a completed job pod is not running workload",
+			name: "a completed job pod is not running platform",
 			pod: corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "shop", Name: "import"},
 				Status:     corev1.PodStatus{Phase: corev1.PodSucceeded},
@@ -168,7 +168,7 @@ func TestIsUserPod(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "a failed pod is not running workload",
+			name: "a failed pod is not running platform",
 			pod: corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "shop", Name: "import"},
 				Status:     corev1.PodStatus{Phase: corev1.PodFailed},
@@ -176,7 +176,7 @@ func TestIsUserPod(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "a running pod in an application namespace is user workload",
+			name: "a running pod in an application namespace is user platform",
 			pod: corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "shop", Name: "api"},
 				Status:     corev1.PodStatus{Phase: corev1.PodRunning},

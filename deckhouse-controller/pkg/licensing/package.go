@@ -25,10 +25,10 @@ import (
 	"time"
 )
 
-// TypeWorkload is the only record type this iteration understands. Every other
+// TypePlatform is the only record type this iteration understands. Every other
 // type is ignored uniformly, never rejected: packages carrying record types
 // invented later must keep applying on older builds.
-const TypeWorkload = "Workload"
+const TypePlatform = "Platform"
 
 // Package is a license package as issued by the license server. Unknown fields
 // are ignored by design (default encoding/json behaviour).
@@ -57,13 +57,13 @@ type Record struct {
 	PublicDomain         string     `json:"public_domain"`
 	ClusterKeyThumbprint *string    `json:"cluster_key_thumbprint"`
 	Origin               string     `json:"origin"`
-	Workload             *Workload  `json:"workload"`
+	Platform             *Platform  `json:"platform"`
 	Renews               []string   `json:"renews"`
 	Supersedes           []string   `json:"supersedes"`
 }
 
-// Workload is the body of a Workload record.
-type Workload struct {
+// Platform is the body of a Platform record.
+type Platform struct {
 	DKP *DKPLimits `json:"dkp"`
 	// Expansions and ExtraComponents are maps of scopes. This iteration does not
 	// interpret them; it only requires them to be JSON objects, so that a
@@ -268,7 +268,7 @@ func checkRecord(raw json.RawMessage, ctx VerifyContext) RecordStatus {
 		return RecordStatus{Record: r, Reason: reason, Message: fmt.Sprintf(format, args...)}
 	}
 
-	if r.Type != TypeWorkload {
+	if r.Type != TypePlatform {
 		return reject(ReasonUnsupportedType, "record type %q is not supported by this build", r.Type)
 	}
 	if !isUUID(r.ID) {
@@ -295,16 +295,16 @@ func checkRecord(raw json.RawMessage, ctx VerifyContext) RecordStatus {
 	if r.GraceDays != nil && *r.GraceDays < 0 {
 		return reject(ReasonSchemaViolation, "grace_days is %d, must not be negative", *r.GraceDays)
 	}
-	if r.Workload != nil {
-		if err := requireObject("workload.expansions", r.Workload.Expansions); err != nil {
+	if r.Platform != nil {
+		if err := requireObject("platform.expansions", r.Platform.Expansions); err != nil {
 			return reject(ReasonSchemaViolation, "%s", err)
 		}
-		if err := requireObject("workload.extra_components", r.Workload.ExtraComponents); err != nil {
+		if err := requireObject("platform.extra_components", r.Platform.ExtraComponents); err != nil {
 			return reject(ReasonSchemaViolation, "%s", err)
 		}
-		if r.Workload.DKP != nil {
-			for _, name := range sortedLimitNames(r.Workload.DKP.ResourceLimits) {
-				if v := r.Workload.DKP.ResourceLimits[name]; v != nil && *v < 0 {
+		if r.Platform.DKP != nil {
+			for _, name := range sortedLimitNames(r.Platform.DKP.ResourceLimits) {
+				if v := r.Platform.DKP.ResourceLimits[name]; v != nil && *v < 0 {
 					return reject(ReasonSchemaViolation, "resource_limits[%q] is %d, must not be negative", name, *v)
 				}
 			}

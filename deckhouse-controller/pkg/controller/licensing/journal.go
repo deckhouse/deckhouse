@@ -205,7 +205,7 @@ func (r *reconciler) saveJournal(ctx context.Context, journal *licensing.Journal
 // inline jwk while no record has been accepted yet, and references it by
 // thumbprint afterwards: the license server already knows the key by then.
 // acceptedRecords returns the sorted ids of the accepted records and whether
-// any of them is a Workload, which is what makes the cluster registered.
+// any of them is a Platform, which is what makes the cluster registered.
 func acceptedRecords(res licensing.Result) ([]string, bool) {
 	accepted := make([]string, 0, len(res.Records))
 	registered := false
@@ -214,7 +214,7 @@ func acceptedRecords(res licensing.Result) ([]string, bool) {
 			continue
 		}
 		accepted = append(accepted, rec.ID)
-		if rec.Type == licensing.TypeWorkload {
+		if rec.Type == licensing.TypePlatform {
 			registered = true
 		}
 	}

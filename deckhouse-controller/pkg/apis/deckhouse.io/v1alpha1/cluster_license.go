@@ -129,7 +129,7 @@ type LicenseRecordStatus struct {
 	// ID is the record id from the package.
 	ID string `json:"id"`
 
-	// Type of the record, for example Workload. Unknown types are ignored.
+	// Type of the record, for example Platform. Unknown types are ignored.
 	// +optional
 	Type string `json:"type,omitempty"`
 

@@ -62,16 +62,16 @@ func pkgOf(records ...any) map[string]any {
 	}
 }
 
-// workloadOf builds a Workload record for the test cluster.
-func workloadOf(id string, workload map[string]any) map[string]any {
+// platformOf builds a Platform record for the test cluster.
+func platformOf(id string, platform map[string]any) map[string]any {
 	return map[string]any{
-		"type":       TypeWorkload,
+		"type":       TypePlatform,
 		"id":         id,
 		"start_at":   "2026-01-01T00:00:00Z",
 		"expire_at":  "2026-07-01T00:00:00Z",
 		"cluster_id": testClusterID,
 		"origin":     "purchase",
-		"workload":   workload,
+		"platform":   platform,
 	}
 }
 
@@ -102,11 +102,11 @@ func tsp(s string) *time.Time {
 
 func i64(v int64) *int64 { return &v }
 
-// wl builds an already verified Workload record status, the input shape of
+// wl builds an already verified Platform record status, the input shape of
 // Compute. expire may be empty for a perpetual record.
 func wl(id, start, expire string, limits map[string]*int64) RecordStatus {
 	r := Record{
-		Type:      TypeWorkload,
+		Type:      TypePlatform,
 		ID:        id,
 		StartAt:   ts(start),
 		ClusterID: testClusterID,
@@ -115,7 +115,7 @@ func wl(id, start, expire string, limits map[string]*int64) RecordStatus {
 		r.ExpireAt = tsp(expire)
 	}
 	if limits != nil {
-		r.Workload = &Workload{DKP: &DKPLimits{Edition: "Core", ResourceLimits: limits}}
+		r.Platform = &Platform{DKP: &DKPLimits{Edition: "Core", ResourceLimits: limits}}
 	}
 	return RecordStatus{Record: r, Accepted: true}
 }

@@ -29,7 +29,7 @@ func TestParsePackageRejections(t *testing.T) {
 	pub, priv := newKey(t)
 	_, otherPriv := newKey(t)
 	ctx := ctxFor(pub)
-	record := workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+	record := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
 
 	unsigned := func(header map[string]any, payload any) string {
 		hb, _ := marshalCompact(header)
@@ -157,7 +157,7 @@ func tamper(t *testing.T, token string) string {
 // P9: the token survives line wraps, NBSP and zero width characters.
 func TestParsePackageNormalizesInput(t *testing.T) {
 	pub, priv := newKey(t)
-	token := issue(t, priv, pkgOf(workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))))
+	token := issue(t, priv, pkgOf(platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))))
 
 	mangled := token[:20] + "\n  " + token[20:40] + "\u00a0" + token[40:60] + "\u200b\ufeff" + token[60:]
 	_, statuses, err := ParsePackage(mangled, ctxFor(pub))
@@ -170,14 +170,14 @@ func TestParsePackageNormalizesInput(t *testing.T) {
 }
 
 // P14a and the forward compatibility guarantee: a package mixing an unknown
-// record type with a Workload is accepted and the Workload still contributes.
-func TestUnknownTypeDoesNotBlockWorkload(t *testing.T) {
+// record type with a Platform is accepted and the Platform still contributes.
+func TestUnknownTypeDoesNotBlockPlatform(t *testing.T) {
 	pub, priv := newKey(t)
 
-	future := workloadOf(recordC, nil)
+	future := platformOf(recordC, nil)
 	future["type"] = "Quantum"
 	future["quantum_entanglement"] = map[string]any{"qubits": 42}
-	work := workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50, "nodes": 10}))
+	work := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50, "nodes": 10}))
 
 	_, statuses, err := ParsePackage(issue(t, priv, pkgOf(future, work)), ctxFor(pub))
 	if err != nil {
@@ -187,7 +187,7 @@ func TestUnknownTypeDoesNotBlockWorkload(t *testing.T) {
 		t.Fatalf("unknown type: %+v", statuses[0])
 	}
 	if !statuses[1].Accepted {
-		t.Fatalf("workload: %+v", statuses[1])
+		t.Fatalf("platform: %+v", statuses[1])
 	}
 
 	res := Compute(oneKey(statuses...), nil, nil, ts("2026-02-01T00:00:00Z"), DefaultThresholds())
@@ -212,7 +212,7 @@ func TestUnknownTypeDoesNotBlockWorkload(t *testing.T) {
 // without any grace.
 func TestRevokedRecords(t *testing.T) {
 	pub, priv := newKey(t)
-	record := workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+	record := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
 	token := issue(t, priv, pkgOf(record))
 	now := ts("2026-02-01T00:00:00Z")
 
@@ -277,8 +277,8 @@ func TestRevokedRecords(t *testing.T) {
 func TestRecordIDsUnverified(t *testing.T) {
 	_, priv := newKey(t)
 	token := issue(t, priv, pkgOf(
-		workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50})),
-		workloadOf(recordB, dkpLimits(map[string]any{"vCPU": 40})),
+		platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50})),
+		platformOf(recordB, dkpLimits(map[string]any{"vCPU": 40})),
 	))
 
 	ids, err := RecordIDsUnverified(token)
@@ -328,7 +328,7 @@ func TestEmbeddedVendorLists(t *testing.T) {
 	}
 
 	_, stranger := newKey(t)
-	token := issue(t, stranger, pkgOf(workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))))
+	token := issue(t, stranger, pkgOf(platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))))
 	_, _, err := ParsePackage(token, VerifyContext{VendorKeys: VendorPublicKeys, ClusterID: testClusterID})
 	if !errors.Is(err, ErrBadSignature) {
 		t.Fatalf("stranger-signed package: got %v, want ErrBadSignature", err)

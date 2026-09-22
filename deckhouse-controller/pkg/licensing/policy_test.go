@@ -98,8 +98,8 @@ func TestComputeEffectiveLimits(t *testing.T) {
 		{
 			name: "A10a a record without dkp stays silent",
 			keys: oneKey(
-				RecordStatus{Record: Record{Type: TypeWorkload, ID: recordA, StartAt: ts("2026-01-01T00:00:00Z"),
-					Workload: &Workload{Expansions: []byte(`{"AdvancedStorage":{}}`)}}, Accepted: true},
+				RecordStatus{Record: Record{Type: TypePlatform, ID: recordA, StartAt: ts("2026-01-01T00:00:00Z"),
+					Platform: &Platform{Expansions: []byte(`{"AdvancedStorage":{}}`)}}, Accepted: true},
 				active(recordB, map[string]*int64{"vCPU": i64(40)}),
 			),
 			wantVCPU: i64(40),
@@ -107,8 +107,8 @@ func TestComputeEffectiveLimits(t *testing.T) {
 		{
 			name: "A10b edition only does not touch the quota",
 			keys: oneKey(
-				RecordStatus{Record: Record{Type: TypeWorkload, ID: recordA, StartAt: ts("2026-01-01T00:00:00Z"),
-					Workload: &Workload{DKP: &DKPLimits{Edition: "Ultimate"}}}, Accepted: true},
+				RecordStatus{Record: Record{Type: TypePlatform, ID: recordA, StartAt: ts("2026-01-01T00:00:00Z"),
+					Platform: &Platform{DKP: &DKPLimits{Edition: "Ultimate"}}}, Accepted: true},
 				active(recordB, map[string]*int64{"vCPU": i64(40)}),
 			),
 			wantVCPU: i64(40),

@@ -28,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/licensing"
 )
 
-// signOneRecord issues a single record Workload package with the given vendor
+// signOneRecord issues a single record Platform package with the given vendor
 // key, so that two keys of the same test share an issuer.
 func signOneRecord(t *testing.T, priv ed25519.PrivateKey, jti, recordID, expireAt string) string {
 	t.Helper()
@@ -41,13 +41,13 @@ func signOneRecord(t *testing.T, priv ed25519.PrivateKey, jti, recordID, expireA
 		"iat":           "2026-01-01T00:00:00Z",
 		"customer_name": "Acme",
 		"licenses": []any{map[string]any{
-			"type":       licensing.TypeWorkload,
+			"type":       licensing.TypePlatform,
 			"id":         recordID,
 			"start_at":   "2026-01-01T00:00:00Z",
 			"expire_at":  expireAt,
 			"cluster_id": testClusterID,
 			"origin":     "purchase",
-			"workload": map[string]any{
+			"platform": map[string]any{
 				"dkp": map[string]any{"edition": "EE", "resource_limits": map[string]any{"vCPU": 50}},
 			},
 		}},

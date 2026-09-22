@@ -51,7 +51,7 @@ func setConditions(conditions *[]metav1.Condition, res licensing.Result, now tim
 	rejected := make([]string, 0, len(res.Records))
 	for _, rec := range res.Records {
 		if rec.Accepted {
-			if rec.Type == licensing.TypeWorkload {
+			if rec.Type == licensing.TypePlatform {
 				registered = true
 			}
 			continue
@@ -72,8 +72,8 @@ func setConditions(conditions *[]metav1.Condition, res licensing.Result, now tim
 	sort.Strings(expiring)
 
 	set(conditions, now, conditionRegistered, registered,
-		"RecordAccepted", "no accepted Workload record is installed",
-		"at least one Workload record is part of the policy")
+		"RecordAccepted", "no accepted Platform record is installed",
+		"at least one Platform record is part of the policy")
 
 	set(conditions, now, conditionLimitsSatisfied, res.WithinLimits,
 		"WithinLimits", "consumption is above an effective limit",

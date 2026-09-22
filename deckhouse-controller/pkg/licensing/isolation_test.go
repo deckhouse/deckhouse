@@ -30,7 +30,7 @@ func TestRecordShapeIsIsolated(t *testing.T) {
 	pub, priv := newKey(t)
 
 	withLimits := func(limits map[string]any) map[string]any {
-		return workloadOf(recordA, dkpLimits(limits))
+		return platformOf(recordA, dkpLimits(limits))
 	}
 
 	cases := []struct {
@@ -94,7 +94,7 @@ func TestRecordShapeIsIsolated(t *testing.T) {
 		},
 	}
 
-	good := workloadOf(recordB, dkpLimits(map[string]any{"vCPU": 40}))
+	good := platformOf(recordB, dkpLimits(map[string]any{"vCPU": 40}))
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -116,8 +116,8 @@ func TestRecordShapeIsIsolated(t *testing.T) {
 			if statuses[0].ID != tc.wantID {
 				t.Fatalf("recovered id = %q, want %q", statuses[0].ID, tc.wantID)
 			}
-			if tc.wantID != "" && statuses[0].Type != TypeWorkload {
-				t.Fatalf("recovered type = %q, want %q", statuses[0].Type, TypeWorkload)
+			if tc.wantID != "" && statuses[0].Type != TypePlatform {
+				t.Fatalf("recovered type = %q, want %q", statuses[0].Type, TypePlatform)
 			}
 			if !statuses[1].Accepted {
 				t.Fatalf("the healthy record must still contribute: %+v", statuses[1])
@@ -152,13 +152,13 @@ func TestNonsensicalValuesAreSchemaViolations(t *testing.T) {
 	}{
 		{
 			name:    "a negative limit",
-			record:  workloadOf(recordA, dkpLimits(map[string]any{"vCPU": -1})),
+			record:  platformOf(recordA, dkpLimits(map[string]any{"vCPU": -1})),
 			wantMsg: `resource_limits["vCPU"] is -1`,
 		},
 		{
 			name: "a negative grace period",
 			record: func() map[string]any {
-				r := workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
 				r["grace_days"] = -3
 				return r
 			}(),
@@ -167,7 +167,7 @@ func TestNonsensicalValuesAreSchemaViolations(t *testing.T) {
 		{
 			name: "no start_at at all",
 			record: func() map[string]any {
-				r := workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
 				delete(r, "start_at")
 				return r
 			}(),
@@ -176,7 +176,7 @@ func TestNonsensicalValuesAreSchemaViolations(t *testing.T) {
 		{
 			name: "a zero start_at",
 			record: func() map[string]any {
-				r := workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
 				r["start_at"] = "0001-01-01T00:00:00Z"
 				return r
 			}(),
@@ -185,7 +185,7 @@ func TestNonsensicalValuesAreSchemaViolations(t *testing.T) {
 		{
 			name: "expire_at before start_at",
 			record: func() map[string]any {
-				r := workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
+				r := platformOf(recordA, dkpLimits(map[string]any{"vCPU": 50}))
 				r["expire_at"] = "2025-01-01T00:00:00Z"
 				return r
 			}(),
@@ -214,7 +214,7 @@ func TestZeroLimitIsAccepted(t *testing.T) {
 	pub, priv := newKey(t)
 
 	_, statuses, err := ParsePackage(
-		issue(t, priv, pkgOf(workloadOf(recordA, dkpLimits(map[string]any{"vCPU": 0, "nodes": nil})))),
+		issue(t, priv, pkgOf(platformOf(recordA, dkpLimits(map[string]any{"vCPU": 0, "nodes": nil})))),
 		ctxFor(pub))
 	if err != nil {
 		t.Fatalf("parse: %v", err)

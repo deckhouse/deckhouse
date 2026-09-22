@@ -31,7 +31,7 @@ import (
 )
 
 // systemTaintKeys mark a node as reserved for platform components. A node
-// carrying one of them is presumed not to run user workload.
+// carrying one of them is presumed not to run user platform.
 var systemTaintKeys = []string{
 	"dedicated.deckhouse.io",
 	"node-role.kubernetes.io/control-plane",
@@ -39,14 +39,14 @@ var systemTaintKeys = []string{
 }
 
 // systemNamespacePrefixes are the namespaces whose pods are platform, not user,
-// workload.
+// platform.
 var systemNamespacePrefixes = []string{"d8-", "kube-"}
 
 // countNodes applies the membership rule of the consumption metrics. Both
 // metrics are derived from the same node set, so they cannot drift apart.
 //
 // A node counts unless it is reserved by a system taint, and a reserved node
-// counts anyway once it actually runs user workload: a control plane opened up
+// counts anyway once it actually runs user platform: a control plane opened up
 // for user pods is cluster capacity like any other node. NotReady nodes count,
 // the state is temporary and it is the capacity that is licensed.
 //
@@ -115,7 +115,7 @@ func (r *reconciler) sampleConsumption(ctx context.Context) (map[string]float64,
 }
 
 // hasUserPods reports whether a reserved node runs at least one pod that is
-// neither platform workload nor a per-node agent. The list goes through the
+// neither platform platform nor a per-node agent. The list goes through the
 // uncached reader on purpose: the manager caches only a narrow slice of pods,
 // and this question is asked once an hour.
 func (r *reconciler) hasUserPods(ctx context.Context, nodeName string) (bool, error) {
@@ -139,7 +139,7 @@ func (r *reconciler) hasUserPods(ctx context.Context, nodeName string) (bool, er
 
 func isUserPod(pod corev1.Pod) bool {
 	// A finished Job leaves its pod object behind for hours. It is not running
-	// workload, so it must not keep a reserved node inside the metrics.
+	// platform, so it must not keep a reserved node inside the metrics.
 	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 		return false
 	}
@@ -149,7 +149,7 @@ func isUserPod(pod corev1.Pod) bool {
 		}
 	}
 	// A DaemonSet lands on every node it tolerates, so its presence says nothing
-	// about the node being opened up for user workload.
+	// about the node being opened up for user platform.
 	for _, owner := range pod.OwnerReferences {
 		if owner.Kind == "DaemonSet" {
 			return false

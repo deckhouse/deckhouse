@@ -44,7 +44,7 @@ const (
 
 var testNow = time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
 
-// issueTestPackage signs a one-record Workload package with a throwaway vendor
+// issueTestPackage signs a one-record Platform package with a throwaway vendor
 // key, so that the test never depends on the keys shipped with the build.
 func issueTestPackage(t *testing.T, limits map[string]any) (string, ed25519.PublicKey) {
 	t.Helper()
@@ -62,13 +62,13 @@ func issueTestPackage(t *testing.T, limits map[string]any) (string, ed25519.Publ
 		"iat":           "2026-01-01T00:00:00Z",
 		"customer_name": "Acme",
 		"licenses": []any{map[string]any{
-			"type":       licensing.TypeWorkload,
+			"type":       licensing.TypePlatform,
 			"id":         testRecordID,
 			"start_at":   "2026-01-01T00:00:00Z",
 			"expire_at":  "2027-01-01T00:00:00Z",
 			"cluster_id": testClusterID,
 			"origin":     "purchase",
-			"workload":   map[string]any{"dkp": map[string]any{"edition": "EE", "resource_limits": limits}},
+			"platform":   map[string]any{"dkp": map[string]any{"edition": "EE", "resource_limits": limits}},
 		}},
 	}, priv)
 	if err != nil {

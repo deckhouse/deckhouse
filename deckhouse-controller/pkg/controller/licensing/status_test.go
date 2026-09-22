@@ -38,7 +38,7 @@ func validResult() licensing.Result {
 		WithinLimits: true,
 		Records: []licensing.RecordStatus{{
 			Record: licensing.Record{
-				Type:    licensing.TypeWorkload,
+				Type:    licensing.TypePlatform,
 				ID:      testRecordID,
 				StartAt: testNow.Add(-24 * time.Hour),
 			},
@@ -126,7 +126,7 @@ func TestComplianceSince(t *testing.T) {
 func TestConditionsFollowRecords(t *testing.T) {
 	res := validResult()
 	res.Records = append(res.Records, licensing.RecordStatus{
-		Record:   licensing.Record{Type: licensing.TypeWorkload, ID: testPackageID},
+		Record:   licensing.Record{Type: licensing.TypePlatform, ID: testPackageID},
 		Accepted: false,
 		Reason:   licensing.ReasonClusterMismatch,
 	})
