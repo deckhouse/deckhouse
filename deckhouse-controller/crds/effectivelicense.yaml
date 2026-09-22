@@ -27,7 +27,7 @@ spec:
       type: string
     - jsonPath: .status.key.validUntil
       name: Valid until
-      type: date
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date

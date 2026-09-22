@@ -61,7 +61,7 @@ const (
 // +kubebuilder:resource:scope=Cluster,shortName=el
 // +kubebuilder:printcolumn:name="Licensed",type=boolean,JSONPath=`.status.licensed`
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.compliance.state`
-// +kubebuilder:printcolumn:name="Valid until",type=date,JSONPath=`.status.key.validUntil`
+// +kubebuilder:printcolumn:name="Valid until",type=string,JSONPath=`.status.key.validUntil`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EffectiveLicense is the aggregated license policy of one product.
