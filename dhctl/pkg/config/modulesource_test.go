@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"time"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
@@ -40,7 +40,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/module"
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
 	"github.com/deckhouse/deckhouse/pkg/log"

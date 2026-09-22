@@ -29,13 +29,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/module"
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry/client"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
