@@ -1,0 +1,54 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://deckhouse.io/ns/vex/prometheus/mimir",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-09-18T12:41:23.632896Z",
+  "version": 3,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "description": "golang.org/x/crypto/openpgp: unmaintained, unsafe by design, исправленной версии нет"
+      },
+      "timestamp": "2026-09-18T12:41:23.538826Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который признан неподдерживаемым и небезопасным по своему дизайну (unmaintained, unsafe by design) и не имеет исправленной версии. Mimir использует golang.org/x/crypto как транзитивную зависимость и подпакет openpgp не импортирует: go mod why golang.org/x/crypto/openpgp на дереве mimir-2.14.3 с применёнными патчами 001, 004, 006, 007, 008 отвечает 'main module does not need package golang.org/x/crypto/openpgp'. Проверка графа импортов бинарного файла (CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -mod=vendor -deps ./cmd/...) даёт 15 пакетов golang.org/x/crypto (pkcs12, pkcs12/internal/rc2, internal/alias, chacha20, internal/poly1305, chacha20poly1305, cryptobyte, cryptobyte/asn1, hkdf, blake2b, argon2, blowfish, bcrypt, pbkdf2, scrypt) и ни одного openpgp — то есть проверка положительно контролируется, x/crypto действительно линкуется, но openpgp в него не входит. Проверка собранного бинарного файла через go tool nm подтверждает: символов с префиксом golang.org/x/crypto/openpgp в нём нет при 270 символах golang.org/x/crypto в целом. Уязвимый код физически отсутствует в образе и не может быть вызван."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: deadlock установленного канала при особых сообщениях от злонамеренного пира"
+      },
+      "timestamp": "2026-09-18T12:41:23.586503Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-56855 (GO-2026-6355) находится в пакете golang.org/x/crypto/ssh: злонамеренный SSH-пир может специально сформированными сообщениями заблокировать (deadlock) уже установленный канал. Исправление выпущено в golang.org/x/crypto v0.56.0, однако эта версия объявляет в своём go.mod директиву go 1.26.0, тогда как сборочный образ DKP (candi/base_images.yml, ключ builder/golang-alpine указывает на digest builder/golang-alpine-1.25, ключей 1.26/1.27 в файле нет) поставляет Go 1.25.x, поэтому в релизе 1.76 зависимость поднята до максимально возможной v0.55.0 (патч 008-fix-cve-bump.patch). Mimir при этом не использует SSH: go mod why golang.org/x/crypto/ssh на дереве mimir-2.14.3 с патчами 001, 004, 006, 007, 008 отвечает 'main module does not need package golang.org/x/crypto/ssh'. Проверка графа импортов бинарного файла (CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -mod=vendor -deps ./cmd/...) даёт 15 пакетов golang.org/x/crypto (pkcs12, chacha20poly1305, cryptobyte, hkdf, blake2b, argon2, blowfish, bcrypt, pbkdf2, scrypt и внутренние) и ни одного ssh, а go tool nm по собранному бинарному файлу не находит ни одного символа с префиксом golang.org/x/crypto/ssh при 270 символах golang.org/x/crypto в целом. Уязвимый код в образе отсутствует."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: переполнение incomingRequests неустановленного канала и deadlock соединения"
+      },
+      "timestamp": "2026-09-18T12:41:23.632896Z",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-78662 (GO-2026-6354) находится в пакете golang.org/x/crypto/ssh: злонамеренный SSH-пир может переполнить очередь incomingRequests ещё не установленного канала и заблокировать (deadlock) соединение. Исправление выпущено в golang.org/x/crypto v0.56.0, которая объявляет в своём go.mod директиву go 1.26.0, тогда как сборочный образ DKP (candi/base_images.yml, builder/golang-alpine указывает на builder/golang-alpine-1.25) поставляет Go 1.25.x; в релизе 1.76 зависимость поднята до максимально возможной v0.55.0. Mimir не использует SSH: go mod why golang.org/x/crypto/ssh на дереве mimir-2.14.3 с патчами 001, 004, 006, 007, 008 отвечает 'main module does not need package golang.org/x/crypto/ssh'. Проверка графа импортов бинарного файла (CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go list -mod=vendor -deps ./cmd/...) даёт 15 пакетов golang.org/x/crypto и ни одного ssh, а go tool nm по собранному бинарному файлу не находит ни одного символа с префиксом golang.org/x/crypto/ssh при 270 символах golang.org/x/crypto в целом. Уязвимый код в образе отсутствует."
+    }
+  ]
+}

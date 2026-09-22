@@ -1,0 +1,113 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-operator-prometheus-prometheus-operator",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-05-21T15:00:00.000000+03:00",
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "timestamp": "2026-05-14T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.47.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-40179 представляет собой Stored XSS в веб-интерфейсе Prometheus через имена метрик и значения меток в тултипах графиков и обозревателе метрик. Согласно официальному advisory (GHSA-vffh-x6r8-xx99), уязвимость затрагивает исключительно Prometheus версий >= 3.0 (конкретно: >= 3.0 <= 3.5.1 и >= 3.6.0 <= 3.11.1). Вектор атаки основан на поддержке UTF-8 в именах метрик и меток, которая была введена как поведение по умолчанию в Prometheus v3.x, что позволяет использовать символы '<', '>' и '\"' в именах метрик. Образ prometheus-operator v0.68.0 в Deckhouse использует библиотеку github.com/prometheus/prometheus v0.47.0 (это Prometheus 2.47.x) для интеграции с Prometheus API; данная версия использует строгую валидацию имён метрик по регулярному выражению [a-zA-Z_:][a-zA-Z0-9_:]* и имён меток по [a-zA-Z_][a-zA-Z0-9_]*, что приводит к отклонению HTML/JavaScript символов на этапе приёма данных (ingestion). Кроме того, Prometheus 2.47.x не содержит Mantine UI, который является одним из основных затронутых компонентов. Инъекция XSS через специально сформированные имена метрик невозможна в данной версии. Помимо этого, бинарь /bin/operator не запускает Prometheus Web UI и не рендерит пользовательский контент в HTML; уязвимый код в этом контексте не исполняется. Проверка: `go list -deps ./cmd/operator` не содержит пакета github.com/prometheus/prometheus/web/ui (равно как и github.com/prometheus/prometheus/web и web/api/v1) — из 35 линкуемых пакетов github.com/prometheus/prometheus в бинарь попадают только model/*, promql/parser, storage, tsdb/*, config, discovery и util/* (контроль: github.com/prometheus/prometheus/config и storage/remote/azuread в списке присутствуют)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42151"
+      },
+      "timestamp": "2026-05-21T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.47.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42151 (GHSA-wg65-39gg-5wfj, CWE-200) — некорректная типизация поля client_secret в Azure AD remote write OAuth конфигурации Prometheus (пакет storage/remote/azuread): поле объявлено как string вместо Secret, поэтому при отдаче конфига через HTTP endpoint /-/config сервер Prometheus возвращал Azure OAuth client secret в открытом виде. Согласно официальному advisory, уязвимость затрагивает исключительно версии Prometheus < 3.5.3 и < 3.11.3 (фикс в 3.5.3/3.11.3, upstream v0.311.3). Образ prometheus-operator v0.68.0 в Deckhouse использует библиотеку github.com/prometheus/prometheus v0.47.0 (Prometheus 2.47.x) только как набор Go-типов для shared конфигурационных структур, CRD-валидации (Prometheus/Alertmanager/ServiceMonitor) и client-go-обёрток. Бинарь /bin/operator является Kubernetes-оператором: он не запускает Prometheus-сервер, не экспонирует endpoint /-/config и не сериализует Azure AD remote write конфигурацию в HTTP-ответ. Уязвимый исполняемый путь в данном контексте не активируется. Проверка: `go list -deps ./cmd/operator` показывает, что пакет github.com/prometheus/prometheus/storage/remote/azuread действительно линкуется (транзитивно через github.com/prometheus/prometheus/config), но пакеты github.com/prometheus/prometheus/web и github.com/prometheus/prometheus/web/api/v1, реализующие endpoint /-/config и выполняющие сериализацию конфигурации в HTTP-ответ, в бинарь не попадают. Таким образом присутствует только объявление типа, а исполняемый путь утечки секрета отсутствует."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42154"
+      },
+      "timestamp": "2026-05-21T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.47.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42154 (GHSA-8rm2-7qqf-34qm, CWE-400) относится к endpoint удалённого чтения /api/v1/read сервера Prometheus: некорректная валидация декодированной длины snappy-payload приводит к огромным аллокациям памяти и может вызвать OOM-падение процесса. Согласно официальному advisory, уязвимость затрагивает Prometheus < 3.5.3 и < 3.11.3 (фикс в 3.5.3/3.11.3, upstream v0.311.3). Образ prometheus-operator v0.68.0 в Deckhouse использует библиотеку github.com/prometheus/prometheus v0.47.0 (Prometheus 2.47.x) только как набор Go-типов для shared конфигурационных структур, CRD-валидации и client-go-обёрток. Бинарь /bin/operator является Kubernetes-оператором: он не запускает Prometheus-сервер и не обслуживает endpoint /api/v1/read. Уязвимый исполняемый код в данном контексте не скомпилирован в путь обработки запросов и эксплуатация в рамках образа недоступна. Проверка: `go list -deps ./cmd/operator` не содержит ни github.com/prometheus/prometheus/web/api/v1 (обработчик /api/v1/read), ни github.com/prometheus/prometheus/storage/remote (snappy-декодирование remote-read запросов); линкуется только github.com/prometheus/prometheus/storage/remote/azuread (контроль: он в списке есть)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-44903"
+      },
+      "timestamp": "2026-05-21T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.47.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-44903 (GHSA-fw8g-cg8f-9j28, CWE-79) — Stored XSS в legacy веб-интерфейсе Prometheus при отображении heatmap (histogram bucket label values), активируемый флагом --enable-feature=old-ui. Согласно официальному advisory, уязвимость затрагивает Prometheus < 3.5.3 и < 3.11.3 (фикс в 3.5.3/3.11.3, upstream v0.311.3). Образ prometheus-operator v0.68.0 в Deckhouse использует библиотеку github.com/prometheus/prometheus v0.47.0 (Prometheus 2.47.x) только как набор Go-типов для shared конфигурационных структур, CRD-валидации и client-go-обёрток. Бинарь /bin/operator является Kubernetes-оператором: он не запускает Prometheus-сервер, не открывает legacy web UI Prometheus и не имеет флага --enable-feature=old-ui. Код пакета github.com/prometheus/prometheus/web/ui в /bin/operator не импортируется и не компилируется в исполняемый путь. Эксплуатация в рамках данного образа недоступна. Проверка: `go list -deps ./cmd/operator` не содержит пакета github.com/prometheus/prometheus/web/ui и вообще ни одного пакета из поддерева github.com/prometheus/prometheus/web."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "timestamp": "2026-07-14T18:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 — информационное предупреждение о том, что пакет golang.org/x/crypto/openpgp является неподдерживаемым и небезопасным по дизайну (https://go.dev/issue/44226), без CVE-идентификатора и без фикс-версии, так как автор пакета не планирует его исправлять. prometheus-operator v0.68.0 использует модуль golang.org/x/crypto только за счёт транзитивных зависимостей (github.com/prometheus/alertmanager, go.mongodb.org/mongo-driver, k8s.io/client-go и др.) для функций TLS/SSH/pkcs12; ни prometheus-operator, ни его зависимости не импортируют подпакет golang.org/x/crypto/openpgp. Проверка `go mod vendor` подтверждает, что в vendor-дереве присутствует только golang.org/x/crypto/pkcs12 — пакет openpgp не вендорится и не компилируется в бинарь /bin/operator. Уязвимый код физически отсутствует в образе. Дополнительная проверка на срезе монорепозитория: `go list -deps ./cmd/operator | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт совпадений, в дереве зависимостей присутствуют только golang.org/x/crypto/pkcs12 и golang.org/x/crypto/pkcs12/internal/rc2, а `go tool nm` по несжатому бинарю /bin/operator не находит ни одного символа golang.org/x/crypto/openpgp при 3 символах golang.org/x/crypto/pkcs12 в качестве контроля."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "aliases": [
+          "GO-2026-6355"
+        ]
+      },
+      "timestamp": "2026-09-18T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-56855 (GO-2026-6355) — отказ в обслуживании в пакете golang.org/x/crypto/ssh: заблокированный (deadlocked) канал в состоянии established/undecided не освобождается, что позволяет удалённой стороне SSH-соединения исчерпать ресурсы процесса. Уязвимость исправлена только в golang.org/x/crypto v0.56.0; эта версия объявляет директиву go 1.26.0 и потому не может быть собрана builder-образом builder/golang-alpine, который в candi/base_images.yml указывает на builder/golang-alpine-1.25 (Go 1.25.13) — ключей 1.26/1.27 в файле нет. Поэтому патч 007-cve-go-mod.patch поднимает golang.org/x/crypto до максимально собираемой версии v0.55.0. Уязвимый код при этом физически отсутствует в образе: prometheus-operator v0.68.0 использует модуль golang.org/x/crypto исключительно транзитивно и только ради подпакета pkcs12 (цепочка github.com/prometheus/prometheus/config → storage/remote/azuread → github.com/Azure/azure-sdk-for-go/sdk/azidentity → golang.org/x/crypto/pkcs12). Подпакет golang.org/x/crypto/ssh не импортируется ни кодом prometheus-operator, ни его зависимостями: `go list -deps ./cmd/operator | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт ни одного совпадения (в дереве зависимостей присутствуют только golang.org/x/crypto/pkcs12 и golang.org/x/crypto/pkcs12/internal/rc2), после `go mod vendor` каталог vendor/golang.org/x/crypto/ содержит только pkcs12, а `go tool nm` по несжатому бинарю /bin/operator не находит ни одного символа golang.org/x/crypto/ssh при 3 символах golang.org/x/crypto/pkcs12 в качестве положительного контроля. Эксплуатация в рамках данного образа невозможна."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "aliases": [
+          "GO-2026-6354"
+        ]
+      },
+      "timestamp": "2026-09-18T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-78662 (GO-2026-6354) — отказ в обслуживании в пакете golang.org/x/crypto/ssh: заблокированный (deadlocked) канал в состоянии established/undecided не освобождается, что позволяет удалённой стороне SSH-соединения исчерпать ресурсы процесса. Уязвимость исправлена только в golang.org/x/crypto v0.56.0; эта версия объявляет директиву go 1.26.0 и потому не может быть собрана builder-образом builder/golang-alpine, который в candi/base_images.yml указывает на builder/golang-alpine-1.25 (Go 1.25.13) — ключей 1.26/1.27 в файле нет. Поэтому патч 007-cve-go-mod.patch поднимает golang.org/x/crypto до максимально собираемой версии v0.55.0. Уязвимый код при этом физически отсутствует в образе: prometheus-operator v0.68.0 использует модуль golang.org/x/crypto исключительно транзитивно и только ради подпакета pkcs12 (цепочка github.com/prometheus/prometheus/config → storage/remote/azuread → github.com/Azure/azure-sdk-for-go/sdk/azidentity → golang.org/x/crypto/pkcs12). Подпакет golang.org/x/crypto/ssh не импортируется ни кодом prometheus-operator, ни его зависимостями: `go list -deps ./cmd/operator | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт ни одного совпадения (в дереве зависимостей присутствуют только golang.org/x/crypto/pkcs12 и golang.org/x/crypto/pkcs12/internal/rc2), после `go mod vendor` каталог vendor/golang.org/x/crypto/ содержит только pkcs12, а `go tool nm` по несжатому бинарю /bin/operator не находит ни одного символа golang.org/x/crypto/ssh при 3 символах golang.org/x/crypto/pkcs12 в качестве положительного контроля. Эксплуатация в рамках данного образа невозможна."
+    }
+  ]
+}

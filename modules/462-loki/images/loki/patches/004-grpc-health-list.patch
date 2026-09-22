@@ -1,0 +1,33 @@
+diff --git a/pkg/loki/loki.go b/pkg/loki/loki.go
+--- a/pkg/loki/loki.go
++++ b/pkg/loki/loki.go
+@@ -500,7 +500,7 @@
+ 
+ 	t.Server.HTTP.Path("/log_level").Methods("GET", "POST").Handler(util_log.LevelHandler(&t.Cfg.Server.LogLevel))
+ 
+-	grpc_health_v1.RegisterHealthServer(t.Server.GRPC, grpcutil.NewHealthCheck(sm))
++	grpc_health_v1.RegisterHealthServer(t.Server.GRPC, &healthCheckShim{HealthCheck: grpcutil.NewHealthCheck(sm)})
+ 
+ 	// Config endpoint adds a way to see the config and the changes compared to the defaults.
+ 	t.bindConfigEndpoint(opts)
+@@ -806,4 +806,20 @@
+ 		}
+ 	}
+ 	return false
++}
++
++// healthCheckShim adapts dskit's HealthCheck to the grpc_health_v1.HealthServer
++// interface, which gained the List method in grpc-go >= 1.7x.
++type healthCheckShim struct {
++	*grpcutil.HealthCheck
++}
++
++func (h *healthCheckShim) List(ctx context.Context, _ *grpc_health_v1.HealthListRequest) (*grpc_health_v1.HealthListResponse, error) {
++	resp, err := h.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
++	if err != nil {
++		return nil, err
++	}
++	return &grpc_health_v1.HealthListResponse{
++		Statuses: map[string]*grpc_health_v1.HealthCheckResponse{"": resp},
++	}, nil
+ }

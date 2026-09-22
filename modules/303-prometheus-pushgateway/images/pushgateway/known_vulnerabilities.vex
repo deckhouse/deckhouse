@@ -1,0 +1,60 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-prometheus-pushgateway-pushgateway",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-07-23T00:00:00.000000+03:00",
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "aliases": [
+          "CGA-485h-x96h-hqh7"
+        ]
+      },
+      "timestamp": "2026-07-23T00:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 не описывает конкретную уязвимую функцию, а помечает пакет golang.org/x/crypto/openpgp (и его субпакеты packet, armor, clearsign, elgamal, errors, s2k) как неподдерживаемый и небезопасный по архитектуре; апстрим рекомендует переход на github.com/ProtonMail/go-crypto/openpgp, фикс-версии в golang.org/x/crypto не существует. Pushgateway не реализует и не использует функциональность OpenPGP: golang.org/x/crypto попадает в зависимости бинарника pushgateway исключительно транзитивно (через prometheus/exporter-toolkit и prometheus/prometheus, используется для TLS/HTTP, а не для OpenPGP). Ни код pushgateway, ни его прямые зависимости не импортируют пакет golang.org/x/crypto/openpgp и его субпакеты, соответственно уязвимый код не компилируется в исполняемый путь бинарника /bin/pushgateway и не может быть эксплуатирован. Проверка на срезе монорепозитория (upstream v1.11.3 + патч 001-cve-go-mod): `go list -deps . | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт ни одного совпадения — в бинарь линкуются только golang.org/x/crypto/bcrypt и golang.org/x/crypto/blowfish (через github.com/prometheus/exporter-toolkit/web, basic-auth), что подтверждает и `go mod why golang.org/x/crypto/openpgp` → «main module does not need package». `go tool nm` по несжатому бинарю pushgateway не находит ни одного символа golang.org/x/crypto/openpgp при 111 символах golang.org/x/crypto в качестве положительного контроля."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855",
+        "aliases": [
+          "GO-2026-6355"
+        ]
+      },
+      "timestamp": "2026-09-18T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-56855 (GO-2026-6355) — отказ в обслуживании в пакете golang.org/x/crypto/ssh: заблокированный (deadlocked) канал в состоянии established/undecided не освобождается, что позволяет удалённой стороне SSH-соединения исчерпать ресурсы процесса. Уязвимость исправлена только в golang.org/x/crypto v0.56.0; эта версия объявляет директиву go 1.26.0 и потому не может быть собрана builder-образом builder/golang-alpine, который в candi/base_images.yml указывает на builder/golang-alpine-1.25 (Go 1.25.13) — ключей 1.26/1.27 в файле нет. Поэтому патч 001-cve-go-mod.patch поднимает golang.org/x/crypto до максимально собираемой версии v0.55.0. Уязвимый код при этом физически отсутствует в образе: pushgateway v1.11.3 тянет golang.org/x/crypto транзитивно и только ради bcrypt-хеширования паролей basic-auth (github.com/prometheus/pushgateway → github.com/prometheus/exporter-toolkit/web → golang.org/x/crypto/bcrypt). SSH-функциональность в pushgateway отсутствует: `go list -deps . | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт совпадений (линкуются только golang.org/x/crypto/bcrypt и golang.org/x/crypto/blowfish), `go mod why golang.org/x/crypto/ssh` возвращает «main module does not need package golang.org/x/crypto/ssh», а `go tool nm` по несжатому бинарю pushgateway не находит ни одного символа golang.org/x/crypto/ssh при 111 символах golang.org/x/crypto в качестве положительного контроля. Эксплуатация в рамках данного образа невозможна."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662",
+        "aliases": [
+          "GO-2026-6354"
+        ]
+      },
+      "timestamp": "2026-09-18T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-78662 (GO-2026-6354) — отказ в обслуживании в пакете golang.org/x/crypto/ssh: заблокированный (deadlocked) канал в состоянии established/undecided не освобождается, что позволяет удалённой стороне SSH-соединения исчерпать ресурсы процесса. Уязвимость исправлена только в golang.org/x/crypto v0.56.0; эта версия объявляет директиву go 1.26.0 и потому не может быть собрана builder-образом builder/golang-alpine, который в candi/base_images.yml указывает на builder/golang-alpine-1.25 (Go 1.25.13) — ключей 1.26/1.27 в файле нет. Поэтому патч 001-cve-go-mod.patch поднимает golang.org/x/crypto до максимально собираемой версии v0.55.0. Уязвимый код при этом физически отсутствует в образе: pushgateway v1.11.3 тянет golang.org/x/crypto транзитивно и только ради bcrypt-хеширования паролей basic-auth (github.com/prometheus/pushgateway → github.com/prometheus/exporter-toolkit/web → golang.org/x/crypto/bcrypt). SSH-функциональность в pushgateway отсутствует: `go list -deps . | grep -xE 'golang.org/x/crypto/(ssh|openpgp)'` не даёт совпадений (линкуются только golang.org/x/crypto/bcrypt и golang.org/x/crypto/blowfish), `go mod why golang.org/x/crypto/ssh` возвращает «main module does not need package golang.org/x/crypto/ssh», а `go tool nm` по несжатому бинарю pushgateway не находит ни одного символа golang.org/x/crypto/ssh при 111 символах golang.org/x/crypto в качестве положительного контроля. Эксплуатация в рамках данного образа невозможна."
+    }
+  ]
+}
