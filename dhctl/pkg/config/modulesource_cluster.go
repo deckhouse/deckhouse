@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
@@ -187,7 +186,8 @@ func moduleVersionTag(version string) string {
 	if _, err := semver.NewVersion(version); err != nil {
 		return version
 	}
-	return cr.ModuleImageTag(version)
+
+	return moduleImageTag(version)
 }
 
 // registry.d8-system.svc only resolves inside the cluster, yet the built-in "deckhouse"

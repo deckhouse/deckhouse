@@ -26,8 +26,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/module"
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/registry"
+	"github.com/deckhouse/deckhouse/pkg/registry/client"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
@@ -318,33 +323,38 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 
 	moduleName := CloudProviderModuleName(provider)
 
-	repo, conf, err := md.moduleRepo(moduleName, md.providerSource(moduleName))
+	catalogRepo, conf, err := md.moduleRepo(moduleName, md.providerSource(moduleName))
 	if err != nil {
 		return providerBundleRef{}, true, err
 	}
-	moduleRepo := path.Join(repo, moduleName)
+	moduleRepo := path.Join(catalogRepo, moduleName)
+
+	catalog, err := moduleCatalog(conf, catalogRepo)
+	if err != nil {
+		return providerBundleRef{}, true, fmt.Errorf("registry client for %s: %w", catalogRepo, err)
+	}
+	svc := catalog.Module(moduleName)
 
 	// The controller pulls exactly <repo>/<module>:<imageTag> for an override: no release image,
 	// no version.json, no "v" prefix.
 	moduleTag := md.ImageTags[moduleName]
 	if moduleTag == "" {
 		tag := md.releaseChannelTag()
-		releaseClient, err := moduleRegistryClient(conf, path.Join(moduleRepo, "release"))
-		if err != nil {
-			return providerBundleRef{}, true, fmt.Errorf("registry client for %s/release: %w", moduleRepo, err)
-		}
-		release, err := cr.ResolveChannel(ctx, releaseClient, tag)
+
+		rel, err := svc.Releases().Fetch(ctx, tag)
 		if err != nil {
 			return providerBundleRef{}, true, fmt.Errorf("resolve %s/release:%s: %w%s", moduleRepo, tag, err, guessedRepoHint(provider, md.providerSource(moduleName)))
 		}
-		moduleTag = cr.ModuleImageTag(release.Version)
+
+		version, err := rel.Version()
+		if err != nil {
+			return providerBundleRef{}, true, fmt.Errorf("resolve %s/release:%s: %w", moduleRepo, tag, err)
+		}
+
+		moduleTag = moduleImageTag(version)
 	}
 
-	moduleClient, err := moduleRegistryClient(conf, moduleRepo)
-	if err != nil {
-		return providerBundleRef{}, true, fmt.Errorf("registry client for %s: %w", moduleRepo, err)
-	}
-	imageDigests, err := cr.ImagesDigests(ctx, moduleClient, moduleTag)
+	bundle, err := svc.Fetch(ctx, moduleTag)
 	if err != nil {
 		return providerBundleRef{}, true, fmt.Errorf("read images digests of %s:%s: %w", moduleRepo, moduleTag, err)
 	}
@@ -353,7 +363,8 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 	// refreshes on a deckhouse restart, so converge can legitimately resolve the previous one.
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Provider bundle resolved from module %s:%s", moduleRepo, moduleTag))
 
-	digest := imageDigests[terraformManagerImageName]
+	// A module image ships a flat images_digests.json, so the module selector stays empty.
+	digest, _ := bundle.Digests().Lookup("", terraformManagerImageName)
 	if digest == "" {
 		return providerBundleRef{}, true, fmt.Errorf("module %s:%s ships no %q image digest, so there is no provider bundle to unpack", moduleRepo, moduleTag, terraformManagerImageName)
 	}
@@ -399,11 +410,46 @@ func (md *ModuleDocs) moduleRepo(moduleName, sourceName string) (string, *image.
 	return path.Join(conf.GetRegistry(), modulesRepoSuffix), conf, nil
 }
 
+// moduleImageTag turns a release version into the module image tag the way the controller builds
+// it: "v" plus the version. The version stays opaque - a dev build ships {"version": "mr1"} - so
+// the only safe thing is to avoid doubling a prefix that is already there.
+//
+// This is not moduleVersionTag: that one guards a raw ModulePullOverride imageTag, which reaches
+// it through properties.version and must be left alone. A version read out of version.json is
+// always prefixed.
+func moduleImageTag(version string) string {
+	if strings.HasPrefix(version, "v") {
+		return version
+	}
+
+	return "v" + version
+}
+
+// splitHostPath splits "host/a/b" into "host" and "a/b". A bare host yields an empty path,
+// which is what strings.Cut already returns when the separator is absent.
+func splitHostPath(repo string) (string, string) {
+	host, rest, _ := strings.Cut(strings.Trim(repo, "/"), "/")
+
+	return host, rest
+}
+
 // A var so tests can drive the chain without a registry.
-var moduleRegistryClient = func(conf *image.RegistryConfig, repo string) (cr.Client, error) {
-	return cr.NewClient(repo,
-		cr.WithUserPasswordAuth(conf.GetUsername(), conf.GetPassword()),
-		cr.WithCA(conf.GetCA()),
-		cr.WithInsecureSchema(strings.EqualFold(conf.GetScheme(), "HTTP")),
-	)
+//
+// repo addresses the module catalog, whose tags are module names; the module name itself goes to
+// catalog.Module. log.Default() rather than the context logger on purpose: lib-dhctl already holds
+// it at fatal level and opens it to debug, routed to the log file, under DHCTL_DEBUG.
+var moduleCatalog = func(conf *image.RegistryConfig, repo string) (*module.Catalog, error) {
+	host, rest := splitHostPath(repo)
+
+	cli := registry.Client(client.New(host,
+		client.WithLoginPassword(conf.GetUsername(), conf.GetPassword()),
+		client.WithCA(conf.GetCA()),
+		client.WithInsecure(strings.EqualFold(conf.GetScheme(), "HTTP")),
+		client.WithLogger(log.Default()),
+	))
+	if rest != "" {
+		cli = cli.WithSegment(strings.Split(rest, "/")...)
+	}
+
+	return module.NewCatalog(service.NewBasicService(module.CatalogServiceName, cli, log.Default())), nil
 }

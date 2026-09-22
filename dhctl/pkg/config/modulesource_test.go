@@ -15,21 +15,16 @@
 package config
 
 import (
-	"archive/tar"
-	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,8 +36,13 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/module"
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/registry"
+	"github.com/deckhouse/deckhouse/pkg/registry/fake"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
@@ -156,7 +156,7 @@ func TestResolveModuleProviderBundleNotAModule(t *testing.T) {
 // repository CE never publishes. The registry's 404 is the only thing that can tell that apart
 // from a provider genuinely published outside the repo, so the error has to offer both readings.
 func TestResolveModuleProviderBundleGuessedRepoExplainsItself(t *testing.T) {
-	stubModuleRegistry(t, &fakeRegistry{err: fmt.Errorf("NAME_UNKNOWN")})
+	stubModuleCatalog(t, newModuleStand("registry.example.io/modules"))
 
 	bareModuleConfig := `
 apiVersion: deckhouse.io/v1alpha1
@@ -172,7 +172,7 @@ spec:
 		_, found, err := resolveModuleProviderBundle(context.Background(), "openstack",
 			configModuleDocs([]string{ensureRegistryMCDoc, bareModuleConfig}), testModuleOptions(t))
 		require.True(t, found)
-		require.ErrorContains(t, err, "NAME_UNKNOWN")
+		require.ErrorIs(t, err, registry.ErrImageNotFound)
 		require.ErrorContains(t, err, "this Deckhouse edition does not include that provider")
 		require.ErrorContains(t, err, "ModuleSource publishing it is missing")
 	})
@@ -185,7 +185,7 @@ spec:
 			bareModuleConfig + "  source: dev\n",
 		}), testModuleOptions(t))
 		require.True(t, found)
-		require.ErrorContains(t, err, "NAME_UNKNOWN")
+		require.ErrorIs(t, err, registry.ErrImageNotFound)
 		require.NotContains(t, err.Error(), "does not include that provider")
 	})
 }
@@ -195,11 +195,10 @@ func TestResolveModuleProviderBundleBareModuleConfigModuleNotInImage(t *testing.
 
 	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
 
-	reg := &fakeRegistry{images: map[string]crv1.Image{
-		moduleRepo + "/release": testImage(t, map[string]string{"version.json": `{"version": "1.0.0"}`}),
-		moduleRepo:              testImage(t, map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`}),
-	}}
-	stubModuleRegistry(t, reg)
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo+"/release", "stable", map[string]string{"version.json": `{"version": "1.0.0"}`}).
+		addImage(t, moduleRepo, "v1.0.0", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
+	stubModuleCatalog(t, reg)
 
 	ref, found, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
 		ensureRegistryMCDoc,
@@ -228,8 +227,8 @@ spec:
 // bare ModuleConfig must not send dhctl to a registry - doing so aborts LoadConfigFromFile on a
 // fetch error before any preflight check runs, with no fallback.
 func TestResolveModuleProviderBundleBareModuleConfigModuleInImageStaysInternal(t *testing.T) {
-	reg := &fakeRegistry{err: fmt.Errorf("the registry must not be touched at all")}
-	stubModuleRegistry(t, reg)
+	reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
+	stubModuleCatalog(t, reg)
 
 	_, found, err := resolveModuleProviderBundle(context.Background(), "openstack", configModuleDocs([]string{
 		ensureRegistryMCDoc,
@@ -330,11 +329,10 @@ spec:
 `, "mr1"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			reg := &fakeRegistry{images: map[string]crv1.Image{
-				moduleRepo + "/release": testImage(t, map[string]string{"version.json": `{"version": "1.0.0"}`}),
-				moduleRepo:              testImage(t, map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`}),
-			}}
-			stubModuleRegistry(t, reg)
+			reg := newModuleStand(moduleRepo).
+				addImage(t, moduleRepo+"/release", "stable", map[string]string{"version.json": `{"version": "1.0.0"}`}).
+				addImage(t, moduleRepo, tc.tag, map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
+			stubModuleCatalog(t, reg)
 
 			ref, found, err := resolveModuleProviderBundle(context.Background(), "openstack",
 				configModuleDocs([]string{ensureRegistryMCDoc, tc.doc}), testModuleOptions(t, "openstack"))
@@ -429,83 +427,109 @@ spec:
 	require.Equal(t, "test-user", conf.GetUsername())
 }
 
-// fakeRegistry stands in for the OCI registry the module chain talks to. It answers per
-// repository, because the chain's whole point is that the release image and the module image
-// live in two different repositories and are addressed by two different tags.
-type fakeRegistry struct {
-	images map[string]crv1.Image
-	err    error
+// recordingClient notes which tag each repository was asked for and can fail every request.
+// pkg/registry/fake stores images but records no requests, and half of these tests assert on the
+// request itself - that the release image was NOT fetched when an override pins the tag.
+//
+// The path is tracked here rather than read back from the client: fake.Client.GetRegistry()
+// returns only the host, while the registry.Client contract promises host plus segments.
+type recordingClient struct {
+	registry.Client
 
-	// tags records the tag each repository was actually asked for, which is where the
-	// override-beats-channel decision becomes visible.
+	path string
+	tags map[string]string
+	err  error
+}
+
+func (c *recordingClient) WithSegment(segments ...string) registry.Client {
+	return &recordingClient{
+		Client: c.Client.WithSegment(segments...),
+		path:   path.Join(append([]string{c.path}, segments...)...),
+		tags:   c.tags,
+		err:    c.err,
+	}
+}
+
+func (c *recordingClient) GetImage(ctx context.Context, tag string, opts ...registry.ImageGetOption) (registry.Image, error) {
+	c.tags[c.path] = tag
+	if c.err != nil {
+		return nil, c.err
+	}
+
+	return c.Client.GetImage(ctx, tag, opts...)
+}
+
+// moduleStand is the registry the module chain talks to. It keeps the shape the hand-rolled fake
+// had - images, recorded tags, recorded configs, an optional injected failure - so the assertions
+// in this file read exactly as they did.
+type moduleStand struct {
+	reg   *fake.Registry
 	tags  map[string]string
 	confs map[string]*image.RegistryConfig
+	err   error
 }
 
-type fakeRegistryClient struct {
-	reg  *fakeRegistry
-	repo string
-}
+// newModuleStand takes any full repository path and serves the registry its host names.
+func newModuleStand(repo string) *moduleStand {
+	host, _ := splitHostPath(repo)
 
-func (c fakeRegistryClient) Image(_ context.Context, tag string) (crv1.Image, error) {
-	c.reg.tags[c.repo] = tag
-	if c.reg.err != nil {
-		return nil, c.reg.err
+	return &moduleStand{
+		reg:   fake.NewRegistry(host),
+		tags:  map[string]string{},
+		confs: map[string]*image.RegistryConfig{},
 	}
-	img, ok := c.reg.images[c.repo]
-	if !ok {
-		return nil, fmt.Errorf("no such repository %q", c.repo)
-	}
-	return img, nil
 }
 
-func (c fakeRegistryClient) Digest(_ context.Context, _ string) (string, error) { return "", nil }
-func (c fakeRegistryClient) ListTags(_ context.Context) ([]string, error)       { return nil, nil }
-
-// stubModuleRegistry routes the cr metadata lookups at reg instead of a real registry.
-func stubModuleRegistry(t *testing.T, reg *fakeRegistry) {
+// addImage publishes an image at repo:tag. repo carries the host, which the registry already is.
+func (s *moduleStand) addImage(t *testing.T, repo, tag string, files map[string]string) *moduleStand {
 	t.Helper()
-	reg.tags = map[string]string{}
-	reg.confs = map[string]*image.RegistryConfig{}
+	_, inside := splitHostPath(repo)
+	s.reg.MustAddImage(inside, tag, testImage(t, files))
 
-	orig := moduleRegistryClient
-	moduleRegistryClient = func(conf *image.RegistryConfig, repo string) (cr.Client, error) {
-		reg.confs[repo] = conf
-		return fakeRegistryClient{reg: reg, repo: repo}, nil
-	}
-
-	t.Cleanup(func() { moduleRegistryClient = orig })
+	return s
 }
 
-// testImage builds a single-layer image whose root holds the given files, the way a release
-// image and a module image both carry their metadata.
+// failing makes every image fetch answer err, for the cases a stocked registry cannot express.
+func (s *moduleStand) failing(err error) *moduleStand {
+	s.err = err
+
+	return s
+}
+
+// stubModuleCatalog routes the module chain at the stand instead of a real registry.
+func stubModuleCatalog(t *testing.T, stand *moduleStand) {
+	t.Helper()
+
+	orig := moduleCatalog
+	moduleCatalog = func(conf *image.RegistryConfig, repo string) (*module.Catalog, error) {
+		stand.confs[repo] = conf
+
+		_, rest := splitHostPath(repo)
+
+		cli := registry.Client(fake.NewClient(stand.reg))
+		if rest != "" {
+			cli = cli.WithSegment(strings.Split(rest, "/")...)
+		}
+
+		rec := registry.Client(&recordingClient{Client: cli, path: repo, tags: stand.tags, err: stand.err})
+
+		return module.NewCatalog(service.NewBasicService(module.CatalogServiceName, rec, log.Default())), nil
+	}
+
+	t.Cleanup(func() { moduleCatalog = orig })
+}
+
+// testImage builds an image whose root holds the given files, the way a release image and a
+// module image both carry their metadata.
 func testImage(t *testing.T, files map[string]string) crv1.Image {
 	t.Helper()
 
-	buf := bytes.NewBuffer(nil)
-	tw := tar.NewWriter(buf)
-
+	b := fake.NewImageBuilder()
 	for name, content := range files {
-		require.NoError(t, tw.WriteHeader(&tar.Header{
-			Name:     name,
-			Typeflag: tar.TypeReg,
-			Mode:     0o644,
-			Size:     int64(len(content)),
-		}))
-		_, err := tw.Write([]byte(content))
-		require.NoError(t, err)
+		b.WithFile(name, content)
 	}
-	require.NoError(t, tw.Close())
 
-	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(buf.Bytes())), nil
-	})
-	require.NoError(t, err)
-
-	img, err := mutate.AppendLayers(empty.Image, layer)
-	require.NoError(t, err)
-
-	return img
+	return b.MustBuild()
 }
 
 // stubEmbeddedDigests makes the compiled-in images_digests.json say what the test needs, so a
@@ -579,16 +603,15 @@ func TestResolveModuleProviderBundleChain(t *testing.T) {
 	// digests are stocked with a different one to make that visible.
 	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
 
-	reg := &fakeRegistry{images: map[string]crv1.Image{
-		moduleRepo + "/release": testImage(t, map[string]string{
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo+"/release", "stable", map[string]string{
 			"version.json": `{"version": "mr1"}`,
 			"module.yaml":  "name: cloud-provider-dvp\n",
-		}),
-		moduleRepo: testImage(t, map[string]string{
+		}).
+		addImage(t, moduleRepo, "vmr1", map[string]string{
 			"images_digests.json": `{"validator": "sha256:aaa", "terraformManager": "` + testBundleDigest + `"}`,
-		}),
-	}}
-	stubModuleRegistry(t, reg)
+		})
+	stubModuleCatalog(t, reg)
 
 	docs := []string{
 		ensureRegistryMCDoc,
@@ -613,8 +636,7 @@ func TestResolveModuleProviderBundleChain(t *testing.T) {
 	require.Equal(t, "user", ref.Registry.GetUsername())
 	require.Equal(t, "pass", ref.Registry.GetPassword())
 	require.Equal(t, "test-ca-pem", ref.Registry.GetCA())
-	require.Equal(t, ref.Registry, reg.confs[moduleRepo+"/release"])
-	require.Equal(t, ref.Registry, reg.confs[moduleRepo])
+	require.Equal(t, ref.Registry, reg.confs[repo], "one catalog client serves both the release and the module repository")
 }
 
 // Which tag the release image is asked for: an override pins the module and beats any
@@ -650,11 +672,10 @@ spec:
 		{"rock solid", []string{deckhouseMC("RockSolid"), providerMC}, "rock-solid"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			reg := &fakeRegistry{images: map[string]crv1.Image{
-				moduleRepo + "/release": testImage(t, map[string]string{"version.json": `{"version": "1.2.3"}`}),
-				moduleRepo:              testImage(t, map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`}),
-			}}
-			stubModuleRegistry(t, reg)
+			reg := newModuleStand(moduleRepo).
+				addImage(t, moduleRepo+"/release", tc.tag, map[string]string{"version.json": `{"version": "1.2.3"}`}).
+				addImage(t, moduleRepo, "v1.2.3", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
+			stubModuleCatalog(t, reg)
 
 			ref, _, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs(tc.docs), testModuleOptions(t))
 			require.NoError(t, err)
@@ -672,8 +693,8 @@ spec:
 func TestResolveProviderBundleRefFallsBackToEmbeddedDigests(t *testing.T) {
 	stubEmbeddedDigests(t, `{"cloudProviderYandex": {"terraformManager": "sha256:embedded"}}`)
 
-	reg := &fakeRegistry{err: fmt.Errorf("the registry must not be touched at all")}
-	stubModuleRegistry(t, reg)
+	reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
+	stubModuleCatalog(t, reg)
 
 	ref, err := resolveProviderBundleRef(context.Background(), "yandex", configModuleDocs([]string{ensureRegistryMCDoc, ensureClusterConfigDoc("Yandex")}), testModuleOptions(t, "yandex"))
 	require.NoError(t, err)
@@ -687,8 +708,8 @@ func TestResolveProviderBundleRefFallsBackToEmbeddedDigests(t *testing.T) {
 // images_digests.json. Nothing in the documents asked for a module, so nothing may reach for a
 // registry.
 func TestResolveModuleProviderBundleNoModuleConfig(t *testing.T) {
-	reg := &fakeRegistry{err: fmt.Errorf("the registry must not be touched at all")}
-	stubModuleRegistry(t, reg)
+	reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
+	stubModuleCatalog(t, reg)
 
 	_, found, err := resolveModuleProviderBundle(context.Background(), "dvp",
 		configModuleDocs([]string{ensureRegistryMCDoc, ensureClusterConfigDoc("DVP")}), testModuleOptions(t))
@@ -704,7 +725,7 @@ func TestResolveProviderBundleRefRegistryFailureIsNotAFallback(t *testing.T) {
 	// Stocked so that a fallback would succeed and the test would pass by accident.
 	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
 
-	stubModuleRegistry(t, &fakeRegistry{err: fmt.Errorf("401 Unauthorized")})
+	stubModuleCatalog(t, newModuleStand("registry.example.io/modules").failing(fmt.Errorf("401 Unauthorized")))
 
 	_, err := resolveProviderBundleRef(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, testProviderMCWithSourceDoc, testModuleSourceDoc(t, "registry.example.io/modules")}), testModuleOptions(t))
 	require.ErrorContains(t, err, "401 Unauthorized")
@@ -715,10 +736,9 @@ func TestResolveProviderBundleRefRegistryFailureIsNotAFallback(t *testing.T) {
 func TestResolveModuleProviderBundleNoBundleDigest(t *testing.T) {
 	const moduleRepo = "r.example.com/test/modules/cloud-provider-dvp"
 
-	stubModuleRegistry(t, &fakeRegistry{images: map[string]crv1.Image{
-		moduleRepo + "/release": testImage(t, map[string]string{"version.json": `{"version": "1.0.0"}`}),
-		moduleRepo:              testImage(t, map[string]string{"images_digests.json": `{"validator": "sha256:aaa"}`}),
-	}})
+	stubModuleCatalog(t, newModuleStand(moduleRepo).
+		addImage(t, moduleRepo+"/release", "stable", map[string]string{"version.json": `{"version": "1.0.0"}`}).
+		addImage(t, moduleRepo, "v1.0.0", map[string]string{"images_digests.json": `{"validator": "sha256:aaa"}`}))
 
 	_, found, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, `
 apiVersion: deckhouse.io/v1alpha1
@@ -740,12 +760,11 @@ spec:
 func TestResolveModuleProviderBundlePullOverrideSkipsReleaseImage(t *testing.T) {
 	const moduleRepo = "r.example.com/test/modules/cloud-provider-dvp"
 
-	reg := &fakeRegistry{images: map[string]crv1.Image{
-		moduleRepo: testImage(t, map[string]string{
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo, "mr1", map[string]string{
 			"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`,
-		}),
-	}}
-	stubModuleRegistry(t, reg)
+		})
+	stubModuleCatalog(t, reg)
 
 	ref, found, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, `
 apiVersion: deckhouse.io/v1alpha2
@@ -768,11 +787,10 @@ spec:
 func TestResolveModuleProviderBundleDefaultSource(t *testing.T) {
 	const moduleRepo = "r.example.com/test/modules/cloud-provider-dvp"
 
-	reg := &fakeRegistry{images: map[string]crv1.Image{
-		moduleRepo + "/release": testImage(t, map[string]string{"version.json": `{"version": "1.0.0"}`}),
-		moduleRepo:              testImage(t, map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`}),
-	}}
-	stubModuleRegistry(t, reg)
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo+"/release", "stable", map[string]string{"version.json": `{"version": "1.0.0"}`}).
+		addImage(t, moduleRepo, "v1.0.0", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
+	stubModuleCatalog(t, reg)
 
 	ref, found, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, `
 apiVersion: deckhouse.io/v1alpha1
@@ -938,8 +956,8 @@ func TestResolveModuleProviderBundleFromClusterNotAModule(t *testing.T) {
 		{"source object gone", []testClusterObject{testModuleObject("dev", "1.2.3")}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			reg := &fakeRegistry{err: fmt.Errorf("the registry must not be touched at all")}
-			stubModuleRegistry(t, reg)
+			reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
+			stubModuleCatalog(t, reg)
 
 			_, found, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t, tc.objs...), testModuleOptions(t))
 			require.NoError(t, err)
@@ -959,12 +977,11 @@ func TestResolveModuleProviderBundleFromClusterVersion(t *testing.T) {
 	// stocked with a different one to make that visible.
 	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
 
-	reg := &fakeRegistry{images: map[string]crv1.Image{
-		moduleRepo: testImage(t, map[string]string{
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo, "v1.2.3", map[string]string{
 			"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`,
-		}),
-	}}
-	stubModuleRegistry(t, reg)
+		})
+	stubModuleCatalog(t, reg)
 
 	ref, found, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
 		testModuleObject("dev", "1.2.3"),
@@ -984,7 +1001,7 @@ func TestResolveModuleProviderBundleFromClusterVersion(t *testing.T) {
 	require.Equal(t, "user", ref.Registry.GetUsername())
 	require.Equal(t, "pass", ref.Registry.GetPassword())
 	require.Equal(t, "test-ca-pem", ref.Registry.GetCA())
-	require.Equal(t, ref.Registry, reg.confs[moduleRepo])
+	require.Equal(t, ref.Registry, reg.confs[testClusterModuleRepo], "one catalog client serves both the release and the module repository")
 }
 
 // A ModulePullOverride in the cluster keeps the controller pulling its tag, so it outranks the
@@ -992,12 +1009,11 @@ func TestResolveModuleProviderBundleFromClusterVersion(t *testing.T) {
 func TestResolveModuleProviderBundleFromClusterPullOverride(t *testing.T) {
 	const moduleRepo = testClusterModuleRepo + "/cloud-provider-dvp"
 
-	reg := &fakeRegistry{images: map[string]crv1.Image{
-		moduleRepo: testImage(t, map[string]string{
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo, "mr1", map[string]string{
 			"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`,
-		}),
-	}}
-	stubModuleRegistry(t, reg)
+		})
+	stubModuleCatalog(t, reg)
 
 	ref, found, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
 		testModuleObject("dev", "1.2.3"),
@@ -1042,8 +1058,8 @@ spec:
 // until its module is upgraded. A denied read says the same thing a missing object does: ask
 // the mounted digests instead, which is what that pod did before the module chain existed.
 func TestResolveModuleProviderBundleFromClusterDenied(t *testing.T) {
-	reg := &fakeRegistry{err: fmt.Errorf("the registry must not be touched at all")}
-	stubModuleRegistry(t, reg)
+	reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
+	stubModuleCatalog(t, reg)
 
 	kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
 		ModuleGVR: "ModuleList",
@@ -1076,12 +1092,11 @@ func TestModuleVersionTag(t *testing.T) {
 func TestResolveModuleProviderBundleFromClusterUnreadyPullOverride(t *testing.T) {
 	const moduleRepo = testClusterModuleRepo + "/cloud-provider-dvp"
 
-	reg := &fakeRegistry{images: map[string]crv1.Image{
-		moduleRepo: testImage(t, map[string]string{
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo, "v1.2.3", map[string]string{
 			"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`,
-		}),
-	}}
-	stubModuleRegistry(t, reg)
+		})
+	stubModuleCatalog(t, reg)
 
 	_, found, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
 		testModuleObject("dev", "1.2.3"),
@@ -1096,8 +1111,8 @@ func TestResolveModuleProviderBundleFromClusterUnreadyPullOverride(t *testing.T)
 // Defaulting to Stable here would unpack whatever that channel points at today and validate the
 // configuration against schemas from a release this cluster is not on.
 func TestResolveModuleProviderBundleFromClusterNoVersion(t *testing.T) {
-	reg := &fakeRegistry{err: fmt.Errorf("the registry must not be touched at all")}
-	stubModuleRegistry(t, reg)
+	reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
+	stubModuleCatalog(t, reg)
 
 	_, _, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
 		testModuleObject("dev", ""),
