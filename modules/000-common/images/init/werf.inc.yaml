@@ -9,6 +9,8 @@ import:
   includePaths:
   - bin
   - usr/bin/sh
+  - usr/bin/bash
+  
   - usr/bin/chown
   - usr/bin/chmod
   - usr/bin/ls
@@ -17,7 +19,6 @@ import:
   - usr/bin/mkdir
   - usr/bin/sleep
   - usr/bin/true
-  - usr/bin/busybox
 
   - usr/bin/nc
   - usr/lib/libc.so.*
@@ -31,4 +32,4 @@ from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   beforeInstall:
-  - pm install netcat
+  - pm install netcat coreutils bash
