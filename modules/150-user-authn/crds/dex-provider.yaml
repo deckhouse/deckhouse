@@ -54,6 +54,7 @@ spec:
                   type: object
                   description: |
                     Limits the identities this provider is allowed to assert, regardless of the provider type.
+
                     Dex refuses to sign in a user whose email is outside `emails` and `emailDomains` when either is set,
                     and narrows the `groups` claim to the intersection with `groups` when it is set (an empty
                     intersection refuses the sign-in). Each list is optional; an omitted or empty list does not limit
@@ -62,19 +63,24 @@ spec:
                     The limits also decide who may create or change the provider. A provider that can assert an
                     email or a group that already carries roles in the cluster may be written only by a requester
                     who is allowed to assign those roles. Without an email limit the provider can assert any email,
-                    including the ones that hold SuperAdmin, so writing it requires SuperAdmin. With limits on both
+                    including the ones that hold `SuperAdmin`, so writing it requires `SuperAdmin`. With limits on both
                     attributes only the roles granted to the listed identities count.
                   properties:
                     emails:
                       type: array
-                      description: 'Exact email addresses this provider may assert. Compared case-insensitively.'
+                      description: |
+                        Exact email addresses this provider may assert.
+
+                        Compared case-insensitively.
                       items:
                         type: string
                         minLength: 1
                     emailDomains:
                       type: array
                       description: |
-                        Email domains this provider may assert, without the `@`. Matched exactly against the part of
+                        Email domains this provider may assert, without the `@`.
+
+                        Matched exactly against the part of
                         the email after the last `@`; subdomains must be listed explicitly.
                       items:
                         type: string
@@ -82,7 +88,9 @@ spec:
                     groups:
                       type: array
                       description: |
-                        Group names this provider may assert. Applied on top of the provider-specific group filters
+                        Group names this provider may assert.
+
+                        Applied on top of the provider-specific group filters
                         (`allowedGroups`, `groups`, `teams`, `orgs[].teams`), if any.
                       items:
                         type: string
@@ -760,6 +768,7 @@ spec:
                   type: object
                   description: |
                     Limits the identities this provider is allowed to assert, regardless of the provider type.
+
                     Dex refuses to sign in a user whose email is outside `emails` and `emailDomains` when either is set,
                     and narrows the `groups` claim to the intersection with `groups` when it is set (an empty
                     intersection refuses the sign-in). Each list is optional; an omitted or empty list does not limit
@@ -768,19 +777,24 @@ spec:
                     The limits also decide who may create or change the provider. A provider that can assert an
                     email or a group that already carries roles in the cluster may be written only by a requester
                     who is allowed to assign those roles. Without an email limit the provider can assert any email,
-                    including the ones that hold SuperAdmin, so writing it requires SuperAdmin. With limits on both
+                    including the ones that hold `SuperAdmin`, so writing it requires `SuperAdmin`. With limits on both
                     attributes only the roles granted to the listed identities count.
                   properties:
                     emails:
                       type: array
-                      description: 'Exact email addresses this provider may assert. Compared case-insensitively.'
+                      description: |
+                        Exact email addresses this provider may assert.
+
+                        Compared case-insensitively.
                       items:
                         type: string
                         minLength: 1
                     emailDomains:
                       type: array
                       description: |
-                        Email domains this provider may assert, without the `@`. Matched exactly against the part of
+                        Email domains this provider may assert, without the `@`.
+
+                        Matched exactly against the part of
                         the email after the last `@`; subdomains must be listed explicitly.
                       items:
                         type: string
@@ -788,7 +802,9 @@ spec:
                     groups:
                       type: array
                       description: |
-                        Group names this provider may assert. Applied on top of the provider-specific group filters
+                        Group names this provider may assert.
+
+                        Applied on top of the provider-specific group filters
                         (`allowedGroups`, `groups`, `teams`, `orgs[].teams`), if any.
                       items:
                         type: string
