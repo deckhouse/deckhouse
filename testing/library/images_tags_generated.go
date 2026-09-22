@@ -430,16 +430,15 @@ var DefaultImagesDigests = map[string]interface{}{
 	"terraformManager": map[string]interface{}{
 		"baseOpentofu":                "imageHash-terraformManager-baseOpentofu",
 		"baseTerraform":               "imageHash-terraformManager-baseTerraform",
+		"terraformManager":            "imageHash-terraformManager-terraformManager",
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
 		"terraformManagerAzure":       "imageHash-terraformManager-terraformManagerAzure",
-		"terraformManagerDvp":         "imageHash-terraformManager-terraformManagerDvp",
 		"terraformManagerDynamix":     "imageHash-terraformManager-terraformManagerDynamix",
 		"terraformManagerGcp":         "imageHash-terraformManager-terraformManagerGcp",
 		"terraformManagerHuaweicloud": "imageHash-terraformManager-terraformManagerHuaweicloud",
 		"terraformManagerOpenstack":   "imageHash-terraformManager-terraformManagerOpenstack",
 		"terraformManagerVcd":         "imageHash-terraformManager-terraformManagerVcd",
 		"terraformManagerVsphere":     "imageHash-terraformManager-terraformManagerVsphere",
-		"terraformManagerYandex":      "imageHash-terraformManager-terraformManagerYandex",
 		"terraformManagerZvirt":       "imageHash-terraformManager-terraformManagerZvirt",
 	},
 	"userAuthn": map[string]interface{}{
