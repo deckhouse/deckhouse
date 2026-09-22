@@ -19,14 +19,14 @@ spec:
     - el
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.licensed
+      name: Licensed
+      type: boolean
     - jsonPath: .status.compliance.state
       name: State
       type: string
-    - jsonPath: .status.withinLimits
-      name: Within limits
-      type: boolean
-    - jsonPath: .status.nextReduction.at
-      name: Next reduction
+    - jsonPath: .status.key.validUntil
+      name: Valid until
       type: date
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -35,10 +35,15 @@ spec:
     schema:
       openAPIV3Schema:
         description: |
-          The aggregated license policy of the cluster.
+          The aggregated license policy of one product.
 
-          The object is entirely computed by the controller from all `ClusterLicense` resources.
-          The only instance is named `dkp`, and it has no settings: `spec` accepts no fields.
+          The object is computed by the controller from every installed `ClusterLicense`, it has no spec,
+          and the instance describing the platform itself is named `deckhouse-platform`. Licenses for
+          individual products get their own object of the same kind, computed from the same keys: one key
+          may carry records of several products, so the key and the state of a product are different objects.
+
+          Everything the Console shows comes from here, already computed: the Console never lays nodes out
+          by itself, otherwise it and the cluster would disagree.
         properties:
           apiVersion:
             description: |-
@@ -50,57 +55,94 @@ spec:
             type: string
           metadata:
             type: object
-          spec:
-            description: |
-              Not used. The resource is computed by the controller, it has no desired state to declare.
-
-              Any field here is rejected rather than silently dropped: a setting that looks accepted
-              and does nothing is worse than an error.
-            maxProperties: 0
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
           status:
             properties:
+              allocation:
+                description: |
+                  Totals of the node allocation, the numbers shown next to each group in the Console.
+                properties:
+                  pool:
+                    description: |
+                      The shared pool of `vCPU` and `cores`. Its capacity is `vCPU + 2 * cores`
+                      of the active records; the two metrics are one pool, not two.
+                    properties:
+                      capacityVCPU:
+                        description: |
+                          Capacity of the pool, in vCPU. Null when the pool is unbounded, that is,
+                          when the key grants `vCPU` or `cores` without a limit.
+                        format: int64
+                        nullable: true
+                        type: integer
+                      nodes:
+                        description: Number of nodes covered by the pool.
+                        format: int64
+                        type: integer
+                      usedVCPU:
+                        description: vCPU of the nodes covered by the pool.
+                        format: int64
+                        type: integer
+                    type: object
+                  servers:
+                    description: |
+                      Whole-node licences. They are applied to the largest nodes first; everything
+                      that does not fit falls through to the pool, so this metric cannot be exceeded
+                      on its own.
+                    properties:
+                      limit:
+                        description: |
+                          Granted number of server licences. Null when the metric is unlimited.
+                        format: int64
+                        nullable: true
+                        type: integer
+                      used:
+                        description: Number of nodes holding a server licence.
+                        format: int64
+                        type: integer
+                    type: object
+                  unlicensed:
+                    description: |
+                      Nodes that fit neither into `servers` nor into the pool. A non-empty group is
+                      the only way the license can be violated, which is what makes the licence
+                      binary for the customer: it is either in force or it is not.
+                    properties:
+                      nodes:
+                        description: Number of nodes not covered by the license.
+                        format: int64
+                        type: integer
+                      vCPU:
+                        description: vCPU of the nodes not covered by the license.
+                        format: int64
+                        type: integer
+                    type: object
+                type: object
               compliance:
-                description: The aggregated compliance verdict.
+                description: Aggregated compliance state of the license policy.
                 properties:
                   reason:
                     description: |
-                      Why the state is what it is. At `Valid` it is either absent or `LimitsApproaching`.
+                      What produced a state that is not `Valid`.
 
-                      * `Unregistered` — no accepted `Workload` record has ever been installed.
-                      * `Expired` — all records have expired, the state is `Grace` or `Violation` by time.
-                      * `Revoked` — a record is revoked on commercial grounds.
-                      * `LimitsExceeded` — consumption is above a limit: instant consumption above it at `Warning`,
-                        instant consumption above it continuously for the sustained window (7 days by default)
-                        at `Violation`. The state is left as soon as one observation comes back within the limit.
-                      * `ExpiringSoon` — an active record expires within the warning window.
-                      * `LimitsApproaching` — informational, present at `Valid`: instant consumption is at or above
-                        the warning ratio of a limit (90% by default) but not above the limit itself.
-                      * `ProjectedOverLimit` — the extrapolated consumption is above a limit.
-                    enum:
-                    - Unregistered
-                    - Expired
-                    - Revoked
-                    - LimitsExceeded
-                    - ExpiringSoon
-                    - LimitsApproaching
-                    - ProjectedOverLimit
+                      * `Unregistered` — no key has ever been installed.
+                      * `Expired` — every record has expired.
+                      * `Revoked` — a record was revoked on a commercial ground: no grace period applies.
+                      * `UnlicensedNodes` — some nodes are not covered by the license.
+                      * `ExpiringSoon` — the key expires within 30 days.
                     type: string
                   since:
                     description: |
-                      When the current state was entered. Null while the controller has not
-                      observed a transition yet.
+                      When the state was entered. Null while the controller has not observed a transition yet.
                     format: date-time
                     nullable: true
                     type: string
                   state:
                     description: |
-                      * `Valid` — the policy is satisfied.
-                      * `Warning` — the policy is satisfied, but something needs attention soon.
-                      * `Grace` — the rights have run out and the grace period is running.
-                      * `Violation` — the rights have run out and the grace period is over.
-                      * `NoUpdateRight` — the cluster has no right to receive updates.
+                      * `Valid` — every node is covered and nothing expires soon.
+                      * `Warning` — unlicensed nodes appeared less than 7 days ago, or the key expires
+                        within 30 days. The cluster is still licensed.
+                      * `Grace` — every record has expired and the grace period is running.
+                      * `Violation` — the grace period is over, a record was revoked commercially, or
+                        unlicensed nodes have been there for 7 days without interruption.
+                      * `NoUpdateRight` — reserved, not computed in this release.
                     enum:
                     - Valid
                     - Warning
@@ -109,19 +151,157 @@ spec:
                     - NoUpdateRight
                     type: string
                 type: object
+              consumption:
+                description: |
+                  What the cluster consumes, over its licensable nodes. These are exactly the numbers
+                  that go into the cluster data file.
+                properties:
+                  cores:
+                    description: '`ceil(vCPU / 2)`, taken on the sum and never per node.'
+                    format: int64
+                    type: integer
+                  freeNodes:
+                    description: |
+                      Number of nodes left out of the metrics: platform nodes without user workload.
+                    format: int64
+                    type: integer
+                  servers:
+                    description: Number of licensable nodes.
+                    format: int64
+                    type: integer
+                  vCPU:
+                    description: Sum of the vCPU of the licensable nodes, each rounded up to a whole number.
+                    format: int64
+                    type: integer
+                type: object
+              key:
+                description: |
+                  The license key in force. Absent while the cluster holds no key.
+
+                  The individual records of a key may have different terms, which is how a reissue encodes
+                  the paid remainder next to the new one. None of that is shown here: for the customer a
+                  licence is valid until one date.
+                properties:
+                  customerName:
+                    description: Customer the key was issued to.
+                    type: string
+                  graceDays:
+                    description: |
+                      Grace period, in days, taken from the record that expires last.
+                    nullable: true
+                    type: integer
+                  jti:
+                    description: The `jti` claim of the key.
+                    type: string
+                  name:
+                    description: Name of the `ClusterLicense` object carrying the key.
+                    type: string
+                  origin:
+                    description: 'Where the key comes from: `purchase`, `demo` or `self-service`.'
+                    type: string
+                  validUntil:
+                    description: |
+                      The greatest expiration among the records of the key. Null for a key that never expires.
+                    format: date-time
+                    nullable: true
+                    type: string
+                type: object
+              licensed:
+                description: |
+                  The binary answer, and the only thing the Console shows prominently.
+
+                  True while the compliance state is `Valid` or `Warning`, false at `Grace`, `Violation`
+                  and `NoUpdateRight`.
+                type: boolean
+              limits:
+                description: |
+                  The quota granted by the records active right now, summed per metric (ADR 14.3).
+                properties:
+                  grantedBy:
+                    additionalProperties:
+                      items:
+                        type: string
+                      type: array
+                    description: |
+                      Every record behind a metric, keyed by metric name. Diagnostics: it shows which
+                      grant carried the quota when another one expired. Not shown in the Console.
+                    type: object
+                  unlimited:
+                    description: Metrics that ended up without a limit.
+                    items:
+                      type: string
+                    type: array
+                  values:
+                    additionalProperties:
+                      format: int64
+                      nullable: true
+                      type: integer
+                    description: |
+                      The summed quota, keyed by metric name: `servers`, `vCPU`, `cores`, and whatever
+                      a newer key adds.
+
+                      `null` means the metric is unlimited; an absent key means no active record named it.
+                    type: object
+                type: object
+              nodes:
+                description: |
+                  The full allocation, free nodes included, sorted by size inside each group.
+
+                  The Console renders this list as is. It is also the state the tie-breaking rule reads
+                  back: a node that already holds a server licence keeps it while it is the largest.
+                items:
+                  properties:
+                    billing:
+                      description: |
+                        * `Free` — a platform node without user workload, see `reason`.
+                        * `Server` — covered by a whole-node licence.
+                        * `Pool` — covered by the shared `vCPU` and `cores` pool.
+                        * `Unlicensed` — not covered at all.
+                      enum:
+                      - Free
+                      - Server
+                      - Pool
+                      - Unlicensed
+                      type: string
+                    name:
+                      description: Node name.
+                      type: string
+                    reason:
+                      description: |
+                        Why the node is free. Filled for the `Free` group only.
+                      type: string
+                    vCPU:
+                      description: Capacity of the node in vCPU, rounded up to a whole number.
+                      format: int64
+                      type: integer
+                  required:
+                  - name
+                  type: object
+                type: array
+              overLimitSince:
+                description: |
+                  When unlicensed nodes appeared. Null while every node is covered.
+
+                  Seven days after this moment the compliance state becomes `Violation`; it goes back to
+                  `Valid` on the first recomputation that finds every node covered again.
+                format: date-time
+                nullable: true
+                type: string
+              registrationRequest:
+                description: |
+                  The cluster data file: a bare compact JWT to hand to the license server as a `.jwt` file.
+
+                  It is rebuilt whenever the accepted records, the installed keys or the consumption change.
+                  It carries numbers only: node names and the allocation never leave the cluster.
+                type: string
               conditions:
                 description: |
                   Conditions represent the latest available observations of the license policy.
 
-                  The controller publishes the following condition types:
-
-                  * `LimitsSatisfied` — `False` while instant consumption exceeds any limit;
-                    `lastTransitionTime` marks when the exceedance started.
-                  * `SomeRecordsExpiring` — `True` when an active, not-renewed record expires within
-                    the warning window; the message names the record id and the RFC 3339 date.
-                  * `RejectedRecords` — `True` when any record is rejected for a reason other than
-                    `UnsupportedType`, `Renewed`, `Superseded` or `Expired`.
-                  * `Registered` — `True` when at least one accepted `Workload` record exists.
+                  * `LimitsSatisfied` — every licensable node is covered.
+                  * `KeyExpiring` — the key expires within 30 days.
+                  * `KeyRejected` — a record or a key was rejected for a reason the customer has to act on.
+                  * `SupersedeCycle` — records extinguish each other in a cycle, so all of them are excluded.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -173,160 +353,6 @@ spec:
                   - type
                   type: object
                 type: array
-              counts:
-                description: Composition of the installed key set.
-                properties:
-                  accepted:
-                    description: Number of accepted records.
-                    type: integer
-                  packages:
-                    description: Number of installed keys.
-                    type: integer
-                  records:
-                    description: Total number of records in all keys.
-                    type: integer
-                  rejected:
-                    description: Number of rejected records.
-                    type: integer
-                  retirable:
-                    description: |
-                      Number of installed keys that can be deleted without changing the policy.
-                    type: integer
-                type: object
-              effective:
-                description: The quota currently in effect.
-                properties:
-                  grantedBy:
-                    additionalProperties:
-                      items:
-                        type: string
-                      type: array
-                    description: |
-                      Every record that contributes to a resource, keyed by resource name.
-
-                      Listing all the grounds matters: when one of them expires, it must be visible
-                      that the quota is still granted by another one.
-                    type: object
-                  limits:
-                    additionalProperties:
-                      format: int64
-                      nullable: true
-                      type: integer
-                    description: |
-                      The summed quota, keyed by resource name.
-
-                      `null` means the resource is unlimited; an absent key means no limit for this
-                      resource has been granted.
-                    type: object
-                  unlimited:
-                    description: |
-                      Whether at least one resource in `limits` ended up unlimited, that is, whether
-                      any of its values is `null`.
-                    type: boolean
-                type: object
-              metrics:
-                additionalProperties:
-                  properties:
-                    avg_7d:
-                      description: Mean over the observation window.
-                      type: number
-                    extrapolated:
-                      description: |
-                        Value projected to the nearest future expiration by linear regression
-                        over the daily means of the observation window.
-
-                        `null` means there are not enough observations to project from yet: the
-                        journal is shorter than the sustained window (7 days by default).
-                      nullable: true
-                      type: number
-                    instant:
-                      description: Value of the last observation.
-                      type: number
-                  type: object
-                description: Observed consumption, keyed by resource name.
-                type: object
-              nextReduction:
-                description: |
-                  The nearest point in time when the effective limits shrink. Null when no reduction is known.
-                nullable: true
-                properties:
-                  at:
-                    description: When the limits shrink.
-                    format: date-time
-                    type: string
-                  in:
-                    description: Human readable time left until the reduction, for
-                      example `61d`.
-                    type: string
-                  limits:
-                    additionalProperties:
-                      properties:
-                        from:
-                          description: |
-                            The current limit. `null` means the resource is currently unlimited.
-                          format: int64
-                          nullable: true
-                          type: integer
-                        to:
-                          description: |
-                            The limit after the reduction. `null` means the resource stays unlimited.
-                          format: int64
-                          nullable: true
-                          type: integer
-                      type: object
-                    description: Change of every affected resource, keyed by resource
-                      name.
-                    type: object
-                type: object
-              registrationRequest:
-                description: |
-                  A bare compact JWT to paste into the license server to obtain or renew a key.
-
-                  Regenerated hourly, so the consumption figures it carries stay fresh.
-                type: string
-              timeline:
-                description: |
-                  The effective limits over time, starting from the current segment.
-                items:
-                  properties:
-                    from:
-                      description: Start of the segment.
-                      format: date-time
-                      type: string
-                    limits:
-                      additionalProperties:
-                        format: int64
-                        nullable: true
-                        type: integer
-                      description: |
-                        The effective quota during the segment, keyed by resource name.
-
-                        `null` means the resource is unlimited; an absent key means no limit for this
-                        resource has been granted.
-                      type: object
-                    state:
-                      description: Compliance state during the segment.
-                      enum:
-                      - Valid
-                      - Warning
-                      - Grace
-                      - Violation
-                      - NoUpdateRight
-                      type: string
-                    to:
-                      description: End of the segment. Null for the last, open ended
-                        segment.
-                      format: date-time
-                      nullable: true
-                      type: string
-                  required:
-                  - from
-                  type: object
-                type: array
-              withinLimits:
-                description: |
-                  Whether every observed resource stays within its effective limit.
-                type: boolean
             type: object
         type: object
     served: true

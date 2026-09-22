@@ -21,8 +21,10 @@ import (
 
 const (
 	EffectiveLicenseKind = "EffectiveLicense"
-	// EffectiveLicenseName is the name of the only EffectiveLicense instance.
-	EffectiveLicenseName = "dkp"
+	// EffectiveLicenseName is the name of the EffectiveLicense of the platform
+	// itself. The object is named after the product: licences for individual
+	// products get their own object, computed from the same ClusterLicense keys.
+	EffectiveLicenseName = "deckhouse-platform"
 )
 
 var _ runtime.Object = (*EffectiveLicense)(nil)
@@ -38,17 +40,32 @@ const (
 	LicenseComplianceNoUpdateRight LicenseComplianceState = "NoUpdateRight"
 )
 
+// LicenseNodeBilling is the group a node was allocated to.
+type LicenseNodeBilling string
+
+const (
+	// LicenseNodeFree - a platform node without user workload, see the reason field.
+	LicenseNodeFree LicenseNodeBilling = "Free"
+	// LicenseNodeServer - covered by a whole-node server licence.
+	LicenseNodeServer LicenseNodeBilling = "Server"
+	// LicenseNodePool - covered by the shared vCPU and cores pool.
+	LicenseNodePool LicenseNodeBilling = "Pool"
+	// LicenseNodeUnlicensed - not covered by the license at all.
+	LicenseNodeUnlicensed LicenseNodeBilling = "Unlicensed"
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=el
+// +kubebuilder:printcolumn:name="Licensed",type=boolean,JSONPath=`.status.licensed`
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.compliance.state`
-// +kubebuilder:printcolumn:name="Within limits",type=boolean,JSONPath=`.status.withinLimits`
-// +kubebuilder:printcolumn:name="Next reduction",type=date,JSONPath=`.status.nextReduction.at`
+// +kubebuilder:printcolumn:name="Valid until",type=date,JSONPath=`.status.key.validUntil`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// EffectiveLicense is the aggregated license policy of the cluster.
+// EffectiveLicense is the aggregated license policy of one product.
 // The object is computed by the controller from all ClusterLicense resources,
-// it has no spec and the only instance is named dkp.
+// it has no spec, and the instance of the platform itself is named
+// deckhouse-platform.
 type EffectiveLicense struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -69,36 +86,44 @@ type EffectiveLicenseList struct {
 }
 
 type EffectiveLicenseStatus struct {
+	// Licensed is the binary answer: true while the compliance state is Valid or
+	// Warning. It is always published: a missing field and an explicit false
+	// would read the same to a client, and they are different statements.
+	// +optional
+	Licensed bool `json:"licensed"`
+
 	// +optional
 	Compliance LicenseCompliance `json:"compliance,omitempty"`
 
+	// Key describes the license key in force. It is absent while the cluster
+	// holds no key.
 	// +optional
-	Counts LicenseCounts `json:"counts,omitempty"`
+	Key *LicenseKeyInfo `json:"key,omitempty"`
 
 	// +optional
-	Effective LicenseEffective `json:"effective,omitempty"`
+	Limits LicenseLimits `json:"limits,omitempty"`
 
-	// Metrics is the observed consumption, keyed by resource name.
+	// Consumption is what went into the cluster data file: the metrics of the
+	// licensable nodes.
 	// +optional
-	Metrics map[string]LicenseMetricValue `json:"metrics,omitempty"`
+	Consumption LicenseConsumption `json:"consumption,omitempty"`
 
-	// WithinLimits is false when any observed resource exceeds its effective limit.
-	// It is always published: a missing field and an explicit false would read the
-	// same to a client, and they are different statements.
 	// +optional
-	WithinLimits bool `json:"withinLimits"`
+	Allocation LicenseAllocation `json:"allocation,omitempty"`
 
-	// NextReduction is the nearest point in time when the effective limits shrink.
-	// It is null when no reduction is known.
+	// OverLimitSince is when unlicensed nodes appeared. It is null while every
+	// node is covered, and seven days after it the cluster is in violation.
 	// +optional
-	NextReduction *LicenseReduction `json:"nextReduction,omitempty"`
+	OverLimitSince *metav1.Time `json:"overLimitSince,omitempty"`
 
-	// Timeline is the effective limits over time, from the current segment onwards.
+	// Nodes is the full allocation, free nodes included, sorted by the rule of
+	// the specification inside each group.
 	// +optional
-	Timeline []LicenseTimelineSegment `json:"timeline,omitempty"`
+	Nodes []LicenseNodeStatus `json:"nodes,omitempty"`
 
-	// RegistrationRequest is a bare compact JWT to paste into the license server.
-	// It is regenerated hourly.
+	// RegistrationRequest is a bare compact JWT with the cluster data, to be
+	// handed to the license server as a .jwt file. It is rebuilt whenever the
+	// accepted records, the installed keys or the consumption change.
 	// +optional
 	RegistrationRequest string `json:"registrationRequest,omitempty"`
 
@@ -110,106 +135,132 @@ type LicenseCompliance struct {
 	// +optional
 	State LicenseComplianceState `json:"state,omitempty"`
 
-	// Reason explains the state. At Valid it is either empty or the informational
-	// LimitsApproaching.
-	// One of Unregistered, Expired, Revoked, LimitsExceeded, ExpiringSoon,
-	// LimitsApproaching, ProjectedOverLimit.
+	// Reason explains a state that is not Valid.
+	// One of Unregistered, Expired, Revoked, UnlicensedNodes, ExpiringSoon.
 	// +optional
 	Reason string `json:"reason,omitempty"`
 
-	// Since is when the state was entered. It is null while the controller has not
-	// observed a transition yet.
+	// Since is when the state was entered. It is null while the controller has
+	// not observed a transition yet.
 	// +optional
 	Since *metav1.Time `json:"since,omitempty"`
 }
 
-type LicenseCounts struct {
+// LicenseKeyInfo is the key in force, the way it is shown to the customer. The
+// stepped terms of the individual records are deliberately not part of it.
+type LicenseKeyInfo struct {
+	// Name is the ClusterLicense object that carries the key.
 	// +optional
-	Packages int `json:"packages,omitempty"`
+	Name string `json:"name,omitempty"`
+
+	// Jti identifies the key itself.
+	// +optional
+	Jti string `json:"jti,omitempty"`
 
 	// +optional
-	Records int `json:"records,omitempty"`
+	CustomerName string `json:"customerName,omitempty"`
 
+	// Origin of the key: purchase, demo or self-service.
 	// +optional
-	Accepted int `json:"accepted,omitempty"`
+	Origin string `json:"origin,omitempty"`
 
+	// ValidUntil is the greatest expiration of the records of the key.
+	// It is null for a key that never expires.
 	// +optional
-	Rejected int `json:"rejected,omitempty"`
+	ValidUntil *metav1.Time `json:"validUntil,omitempty"`
 
-	// Retirable is the number of installed keys that can be deleted without
-	// changing the policy.
+	// GraceDays comes from the record that expires last.
 	// +optional
-	Retirable int `json:"retirable,omitempty"`
+	GraceDays *int `json:"graceDays,omitempty"`
 }
 
-type LicenseEffective struct {
-	// Limits is the summed quota, keyed by resource name.
-	// A null value means the resource is unlimited; an absent key means no limit
-	// for this resource has been granted.
+type LicenseLimits struct {
+	// Values is the summed quota of the active records, keyed by metric name.
+	// A null value means the metric is unlimited; an absent key means no active
+	// record named it.
 	// +optional
-	Limits map[string]*int64 `json:"limits,omitempty"`
+	Values map[string]*int64 `json:"values,omitempty"`
 
-	// Unlimited is true when at least one resource in Limits ended up unlimited.
+	// Unlimited lists the metrics that ended up without a limit.
 	// +optional
-	Unlimited bool `json:"unlimited,omitempty"`
+	Unlimited []string `json:"unlimited,omitempty"`
 
-	// GrantedBy lists every record that contributes to a resource, keyed by resource name.
+	// GrantedBy lists every record that contributes to a metric, keyed by metric
+	// name. It is diagnostics and is not shown in the Console.
 	// +optional
 	GrantedBy map[string][]string `json:"grantedBy,omitempty"`
 }
 
-type LicenseMetricValue struct {
-	// Instant is the value of the last observation.
+// LicenseConsumption is the instant reading of the three metrics over the
+// licensable nodes, plus the number of free nodes left out of them.
+type LicenseConsumption struct {
 	// +optional
-	Instant float64 `json:"instant,omitempty"`
+	Servers int64 `json:"servers"`
 
-	// Avg7d is the mean over the observation window.
 	// +optional
-	Avg7d float64 `json:"avg_7d,omitempty"`
+	VCPU int64 `json:"vCPU"`
 
-	// Extrapolated is the value projected to the nearest future expiration.
-	// It is null while there are not enough observations to project from, that is,
-	// while the journal is shorter than the sustained window.
 	// +optional
-	Extrapolated *float64 `json:"extrapolated"`
+	Cores int64 `json:"cores"`
+
+	// +optional
+	FreeNodes int64 `json:"freeNodes"`
 }
 
-type LicenseReduction struct {
-	At metav1.Time `json:"at"`
-
-	// In is the human readable time left until the reduction, for example 61d.
+type LicenseAllocation struct {
 	// +optional
-	In string `json:"in,omitempty"`
+	Servers LicenseServerAllocation `json:"servers,omitempty"`
 
-	// Limits is the change of every affected resource, keyed by resource name.
 	// +optional
-	Limits map[string]LicenseLimitChange `json:"limits,omitempty"`
+	Pool LicensePoolAllocation `json:"pool,omitempty"`
+
+	// +optional
+	Unlicensed LicenseUnlicensedNodes `json:"unlicensed,omitempty"`
 }
 
-// LicenseLimitChange is one resource moving from one limit to another.
-// A null bound means unlimited, and both are always published: dropping a zero
-// would turn "the quota becomes zero" into "the quota does not change".
-type LicenseLimitChange struct {
+type LicenseServerAllocation struct {
+	// Limit is the granted servers quota; null means it is unlimited.
 	// +optional
-	From *int64 `json:"from"`
+	Limit *int64 `json:"limit,omitempty"`
 
+	// Used is the number of nodes that hold a server licence.
 	// +optional
-	To *int64 `json:"to"`
+	Used int64 `json:"used"`
 }
 
-type LicenseTimelineSegment struct {
-	From metav1.Time `json:"from"`
-
-	// To is null for the last, open ended segment.
+type LicensePoolAllocation struct {
+	// CapacityVCPU is vCPU + 2*cores of the active records; null means the pool
+	// is unbounded.
 	// +optional
-	To *metav1.Time `json:"to,omitempty"`
+	CapacityVCPU *int64 `json:"capacityVCPU,omitempty"`
 
 	// +optional
-	State LicenseComplianceState `json:"state,omitempty"`
+	UsedVCPU int64 `json:"usedVCPU"`
 
-	// Limits is the effective quota during the segment, keyed by resource name.
-	// A null value means the resource is unlimited; an absent key means no limit
-	// for this resource has been granted.
 	// +optional
-	Limits map[string]*int64 `json:"limits,omitempty"`
+	Nodes int64 `json:"nodes"`
+}
+
+type LicenseUnlicensedNodes struct {
+	// +optional
+	Nodes int64 `json:"nodes"`
+
+	// +optional
+	VCPU int64 `json:"vCPU"`
+}
+
+type LicenseNodeStatus struct {
+	Name string `json:"name"`
+
+	// +optional
+	VCPU int64 `json:"vCPU"`
+
+	// Billing is the group the node was allocated to.
+	// One of free, server, pool, unlicensed.
+	// +optional
+	Billing LicenseNodeBilling `json:"billing,omitempty"`
+
+	// Reason is filled for free nodes only: it says why the node is not billed.
+	// +optional
+	Reason string `json:"reason,omitempty"`
 }

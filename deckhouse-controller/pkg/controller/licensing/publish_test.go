@@ -16,37 +16,120 @@ package licensing
 
 import (
 	"crypto/ed25519"
+	"math"
 	"testing"
-
-	"k8s.io/utils/ptr"
+	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/licensing"
 )
 
-// An unlimited resource must export no limit at all. Exporting 0 for it would
-// fire every consumption alert on the customers who bought the most.
-func TestPublishMetricsOmitsUnlimitedResources(t *testing.T) {
+// validResult is the policy of a healthy single key cluster.
+func validResult() licensing.Result {
+	res := licensing.Result{
+		State:    licensing.StateValid,
+		Licensed: true,
+		Limits: licensing.Limits{Speaking: true, Values: map[string]*int64{
+			licensing.MetricServers: ptrTo(int64(10)),
+			licensing.MetricVCPU:    ptrTo(int64(100)),
+			licensing.MetricCores:   ptrTo(int64(0)),
+		}},
+		Consumption: map[string]int64{
+			licensing.MetricServers: 1, licensing.MetricVCPU: 4, licensing.MetricCores: 2,
+		},
+		Allocation: licensing.Allocation{Servers: []string{"worker"}, ServersLimit: ptrTo(int64(10))},
+		Records: []licensing.RecordStatus{{
+			Record: licensing.Record{
+				Type:    licensing.TypePlatform,
+				ID:      testRecordID,
+				StartAt: testNow.Add(-24 * time.Hour),
+			},
+			Accepted: true,
+		}},
+	}
+	res.Counts.Keys = 1
+	res.Counts.Records = 1
+	res.Counts.Accepted = 1
+	return res
+}
+
+func ptrTo[T any](v T) *T { return &v }
+
+// An unlimited metric is exported as +Inf: a comparison against it is silent,
+// and exporting 0 for it would fire every consumption alert on the customers who
+// bought the most.
+func TestPublishMetricsExportsUnlimitedAsInfinity(t *testing.T) {
 	env := newTestEnv(t, ed25519.PublicKey{})
 
-	limit := int64(50)
 	res := validResult()
-	res.Effective = map[string]*int64{metricVCPU: &limit, metricNodes: nil}
-	res.Unlimited = true
+	res.Limits.Values[licensing.MetricVCPU] = nil
 
-	env.r.publishMetrics(res, map[string]licensing.MetricValue{
-		metricVCPU: {Instant: 4, Avg7d: 4, Extrapolated: ptr.To[float64](4)},
-	}, nil, testNow)
+	env.r.publishMetrics(res, nil, testNow)
 
-	limits := env.series(t, metrics.D8LicenseEffectiveLimit)
-	if len(limits) != 1 {
-		t.Fatalf("effective limit has %d series, want only the finite resource", len(limits))
+	for _, sample := range env.series(t, metrics.D8LicenseLimit) {
+		value := sample.GetGauge().GetValue()
+		switch labelOf(sample, metrics.LabelResource) {
+		case licensing.MetricVCPU:
+			if !math.IsInf(value, 1) {
+				t.Fatalf("unlimited vCPU = %v, want +Inf", value)
+			}
+		case licensing.MetricServers:
+			if value != 10 {
+				t.Fatalf("servers limit = %v, want 10", value)
+			}
+		}
 	}
-	if got := labelOf(limits[0], metrics.LabelResource); got != metricVCPU {
-		t.Fatalf("effective limit is exported for %q, want %q", got, metricVCPU)
+}
+
+// The consumption of every metric is exported once, with no kind label: there is
+// no moving average and no projection any more.
+func TestPublishMetricsExportsTheThreeMetrics(t *testing.T) {
+	env := newTestEnv(t, ed25519.PublicKey{})
+	env.r.publishMetrics(validResult(), nil, testNow)
+
+	got := map[string]float64{}
+	for _, sample := range env.series(t, metrics.D8LicenseConsumption) {
+		got[labelOf(sample, metrics.LabelResource)] = sample.GetGauge().GetValue()
 	}
-	if got := limits[0].GetGauge().GetValue(); got != 50 {
-		t.Fatalf("effective limit = %v, want 50", got)
+	want := map[string]float64{licensing.MetricServers: 1, licensing.MetricVCPU: 4, licensing.MetricCores: 2}
+	for name, value := range want {
+		if got[name] != value {
+			t.Fatalf("consumption = %v, want %v", got, want)
+		}
+	}
+	if len(got) != len(want) {
+		t.Fatalf("consumption has %d series, want %d", len(got), len(want))
+	}
+}
+
+// The over-limit clock is exported even while it is zero: an alert needs to be
+// able to tell "covered" from "no data".
+func TestPublishMetricsExportsTheOverLimitClock(t *testing.T) {
+	env := newTestEnv(t, ed25519.PublicKey{})
+
+	res := validResult()
+	since := testNow.Add(-48 * time.Hour)
+	res.OverLimitSince = &since
+	res.Allocation.Unlicensed = []string{"small"}
+	res.Allocation.UnlicensedVCPU = 8
+
+	env.r.publishMetrics(res, nil, testNow)
+
+	over := env.series(t, metrics.D8LicenseOverLimitSeconds)
+	if len(over) != 1 || over[0].GetGauge().GetValue() != 48*3600 {
+		t.Fatalf("over limit seconds = %+v, want 172800", over)
+	}
+	vcpu := env.series(t, metrics.D8LicenseUnlicensedVCPU)
+	if len(vcpu) != 1 || vcpu[0].GetGauge().GetValue() != 8 {
+		t.Fatalf("unlicensed vCPU = %+v, want 8", vcpu)
+	}
+
+	nodes := map[string]float64{}
+	for _, sample := range env.series(t, metrics.D8LicenseNodes) {
+		nodes[labelOf(sample, metrics.LabelBilling)] = sample.GetGauge().GetValue()
+	}
+	if nodes[licensing.BillingUnlicensed] != 1 || nodes[licensing.BillingServer] != 1 {
+		t.Fatalf("nodes by billing = %v", nodes)
 	}
 }
 
@@ -59,7 +142,7 @@ func TestPublishMetricsLabelsComplianceStateWithItsReason(t *testing.T) {
 	res.State = licensing.StateViolation
 	res.Reason = licensing.ReasonUnregistered
 
-	env.r.publishMetrics(res, nil, nil, testNow)
+	env.r.publishMetrics(res, nil, testNow)
 
 	state := env.series(t, metrics.D8LicenseComplianceState)
 	if len(state) != 1 {
@@ -81,7 +164,7 @@ func TestPublishMetricsSkipsUnknownState(t *testing.T) {
 	res := validResult()
 	res.State = "SomethingNewerThanThisBuild"
 
-	env.r.publishMetrics(res, nil, nil, testNow)
+	env.r.publishMetrics(res, nil, testNow)
 
 	if got := env.series(t, metrics.D8LicenseComplianceState); len(got) != 0 {
 		t.Fatalf("compliance state has %d series, want none", len(got))

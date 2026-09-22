@@ -56,7 +56,7 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=cl
 // +kubebuilder:printcolumn:name="Accepted",type=boolean,JSONPath=`.status.accepted`
-// +kubebuilder:printcolumn:name="Alias",type=string,JSONPath=`.spec.alias`
+// +kubebuilder:printcolumn:name="Superseded",type=boolean,JSONPath=`.status.superseded`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
@@ -85,10 +85,6 @@ type ClusterLicenseList struct {
 type ClusterLicenseSpec struct {
 	// LicenseKey is a bare compact JWT issued by the license server.
 	LicenseKey string `json:"licenseKey"`
-
-	// Alias is a human readable name of the key, it does not affect the policy.
-	// +optional
-	Alias string `json:"alias,omitempty"`
 }
 
 type ClusterLicenseStatus struct {
@@ -99,11 +95,11 @@ type ClusterLicenseStatus struct {
 	// +optional
 	Accepted bool `json:"accepted"`
 
-	// Retirable is true when no record of this key contributes to the policy now
-	// or in the future, so the key can be deleted without changing either the
-	// policy or the timeline. It is always published, see Accepted.
+	// Superseded is true when every record of this key was extinguished by a
+	// successor of an accepted key whose start has passed. Such a key is deleted
+	// by the controller. It is always published, see Accepted.
 	// +optional
-	Retirable bool `json:"retirable"`
+	Superseded bool `json:"superseded"`
 
 	// PackageJti is the jti claim of the package, it identifies the key itself.
 	// +optional
@@ -150,9 +146,10 @@ type LicenseRecordStatus struct {
 	// +optional
 	Message string `json:"message,omitempty"`
 
-	// RenewedBy is the id of the record that extinguished this one.
+	// SupersededBy is the id of the record that extinguished this one, for both
+	// Superseded and Renewed.
 	// +optional
-	RenewedBy string `json:"renewedBy,omitempty"`
+	SupersededBy string `json:"supersededBy,omitempty"`
 
 	// StartAt is null when the record was rejected before its dates could be read.
 	// +optional

@@ -121,7 +121,7 @@ var _ = Describe("Module :: deckhouse :: licensing admission policy ::", func() 
 		}
 
 		// CREATE and UPDATE carry the new object, DELETE only the old one.
-		for _, name := range []string{"cluster-key", "consumption-journal"} {
+		for _, name := range []string{"cluster-key", "license-registration"} {
 			Expect(celEval(named, admission("UPDATE", "d8-system", "admin", secret(name), secret(name)))).
 				To(BeTrue(), "updating %s", name)
 			Expect(celEval(named, admission("CREATE", "d8-system", "admin", nil, secret(name)))).

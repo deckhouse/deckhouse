@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	promdto "github.com/prometheus/client_model/go"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
@@ -65,10 +66,11 @@ func (p *podReader) List(ctx context.Context, list client.ObjectList, opts ...cl
 
 // testEnv is one reconciler with the handles a test needs to look behind it.
 type testEnv struct {
-	r    *reconciler
-	cl   *testclient.Client
-	pods *podReader
-	reg  *prometheus.Registry
+	r      *reconciler
+	cl     *testclient.Client
+	pods   *podReader
+	reg    *prometheus.Registry
+	events *record.FakeRecorder
 }
 
 func newTestEnv(t *testing.T, vendorKey ed25519.PublicKey, objects ...client.Object) *testEnv {
@@ -89,12 +91,16 @@ func newTestEnv(t *testing.T, vendorKey ed25519.PublicKey, objects ...client.Obj
 	}
 
 	pods := &podReader{Reader: cl}
+	// The buffer is generous: a FakeRecorder drops events once it is full, and a
+	// dropped one would make a test about events silently pass.
+	events := record.NewFakeRecorder(64)
 
 	return &testEnv{
 		r: &reconciler{
 			Client:        cl,
 			apiReader:     pods,
 			metricStorage: ms,
+			recorder:      events,
 			logger:        logger,
 			vendorKeys:    []ed25519.PublicKey{vendorKey},
 			thresholds:    licensing.DefaultThresholds(),
@@ -102,9 +108,10 @@ func newTestEnv(t *testing.T, vendorKey ed25519.PublicKey, objects ...client.Obj
 			build:         "ee",
 			now:           func() time.Time { return testNow },
 		},
-		cl:   cl,
-		pods: pods,
-		reg:  reg,
+		cl:     cl,
+		pods:   pods,
+		reg:    reg,
+		events: events,
 	}
 }
 

@@ -13,9 +13,9 @@
 // limitations under the License.
 
 // Package licensing computes the license policy of the cluster: it verifies the
-// installed ClusterLicense keys, samples the consumption metrics into a durable
-// journal, publishes the aggregated EffectiveLicense and keeps a signed
-// registration request ready for the customer to hand to the license server.
+// installed ClusterLicense keys, reads the node set, lays the nodes out over the
+// metrics of the key, publishes the aggregated EffectiveLicense and keeps a
+// signed cluster data file ready for the customer to hand to the license server.
 package licensing
 
 import (
@@ -28,16 +28,21 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
@@ -53,37 +58,21 @@ const (
 
 	// resyncPeriod bounds how stale the policy can get while nothing happens in
 	// the cluster: records expire on a wall clock, not on an event.
-	resyncPeriod = 10 * time.Minute
-
-	// minSampleAge is the age at which the last observation is due for a
-	// successor. It is short of the nominal hour so that a resync landing a few
-	// minutes early still samples, instead of pushing every sample to 70 minutes.
-	minSampleAge = 55 * time.Minute
-	// window is the observation window behind avg_7d and the extrapolation.
-	window = 7 * 24 * time.Hour
-	// retention is how much history the journal keeps. It is a day longer than
-	// the window on purpose: both the projection and the sustained exceedance
-	// rule ask whether the whole window is covered, and that can only ever be
-	// true while the journal reaches back past its start.
-	retention = window + 24*time.Hour
-	// defaultHorizon is how far ahead consumption is extrapolated when no active
-	// record expires.
-	defaultHorizon = 30 * 24 * time.Hour
+	resyncPeriod = time.Hour
 
 	// keySecretName holds the cluster Ed25519 identity as a raw 32 byte seed.
 	keySecretName  = "cluster-key"
 	keySecretField = "seed"
 
-	// journalConfigMapName holds the observation window and the registration
-	// counter, both of which must survive a restart.
-	journalConfigMapName = "consumption-journal"
-	journalField         = "journal"
-	// journalCorruptField parks a journal payload that could not be decoded, so
-	// that restarting the window does not destroy the evidence.
-	journalCorruptField = "journal.corrupt"
+	// seqConfigMapName holds the registration counter, which has to survive a
+	// restart and the loss of the status: the license server reads seq as
+	// strictly growing.
+	seqConfigMapName = "license-registration"
+	seqField         = "seq"
 
-	metricVCPU  = "vCPU"
-	metricNodes = "nodes"
+	// eventKeySuperseded is emitted on EffectiveLicense when the controller
+	// deletes a key a reissue extinguished.
+	eventKeySuperseded = "KeySuperseded"
 )
 
 // objectLabels mark the objects the controller owns, the way every other
@@ -97,15 +86,16 @@ type reconciler struct {
 	client.Client
 
 	// apiReader bypasses the manager cache. The cluster key Secret and the
-	// journal ConfigMap fall outside the label selectors the manager caches, and
+	// counter ConfigMap fall outside the label selectors the manager caches, and
 	// a stale miss on the key would mint a second cluster identity.
 	apiReader client.Reader
 
 	metricStorage metricsstorage.Storage
+	recorder      record.EventRecorder
 	logger        *log.Logger
 
 	// vendorKeys defaults to licensing.VendorPublicKeys. A test issues its own
-	// packages and overrides the field instead of the package variable.
+	// keys and overrides the field instead of the package variable.
 	vendorKeys []ed25519.PublicKey
 	thresholds licensing.Thresholds
 
@@ -123,10 +113,12 @@ func RegisterController(mgr manager.Manager, ms metricsstorage.Storage, logger *
 		Client:        mgr.GetClient(),
 		apiReader:     mgr.GetAPIReader(),
 		metricStorage: ms,
+		recorder:      mgr.GetEventRecorderFor(controllerName),
 		logger:        logger,
 		vendorKeys:    licensing.VendorPublicKeys,
 		// ponytail: the thresholds are compiled in. Sales has not asked for a
-		// knob, and §7.2 forbids any path that could also feed the metrics.
+		// knob, and specification 7.5 forbids any path that could also feed the
+		// metrics.
 		thresholds: licensing.DefaultThresholds(),
 		dkpVersion: app.Version,
 		build:      editionName(),
@@ -134,7 +126,7 @@ func RegisterController(mgr manager.Manager, ms metricsstorage.Storage, logger *
 	}
 
 	// A cluster with no ClusterLicense at all still needs its policy computed
-	// and its registration request published, and nothing would ever enqueue a
+	// and its cluster data file published, and nothing would ever enqueue a
 	// request there. One event at startup gets the loop going; RequeueAfter
 	// keeps it alive from then on.
 	kick := make(chan event.TypedGenericEvent[client.Object], 1)
@@ -150,13 +142,38 @@ func RegisterController(mgr manager.Manager, ms metricsstorage.Storage, logger *
 			NeedLeaderElection:      ptr.To(false),
 		}).
 		For(&v1alpha1.ClusterLicense{}).
+		Watches(&corev1.Node{}, enqueueRecompute(), builder.WithPredicates(nodeChanged{})).
 		WatchesRawSource(source.Channel(kick, &handler.EnqueueRequestForObject{})).
 		Complete(r)
 }
 
+// enqueueRecompute funnels every node event onto the one request the reconciler
+// recognises. With MaxConcurrentReconciles at 1 the workqueue then collapses a
+// rolling node group update into a single recompute instead of one per node.
+func enqueueRecompute() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}}}
+	})
+}
+
+// nodeChanged is the debounce of specification 10.6: only the two things the
+// policy reads off a node wake the controller up. Without it every kubelet
+// status heartbeat of every node would recompute the whole policy.
+type nodeChanged struct{ predicate.Funcs }
+
+func (nodeChanged) Update(e event.UpdateEvent) bool {
+	before, okOld := e.ObjectOld.(*corev1.Node)
+	after, okNew := e.ObjectNew.(*corev1.Node)
+	if !okOld || !okNew {
+		return true
+	}
+	return !equality.Semantic.DeepEqual(before.Spec.Taints, after.Spec.Taints) ||
+		before.Status.Capacity.Cpu().MilliValue() != after.Status.Capacity.Cpu().MilliValue()
+}
+
 // editionName returns the edition of the running build, or an empty string when
-// it cannot be read: the registration request carries it as an optional hint,
-// it is never a reason to fail a reconcile.
+// it cannot be read: the cluster data file carries it as an optional hint, it is
+// never a reason to fail a reconcile.
 func editionName() string {
 	ed, err := edition.Parse(app.Version)
 	if err != nil {
@@ -167,7 +184,7 @@ func editionName() string {
 
 // Reconcile recomputes the whole policy. Every event lands on the same
 // computation, so the request is ignored: the policy is a property of the key
-// set, not of the key that happened to change.
+// set and the node set, not of the object that happened to change.
 func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
 	now := r.now()
 
@@ -182,7 +199,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 
 	clusterID := r.clusterID(ctx)
 
-	licenses, keys, failures, packages, err := r.verifyKeys(ctx, licensing.VerifyContext{
+	items, keys, failures, err := r.verifyKeys(ctx, licensing.VerifyContext{
 		VendorKeys:           r.vendorKeys,
 		ClusterID:            clusterID,
 		ClusterKeyThumbprint: licensing.Thumbprint(pub),
@@ -193,92 +210,135 @@ func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, err
 	}
 
-	journal, corrupt, err := r.loadJournal(ctx)
+	// A node whose pods cannot be listed aborts the reconcile: the previous
+	// status stays as it is, which is the honest answer (vector N12).
+	observed, err := r.observeNodes(ctx)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("load journal: %w", err)
+		return ctrl.Result{}, err
 	}
-
-	// The extrapolation horizon is the nearest expiry, and the limits the
-	// consumption is judged against are the effective ones; neither is known
-	// before the records have been resolved. The records do not depend on the
-	// metrics, so a first pass without them settles both, and the second pass
-	// produces the policy that is published.
-	policy := licensing.Compute(keys, nil, nil, now, r.thresholds)
-	horizon := horizonOf(policy, now)
-
-	due := sampleDue(journal, now)
-	if due {
-		// A failed observation aborts the reconcile: nothing is appended, the
-		// counter does not move, and controller-runtime retries with backoff.
-		values, err := r.sampleConsumption(ctx)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		journal.Add(licensing.Sample{At: now, Values: values}, retention)
-	}
-
-	values, sustained := r.consumption(journal, policy.Effective, now, horizon)
-	res := licensing.Compute(keys, values, sustained, now, r.thresholds)
 
 	effective, err := r.getEffectiveLicense(ctx)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// Every request that is issued carries its own seq, whether it was a
-	// sampling tick that produced it, a lost status that had to be rebuilt or
-	// a change in the installed set: the license server reads seq as a
-	// strictly growing counter.
-	request := effective.Status.RegistrationRequest
-	issue := due || request == "" || requestStale(request, res)
-	if issue && !due {
-		// A request that is issued between two sampling ticks would otherwise
-		// carry an instant read back out of the journal ConfigMap, and anyone
-		// who can write that ConfigMap could understate it for free. The
-		// observation is live, and it is deliberately not appended: the hourly
-		// cadence is what avg_7d and the extrapolation mean.
-		live, err := r.sampleConsumption(ctx)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		values = withLiveInstant(values, live)
-		res = licensing.Compute(keys, values, sustained, now, r.thresholds)
-	}
-	if issue {
-		journal.Seq++
-		request, err = r.buildRegistrationRequest(priv, clusterID, res, values, journal.Seq, now)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("build registration request: %w", err)
-		}
-		if err := r.saveJournal(ctx, journal, corrupt); err != nil {
-			return ctrl.Result{}, fmt.Errorf("save journal: %w", err)
-		}
-	}
+	res := licensing.Compute(licensing.Input{
+		Keys:           keys,
+		RejectedKeys:   rejectedKeys(items, failures),
+		Nodes:          licensable(observed),
+		PrevServers:    previousServers(effective.Status),
+		OverLimitSince: previousOverLimitSince(effective.Status),
+		Now:            now,
+		Thresholds:     r.thresholds,
+	})
 
-	owners, err := r.updateKeyStatuses(ctx, licenses, keys, failures, packages, res, now)
+	request, err := r.registrationRequest(ctx, effective.Status.RegistrationRequest, priv, clusterID, res, now)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := r.updateEffectiveLicense(ctx, effective, res, values, request, now); err != nil {
+	owners, err := r.updateKeyStatuses(ctx, items, keys, failures, res, now)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	r.publishMetrics(res, values, owners, now)
+	if err := r.updateEffectiveLicense(ctx, effective, res, observed, request, now); err != nil {
+		return ctrl.Result{}, err
+	}
 
-	return ctrl.Result{RequeueAfter: requeueAfter(res, journal, now)}, nil
+	// Deletion comes last: the key has to have carried its Superseded verdict
+	// into the status of the record set before it goes away.
+	if err := r.deleteSupersededKeys(ctx, effective, items, res); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	r.publishMetrics(res, owners, now)
+
+	return ctrl.Result{RequeueAfter: requeueAfter(res, r.thresholds, now)}, nil
+}
+
+// registrationRequest returns the cluster data file to publish, rebuilding it
+// only when the published one no longer describes the cluster (specification
+// 10.6). Every rebuild consumes one seq, and the counter is written before the
+// request is published so that a crash in between can only skip a number.
+func (r *reconciler) registrationRequest(
+	ctx context.Context,
+	published string,
+	priv ed25519.PrivateKey,
+	clusterID string,
+	res licensing.Result,
+	now time.Time,
+) (string, error) {
+	if published != "" && !requestStale(published, res) {
+		return published, nil
+	}
+
+	seq, err := r.loadSeq(ctx)
+	if err != nil {
+		return "", fmt.Errorf("load registration counter: %w", err)
+	}
+	seq++
+	if err := r.saveSeq(ctx, seq); err != nil {
+		return "", fmt.Errorf("save registration counter: %w", err)
+	}
+
+	request, err := r.buildRegistrationRequest(priv, clusterID, res, seq, now)
+	if err != nil {
+		return "", fmt.Errorf("build registration request: %w", err)
+	}
+	return request, nil
+}
+
+// deleteSupersededKeys removes the keys a reissue extinguished (specification
+// 8.4). It is the one place the controller deletes an object the customer wrote,
+// and it is deliberately narrow: only a key whose every record was taken over by
+// an accepted successor already in force qualifies. A key that expired without a
+// successor, a rejected key and a key carrying an unknown record type all stay.
+func (r *reconciler) deleteSupersededKeys(
+	ctx context.Context,
+	effective *v1alpha1.EffectiveLicense,
+	items []v1alpha1.ClusterLicense,
+	res licensing.Result,
+) error {
+	for i := range items {
+		item := &items[i]
+		if !res.Superseded[item.Name] {
+			continue
+		}
+		if err := r.Delete(ctx, item); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete superseded cluster license %s: %w", item.Name, err)
+		}
+		r.logger.Info("superseded license key deleted",
+			slog.String("license", item.Name), slog.String("superseded_by", res.SupersededBy[item.Name]))
+		r.recorder.Eventf(effective, corev1.EventTypeNormal, eventKeySuperseded,
+			"License key %s (jti %s) was superseded by key %s and has been deleted",
+			item.Name, item.Status.PackageJti, res.SupersededBy[item.Name])
+	}
+	return nil
+}
+
+// rejectedKeys names the installed keys that did not verify at all. Such a key
+// carries no records, so without this it would leave no trace in the summary.
+func rejectedKeys(items []v1alpha1.ClusterLicense, failures []error) []string {
+	out := make([]string, 0, len(items))
+	for i := range items {
+		if failures[i] != nil {
+			out = append(out, items[i].Name)
+		}
+	}
+	return out
 }
 
 // verifyKeys lists the installed keys and verifies each of them. The returned
-// slices are index aligned with licenses.Items: failures[i] is the package level
-// error of key i, packages[i] its parsed envelope, and keys holds the record
-// sets of the keys that survived, in the same order.
+// slices are index aligned with the items: failures[i] is the package level
+// error of key i, and keys holds the record sets of the keys that survived, in
+// the same order.
 func (r *reconciler) verifyKeys(ctx context.Context, vc licensing.VerifyContext) (
-	[]v1alpha1.ClusterLicense, []licensing.KeyRecords, []error, []*licensing.Package, error,
+	[]v1alpha1.ClusterLicense, []licensing.KeyRecords, []error, error,
 ) {
 	var list v1alpha1.ClusterLicenseList
 	if err := r.List(ctx, &list); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("list cluster licenses: %w", err)
+		return nil, nil, nil, fmt.Errorf("list cluster licenses: %w", err)
 	}
 	// Order decides which of two identical records is the duplicate, so it must
 	// not depend on what the cache happened to return.
@@ -287,7 +347,6 @@ func (r *reconciler) verifyKeys(ctx context.Context, vc licensing.VerifyContext)
 
 	keys := make([]licensing.KeyRecords, 0, len(items))
 	failures := make([]error, len(items))
-	packages := make([]*licensing.Package, len(items))
 
 	for i, item := range items {
 		pkg, records, err := licensing.ParsePackage(item.Spec.LicenseKey, vc)
@@ -297,11 +356,12 @@ func (r *reconciler) verifyKeys(ctx context.Context, vc licensing.VerifyContext)
 			failures[i] = err
 			continue
 		}
-		packages[i] = pkg
-		keys = append(keys, licensing.KeyRecords{Key: item.Name, Records: records})
+		keys = append(keys, licensing.KeyRecords{
+			Key: item.Name, JTI: pkg.JTI, CustomerName: pkg.CustomerName, Records: records,
+		})
 	}
 
-	return items, keys, failures, packages, nil
+	return items, keys, failures, nil
 }
 
 // clusterKey returns the cluster Ed25519 identity, generating it on first use.

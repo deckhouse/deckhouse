@@ -31,164 +31,188 @@ const (
 	StateViolation = "Violation"
 )
 
-// Compliance reasons. They are published as EffectiveLicense
-// .status.compliance.reason. All of them but ReasonLimitsApproaching explain a
-// non-Valid state; ReasonLimitsApproaching is informational and appears at
-// StateValid. ReasonExpired and ReasonRevoked are shared with the record level
-// reasons above: same word, same meaning.
+// Compliance reasons, published as EffectiveLicense .status.compliance.reason.
+// ReasonExpired and ReasonRevoked are shared with the record level reasons:
+// same word, same meaning.
 const (
-	ReasonUnregistered       = "Unregistered"
-	ReasonLimitsExceeded     = "LimitsExceeded"
-	ReasonExpiringSoon       = "ExpiringSoon"
-	ReasonLimitsApproaching  = "LimitsApproaching"
-	ReasonProjectedOverLimit = "ProjectedOverLimit"
+	ReasonUnregistered    = "Unregistered"
+	ReasonUnlicensedNodes = "UnlicensedNodes"
+	ReasonExpiringSoon    = "ExpiringSoon"
 )
 
 // KeyRecords is the verified content of one ClusterLicense.
 type KeyRecords struct {
 	// Key is the ClusterLicense name.
-	Key     string
-	Records []RecordStatus
+	Key string
+	// JTI and CustomerName come from the package envelope, not from a record.
+	JTI          string
+	CustomerName string
+	Records      []RecordStatus
 }
 
 // Thresholds are the commercial knobs of the compliance state machine. They are
-// parameters, not constants: sales has not approved the defaults.
+// parameters, not constants: sales has not approved the defaults (ADR 21).
 type Thresholds struct {
 	// DefaultGrace applies only to expired records that carry no grace_days.
 	DefaultGrace time.Duration
-	// WarningRatio is the share of the limit at which instant consumption is
-	// reported as approaching it. It is informational: it does not warn.
-	// Consuming the whole paid quota is normal.
-	WarningRatio float64
-	// ExpiringSoon is how long before its expiry an active record warns.
+	// ExpiringSoon is how long before the key expires the cluster warns.
 	ExpiringSoon time.Duration
-	// SustainedWindow is how long consumption has to stay above a limit before
-	// the exceedance becomes a violation. A shorter one is a warning: buying a
-	// node for an afternoon is not a breach of contract.
-	SustainedWindow time.Duration
+	// OverLimitWindow is how long unlicensed nodes may exist before the
+	// overuse becomes a violation rather than a warning. Buying a node for an
+	// afternoon is not a breach of contract.
+	OverLimitWindow time.Duration
 }
 
-// DefaultThresholds returns the controller defaults: 14 days of grace, the
-// approaching notice at 90% of the limit, 30 days of expiry notice and seven
-// days of continuous exceedance before a violation.
+// DefaultThresholds returns the controller defaults: 14 days of grace, 30 days
+// of expiry notice and seven days of unlicensed nodes before a violation.
 func DefaultThresholds() Thresholds {
 	return Thresholds{
 		DefaultGrace:    14 * 24 * time.Hour,
-		WarningRatio:    0.9,
 		ExpiringSoon:    30 * 24 * time.Hour,
-		SustainedWindow: 7 * 24 * time.Hour,
+		OverLimitWindow: 7 * 24 * time.Hour,
 	}
 }
 
-// Segment is one interval of the policy timeline. To is nil for the open ended
-// last segment. A nil value in Limits means unlimited for that metric; a metric
-// missing from Limits is not granted at all.
-type Segment struct {
-	From   time.Time
-	To     *time.Time
-	State  string
-	Limits map[string]*int64
+// KeyInfo describes the key in force, the way the Console shows it. The stepped
+// terms of the individual records are not part of it: for the customer a
+// licence is valid until one date or it is not valid at all.
+type KeyInfo struct {
+	Name         string
+	JTI          string
+	CustomerName string
+	Origin       string
+	// ValidUntil is the greatest expire_at of the records of the key; nil means
+	// the key never expires.
+	ValidUntil *time.Time
+	// GraceDays comes from the record that expires last.
+	GraceDays *int
 }
 
-// Reduction is the next point in time where any limit goes down.
-type Reduction struct {
-	At   time.Time
-	From map[string]*int64
-	To   map[string]*int64
+// Input is everything Compute needs. Every field is data, so the whole policy is
+// a pure function of a point in time, the installed keys and the node set.
+type Input struct {
+	Keys []KeyRecords
+	// Nodes are the licensable nodes, free ones already excluded.
+	Nodes []Node
+	// PrevServers is the previous allocation, read off status.nodes[]. It only
+	// breaks ties between equally sized nodes.
+	PrevServers map[string]bool
+	// RejectedKeys are the names of the installed keys that failed verification
+	// as a whole, so they carry no records to report a reason on. They are
+	// reported next to the rejected records: a key nobody can read is exactly as
+	// actionable as a record nobody can read.
+	RejectedKeys []string
+	// OverLimitSince is the published mark of when unlicensed nodes appeared.
+	// Compute returns the updated value; there is no observation journal.
+	OverLimitSince *time.Time
+	Now            time.Time
+	Thresholds     Thresholds
 }
 
 // Result is the whole computed policy at a point in time.
 type Result struct {
 	State string
-	// Reason names the check that produced a non-Valid State. At StateValid it is
-	// either empty or the informational ReasonLimitsApproaching.
+	// Reason names the check that produced a non-Valid State.
 	Reason string
-	// Effective maps a metric to its limit; a nil value means unlimited.
-	Effective map[string]*int64
-	// Unlimited reports whether at least one metric ended up unlimited.
-	Unlimited bool
-	// WithinLimits reports whether instant consumption stays at or below every
-	// finite limit. It is true when no finite limit is granted at all.
-	WithinLimits bool
-	// GrantedBy lists every record backing a metric, so that the customer can
-	// see the quota survived on the second grant when the first one expired.
+	// Licensed is the binary answer for the Console: true at Valid and Warning.
+	Licensed bool
+
+	// Limits is the aggregated quota; GrantedBy lists every record behind a
+	// metric, so that the customer can see the quota survived on the second
+	// grant when the first one expired.
+	Limits    Limits
 	GrantedBy map[string][]string
+	// Unlimited lists, sorted, the metrics that ended up without a limit.
+	Unlimited []string
+
+	// Key is the key in force, nil when the cluster holds none.
+	Key *KeyInfo
+
+	Consumption map[string]int64
+	Allocation  Allocation
+	// OverLimitSince is the updated mark: Now on the first recompute with
+	// unlicensed nodes, nil on the first one without.
+	OverLimitSince *time.Time
+
 	// Records are all records with their final verdict.
-	Records       []RecordStatus
-	Timeline      []Segment
-	NextReduction *Reduction
-	ExpiringSoon  []RecordStatus
-	// Retirable is the per-key verdict of Retirable, keyed by KeyRecords.Key.
-	Retirable map[string]bool
-	Counts    struct {
-		Packages, Records, Accepted, Rejected, Retirable int
+	Records []RecordStatus
+	// AcceptedRecords are the sorted ids of the records that passed
+	// verification and were not extinguished. They go into the registration
+	// request: the license server supersedes exactly this set on a reissue.
+	AcceptedRecords []string
+	// ActiveKeys are the sorted jti of the installed keys that carry at least
+	// one accepted record.
+	ActiveKeys []string
+
+	// Superseded is the per-key verdict of Superseded, keyed by KeyRecords.Key.
+	Superseded map[string]bool
+	// SupersededBy names, for every superseded key, the jti of the key that
+	// extinguished it, for the KeySuperseded event.
+	SupersededBy map[string]string
+	// SupersedeCycle lists the record ids caught in an extinction cycle.
+	SupersedeCycle []string
+
+	// Expiring is true when the key expires within Thresholds.ExpiringSoon.
+	Expiring bool
+	// Rejected lists, sorted, the records rejected for a reason the customer
+	// has to act on, as "<id> (<reason>)".
+	Rejected []string
+
+	Counts struct {
+		Keys, Records, Accepted, Rejected, Superseded int
 	}
 }
 
 // Active reports whether a record contributes to the policy at t. Boundaries
-// are half-open, [start_at, expire_at): a renewal starting exactly when its
-// predecessor expires leaves neither a gap nor an overlap.
+// are half-open, [start_at, expire_at): the records of one reissued key stack
+// without a gap and without an overlap.
 func Active(r RecordStatus, t time.Time) bool {
 	return r.Accepted && !t.Before(r.StartAt) && (r.ExpireAt == nil || t.Before(*r.ExpireAt))
 }
 
-// retirableReasons are the verdicts that never turn back on their own: a record
-// carrying one of them contributes neither now nor later.
-//
-// UnsupportedType is deliberately absent: a record of a type this build does not
-// know starts counting after a Deckhouse upgrade, so its key must not be offered
-// for deletion (spec 8.6, vector K5). NotYetValid is absent for the same reason:
-// the record is simply waiting for its start_at.
-var retirableReasons = map[string]bool{
-	ReasonExpired:         true,
-	ReasonRenewed:         true,
-	ReasonSuperseded:      true,
-	ReasonRevoked:         true,
-	ReasonDuplicate:       true,
-	ReasonClusterMismatch: true,
-	ReasonSchemaViolation: true,
+// extinguishedReasons are the verdicts that mean "a successor took over".
+var extinguishedReasons = map[string]bool{
+	ReasonRenewed:    true,
+	ReasonSuperseded: true,
 }
 
-// Retirable reports whether a key can be deleted without changing either the
-// policy or the timeline: every one of its records is permanently out (spec 8.6).
+// Superseded reports whether every record of a key has been extinguished by an
+// accepted successor whose start_at has passed (specification 8.4). Such a key
+// is deleted by the controller: after a reissue it contributes nothing now and
+// nothing later, and its presence would make "one key" a lie.
 //
-// The records must be the final per-record statuses Compute produced, which is
-// what makes the successor rule fall out for free: extinction by a successor
-// whose start_at has already passed reads as Renewed or Superseded, while a
-// successor still in the future leaves the record accepted.
-func Retirable(records []RecordStatus) bool {
+// Nothing else qualifies. A key that expired without a successor is the only
+// record that the licence existed and when it ran out; a rejected key has to
+// stay so that the customer can read the reason; a key carrying a record of an
+// unknown type starts counting after a Deckhouse upgrade.
+//
+// The records must be the final per-record statuses Compute produced.
+func Superseded(records []RecordStatus) bool {
 	if len(records) == 0 {
 		return false
 	}
 	for _, r := range records {
-		if r.Accepted || !retirableReasons[r.Reason] {
+		if r.Accepted || !extinguishedReasons[r.Reason] {
 			return false
 		}
 	}
 	return true
 }
 
-// Compute turns the verified records of every key into the effective policy.
-//
-// sustained carries, per metric, whether consumption has been above its current
-// limit for the whole Thresholds.SustainedWindow. It is a separate input rather
-// than a field of MetricValue because MetricValue is also the wire type of the
-// registration request, and this verdict is not part of that schema. The caller
-// derives it with Journal.ExceededThroughout.
-func Compute(keys []KeyRecords, metrics map[string]MetricValue, sustained map[string]bool, now time.Time, th Thresholds) Result {
+// Compute turns the verified records of every key and the current node set into
+// the effective policy.
+func Compute(in Input) Result {
 	// Dedup is first-wins, so the order of the keys decides which copy of a
 	// record contributes. Listing order is whatever the API server returned, so
 	// it is normalized here: the same key set must always produce the same
 	// Result, byte for byte.
-	ordered := make([]KeyRecords, len(keys))
-	copy(ordered, keys)
+	ordered := make([]KeyRecords, len(in.Keys))
+	copy(ordered, in.Keys)
 	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].Key < ordered[j].Key })
 
 	base := dedup(ordered)
+	now := in.Now
 
-	// Records that passed the record level checks and survived deduplication are
-	// the input of every later stage, evaluated at whatever point in time the
-	// stage cares about.
 	final := make([]RecordStatus, len(base))
 	copy(final, base)
 	ext := extinguish(base, now)
@@ -216,38 +240,60 @@ func Compute(keys []KeyRecords, metrics map[string]MetricValue, sustained map[st
 	effective, grantedBy := limits(activeAt(base, now))
 
 	res := Result{
-		State:     StateValid,
-		Effective: effective,
-		GrantedBy: grantedBy,
-		Records:   final,
-		Timeline:  timeline(base, now, th),
+		Limits:         effective,
+		GrantedBy:      grantedBy,
+		Records:        final,
+		Consumption:    Consumption(in.Nodes),
+		Allocation:     Allocate(in.Nodes, effective, in.PrevServers),
+		SupersedeCycle: supersedeCycles(base),
 	}
-	for _, v := range effective {
-		if v == nil {
-			res.Unlimited = true
+	for name, value := range effective.Values {
+		if value == nil {
+			res.Unlimited = append(res.Unlimited, name)
 		}
 	}
-	res.NextReduction = nextReduction(res.Timeline)
-	res.State, res.Reason = state(base, final, effective, metrics, sustained, now, th)
-	res.WithinLimits = withinLimits(effective, metrics)
+	sort.Strings(res.Unlimited)
 
-	for _, r := range final {
-		if Active(r, now) && r.ExpireAt != nil && r.ExpireAt.Sub(now) < th.ExpiringSoon {
-			res.ExpiringSoon = append(res.ExpiringSoon, r)
-		}
+	res.OverLimitSince = overLimitSince(res.Allocation, in.OverLimitSince, now)
+	res.Key = keyInForce(ordered, final, ext)
+	if res.Key != nil && res.Key.ValidUntil != nil {
+		left := res.Key.ValidUntil.Sub(now)
+		res.Expiring = left > 0 && left < in.Thresholds.ExpiringSoon
 	}
+
+	res.State, res.Reason = state(base, final, res, in)
+	res.Licensed = res.State == StateValid || res.State == StateWarning
+
+	res.AcceptedRecords, res.ActiveKeys = accepted(ordered, ext)
+	res.Rejected = rejected(final, in.RejectedKeys)
 
 	// final is ordered records flattened, so each key owns the next len(Records)
-	// of it. Slicing beats matching by id: the same id may legitimately appear in
-	// two keys, one of them marked Duplicate.
-	res.Retirable = make(map[string]bool, len(ordered))
+	// of it. Slicing beats matching by id: the same id may legitimately appear
+	// in two keys, one of them marked Duplicate.
+	res.Superseded = make(map[string]bool, len(ordered))
+	res.SupersededBy = make(map[string]string, len(ordered))
+	byID := make(map[string]string, len(ordered))
+	for _, k := range ordered {
+		byID[k.Key] = k.JTI
+	}
+	owner := make(map[string]string, len(base))
 	at := 0
 	for _, k := range ordered {
-		res.Retirable[k.Key] = Retirable(final[at : at+len(k.Records)])
+		for _, r := range k.Records {
+			owner[r.ID] = k.Key
+		}
+		mine := final[at : at+len(k.Records)]
 		at += len(k.Records)
+		if !Superseded(mine) {
+			continue
+		}
+		res.Superseded[k.Key] = true
+	}
+	for key := range res.Superseded {
+		res.SupersededBy[key] = supersededBy(final, owner, byID, key)
 	}
 
-	res.Counts.Packages = len(keys)
+	res.Counts.Keys = len(in.Keys)
 	res.Counts.Records = len(final)
 	for _, r := range final {
 		if r.Accepted {
@@ -256,44 +302,185 @@ func Compute(keys []KeyRecords, metrics map[string]MetricValue, sustained map[st
 			res.Counts.Rejected++
 		}
 	}
-	for _, retirable := range res.Retirable {
-		if retirable {
-			res.Counts.Retirable++
-		}
-	}
+	res.Counts.Superseded = len(res.Superseded)
 
 	return res
 }
 
-// stateAt is the part of the compliance state that depends on records only, so
-// it can be evaluated at any point of the timeline. Metrics are not projected
-// into the future, so no Warning here.
-func stateAt(base []RecordStatus, t time.Time, th Thresholds) string {
-	if len(activeAt(base, t)) > 0 {
-		return StateValid
+// overLimitSince keeps the single piece of state the compliance machine needs
+// over time: the moment unlicensed nodes appeared. It is set on the first
+// recompute that finds them and cleared by the first one that does not, so
+// leaving a violation takes one pass (ADR 8.6).
+func overLimitSince(a Allocation, prev *time.Time, now time.Time) *time.Time {
+	if a.WithinLimits() {
+		return nil
 	}
-	last := lastExpired(base, t)
-	if last == nil {
-		return StateViolation
+	if prev != nil {
+		return prev
 	}
-	if t.Before(last.ExpireAt.Add(graceOf(*last, th))) {
-		return StateGrace
-	}
-	return StateViolation
+	at := now
+	return &at
 }
 
-// state is the compliance verdict together with the reason for it. Checks are
-// ordered by severity, and every loop over the metrics walks their names in
-// sorted order so that two metrics failing different checks still produce the
-// same reason on every reconcile.
-func state(
-	base, final []RecordStatus,
-	effective map[string]*int64,
-	metrics map[string]MetricValue,
-	sustained map[string]bool,
-	now time.Time,
-	th Thresholds,
-) (string, string) {
+// contributing reports whether a record passed verification, survived
+// deduplication and was not extinguished. Such a record is part of the policy
+// now, was part of it, or will be: the license server supersedes exactly this
+// set when it reissues.
+func contributing(r RecordStatus, ext map[string]extinction) bool {
+	if !r.Accepted {
+		return false
+	}
+	_, gone := ext[r.ID]
+	return !gone
+}
+
+func accepted(keys []KeyRecords, ext map[string]extinction) ([]string, []string) {
+	var records, activeKeys []string
+	seen := make(map[string]bool)
+	for _, k := range keys {
+		carries := false
+		for _, r := range k.Records {
+			if !r.Accepted || seen[r.ID] {
+				continue
+			}
+			seen[r.ID] = true
+			if _, gone := ext[r.ID]; gone {
+				continue
+			}
+			records = append(records, r.ID)
+			carries = true
+		}
+		if carries && k.JTI != "" {
+			activeKeys = append(activeKeys, k.JTI)
+		}
+	}
+	sort.Strings(records)
+	sort.Strings(activeKeys)
+	return records, activeKeys
+}
+
+// keyInForce picks the key the Console shows. With one key in the cluster the
+// choice is trivial; during the moment a reissue is installed and the old key is
+// not deleted yet, the one that reaches furthest into the future wins.
+func keyInForce(keys []KeyRecords, final []RecordStatus, ext map[string]extinction) *KeyInfo {
+	byID := make(map[string]RecordStatus, len(final))
+	for _, r := range final {
+		if _, taken := byID[r.ID]; !taken {
+			byID[r.ID] = r
+		}
+	}
+
+	var best *KeyInfo
+	for _, k := range keys {
+		var last *RecordStatus
+		perpetual := false
+		carries := false
+		for i := range k.Records {
+			r := k.Records[i]
+			if !contributing(r, ext) {
+				continue
+			}
+			carries = true
+			if r.ExpireAt == nil {
+				perpetual = true
+				last = &k.Records[i]
+				break
+			}
+			if last == nil || last.ExpireAt == nil || r.ExpireAt.After(*last.ExpireAt) {
+				last = &k.Records[i]
+			}
+		}
+		if !carries || last == nil {
+			continue
+		}
+
+		info := &KeyInfo{
+			Name:         k.Key,
+			JTI:          k.JTI,
+			CustomerName: k.CustomerName,
+			Origin:       last.Origin,
+			GraceDays:    last.GraceDays,
+		}
+		if !perpetual {
+			until := *last.ExpireAt
+			info.ValidUntil = &until
+		}
+		if best == nil || furtherThan(info, best) {
+			best = info
+		}
+	}
+	return best
+}
+
+// furtherThan orders two candidate keys: the one valid longer wins, a perpetual
+// key beats every dated one, and an exact tie is broken on the object name so
+// that the status does not flip between two equal keys.
+func furtherThan(a, b *KeyInfo) bool {
+	switch {
+	case a.ValidUntil == nil && b.ValidUntil == nil:
+		return a.Name < b.Name
+	case a.ValidUntil == nil:
+		return true
+	case b.ValidUntil == nil:
+		return false
+	case a.ValidUntil.Equal(*b.ValidUntil):
+		return a.Name < b.Name
+	default:
+		return a.ValidUntil.After(*b.ValidUntil)
+	}
+}
+
+// supersededBy names the key that extinguished the records of a superseded key.
+func supersededBy(final []RecordStatus, owner, jti map[string]string, key string) string {
+	successors := make(map[string]bool)
+	for _, r := range final {
+		if owner[r.ID] != key || r.RenewedBy == "" {
+			continue
+		}
+		successors[r.RenewedBy] = true
+	}
+	names := make([]string, 0, len(successors))
+	for id := range successors {
+		if name, known := owner[id]; known && name != key {
+			names = append(names, jti[name])
+		}
+	}
+	sort.Strings(names)
+	if len(names) == 0 {
+		return ""
+	}
+	return names[0]
+}
+
+// benignRejections are the reasons a record may legitimately not contribute:
+// none of them is a problem the customer has to act on.
+var benignRejections = map[string]bool{
+	ReasonUnsupportedType: true,
+	ReasonRenewed:         true,
+	ReasonSuperseded:      true,
+	ReasonExpired:         true,
+	ReasonNotYetValid:     true,
+}
+
+func rejected(final []RecordStatus, keys []string) []string {
+	out := make([]string, 0, len(final)+len(keys))
+	for _, r := range final {
+		if r.Accepted || benignRejections[r.Reason] {
+			continue
+		}
+		out = append(out, fmt.Sprintf("%s (%s)", r.ID, r.Reason))
+	}
+	for _, key := range keys {
+		out = append(out, fmt.Sprintf("key %s (Rejected)", key))
+	}
+	sort.Strings(out)
+	return out
+}
+
+// state is the compliance verdict of specification 10.4, together with the
+// reason for it. The checks are in the order the specification lists them, which
+// is by severity: a violation found by any of the three beats a grace period.
+func state(base, final []RecordStatus, res Result, in Input) (string, string) {
 	// A commercial revocation is a violation immediately and without grace.
 	// A reissue only removes the contribution of the record.
 	for _, r := range final {
@@ -306,86 +493,28 @@ func state(
 		}
 	}
 
-	names := make([]string, 0, len(effective))
-	for name := range effective {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	// Sustained overuse. Entry needs the instant reading to have stayed above a
-	// finite limit for the whole sustained window; exit is immediate, because
-	// the window stops being exceeded throughout the moment one observation
-	// comes back under. avg_7d is reported, it is not part of the verdict: one
-	// spike inside a week drags the mean over a limit the cluster is no longer
-	// exceeding, and the state would stick for another week.
-	for _, name := range names {
-		if effective[name] != nil && sustained[name] {
-			return StateViolation, ReasonLimitsExceeded
-		}
+	if since := res.OverLimitSince; since != nil && in.Now.Sub(*since) >= in.Thresholds.OverLimitWindow {
+		return StateViolation, ReasonUnlicensedNodes
 	}
 
-	if s := stateAt(base, now, th); s != StateValid {
+	if len(activeAt(base, in.Now)) == 0 {
+		last := lastExpired(base, in.Now)
 		// A cluster that never had a single record that passed the record level
 		// checks was never registered; it did not lose rights, it never had any.
-		if s == StateViolation && !anyVerified(base) {
-			return s, ReasonUnregistered
+		if last == nil {
+			return StateViolation, ReasonUnregistered
 		}
-		return s, ReasonExpired
+		if in.Now.Before(last.ExpireAt.Add(graceOf(*last, in.Thresholds))) {
+			return StateGrace, ReasonExpired
+		}
+		return StateViolation, ReasonExpired
 	}
 
-	// Instant overuse. Spending the whole paid quota is what the customer bought,
-	// so only going over it warns.
-	for _, name := range names {
-		if over(metrics[name].Instant, effective[name]) {
-			return StateWarning, ReasonLimitsExceeded
-		}
+	if !res.Allocation.WithinLimits() {
+		return StateWarning, ReasonUnlicensedNodes
 	}
-	// A projection that could not be made warns about nothing.
-	for _, name := range names {
-		if e := metrics[name].Extrapolated; e != nil && over(*e, effective[name]) {
-			return StateWarning, ReasonProjectedOverLimit
-		}
-	}
-	for _, r := range final {
-		if Active(r, now) && r.ExpireAt != nil && r.ExpireAt.Sub(now) < th.ExpiringSoon {
-			return StateWarning, ReasonExpiringSoon
-		}
-	}
-
-	// Nothing is wrong, but the quota is nearly spent. This is a note on a Valid
-	// state, not a warning: it tells the customer when to start ordering more.
-	// The ratio check is skipped for a zero limit: everything is at 90% of zero.
-	for _, name := range names {
-		if limit := effective[name]; limit != nil && *limit > 0 &&
-			metrics[name].Instant >= th.WarningRatio*float64(*limit) {
-			return StateValid, ReasonLimitsApproaching
-		}
+	if res.Expiring {
+		return StateWarning, ReasonExpiringSoon
 	}
 	return StateValid, ""
-}
-
-func over(v float64, limit *int64) bool {
-	return limit != nil && v > float64(*limit)
-}
-
-// anyVerified reports whether at least one record of at least one key passed
-// the record level checks of the specification.
-func anyVerified(base []RecordStatus) bool {
-	for _, r := range base {
-		if r.Accepted {
-			return true
-		}
-	}
-	return false
-}
-
-// withinLimits is the instant consumption check on its own, reported next to
-// the compliance state: the state is a verdict over time, this is a snapshot.
-func withinLimits(effective map[string]*int64, metrics map[string]MetricValue) bool {
-	for name, limit := range effective {
-		if over(metrics[name].Instant, limit) {
-			return false
-		}
-	}
-	return true
 }

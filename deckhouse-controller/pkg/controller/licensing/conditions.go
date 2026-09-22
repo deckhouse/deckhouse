@@ -16,7 +16,7 @@ package licensing
 
 import (
 	"fmt"
-	"sort"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -25,67 +25,63 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/licensing"
 )
 
-// Condition types published on EffectiveLicense. Their semantics are documented
-// in the CRD, next to the field they describe.
+// Condition types published on EffectiveLicense. UpdatesAllowed and
+// RuntimeRestricted are named by the specification for the second iteration and
+// are deliberately not published yet.
 const (
-	conditionLimitsSatisfied     = "LimitsSatisfied"
-	conditionSomeRecordsExpiring = "SomeRecordsExpiring"
-	conditionRejectedRecords     = "RejectedRecords"
-	conditionRegistered          = "Registered"
-	// conditionRetirable lives on ClusterLicense, not on EffectiveLicense: it is a
+	conditionLimitsSatisfied = "LimitsSatisfied"
+	conditionKeyExpiring     = "KeyExpiring"
+	conditionKeyRejected     = "KeyRejected"
+	conditionSupersedeCycle  = "SupersedeCycle"
+	// conditionValid lives on ClusterLicense, not on EffectiveLicense: it is a
 	// verdict about one key.
-	conditionRetirable = "Retirable"
+	conditionValid = "Valid"
 )
 
-// benignRejections are the reasons a record may legitimately not contribute:
-// none of them is a problem the customer has to act on.
-var benignRejections = map[string]bool{
-	licensing.ReasonUnsupportedType: true,
-	licensing.ReasonRenewed:         true,
-	licensing.ReasonSuperseded:      true,
-	licensing.ReasonExpired:         true,
+func setConditions(conditions *[]metav1.Condition, res licensing.Result, now time.Time) {
+	set(conditions, now, conditionLimitsSatisfied, res.Allocation.WithinLimits(),
+		unlicensedReason(res), unlicensedMessage(res, now),
+		"every licensable node is covered by the license")
+
+	expiry := "the license key does not expire within the warning window"
+	if res.Key != nil && res.Key.ValidUntil != nil {
+		expiry = fmt.Sprintf("the license expires at %s", res.Key.ValidUntil.UTC().Format(time.RFC3339))
+	}
+	set(conditions, now, conditionKeyExpiring, res.Expiring, "KeyExpiry",
+		"the license key does not expire within the warning window", expiry)
+
+	set(conditions, now, conditionKeyRejected, len(res.Rejected) > 0, "RecordsRejected",
+		"no record and no key is rejected",
+		joinOr(res.Rejected, "records are rejected"))
+
+	set(conditions, now, conditionSupersedeCycle, len(res.SupersedeCycle) > 0, "ExtinctionCycle",
+		"no record supersedes itself through a cycle",
+		joinOr(res.SupersedeCycle, "records form a supersede cycle and all of them are excluded"))
 }
 
-func setConditions(conditions *[]metav1.Condition, res licensing.Result, now time.Time) {
-	registered := false
-	rejected := make([]string, 0, len(res.Records))
-	for _, rec := range res.Records {
-		if rec.Accepted {
-			if rec.Type == licensing.TypePlatform {
-				registered = true
-			}
-			continue
-		}
-		if !benignRejections[rec.Reason] {
-			rejected = append(rejected, fmt.Sprintf("%s (%s)", rec.ID, rec.Reason))
-		}
+func unlicensedReason(res licensing.Result) string {
+	if res.Allocation.WithinLimits() {
+		return "WithinLimits"
 	}
-	sort.Strings(rejected)
+	return "UnlicensedNodes"
+}
 
-	expiring := make([]string, 0, len(res.ExpiringSoon))
-	for _, rec := range res.ExpiringSoon {
-		if rec.ExpireAt == nil {
-			continue
-		}
-		expiring = append(expiring, fmt.Sprintf("%s expires at %s", rec.ID, rec.ExpireAt.UTC().Format(time.RFC3339)))
+// unlicensedMessage is the operator facing half of specification 13: how many
+// nodes are uncovered, how much they weigh, since when, and how long is left.
+func unlicensedMessage(res licensing.Result, now time.Time) string {
+	if res.Allocation.WithinLimits() {
+		return "every licensable node is covered by the license"
 	}
-	sort.Strings(expiring)
-
-	set(conditions, now, conditionRegistered, registered,
-		"RecordAccepted", "no accepted Platform record is installed",
-		"at least one Platform record is part of the policy")
-
-	set(conditions, now, conditionLimitsSatisfied, res.WithinLimits,
-		"WithinLimits", "consumption is above an effective limit",
-		"consumption is within every effective limit")
-
-	set(conditions, now, conditionSomeRecordsExpiring, len(expiring) > 0,
-		"RecordsExpiring", "no active record expires within the warning window",
-		joinOr(expiring, "records expire soon"))
-
-	set(conditions, now, conditionRejectedRecords, len(rejected) > 0,
-		"RecordsRejected", "no record is rejected",
-		joinOr(rejected, "records are rejected"))
+	message := fmt.Sprintf("%d node(s) (%d vCPU) are not covered by the license",
+		len(res.Allocation.Unlicensed), res.Allocation.UnlicensedVCPU)
+	if res.OverLimitSince == nil {
+		return message
+	}
+	message += " since " + res.OverLimitSince.UTC().Format(time.RFC3339)
+	if left := res.OverLimitSince.Add(licensing.DefaultThresholds().OverLimitWindow).Sub(now); left > 0 {
+		message += fmt.Sprintf("; in %d day(s) this becomes a violation", int64(left/(24*time.Hour))+1)
+	}
+	return message
 }
 
 // set publishes one condition through meta.SetStatusCondition, which keeps
@@ -118,9 +114,5 @@ func joinOr(items []string, fallback string) string {
 	if len(items) == 0 {
 		return fallback
 	}
-	out := items[0]
-	for _, item := range items[1:] {
-		out += "; " + item
-	}
-	return out
+	return strings.Join(items, "; ")
 }

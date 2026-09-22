@@ -22,12 +22,9 @@ spec:
     - jsonPath: .status.accepted
       name: Accepted
       type: boolean
-    - jsonPath: .status.retirable
-      name: Retirable
+    - jsonPath: .status.superseded
+      name: Superseded
       type: boolean
-    - jsonPath: .spec.alias
-      name: Alias
-      type: string
     - jsonPath: .status.message
       name: Message
       type: string
@@ -40,8 +37,12 @@ spec:
         description: |
           Holds a single Deckhouse license key installed in the cluster.
 
-          One resource per key. Keys are independent: adding or removing one does not touch the others.
-          The aggregated policy computed from all keys is published in the `EffectiveLicense` resource named `dkp`.
+          This is an internal object: it is not shown in the Console, and `d8 system licenses` only lists it
+          with `--keys`. In normal operation a cluster holds exactly one key; a second one appears only for
+          the moment a reissue is being installed, and the controller deletes the key it superseded.
+
+          The aggregated policy computed from all keys is published in the `EffectiveLicense` resource named
+          `deckhouse-platform`.
         properties:
           apiVersion:
             description: |-
@@ -55,10 +56,6 @@ spec:
             type: object
           spec:
             properties:
-              alias:
-                description: |
-                  Human readable name of the key. Does not affect the policy in any way.
-                type: string
               licenseKey:
                 description: |
                   The license key: a bare compact JWT issued by the license server.
@@ -209,8 +206,9 @@ spec:
                       - SchemaViolation
                       - UnsupportedType
                       type: string
-                    renewedBy:
-                      description: Identifier of the record that extinguished this one.
+                    supersededBy:
+                      description: |
+                        Identifier of the record that extinguished this one, for both `Superseded` and `Renewed`.
                       type: string
                     startAt:
                       description: |
@@ -221,21 +219,22 @@ spec:
                       type: string
                     type:
                       description: |
-                        Record type, for example `Workload`. A type unknown to this version of Deckhouse
+                        Record type, for example `Platform`. A type unknown to this version of Deckhouse
                         is ignored and never rejects the whole key.
                       type: string
                   required:
                   - id
                   type: object
                 type: array
-              retirable:
+              superseded:
                 description: |
-                  Whether the key can be deleted without changing the policy or the timeline.
+                  Whether every record of this key has been extinguished by an accepted successor
+                  whose start has already passed.
 
-                  True when no record of the key contributes now or in the future: every one of them is
-                  expired, extinguished by a successor already in force, revoked, or rejected for a reason
-                  that will not heal with time. A record of a type this Deckhouse release does not support
-                  yet, and a record waiting for its `startAt`, both keep the key in use.
+                  A superseded key contributes nothing now and nothing later, and the controller deletes it,
+                  emitting a `KeySuperseded` event on the `EffectiveLicense`. Nothing else is deleted: a key
+                  that expired without a successor, a rejected key and a key carrying a record type this
+                  release does not support all stay in place.
                 type: boolean
             type: object
         required:

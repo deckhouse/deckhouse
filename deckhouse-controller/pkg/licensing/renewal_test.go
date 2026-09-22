@@ -113,8 +113,8 @@ func TestRenewsAndSupersedes(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := Compute(oneKey(tc.records...), nil, nil, ts(tc.now), DefaultThresholds())
-			if got := limitOf(t, res, "vCPU"); got != tc.wantVCPU {
+			res := Compute(input(ts(tc.now), oneKey(tc.records...)))
+			if got := limitOf(t, res, MetricVCPU); got != tc.wantVCPU {
 				t.Fatalf("vCPU = %d, want %d", got, tc.wantVCPU)
 			}
 			for id, reason := range tc.wantRejected {
@@ -132,28 +132,6 @@ func TestRenewsAndSupersedes(t *testing.T) {
 	}
 }
 
-// R2: the renewal scenario keeps a flat 50 across the whole horizon, with no
-// reduction reported.
-func TestRenewalTimelineIsFlat(t *testing.T) {
-	res := Compute(oneKey(
-		wl(recordA, "2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z", map[string]*int64{"vCPU": i64(50)}),
-		func() RecordStatus {
-			r := wl(recordB, "2026-07-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{"vCPU": i64(50)})
-			r.Renews = []string{recordA}
-			return r
-		}(),
-	), nil, nil, ts("2026-06-26T00:00:00Z"), DefaultThresholds())
-
-	assertTimeline(t, res.Timeline, []string{
-		"2026-01-01T00:00:00Z..2027-01-01T00:00:00Z Valid vCPU=50",
-		"2027-01-01T00:00:00Z..2027-01-15T00:00:00Z Grace vCPU=0",
-		"2027-01-15T00:00:00Z..nil Violation vCPU=0",
-	})
-	if res.NextReduction == nil || !res.NextReduction.At.Equal(ts("2027-01-01T00:00:00Z")) {
-		t.Fatalf("nextReduction = %+v, want the end of the renewal", res.NextReduction)
-	}
-}
-
 // A supersede cycle excludes both records rather than picking a winner.
 func TestSupersedeCycleExcludesBoth(t *testing.T) {
 	a := wl(recordA, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{"vCPU": i64(50)})
@@ -161,13 +139,31 @@ func TestSupersedeCycleExcludesBoth(t *testing.T) {
 	b := wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{"vCPU": i64(40)})
 	b.Supersedes = []string{recordA}
 
-	res := Compute(oneKey(a, b), nil, nil, ts("2026-05-01T00:00:00Z"), DefaultThresholds())
-	if len(res.Effective) != 0 {
-		t.Fatalf("effective = %v, want nothing granted", res.Effective)
+	res := Compute(input(ts("2026-05-01T00:00:00Z"), oneKey(a, b)))
+	if len(res.Limits.Values) != 0 || res.Limits.Speaking {
+		t.Fatalf("limits = %+v, want nothing granted", res.Limits)
 	}
 	if res.Counts.Accepted != 0 {
 		t.Fatalf("accepted = %d, want 0", res.Counts.Accepted)
 	}
+	// R8: both members of the cycle are named, so that a key set granting
+	// nothing by accident does not look like one granting nothing on purpose.
+	if len(res.SupersedeCycle) != 2 {
+		t.Fatalf("supersedeCycle = %v, want both records", res.SupersedeCycle)
+	}
+}
+
+// limitOf reads a finite limit out of a result.
+func limitOf(t *testing.T, res Result, metric string) int64 {
+	t.Helper()
+	v, ok := res.Limits.Values[metric]
+	if !ok {
+		t.Fatalf("metric %q is absent from %v", metric, res.Limits.Values)
+	}
+	if v == nil {
+		t.Fatalf("metric %q is unlimited, want a finite value", metric)
+	}
+	return *v
 }
 
 // Active implements half-open boundaries.
@@ -193,55 +189,5 @@ func TestActiveBoundaries(t *testing.T) {
 	}
 	if Active(RecordStatus{Record: Record{StartAt: ts("2026-01-01T00:00:00Z")}}, ts("2026-05-01T00:00:00Z")) {
 		t.Fatal("a rejected record is never active")
-	}
-}
-
-// Losing an unlimited metric is a reduction, and a zero limit disappearing is
-// not: the quota did not go down, it was never there.
-func TestNextReductionUnlimitedAndZero(t *testing.T) {
-	cases := []struct {
-		name string
-		from map[string]*int64
-		to   map[string]*int64
-		want bool
-	}{
-		{"unlimited to finite", map[string]*int64{"vCPU": nil}, map[string]*int64{"vCPU": i64(40)}, true},
-		{"unlimited to nothing", map[string]*int64{"vCPU": nil}, map[string]*int64{}, true},
-		{"unlimited stays unlimited", map[string]*int64{"vCPU": nil}, map[string]*int64{"vCPU": nil}, false},
-		{"finite to unlimited", map[string]*int64{"vCPU": i64(40)}, map[string]*int64{"vCPU": nil}, false},
-		{"finite to nothing", map[string]*int64{"vCPU": i64(40)}, map[string]*int64{}, true},
-		{"zero to nothing", map[string]*int64{"vCPU": i64(0)}, map[string]*int64{}, false},
-		{"nothing to finite", map[string]*int64{}, map[string]*int64{"vCPU": i64(40)}, false},
-		{"finite goes down", map[string]*int64{"vCPU": i64(90)}, map[string]*int64{"vCPU": i64(40)}, true},
-		{"finite goes up", map[string]*int64{"vCPU": i64(40)}, map[string]*int64{"vCPU": i64(90)}, false},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := decreases(tc.from, tc.to); got != tc.want {
-				t.Fatalf("decreases = %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestSameLimits(t *testing.T) {
-	cases := []struct {
-		name string
-		a, b map[string]*int64
-		want bool
-	}{
-		{"equal", map[string]*int64{"vCPU": i64(40)}, map[string]*int64{"vCPU": i64(40)}, true},
-		{"different size", map[string]*int64{"vCPU": i64(40)}, map[string]*int64{}, false},
-		{"different metric", map[string]*int64{"vCPU": i64(40)}, map[string]*int64{"nodes": i64(40)}, false},
-		{"unlimited against finite", map[string]*int64{"vCPU": nil}, map[string]*int64{"vCPU": i64(40)}, false},
-		{"both unlimited", map[string]*int64{"vCPU": nil}, map[string]*int64{"vCPU": nil}, true},
-		{"different value", map[string]*int64{"vCPU": i64(40)}, map[string]*int64{"vCPU": i64(41)}, false},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := sameLimits(tc.a, tc.b); got != tc.want {
-				t.Fatalf("sameLimits = %v, want %v", got, tc.want)
-			}
-		})
 	}
 }

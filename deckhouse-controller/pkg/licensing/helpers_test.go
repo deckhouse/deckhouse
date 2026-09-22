@@ -28,6 +28,7 @@ const (
 	recordA        = "c0d100e0-4ed0-4da4-9742-a1b2c3d4e5f6"
 	recordB        = "1a7f93b2-0c58-4d61-8e30-9f4a6b2c8d17"
 	recordC        = "9c4e12ab-7f30-4d88-b512-6a0e3d7c9f21"
+	testPackageJTI = "00000000-0000-4000-8000-00000000abcd"
 )
 
 func newKey(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
@@ -121,19 +122,33 @@ func wl(id, start, expire string, limits map[string]*int64) RecordStatus {
 }
 
 func oneKey(records ...RecordStatus) []KeyRecords {
-	return []KeyRecords{{Key: "license-1", Records: records}}
+	return []KeyRecords{{Key: "license-1", JTI: testPackageJTI, Records: records}}
 }
 
-func limitOf(t *testing.T, res Result, metric string) int64 {
-	t.Helper()
-	v, ok := res.Effective[metric]
-	if !ok {
-		t.Fatalf("metric %q is absent from %v", metric, res.Effective)
+// input builds a Compute input with the defaults every test shares. Fields that
+// a particular test cares about are set on the returned value.
+func input(now time.Time, keys []KeyRecords, nodes ...Node) Input {
+	return Input{Keys: keys, Nodes: nodes, Now: now, Thresholds: DefaultThresholds()}
+}
+
+// nd is one licensable node of a given size.
+func nd(name string, vcpu int64) Node { return Node{Name: name, VCPU: vcpu} }
+
+// nodeNames flattens an allocation group for comparison.
+func nodeNames(nodes []Node) []string {
+	out := make([]string, 0, len(nodes))
+	for _, n := range nodes {
+		out = append(out, n.Name)
 	}
-	if v == nil {
-		t.Fatalf("metric %q is unlimited, want a finite value", metric)
-	}
-	return *v
+	return out
+}
+
+// rejectedRec builds a record that did not pass the record level checks.
+func rejectedRec(id, reason string) RecordStatus {
+	r := wl(id, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{MetricVCPU: i64(100)})
+	r.Accepted = false
+	r.Reason = reason
+	return r
 }
 
 func statusOf(t *testing.T, res Result, id string) RecordStatus {
@@ -146,6 +161,3 @@ func statusOf(t *testing.T, res Result, id string) RecordStatus {
 	t.Fatalf("record %q not found", id)
 	return RecordStatus{}
 }
-
-// f64 is a pointer to a float literal, the shape of an optional metric view.
-func f64(v float64) *float64 { return &v }

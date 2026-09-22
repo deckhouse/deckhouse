@@ -164,7 +164,7 @@ func TestRegistrationPayloadSerialization(t *testing.T) {
 		JTI:          recordC,
 		IssuedAt:     ts("2026-09-09T12:00:00Z").In(time.FixedZone("MSK", 3*3600)),
 		Seq:          1,
-		Metrics:      map[string]MetricValue{"vCPU": {}, "nodes": {Instant: 24}},
+		Metrics:      map[string]int64{MetricServers: 24, MetricVCPU: 384, MetricCores: 192},
 		Key:          priv,
 		IncludeJWK:   true,
 	})
@@ -202,33 +202,24 @@ func TestRegistrationPayloadSerialization(t *testing.T) {
 		t.Fatalf("iat = %q, want UTC RFC 3339", iat)
 	}
 
-	// D5: zero metric values are present, not omitted.
+	// D5: the three metrics are plain integers, present even when zero, with no
+	// nested objects anywhere.
 	metrics, ok := payload["metrics"].(map[string]any)
 	if !ok {
 		t.Fatalf("metrics = %T", payload["metrics"])
 	}
-	vcpu, ok := metrics["vCPU"].(map[string]any)
-	if !ok {
-		t.Fatalf("metrics.vCPU = %T", metrics["vCPU"])
+	want := map[string]float64{MetricServers: 24, MetricVCPU: 384, MetricCores: 192}
+	if len(metrics) != len(want) {
+		t.Fatalf("metrics = %v, want exactly %v", metrics, want)
 	}
-	for _, field := range []string{"instant", "avg_7d", "extrapolated"} {
-		v, ok := vcpu[field]
+	for name, value := range want {
+		got, ok := metrics[name].(float64)
 		if !ok {
-			t.Fatalf("metrics.vCPU.%s is missing from %v", field, vcpu)
+			t.Fatalf("metrics.%s = %T, want a number", name, metrics[name])
 		}
-		if v.(float64) != 0 {
-			t.Fatalf("metrics.vCPU.%s = %v, want 0", field, v)
+		if got != value {
+			t.Fatalf("metrics.%s = %v, want %v", name, got, value)
 		}
-	}
-
-	// §5.3 requires extrapolated, so a metric that could not be projected yet
-	// sends the instant reading in its place rather than a null.
-	nodes, ok := metrics["nodes"].(map[string]any)
-	if !ok {
-		t.Fatalf("metrics.nodes = %T", metrics["nodes"])
-	}
-	if nodes["extrapolated"] != float64(24) {
-		t.Fatalf("metrics.nodes.extrapolated = %v, want the instant reading 24", nodes["extrapolated"])
 	}
 
 	// Optional fields disappear when empty, records and ver are always there.
@@ -240,8 +231,10 @@ func TestRegistrationPayloadSerialization(t *testing.T) {
 	if payload["ver"].(float64) != SchemaVersion {
 		t.Fatalf("ver = %v", payload["ver"])
 	}
-	if _, ok := payload["records"].([]any); !ok {
-		t.Fatalf("records = %T, want an array", payload["records"])
+	for _, always := range []string{"records", "active_keys"} {
+		if _, ok := payload[always].([]any); !ok {
+			t.Fatalf("%s = %T, want an array", always, payload[always])
+		}
 	}
 }
 

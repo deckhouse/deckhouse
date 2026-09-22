@@ -89,7 +89,7 @@ const (
 
 	LabelResource = "resource"
 
-	LabelKind = "kind"
+	LabelBilling = "billing"
 
 	LabelRecordID = "record_id"
 

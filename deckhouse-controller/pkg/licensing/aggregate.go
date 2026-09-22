@@ -82,6 +82,61 @@ func claim(out map[string]extinction, id string, e extinction) {
 	out[id] = e
 }
 
+// supersedeCycles returns the sorted ids of the records that extinguish each
+// other in a cycle. Every one of them is already excluded by extinguish, since a
+// cycle extinguishes all of its members; naming them is diagnostics, so that a
+// key set that quietly grants nothing does not look like one that grants nothing
+// on purpose (specification 9.7).
+func supersedeCycles(base []RecordStatus) []string {
+	successors := make(map[string][]string, len(base))
+	for _, r := range base {
+		if !r.Accepted {
+			continue
+		}
+		successors[r.ID] = append(append([]string(nil), r.Renews...), r.Supersedes...)
+	}
+
+	const (
+		visiting = 1
+		done     = 2
+	)
+	mark := make(map[string]int, len(successors))
+	onCycle := make(map[string]bool)
+
+	var walk func(id string) bool
+	walk = func(id string) bool {
+		switch mark[id] {
+		case visiting:
+			onCycle[id] = true
+			return true
+		case done:
+			return onCycle[id]
+		}
+		mark[id] = visiting
+		found := false
+		for _, next := range successors[id] {
+			if walk(next) {
+				onCycle[id] = true
+				found = true
+			}
+		}
+		mark[id] = done
+		return found
+	}
+	for _, r := range base {
+		if r.Accepted {
+			walk(r.ID)
+		}
+	}
+
+	ids := make([]string, 0, len(onCycle))
+	for id := range onCycle {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
+}
+
 func activeAt(base []RecordStatus, t time.Time) []RecordStatus {
 	ext := extinguish(base, t)
 	out := make([]RecordStatus, 0, len(base))
@@ -97,8 +152,10 @@ func activeAt(base []RecordStatus, t time.Time) []RecordStatus {
 }
 
 // limits aggregates the numeric quotas of the platform scope. The walk is
-// generic over the keys of resource_limits: no per-metric branches.
-func limits(active []RecordStatus) (map[string]*int64, map[string][]string) {
+// generic over the keys of resource_limits: no per-metric branches here. What an
+// absent metric means is decided by Limits.Of, next to the allocation, which is
+// the only place that knows the three metric names.
+func limits(active []RecordStatus) (Limits, map[string][]string) {
 	speaking := make([]RecordStatus, 0, len(active))
 	for _, r := range active {
 		if r.Platform != nil && r.Platform.DKP != nil && r.Platform.DKP.ResourceLimits != nil {
@@ -113,7 +170,7 @@ func limits(active []RecordStatus) (map[string]*int64, map[string][]string) {
 		}
 	}
 
-	effective := make(map[string]*int64, len(names))
+	values := make(map[string]*int64, len(names))
 	granted := make(map[string][]string, len(names))
 	for m := range names {
 		var sum int64
@@ -132,13 +189,13 @@ func limits(active []RecordStatus) (map[string]*int64, map[string][]string) {
 		// the record id first, so this orders them by id.
 		sort.Strings(granted[m])
 		if unlimited {
-			effective[m] = nil
+			values[m] = nil
 			continue
 		}
 		total := sum
-		effective[m] = &total
+		values[m] = &total
 	}
-	return effective, granted
+	return Limits{Values: values, Speaking: len(speaking) > 0}, granted
 }
 
 func graceOf(r RecordStatus, th Thresholds) time.Duration {

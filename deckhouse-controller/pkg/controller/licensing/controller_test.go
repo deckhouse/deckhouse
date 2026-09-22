@@ -44,6 +44,16 @@ const (
 
 var testNow = time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
 
+// fullLimits is what the license server issues: all three metrics, the ones the
+// customer did not buy as an explicit zero.
+func fullLimits(servers, vcpu, cores int) map[string]any {
+	return map[string]any{
+		licensing.MetricServers: servers,
+		licensing.MetricVCPU:    vcpu,
+		licensing.MetricCores:   cores,
+	}
+}
+
 // issueTestPackage signs a one-record Platform package with a throwaway vendor
 // key, so that the test never depends on the keys shipped with the build.
 func issueTestPackage(t *testing.T, limits map[string]any) (string, ed25519.PublicKey) {
@@ -53,28 +63,42 @@ func issueTestPackage(t *testing.T, limits map[string]any) (string, ed25519.Publ
 	if err != nil {
 		t.Fatalf("generate vendor key: %v", err)
 	}
+	return signPackage(t, priv, testPackageID, platformRecord(testRecordID, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", limits)), pub
+}
 
+// platformRecord builds one Platform record of the test cluster.
+func platformRecord(id, start, expire string, limits map[string]any) map[string]any {
+	return map[string]any{
+		"type":       licensing.TypePlatform,
+		"id":         id,
+		"start_at":   start,
+		"expire_at":  expire,
+		"cluster_id": testClusterID,
+		"origin":     "self-service",
+		"platform":   map[string]any{"dkp": map[string]any{"edition": "EE", "resource_limits": limits}},
+	}
+}
+
+func signPackage(t *testing.T, priv ed25519.PrivateKey, jti string, records ...map[string]any) string {
+	t.Helper()
+
+	licenses := make([]any, 0, len(records))
+	for _, r := range records {
+		licenses = append(licenses, r)
+	}
 	token, err := licensing.Sign(map[string]any{"typ": licensing.TypLicense}, map[string]any{
 		"ver":           licensing.SchemaVersion,
 		"iss":           licensing.Issuer,
 		"sub":           testClusterID,
-		"jti":           testPackageID,
+		"jti":           jti,
 		"iat":           "2026-01-01T00:00:00Z",
 		"customer_name": "Acme",
-		"licenses": []any{map[string]any{
-			"type":       licensing.TypePlatform,
-			"id":         testRecordID,
-			"start_at":   "2026-01-01T00:00:00Z",
-			"expire_at":  "2027-01-01T00:00:00Z",
-			"cluster_id": testClusterID,
-			"origin":     "purchase",
-			"platform":   map[string]any{"dkp": map[string]any{"edition": "EE", "resource_limits": limits}},
-		}},
+		"licenses":      licenses,
 	}, priv)
 	if err != nil {
 		t.Fatalf("sign package: %v", err)
 	}
-	return token, pub
+	return token
 }
 
 func newTestReconciler(t *testing.T, vendorKey ed25519.PublicKey, objects ...client.Object) (*reconciler, *testclient.Client) {
@@ -92,16 +116,17 @@ func discoverySecret() *corev1.Secret {
 }
 
 func TestReconcilePublishesPolicy(t *testing.T) {
-	token, vendorKey := issueTestPackage(t, map[string]any{"vCPU": 50, "nodes": 10})
+	token, vendorKey := issueTestPackage(t, fullLimits(1, 8, 0))
 
 	license := &v1alpha1.ClusterLicense{
 		ObjectMeta: metav1.ObjectMeta{Name: "primary"},
-		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: token, Alias: "Acme"},
+		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: token},
 	}
-	worker := node("worker", "4", true)
-	master := node("master", "8", true, taint("node-role.kubernetes.io/control-plane"))
+	big := node("worker-big", "16", true)
+	small := node("worker-small", "8", true)
+	master := node("master", "8", true, taint(taintControlPlane))
 
-	r, cl := newTestReconciler(t, vendorKey, license, &worker, &master, discoverySecret())
+	r, cl := newTestReconciler(t, vendorKey, license, &big, &small, &master, discoverySecret())
 
 	ctx := context.Background()
 	res, err := r.Reconcile(ctx, ctrl.Request{})
@@ -128,33 +153,38 @@ func TestReconcilePublishesPolicy(t *testing.T) {
 	}
 	status := effective.Status
 
-	if got := status.Effective.Limits["vCPU"]; got == nil || *got != 50 {
-		t.Fatalf("effective vCPU limit = %v, want 50", derefOrNil(got))
+	if !status.Licensed || status.Compliance.State != v1alpha1.LicenseComplianceValid {
+		t.Fatalf("licensed/state = %v/%q", status.Licensed, status.Compliance.State)
 	}
-	if got := status.Effective.Limits["nodes"]; got == nil || *got != 10 {
-		t.Fatalf("effective nodes limit = %v, want 10", derefOrNil(got))
+	if got := status.Limits.Values[licensing.MetricServers]; got == nil || *got != 1 {
+		t.Fatalf("servers limit = %v, want 1", derefOrNil(got))
 	}
-	// Only the untainted worker is counted, so four cores on one node.
-	if got := status.Metrics["vCPU"].Instant; got != 4 {
-		t.Fatalf("vCPU instant = %v, want 4", got)
+
+	// The tainted master is free, so the consumption is the two workers.
+	want := v1alpha1.LicenseConsumption{Servers: 2, VCPU: 24, Cores: 12, FreeNodes: 1}
+	if status.Consumption != want {
+		t.Fatalf("consumption = %+v, want %+v", status.Consumption, want)
 	}
-	if got := status.Metrics["nodes"].Instant; got != 1 {
-		t.Fatalf("nodes instant = %v, want 1", got)
+
+	// One server licence for the larger worker, eight vCPU of pool for the other.
+	if status.Allocation.Servers.Used != 1 || status.Allocation.Pool.Nodes != 1 ||
+		status.Allocation.Unlicensed.Nodes != 0 {
+		t.Fatalf("allocation = %+v", status.Allocation)
 	}
-	if status.Compliance.State != v1alpha1.LicenseComplianceValid {
-		t.Fatalf("compliance state = %q, want %q", status.Compliance.State, v1alpha1.LicenseComplianceValid)
-	}
-	if !status.WithinLimits {
-		t.Fatal("withinLimits = false, want true")
-	}
-	if status.Compliance.Since == nil {
-		t.Fatal("compliance.since is not set")
-	}
-	if !meta.IsStatusConditionTrue(status.Conditions, conditionRegistered) {
-		t.Fatalf("condition %s is not True: %+v", conditionRegistered, status.Conditions)
+	if status.OverLimitSince != nil {
+		t.Fatalf("overLimitSince = %v, want null while every node is covered", status.OverLimitSince)
 	}
 	if !meta.IsStatusConditionTrue(status.Conditions, conditionLimitsSatisfied) {
 		t.Fatalf("condition %s is not True: %+v", conditionLimitsSatisfied, status.Conditions)
+	}
+
+	assertNodes(t, status.Nodes, map[string]v1alpha1.LicenseNodeBilling{
+		"worker-big":   v1alpha1.LicenseNodeServer,
+		"worker-small": v1alpha1.LicenseNodePool,
+		"master":       v1alpha1.LicenseNodeFree,
+	})
+	if status.Key == nil || status.Key.Jti != testPackageID || status.Key.CustomerName != "Acme" {
+		t.Fatalf("key = %+v", status.Key)
 	}
 
 	// The request references the key by thumbprint: a record is accepted, so the
@@ -171,12 +201,11 @@ func TestReconcilePublishesPolicy(t *testing.T) {
 	}
 
 	var payload struct {
-		ClusterID string   `json:"cluster_id"`
-		Records   []string `json:"records"`
-		Seq       uint64   `json:"seq"`
-		Metrics   map[string]struct {
-			Instant float64 `json:"instant"`
-		} `json:"metrics"`
+		ClusterID  string           `json:"cluster_id"`
+		Records    []string         `json:"records"`
+		ActiveKeys []string         `json:"active_keys"`
+		Seq        uint64           `json:"seq"`
+		Metrics    map[string]int64 `json:"metrics"`
 	}
 	if err := json.Unmarshal(request.Payload, &payload); err != nil {
 		t.Fatalf("decode registration payload: %v", err)
@@ -187,16 +216,23 @@ func TestReconcilePublishesPolicy(t *testing.T) {
 	if len(payload.Records) != 1 || payload.Records[0] != testRecordID {
 		t.Fatalf("records = %v, want [%s]", payload.Records, testRecordID)
 	}
-	if payload.Metrics["vCPU"].Instant != 4 {
-		t.Fatalf("payload vCPU instant = %v, want 4", payload.Metrics["vCPU"].Instant)
+	if len(payload.ActiveKeys) != 1 || payload.ActiveKeys[0] != testPackageID {
+		t.Fatalf("active_keys = %v, want [%s]", payload.ActiveKeys, testPackageID)
+	}
+	// D9: the payload carries numbers, never node names.
+	if got := string(request.Payload); containsAny(got, "worker-big", "worker-small", "master") {
+		t.Fatalf("the registration payload names nodes: %s", got)
+	}
+	if payload.Metrics[licensing.MetricVCPU] != 24 || payload.Metrics[licensing.MetricCores] != 12 {
+		t.Fatalf("metrics = %v", payload.Metrics)
 	}
 
 	var stored v1alpha1.ClusterLicense
 	if err := cl.Get(ctx, types.NamespacedName{Name: "primary"}, &stored); err != nil {
 		t.Fatalf("get cluster license: %v", err)
 	}
-	if !stored.Status.Accepted {
-		t.Fatalf("cluster license is not accepted: %q", stored.Status.Message)
+	if !stored.Status.Accepted || stored.Status.Superseded {
+		t.Fatalf("cluster license status = %+v", stored.Status)
 	}
 	if len(stored.Status.Records) != 1 || !stored.Status.Records[0].Accepted {
 		t.Fatalf("records = %+v, want one accepted record", stored.Status.Records)
@@ -207,25 +243,11 @@ func TestReconcilePublishesPolicy(t *testing.T) {
 
 	assertMatchesCRD(t, cl, &effective, v1alpha1.EffectiveLicenseKind)
 	assertMatchesCRD(t, cl, &stored, v1alpha1.ClusterLicenseKind)
-
-	// The journal holds exactly one observation and the counter it was signed with.
-	var journalCM corev1.ConfigMap
-	if err := cl.Get(ctx, r.journalKey(), &journalCM); err != nil {
-		t.Fatalf("get journal: %v", err)
-	}
-	stored2 := new(licensing.Journal)
-	if err := json.Unmarshal([]byte(journalCM.Data[journalField]), stored2); err != nil {
-		t.Fatalf("decode journal: %v", err)
-	}
-	if len(stored2.Samples) != 1 || stored2.Seq != payload.Seq {
-		t.Fatalf("journal = %+v, want one sample and seq %d", stored2, payload.Seq)
-	}
 }
 
-// A second reconcile in the same minute must not take a second sample and must
-// not rewrite a status that did not change.
+// A recompute of an unchanged cluster must not rewrite anything.
 func TestReconcileIsIdempotent(t *testing.T) {
-	token, vendorKey := issueTestPackage(t, map[string]any{"vCPU": 50})
+	token, vendorKey := issueTestPackage(t, fullLimits(10, 100, 0))
 
 	license := &v1alpha1.ClusterLicense{
 		ObjectMeta: metav1.ObjectMeta{Name: "primary"},
@@ -233,96 +255,151 @@ func TestReconcileIsIdempotent(t *testing.T) {
 	}
 	worker := node("worker", "4", true)
 
-	r, cl := newTestReconciler(t, vendorKey, license, &worker, discoverySecret())
-
+	env := newTestEnv(t, vendorKey, license, &worker, discoverySecret())
 	ctx := context.Background()
-	if _, err := r.Reconcile(ctx, ctrl.Request{}); err != nil {
+
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
 		t.Fatalf("first reconcile: %v", err)
 	}
-
 	var first v1alpha1.EffectiveLicense
-	if err := cl.Get(ctx, types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}, &first); err != nil {
+	if err := env.cl.Get(ctx, types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}, &first); err != nil {
 		t.Fatalf("get effective license: %v", err)
 	}
 
-	if _, err := r.Reconcile(ctx, ctrl.Request{}); err != nil {
+	env.at(testNow.Add(10 * time.Minute))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
 		t.Fatalf("second reconcile: %v", err)
 	}
-
 	var second v1alpha1.EffectiveLicense
-	if err := cl.Get(ctx, types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}, &second); err != nil {
+	if err := env.cl.Get(ctx, types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}, &second); err != nil {
 		t.Fatalf("get effective license: %v", err)
 	}
 
 	if first.ResourceVersion != second.ResourceVersion {
 		t.Fatalf("effective license was rewritten: %s -> %s", first.ResourceVersion, second.ResourceVersion)
 	}
-
-	var journalCM corev1.ConfigMap
-	if err := cl.Get(ctx, r.journalKey(), &journalCM); err != nil {
-		t.Fatalf("get journal: %v", err)
-	}
-	stored := new(licensing.Journal)
-	if err := json.Unmarshal([]byte(journalCM.Data[journalField]), stored); err != nil {
-		t.Fatalf("decode journal: %v", err)
-	}
-	if len(stored.Samples) != 1 {
-		t.Fatalf("journal holds %d samples, want 1", len(stored.Samples))
-	}
-
-	// With a second observation in the window the consumption views become a
-	// least squares fit, which drifts in the last bits of the mantissa as the
-	// clock moves. Ten minutes later, on unchanged consumption, nothing may be
-	// rewritten.
-	stored.Samples = append([]licensing.Sample{{
-		At:     testNow.Add(-30 * time.Minute),
-		Values: stored.Samples[0].Values,
-	}}, stored.Samples...)
-	raw, err := json.Marshal(stored)
-	if err != nil {
-		t.Fatalf("marshal journal: %v", err)
-	}
-	journalCM.Data[journalField] = string(raw)
-	if err := cl.Update(ctx, &journalCM); err != nil {
-		t.Fatalf("seed a second sample: %v", err)
-	}
-
-	r.now = func() time.Time { return testNow.Add(10 * time.Minute) }
-	if _, err := r.Reconcile(ctx, ctrl.Request{}); err != nil {
-		t.Fatalf("third reconcile: %v", err)
-	}
-
-	var third v1alpha1.EffectiveLicense
-	if err := cl.Get(ctx, types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}, &third); err != nil {
-		t.Fatalf("get effective license: %v", err)
-	}
-	if !equality.Semantic.DeepEqual(second.Status.Metrics, third.Status.Metrics) {
-		t.Fatalf("consumption moved on an unchanged window:\n%+v\n%+v", second.Status.Metrics, third.Status.Metrics)
-	}
-	// licensing.timeline anchors the current segment at "now", so that one field
-	// moves on every reconcile whatever the consumption did. Everything else has
-	// to stand still.
-	settledStatus := *third.Status.DeepCopy()
-	if len(settledStatus.Timeline) > 0 && len(second.Status.Timeline) > 0 {
-		settledStatus.Timeline[0].From = second.Status.Timeline[0].From
-	}
-	if !equality.Semantic.DeepEqual(second.Status, settledStatus) {
-		t.Fatalf("effective license changed ten minutes later:\n%+v\n%+v", second.Status, settledStatus)
-	}
-
-	var settled corev1.ConfigMap
-	if err := cl.Get(ctx, r.journalKey(), &settled); err != nil {
-		t.Fatalf("get journal: %v", err)
-	}
-	if settled.ResourceVersion != journalCM.ResourceVersion {
-		t.Fatalf("journal was rewritten without a sample being due: %s -> %s", journalCM.ResourceVersion, settled.ResourceVersion)
+	if !equality.Semantic.DeepEqual(first.Status, second.Status) {
+		t.Fatalf("status changed ten minutes later:\n%+v\n%+v", first.Status, second.Status)
 	}
 }
 
-// Without a key at all the cluster is Unregistered, and the request it publishes
-// declares its identity inline so that the customer can obtain a first key.
+// S7 to S9 through the controller: an allocation of equally sized nodes stays
+// put, because the previous one is read back off the published status.
+func TestAllocationIsStableAcrossReconciles(t *testing.T) {
+	// One server licence and no pool: exactly one of the two equal nodes wins.
+	token, vendorKey := issueTestPackage(t, fullLimits(1, 0, 0))
+	license := &v1alpha1.ClusterLicense{
+		ObjectMeta: metav1.ObjectMeta{Name: "primary"},
+		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: token},
+	}
+	a := node("a", "16", true)
+	b := node("b", "16", true)
+
+	env := newTestEnv(t, vendorKey, license, &a, &b, discoverySecret())
+	ctx := context.Background()
+
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("first reconcile: %v", err)
+	}
+	// S6: with no history the lower name wins.
+	if got := serverNodes(t, env); len(got) != 1 || got[0] != "a" {
+		t.Fatalf("servers = %v, want [a]", got)
+	}
+
+	// S8: a larger node takes the licence over.
+	c := node("c", "32", true)
+	if err := env.cl.Create(ctx, &c); err != nil {
+		t.Fatalf("create node c: %v", err)
+	}
+	env.at(testNow.Add(time.Minute))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+	if got := serverNodes(t, env); len(got) != 1 || got[0] != "c" {
+		t.Fatalf("servers = %v, want [c]", got)
+	}
+
+	// S9: the server node disappears and the licence falls back to the survivors.
+	if err := env.cl.Delete(ctx, &c); err != nil {
+		t.Fatalf("delete node c: %v", err)
+	}
+	env.at(testNow.Add(2 * time.Minute))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("third reconcile: %v", err)
+	}
+	if got := serverNodes(t, env); len(got) != 1 || got[0] != "a" {
+		t.Fatalf("servers = %v, want the previous holder [a]", got)
+	}
+}
+
+// A7: unlicensed nodes warn and stamp the moment they appeared.
+func TestUnlicensedNodesWarnAndStampTheStatus(t *testing.T) {
+	token, vendorKey := issueTestPackage(t, fullLimits(1, 0, 0))
+	license := &v1alpha1.ClusterLicense{
+		ObjectMeta: metav1.ObjectMeta{Name: "primary"},
+		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: token},
+	}
+	big := node("big", "32", true)
+	small := node("small", "8", true)
+
+	env := newTestEnv(t, vendorKey, license, &big, &small, discoverySecret())
+	ctx := context.Background()
+
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	status := effectiveStatusOf(t, env)
+
+	if status.Compliance.State != v1alpha1.LicenseComplianceWarning ||
+		status.Compliance.Reason != licensing.ReasonUnlicensedNodes {
+		t.Fatalf("compliance = %+v", status.Compliance)
+	}
+	if !status.Licensed {
+		t.Fatal("a warning must still count as licensed")
+	}
+	if status.OverLimitSince == nil || !status.OverLimitSince.Time.Equal(testNow) {
+		t.Fatalf("overLimitSince = %v, want %s", status.OverLimitSince, testNow)
+	}
+	if status.Allocation.Unlicensed.Nodes != 1 || status.Allocation.Unlicensed.VCPU != 8 {
+		t.Fatalf("unlicensed = %+v", status.Allocation.Unlicensed)
+	}
+	if meta.IsStatusConditionTrue(status.Conditions, conditionLimitsSatisfied) {
+		t.Fatalf("condition %s is True with an unlicensed node", conditionLimitsSatisfied)
+	}
+
+	// A9: seven days on, the same overuse is a violation, and the stamp does not
+	// move in between.
+	env.at(testNow.Add(7 * 24 * time.Hour))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("reconcile a week later: %v", err)
+	}
+	later := effectiveStatusOf(t, env)
+	if later.Compliance.State != v1alpha1.LicenseComplianceViolation || later.Licensed {
+		t.Fatalf("compliance = %+v, licensed = %v", later.Compliance, later.Licensed)
+	}
+	if !later.OverLimitSince.Time.Equal(testNow) {
+		t.Fatalf("overLimitSince moved to %v", later.OverLimitSince)
+	}
+
+	// A10: the node goes away and the violation ends on the first recompute.
+	if err := env.cl.Delete(ctx, &small); err != nil {
+		t.Fatalf("delete node: %v", err)
+	}
+	env.at(testNow.Add(7*24*time.Hour + time.Minute))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("reconcile after the node left: %v", err)
+	}
+	recovered := effectiveStatusOf(t, env)
+	if recovered.Compliance.State != v1alpha1.LicenseComplianceValid || recovered.OverLimitSince != nil {
+		t.Fatalf("compliance = %+v, overLimitSince = %v", recovered.Compliance, recovered.OverLimitSince)
+	}
+}
+
+// A12: without a key at all the cluster is Unregistered, every node is
+// unlicensed, and the request it publishes declares its identity inline so that
+// the customer can obtain a first key.
 func TestReconcileWithoutKeys(t *testing.T) {
-	_, vendorKey := issueTestPackage(t, map[string]any{"vCPU": 50})
+	_, vendorKey := issueTestPackage(t, fullLimits(10, 100, 0))
 	worker := node("worker", "4", true)
 
 	r, cl := newTestReconciler(t, vendorKey, &worker, discoverySecret())
@@ -336,19 +413,82 @@ func TestReconcileWithoutKeys(t *testing.T) {
 	if err := cl.Get(ctx, types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}, &effective); err != nil {
 		t.Fatalf("get effective license: %v", err)
 	}
-	if effective.Status.Compliance.Reason != licensing.ReasonUnregistered {
-		t.Fatalf("compliance reason = %q, want %q", effective.Status.Compliance.Reason, licensing.ReasonUnregistered)
+	status := effective.Status
+	if status.Licensed || status.Compliance.Reason != licensing.ReasonUnregistered {
+		t.Fatalf("licensed = %v, reason = %q", status.Licensed, status.Compliance.Reason)
 	}
-	if meta.IsStatusConditionTrue(effective.Status.Conditions, conditionRegistered) {
-		t.Fatalf("condition %s is True without any key", conditionRegistered)
+	if status.Key != nil {
+		t.Fatalf("key = %+v, want none", status.Key)
+	}
+	if status.Allocation.Unlicensed.Nodes != 1 {
+		t.Fatalf("allocation = %+v, want the worker unlicensed", status.Allocation)
 	}
 
-	request, err := licensing.Parse(effective.Status.RegistrationRequest)
+	request, err := licensing.Parse(status.RegistrationRequest)
 	if err != nil {
 		t.Fatalf("parse registration request: %v", err)
 	}
 	if _, ok := request.Header["jwk"]; !ok {
 		t.Fatalf("registration request header = %v, want an inline jwk", request.Header)
+	}
+
+	assertMatchesCRD(t, cl, &effective, v1alpha1.EffectiveLicenseKind)
+}
+
+// S14: three hundred nodes land in the status and the object still validates.
+func TestReconcileWithThreeHundredNodes(t *testing.T) {
+	token, vendorKey := issueTestPackage(t, fullLimits(12, 200, 0))
+	objects := []client.Object{
+		&v1alpha1.ClusterLicense{
+			ObjectMeta: metav1.ObjectMeta{Name: "primary"},
+			Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: token},
+		},
+		discoverySecret(),
+	}
+	for i := range 300 {
+		n := node(nodeName(i), "8", true)
+		objects = append(objects, &n)
+	}
+
+	env := newTestEnv(t, vendorKey, objects...)
+	if _, err := env.r.Reconcile(context.Background(), ctrl.Request{}); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	var effective v1alpha1.EffectiveLicense
+	if err := env.cl.Get(context.Background(), types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}, &effective); err != nil {
+		t.Fatalf("get effective license: %v", err)
+	}
+	if len(effective.Status.Nodes) != 300 {
+		t.Fatalf("status lists %d nodes, want 300", len(effective.Status.Nodes))
+	}
+	assertMatchesCRD(t, env.cl, &effective, v1alpha1.EffectiveLicenseKind)
+}
+
+// The node predicate is the debounce of specification 10.6: only a change the
+// policy actually reads wakes the controller.
+func TestNodePredicate(t *testing.T) {
+	base := node("worker", "4", true)
+
+	unchanged := base
+	if (nodeChanged{}).Update(updateOf(&base, &unchanged)) {
+		t.Fatal("an identical node woke the controller")
+	}
+
+	heartbeat := base
+	heartbeat.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(testNow)
+	if (nodeChanged{}).Update(updateOf(&base, &heartbeat)) {
+		t.Fatal("a kubelet heartbeat woke the controller")
+	}
+
+	resized := node("worker", "8", true)
+	if !(nodeChanged{}).Update(updateOf(&base, &resized)) {
+		t.Fatal("a change of capacity did not wake the controller")
+	}
+
+	tainted := node("worker", "4", true, taint(taintControlPlane))
+	if !(nodeChanged{}).Update(updateOf(&base, &tainted)) {
+		t.Fatal("a change of taints did not wake the controller")
 	}
 }
 

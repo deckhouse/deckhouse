@@ -190,8 +190,8 @@ func TestUnknownTypeDoesNotBlockPlatform(t *testing.T) {
 		t.Fatalf("platform: %+v", statuses[1])
 	}
 
-	res := Compute(oneKey(statuses...), nil, nil, ts("2026-02-01T00:00:00Z"), DefaultThresholds())
-	if got := limitOf(t, res, "vCPU"); got != 50 {
+	res := Compute(input(ts("2026-02-01T00:00:00Z"), oneKey(statuses...)))
+	if got := limitOf(t, res, MetricVCPU); got != 50 {
 		t.Fatalf("vCPU = %d, want 50", got)
 	}
 	if res.State != StateValid {
@@ -243,7 +243,7 @@ func TestRevokedRecords(t *testing.T) {
 			if statuses[0].RevokedReason != tc.reason {
 				t.Fatalf("RevokedReason = %q, want %q", statuses[0].RevokedReason, tc.reason)
 			}
-			if got := Compute(oneKey(statuses...), nil, nil, now, DefaultThresholds()).State; got != tc.wantState {
+			if got := Compute(input(now, oneKey(statuses...))).State; got != tc.wantState {
 				t.Fatalf("state = %q, want %q", got, tc.wantState)
 			}
 		})
@@ -251,24 +251,24 @@ func TestRevokedRecords(t *testing.T) {
 
 	// Reissued leaves the state to the surviving records; a commercial reason
 	// does not, even with a healthy record next to it.
-	healthy := wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{"vCPU": i64(40)})
+	healthy := wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{MetricVCPU: i64(40)})
 	ctx := ctxFor(pub)
 	ctx.Revoked = map[string]Revocation{recordA: {RevokedAt: now, Reason: ReasonReissued}}
 	_, statuses, err := ParsePackage(token, ctx)
 	if err != nil {
 		t.Fatalf("package rejected: %v", err)
 	}
-	res := Compute(oneKey(append(statuses, healthy)...), nil, nil, now, DefaultThresholds())
+	res := Compute(input(now, oneKey(append(statuses, healthy)...)))
 	if res.State != StateValid {
 		t.Fatalf("reissued state = %q, want %q", res.State, StateValid)
 	}
-	if got := limitOf(t, res, "vCPU"); got != 40 {
+	if got := limitOf(t, res, MetricVCPU); got != 40 {
 		t.Fatalf("vCPU = %d, want 40", got)
 	}
 
 	ctx.Revoked = map[string]Revocation{recordA: {RevokedAt: now, Reason: ReasonNonPayment}}
 	_, statuses, _ = ParsePackage(token, ctx)
-	res = Compute(oneKey(append(statuses, healthy)...), nil, nil, now, DefaultThresholds())
+	res = Compute(input(now, oneKey(append(statuses, healthy)...)))
 	if res.State != StateViolation {
 		t.Fatalf("non payment state = %q, want %q", res.State, StateViolation)
 	}

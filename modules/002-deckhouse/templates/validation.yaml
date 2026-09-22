@@ -494,7 +494,7 @@ spec:
 ---
 {{- $policyName := "licensing-storage.deckhouse.io" }}
 # The same single writer, for the two objects the licensing state is kept in: the
-# cluster identity and the consumption journal. They are guarded by their own
+# cluster identity and the registration counter. They are guarded by their own
 # policy rather than by a third rule of the one above, because matchConditions are
 # ANDed across the whole policy and a condition on the object name would switch
 # the rules for the custom resources off along with it.
@@ -522,7 +522,7 @@ spec:
       expression: 'request.namespace == "d8-system"'
     # A DELETE has no new object, so the name is read off whichever side exists.
     - name: 'only-licensing-storage'
-      expression: '(object == null ? oldObject : object).metadata.name in ["cluster-key", "consumption-journal"]'
+      expression: '(object == null ? oldObject : object).metadata.name in ["cluster-key", "license-registration"]'
   validations:
     - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"'
       reason: Forbidden

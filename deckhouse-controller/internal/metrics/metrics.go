@@ -73,13 +73,18 @@ const (
 	// Licensing Controller Metrics
 	// ============================================================================
 	D8LicenseComplianceState        = "d8_license_compliance_state"
-	D8LicenseEffectiveLimit         = "d8_license_effective_limit"
+	D8LicenseLicensed               = "d8_license_licensed"
+	D8LicenseLimit                  = "d8_license_limit"
 	D8LicenseConsumption            = "d8_license_consumption"
-	D8LicenseWithinLimits           = "d8_license_within_limits"
-	D8LicenseNextReductionSeconds   = "d8_license_next_reduction_seconds"
-	D8LicenseLimitAfterReduction    = "d8_license_limit_after_reduction"
-	D8LicenseRecordExpiresInSeconds = "d8_license_record_expires_in_seconds"
+	D8LicenseNodes                  = "d8_license_nodes"
+	D8LicenseUnlicensedVCPU         = "d8_license_unlicensed_vcpu"
+	D8LicenseKeyExpiresInSeconds    = "d8_license_key_expires_in_seconds"
+	D8LicenseOverLimitSeconds       = "d8_license_over_limit_seconds"
 	D8LicenseRecords                = "d8_license_records"
+	D8LicenseRecordActive           = "d8_license_record_active"
+	D8LicenseRecordAccepted         = "d8_license_record_accepted"
+	D8LicenseRecordGrant            = "d8_license_record_grant"
+	D8LicenseRecordExpiresInSeconds = "d8_license_record_expires_in_seconds"
 
 	ModulePullSecondsTotal     = "deckhouse_module_pull_seconds_total"
 	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
@@ -161,13 +166,18 @@ func RegisterLicensingMetrics(metricStorage metricsstorage.Storage) error {
 		help   string
 	}{
 		{D8LicenseComplianceState, []string{LabelReason}, "Compliance state of the license policy (0 = Valid, 1 = Warning, 2 = Grace, 3 = Violation, 4 = NoUpdateRight); reason carries the check that produced it, empty while Valid"},
-		{D8LicenseEffectiveLimit, []string{LabelResource}, "Effective quota of a resource; the series is absent while the resource is unlimited"},
-		{D8LicenseConsumption, []string{LabelResource, LabelKind}, "Observed consumption of a resource, by kind (instant, avg_7d, extrapolated)"},
-		{D8LicenseWithinLimits, nil, "Whether every observed resource stays within its effective limit (1.0 = yes)"},
-		{D8LicenseNextReductionSeconds, nil, "Seconds until the effective limits shrink"},
-		{D8LicenseLimitAfterReduction, []string{LabelResource}, "Quota of a resource after the next reduction"},
-		{D8LicenseRecordExpiresInSeconds, []string{LabelRecordID, LabelLicense}, "Seconds until an active license record expires"},
+		{D8LicenseLicensed, nil, "Whether the cluster is licensed (1.0 = yes, that is the state is Valid or Warning)"},
+		{D8LicenseLimit, []string{LabelResource}, "Current quota of a metric; +Inf while the metric is unlimited"},
+		{D8LicenseConsumption, []string{LabelResource}, "Consumption of a metric over the licensable nodes"},
+		{D8LicenseNodes, []string{LabelBilling}, "Number of nodes by allocation group (server, pool, unlicensed)"},
+		{D8LicenseUnlicensedVCPU, nil, "vCPU of the nodes that are not covered by the license"},
+		{D8LicenseKeyExpiresInSeconds, nil, "Seconds until the license key expires; the series is absent for a key that never expires"},
+		{D8LicenseOverLimitSeconds, nil, "Seconds since unlicensed nodes appeared, 0 while every node is covered"},
 		{D8LicenseRecords, []string{LabelType, LabelStatus}, "Number of license records by type and status (accepted or the rejection reason)"},
+		{D8LicenseRecordActive, []string{LabelRecordID, LabelLicense}, "Whether a license record contributes to the policy right now (1.0 = yes)"},
+		{D8LicenseRecordAccepted, []string{LabelRecordID, LabelLicense}, "Whether a license record passed every check (1.0 = yes)"},
+		{D8LicenseRecordGrant, []string{LabelRecordID, LabelLicense, LabelResource}, "Quota a single license record grants for a metric; +Inf when it grants it without a limit"},
+		{D8LicenseRecordExpiresInSeconds, []string{LabelRecordID, LabelLicense}, "Seconds until an active license record expires"},
 	}
 
 	for _, g := range gauges {

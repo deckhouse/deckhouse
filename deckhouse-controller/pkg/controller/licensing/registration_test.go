@@ -19,6 +19,7 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -49,41 +50,126 @@ func requestClaims(t *testing.T, token string) map[string]any {
 
 func publishedRequest(t *testing.T, env *testEnv) string {
 	t.Helper()
-
-	var effective v1alpha1.EffectiveLicense
-	if err := env.cl.Get(context.Background(), types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}, &effective); err != nil {
-		t.Fatalf("get effective license: %v", err)
-	}
-	return effective.Status.RegistrationRequest
+	return effectiveStatusOf(t, env).RegistrationRequest
 }
 
-func storedJournal(t *testing.T, env *testEnv) *licensing.Journal {
+func headerOf(t *testing.T, token string) map[string]any {
+	t.Helper()
+	tok, err := licensing.Parse(token)
+	if err != nil {
+		t.Fatalf("parse request: %v", err)
+	}
+	return tok.Header
+}
+
+func storedSeq(t *testing.T, env *testEnv) uint64 {
 	t.Helper()
 
 	var cm corev1.ConfigMap
-	if err := env.cl.Get(context.Background(), env.r.journalKey(), &cm); err != nil {
-		t.Fatalf("get journal: %v", err)
+	if err := env.cl.Get(context.Background(), env.r.seqKey(), &cm); err != nil {
+		t.Fatalf("get registration counter: %v", err)
 	}
-	journal := new(licensing.Journal)
-	if err := json.Unmarshal([]byte(cm.Data[journalField]), journal); err != nil {
-		t.Fatalf("decode journal: %v", err)
+	seq, err := strconv.ParseUint(cm.Data[seqField], 10, 64)
+	if err != nil {
+		t.Fatalf("parse stored seq %q: %v", cm.Data[seqField], err)
 	}
-	return journal
+	return seq
 }
 
 func licenseObject(t *testing.T) (*v1alpha1.ClusterLicense, ed25519.PublicKey) {
 	t.Helper()
 
-	token, vendorKey := issueTestPackage(t, map[string]any{"vCPU": 50})
+	token, vendorKey := issueTestPackage(t, fullLimits(10, 100, 0))
 	return &v1alpha1.ClusterLicense{
 		ObjectMeta: metav1.ObjectMeta{Name: "primary"},
 		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: token},
 	}, vendorKey
 }
 
-// D4 at the controller level: every issued request is a new one, and the counter
-// the license server reads only ever grows.
-func TestConsecutiveSamplesAdvanceSeqAndJTI(t *testing.T) {
+// Installing or removing a key must rebuild the cluster data file at once: the
+// license server reads the installed set out of it, and a customer reissuing
+// right after installing a key must not be handed a stale file.
+func TestRequestFollowsInstalledSet(t *testing.T) {
+	license, vendorKey := licenseObject(t)
+	worker := node("worker", "4", true)
+
+	env := newTestEnv(t, vendorKey, &worker, discoverySecret())
+	ctx := context.Background()
+
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("first reconcile: %v", err)
+	}
+	// D1: no key at all.
+	unregistered := requestClaims(t, publishedRequest(t, env))
+	if got := unregistered["records"].([]any); len(got) != 0 {
+		t.Fatalf("records before any key = %v, want none", got)
+	}
+	if got := unregistered["active_keys"].([]any); len(got) != 0 {
+		t.Fatalf("active_keys before any key = %v, want none", got)
+	}
+	if _, hasJWK := headerOf(t, publishedRequest(t, env))["jwk"]; !hasJWK {
+		t.Fatal("request before any key must carry jwk")
+	}
+
+	// D2: a key is installed, so the file is rebuilt with the record id, the key
+	// jti and a kid header.
+	if err := env.cl.Create(ctx, license); err != nil {
+		t.Fatalf("create license: %v", err)
+	}
+	env.at(testNow.Add(10 * time.Minute))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+	registered := requestClaims(t, publishedRequest(t, env))
+	// D4: consecutive requests differ in jti and grow in seq.
+	if registered["seq"].(float64) != unregistered["seq"].(float64)+1 {
+		t.Fatalf("seq = %v, want %v + 1", registered["seq"], unregistered["seq"])
+	}
+	if registered["jti"] == unregistered["jti"] {
+		t.Fatalf("jti = %v twice, want a fresh one per request", registered["jti"])
+	}
+	if got := registered["records"].([]any); len(got) != 1 {
+		t.Fatalf("records after install = %v, want one id", got)
+	}
+	if got := registered["active_keys"].([]any); len(got) != 1 || got[0] != testPackageID {
+		t.Fatalf("active_keys after install = %v, want [%s]", got, testPackageID)
+	}
+	if _, hasKID := headerOf(t, publishedRequest(t, env))["kid"]; !hasKID {
+		t.Fatal("request after install must carry kid")
+	}
+
+	// Nothing changed: the same file stays put, and so does the counter.
+	env.at(testNow.Add(20 * time.Minute))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("third reconcile: %v", err)
+	}
+	if again := requestClaims(t, publishedRequest(t, env)); again["jti"] != registered["jti"] {
+		t.Fatal("request was rebuilt although nothing changed")
+	}
+	if got := storedSeq(t, env); float64(got) != registered["seq"].(float64) {
+		t.Fatalf("stored seq = %d, want %v", got, registered["seq"])
+	}
+
+	// The key is removed: back to an unregistered request.
+	if err := env.cl.Delete(ctx, license); err != nil {
+		t.Fatalf("delete license: %v", err)
+	}
+	env.at(testNow.Add(30 * time.Minute))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("fourth reconcile: %v", err)
+	}
+	if got := requestClaims(t, publishedRequest(t, env))["records"].([]any); len(got) != 0 {
+		t.Fatalf("records after removal = %v, want none", got)
+	}
+	if _, hasJWK := headerOf(t, publishedRequest(t, env))["jwk"]; !hasJWK {
+		t.Fatal("request after removal must carry jwk again")
+	}
+}
+
+// The consumption is part of the cluster data file, so a node joining rebuilds
+// it: a file the license server would price against last month's cluster is
+// worse than no file.
+func TestRequestFollowsConsumption(t *testing.T) {
 	license, vendorKey := licenseObject(t)
 	worker := node("worker", "4", true)
 
@@ -93,26 +179,31 @@ func TestConsecutiveSamplesAdvanceSeqAndJTI(t *testing.T) {
 	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
 		t.Fatalf("first reconcile: %v", err)
 	}
-	first := requestClaims(t, publishedRequest(t, env))
+	before := requestClaims(t, publishedRequest(t, env))
+	if got := before["metrics"].(map[string]any)[licensing.MetricVCPU]; got != float64(4) {
+		t.Fatalf("vCPU = %v, want 4", got)
+	}
 
-	env.at(testNow.Add(time.Hour))
+	second := node("worker-2", "8", true)
+	if err := env.cl.Create(ctx, &second); err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+	env.at(testNow.Add(time.Minute))
 	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
 		t.Fatalf("second reconcile: %v", err)
 	}
-	second := requestClaims(t, publishedRequest(t, env))
 
-	if first["jti"] == second["jti"] {
-		t.Fatalf("jti = %v twice, want a fresh one per request", first["jti"])
+	after := requestClaims(t, publishedRequest(t, env))
+	metrics := after["metrics"].(map[string]any)
+	if metrics[licensing.MetricVCPU] != float64(12) || metrics[licensing.MetricServers] != float64(2) {
+		t.Fatalf("metrics = %v, want 2 servers and 12 vCPU", metrics)
 	}
-	if first["seq"].(float64) >= second["seq"].(float64) {
-		t.Fatalf("seq = %v then %v, want it to grow", first["seq"], second["seq"])
-	}
-	if got := storedJournal(t, env).Seq; float64(got) != second["seq"].(float64) {
-		t.Fatalf("persisted seq = %d, want the seq of the published request %v", got, second["seq"])
+	if after["seq"].(float64) != before["seq"].(float64)+1 {
+		t.Fatalf("seq = %v, want %v + 1", after["seq"], before["seq"])
 	}
 }
 
-// A request that has to be rebuilt outside a sampling tick is still a new
+// A request that has to be rebuilt because the status was wiped is still a new
 // request, so it carries the next seq and that seq is persisted.
 func TestLostRequestIsReissuedWithANewSeq(t *testing.T) {
 	license, vendorKey := licenseObject(t)
@@ -136,7 +227,6 @@ func TestLostRequestIsReissuedWithANewSeq(t *testing.T) {
 		t.Fatalf("wipe registration request: %v", err)
 	}
 
-	// Ten minutes later no sample is due, but the request has to come back.
 	env.at(testNow.Add(10 * time.Minute))
 	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
 		t.Fatalf("second reconcile: %v", err)
@@ -146,22 +236,38 @@ func TestLostRequestIsReissuedWithANewSeq(t *testing.T) {
 	if second["seq"].(float64) != first["seq"].(float64)+1 {
 		t.Fatalf("seq = %v, want %v + 1", second["seq"], first["seq"])
 	}
-
-	journal := storedJournal(t, env)
-	if float64(journal.Seq) != second["seq"].(float64) {
-		t.Fatalf("persisted seq = %d, want %v", journal.Seq, second["seq"])
-	}
-	if len(journal.Samples) != 1 {
-		t.Fatalf("journal holds %d samples, want the single one of the first tick", len(journal.Samples))
+	if got := storedSeq(t, env); float64(got) != second["seq"].(float64) {
+		t.Fatalf("stored seq = %d, want %v", got, second["seq"])
 	}
 }
 
-// An unreadable pod list must leave the window alone: no sample, no counter
-// move, and an error for controller-runtime to back off on.
+// The counter outlives the status: it is the one piece of state a license server
+// cannot forgive going backwards.
+func TestSeqSurvivesAWipedStatus(t *testing.T) {
+	license, vendorKey := licenseObject(t)
+	worker := node("worker", "4", true)
+
+	seed := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: seqConfigMapName, Namespace: app.NamespaceDeckhouse},
+		Data:       map[string]string{seqField: "41"},
+	}
+
+	env := newTestEnv(t, vendorKey, license, &worker, discoverySecret(), seed)
+	if _, err := env.r.Reconcile(context.Background(), ctrl.Request{}); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	if got := requestClaims(t, publishedRequest(t, env))["seq"].(float64); got != 42 {
+		t.Fatalf("seq = %v, want 42", got)
+	}
+}
+
+// N12: an unreadable pod list aborts the reconcile, leaves the status alone and
+// does not move the counter.
 func TestReconcileFailsWhenPodsCannotBeListed(t *testing.T) {
 	license, vendorKey := licenseObject(t)
 	worker := node("worker", "4", true)
-	master := node("master", "8", true, taint("node-role.kubernetes.io/control-plane"))
+	master := node("master", "8", true, taint(taintControlPlane))
 
 	env := newTestEnv(t, vendorKey, license, &worker, &master, discoverySecret())
 	env.pods.err = errors.New("apiserver is unhappy")
@@ -172,72 +278,12 @@ func TestReconcileFailsWhenPodsCannotBeListed(t *testing.T) {
 	}
 
 	var cm corev1.ConfigMap
-	err := env.cl.Get(ctx, env.r.journalKey(), &cm)
-	if err == nil {
-		t.Fatalf("a journal was written from a failed observation: %q", cm.Data[journalField])
+	if err := env.cl.Get(ctx, env.r.seqKey(), &cm); err == nil {
+		t.Fatalf("a counter was written from a failed observation: %q", cm.Data[seqField])
 	}
-}
-
-// A journal nobody can decode restarts the window and keeps the broken bytes
-// for whoever investigates. The counter survives whenever it can still be read:
-// a seq that went backwards is the one part the license server cannot shrug off.
-func TestCorruptJournalIsSalvagedAndParked(t *testing.T) {
-	cases := []struct {
-		name    string
-		payload string
-		wantSeq uint64
-	}{
-		{
-			// Valid JSON, wrong shape: seq is still there to be read.
-			name:    "a journal with a broken samples field keeps its counter",
-			payload: `{"seq":42,"samples":{"what":"is this"}}`,
-			wantSeq: 43,
-		},
-		{
-			// Nothing can be read out of this one, so the counter restarts and
-			// the customer may have to register once more.
-			name:    "an unparseable journal restarts the counter",
-			payload: `{"seq": 42, "samples": [ this is not json`,
-			wantSeq: 1,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			license, vendorKey := licenseObject(t)
-			worker := node("worker", "4", true)
-
-			journalCM := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: journalConfigMapName, Namespace: app.NamespaceDeckhouse},
-				Data:       map[string]string{journalField: tc.payload},
-			}
-
-			env := newTestEnv(t, vendorKey, license, &worker, discoverySecret(), journalCM)
-			ctx := context.Background()
-
-			if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
-				t.Fatalf("reconcile: %v", err)
-			}
-
-			var cm corev1.ConfigMap
-			if err := env.cl.Get(ctx, env.r.journalKey(), &cm); err != nil {
-				t.Fatalf("get journal: %v", err)
-			}
-			if cm.Data[journalCorruptField] != tc.payload {
-				t.Fatalf("journal.corrupt = %q, want the original payload", cm.Data[journalCorruptField])
-			}
-
-			journal := storedJournal(t, env)
-			if journal.Seq != tc.wantSeq {
-				t.Fatalf("seq = %d, want %d", journal.Seq, tc.wantSeq)
-			}
-			if len(journal.Samples) != 1 {
-				t.Fatalf("journal holds %d samples, want the window restarted with one", len(journal.Samples))
-			}
-			if claims := requestClaims(t, publishedRequest(t, env)); claims["seq"].(float64) != float64(tc.wantSeq) {
-				t.Fatalf("request seq = %v, want %d", claims["seq"], tc.wantSeq)
-			}
-		})
+	var effective v1alpha1.EffectiveLicense
+	if err := env.cl.Get(ctx, types.NamespacedName{Name: v1alpha1.EffectiveLicenseName}, &effective); err == nil {
+		t.Fatalf("a status was published from a failed observation: %+v", effective.Status)
 	}
 }
 
@@ -269,5 +315,42 @@ func TestMalformedClusterKeyIsNotReplaced(t *testing.T) {
 	}
 	if stored.ResourceVersion != secret.ResourceVersion {
 		t.Fatalf("secret was rewritten: %s -> %s", secret.ResourceVersion, stored.ResourceVersion)
+	}
+}
+
+// requeueAfter picks the soonest moment the policy can change on its own.
+func TestRequeueAfter(t *testing.T) {
+	th := licensing.DefaultThresholds()
+	expire := testNow.Add(30 * time.Minute)
+	res := licensing.Result{Records: []licensing.RecordStatus{{
+		Record: licensing.Record{StartAt: testNow.Add(-time.Hour), ExpireAt: &expire},
+	}}}
+
+	if got := requeueAfter(res, th, testNow); got != 30*time.Minute {
+		t.Fatalf("requeueAfter = %s, want the record expiry in 30m", got)
+	}
+
+	// Anything further out than the resync period is the resync period.
+	far := testNow.Add(3 * time.Hour)
+	if got := requeueAfter(licensing.Result{Records: []licensing.RecordStatus{{
+		Record: licensing.Record{StartAt: testNow.Add(-time.Hour), ExpireAt: &far},
+	}}}, th, testNow); got != resyncPeriod {
+		t.Fatalf("requeueAfter = %s, want the resync period", got)
+	}
+
+	since := testNow.Add(-7*24*time.Hour + 30*time.Minute)
+	over := licensing.Result{OverLimitSince: &since}
+	if got := requeueAfter(over, th, testNow); got != 30*time.Minute {
+		t.Fatalf("requeueAfter = %s, want the end of the over-limit window in 30m", got)
+	}
+
+	// Nothing ahead at all still resyncs, and a breakpoint on top of us does not
+	// turn into a hot loop.
+	if got := requeueAfter(licensing.Result{}, th, testNow); got != resyncPeriod {
+		t.Fatalf("requeueAfter = %s, want the resync period", got)
+	}
+	now := expire.Add(-time.Second)
+	if got := requeueAfter(res, th, now); got != time.Minute {
+		t.Fatalf("requeueAfter = %s, want the one minute floor", got)
 	}
 }

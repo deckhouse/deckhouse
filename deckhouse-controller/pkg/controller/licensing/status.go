@@ -16,7 +16,6 @@ package licensing
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -37,7 +36,6 @@ func (r *reconciler) updateKeyStatuses(
 	items []v1alpha1.ClusterLicense,
 	keys []licensing.KeyRecords,
 	failures []error,
-	packages []*licensing.Package,
 	res licensing.Result,
 	now time.Time,
 ) (map[string]string, error) {
@@ -52,6 +50,8 @@ func (r *reconciler) updateKeyStatuses(
 	}
 
 	byKey := make(map[string][]licensing.RecordStatus, len(keys))
+	jtis := make(map[string]string, len(keys))
+	customers := make(map[string]string, len(keys))
 	for _, key := range keys {
 		records := make([]licensing.RecordStatus, 0, len(key.Records))
 		for _, rec := range key.Records {
@@ -63,6 +63,8 @@ func (r *reconciler) updateKeyStatuses(
 			verdicts[rec.ID] = pending[1:]
 		}
 		byKey[key.Key] = records
+		jtis[key.Key] = key.JTI
+		customers[key.Key] = key.CustomerName
 	}
 
 	owners := make(map[string]string, len(res.Records))
@@ -73,7 +75,7 @@ func (r *reconciler) updateKeyStatuses(
 			owners[rec.ID] = item.Name
 		}
 
-		status := keyStatus(item.Status, failures[i], packages[i], records, res.Retirable[item.Name], now)
+		status := keyStatus(item.Status, failures[i], jtis[item.Name], customers[item.Name], records, res.Superseded[item.Name], now)
 		if equality.Semantic.DeepEqual(item.Status, status) {
 			continue
 		}
@@ -89,29 +91,25 @@ func (r *reconciler) updateKeyStatuses(
 func keyStatus(
 	prev v1alpha1.ClusterLicenseStatus,
 	failure error,
-	pkg *licensing.Package,
+	jti string,
+	customer string,
 	records []licensing.RecordStatus,
-	retirable bool,
+	superseded bool,
 	now time.Time,
 ) v1alpha1.ClusterLicenseStatus {
 	status := v1alpha1.ClusterLicenseStatus{
-		Retirable:  retirable,
+		Superseded: superseded,
 		Conditions: append([]metav1.Condition(nil), prev.Conditions...),
 	}
 
 	if failure != nil {
 		status.Message = failure.Error()
-		// A package that does not verify carries no records, so retirability is
-		// decided by the failure itself: a bad signature, a foreign issuer or a
-		// wrong type will never start verifying, while a package written for a
-		// newer schema starts working after a Deckhouse upgrade (spec 8.6).
-		status.Retirable = !errors.Is(failure, licensing.ErrUnsupportedVersion)
-		setRetirable(&status, now)
+		setValid(&status, false, status.Message, now)
 		return status
 	}
 
-	status.PackageJti = pkg.JTI
-	status.CustomerName = pkg.CustomerName
+	status.PackageJti = jti
+	status.CustomerName = customer
 	status.Records = make([]v1alpha1.LicenseRecordStatus, 0, len(records))
 
 	accepted := 0
@@ -123,31 +121,32 @@ func keyStatus(
 	}
 	status.Accepted = accepted > 0
 	status.Message = fmt.Sprintf("%d of %d records are part of the policy", accepted, len(records))
-	setRetirable(&status, now)
+	setValid(&status, true, status.Message, now)
 
 	return status
 }
 
-func setRetirable(status *v1alpha1.ClusterLicenseStatus, now time.Time) {
-	reason, message := "InUse", "at least one record of this key contributes now or in the future"
-	if status.Retirable {
-		reason = conditionRetirable
-		message = "no record contributes now or in the future; the key can be deleted without changing the policy"
+// setValid publishes the one condition a single key carries: whether the token
+// itself verified. Everything else about a key is in its records.
+func setValid(status *v1alpha1.ClusterLicenseStatus, valid bool, message string, now time.Time) {
+	reason := "Rejected"
+	if valid {
+		reason = "Verified"
 	}
-	set(&status.Conditions, now, conditionRetirable, status.Retirable, reason, message, message)
+	set(&status.Conditions, now, conditionValid, valid, reason, message, message)
 }
 
 func recordStatus(rec licensing.RecordStatus) v1alpha1.LicenseRecordStatus {
 	out := v1alpha1.LicenseRecordStatus{
-		ID:        rec.ID,
-		Type:      rec.Type,
-		Origin:    rec.Origin,
-		Accepted:  rec.Accepted,
-		Reason:    v1alpha1.LicenseRecordReason(rec.Reason),
-		Message:   rec.Message,
-		RenewedBy: rec.RenewedBy,
-		StartAt:   ptr.To(metav1.NewTime(rec.StartAt)),
-		GraceDays: rec.GraceDays,
+		ID:           rec.ID,
+		Type:         rec.Type,
+		Origin:       rec.Origin,
+		Accepted:     rec.Accepted,
+		Reason:       v1alpha1.LicenseRecordReason(rec.Reason),
+		Message:      rec.Message,
+		SupersededBy: rec.RenewedBy,
+		StartAt:      ptr.To(metav1.NewTime(rec.StartAt)),
+		GraceDays:    rec.GraceDays,
 	}
 	if rec.ExpireAt != nil {
 		out.ExpireAt = ptr.To(metav1.NewTime(*rec.ExpireAt))
@@ -176,8 +175,11 @@ func (r *reconciler) getEffectiveLicense(ctx context.Context) (*v1alpha1.Effecti
 	effective = &v1alpha1.EffectiveLicense{
 		ObjectMeta: metav1.ObjectMeta{Name: key.Name, Labels: objectLabels},
 	}
-	if err := r.Create(ctx, effective); err != nil {
+	if err := r.Create(ctx, effective); err != nil && !apierrors.IsAlreadyExists(err) {
 		return nil, fmt.Errorf("create effective license: %w", err)
+	}
+	if err := r.apiReader.Get(ctx, key, effective); err != nil {
+		return nil, fmt.Errorf("get effective license: %w", err)
 	}
 	return effective, nil
 }
@@ -186,11 +188,11 @@ func (r *reconciler) updateEffectiveLicense(
 	ctx context.Context,
 	effective *v1alpha1.EffectiveLicense,
 	res licensing.Result,
-	values map[string]licensing.MetricValue,
+	observed []nodeObservation,
 	request string,
 	now time.Time,
 ) error {
-	status := effectiveStatus(effective.Status, res, values, request, now)
+	status := effectiveStatus(effective.Status, res, observed, request, now)
 	if equality.Semantic.DeepEqual(effective.Status, status) {
 		return nil
 	}
@@ -205,35 +207,52 @@ func (r *reconciler) updateEffectiveLicense(
 func effectiveStatus(
 	prev v1alpha1.EffectiveLicenseStatus,
 	res licensing.Result,
-	values map[string]licensing.MetricValue,
+	observed []nodeObservation,
 	request string,
 	now time.Time,
 ) v1alpha1.EffectiveLicenseStatus {
+	alloc := res.Allocation
 	status := v1alpha1.EffectiveLicenseStatus{
+		Licensed: res.Licensed,
 		Compliance: v1alpha1.LicenseCompliance{
 			State:  v1alpha1.LicenseComplianceState(res.State),
 			Reason: res.Reason,
 			// A state that did not change did not start again.
 			Since: ptr.To(metav1.NewTime(now)),
 		},
-		Counts: v1alpha1.LicenseCounts{
-			Packages:  res.Counts.Packages,
-			Records:   res.Counts.Records,
-			Accepted:  res.Counts.Accepted,
-			Rejected:  res.Counts.Rejected,
-			Retirable: res.Counts.Retirable,
-		},
-		Effective: v1alpha1.LicenseEffective{
-			Limits:    res.Effective,
+		Key: keyInfo(res.Key),
+		Limits: v1alpha1.LicenseLimits{
+			Values:    res.Limits.Values,
 			Unlimited: res.Unlimited,
 			GrantedBy: res.GrantedBy,
 		},
-		Metrics:             make(map[string]v1alpha1.LicenseMetricValue, len(values)),
-		WithinLimits:        res.WithinLimits,
-		NextReduction:       reductionStatus(res.NextReduction, now),
-		Timeline:            timelineStatus(res.Timeline),
+		Consumption: v1alpha1.LicenseConsumption{
+			Servers:   res.Consumption[licensing.MetricServers],
+			VCPU:      res.Consumption[licensing.MetricVCPU],
+			Cores:     res.Consumption[licensing.MetricCores],
+			FreeNodes: freeNodes(observed),
+		},
+		Allocation: v1alpha1.LicenseAllocation{
+			Servers: v1alpha1.LicenseServerAllocation{
+				Limit: alloc.ServersLimit,
+				Used:  int64(len(alloc.Servers)),
+			},
+			Pool: v1alpha1.LicensePoolAllocation{
+				CapacityVCPU: alloc.PoolCapacity,
+				UsedVCPU:     alloc.PoolUsedVCPU,
+				Nodes:        int64(len(alloc.Pool)),
+			},
+			Unlicensed: v1alpha1.LicenseUnlicensedNodes{
+				Nodes: int64(len(alloc.Unlicensed)),
+				VCPU:  alloc.UnlicensedVCPU,
+			},
+		},
+		Nodes:               nodeStatuses(res, observed),
 		RegistrationRequest: request,
 		Conditions:          append([]metav1.Condition(nil), prev.Conditions...),
+	}
+	if res.OverLimitSince != nil {
+		status.OverLimitSince = ptr.To(metav1.NewTime(*res.OverLimitSince))
 	}
 
 	if prev.Compliance.Since != nil &&
@@ -242,88 +261,86 @@ func effectiveStatus(
 		status.Compliance.Since = prev.Compliance.Since
 	}
 
-	for name, value := range values {
-		metric := v1alpha1.LicenseMetricValue{Instant: value.Instant, Avg7d: value.Avg7d}
-		// Null, not zero: "not projected yet" and "projected to nothing" are
-		// different statements, and the status is what the customer reads.
-		if value.Extrapolated != nil {
-			metric.Extrapolated = ptr.To(*value.Extrapolated)
-		}
-		status.Metrics[name] = metric
-	}
-
 	setConditions(&status.Conditions, res, now)
 
 	return status
 }
 
-func timelineStatus(segments []licensing.Segment) []v1alpha1.LicenseTimelineSegment {
-	if len(segments) == 0 {
+func keyInfo(key *licensing.KeyInfo) *v1alpha1.LicenseKeyInfo {
+	if key == nil {
 		return nil
 	}
-	out := make([]v1alpha1.LicenseTimelineSegment, 0, len(segments))
-	for _, seg := range segments {
-		item := v1alpha1.LicenseTimelineSegment{
-			From:   metav1.NewTime(seg.From),
-			State:  v1alpha1.LicenseComplianceState(seg.State),
-			Limits: seg.Limits,
-		}
-		if seg.To != nil {
-			item.To = ptr.To(metav1.NewTime(*seg.To))
-		}
-		out = append(out, item)
+	out := &v1alpha1.LicenseKeyInfo{
+		Name:         key.Name,
+		Jti:          key.JTI,
+		CustomerName: key.CustomerName,
+		Origin:       key.Origin,
+		GraceDays:    key.GraceDays,
+	}
+	if key.ValidUntil != nil {
+		out.ValidUntil = ptr.To(metav1.NewTime(*key.ValidUntil))
 	}
 	return out
 }
 
-func reductionStatus(reduction *licensing.Reduction, now time.Time) *v1alpha1.LicenseReduction {
-	if reduction == nil {
+// nodeStatuses publishes the full allocation: the licensable nodes in allocation
+// order, then the free ones. The Console renders this list as is, it computes
+// nothing itself, so a cluster and its Console can never disagree.
+func nodeStatuses(res licensing.Result, observed []nodeObservation) []v1alpha1.LicenseNodeStatus {
+	if len(observed) == 0 {
 		return nil
 	}
 
-	names := make(map[string]bool, len(reduction.From)+len(reduction.To))
-	for name := range reduction.From {
-		names[name] = true
-	}
-	for name := range reduction.To {
-		names[name] = true
-	}
-
-	limits := make(map[string]v1alpha1.LicenseLimitChange, len(names))
-	for name := range names {
-		from, hadFrom := reduction.From[name]
-		to, hadTo := reduction.To[name]
-		if hadFrom && hadTo && samePtr(from, to) {
-			continue
+	sizes := make(map[string]int64, len(observed))
+	free := make(map[string]string, len(observed))
+	for _, node := range observed {
+		sizes[node.Name] = node.VCPU
+		if node.Free {
+			free[node.Name] = node.Reason
 		}
-		limits[name] = v1alpha1.LicenseLimitChange{From: from, To: to}
 	}
 
-	return &v1alpha1.LicenseReduction{
-		At:     metav1.NewTime(reduction.At),
-		In:     humanDuration(reduction.At.Sub(now)),
-		Limits: limits,
+	out := make([]v1alpha1.LicenseNodeStatus, 0, len(observed))
+	groups := []struct {
+		names   []string
+		billing v1alpha1.LicenseNodeBilling
+	}{
+		{res.Allocation.Servers, v1alpha1.LicenseNodeServer},
+		{res.Allocation.Pool, v1alpha1.LicenseNodePool},
+		{res.Allocation.Unlicensed, v1alpha1.LicenseNodeUnlicensed},
 	}
+	for _, group := range groups {
+		for _, name := range group.names {
+			out = append(out, v1alpha1.LicenseNodeStatus{Name: name, VCPU: sizes[name], Billing: group.billing})
+		}
+	}
+	// observed is sorted by name, so the free group is too.
+	for _, node := range observed {
+		if reason, isFree := free[node.Name]; isFree {
+			out = append(out, v1alpha1.LicenseNodeStatus{
+				Name: node.Name, VCPU: node.VCPU, Billing: v1alpha1.LicenseNodeFree, Reason: reason,
+			})
+		}
+	}
+	return out
 }
 
-func samePtr(a, b *int64) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
+// previousServers reads the previous allocation off the published status. It is
+// the only state the tie-breaking rule of specification 7.4 needs.
+func previousServers(status v1alpha1.EffectiveLicenseStatus) map[string]bool {
+	out := make(map[string]bool, len(status.Nodes))
+	for _, node := range status.Nodes {
+		if node.Billing == v1alpha1.LicenseNodeServer {
+			out[node.Name] = true
+		}
 	}
-	return *a == *b
+	return out
 }
 
-// humanDuration renders a coarse "time left", the way a person reads a licence:
-// days while there are days, then hours, then minutes.
-func humanDuration(d time.Duration) string {
-	switch {
-	case d <= 0:
-		return "0m"
-	case d >= 24*time.Hour:
-		return fmt.Sprintf("%dd", int64(d/(24*time.Hour)))
-	case d >= time.Hour:
-		return fmt.Sprintf("%dh", int64(d/time.Hour))
-	default:
-		return fmt.Sprintf("%dm", int64(d/time.Minute))
+func previousOverLimitSince(status v1alpha1.EffectiveLicenseStatus) *time.Time {
+	if status.OverLimitSince == nil {
+		return nil
 	}
+	at := status.OverLimitSince.Time
+	return &at
 }
