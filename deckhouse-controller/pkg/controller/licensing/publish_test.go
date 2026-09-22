@@ -17,6 +17,7 @@ package licensing
 import (
 	"crypto/ed25519"
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -37,7 +38,13 @@ func validResult() licensing.Result {
 		Consumption: map[string]int64{
 			licensing.MetricServers: 1, licensing.MetricVCPU: 4, licensing.MetricCores: 2,
 		},
-		Allocation: licensing.Allocation{Servers: []string{"worker"}, ServersLimit: ptrTo(int64(10))},
+		Allocation: licensing.Allocation{
+			Servers: licensing.MetricAllocation{
+				Nodes: []string{"worker"}, Limit: ptrTo(int64(10)), Used: 1,
+			},
+			VCPU:  licensing.MetricAllocation{Limit: ptrTo(int64(100))},
+			Cores: licensing.MetricAllocation{Limit: ptrTo(int64(0))},
+		},
 		Records: []licensing.RecordStatus{{
 			Record: licensing.Record{
 				Type:    licensing.TypePlatform,
@@ -110,6 +117,8 @@ func TestPublishMetricsExportsTheOverLimitClock(t *testing.T) {
 	res := validResult()
 	since := testNow.Add(-48 * time.Hour)
 	res.OverLimitSince = &since
+	res.Allocation.VCPU.Nodes = []string{"mid"}
+	res.Allocation.Cores.Nodes = []string{"other", "another"}
 	res.Allocation.Unlicensed = []string{"small"}
 	res.Allocation.UnlicensedVCPU = 8
 
@@ -128,8 +137,14 @@ func TestPublishMetricsExportsTheOverLimitClock(t *testing.T) {
 	for _, sample := range env.series(t, metrics.D8LicenseNodes) {
 		nodes[labelOf(sample, metrics.LabelBilling)] = sample.GetGauge().GetValue()
 	}
-	if nodes[licensing.BillingUnlicensed] != 1 || nodes[licensing.BillingServer] != 1 {
-		t.Fatalf("nodes by billing = %v", nodes)
+	want := map[string]float64{
+		licensing.BillingServer:     1,
+		licensing.BillingVCPU:       1,
+		licensing.BillingCores:      2,
+		licensing.BillingUnlicensed: 1,
+	}
+	if !reflect.DeepEqual(nodes, want) {
+		t.Fatalf("nodes by billing = %v, want %v", nodes, want)
 	}
 }
 

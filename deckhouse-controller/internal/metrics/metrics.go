@@ -169,7 +169,7 @@ func RegisterLicensingMetrics(metricStorage metricsstorage.Storage) error {
 		{D8LicenseLicensed, nil, "Whether the cluster is licensed (1.0 = yes, that is the state is Valid or Warning)"},
 		{D8LicenseLimit, []string{LabelResource}, "Current quota of a metric; +Inf while the metric is unlimited"},
 		{D8LicenseConsumption, []string{LabelResource}, "Consumption of a metric over the licensable nodes"},
-		{D8LicenseNodes, []string{LabelBilling}, "Number of nodes by allocation group (server, pool, unlicensed)"},
+		{D8LicenseNodes, []string{LabelBilling}, "Number of nodes by billing group (Server, VCPU, Cores, Unlicensed)"},
 		{D8LicenseUnlicensedVCPU, nil, "vCPU of the nodes that are not covered by the license"},
 		{D8LicenseKeyExpiresInSeconds, nil, "Seconds until the license key expires; the series is absent for a key that never expires"},
 		{D8LicenseOverLimitSeconds, nil, "Seconds since unlicensed nodes appeared, 0 while every node is covered"},

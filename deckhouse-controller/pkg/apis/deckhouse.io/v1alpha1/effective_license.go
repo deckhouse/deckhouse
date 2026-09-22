@@ -48,8 +48,10 @@ const (
 	LicenseNodeFree LicenseNodeBilling = "Free"
 	// LicenseNodeServer - covered by a whole-node server licence.
 	LicenseNodeServer LicenseNodeBilling = "Server"
-	// LicenseNodePool - covered by the shared vCPU and cores pool.
-	LicenseNodePool LicenseNodeBilling = "Pool"
+	// LicenseNodeVCPU - paid for out of the vCPU metric.
+	LicenseNodeVCPU LicenseNodeBilling = "VCPU"
+	// LicenseNodeCores - paid for out of the cores metric.
+	LicenseNodeCores LicenseNodeBilling = "Cores"
 	// LicenseNodeUnlicensed - not covered by the license at all.
 	LicenseNodeUnlicensed LicenseNodeBilling = "Unlicensed"
 )
@@ -207,38 +209,38 @@ type LicenseConsumption struct {
 	FreeNodes int64 `json:"freeNodes"`
 }
 
+// LicenseAllocation is the node allocation by metric: every licensable node is
+// attributed to exactly one of servers, vCPU and cores, or to unlicensed.
 type LicenseAllocation struct {
 	// +optional
-	Servers LicenseServerAllocation `json:"servers,omitempty"`
+	Servers LicenseMetricAllocation `json:"servers,omitempty"`
 
 	// +optional
-	Pool LicensePoolAllocation `json:"pool,omitempty"`
+	VCPU LicenseMetricAllocation `json:"vCPU,omitempty"`
+
+	// +optional
+	Cores LicenseMetricAllocation `json:"cores,omitempty"`
 
 	// +optional
 	Unlicensed LicenseUnlicensedNodes `json:"unlicensed,omitempty"`
 }
 
-type LicenseServerAllocation struct {
-	// Limit is the granted servers quota; null means it is unlimited.
+// LicenseMetricAllocation is the quota of one metric and what the nodes
+// attributed to it consume of it.
+type LicenseMetricAllocation struct {
+	// Limit is the granted quota. It is absent when the metric is unlimited.
 	// +optional
 	Limit *int64 `json:"limit,omitempty"`
 
-	// Used is the number of nodes that hold a server licence.
+	// Unlimited is true when the key grants the metric without a limit; Limit is
+	// then absent.
+	// +optional
+	Unlimited bool `json:"unlimited,omitempty"`
+
+	// Used is what the nodes attributed to this metric consume of the quota: one
+	// per node for servers, vCPU for vCPU, ceil(vCPU/2) for cores.
 	// +optional
 	Used int64 `json:"used"`
-}
-
-type LicensePoolAllocation struct {
-	// CapacityVCPU is vCPU + 2*cores of the active records; null means the pool
-	// is unbounded.
-	// +optional
-	CapacityVCPU *int64 `json:"capacityVCPU,omitempty"`
-
-	// +optional
-	UsedVCPU int64 `json:"usedVCPU"`
-
-	// +optional
-	Nodes int64 `json:"nodes"`
 }
 
 type LicenseUnlicensedNodes struct {
@@ -256,7 +258,7 @@ type LicenseNodeStatus struct {
 	VCPU int64 `json:"vCPU"`
 
 	// Billing is the group the node was allocated to.
-	// One of free, server, pool, unlicensed.
+	// One of Free, Server, VCPU, Cores, Unlicensed.
 	// +optional
 	Billing LicenseNodeBilling `json:"billing,omitempty"`
 

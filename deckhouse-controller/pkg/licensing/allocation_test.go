@@ -45,7 +45,8 @@ func TestAllocate(t *testing.T) {
 		nodes      []Node
 		wasServer  map[string]bool
 		servers    []string
-		pool       []string
+		vcpu       []string
+		cores      []string
 		unlicensed []string
 	}{
 		{
@@ -56,31 +57,41 @@ func TestAllocate(t *testing.T) {
 			unlicensed: []string{"c"},
 		},
 		{
-			name:    "S2 the rest fits into the pool",
+			name:    "S2 the rest is paid for out of vCPU",
 			limits:  key(2, 8, 0),
 			nodes:   []Node{nd("a", 32), nd("b", 16), nd("c", 8)},
 			servers: []string{"a", "b"},
-			pool:    []string{"c"},
+			vcpu:    []string{"c"},
 		},
 		{
 			name:       "S3 vCPU only",
 			limits:     key(0, 100, 0),
 			nodes:      []Node{nd("a", 32), nd("b", 32), nd("c", 32), nd("d", 8)},
-			pool:       []string{"a", "b", "c"},
+			vcpu:       []string{"a", "b", "c"},
 			unlicensed: []string{"d"},
 		},
 		{
 			name:       "S4 cores count double",
 			limits:     key(0, 0, 50),
 			nodes:      []Node{nd("a", 32), nd("b", 32), nd("c", 32), nd("d", 8)},
-			pool:       []string{"a", "b", "c"},
+			cores:      []string{"a", "b", "c"},
 			unlicensed: []string{"d"},
 		},
 		{
-			name:       "S5 vCPU and cores share one pool",
+			name:       "S5 a node vCPU cannot pay for falls through to cores",
 			limits:     key(0, 60, 20),
 			nodes:      []Node{nd("a", 32), nd("b", 32), nd("c", 32), nd("d", 8)},
-			pool:       []string{"a", "b", "c"},
+			vcpu:       []string{"a", "d"},
+			cores:      []string{"b"},
+			unlicensed: []string{"c"},
+		},
+		{
+			name:       "S16 every metric is attributed in turn",
+			limits:     key(1, 8, 4),
+			nodes:      []Node{nd("a", 32), nd("b", 8), nd("c", 8), nd("d", 4)},
+			servers:    []string{"a"},
+			vcpu:       []string{"b"},
+			cores:      []string{"c"},
 			unlicensed: []string{"d"},
 		},
 		{
@@ -117,7 +128,7 @@ func TestAllocate(t *testing.T) {
 			name:   "S10 a key omitting vCPU grants it without a limit",
 			limits: partial(map[string]*int64{MetricServers: i64(0)}),
 			nodes:  []Node{nd("a", 32), nd("b", 1000)},
-			pool:   []string{"b", "a"},
+			vcpu:   []string{"b", "a"},
 		},
 		{
 			name:    "S11 more server licences than nodes",
@@ -132,10 +143,17 @@ func TestAllocate(t *testing.T) {
 			unlicensed: []string{"a", "b"},
 		},
 		{
-			name:   "an explicitly unlimited metric unbounds the pool",
+			name:   "an explicitly unlimited vCPU pays for a node of any size",
 			limits: partial(map[string]*int64{MetricServers: i64(0), MetricVCPU: nil, MetricCores: i64(0)}),
 			nodes:  []Node{nd("a", 1<<20)},
-			pool:   []string{"a"},
+			vcpu:   []string{"a"},
+		},
+		{
+			name:    "an unlimited vCPU takes everything the servers quota leaves",
+			limits:  partial(map[string]*int64{MetricServers: i64(1), MetricVCPU: nil, MetricCores: i64(0)}),
+			nodes:   []Node{nd("a", 32), nd("b", 32), nd("c", 8)},
+			servers: []string{"a"},
+			vcpu:    []string{"b", "c"},
 		},
 		{
 			name:    "an unlimited servers quota covers every node",
@@ -144,10 +162,10 @@ func TestAllocate(t *testing.T) {
 			servers: []string{"a", "b"},
 		},
 		{
-			name:       "the pool is filled largest first, so the smallest node is the one left out",
+			name:       "vCPU is filled largest first, so the node left out is not the smallest one",
 			limits:     key(0, 40, 0),
 			nodes:      []Node{nd("small", 8), nd("big", 32), nd("mid", 16)},
-			pool:       []string{"big", "small"},
+			vcpu:       []string{"big", "small"},
 			unlicensed: []string{"mid"},
 		},
 	}
@@ -155,8 +173,9 @@ func TestAllocate(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := Allocate(tc.nodes, tc.limits, tc.wasServer)
-			assertGroup(t, "servers", got.Servers, tc.servers)
-			assertGroup(t, "Pool", got.Pool, tc.pool)
+			assertGroup(t, "Server", got.Servers.Nodes, tc.servers)
+			assertGroup(t, "VCPU", got.VCPU.Nodes, tc.vcpu)
+			assertGroup(t, "Cores", got.Cores.Nodes, tc.cores)
 			assertGroup(t, "Unlicensed", got.Unlicensed, tc.unlicensed)
 			if got.WithinLimits() != (len(tc.unlicensed) == 0) {
 				t.Fatalf("withinLimits = %v with %d unlicensed nodes", got.WithinLimits(), len(got.Unlicensed))
@@ -175,15 +194,25 @@ func assertGroup(t *testing.T, name string, got, want []string) {
 	}
 }
 
-// S11: the published servers limit stays the quota that was granted, not the
-// number of nodes that happened to use it.
-func TestAllocationPublishesTheGrantedServersLimit(t *testing.T) {
-	got := Allocate([]Node{nd("a", 8), nd("b", 8), nd("c", 8), nd("d", 8)}, key(10, 0, 0), nil)
-	if got.ServersLimit == nil || *got.ServersLimit != 10 {
-		t.Fatalf("serversLimit = %v, want 10", got.ServersLimit)
+// S11: the published limits stay the quota that was granted, not the amount the
+// nodes happened to use.
+func TestAllocationPublishesTheGrantedLimits(t *testing.T) {
+	got := Allocate([]Node{nd("a", 8), nd("b", 8), nd("c", 8), nd("d", 8)}, key(10, 6, 0), nil)
+	if got.Servers.Limit == nil || *got.Servers.Limit != 10 {
+		t.Fatalf("servers limit = %v, want 10", got.Servers.Limit)
 	}
-	if len(got.Servers) != 4 {
-		t.Fatalf("used = %d, want 4", len(got.Servers))
+	if got.VCPU.Limit == nil || *got.VCPU.Limit != 6 {
+		t.Fatalf("vCPU limit = %v, want 6", got.VCPU.Limit)
+	}
+	if got.Servers.Used != 4 || len(got.Servers.Nodes) != 4 {
+		t.Fatalf("servers used = %d over %v, want 4", got.Servers.Used, got.Servers.Nodes)
+	}
+
+	// An unlimited metric publishes no limit at all, never a number standing in
+	// for "no limit".
+	unlimited := Allocate(nil, partial(map[string]*int64{MetricServers: nil}), nil)
+	if unlimited.Servers.Limit != nil {
+		t.Fatalf("servers limit = %d, want none", *unlimited.Servers.Limit)
 	}
 }
 
@@ -194,12 +223,19 @@ func TestAllocateManyNodes(t *testing.T) {
 		nodes = append(nodes, nd(fmt.Sprintf("worker-%03d", i), 8))
 	}
 
-	got := Allocate(nodes, key(12, 200, 0), nil)
-	if len(got.Servers) != 12 || len(got.Pool) != 25 || len(got.Unlicensed) != 263 {
-		t.Fatalf("servers/pool/unlicensed = %d/%d/%d", len(got.Servers), len(got.Pool), len(got.Unlicensed))
+	// 12 whole-node licences, then 200 vCPU cover 25 nodes of 8, then 40 cores
+	// cover 10 more at ceil(8/2) each.
+	got := Allocate(nodes, key(12, 200, 40), nil)
+	if len(got.Servers.Nodes) != 12 || len(got.VCPU.Nodes) != 25 ||
+		len(got.Cores.Nodes) != 10 || len(got.Unlicensed) != 253 {
+		t.Fatalf("servers/vCPU/cores/unlicensed = %d/%d/%d/%d", len(got.Servers.Nodes),
+			len(got.VCPU.Nodes), len(got.Cores.Nodes), len(got.Unlicensed))
 	}
-	if got.PoolUsedVCPU != 200 || got.UnlicensedVCPU != 263*8 {
-		t.Fatalf("poolUsed = %d, unlicensedVCPU = %d", got.PoolUsedVCPU, got.UnlicensedVCPU)
+	if got.Servers.Used != 12 || got.VCPU.Used != 200 || got.Cores.Used != 40 {
+		t.Fatalf("used servers/vCPU/cores = %d/%d/%d", got.Servers.Used, got.VCPU.Used, got.Cores.Used)
+	}
+	if got.UnlicensedVCPU != 253*8 {
+		t.Fatalf("unlicensedVCPU = %d", got.UnlicensedVCPU)
 	}
 }
 

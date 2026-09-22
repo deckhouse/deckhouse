@@ -27,13 +27,14 @@ const (
 	MetricCores   = "cores"
 )
 
-// Billing groups a node can land in. The value is a string enum on purpose:
-// splitting the pool into separate vCPU and cores groups later adds values
-// instead of changing the shape of the status (specification 14).
+// Billing groups a node can land in: one per metric of the key, plus the two
+// groups no metric pays for. Every licensable node is attributed to exactly one
+// of them, so the Console can name the licence that covers a given node.
 const (
 	BillingFree       = "Free"
 	BillingServer     = "Server"
-	BillingPool       = "Pool"
+	BillingVCPU       = "VCPU"
+	BillingCores      = "Cores"
 	BillingUnlicensed = "Unlicensed"
 )
 
@@ -74,73 +75,74 @@ func (l Limits) Of(metric string) (int64, bool) {
 	}
 }
 
+// MetricAllocation is what one metric of the key ended up covering.
+type MetricAllocation struct {
+	// Nodes are the node names attributed to this metric, in allocation order.
+	Nodes []string
+	// Limit is the granted quota; nil means the metric is unlimited.
+	Limit *int64
+	// Used is what those nodes cost the metric: one per node for servers, the
+	// node vCPU for vCPU, ceil(vCPU/2) for cores.
+	Used int64
+}
+
+// fits reports whether one more cost still stays inside the quota.
+func (m MetricAllocation) fits(cost int64) bool {
+	return m.Limit == nil || m.Used+cost <= *m.Limit
+}
+
+func (m *MetricAllocation) take(name string, cost int64) {
+	m.Nodes = append(m.Nodes, name)
+	m.Used += cost
+}
+
 // Allocation is the assignment of every licensable node to a billing group,
 // together with the totals the status and the Console show next to it.
 type Allocation struct {
-	// Servers, Pool and Unlicensed are node names, in allocation order.
-	Servers    []string
-	Pool       []string
-	Unlicensed []string
+	Servers MetricAllocation
+	VCPU    MetricAllocation
+	Cores   MetricAllocation
 
-	// ServersLimit is the servers quota the allocation was computed against;
-	// nil means the quota is unlimited.
-	ServersLimit *int64
-	// PoolCapacity is vCPU + 2*cores; nil means the pool is unbounded.
-	PoolCapacity *int64
-	// PoolUsedVCPU is the vCPU of the nodes that fit into the pool.
-	PoolUsedVCPU int64
-	// UnlicensedVCPU is the vCPU of the nodes that fit nowhere.
+	// Unlicensed are the node names that fit into no metric, in allocation order.
+	Unlicensed []string
+	// UnlicensedVCPU is the vCPU of those nodes.
 	UnlicensedVCPU int64
 }
 
 // WithinLimits reports whether every licensable node is covered.
 func (a Allocation) WithinLimits() bool { return len(a.Unlicensed) == 0 }
 
-// BillingByNode indexes the allocation by node name.
-func (a Allocation) BillingByNode() map[string]string {
-	out := make(map[string]string, len(a.Servers)+len(a.Pool)+len(a.Unlicensed))
-	for _, group := range []struct {
-		names   []string
-		billing string
-	}{
-		{a.Servers, BillingServer},
-		{a.Pool, BillingPool},
-		{a.Unlicensed, BillingUnlicensed},
-	} {
-		for _, name := range group.names {
-			out[name] = group.billing
-		}
-	}
-	return out
-}
-
 // Allocate lays the licensable nodes out over the metrics of the key
 // (specification 7.3). It is a pure function of the node set, the effective
 // limits and the previous allocation.
+//
+// The capacity is still the single pool vCPU + 2*cores; what the walk adds is
+// attribution: every covered node names the metric that pays for it, because
+// the Console has to say which licence covers which node. A node is never
+// split between two metrics, so it takes vCPU while vCPU has room and falls
+// through to cores only when it does not.
 //
 // wasServer is the previous allocation, read off status.nodes[]; it only breaks
 // ties between equally sized nodes.
 func Allocate(nodes []Node, limits Limits, wasServer map[string]bool) Allocation {
 	ordered := SortNodes(nodes, wasServer)
 
-	out := Allocation{PoolCapacity: poolCapacity(limits)}
-
-	// An unlimited servers quota covers every node there is, which is the same
-	// answer as a limit equal to the node count. The published limit keeps the
-	// quota as granted, so that the Console can say "12 of 12".
-	servers := int64(len(ordered))
-	if granted, finite := limits.Of(MetricServers); finite {
-		servers = granted
-		out.ServersLimit = &granted
+	out := Allocation{
+		// An unlimited quota covers everything there is; the published limit
+		// keeps the quota as granted, so the Console can say "12 of 12".
+		Servers: MetricAllocation{Limit: grantedLimit(limits, MetricServers)},
+		VCPU:    MetricAllocation{Limit: grantedLimit(limits, MetricVCPU)},
+		Cores:   MetricAllocation{Limit: grantedLimit(limits, MetricCores)},
 	}
 
-	for i, node := range ordered {
+	for _, node := range ordered {
 		switch {
-		case int64(i) < servers:
-			out.Servers = append(out.Servers, node.Name)
-		case out.PoolCapacity == nil || out.PoolUsedVCPU+node.VCPU <= *out.PoolCapacity:
-			out.Pool = append(out.Pool, node.Name)
-			out.PoolUsedVCPU += node.VCPU
+		case out.Servers.fits(1):
+			out.Servers.take(node.Name, 1)
+		case out.VCPU.fits(node.VCPU):
+			out.VCPU.take(node.Name, node.VCPU)
+		case out.Cores.fits(coresOf(node.VCPU)):
+			out.Cores.take(node.Name, coresOf(node.VCPU))
 		default:
 			out.Unlicensed = append(out.Unlicensed, node.Name)
 			out.UnlicensedVCPU += node.VCPU
@@ -150,18 +152,18 @@ func Allocate(nodes []Node, limits Limits, wasServer map[string]bool) Allocation
 	return out
 }
 
-// poolCapacity is vCPU + 2*cores. Either metric being unlimited makes the whole
-// pool unbounded (ADR 14.3), which is reported as a nil capacity. The two share
-// one pool: a key granting 60 vCPU and 20 cores covers a hundred vCPU of nodes
-// however they are sized.
-func poolCapacity(limits Limits) *int64 {
-	vcpu, vcpuFinite := limits.Of(MetricVCPU)
-	cores, coresFinite := limits.Of(MetricCores)
-	if !vcpuFinite || !coresFinite {
+// coresOf is what one node costs the cores metric under the temporary
+// "2 vCPU = 1 core" rule of specification 7.2. It rounds up per node because a
+// node is never split between two metrics.
+func coresOf(vcpu int64) int64 { return (vcpu + 1) / 2 }
+
+// grantedLimit resolves one metric into a published quota: nil for unlimited.
+func grantedLimit(limits Limits, metric string) *int64 {
+	granted, finite := limits.Of(metric)
+	if !finite {
 		return nil
 	}
-	capacity := vcpu + 2*cores
-	return &capacity
+	return &granted
 }
 
 // SortNodes orders the licensable nodes by (vCPU descending, previously a server
@@ -172,9 +174,9 @@ func poolCapacity(limits Limits) *int64 {
 // blink. A node that already holds a server licence keeps it until a larger node
 // appears or it goes away itself.
 //
-// The same order fills the pool, so the largest nodes are covered first and the
-// smallest ones are what ends up unlicensed. That minimises the number of
-// unlicensed nodes for a given capacity.
+// The same order drives the attribution, so the largest nodes are covered first
+// and the smallest ones are what ends up unlicensed. That minimises the number
+// of unlicensed nodes for a given capacity.
 func SortNodes(nodes []Node, wasServer map[string]bool) []Node {
 	ordered := make([]Node, len(nodes))
 	copy(ordered, nodes)

@@ -76,8 +76,9 @@ func (r *reconciler) publishMetrics(res licensing.Result, owners map[string]stri
 	}
 
 	for billing, count := range map[string]int{
-		licensing.BillingServer:     len(res.Allocation.Servers),
-		licensing.BillingPool:       len(res.Allocation.Pool),
+		licensing.BillingServer:     len(res.Allocation.Servers.Nodes),
+		licensing.BillingVCPU:       len(res.Allocation.VCPU.Nodes),
+		licensing.BillingCores:      len(res.Allocation.Cores.Nodes),
 		licensing.BillingUnlicensed: len(res.Allocation.Unlicensed),
 	} {
 		group.GaugeSet(metrics.LicensingGroup, metrics.D8LicenseNodes, float64(count), map[string]string{

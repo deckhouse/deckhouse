@@ -60,40 +60,47 @@ spec:
               allocation:
                 description: |
                   Totals of the node allocation, the numbers shown next to each group in the Console.
+
+                  Capacity is still one pool, `vCPU + 2 * cores`; what the allocation adds is
+                  attribution. Every licensable node is attributed to exactly one metric, so the
+                  Console can name the licence that covers a given node. A node is never split
+                  between two metrics: it takes `vCPU` while `vCPU` has room and falls through to
+                  `cores` only when it does not.
                 properties:
-                  pool:
+                  cores:
                     description: |
-                      The shared pool of `vCPU` and `cores`. Its capacity is `vCPU + 2 * cores`
-                      of the active records; the two metrics are one pool, not two.
+                      The `cores` metric, which pays for the nodes that no longer fit into `vCPU`.
+                      A node costs it `ceil(vCPU / 2)` under the temporary "2 vCPU = 1 core" rule.
                     properties:
-                      capacityVCPU:
+                      limit:
                         description: |
-                          Capacity of the pool, in vCPU. Null when the pool is unbounded, that is,
-                          when the key grants `vCPU` or `cores` without a limit.
-                        format: int64
-                        nullable: true
-                        type: integer
-                      nodes:
-                        description: Number of nodes covered by the pool.
+                          Granted number of cores. Absent when the metric is unlimited.
                         format: int64
                         type: integer
-                      usedVCPU:
-                        description: vCPU of the nodes covered by the pool.
+                      unlimited:
+                        description: |
+                          Whether the key grants the metric without a limit. `limit` is then absent.
+                        type: boolean
+                      used:
+                        description: Cores consumed by the nodes attributed to this metric.
                         format: int64
                         type: integer
                     type: object
                   servers:
                     description: |
                       Whole-node licences. They are applied to the largest nodes first; everything
-                      that does not fit falls through to the pool, so this metric cannot be exceeded
-                      on its own.
+                      that does not fit falls through to `vCPU` and then to `cores`, so this metric
+                      cannot be exceeded on its own.
                     properties:
                       limit:
                         description: |
-                          Granted number of server licences. Null when the metric is unlimited.
+                          Granted number of server licences. Absent when the metric is unlimited.
                         format: int64
-                        nullable: true
                         type: integer
+                      unlimited:
+                        description: |
+                          Whether the key grants the metric without a limit. `limit` is then absent.
+                        type: boolean
                       used:
                         description: Number of nodes holding a server licence.
                         format: int64
@@ -101,9 +108,9 @@ spec:
                     type: object
                   unlicensed:
                     description: |
-                      Nodes that fit neither into `servers` nor into the pool. A non-empty group is
-                      the only way the license can be violated, which is what makes the licence
-                      binary for the customer: it is either in force or it is not.
+                      Nodes that fit into none of the three metrics. A non-empty group is the only
+                      way the license can be violated, which is what makes the licence binary for
+                      the customer: it is either in force or it is not.
                     properties:
                       nodes:
                         description: Number of nodes not covered by the license.
@@ -111,6 +118,25 @@ spec:
                         type: integer
                       vCPU:
                         description: vCPU of the nodes not covered by the license.
+                        format: int64
+                        type: integer
+                    type: object
+                  vCPU:
+                    description: |
+                      The `vCPU` metric, which pays for the nodes left over by `servers`. A node
+                      costs it its whole vCPU.
+                    properties:
+                      limit:
+                        description: |
+                          Granted number of vCPU. Absent when the metric is unlimited.
+                        format: int64
+                        type: integer
+                      unlimited:
+                        description: |
+                          Whether the key grants the metric without a limit. `limit` is then absent.
+                        type: boolean
+                      used:
+                        description: vCPU consumed by the nodes attributed to this metric.
                         format: int64
                         type: integer
                     type: object
@@ -255,12 +281,14 @@ spec:
                       description: |
                         * `Free` — a platform node without user workload, see `reason`.
                         * `Server` — covered by a whole-node licence.
-                        * `Pool` — covered by the shared `vCPU` and `cores` pool.
+                        * `VCPU` — paid for out of the `vCPU` metric.
+                        * `Cores` — paid for out of the `cores` metric.
                         * `Unlicensed` — not covered at all.
                       enum:
                       - Free
                       - Server
-                      - Pool
+                      - VCPU
+                      - Cores
                       - Unlicensed
                       type: string
                     name:

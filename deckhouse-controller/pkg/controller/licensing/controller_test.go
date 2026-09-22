@@ -166,9 +166,9 @@ func TestReconcilePublishesPolicy(t *testing.T) {
 		t.Fatalf("consumption = %+v, want %+v", status.Consumption, want)
 	}
 
-	// One server licence for the larger worker, eight vCPU of pool for the other.
-	if status.Allocation.Servers.Used != 1 || status.Allocation.Pool.Nodes != 1 ||
-		status.Allocation.Unlicensed.Nodes != 0 {
+	// One server licence for the larger worker, eight vCPU for the other.
+	if status.Allocation.Servers.Used != 1 || status.Allocation.VCPU.Used != 8 ||
+		status.Allocation.Cores.Used != 0 || status.Allocation.Unlicensed.Nodes != 0 {
 		t.Fatalf("allocation = %+v", status.Allocation)
 	}
 	if status.OverLimitSince != nil {
@@ -180,7 +180,7 @@ func TestReconcilePublishesPolicy(t *testing.T) {
 
 	assertNodes(t, status.Nodes, map[string]v1alpha1.LicenseNodeBilling{
 		"worker-big":   v1alpha1.LicenseNodeServer,
-		"worker-small": v1alpha1.LicenseNodePool,
+		"worker-small": v1alpha1.LicenseNodeVCPU,
 		"master":       v1alpha1.LicenseNodeFree,
 	})
 	if status.Key == nil || status.Key.Jti != testPackageID || status.Key.CustomerName != "Acme" {

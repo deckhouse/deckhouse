@@ -233,15 +233,9 @@ func effectiveStatus(
 			FreeNodes: freeNodes(observed),
 		},
 		Allocation: v1alpha1.LicenseAllocation{
-			Servers: v1alpha1.LicenseServerAllocation{
-				Limit: alloc.ServersLimit,
-				Used:  int64(len(alloc.Servers)),
-			},
-			Pool: v1alpha1.LicensePoolAllocation{
-				CapacityVCPU: alloc.PoolCapacity,
-				UsedVCPU:     alloc.PoolUsedVCPU,
-				Nodes:        int64(len(alloc.Pool)),
-			},
+			Servers: metricAllocation(alloc.Servers),
+			VCPU:    metricAllocation(alloc.VCPU),
+			Cores:   metricAllocation(alloc.Cores),
 			Unlicensed: v1alpha1.LicenseUnlicensedNodes{
 				Nodes: int64(len(alloc.Unlicensed)),
 				VCPU:  alloc.UnlicensedVCPU,
@@ -264,6 +258,16 @@ func effectiveStatus(
 	setConditions(&status.Conditions, res, now)
 
 	return status
+}
+
+// metricAllocation publishes one metric. An unlimited metric carries the flag
+// instead of a limit, so that "no limit" never has to be spelled as a number.
+func metricAllocation(m licensing.MetricAllocation) v1alpha1.LicenseMetricAllocation {
+	return v1alpha1.LicenseMetricAllocation{
+		Limit:     m.Limit,
+		Unlimited: m.Limit == nil,
+		Used:      m.Used,
+	}
 }
 
 func keyInfo(key *licensing.KeyInfo) *v1alpha1.LicenseKeyInfo {
@@ -305,8 +309,9 @@ func nodeStatuses(res licensing.Result, observed []nodeObservation) []v1alpha1.L
 		names   []string
 		billing v1alpha1.LicenseNodeBilling
 	}{
-		{res.Allocation.Servers, v1alpha1.LicenseNodeServer},
-		{res.Allocation.Pool, v1alpha1.LicenseNodePool},
+		{res.Allocation.Servers.Nodes, v1alpha1.LicenseNodeServer},
+		{res.Allocation.VCPU.Nodes, v1alpha1.LicenseNodeVCPU},
+		{res.Allocation.Cores.Nodes, v1alpha1.LicenseNodeCores},
 		{res.Allocation.Unlicensed, v1alpha1.LicenseNodeUnlicensed},
 	}
 	for _, group := range groups {
