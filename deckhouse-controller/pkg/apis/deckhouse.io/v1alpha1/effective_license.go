@@ -124,7 +124,8 @@ type EffectiveLicenseStatus struct {
 	Nodes []LicenseNodeStatus `json:"nodes,omitempty"`
 
 	// RegistrationRequest is a bare compact JWT with the cluster data, to be
-	// handed to the license server as a .jwt file. It is rebuilt whenever the
+	// handed to the license server as deckhouse-cluster-<first 8 of
+	// cluster_id>-<YYYYMMDD>.jwt. It is rebuilt whenever the
 	// accepted records, the installed keys or the consumption change.
 	// +optional
 	RegistrationRequest string `json:"registrationRequest,omitempty"`

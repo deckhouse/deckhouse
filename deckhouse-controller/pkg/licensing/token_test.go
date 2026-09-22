@@ -273,6 +273,18 @@ func TestRegistrationRecordsSorted(t *testing.T) {
 	}
 }
 
+// The two typ values are the wire contract with the license server and the
+// Console. Renaming one is a three-repository change, so it has to be a
+// deliberate edit here rather than a quiet refactor.
+func TestTokenTypesAreTheAgreedStrings(t *testing.T) {
+	if TypRegistration != "deckhouse-cluster-license+jwt" {
+		t.Fatalf("TypRegistration = %q", TypRegistration)
+	}
+	if TypLicense != "deckhouse-license-key+jwt" {
+		t.Fatalf("TypLicense = %q", TypLicense)
+	}
+}
+
 func TestSignDoesNotMutateHeader(t *testing.T) {
 	_, priv := newKey(t)
 	header := map[string]any{"typ": TypLicense}

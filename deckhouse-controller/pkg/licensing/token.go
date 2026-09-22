@@ -37,10 +37,12 @@ import (
 
 // Token types and issuer defined by the registration specification.
 const (
-	// TypRegistration is the "typ" header value of a cluster registration request.
-	TypRegistration = "dkp-cluster-registration+jwt"
-	// TypLicense is the "typ" header value of a license package issued by the license server.
-	TypLicense = "dkp-license+jwt"
+	// TypRegistration is the "typ" header value of the cluster data file, handed
+	// to the license server as deckhouse-cluster-<first 8 of cluster_id>-<YYYYMMDD>.jwt.
+	TypRegistration = "deckhouse-cluster-license+jwt"
+	// TypLicense is the "typ" header value of a license key issued by the license
+	// server, delivered as deckhouse-license-<first 8 of cluster_id>-<YYYYMMDD>.jwt.
+	TypLicense = "deckhouse-license-key+jwt"
 	// Issuer is the only accepted "iss" claim of a license package.
 	Issuer = "license.deckhouse.io"
 	// SchemaVersion is the highest payload schema version this build understands.

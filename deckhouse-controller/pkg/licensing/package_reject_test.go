@@ -65,6 +65,7 @@ func TestParsePackageRejections(t *testing.T) {
 				return s
 			}(),
 			wantErr: ErrWrongType,
+			wantMsg: `typ is "deckhouse-cluster-license+jwt", want "deckhouse-license-key+jwt"`,
 		},
 		{
 			name:    "P6 alg none",

@@ -317,7 +317,8 @@ spec:
                 type: string
               registrationRequest:
                 description: |
-                  The cluster data file: a bare compact JWT to hand to the license server as a `.jwt` file.
+                  The cluster data file: a bare compact JWT to hand to the license server as
+                  `deckhouse-cluster-<first 8 characters of cluster_id>-<YYYYMMDD>.jwt`.
 
                   It is rebuilt whenever the accepted records, the installed keys or the consumption change.
                   It carries numbers only: node names and the allocation never leave the cluster.
