@@ -1,18 +1,18 @@
 ---
-title: Гибридный кластер с виртуализацией
+title: Гибридный кластер со встроенной виртуализацией
 permalink: ru/admin/integrations/hybrid/dvp-hybrid.html
 lang: ru
 search: гибрид с DVP
-description: Подготовка к гибридной интеграции с виртуализацией в Deckhouse Platform.
+description: Подготовка к гибридной интеграции со встроенной виртуализацией в Deckhouse Platform.
 ---
 
-Далее описан процесс добавления узлов виртуализации в существующий статический кластер DP.
+Далее описан процесс добавления узлов из встроенной виртуализации в существующий статический кластер DP.
 
-Для интеграции используется модуль [`cloud-provider-dvp`](/modules/cloud-provider-dvp/). Он обеспечивает взаимодействие с API подсистемы виртуализации DP, создание виртуальных машин, подключение созданных ВМ к существующему Kubernetes-кластеру и управление жизненным циклом узлов через механизмы Cluster API.
+Для интеграции со встроенной виртуализацией используется модуль [`cloud-provider-dvp`](/modules/cloud-provider-dvp/). Он обеспечивает взаимодействие с API подсистемы виртуализации DP, создание виртуальных машин, подключение созданных ВМ к существующему Kubernetes-кластеру и управление жизненным циклом узлов через механизмы Cluster API.
 
 В разделе описаны два способа добавления узлов:
 
-- **Автоматическое создание узлов виртуализации**. DP создаёт виртуальные машины через API виртуализации. Параметры ВМ задаются ресурсом [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
+- **Автоматическое создание узлов виртуализации**. DP создаёт виртуальные машины через API встроенной виртуализации. Параметры ВМ задаются ресурсом [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
 - **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
 
 ## Предварительные требования
@@ -20,29 +20,29 @@ description: Подготовка к гибридной интеграции с 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью статических узлов кластера DP и сетью виртуальных машин в виртуализации настроена [сетевая связность](./overview.html#общие-сетевые-требования). Создаваемые в виртуализации узлы имеют доступ к Kubernetes API подключаемого DP-кластера, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками. Из кластера DP доступен Kubernetes API кластера виртуализации.
+- Между сетью статических узлов кластера DP и сетью виртуальных машин во встроенной виртуализации настроена [сетевая связность](./overview.html#общие-сетевые-требования). Создаваемые во встроенной виртуализации узлы имеют доступ к Kubernetes API подключаемого DP-кластера, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками. Из кластера DP доступен Kubernetes API кластера встроенной виртуализации.
 - Выполнены требования из раздела [«Подготовка окружения»](/modules/cloud-provider-dvp/environment.html):
-  - создан [ServiceAccount](/modules/cloud-provider-dvp/environment.html#создание-пользователя) для доступа к API виртуализации;
-  - сгенерирован kubeconfig для подключения к API виртуализации;
+  - создан [ServiceAccount](/modules/cloud-provider-dvp/environment.html#создание-пользователя) для доступа к API встроенной виртуализации;
+  - сгенерирован kubeconfig для подключения к API встроенной виртуализации;
   - подготовлен неймспейс, в котором будут создаваться виртуальные машины и диски.
-- В виртуализации доступен образ ОС Linux с поддержкой `cloud-init`, например `ubuntu-24-04-lts`.
-- В виртуализации доступен подходящий [VirtualMachineClass](/modules/virtualization/stable/cr.html#virtualmachineclass), например `amd-epyc-gen-3`.
-- В виртуализации доступен StorageClass для корневых дисков виртуальных машин, например `replicated`.
+- Во встроенной виртуализации доступен образ ОС Linux с поддержкой `cloud-init`, например `ubuntu-24-04-lts`.
+- Во встроенной виртуализации доступен подходящий [VirtualMachineClass](/modules/virtualization/stable/cr.html#virtualmachineclass), например `amd-epyc-gen-3`.
+- Во встроенной виртуализации доступен StorageClass для корневых дисков виртуальных машин, например `replicated`.
 - Если используется шаблон виртуальной машины, убедитесь, что он содержит только один диск.
 
 {% alert level="warning" %}
-В параметрах [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) используются ресурсы кластера виртуализации: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk и StorageClass из виртуализации, а не из подключаемого DP-кластера.
+В параметрах [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) используются ресурсы кластера встроенной виртуализации: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk и StorageClass из встроенной виртуализации, а не из подключаемого DP-кластера.
 {% endalert %}
 
 {% alert level="warning" %}
-Убедитесь, что в статическом DP-кластере отсутствуют StorageClass с именами, совпадающими с именами StorageClass в кластере виртуализации.
+Убедитесь, что в статическом DP-кластере отсутствуют StorageClass с именами, совпадающими с именами StorageClass в кластере встроенной виртуализации.
 
-При включении модуля `cloud-provider-dvp` соответствующие StorageClass автоматически синхронизируются из виртуализации в DP-кластер. Если StorageClass с таким именем уже существует в статическом кластере, может возникнуть конфликт ресурсов, из-за которого установка или обновление модуля завершится с ошибкой.
+При включении модуля `cloud-provider-dvp` соответствующие StorageClass автоматически синхронизируются из встроенной виртуализации в DP-кластер. Если StorageClass с таким именем уже существует в статическом кластере, может возникнуть конфликт ресурсов, из-за которого установка или обновление модуля завершится с ошибкой.
 {% endalert %}
 
 ## Добавление автоматически создаваемых узлов
 
-1. На машине администратора, где настроен доступ к кластеру виртуализации, подготовьте kubeconfig для доступа модуля `cloud-provider-dvp` к API виртуализации.
+1. На машине администратора, где настроен доступ к кластеру встроенной виртуализации, подготовьте kubeconfig для доступа модуля `cloud-provider-dvp` к API встроенной виртуализации.
 
    Выполните шаги из раздела [«Подготовка окружения»](/modules/cloud-provider-dvp/environment.html) и закодируйте полученный kubeconfig в Base64:
 
@@ -51,21 +51,21 @@ description: Подготовка к гибридной интеграции с 
    export DVP_KUBECONFIG_B64="$(base64 -w0 ${DVP_PROVIDER_KUBECONFIG})"
    ```
 
-1. Задайте неймспейс виртуализации, в котором будут создаваться виртуальные машины и диски:
+1. Задайте неймспейс встроенной виртуализации, в котором будут создаваться виртуальные машины и диски:
 
    ```shell
    export DVP_NAMESPACE="<DVP_NAMESPACE>"
    ```
 
-1. Укажите зону виртуализации, в которой будут создаваться узлы.
+1. Укажите зону встроенной виртуализации, в которой будут создаваться узлы.
 
-   На данный момент зонирование в виртуализации находится в разработке, поэтому для параметров `zones` в ModuleConfig и NodeGroup используйте значение `default`:
+   На данный момент зонирование во встроенной виртуализации находится в разработке, поэтому для параметров `zones` в ModuleConfig и NodeGroup используйте значение `default`:
 
    ```shell
    export DVP_ZONE="default"
    ```
 
-   При необходимости можно проверить топологические метки узлов в кластере виртуализации:
+   При необходимости можно проверить топологические метки узлов в кластере встроенной виртуализации:
 
    ```shell
    d8 k get nodes -L topology.kubernetes.io/region,topology.kubernetes.io/zone
@@ -117,7 +117,7 @@ description: Подготовка к гибридной интеграции с 
    d8 k get module node-manager -o wide
    ```
 
-   Если модуль находится в состоянии `Error`, проверьте, что в ModuleConfig и NodeGroup указаны доступные зоны виртуализации.
+   Если модуль находится в состоянии `Error`, проверьте, что в ModuleConfig и NodeGroup указаны доступные зоны встроенной виртуализации.
 
 1. Убедитесь, что в кластере появился ресурс [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass):
 
@@ -125,7 +125,7 @@ description: Подготовка к гибридной интеграции с 
    d8 k get crd dvpinstanceclasses.deckhouse.io
    ```
 
-1. На машине администратора, где настроен доступ к кластеру виртуализации, проверьте доступные классы виртуальных машин, образы и StorageClass:
+1. На машине администратора, где настроен доступ к кластеру встроенной виртуализации, проверьте доступные классы виртуальных машин, образы и StorageClass:
 
    ```shell
    d8 k --kubeconfig ${DVP_PROVIDER_KUBECONFIG} get virtualmachineclasses
@@ -176,11 +176,11 @@ description: Подготовка к гибридной интеграции с 
 
    Где:
 
-   - `virtualMachineClassName` — имя VirtualMachineClass в виртуализации, например `amd-epyc-gen-3`;
-   - `rootDisk.storageClass` — имя StorageClass в виртуализации, например `replicated`;
+   - `virtualMachineClassName` — имя VirtualMachineClass во встроенной виртуализации, например `amd-epyc-gen-3`;
+   - `rootDisk.storageClass` — имя StorageClass во встроенной виртуализации, например `replicated`;
    - `rootDisk.image.kind` — тип источника образа. Для кластерного образа используйте `ClusterVirtualImage`;
-   - `rootDisk.image.name` — имя образа ОС в виртуализации, например `ubuntu-24-04-lts`;
-   - `cloudInstances.zones` — зона виртуализации, в которой будет создан узел. Значение должно входить в список `zones` из ModuleConfig.
+   - `rootDisk.image.name` — имя образа ОС во встроенной виртуализации, например `ubuntu-24-04-lts`;
+   - `cloudInstances.zones` — зона во встроенной виртуализации, в которой будет создан узел. Значение должно входить в список `zones` из ModuleConfig.
 
 1. Примените манифест:
 
@@ -188,7 +188,7 @@ description: Подготовка к гибридной интеграции с 
    d8 k apply -f dvp-instanceclass-nodegroup.yaml
    ```
 
-   После применения DP начнёт создавать виртуальную машину в виртуализации и подключать её к кластеру как узел.
+   После применения DP начнёт создавать виртуальную машину во встроенной виртуализации и подключать её к кластеру как узел.
 
 1. Проверьте состояние NodeGroup:
 
@@ -230,10 +230,10 @@ description: Подготовка к гибридной интеграции с 
   d8 k -n d8-cloud-provider-dvp get pods -o wide
   ```
 
-- В виртуализации создана виртуальная машина, которая будет подключена к кластеру.
-- Виртуальная машина подключена к сети виртуализации, используемой для гибридной интеграции с кластером.
+- Во встроенной виртуализации создана виртуальная машина, которая будет подключена к кластеру.
+- Виртуальная машина подключена к сети встроенной виртуализации, используемой для гибридной интеграции с кластером.
 - IP-адрес виртуальной машины входит в диапазон, указанный в [`internalNetworkCIDRs`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs).
-- Имя виртуальной машины в виртуализации совпадает с hostname внутри операционной системы.
+- Имя виртуальной машины во встроенной виртуализации совпадает с hostname внутри операционной системы.
 - На виртуальной машине есть SSH-доступ для копирования и запуска bootstrap-скрипта.
 - Пользователь для подключения по SSH может выполнять команды через `sudo` без ввода пароля.
 - На виртуальной машине установлен один из пакетных менеджеров (`apt`/`apt-get`, `yum` или `rpm`) для поддерживаемой ОС.  В РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому их необходимо заранее установить.

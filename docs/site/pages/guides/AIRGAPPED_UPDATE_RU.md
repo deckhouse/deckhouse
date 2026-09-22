@@ -219,7 +219,7 @@ crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | 
 ## Механика обновления баз данных сканера уязвимостей
 
 {% alert level="warning" %}
-Доступно в DP EE, DP Ultimate, DP CSE Lite, DP CSE Pro, DP Certified Pro и DP Certified Lite.
+Доступно в DP EE, DP Ultimate, DP CSE Lite, DP CSE Pro, DP Certified Pro и DP Certified Core.
 {% endalert %}
 
 Базы уязвимостей обновляются раз в 6 часов. Модуль `operator-trivy` в кластере самостоятельно скачивает их из registry один раз за этот промежуток.

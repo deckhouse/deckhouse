@@ -322,12 +322,12 @@ entries:
                         ru: Обзор
                       url: /admin/integrations/virtualization/overview.html
                     - title:
-                        en: Integration with DVP
-                        ru: Интеграция с DVP
+                        en: Integration with built-in virtualization
+                        ru: Интеграция со встроенной виртуализацией
                       folders:
                         - title:
-                            en: Integration with DVP
-                            ru: Интеграция с облаком DVP
+                            en: Integration with built-in virtualization
+                            ru: Интеграция с облаком встроенной виртуализации
                           url: /admin/integrations/virtualization/dvp/services.html
                         - title:
                             en: Connection and authorization
@@ -410,8 +410,8 @@ entries:
                         ru: Гибридный кластер с vSphere
                       url: /admin/integrations/hybrid/vsphere-hybrid.html
                     - title:
-                        en: Hybrid cluster with DVP
-                        ru: Гибридный кластер с DVP
+                        en: Hybrid cluster with built-in virtualization
+                        ru: Гибридный кластер со встроенной виртуализацией
                       url: /admin/integrations/hybrid/dvp-hybrid.html
             - title:
                 en: High reliability and availability

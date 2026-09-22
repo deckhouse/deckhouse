@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка Deckhouse Virtualization Platform
+title: Схемы размещения и настройка встроенной виртуализации
 permalink: ru/admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
 lang: ru
 ---
@@ -43,7 +43,7 @@ provider:
 
 ## Конфигурация
 
-Deckhouse использует ресурс [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration) для описания конфигурации кластера в DVP.
+Параметры облачного провайдера встроенной виртуализации задаются в четырёх ресурсах:
 
 Для изменения конфигурации в работающем кластере выполните:
 

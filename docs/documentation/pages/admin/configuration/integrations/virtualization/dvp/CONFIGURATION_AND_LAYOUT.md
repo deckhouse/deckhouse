@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration in Deckhouse Virtualization Platform
+title: Layouts and configuration in built-in virtualization
 permalink: en/admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
 ---
 
@@ -44,7 +44,7 @@ provider:
 
 ## Configuration
 
-Deckhouse uses the [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration) resource to describe the cluster configuration in DVP.
+The built-in virtualization cloud provider parameters are set in four resources:
 
 To modify the configuration in a running cluster, execute:
 
