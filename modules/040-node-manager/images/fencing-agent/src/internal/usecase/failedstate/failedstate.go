@@ -96,7 +96,7 @@ type Params struct {
 	MaxRetryInterval time.Duration
 	TakeoverDelay    time.Duration
 	FallbackTTL      time.Duration
-	StartedAt time.Time
+	StartedAt        time.Time
 }
 
 type Deps struct {
@@ -108,12 +108,12 @@ type Deps struct {
 }
 
 type incident struct {
-	detectedAt time.Time
-	clockFrom time.Time
-	restamp bool
-	sawRecord  bool
-	attempts   int
-	retryAfter time.Time
+	detectedAt  time.Time
+	clockFrom   time.Time
+	restamp     bool
+	sawRecord   bool
+	attempts    int
+	retryAfter  time.Time
 	warnedNoUID bool
 }
 

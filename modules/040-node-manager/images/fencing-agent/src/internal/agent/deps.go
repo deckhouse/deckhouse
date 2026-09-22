@@ -28,5 +28,5 @@ type Deps struct {
 	K8sClient     kubernetes.Interface
 	FencingClient client.Client
 	FencingCache  cache.Cache
-	StartedAt time.Time
+	StartedAt     time.Time
 }
