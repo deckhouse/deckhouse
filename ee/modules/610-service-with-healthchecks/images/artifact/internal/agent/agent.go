@@ -44,12 +44,19 @@ const (
 	endpointControllerLabelKey  = "endpointslice.kubernetes.io/managed-by"
 	controllerName              = "servicewithhealthchecks"
 
-	// resyncPeriod bounds how long a ServiceWithHealthchecks may stay out of sync with the
-	// pods on this node. New target pods are learned from watch events only, and once the
-	// last target is gone there is no probe result left to wake the reconciliation up
-	// either — so a single missed event would otherwise keep the EndpointSlice empty until
-	// the cache resync (10h by default) or an agent restart. The resync is read-only in the
-	// steady state: neither the status nor the EndpointSlice is written when nothing changed.
+	// resyncPeriod is a periodic, per-object re-reconcile of every ServiceWithHealthchecks.
+	// Pod membership already converges from pod watch events — creations, deletions and
+	// endpoint-affecting updates all enqueue the owning resource — so this is not the main
+	// path. It is a backstop for the drift those events do not cover:
+	//   - the child Service, which mayPublishEPS reads but the agent does not watch, so an
+	//     ownership clash appearing or clearing is only noticed on the next reconcile;
+	//   - the EndpointSlice this node publishes, which is not watched either, so an
+	//     out-of-band edit or deletion is repaired on the next reconcile;
+	//   - a dropped watch enqueue, capping the worst case at this period instead of the
+	//     cache resync (10h by default).
+	// It cannot repair a stale informer cache, because the reconcile reads from that same
+	// cache. It is read-only in the steady state: neither the status nor the EndpointSlice
+	// is written when nothing changed.
 	resyncPeriod = time.Minute
 )
 
@@ -179,7 +186,14 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	return ctrl.Result{RequeueAfter: resyncPeriod}, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
+// SetupWithManager registers the pod field indexer and a startup Runnable that prefills the
+// in-memory cache and only then registers the controller. The controller — and therefore its pod
+// watch and mapper — must not exist before the cache is populated, or the first pod events would
+// be mapped against an empty cache and dropped; see cachePrefillRunnable for why an ordinary
+// Runnable cannot enforce that ordering.
+//
+// The field indexer is registered here, before mgr.Start, because an index has to be added before
+// its informer starts; the controller is deferred, but the index is not.
 func (r *ServiceWithHealthchecksReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &corev1.Pod{}, "spec.nodeName", func(rawObj client.Object) []string {
 		pod := rawObj.(*corev1.Pod)
@@ -187,6 +201,15 @@ func (r *ServiceWithHealthchecksReconciler) SetupWithManager(mgr ctrl.Manager) e
 	}); err != nil {
 		return err
 	}
+	return mgr.Add(&cachePrefillRunnable{reconciler: r, mgr: mgr})
+}
+
+// registerController wires the ServiceWithHealthchecks controller into the manager. It is called
+// from cachePrefillRunnable after the cache prefill has completed, rather than from
+// SetupWithManager, so the pod watch starts only once the in-memory cache holds every
+// ServiceWithHealthchecks spec. The manager is already running by then, which is supported:
+// manager.Add on a started manager enqueues the controller into its runnable group and starts it.
+func (r *ServiceWithHealthchecksReconciler) registerController(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 4,
@@ -203,6 +226,71 @@ func (r *ServiceWithHealthchecksReconciler) SetupWithManager(mgr ctrl.Manager) e
 		).
 		WatchesRawSource(source.Channel(r.events, &handler.EnqueueRequestForObject{})).
 		Complete(r)
+}
+
+// cachePrefillRunnable prefills the in-memory ServiceWithHealthchecks cache and then registers the
+// controller, in that order — which is the whole point of it. The controller cannot be registered
+// in SetupWithManager with the prefill as a separate Runnable, because a manager Runnable's body is
+// not awaited before the controllers start: the runnable-group readiness check runs in its own
+// goroutine and, for an ordinary Runnable, is trivially true at once, so the group's Start returns
+// while the body is still running. That holds on every controller-runtime version, the warmup
+// group included. By registering the controller only after PrefillServiceCache returns, the pod
+// watch is guaranteed to see a populated cache from its very first event.
+//
+// It reports that it does not need leader election so the manager runs it in the Others group,
+// which starts after the caches have synced — so PrefillServiceCache can read from the cache — and
+// ahead of the leader-election group the controller lands in.
+type cachePrefillRunnable struct {
+	reconciler *ServiceWithHealthchecksReconciler
+	mgr        ctrl.Manager
+}
+
+func (c *cachePrefillRunnable) Start(ctx context.Context) error {
+	if err := c.reconciler.PrefillServiceCache(ctx); err != nil {
+		// Non-fatal: the controller still gets registered below, and each resource's initial
+		// reconcile fills the cache. Only the head start is lost, so log and carry on.
+		c.reconciler.logger.Error("prefilling ServiceWithHealthchecks cache failed; registering controller anyway", log.Err(err))
+	}
+	return c.reconciler.registerController(c.mgr)
+}
+
+func (c *cachePrefillRunnable) NeedLeaderElection() bool { return false }
+
+// PrefillServiceCache loads the in-memory ServiceWithHealthchecks specs from the manager cache
+// once, at startup, so the pod watch mapper (getExposedServiceWithHCForPod) can match a node-local
+// pod to its owning resource from the first event. The mapper reads only this map, which is
+// otherwise filled by each resource's own reconcile, so without the prefill a pod event arriving
+// before that reconcile would be mapped against an empty cache and dropped.
+//
+// It is called from cachePrefillRunnable before the controller is registered, so its result is in
+// place before any pod event can be processed. Correctness does not hinge on that ordering — every
+// resource is reconciled once on start, which fills the map and performs a full pod sync — so a
+// failure here only costs the head start and is returned for logging, not treated as fatal.
+//
+// It stores exactly what Reconcile stores: the spec keyed by NamespacedName, skipping a resource
+// being deleted, so the value type the mapper and the task scheduler assert on stays consistent.
+// Reads go through the cached client; the list lazily starts and syncs the ServiceWithHealthchecks
+// informer, so it reflects the same cache the controller reconciles from.
+func (r *ServiceWithHealthchecksReconciler) PrefillServiceCache(ctx context.Context) error {
+	var list networkv1alpha1.ServiceWithHealthchecksList
+	if err := r.List(ctx, &list); err != nil {
+		return fmt.Errorf("listing ServiceWithHealthchecks for cache prefill: %w", err)
+	}
+
+	count := 0
+	for i := range list.Items {
+		swh := &list.Items[i]
+		if swh.DeletionTimestamp != nil {
+			// Reconcile does not store a resource that is being deleted; mirror that here so a
+			// resource mid-deletion is not resurrected in the map until a live event arrives.
+			continue
+		}
+		r.servicesWithHealthchecks.Store(types.NamespacedName{Namespace: swh.GetNamespace(), Name: swh.GetName()}, swh.Spec)
+		count++
+	}
+
+	r.logger.Info("prefilled ServiceWithHealthchecks cache", "count", count)
+	return nil
 }
 
 func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1alpha1.ServiceWithHealthchecks) []networkv1alpha1.EndpointStatus {

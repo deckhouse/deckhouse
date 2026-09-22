@@ -823,3 +823,6 @@ spec:
     - jsonPath: .spec.ports[].port
       name: Ports
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date

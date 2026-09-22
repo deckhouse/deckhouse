@@ -1010,3 +1010,73 @@ func TestDeleteEPSForNodeLeavesForeignSliceAlone(t *testing.T) {
 		t.Errorf("expected the slice of another controller to be kept, got %v", err)
 	}
 }
+
+func swhWithSelector(namespace, name string, selector map[string]string) *networkv1alpha1.ServiceWithHealthchecks {
+	return &networkv1alpha1.ServiceWithHealthchecks{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+		Spec:       specWithSelector(selector),
+	}
+}
+
+// TestPrefillServiceCache checks that the prefill populates the in-memory map from the API
+// with exactly the value type the mapper and the task scheduler assert on, and that it mirrors
+// Reconcile by leaving out a resource that is being deleted.
+func TestPrefillServiceCache(t *testing.T) {
+	r := newTestReconciler()
+
+	live := swhWithSelector(testNamespace, "lb-a", map[string]string{lbSelectorKey: "loadbalancer"})
+	otherNamespace := swhWithSelector("team-other", "lb-b", map[string]string{"app": "x"})
+
+	// A resource mid-deletion: the fake client requires a finalizer to keep a deletion
+	// timestamp on a stored object.
+	deleting := swhWithSelector(testNamespace, "lb-deleting", map[string]string{lbSelectorKey: "loadbalancer"})
+	deleting.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	deleting.Finalizers = []string{"network.deckhouse.io/test"}
+
+	r.Client = fake.NewClientBuilder().
+		WithScheme(newTestScheme(t)).
+		WithObjects(live, otherNamespace, deleting).
+		Build()
+
+	if err := r.PrefillServiceCache(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	stored := map[types.NamespacedName]bool{}
+	r.servicesWithHealthchecks.Range(func(key, value any) bool {
+		name, ok := key.(types.NamespacedName)
+		if !ok {
+			t.Fatalf("stored key is %T, want types.NamespacedName", key)
+		}
+		// The mapper and the scheduler assert the value is a ServiceWithHealthchecksSpec, one of
+		// them without the comma-ok guard, so a wrong type here would panic them at runtime.
+		if _, ok := value.(networkv1alpha1.ServiceWithHealthchecksSpec); !ok {
+			t.Fatalf("stored value for %s is %T, want networkv1alpha1.ServiceWithHealthchecksSpec", name, value)
+		}
+		stored[name] = true
+		return true
+	})
+
+	wantLive := types.NamespacedName{Namespace: testNamespace, Name: "lb-a"}
+	wantOther := types.NamespacedName{Namespace: "team-other", Name: "lb-b"}
+	notWanted := types.NamespacedName{Namespace: testNamespace, Name: "lb-deleting"}
+
+	if !stored[wantLive] || !stored[wantOther] {
+		t.Fatalf("prefilled map %v, want it to contain %s and %s", stored, wantLive, wantOther)
+	}
+	if stored[notWanted] {
+		t.Fatalf("prefilled map %v, want it to skip the resource being deleted %s", stored, notWanted)
+	}
+	if len(stored) != 2 {
+		t.Fatalf("prefilled map holds %d entries, want 2", len(stored))
+	}
+
+	// The prefilled entry must be usable by the mapper: a node-local pod matching its selector
+	// resolves to a reconcile request, proving the stored spec flows through the mapper's type
+	// assertion.
+	pod := newTargetPod("virt-launcher-worker-rvtjp-dz8lg")
+	requests := r.getExposedServiceWithHCForPod(context.Background(), &pod)
+	if len(requests) != 1 || requests[0].NamespacedName != wantLive {
+		t.Fatalf("mapper on prefilled cache got %v, want exactly one request for %s", requests, wantLive)
+	}
+}
