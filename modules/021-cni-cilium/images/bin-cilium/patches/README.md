@@ -273,6 +273,12 @@ Reachable only through the annotation -- `bpf-lb-algorithm` is validated against
 `random`/`maglev`, so least-conn cannot be a node-wide default. Needs
 `kubeProxyReplacement` and `bpf-lb-sock-hostns-only`.
 
+The maps are pinned, so they outlive the service, the agent and a reinstall.
+Entries are dropped as the reconciler sees a frontend or backend go away, and
+swept against the load balancer's own maps at agent start -- otherwise anything
+orphaned while no agent ran would leak for good, and a backend id carries a
+stale count to whatever backend is allocated that id next.
+
 Test `~/src/kind/d8-1.20-tests/least-conn/`
 
 ## 014-add-pod-prioroty-management.patch

@@ -1,4 +1,4 @@
-From 86b97cb8ff3f939653d7529a2811ca2cdf0b788b Mon Sep 17 00:00:00 2001
+From 6c19c7374a4c246552afc9c783fb1b52d096739b Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Wed, 16 Sep 2026 16:34:33 +0300
 Subject: [PATCH] lb: least-conn backend selection algorithm
@@ -28,8 +28,8 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
  pkg/maps/ctmap/gc/gc.go                       |   9 +
  pkg/maps/ctmap/types.go                       |   6 +
  pkg/maps/leastconn/cell.go                    |  36 ++
- pkg/maps/leastconn/leastconn.go               | 203 ++++++++++
- 16 files changed, 722 insertions(+)
+ pkg/maps/leastconn/leastconn.go               | 296 +++++++++++++++
+ 16 files changed, 815 insertions(+)
  create mode 100644 bpf/lib/least_conn.h
  create mode 100644 pkg/maps/leastconn/cell.go
  create mode 100644 pkg/maps/leastconn/leastconn.go
@@ -915,10 +915,10 @@ index 0000000000..02cf87f2b7
 +)
 diff --git a/pkg/maps/leastconn/leastconn.go b/pkg/maps/leastconn/leastconn.go
 new file mode 100644
-index 0000000000..0bda00cefd
+index 0000000000..42bbe5bbdf
 --- /dev/null
 +++ b/pkg/maps/leastconn/leastconn.go
-@@ -0,0 +1,203 @@
+@@ -0,0 +1,296 @@
 +// SPDX-License-Identifier: Apache-2.0
 +// Copyright Authors of Cilium
 +
@@ -1018,6 +1018,99 @@ index 0000000000..0bda00cefd
 +	logger = log
 +	backendMap = m
 +	serviceMap = sm
++
++	// Drop whatever the previous agent left behind before the datapath can read
++	// it. Failing the sweep must not fail the agent: a stale entry is a leak,
++	// not an outage.
++	if err := syncWithLiveState(reg); err != nil {
++		logger.Warn("Unable to drop stale least-conn entries at startup", logfields.Error, err)
++	}
++	return nil
++}
++
++// syncWithLiveState drops every entry whose service or backend no longer exists.
++//
++// Both maps are pinned under /sys/fs/bpf, so they outlive the service, the agent
++// and even a cilium reinstall, while entries are otherwise removed only as the
++// reconciler observes a deletion. Anything that goes away while no agent runs is
++// never cleaned up, and these are fixed-size hashes: the leak is permanent and
++// eventually fills them. A full sweep at start is what closes that gap; keeping
++// them in step while the agent runs is the reconciler's job.
++//
++// Live state is read from the load balancer's own pinned maps rather than from
++// Kubernetes, so the sweep needs nothing to have synced yet and can run before
++// the datapath serves a packet. Dropping an entry is safe either way: the
++// datapath reads a missing backend counter as an idle backend, and the first
++// conntrack GC pass rebuilds the counts from the connections that are really
++// open.
++func syncWithLiveState(reg *registry.MapRegistry) error {
++	svcMap, err := bpf.NewMapFromRegistry(reg, lbmaps.Service4MapV2Name,
++		&lbmaps.Service4Key{}, &lbmaps.Service4Value{})
++	if err != nil {
++		return fmt.Errorf("resolving %s: %w", lbmaps.Service4MapV2Name, err)
++	}
++	if err := svcMap.Open(); err != nil {
++		// No load balancer map means no live state to compare against. Sweeping
++		// on that basis would delete everything, so leave the maps alone.
++		return fmt.Errorf("opening %s: %w", lbmaps.Service4MapV2Name, err)
++	}
++	defer svcMap.Close()
++
++	bckMap, err := bpf.NewMapFromRegistry(reg, lbmaps.Backend4MapV3Name,
++		&lbmaps.Backend4KeyV3{}, &lbmaps.Backend4ValueV3{})
++	if err != nil {
++		return fmt.Errorf("resolving %s: %w", lbmaps.Backend4MapV3Name, err)
++	}
++	if err := bckMap.Open(); err != nil {
++		return fmt.Errorf("opening %s: %w", lbmaps.Backend4MapV3Name, err)
++	}
++	defer bckMap.Close()
++
++	// Collect first, delete afterwards: deleting while iterating a hash map can
++	// make the dump skip entries.
++	var staleSvc []lbmaps.Service4Key
++	if err := serviceMap.DumpWithCallback(func(k bpf.MapKey, _ bpf.MapValue) {
++		key, ok := k.(*lbmaps.Service4Key)
++		if !ok {
++			return
++		}
++		if _, err := svcMap.Lookup(key); err != nil {
++			staleSvc = append(staleSvc, *key)
++		}
++	}); err != nil {
++		return fmt.Errorf("dumping %s: %w", ServiceMapName, err)
++	}
++
++	var staleBck []BackendKey
++	if err := backendMap.DumpWithCallback(func(k bpf.MapKey, _ bpf.MapValue) {
++		key, ok := k.(*BackendKey)
++		if !ok {
++			return
++		}
++		if _, err := bckMap.Lookup(lbmaps.NewBackend4KeyV3(lb.BackendID(key.BackendID))); err != nil {
++			staleBck = append(staleBck, *key)
++		}
++	}); err != nil {
++		return fmt.Errorf("dumping %s: %w", BackendMapName, err)
++	}
++
++	for i := range staleSvc {
++		if err := serviceMap.Delete(&staleSvc[i]); err != nil {
++			logger.Warn("Unable to drop a stale least-conn service entry",
++				logfields.Error, err, logfields.ServiceKey, staleSvc[i].String())
++		}
++	}
++	for i := range staleBck {
++		if err := backendMap.Delete(&staleBck[i]); err != nil {
++			logger.Warn("Unable to drop a stale least-conn backend entry",
++				logfields.Error, err, logfields.BackendID, staleBck[i].BackendID)
++		}
++	}
++
++	if len(staleSvc) > 0 || len(staleBck) > 0 {
++		logger.Info("Dropped stale least-conn entries at startup",
++			"services", len(staleSvc), "backends", len(staleBck))
++	}
 +	return nil
 +}
 +
