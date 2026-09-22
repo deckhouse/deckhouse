@@ -27,6 +27,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -202,4 +203,88 @@ func testArbiterNode(name string) *corev1.Node {
 			},
 		},
 	}
+}
+
+// A node that is still coming up is the normal state of a cluster being
+// bootstrapped: the operations are created before it is Ready, the approver
+// counts no ready node and approves nothing. Its own watch never fires again -
+// the operations do not change - so unless the node itself wakes it, they stay
+// Pending for the life of the cluster.
+func TestNodePredicates(t *testing.T) {
+	t.Parallel()
+
+	notReady := func(node *corev1.Node) *corev1.Node {
+		node = node.DeepCopy()
+		node.Status.Conditions[0].Status = corev1.ConditionFalse
+
+		return node
+	}
+	plain := func(node *corev1.Node) *corev1.Node {
+		node = node.DeepCopy()
+		node.Labels = map[string]string{}
+
+		return node
+	}
+	arbiter := func(node *corev1.Node) *corev1.Node {
+		node = node.DeepCopy()
+		node.Labels = map[string]string{constants.EtcdArbiterNodeLabelKey: ""}
+
+		return node
+	}
+
+	master := testControlPlaneNode("master-0")
+	p := getNodePredicates()
+
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+		for _, tc := range []struct {
+			name     string
+			old, new *corev1.Node
+			want     bool
+		}{
+			{"a master goes Ready", notReady(master), master, true},
+			{"an arbiter goes Ready", notReady(arbiter(master)), arbiter(master), true},
+			{"a Ready node becomes a master", plain(master), master, true},
+			{"a Ready master keeps reporting", master, master, false},
+			{"a master goes NotReady", master, notReady(master), false},
+			{"a node nobody counts goes Ready", notReady(plain(master)), plain(master), false},
+		} {
+			if got := p.Update(event.UpdateEvent{ObjectOld: tc.old, ObjectNew: tc.new}); got != tc.want {
+				t.Errorf("%s: got %v, want %v", tc.name, got, tc.want)
+			}
+		}
+	})
+
+	t.Run("create", func(t *testing.T) {
+		t.Parallel()
+		for _, tc := range []struct {
+			name string
+			node *corev1.Node
+			want bool
+		}{
+			{"a Ready master", master, true},
+			{"a master that is not Ready yet", notReady(master), false},
+			{"a node nobody counts", plain(master), false},
+		} {
+			if got := p.Create(event.CreateEvent{Object: tc.node}); got != tc.want {
+				t.Errorf("%s: got %v, want %v", tc.name, got, tc.want)
+			}
+		}
+	})
+
+	t.Run("a node going away approves nothing", func(t *testing.T) {
+		t.Parallel()
+		if p.Delete(event.DeleteEvent{Object: master}) {
+			t.Error("a deleted node woke the approver")
+		}
+	})
+}
+
+func TestEnqueueForNode(t *testing.T) {
+	t.Parallel()
+
+	got := enqueueForNode(context.Background(), testControlPlaneNode("master-0"))
+	require.Len(t, got, 1)
+	require.Equal(t, constants.KubeSystemNamespace, got[0].Namespace)
+	require.Equal(t, "master-0", got[0].Name)
 }
