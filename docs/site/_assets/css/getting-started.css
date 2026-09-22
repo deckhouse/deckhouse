@@ -11,3 +11,27 @@
     background-color: #ffee93 !important;
     color: #02003E !important;
 }
+
+/* Stronghold download block (getting_started/stronghold/linux/partials/download_form.liquid) */
+.textfield--select {
+    cursor: pointer;
+    padding-right: 3em;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%23222A5D' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 1.25em center;
+}
+
+.stronghold-download__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    margin: 0 0 20px;
+}
+
+.stronghold-download__actions .button_alt {
+    flex-shrink: 0;
+}
+
+.stronghold-download__select {
+    width: auto;
+    min-width: 180px;
+}

@@ -4,7 +4,9 @@ Edition tabs are rendered by the Jekyll `tabs` plugin (docs/documentation/_plugi
 tab labels must be literals, so the edition names are hardcoded here.
 The license key is never validated on the site: it is sent to the download service
 (website-stronghold/registry-proxy) which reports success or an error.
+UI strings live in _data/i18n.yaml (getting_started.stronghold_download) and _data/license.yaml.
 {%- endcomment -%}
+{%- assign i18n = site.data.i18n.getting_started.stronghold_download -%}
 <script type="text/javascript">
 const strongholdDownload = {
   prefix: '/products/stronghold/get',
@@ -12,25 +14,15 @@ const strongholdDownload = {
   i18n: {
     empty_input: '{{ site.data.license.response[page.lang].empty_input }}',
     reject: '{{ site.data.license.response[page.lang].reject }}',
-    {%- if page.lang == 'ru' %}
-    network: 'Не удалось получить список версий. Повторите попытку позже.',
-    no_versions: 'Доступных версий не найдено.',
-    resolve: 'Выберите версию и нажмите «Скачать».'
-    {%- else %}
-    network: 'Failed to fetch the version list. Please try again later.',
-    no_versions: 'No versions available.',
-    resolve: 'Select a version and click "Download".'
-    {%- endif %}
+    resolve: '{{ i18n.key_accepted[page.lang] }}',
+    network: '{{ i18n.network_error[page.lang] }}',
+    no_versions: '{{ i18n.no_versions[page.lang] }}'
   }
 };
 </script>
 <script type="text/javascript" src='{% javascript_asset_tag stronghold-download %}[_assets/js/stronghold-download.js]{% endjavascript_asset_tag %}'></script>
 
-{% if page.lang == 'ru' %}
-#### Выберите редакцию Deckhouse Stronghold
-{% else %}
-#### Select the Deckhouse Stronghold edition
-{% endif %}
+#### {{ i18n.select_edition[page.lang] }}
 
 {% tabs stronghold-edition %}
 {% tab "Enterprise Edition" %}
