@@ -204,6 +204,22 @@ done
 [[ -n "$found" ]] || fail "could not reach any of the API servers: ${KUBE_ENDPOINTS}"
 [[ "$found" == "404" ]] || fail "a node named '${new_name}' already exists in the cluster; a node name has to be unique"
 
+# Where the pod network is routed by the cloud rather than tunnelled by the CNI,
+# the route controller finds a node's instance by the node's name - it cannot use
+# providerID, which reads "static://" on a node like this one. Rename the node and
+# it matches no instance, no route is ever written for its pod subnet, and the
+# node comes back with NetworkUnavailable set for good. The condition names its
+# author: a route controller writes RouteCreated, an overlay CNI writes its own
+# reason (FlannelIsUp, and cilium likewise).
+network_reason="$(jq -r '.status.conditions[]? | select(.type=="NetworkUnavailable") | .reason' <<<"$(kube_body "/api/v1/nodes/${old_name}" || echo '{}')")"
+case "${network_reason}" in
+  RouteCreated|NoRouteCreated)
+    fail "this cluster routes the pod network through the cloud, and the route controller finds a node's machine by the node's name.
+  Renaming '${old_name}' would leave it with no route to its pod subnet and no way to get one.
+  A node here has to keep the name of the machine it runs on."
+    ;;
+esac
+
 if [[ "$skip_drain" != "yes" ]]; then
   # The old Node object goes away as part of this, and its pods with it.
   # Requiring a cordon is how this script refuses to be the one that notices.

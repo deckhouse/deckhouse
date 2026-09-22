@@ -348,6 +348,24 @@ For the first master node of a static or hybrid cluster, pass `--node-name` to
 the infrastructure created, and `dhctl converge` finds its machine again by the
 node's name.
 
+{% alert level="warning" %}
+A node cannot be given a name of its own in a cluster that routes the pod network
+through the cloud — `cni-simple-bridge` together with the route controller of a
+cloud provider. There the route controller finds the machine behind a node by the
+node's name, so a node named anything else never gets a route to its pod subnet,
+and nothing running on it is reachable from the rest of the cluster. The name of a
+node has to stay the name of its machine.
+{% endalert %}
+
+Such a cluster is recognizable by the reason its nodes give for the
+`NetworkUnavailable` condition — `RouteCreated`, where an overlay CNI puts its own
+(`FlannelIsUp`, for instance):
+
+```shell
+d8 k get node <node_name> \
+  -o jsonpath='{.status.conditions[?(@.type=="NetworkUnavailable")].reason}'
+```
+
 ## How do I rename a node that is already in the cluster?
 
 A Node object cannot be renamed, so a node is renamed by re-registering it: the
@@ -384,6 +402,11 @@ of the cluster finds the machine behind them: `machine-controller-manager` match
 a Machine to its Node by name, and the infrastructure state `dhctl converge` works
 from is kept in a `d8-node-terraform-state-<node-name>` Secret. A renamed node
 would read as a machine that vanished and a node that appeared from nowhere.
+
+A node of a cluster that routes the pod network through the cloud cannot be
+renamed either, and for the same reason: its route is created for the name it has
+now, and no route is ever created for the new one. `rename_node.sh` recognizes such
+a cluster and refuses to run on it.
 
 Local PersistentVolumes pin their node in `nodeAffinity` by the
 `kubernetes.io/hostname` label, which holds the node's name. A rename leaves such
