@@ -169,16 +169,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(checkIfGrantRulesAreViolated))
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/160-multitenancy-manager",
-	Schedule: []go_hook.ScheduleConfig{
-		{
-			Name:    "grants",
-			Crontab: "*/2 * * * *",
-		},
-	},
-}, dependency.WithExternalDependencies(scanClusterResourceGrantPolicyRulesViolations))
-
 func filterGrants(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	g := &grant{}
 	if err := sdk.FromUnstructured(obj, g); err != nil {
@@ -199,35 +189,6 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 			return fmt.Errorf("unmarshal grant snapshot: %w", err)
 		}
 		violations, err := validateGrantNotViolated(ctx, g, kubeClient, log)
-		if err != nil {
-			return fmt.Errorf("scan grant %s for violations: %w", g.ObjectMeta.Name, err)
-		}
-		setGrantViolationMetrics(input, g.ObjectMeta.Name, violations)
-	}
-	return nil
-}
-
-func scanClusterResourceGrantPolicyRulesViolations(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	log := input.Logger
-	kube := dc.MustGetK8sClient()
-
-	grantList, err := kube.Dynamic().Resource(schema.GroupVersionResource{
-		Group:    "multitenancy.deckhouse.io",
-		Version:  "v1alpha1",
-		Resource: "clusterresourcegrantpolicies",
-	}).List(ctx, v1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("fetch grants: %w", err)
-	}
-
-	input.MetricsCollector.Expire(grantViolationMetricGroup)
-
-	for _, obj := range grantList.Items {
-		g := &grant{}
-		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, g); err != nil {
-			return err
-		}
-		violations, err := validateGrantNotViolated(ctx, g, kube, log)
 		if err != nil {
 			return fmt.Errorf("scan grant %s for violations: %w", g.ObjectMeta.Name, err)
 		}
