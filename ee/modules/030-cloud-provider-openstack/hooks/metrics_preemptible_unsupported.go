@@ -22,15 +22,12 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
@@ -46,24 +43,27 @@ const (
 
 	preemptibleSnapshotNodeGroups    = "node_groups"
 	preemptibleSnapshotInstanceClass = "openstack_instance_classes"
-	preemptibleSnapshotProvider      = "cloud_provider_secret"
 
-	preemptibleUseMCMAnnotation      = "node.deckhouse.io/use-mcm"
-	preemptibleCloudProviderSecret   = "d8-node-manager-cloud-provider"
-	preemptibleCloudProviderSecretNs = "kube-system"
+	preemptibleUseMCMAnnotation = "node.deckhouse.io/use-mcm"
 
 	preemptibleOpenStackClassKind = "OpenStackInstanceClass"
+
+	// authURL lives in the module's own internal values — populated by discover /
+	// openstack_cluster_configuration hooks. Reading it here (instead of watching the provider
+	// secret) keeps the hook inside the module boundary and avoids a redundant Kubernetes watcher.
+	preemptibleAuthURLValuePath = "cloudProviderOpenstack.internal.connection.authURL"
 
 	engineMCM  = "MCM"
 	engineCAPI = "CAPI"
 )
 
-// Three inputs feed the metric: NodeGroups that carry the intent, OpenStackInstanceClasses that
-// carry the boolean, and the provider secret that carries the authURL. Any of the three changing
-// can flip the alert on or off — the hook fires on every one of them, and the handler re-derives
-// the full picture from the current snapshots.
+// Two inputs feed the metric: NodeGroups that carry the intent and OpenStackInstanceClasses that
+// carry the boolean. The third input (authURL) is a module value, so any hook that writes it
+// (discover, openstack_cluster_configuration) also triggers a helm run, and OnAfterHelm re-fires
+// this hook — no separate Kubernetes watcher on the provider secret is needed.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/cloud-provider-openstack/preemptible-unsupported",
+	Queue:       "/modules/cloud-provider-openstack/preemptible-unsupported",
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         preemptibleSnapshotNodeGroups,
@@ -78,21 +78,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:                         "OpenStackInstanceClass",
 			ExecuteHookOnSynchronization: ptr.To(true),
 			FilterFunc:                   filterPreemptibleInstanceClass,
-		},
-		{
-			Name:                         preemptibleSnapshotProvider,
-			ApiVersion:                   "v1",
-			Kind:                         "Secret",
-			ExecuteHookOnSynchronization: ptr.To(true),
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{preemptibleCloudProviderSecret},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{preemptibleCloudProviderSecretNs},
-				},
-			},
-			FilterFunc: filterPreemptibleProviderSecret,
 		},
 	},
 }, handlePreemptibleUnsupportedMetric)
@@ -109,10 +94,6 @@ type preemptibleNodeGroup struct {
 type preemptibleInstanceClass struct {
 	Name        string
 	Preemptible bool
-}
-
-type preemptibleProvider struct {
-	AuthURL string
 }
 
 func filterPreemptibleNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -155,35 +136,6 @@ func filterPreemptibleInstanceClass(obj *unstructured.Unstructured) (go_hook.Fil
 	return preemptibleInstanceClass{Name: obj.GetName(), Preemptible: preemptible}, nil
 }
 
-// filterPreemptibleProviderSecret reads connection.authURL out of data["openstack"], which is a
-// JSON blob (see modules/030-cloud-provider-openstack/templates/registration.yaml). A missing key
-// yields "" — the handler then treats it as "not yet Selectel", not "not Selectel", so the metric
-// does not spike on the first reconcile before the discovery hook publishes the connection block.
-func filterPreemptibleProviderSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var secret corev1.Secret
-	if err := sdk.FromUnstructured(obj, &secret); err != nil {
-		return nil, fmt.Errorf("from unstructured: %w", err)
-	}
-	raw, ok := secret.Data["openstack"]
-	if !ok {
-		return preemptibleProvider{}, nil
-	}
-	// data.openstack is a JSON tree — we only need connection.authURL, so parse into an
-	// intermediate map rather than a full typed struct that would bind the hook to every
-	// provider-tree change.
-	var tree map[string]any
-	if err := json.Unmarshal(raw, &tree); err != nil {
-		// Malformed secret is transient (mid-write) — treat as empty rather than fail the hook.
-		return preemptibleProvider{}, nil
-	}
-	connection, _ := tree["connection"].(map[string]any)
-	if connection == nil {
-		return preemptibleProvider{}, nil
-	}
-	authURL, _ := connection["authURL"].(string)
-	return preemptibleProvider{AuthURL: authURL}, nil
-}
-
 func handlePreemptibleUnsupportedMetric(_ context.Context, input *go_hook.HookInput) error {
 	// Expire first — a NodeGroup that was unhealthy last pass but has since been fixed or deleted
 	// must lose its timeseries in the same tick, so the alert clears without waiting for the
@@ -199,15 +151,11 @@ func handlePreemptibleUnsupportedMetric(_ context.Context, input *go_hook.HookIn
 		classes[ic.Name] = ic.Preemptible
 	}
 
+	// Empty / missing key reads as "" — treated as "not yet Selectel" (bootstrap race), not "not
+	// Selectel", so the metric does not spike before openstack_cluster_configuration publishes.
 	authURL := ""
-	for provider, err := range sdkobjectpatch.SnapshotIter[preemptibleProvider](
-		input.Snapshots.Get(preemptibleSnapshotProvider)) {
-		if err != nil {
-			return fmt.Errorf("iterate %s: %w", preemptibleSnapshotProvider, err)
-		}
-		authURL = provider.AuthURL
-		// The secret name is unique — one entry at most, but iterate to unwrap the snapshot.
-		break
+	if v, ok := input.Values.GetOk(preemptibleAuthURLValuePath); ok {
+		authURL = v.String()
 	}
 	nonSelectel := isNonSelectelAuthURL(authURL)
 
@@ -246,8 +194,8 @@ func handlePreemptibleUnsupportedMetric(_ context.Context, input *go_hook.HookIn
 }
 
 // isNonSelectelAuthURL returns true only when an authURL has been published AND it is clearly
-// not Selectel. An empty authURL — the state during bootstrap before the discovery hook writes
-// the secret — reads as "not yet Selectel" and does not raise the alert; the next tick, once
+// not Selectel. An empty authURL — the state during bootstrap before openstack_cluster_configuration
+// writes the value — reads as "not yet Selectel" and does not raise the alert; the next tick, once
 // the URL is known, will publish the metric if it turns out to be non-Selectel.
 func isNonSelectelAuthURL(authURL string) bool {
 	if authURL == "" {

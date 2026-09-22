@@ -6,8 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
@@ -19,25 +17,14 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-// providerSecretYAML returns a d8-node-manager-cloud-provider Secret whose data.openstack is a
-// b64-encoded JSON tree with the given authURL under connection. Empty authURL means "connection
-// block absent" — used to exercise the bootstrap-race branch of the hook.
-func providerSecretYAML(authURL string) string {
-	tree := map[string]any{}
-	if authURL != "" {
-		tree["connection"] = map[string]any{"authURL": authURL}
+// valuesWithAuthURL builds the minimal values tree the hook reads. Empty authURL means the
+// discover / openstack_cluster_configuration hooks have not yet published the connection block —
+// used to exercise the bootstrap-race branch.
+func valuesWithAuthURL(authURL string) string {
+	if authURL == "" {
+		return `{"cloudProviderOpenstack":{"internal":{}}}`
 	}
-	raw, _ := json.Marshal(tree)
-	return fmt.Sprintf(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-node-manager-cloud-provider
-  namespace: kube-system
-data:
-  openstack: %s
-`, base64.StdEncoding.EncodeToString(raw))
+	return fmt.Sprintf(`{"cloudProviderOpenstack":{"internal":{"connection":{"authURL":%q}}}}`, authURL)
 }
 
 const (
@@ -164,7 +151,7 @@ status:
 )
 
 var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preemptible_unsupported ::", func() {
-	f := HookExecutionConfigInit(`{}`, `{}`)
+	f := HookExecutionConfigInit(`{"cloudProviderOpenstack":{"internal":{}}}`, `{}`)
 	nodeGroupGVR := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 	openstackInstanceClassGVR := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "openstackinstanceclasses"}
 	f.RegisterCRD(nodeGroupGVR.Group, nodeGroupGVR.Version, "NodeGroup", false)
@@ -190,6 +177,7 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{}`))
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunGoHook()
 		})
@@ -207,11 +195,8 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("MCM NodeGroup + preemptible IC on a Selectel cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				preemptibleICEnabled +
-					ngMCMWithPreempt +
-					providerSecretYAML("https://cloud.api.selcloud.ru/identity/v3"),
-			))
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{"connection":{"authURL":"https://cloud.api.selcloud.ru/identity/v3"}}`))
+			f.BindingContexts.Set(f.KubeStateSet(preemptibleICEnabled + ngMCMWithPreempt))
 			f.RunGoHook()
 		})
 
@@ -229,11 +214,8 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("CAPI NodeGroup + preemptible IC on a non-Selectel cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				preemptibleICEnabled +
-					ngCAPIWithPreempt +
-					providerSecretYAML("https://public.infra.mail.ru:5000/v3/"),
-			))
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{"connection":{"authURL":"https://public.infra.mail.ru:5000/v3/"}}`))
+			f.BindingContexts.Set(f.KubeStateSet(preemptibleICEnabled + ngCAPIWithPreempt))
 			f.RunGoHook()
 		})
 
@@ -249,11 +231,8 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("CAPI NodeGroup + preemptible IC on a Selectel cluster (selcloud.ru)", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				preemptibleICEnabled +
-					ngCAPIWithPreempt +
-					providerSecretYAML("https://cloud.api.selcloud.ru/identity/v3"),
-			))
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{"connection":{"authURL":"https://cloud.api.selcloud.ru/identity/v3"}}`))
+			f.BindingContexts.Set(f.KubeStateSet(preemptibleICEnabled + ngCAPIWithPreempt))
 			f.RunGoHook()
 		})
 
@@ -269,11 +248,8 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("CAPI NodeGroup + preemptible IC on a Selectel cluster (selectel.ru)", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				preemptibleICEnabled +
-					ngCAPIWithPreempt +
-					providerSecretYAML("https://api.selectel.ru/identity/v3"),
-			))
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{"connection":{"authURL":"https://api.selectel.ru/identity/v3"}}`))
+			f.BindingContexts.Set(f.KubeStateSet(preemptibleICEnabled + ngCAPIWithPreempt))
 			f.RunGoHook()
 		})
 
@@ -288,14 +264,14 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("CAPI NodeGroup + preemptible IC but authURL not yet published (bootstrap)", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				preemptibleICEnabled + ngCAPIWithPreempt + providerSecretYAML(""),
-			))
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{}`))
+			f.BindingContexts.Set(f.KubeStateSet(preemptibleICEnabled + ngCAPIWithPreempt))
 			f.RunGoHook()
 		})
 
-		// A cluster is "not yet Selectel" until the discovery hook populates connection —
-		// otherwise every fresh cluster would raise the non-Selectel alert during bootstrap.
+		// A cluster is "not yet Selectel" until openstack_cluster_configuration populates
+		// connection — otherwise every fresh cluster would raise the non-Selectel alert during
+		// bootstrap.
 		It("Suppresses the alert on the first pass before authURL is known", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
@@ -307,11 +283,8 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("CAPI NodeGroup with preemptible: false IC", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				preemptibleICDisabled +
-					ngCAPIWithPlainClass +
-					providerSecretYAML("https://public.infra.mail.ru:5000/v3/"),
-			))
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{"connection":{"authURL":"https://public.infra.mail.ru:5000/v3/"}}`))
+			f.BindingContexts.Set(f.KubeStateSet(preemptibleICDisabled + ngCAPIWithPlainClass))
 			f.RunGoHook()
 		})
 
@@ -327,11 +300,8 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("Static NodeGroup referencing a preemptible IC", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				preemptibleICEnabled +
-					ngStaticWithPreemptClassRef +
-					providerSecretYAML("https://public.infra.mail.ru:5000/v3/"),
-			))
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{"connection":{"authURL":"https://public.infra.mail.ru:5000/v3/"}}`))
+			f.BindingContexts.Set(f.KubeStateSet(preemptibleICEnabled + ngStaticWithPreemptClassRef))
 			f.RunGoHook()
 		})
 
@@ -348,11 +318,8 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("NodeGroup referencing YandexInstanceClass with the same name", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				preemptibleICEnabled +
-					ngYandexKindWithPreemptName +
-					providerSecretYAML("https://public.infra.mail.ru:5000/v3/"),
-			))
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{"connection":{"authURL":"https://public.infra.mail.ru:5000/v3/"}}`))
+			f.BindingContexts.Set(f.KubeStateSet(preemptibleICEnabled + ngYandexKindWithPreemptName))
 			f.RunGoHook()
 		})
 
@@ -369,11 +336,8 @@ var _ = Describe("Modules :: cloudProviderOpenstack :: hooks :: metrics_preempti
 
 	Context("Fresh NodeGroup with no status.engine on a non-Selectel cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				preemptibleICEnabled +
-					ngFreshDefaultsToCAPI +
-					providerSecretYAML("https://public.infra.mail.ru:5000/v3/"),
-			))
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal", []byte(`{"connection":{"authURL":"https://public.infra.mail.ru:5000/v3/"}}`))
+			f.BindingContexts.Set(f.KubeStateSet(preemptibleICEnabled + ngFreshDefaultsToCAPI))
 			f.RunGoHook()
 		})
 
