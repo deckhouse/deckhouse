@@ -19,7 +19,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -180,7 +179,7 @@ func listModulePackageVersionNamesExceptGlobal(t *testing.T, cl client.Client) [
 	t.Helper()
 
 	return slices.DeleteFunc(listModulePackageVersionNames(t, cl), func(name string) bool {
-		return strings.HasPrefix(name, repositoryNameEmbedded+"-"+packageNameGlobal+"-")
+		return name == repositoryNameEmbedded+"-"+packageNameGlobal
 	})
 }
 

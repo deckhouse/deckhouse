@@ -129,6 +129,7 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 	spec := v1alpha1.ModulePackageVersionSpec{
 		PackageName:           def.Name,
 		PackageRepositoryName: repositoryNameEmbedded,
+		PackageVersion:        app.EmbeddedPackageVersion(),
 	}
 
 	return s.ensureFilledModulePackageVersion(ctx, name, spec, meta, schemas)
@@ -176,6 +177,7 @@ func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context, moduleSourc
 	spec := v1alpha1.ModulePackageVersionSpec{
 		PackageName:           packageNameGlobal,
 		PackageRepositoryName: repositoryNameEmbedded,
+		PackageVersion:        app.EmbeddedPackageVersion(),
 	}
 
 	return s.ensureFilledModulePackageVersion(ctx, name, spec, new(v1alpha1.ModulePackageVersionStatusMetadata), schemas)
@@ -282,6 +284,13 @@ func (s *syncer) ensureFilledModulePackageVersion(ctx context.Context, name stri
 		}
 	}
 
+	// the version is checked before the status, since a build can ship the same schemas under a new one
+	if spec.PackageRepositoryName == repositoryNameEmbedded && mpv.Spec.PackageVersion != spec.PackageVersion {
+		if err := s.moveEmbeddedModulePackageVersion(ctx, mpv, spec.PackageVersion); err != nil {
+			return err
+		}
+	}
+
 	if !mpv.IsDraft() &&
 		equality.Semantic.DeepEqual(mpv.Status.PackageMetadata, meta) &&
 		equality.Semantic.DeepEqual(mpv.Status.PackageSchemas, schemas) {
@@ -299,6 +308,22 @@ func (s *syncer) ensureFilledModulePackageVersion(ctx context.Context, name stri
 	}
 
 	return s.removeModulePackageVersionDraft(ctx, mpv)
+}
+
+// moveEmbeddedModulePackageVersion points the object at the build now on disk. Only the embedded
+// repository allows it: its name carries no version, so one object serves every build.
+func (s *syncer) moveEmbeddedModulePackageVersion(ctx context.Context, mpv *v1alpha1.ModulePackageVersion, version string) error {
+	patch := client.MergeFrom(mpv.DeepCopy())
+	mpv.Spec.PackageVersion = version
+
+	if err := s.writer.Patch(ctx, mpv, patch); err != nil {
+		return fmt.Errorf("patch module package version '%s': %w", mpv.Name, err)
+	}
+
+	s.logger.Debug("embedded module package version moved to a new build",
+		slog.String("name", mpv.Name), slog.String("version", version))
+
+	return nil
 }
 
 // ensureModulePackageVersionStub makes sure the version exists at least as a draft stub; any
