@@ -826,6 +826,50 @@ func TestBuildEndpointSliceIsOwnedBySWH(t *testing.T) {
 	}
 }
 
+func TestBuildEndpointSliceHasHeritageLabel(t *testing.T) {
+	r := newTestReconciler()
+	eps := r.BuildEndpointSlice(testSWHName+"-"+testNodeName, newTestSWH())
+	if got := eps.Labels[heritageLabelKey]; got != heritageLabelValue {
+		t.Errorf("label %s = %q, want %q", heritageLabelKey, got, heritageLabelValue)
+	}
+}
+
+// A slice created before the heritage label existed gets it added on the next update, rather than
+// being left unlabelled.
+func TestUpdateEPSAddsHeritageLabelToExistingSlice(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	epsName := testSWHName + "-" + testNodeName
+
+	stale := r.BuildEndpointSlice(epsName, swh)
+	delete(stale.Labels, heritageLabelKey)
+	stale.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&stale).Build()
+	r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Namespace: testNamespace, Name: testSWHName}] = []HealthcheckTarget{
+		{
+			targetHost:         testPodIP,
+			podName:            "worker",
+			podNamespace:       testNamespace,
+			podUID:             types.UID("uid-worker"),
+			podReady:           true,
+			probeResultDetails: successfulProbeDetails(),
+		},
+	}
+
+	if err := r.updateEPSForServiceWithHealthchecks(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var updated discoveryv1.EndpointSlice
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: epsName}, &updated); err != nil {
+		t.Fatalf("failed to read back the EndpointSlice: %v", err)
+	}
+	if got := updated.Labels[heritageLabelKey]; got != heritageLabelValue {
+		t.Errorf("label %s = %q, want %q", heritageLabelKey, got, heritageLabelValue)
+	}
+}
+
 // Slices created by an older version of the agent carry no owner reference; they are adopted
 // in place instead of being recreated.
 func TestUpdateEPSAdoptsSliceWithoutOwnerReference(t *testing.T) {

@@ -44,6 +44,11 @@ const (
 	endpointControllerLabelKey  = "endpointslice.kubernetes.io/managed-by"
 	controllerName              = "servicewithhealthchecks"
 
+	// heritageLabelKey marks every object the module manages as belonging to Deckhouse, the same
+	// way the rest of the platform labels its own resources.
+	heritageLabelKey   = "heritage"
+	heritageLabelValue = "deckhouse"
+
 	// resyncPeriod is a periodic, per-object re-reconcile of every ServiceWithHealthchecks.
 	// Pod membership already converges from pod watch events — creations, deletions and
 	// endpoint-affecting updates all enqueue the owning resource — so this is not the main
@@ -691,12 +696,19 @@ func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(
 	// A slice created before the owner reference was introduced, or left over from a recreated
 	// parent, is adopted here instead of being recreated.
 	ownerIsOutdated := !reflect.DeepEqual(existingEPS.OwnerReferences, desiredEPS.OwnerReferences)
+	// A slice created before the heritage label was introduced is missing it; add it on the next
+	// update instead of leaving old slices unlabelled.
+	heritageOutdated := existingEPS.Labels[heritageLabelKey] != heritageLabelValue
 
 	// Use Patch instead of Update to avoid conflicts and ResourceVersion issues.
-	if ownerIsOutdated || !endpointsAreEqual(existingEPS.Endpoints, desiredEPS.Endpoints) {
+	if ownerIsOutdated || heritageOutdated || !endpointsAreEqual(existingEPS.Endpoints, desiredEPS.Endpoints) {
 		patch := client.MergeFrom(existingEPS.DeepCopy())
 		existingEPS.Endpoints = desiredEPS.Endpoints
 		existingEPS.OwnerReferences = desiredEPS.OwnerReferences
+		if existingEPS.Labels == nil {
+			existingEPS.Labels = map[string]string{}
+		}
+		existingEPS.Labels[heritageLabelKey] = heritageLabelValue
 		if err := r.Patch(ctx, existingEPS, patch); err != nil {
 			r.logger.Error("couldn't patch EndpointSlice", log.Err(err), "name", desiredNameForEndpointSlice)
 			return err
@@ -713,6 +725,7 @@ func (r *ServiceWithHealthchecksReconciler) BuildEndpointSlice(desiredName strin
 			Labels: map[string]string{
 				endpointServiceNameLabelKey: svc.GetName(),
 				endpointControllerLabelKey:  controllerName,
+				heritageLabelKey:            heritageLabelValue,
 			},
 			OwnerReferences: []metav1.OwnerReference{ownerReferenceForServiceWithHealthchecks(svc)},
 		},
