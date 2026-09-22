@@ -195,7 +195,9 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
   - `istio.io/rev=default` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`).
 - The `sidecar.istio.io/inject` (`"true"` or `"false"`) pod annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
 
-It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
+It is also possible to add the sidecar to an individual pod in a namespace without the `istio-injection` and `istio.io/rev` labels by setting the `sidecar.istio.io/inject=true` Pod label. The same applies to the `istio.io/rev=vXxYZ` Pod label — it selects the Istio version for an individual pod, but only in a namespace that carries neither the `istio-injection` nor the `istio.io/rev` label.
+
+The `istio-injection` and `istio.io/rev` namespace labels are mutually exclusive. A namespace carrying both of them, or carrying `istio-injection` with a value other than `enabled`, gets no sidecars injected at all — neither namespace-wide nor per-pod.
 
 Istio-proxy, running as a sidecar container, consumes resources and adds the following overhead:
 
