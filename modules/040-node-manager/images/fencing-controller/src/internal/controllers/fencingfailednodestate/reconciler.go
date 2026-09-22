@@ -31,11 +31,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	v1alpha1 "fencing-controller/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-controller/internal/common"
 	"fencing-controller/internal/domain/fsm"
 	"fencing-controller/internal/usecase/profile"
-
-	v1alpha1 "fencing-controller/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 // Profiles resolves the timings an incident is processed under.

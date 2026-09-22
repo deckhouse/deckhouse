@@ -7,7 +7,7 @@ lang: en
 
 If the [`DeckhouseUpdating`](../reference/alerts.html#deckhouse-deckhouseupdating) alert is gone, the update has finished.
 
-You can also check the status of DKP releases in the cluster with the following command:
+You can also check the status of DP releases in the cluster with the following command:
 
 ```shell
 d8 k get deckhouserelease
@@ -47,8 +47,8 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 - If the Pod is `Running` and shows `1/1` under `READY`, it means the update completed successfully.
 - If the Pod is `Running` but shows `0/1` under `READY`, it means the update is still in progress.
-  If it stays like this for more than 20–30 minutes, it may indicate a problem with DKP that requires investigation.
-- If the Pod is not `Running`, it may indicate a problem with DKP that requires investigation.
+  If it stays like this for more than 20–30 minutes, it may indicate a problem with DP that requires investigation.
+- If the Pod is not `Running`, it may indicate a problem with DP that requires investigation.
 
 #### If something goes wrong
 
@@ -58,4 +58,4 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
 
-- Collect debug information and contact [DKP technical support](/tech-support/).
+- Collect debug information and contact [DP technical support](/tech-support/).

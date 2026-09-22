@@ -74,7 +74,7 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 		return nil, err
 	}
 
-	images, err := controlPlaneImagesFor(cluster.KubernetesVersion, in.MetaConfig.Images.ConvertToMap())
+	images, err := ResolveControlPlaneImages(ctx, in.MetaConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 	}
 
 	return &controlPlaneConfig{
-		APIVersion: payloadAPIVersion,
+		APIVersion: PayloadAPIVersion,
 		Kind:       controlPlaneConfigKind,
 		Metadata:   objectMeta{Name: in.NodeName},
 		Spec: controlPlaneSpec{
@@ -127,7 +127,10 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, error) {
 	// ClusterConfigMap resolves an "Automatic" kubernetesVersion to the version
 	// this installer defaults to. Rendering "Automatic" into the feature gates
-	// of every component is what the raw value would do.
+	// of every component is what the raw value would do. It also substitutes the
+	// three network parameters (ModuleConfig spec.settings.network first, then
+	// the deprecated ClusterConfiguration fields), so the required-key loop below
+	// covers both sources and converge renders the same values bootstrap did.
 	clusterConfig, err := metaConfig.ClusterConfigMap()
 	if err != nil {
 		return controlPlaneRenderParams{}, fmt.Errorf("read the cluster configuration: %w", err)
@@ -173,23 +176,14 @@ func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, err
 
 // ResolveControlPlaneImages picks the four static-pod image digests out of the
 // map baked into the installer image; a preflight check calls it to fail early
-// on an unsupported Kubernetes version.
+// on an unsupported Kubernetes version. Pure; the context is for uniformity.
 func ResolveControlPlaneImages(_ context.Context, metaConfig *config.MetaConfig) (controlPlaneImages, error) {
-	clusterConfig, err := metaConfig.ClusterConfigMap()
-	if err != nil {
-		return controlPlaneImages{}, fmt.Errorf("read the cluster configuration: %w", err)
-	}
-
-	version, err := kubernetesVersion(clusterConfig)
+	version, err := kubernetesVersion(metaConfig)
 	if err != nil {
 		return controlPlaneImages{}, err
 	}
 
-	return controlPlaneImagesFor(version, metaConfig.Images.ConvertToMap())
-}
-
-func controlPlaneImagesFor(version string, allImages map[string]any) (controlPlaneImages, error) {
-	digests, err := digestGroup(allImages, controlPlaneDigestsKey)
+	digests, err := digestGroup(metaConfig.Images.ConvertToMap(), controlPlaneDigestsKey)
 	if err != nil {
 		return controlPlaneImages{}, err
 	}

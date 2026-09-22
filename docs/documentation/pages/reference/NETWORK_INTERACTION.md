@@ -2,11 +2,11 @@
 title: Network interaction of the platform components
 permalink: en/reference/network_interaction.html
 description: |
-  Detailed information on configuring network policies for the Deckhouse Kubernetes Platform, particularly in environments with constraints on host-to-host network communications. Outlines the necessary conditions to enable tunneling modes for pod traffic using CNI Cilium and Flannel.
+  Detailed information on configuring network policies for the Deckhouse Platform, particularly in environments with constraints on host-to-host network communications. Outlines the necessary conditions to enable tunneling modes for pod traffic using CNI Cilium and Flannel.
 lang: en
 ---
 
-If the infrastructure where Deckhouse Kubernetes Platform (DKP) is running has requirements to limit host-to-host network communications, the following conditions must be met:
+If the infrastructure where Deckhouse Platform (DP) is running has requirements to limit host-to-host network communications, the following conditions must be met:
 
 * Tunneling mode for traffic between pods is enabled ([configuration](/modules/cni-cilium/configuration.html#parameters-tunnelmode) for CNI Cilium, [configuration](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) for CNI Flannel).
 * Traffic between [podSubnetCIDR](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) encapsulated within a VXLAN is allowed (if inspection and filtering of traffic within a VXLAN tunnel is performed).
@@ -32,13 +32,13 @@ tunnel-protocol: vxlan
 
 {% alert level="info" %}
 Changes related to the addition, removal, or reassignment of ports in the tables
-are listed in the "Network" section of a respective DKP version on the [Release notes](../release-notes.html) page.
+are listed in the "Network" section of a respective DP version on the [Release notes](../release-notes.html) page.
 {% endalert %}
 
 ## Requirements for network latency between master nodes
 
 {% alert level="info" %}
-DKP supports HA mode using [arbiter nodes](../../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). The network latency requirements listed below also apply to arbiter nodes.
+DP supports HA mode using [arbiter nodes](../../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). The network latency requirements listed below also apply to arbiter nodes.
 {% endalert %}
 
 Etcd only commits a writing after the change has been replicated to a majority of master nodes. Therefore, the round-trip time (RTT) between master nodes directly determines the cluster’s performance.
@@ -59,7 +59,7 @@ When planning a cluster, it is recommended to aim for a latency of no more than 
 
 {% offtopic title="Where does the 100 ms value come from..." %}
 
-DKP uses the standard etcd values:
+DP uses the standard etcd values:
 
 * `ETCD_HEARTBEAT_INTERVAL` — 100 ms, the frequency at which the leader sends heartbeat messages to the other cluster members.
 * `ETCD_ELECTION_TIMEOUT` — 1000 ms, the timeout for heartbeat messages; after this time, a cluster member begins leader re-election.
@@ -108,7 +108,7 @@ Here, `avg` is the average RTT, `mdev` is the delay variation (jitter), and `max
 
 The control plane has no requirements regarding network latency on nodes that are not master nodes: latency on these nodes does not affect the cluster’s stability. The only factor that matters is the duration of the loss of communication with master nodes—by default, after 40 seconds, a node enters the `Unreachable` state, and after 5 minutes, its pods are migrated to other nodes. Both thresholds are configured using the [nodeMonitorGracePeriodSeconds](/modules/control-plane-manager/configuration.html#parameters-nodemonitorgraceperiodseconds) and [failedNodePodEvictionTimeoutSeconds](/modules/control-plane-manager/configuration.html#parameters-failednodepodevictiontimeoutseconds) parameters.
 
-These delays affect the performance of everything running on the nodes—including the platform’s own components. For components that access the Kubernetes API (DKP operators, Prometheus, Ingress controllers), latency to the master nodes is added to every request. Latency between nodes is added to every network request between pods and to DNS lookups, and—when using replicated storage—to the time it takes to write to disk.
+These delays affect the performance of everything running on the nodes—including the platform’s own components. For components that access the Kubernetes API (DP operators, Prometheus, Ingress controllers), latency to the master nodes is added to every request. Latency between nodes is added to every network request between pods and to DNS lookups, and—when using replicated storage—to the time it takes to write to disk.
 
 Thus, the acceptable value is determined by the requirements of the running workload. For clusters distributed across remote sites, this means that the platform will continue to operate, but application latencies will reflect the geographic distribution of the nodes.
 

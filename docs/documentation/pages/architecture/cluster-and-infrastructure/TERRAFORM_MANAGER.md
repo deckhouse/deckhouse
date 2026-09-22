@@ -2,10 +2,10 @@
 title: Terraform-manager module
 permalink: en/architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
 search: terraform manager, terraform
-description: Architecture of the terraform-manager module in Deckhouse Kubernetes Platform for managing Terraform state and cluster infrastructure resources.
+description: Architecture of the terraform-manager module in Deckhouse Platform for managing Terraform state and cluster infrastructure resources.
 ---
 
-The `terraform-manager` module provides tools for managing the Terraform state in a DKP cluster.
+The `terraform-manager` module provides tools for managing the Terraform state in a DP cluster.
 
 For more details about the module configuration, refer to the [corresponding documentation section](/modules/terraform-manager/configuration.html).
 
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`terraform-manager`](/modules/terraform-manager/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`terraform-manager`](/modules/terraform-manager/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Terraform-manager architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-terraform-manager.png)
 

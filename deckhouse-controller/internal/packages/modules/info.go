@@ -15,14 +15,14 @@
 package modules
 
 import (
-	addonutils "github.com/flant/addon-operator/pkg/utils"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 type Info struct {
 	Name       string            `json:"name" yaml:"name"`
 	Running    bool              `json:"running" yaml:"running"`
+	Embedded   bool              `json:"embedded" yaml:"embedded"`
 	Path       string            `json:"path" yaml:"path"`
 	Definition Definition        `json:"definition" yaml:"definition"`
 	Repository registry.Remote   `json:"repository" yaml:"repository"`
@@ -40,6 +40,7 @@ func (m *Module) GetInfo() Info {
 	return Info{
 		Name:       m.name,
 		Running:    m.running.Load(),
+		Embedded:   m.embedded,
 		Path:       m.path,
 		Definition: m.definition,
 		Repository: m.repository,

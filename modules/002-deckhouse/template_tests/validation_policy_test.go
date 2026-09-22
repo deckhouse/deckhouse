@@ -406,7 +406,183 @@ func TestLabelObjectsPolicy(t *testing.T) {
 	}
 }
 
+// This test covers the d8a-prefix.deckhouse.io ValidatingAdmissionPolicy, which
+// guards every object named after the prefix an application renders its own
+// objects with. Its exemptions are read and evaluated exactly like the ones
+// above. What the policy no longer decides is the exemption for an application
+// under maintenance: that one lives in the bindings, and TestApplicationPrefixBindings
+// covers it.
+
+func TestApplicationPrefixPolicy(t *testing.T) {
+	policy := loadPolicy(t, "templates/validation.yaml", "exclude-application-serviceaccounts")
+
+	tests := []struct {
+		name    string
+		request object
+		// oldObject is nil for CREATE, object is nil for DELETE.
+		oldObject any
+		object    any
+		want      policyDecision
+		// detail is the matchCondition that skipped the policy, or a substring of
+		// the denial message.
+		detail string
+	}{
+		// -- exclude-groups ---------------------------------------------------
+		{
+			name:      "a d8-system service account may change application objects",
+			request:   applicationRequest("UPDATE", "Deployment", "deployments", "system:serviceaccount:d8-system:deckhouse", "system:serviceaccounts:d8-system"),
+			oldObject: application(nil),
+			object:    applicationUpdate(func(o object) { container(o)["image"] = "registry.deckhouse.io/console:v2" }),
+			want:      skipped,
+			detail:    "exclude-groups",
+		},
+
+		// -- exclude-users ----------------------------------------------------
+		{
+			name:      "dhctl may change application objects",
+			request:   applicationRequest("UPDATE", "Deployment", "deployments", "dhctl"),
+			oldObject: application(nil),
+			object:    applicationUpdate(func(o object) { container(o)["image"] = "registry.deckhouse.io/console:v2" }),
+			want:      skipped,
+			detail:    "exclude-users",
+		},
+
+		// -- exclude-d8-namespaces --------------------------------------------
+		{
+			name:      "a service account of any d8- namespace may change application objects",
+			request:   applicationRequest("UPDATE", "Deployment", "deployments", "system:serviceaccount:d8-cert-manager:cert-manager"),
+			oldObject: application(nil),
+			object:    applicationUpdate(func(o object) { container(o)["image"] = "registry.deckhouse.io/console:v2" }),
+			want:      skipped,
+			detail:    "exclude-d8-namespaces",
+		},
+
+		// -- exclude-application-serviceaccounts ------------------------------
+		{
+			name:      "a service account of an application namespace may change its objects",
+			request:   applicationRequest("UPDATE", "Deployment", "deployments", "system:serviceaccount:d8a-console:console"),
+			oldObject: application(nil),
+			object:    applicationUpdate(func(o object) { container(o)["image"] = "registry.deckhouse.io/console:v2" }),
+			want:      skipped,
+			detail:    "exclude-application-serviceaccounts",
+		},
+
+		// -- exclude-delete-pods-operations -----------------------------------
+		{
+			name:      "a regular user may delete an application pod",
+			request:   applicationRequest("DELETE", "Pod", "pods", "victor"),
+			oldObject: application(func(o object) { o["kind"] = "Pod"; o["metadata"].(object)["name"] = "d8a-console-backend-0" }),
+			object:    nil,
+			want:      skipped,
+			detail:    "exclude-delete-pods-operations",
+		},
+
+		// -- validations ------------------------------------------------------
+		{
+			name:      "a regular user may not change an application object",
+			request:   applicationRequest("UPDATE", "Deployment", "deployments", "victor"),
+			oldObject: application(nil),
+			object:    applicationUpdate(func(o object) { container(o)["image"] = "docker.io/library/busybox:1.36" }),
+			want:      denied,
+			detail:    "application prefix",
+		},
+		{
+			name:    "a regular user may not create an object with the application prefix",
+			request: applicationRequest("CREATE", "Deployment", "deployments", "victor"),
+			object:  application(nil),
+			want:    denied,
+			detail:  "application prefix",
+		},
+		{
+			name:      "a regular user may not delete an application object",
+			request:   applicationRequest("DELETE", "Deployment", "deployments", "victor"),
+			oldObject: application(nil),
+			object:    nil,
+			want:      denied,
+			detail:    "application prefix",
+		},
+		{
+			name:      "objects outside the prefix are none of this policy's business",
+			request:   applicationRequest("UPDATE", "Deployment", "deployments", "victor"),
+			oldObject: application(func(o object) { o["metadata"].(object)["name"] = "console-backend" }),
+			object: serverSideBump(application(func(o object) { o["metadata"].(object)["name"] = "console-backend" }),
+				func(o object) { container(o)["image"] = "example.com/console:debug" }),
+			want: allowed,
+		},
+	}
+
+	skippedBy := make(map[string]bool)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, detail := policy.evaluate(t, test.request, test.oldObject, test.object)
+			if got != test.want {
+				t.Fatalf("decision = %s (%s), want %s", got, detail, test.want)
+			}
+			if test.detail != "" && !strings.Contains(detail, test.detail) {
+				t.Errorf("detail = %q, want it to contain %q", detail, test.detail)
+			}
+			if got == skipped {
+				skippedBy[detail] = true
+			}
+		})
+	}
+
+	// Every exemption must be exercised: a new matchCondition without a test is
+	// a new way to switch the whole policy off unnoticed.
+	for _, condition := range policy.matchConditions {
+		if !skippedBy[condition.name] {
+			t.Errorf("no test case is exempted by the %s match condition", condition.name)
+		}
+	}
+}
+
 // -- fixtures ----------------------------------------------------------------
+
+// application is an object of an application release: named after the reserved
+// prefix and labeled the way nelm stamps everything it renders.
+func application(mutate func(o object)) object {
+	o := object{
+		"apiVersion": "apps/v1",
+		"kind":       "Deployment",
+		"metadata": object{
+			"name":            "d8a-console-backend",
+			"namespace":       "d8a-console",
+			"generation":      int64(4),
+			"resourceVersion": "3001",
+			"managedFields":   []any{object{"manager": "deckhouse"}},
+			"labels":          object{"heritage": "deckhouse", "app": "console"},
+		},
+		"spec": object{
+			"replicas": int64(1),
+			"template": object{
+				"metadata": object{
+					"labels":      object{"app": "console"},
+					"annotations": object{"checksum/config": "abc"},
+				},
+				"spec": object{
+					"containers": []any{object{
+						"name":  "backend",
+						"image": "registry.deckhouse.io/console:v1",
+					}},
+				},
+			},
+		},
+	}
+	if mutate != nil {
+		mutate(o)
+	}
+	return o
+}
+
+func applicationUpdate(mutate func(o object)) object { return serverSideBump(application(nil), mutate) }
+
+// applicationRequest builds a request for the prefix policy, which - unlike the
+// label-objects one - reads request.resource.resource to let pod deletions pass.
+func applicationRequest(operation, kind, resource, username string, groups ...string) object {
+	request := admissionRequest(operation, kind, username, groups)
+	request["resource"] = object{"resource": resource}
+	return request
+}
 
 func deployment(mutate func(o object)) object {
 	o := object{

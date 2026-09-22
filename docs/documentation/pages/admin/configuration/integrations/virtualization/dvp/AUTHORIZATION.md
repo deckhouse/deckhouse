@@ -3,7 +3,7 @@ title: Connection and authorization in Deckhouse Virtualization Platform
 permalink: en/admin/integrations/virtualization/dvp/authorization.html
 ---
 
-To interact with DVP resources, Deckhouse Kubernetes Platform components use the DVP API. To configure access, create a user (ServiceAccount), assign the necessary permissions, and generate a kubeconfig.
+To interact with virtualization resources, Deckhouse Platform components use the virtualization API. To configure access, create a user (ServiceAccount), assign the necessary permissions, and generate a kubeconfig.
 
 {% alert level="warning" %}
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
@@ -27,7 +27,7 @@ The `update-hostname` module can also be disabled completely by removing it from
 
 ## Creating a user
 
-Create a new user in the DVP cluster using the following command:
+Create a new user in the virtualization cluster using the following command:
 
 ```bash
 d8 k create -f -<<EOF
@@ -50,7 +50,7 @@ EOF
 
 ## Assigning a role
 
-Assign a role to the created user in the DVP cluster using the following command:
+Assign a role to the created user in the virtualization cluster using the following command:
 
 ```bash
 d8 k create -f -<<EOF
@@ -97,8 +97,41 @@ users:
 EOF
 ```
 
-Encode the generated kubeconfig file using Base64 encoding (it appears in the initial configuration file as follows):
+Encode the generated kubeconfig file using Base64 encoding (put it in the `d8-credentials` Secret in the `stringData.secret` field of the initial configuration file):
 
 ```bash
 base64 kubeconfig | tr -d '\n'
 ```
+
+## Credentials Secret
+
+The credentials for accessing the parent cluster API are stored in a separate Secret rather than in the ModuleConfig. The provider reads it when starting the components that access the DVP API.
+
+The Secret is created during cluster installation together with the other resources of the initial configuration. If the module is added to a running cluster, the Secret is applied after the module creates the namespace, and the order is covered in the [Hybrid cluster with DVP](../../hybrid/dvp-hybrid.html) section. The Secret must meet the following requirements:
+
+- The name is `d8-credentials` and the namespace is `d8-cloud-provider-dvp`.
+- The type is `cloud-provider.deckhouse.io/credentials`.
+- The `authScheme` field is set to `kubeconfig`.
+- The `secret` field contains the Base64-encoded kubeconfig.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: kubeconfig
+  secret: <KUBE_CONFIG_BASE64>
+```
+
+Replace `<KUBE_CONFIG_BASE64>` with the Base64-encoded kubeconfig.
+
+To change the credentials, update the `secret` field:
+
+```shell
+d8 k -n d8-cloud-provider-dvp edit secret d8-credentials
+```
+
+In clusters migrated to ModuleConfig, the kubeconfig is moved to this Secret from the `provider.kubeconfigDataBase64` parameter of the DVPClusterConfiguration resource.

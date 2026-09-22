@@ -29,8 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/validate"
 )
 
@@ -70,9 +70,9 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 	return nil
 }
 
-func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate) (ctrl.Result, error) {
+func (m *Manager) Handle(ctx context.Context, template *v1alpha2.ProjectTemplate) (ctrl.Result, error) {
 	// validate project template
-	if err := validate.ProjectTemplate(template); err != nil {
+	if _, err := validate.LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema); err != nil {
 		if statusError := m.setTemplateStatus(ctx, template, err.Error(), false); statusError != nil {
 			m.logger.Error(statusError, "failed to update the template status", "template", template.Name)
 			return ctrl.Result{}, statusError
@@ -84,7 +84,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 	projects, err := m.projectsByTemplate(ctx, template)
 	if err != nil {
 		m.logger.Error(err, "failed to get projects for the template", "template", template.Name)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 	if len(projects) != 0 {
 		m.logger.Info("process projects for the template", "template", template.Name, "projectsNum", len(projects))
@@ -97,7 +97,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 				if project.Annotations == nil {
 					project.Annotations = map[string]string{}
 				}
-				project.Annotations[v1alpha2.ProjectAnnotationRequireSync] = "true"
+				project.Annotations[v1alpha3.ProjectAnnotationRequireSync] = "true"
 				return m.client.Update(ctx, project)
 			})
 			if err != nil {

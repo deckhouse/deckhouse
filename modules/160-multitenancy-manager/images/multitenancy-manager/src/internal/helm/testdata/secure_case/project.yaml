@@ -1,19 +1,17 @@
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha3
 kind: Project
 metadata:
   name: test
 spec:
   description: This is an example from the Deckhouse documentation.
   projectTemplateName: secure
+  administrators:
+    - kind: User
+      name: user@gmail.com
+  quota:
+    requests.cpu: "1"
+    limits.memory: 15Gi
   parameters:
     allowedUIDs:
       min: 1
       max: 2
-    resourceQuota:
-      requests:
-        cpu: 1
-      limits:
-        memory: 15Gi
-    administrators:
-      - subject: User
-        name: user@gmail.com

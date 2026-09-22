@@ -17,6 +17,9 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
@@ -30,31 +33,88 @@ import (
 func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kubeconfigPath string, bctx *bootstrapContext) {
 	logger := dhlog.FromContext(ctx)
 
-	// Tagged for the compact view: an untagged Info record is file-only on a
-	// terminal. The bashible path tags its SSH line the same way (steps_ssh.go).
-	logger.InfoContext(ctx, fmt.Sprintf("Admin kubeconfig written to %s — cluster-admin credentials, "+
-		"and on a cluster of immutable nodes the only way in.", kubeconfigPath), dhlog.ShowInCompacted())
-	logger.InfoContext(ctx, fmt.Sprintf("To use the cluster:  export KUBECONFIG=%s && kubectl get nodes", kubeconfigPath),
-		dhlog.ShowInCompacted())
-
-	// With a bastion that address is reachable from the bastion and nowhere else,
-	// so the line above is true only inside the network. Print how to get there
-	// rather than leave the operator to guess the shape of the tunnel.
-	if line := bastionForwardLine(bastionConfig(b.SSHProviderInitializer.GetConfig()), bctx.immutable.masterIP, kubeconfigPath); line != "" {
-		logger.InfoContext(ctx, "The master has no public address; reach it through the bastion first:",
-			dhlog.ShowInCompacted())
-		// ConnectionString rather than ShowInCompacted: the terminal UI pins it as
-		// a milestone and repeats it in the closing summary, which is where an
-		// operator looks for it after a long run.
-		logger.InfoContext(ctx, "  "+line, dhlog.ConnectionString())
+	tunnel := bastionTunnelCommand(immutable.BastionConfig(b.SSHProviderInitializer.GetConfig()))
+	if tunnel != "" {
+		logger.InfoContext(ctx, fmt.Sprintf(
+			"The master answers at %s:%d, an address that exists only inside the cluster network. "+
+				"Tunnel to it through the bastion once, then use the cluster from any shell:",
+			bctx.immutable.masterIP, immutable.APIServerPort), dhlog.ShowInCompacted())
+	} else {
+		logger.InfoContext(ctx, "To use the cluster:", dhlog.ShowInCompacted())
 	}
+
+	// Banner, not ConnectionString: the terminal pins a connection string as a
+	// single line, and this is four — the operator needs all of them, and needs
+	// them where they do not scroll away behind minutes of module logs.
+	lines := reachTheClusterLines(kubeconfigPath, tunnel)
+	logger.InfoContext(ctx, strings.Join(lines, "\n"), dhlog.Banner())
+	// And once as a single line: the banner lives on the live canvas, which the
+	// closing summary does not have. Joined with && so that the summary's copy is
+	// runnable too — including the tunnel, without which the rest reaches nothing.
+	logger.InfoContext(ctx, strings.Join(runnableLines(lines), " && "), dhlog.ConnectionString())
 }
 
-// bastionForwardLine builds the commands that make the saved kubeconfig usable
-// from outside, or "" when the master is directly reachable. It forwards to
-// 127.0.0.1, which every apiserver certificate covers, and retargets the server
-// with kubectl rather than sed, which would silently miss.
-func bastionForwardLine(cfg *sshconfig.Config, masterIP, kubeconfigPath string) string {
+// runnableLines drops what is prose rather than command: the note about the
+// container path explains the line above it and would not survive a paste.
+func runnableLines(lines []string) []string {
+	runnable := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.HasPrefix(line, "(") {
+			continue
+		}
+		runnable = append(runnable, line)
+	}
+	return runnable
+}
+
+// reachTheClusterLines is the block pinned at the top of the screen: the tunnel
+// (once), the two exports and the call that proves them. Where dhctl runs inside
+// its own container the path is one only that container can see, and the last
+// line says so — the commands are copied onto the host, where nothing answers at
+// that path and kubectl falls back to localhost:8080.
+func reachTheClusterLines(kubeconfigPath, tunnel string) []string {
+	lines := make([]string, 0, 5)
+	if tunnel != "" {
+		lines = append(lines, tunnel)
+	}
+	lines = append(lines, clusterUseCommands(kubeconfigPath, tunnel != "")...)
+	if runningInContainer() {
+		lines = append(lines, fmt.Sprintf(
+			"(%s is a path inside the installer container: on your own machine it is in whatever directory you mounted at %s)",
+			kubeconfigPath, filepath.Dir(kubeconfigPath)))
+	}
+	return lines
+}
+
+// runningInContainer reports the one case where the kubeconfig path printed above
+// is true here and false everywhere else. /.dockerenv is written by the runtime
+// that starts the installer image, and its absence is the native run.
+func runningInContainer() bool {
+	_, err := os.Stat("/.dockerenv")
+	return err == nil
+}
+
+// clusterUseCommands is what an operator runs to work with the cluster: the
+// kubeconfig, the proxy that carries its address when the master sits behind a
+// bastion, and a call that proves both.
+func clusterUseCommands(kubeconfigPath string, throughBastion bool) []string {
+	commands := []string{fmt.Sprintf("export KUBECONFIG=%s", kubeconfigPath)}
+	if throughBastion {
+		commands = append(commands, fmt.Sprintf("export HTTPS_PROXY=socks5://127.0.0.1:%d", socksPort))
+	}
+	return append(commands, "kubectl get nodes")
+}
+
+// socksPort is where the tunnel listens on the operator's own machine. Not 1080:
+// that is the conventional SOCKS port and the one another proxy is likely to be
+// holding. 18443 says what it carries — the API server behind it answers on 6443.
+const socksPort = 18443
+
+// bastionTunnelCommand builds the one command that makes the saved kubeconfig
+// usable from outside, or "" when the master is directly reachable. A SOCKS
+// proxy carries the kubeconfig's own address, so the file stays exactly as the
+// node wrote it: a retargeted server outlives the tunnel it was written for.
+func bastionTunnelCommand(cfg *sshconfig.Config) string {
 	if cfg == nil {
 		return ""
 	}
@@ -68,12 +128,5 @@ func bastionForwardLine(cfg *sshconfig.Config, masterIP, kubeconfigPath string) 
 		port = fmt.Sprintf(" -p %d", *cfg.BastionPort)
 	}
 
-	// 6445 rather than 6443: the port is opened on the operator's own machine,
-	// which may well be running a cluster of its own.
-	const localPort = 6445
-	// The cluster is always named "kubernetes": the node generates this
-	// kubeconfig itself, kubeadm-style, and nothing downstream renames it.
-	return fmt.Sprintf("ssh -f -N%s -L %d:%s:%d %s  &&  kubectl --kubeconfig %s config set-cluster kubernetes --server=https://127.0.0.1:%d",
-		port, localPort, masterIP, immutable.APIServerPort, bastion,
-		kubeconfigPath, localPort)
+	return fmt.Sprintf("ssh -f -N%s -D %d %s", port, socksPort, bastion)
 }

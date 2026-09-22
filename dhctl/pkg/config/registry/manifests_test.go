@@ -149,3 +149,33 @@ func TestManifestsLegacyMode(t *testing.T) {
 		})
 	}
 }
+
+// TestTheBashibleContextTellsTheNodeItCameFromABundle pins the one field the node bootstrap uses to
+// tell an installation from a bundle apart from a legacy Local one.
+//
+// On the node the two are identical by design — the bundle path borrows the legacy bootstrap steps to
+// stand a registry up on the first master and fill it. But one of those steps hands the cluster the
+// legacy implementation's state machine, and on this path there is nothing to execute it, so it has to
+// stay shut. If this field stops reaching the context, that step opens again and nothing fails
+// visibly: the installation finishes, and which registry implementation ends up managing the cluster
+// becomes a race (see modules/038-registry/bashible_tests).
+func TestTheBashibleContextTellsTheNodeItCameFromABundle(t *testing.T) {
+	fromBundle := ConfigBuilder(WithModeLocal())
+	fromBundle.BundleBootstrap = true
+
+	ctx, err := fromBundle.Manifest().BashibleContext(GeneratePKI)
+	require.NoError(t, err)
+	require.NotNil(t, ctx.Bootstrap)
+	require.True(t, ctx.Bootstrap.FromBundle)
+	require.Equal(t, true, ctx.Bootstrap.ToMap()["fromBundle"],
+		"the steps read the rendered map, not the struct")
+
+	// The same mode without a bundle is a legacy Local cluster, and it must render as it always did:
+	// the key absent entirely, not present-and-false.
+	plain := ConfigBuilder(WithModeLocal())
+	legacyLocal, err := plain.Manifest().BashibleContext(GeneratePKI)
+	require.NoError(t, err)
+	require.NotNil(t, legacyLocal.Bootstrap)
+	require.False(t, legacyLocal.Bootstrap.FromBundle)
+	require.NotContains(t, legacyLocal.Bootstrap.ToMap(), "fromBundle")
+}

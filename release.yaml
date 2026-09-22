@@ -34,6 +34,12 @@ requirements:
   "istioMinimalVersion": "1.25" # modules/110-istio/requirements/check.go
   "unmetCloudConditions": "true" # modules/040-node-manager/requirements/check.go
   "nodesMinimalLinuxKernelVersion": "5.8.0" # modules/021-cni-cilium/requirements/check.go
+  # This is the release that removes the previous registry implementation, so it must not install on
+  # a cluster still running it: such a cluster would lose the code that configures the container
+  # runtime on its nodes, in a release that itself has to be pulled through that configuration.
+  # The check is evaluated by the version already INSTALLED — it ships in 1.77, in
+  # modules/038-registry/requirements/check.go — and this line is what finally asks it.
+  "registryImplementation": "V2" # modules/038-registry/requirements/check.go
   # "checkContainerdV1NodesPresent": "false" # modules/040-node-manager/requirements/check.go; injected with 'true' only for CSE via .werf/werf-release-channel.yaml (CSE drops containerd v1)
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release

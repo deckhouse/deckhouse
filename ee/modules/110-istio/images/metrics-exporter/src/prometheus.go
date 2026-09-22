@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -35,7 +36,7 @@ func RegisterMetrics(clientSet *kubernetes.Clientset, reg prometheus.Registerer)
 				Name: "istio_remote_cluster_up",
 				Help: "Indicates if remote cluster is synced (1 = yes, 0 = no)",
 			},
-			[]string{"istiod", "cluster_id", "secret"},
+			[]string{"istiod", "cluster_id", "secret", "multicluster_name"},
 		),
 		clientSet: clientSet,
 	}
@@ -180,7 +181,28 @@ func (p *PrometheusExporterMetrics) setClusterStatus(istiod, clusterID, secretNa
 	if syncStatus == "synced" {
 		val = 1.0
 	}
-	p.clusterUp.WithLabelValues(istiod, clusterID, secretName).Set(val)
+	p.clusterUp.WithLabelValues(istiod, clusterID, secretName, multiclusterNameFromSecret(secretName)).Set(val)
+}
+
+const (
+	remoteSecretNamespace = "d8-istio"
+	remoteSecretPrefix    = "istio-remote-secret-"
+)
+
+func multiclusterNameFromSecret(secretName string) string {
+	namespace, name, hasNamespace := strings.Cut(secretName, "/")
+	if !hasNamespace {
+		name = secretName
+	} else if namespace != remoteSecretNamespace {
+		return ""
+	}
+
+	multiclusterName, found := strings.CutPrefix(name, remoteSecretPrefix)
+	if !found {
+		return ""
+	}
+
+	return multiclusterName
 }
 
 func (p *PrometheusExporterMetrics) DeleteIstiodMetrics(podName string) {

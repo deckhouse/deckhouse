@@ -38,6 +38,9 @@ const (
 	nodeControllerWebhookServiceName = "node-controller-webhook"
 )
 
+// conversionCRDNames lists the CRDs whose spec.conversion this controller keeps pointed at the
+// node-controller webhook. The CRD manifests ship without a conversion section on purpose: the
+// caBundle is only known at runtime and has to be re-stamped on every CA rotation.
 var conversionCRDNames = []string{
 	"nodegroups.deckhouse.io",
 	"instances.deckhouse.io",
@@ -104,7 +107,7 @@ func ensureConversionWebhooks(ctx context.Context, c client.Client) error {
 	klog.Info("node-controller webhook CA secret ready")
 
 	for _, crdName := range conversionCRDNames {
-		if err := patchConversionWebhook(ctx, c, crdName, caBundle); err != nil {
+		if err := patchConversionWebhook(ctx, c, c, crdName, caBundle); err != nil {
 			return fmt.Errorf("patching conversion webhook on %s: %w", crdName, err)
 		}
 	}
@@ -112,9 +115,12 @@ func ensureConversionWebhooks(ctx context.Context, c client.Client) error {
 	return nil
 }
 
-func patchConversionWebhook(ctx context.Context, c client.Client, crdName string, caBundle []byte) error {
+// patchConversionWebhook reads the CRD through reader and writes it through writer. The two are
+// separate because the cached CRD informer only holds the CAPI-labelled CRDs, so the deckhouse
+// CRDs handled here have to be read live.
+func patchConversionWebhook(ctx context.Context, reader client.Reader, writer client.Client, crdName string, caBundle []byte) error {
 	existing := &apiextensionsv1.CustomResourceDefinition{}
-	if err := c.Get(ctx, types.NamespacedName{Name: crdName}, existing); err != nil {
+	if err := reader.Get(ctx, types.NamespacedName{Name: crdName}, existing); err != nil {
 		if errors.IsNotFound(err) {
 			klog.Infof("CRD %s not found, skipping conversion webhook patch", crdName)
 			return nil
@@ -144,11 +150,11 @@ func patchConversionWebhook(ctx context.Context, c client.Client, crdName string
 		},
 	}
 
-	if err := c.Patch(ctx, patch, client.MergeFrom(existing)); err != nil {
+	if err := writer.Patch(ctx, patch, client.MergeFrom(existing)); err != nil {
 		return fmt.Errorf("patching: %w", err)
 	}
 
-	klog.Infof("CRD %s conversion webhook patched to node-controller-webhook", crdName)
+	klog.Infof("CRD %s conversion webhook patched to %s", crdName, nodeControllerWebhookServiceName)
 	return nil
 }
 

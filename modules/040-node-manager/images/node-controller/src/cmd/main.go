@@ -17,12 +17,17 @@ limitations under the License.
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -45,8 +50,10 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/apiserver"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/crdmigration"
+	"github.com/deckhouse/node-controller/internal/controller/nodebootstrap"
 	cachemetrics "github.com/deckhouse/node-controller/internal/metrics/cache"
 	"github.com/deckhouse/node-controller/internal/register"
 	_ "github.com/deckhouse/node-controller/internal/register/controllers"
@@ -172,12 +179,76 @@ func main() {
 		os.Exit(1)
 	}
 
+	// The aggregated API server has its own handler chain, so it cannot share the
+	// webhook port. It runs on every replica: the Service load balances over all of
+	// them, so it must not be tied to leader election.
+	// The client is the uncached one: the API server starts before the manager,
+	// so nothing here may wait on its cache.
+	serving := make(chan struct{})
+	go serveAggregatedAPI(ctx, setupLog, apiserver.Options{
+		BindPort: apiserverPort,
+		CertFile: webhookCertDir + "/tls.crt",
+		KeyFile:  webhookCertDir + "/tls.key",
+		Storage:  nodebootstrap.NewTemplateStorage(directClient),
+		Serving:  serving,
+	})
+	if err := mgr.AddReadyzCheck("aggregated-api", aggregatedAPIReady(serving, aggregatedAPIStartupGrace)); err != nil {
+		setupLog.Error(err, "unable to set up the aggregated API ready check")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
 }
+
+// serveAggregatedAPI serves the templates API until ctx is done. Its death is
+// fatal: this replica answers the probe and stays in the Endpoints the APIService
+// points at, so a pod that outlives its API server fails discovery cluster-wide.
+func serveAggregatedAPI(ctx context.Context, log logr.Logger, opts apiserver.Options) {
+	if err := apiserver.Run(ctx, opts); err != nil {
+		log.Error(err, "problem running aggregated API server")
+		os.Exit(1)
+	}
+}
+
+// aggregatedAPIReady keeps the replica out of the Endpoints the APIService
+// routes to until its aggregated API server answers: kube-aggregator marks the
+// APIService Unavailable on a refused connection, and full discovery then fails
+// for every client in the cluster, immutable nodes or none.
+//
+// The gate ends with grace. The same Endpoints carry the failurePolicy:Fail
+// webhooks, a non-HA cluster runs one replica, and the config retry behind that
+// channel has no cap: a gate with no end turns an API server that cannot start
+// into a cluster that refuses every NodeGroup write, with nothing to restart.
+func aggregatedAPIReady(serving <-chan struct{}, grace time.Duration) healthz.Checker {
+	deadline := time.Now().Add(grace)
+	return func(*http.Request) error {
+		select {
+		case <-serving:
+			return nil
+		default:
+		}
+		if time.Now().After(deadline) {
+			return nil
+		}
+		return errors.New("the aggregated API server is not answering yet")
+	}
+}
+
+// webhookCertDir is the controller-runtime default, mounted from Secret/node-controller-webhook-tls.
+const webhookCertDir = "/tmp/k8s-webhook-server/serving-certs"
+
+// apiserverPort is the port the aggregated API server binds to; the Service,
+// the container port and the APIService all name it.
+const apiserverPort = 4293
+
+// aggregatedAPIStartupGrace bounds the readiness gate above. A healthy start
+// needs one kube-apiserver read; past this the replica serves its webhooks with
+// the aggregated API still down, which is by far the smaller outage.
+const aggregatedAPIStartupGrace = time.Minute
 
 const defaultMaxConcurrentReconciles = 10
 

@@ -1,13 +1,13 @@
 ---
 title: "Configuration of applications logs collection"
-description: "Configuring log collection and delivery in Deckhouse Kubernetes Platform. Working with PodLoggingConfig, log filtering, sending to Loki and Elasticsearch, enrichment with Kubernetes metadata."
+description: "Configuring log collection and delivery in Deckhouse Platform. Working with PodLoggingConfig, log filtering, sending to Loki and Elasticsearch, enrichment with Kubernetes metadata."
 permalink: en/user/logging/
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides log collection and delivery from cluster nodes and pods
+Deckhouse Platform (DP) provides log collection and delivery from cluster nodes and pods
 to internal or external storage systems.
 
-DKP allows you to:
+DP allows you to:
 
 - Collect logs from all or specific pods and namespaces.
 - Filter logs by labels, message content and other attributes.
@@ -18,11 +18,11 @@ DKP allows you to:
 
 The general mechanism of log collection, delivery and filtering is described in detail [in the "Architecture" section](../../architecture/observability/logging.html).
 
-DKP users can configure application log collection parameters using the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource, which describes log sources within a specified namespace, including collection, filtering and parsing rules.
+DP users can configure application log collection parameters using the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource, which describes log sources within a specified namespace, including collection, filtering and parsing rules.
 
 ## Configuring application log collection
 
-1. Check with the DKP administrator whether log collection and storage are configured in your cluster.
+1. Check with the DP administrator whether log collection and storage are configured in your cluster.
    Also ask them to provide you with the storage name that you will specify in the [`clusterDestinationRefs`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-clusterdestinationrefs) parameter.
 1. Create a [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource in your namespace.
 

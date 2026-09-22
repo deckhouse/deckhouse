@@ -4,14 +4,14 @@ permalink: ru/admin/integrations/public/azure/services.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) использует возможности облака Azure для полноценной интеграции с Kubernetes. При работе с кластером в Azure автоматически:
+Deckhouse Platform (DP) использует возможности облака Azure для полноценной интеграции с Kubernetes. При работе с кластером в Azure автоматически:
 
 - Создаются сетевые маршруты для сети PodNetwork;
 - Настраиваются внешние балансировщики нагрузки (LoadBalancer) для сервисов Kubernetes;
 - Удаляются из кластера узлы, отсутствующие в облаке;
 - Обновляются метаданные узлов в соответствии с текущей конфигурацией;
 - Заказываются диски для узлов через CSI;
-- Подключается необходимая CNI-сеть (используется simple bridge);
+- Подключается необходимая CNI-сеть (используется [`cni-cilium`](/modules/cni-cilium/));
 - Становятся доступны описания виртуальных машин в [формате AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) для последующего использования в [NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference).
 
 {% alert level="info" %}

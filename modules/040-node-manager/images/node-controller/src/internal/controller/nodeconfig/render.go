@@ -26,6 +26,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -55,16 +56,22 @@ func nodeRenderInputsChanged(before, after client.Object) bool {
 // On the first master it must differ from the installer payload on exactly three
 // fields (caCert, serverTLSBootstrap, proxy token); every other field must agree.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
+	extraExtensions, extraModules := nodeExtensions(in.NodeExtensions, in.NodeExtensionConflicts, node, ng.Name)
+
+	kernel := renderKernel()
+	kernel.Modules = extraModules
+
 	return internalv1alpha1.NodeSpec{
-		NodeName:           node.Name,
-		OSImage:            in.OSImage,
-		APIServerEndpoints: in.APIServerEndpoints,
-		Extensions:         renderExtensions(in.SysextDigests),
+		NodeName:             node.Name,
+		OSImage:              in.OSImage,
+		APIServerEndpoints:   in.APIServerEndpoints,
+		InternalNetworkCIDRs: in.InternalNetworkCIDRs,
+		Extensions:           mergeExtensions(renderExtensions(in.SysextDigests), extraExtensions),
 		// A NodeGroup has no disk field; without a selector the boot path refuses
-		// outright ("neither device nor diskSelector set"). A richer installer
-		// selector survives this value through keepBootstrapOnlyFields.
+		// outright ("neither device nor diskSelector set"). Any selector the
+		// operator wrote survives this one through keepBootstrapOnlyFields.
 		Storage:          internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}}},
-		Kernel:           renderKernel(),
+		Kernel:           kernel,
 		Network:          renderNetwork(node),
 		Kubelet:          renderKubelet(ng, node, in),
 		ContainerRuntime: renderContainerRuntime(ng, in),
@@ -78,12 +85,13 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 }
 
 // keepBootstrapOnlyFields carries over the machine-specific parts of the spec —
-// kubelet.nodeIP (while still reported), registration taints, explicit network,
-// explicit storage. The rest is rendered: a copied value is never corrected.
-func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, reportedNodeIPs []string) {
-	if nodeIPStillHolds(existing.Kubelet.NodeIP, reportedNodeIPs) {
-		desired.Kubelet.NodeIP = existing.Kubelet.NodeIP
-	}
+// the status token, registration taints, explicit network, explicit storage.
+// The rest is rendered: a copied value is never corrected.
+func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec) {
+	// The machine mints this token and nothing in the cluster can tell it a new
+	// one, so a render that dropped it would lock the operator out of the
+	// node's status port for good.
+	desired.StatusToken = existing.StatusToken
 
 	// Taints take effect while the node registers and are rendered for a machine
 	// that has not joined; dropping them afterwards patches every node once,
@@ -93,47 +101,36 @@ func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, repor
 	}
 
 	// A static network belongs to the provisioner: overwriting it with the
-	// rendered "eth0, DHCP" leaves the node unreachable after a reboot.
-	// "Explicit" is judged against the render, not the zero value.
-	if !sameNetwork(&existing.Network, &desired.Network) {
-		hostname := desired.Network.Hostname
-		desired.Network = existing.Network
-		// The hostname is the cluster's: it must match the Node name however
-		// the machine was given its addresses.
-		desired.Network.Hostname = hostname
+	// rendered "eth0, DHCP" leaves the node unreachable after a reboot. Two
+	// fields are not the machine's: the hostname, which must match the Node
+	// name, and the interfaces of a machine that named none — a spec with no
+	// interface at all is a node with no address after a reboot.
+	rendered := desired.Network
+	desired.Network = existing.Network
+	desired.Network.Hostname = rendered.Hostname
+	if len(desired.Network.Interfaces) == 0 {
+		desired.Network.Interfaces = rendered.Interfaces
 	}
 
-	if storageIsExplicit(&existing.Storage) {
+	if storageIsExplicit(&existing.Storage, &desired.Storage) {
 		desired.Storage = existing.Storage
 	}
 }
 
-// sameNetwork reports whether a node already carries exactly what this render
-// would give it. Hostname is left out: it is the cluster's either way.
-func sameNetwork(existing, desired *internalv1alpha1.Network) bool {
-	a, b := *existing, *desired
-	a.Hostname, b.Hostname = "", ""
-	return apiequality.Semantic.DeepEqual(a, b)
-}
-
-// nodeIPStillHolds reports whether a bootstrapped address is still one the node
-// reports: carrying it over unconditionally pinned re-IPed nodes forever. No
-// reported addresses means no answer, and the node keeps what it was given.
-func nodeIPStillHolds(nodeIP string, reported []string) bool {
-	if nodeIP == "" {
-		return false
-	}
-	if len(reported) == 0 {
+// storageIsExplicit reports whether storage carries something this controller
+// does not render. A selector differing from the rendered guess is the
+// operator's: a hand-installed worker names its disk and nothing else, publishes
+// that once, and has no second write to restore it from.
+func storageIsExplicit(storage, rendered *internalv1alpha1.Storage) bool {
+	if storage.Device != "" || len(storage.Mounts) > 0 {
 		return true
 	}
-	return slices.Contains(reported, nodeIP)
-}
-
-// storageIsExplicit reports whether storage carries something this controller
-// does not render: only device path and mounts count, deliberately not the disk
-// selector — keeping a differing selector would make storage write-once.
-func storageIsExplicit(storage *internalv1alpha1.Storage) bool {
-	return storage.Device != "" || len(storage.Mounts) > 0
+	// The webhook freezes wipe against every other writer, so a render that
+	// drops it destroys a field nothing but the machine can put back.
+	if storage.Wipe {
+		return true
+	}
+	return storage.DiskSelector != nil && !apiequality.Semantic.DeepEqual(storage.DiskSelector, rendered.DiskSelector)
 }
 
 // renderKernel publishes the cluster-decided sysctl keys — the same four dhctl
@@ -155,7 +152,7 @@ func renderKernel() internalv1alpha1.Kernel {
 	}
 }
 
-// renderNetwork keeps the hostname the node booted with. The olcedar init
+// renderNetwork keeps the hostname the node booted with. The Deckhouse Engine init
 // renders it from this config on every boot, so losing it here would leave the
 // node nameless after a reboot.
 func renderNetwork(node *corev1.Node) internalv1alpha1.Network {
@@ -179,7 +176,7 @@ func renderExtensions(digests map[string]string) []internalv1alpha1.Extension {
 }
 
 // renderKubelet maps the NodeGroup's kubelet settings onto the node. Settings
-// an olcedar node cannot honour are clamped (a refused config leaves the node
+// a Deckhouse Engine node cannot honour are clamped (a refused config leaves the node
 // with none) and reported as Warning events (recordClampedSettings).
 func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.Kubelet {
 	kubelet := internalv1alpha1.Kubelet{
@@ -295,6 +292,11 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 			fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
 				len(windows)))
 	}
+	for _, key := range effectlessTaints(ng) {
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
+			fmt.Sprintf("nodeTemplate.taints: %q has no effect, and kubelet cannot register a node with such a taint; the nodes of this group are not tainted with it",
+				key))
+	}
 }
 
 // renderNodeLabels returns the labels kubelet registers the node with: the
@@ -304,7 +306,7 @@ func renderNodeLabels(ng *v1.NodeGroup) map[string]internalv1alpha1.NodeLabelVal
 	labels := map[string]internalv1alpha1.NodeLabelValue{
 		nodecommon.NodeGroupLabel: internalv1alpha1.NodeLabelValue(ng.Name),
 		nodecommon.NodeTypeLabel:  internalv1alpha1.NodeLabelValue(ng.Spec.NodeType),
-		// An olcedar node is cgroup v2 by construction, and the cluster learns
+		// A Deckhouse Engine node is cgroup v2 by construction, and the cluster learns
 		// that from this label alone (node-manager raises alerts otherwise).
 		// The installer sets it on the first master; the render must keep it.
 		cgroupLabel: cgroupV2Value,
@@ -350,6 +352,11 @@ func renderTaints(ng *v1.NodeGroup) []internalv1alpha1.Taint {
 	}
 	taints := make([]internalv1alpha1.Taint, 0, len(ng.Spec.NodeTemplate.Taints))
 	for _, taint := range ng.Spec.NodeTemplate.Taints {
+		// kubelet registers no taint without an effect: it exits, and the node
+		// never joins. Dropped here and reported (recordClampedSettings).
+		if taint.Effect == "" {
+			continue
+		}
 		taints = append(taints, internalv1alpha1.Taint{
 			Key:    taint.Key,
 			Value:  taint.Value,
@@ -357,6 +364,22 @@ func renderTaints(ng *v1.NodeGroup) []internalv1alpha1.Taint {
 		})
 	}
 	return taints
+}
+
+// effectlessTaints names the taints of a group that kubelet cannot register a
+// node with. A NodeGroup leaves effect optional (crds/node_group.yaml:1944), so
+// a taint written without one reaches the render.
+func effectlessTaints(ng *v1.NodeGroup) []string {
+	if ng.Spec.NodeTemplate == nil {
+		return nil
+	}
+	var keys []string
+	for _, taint := range ng.Spec.NodeTemplate.Taints {
+		if taint.Effect == "" {
+			keys = append(keys, taint.Key)
+		}
+	}
+	return keys
 }
 
 // isControlPlaneNode reports whether the node runs the control plane. The label
@@ -379,16 +402,16 @@ func isCloudNodeType(t v1.NodeType) bool {
 func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1.ContainerRuntime {
 	runtime := internalv1alpha1.ContainerRuntime{
 		SandboxImage:           in.SandboxImage,
-		MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
+		MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
 	}
 	if ng.Spec.CRI == nil {
 		return runtime
 	}
 	switch {
 	case ng.Spec.CRI.ContainerdV2 != nil && ng.Spec.CRI.ContainerdV2.MaxConcurrentDownloads != nil:
-		runtime.MaxConcurrentDownloads = *ng.Spec.CRI.ContainerdV2.MaxConcurrentDownloads
+		runtime.MaxConcurrentDownloads = ptr.To(*ng.Spec.CRI.ContainerdV2.MaxConcurrentDownloads)
 	case ng.Spec.CRI.Containerd != nil && ng.Spec.CRI.Containerd.MaxConcurrentDownloads != nil:
-		runtime.MaxConcurrentDownloads = *ng.Spec.CRI.Containerd.MaxConcurrentDownloads
+		runtime.MaxConcurrentDownloads = ptr.To(*ng.Spec.CRI.Containerd.MaxConcurrentDownloads)
 	}
 	return runtime
 }

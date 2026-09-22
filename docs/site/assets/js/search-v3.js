@@ -2416,7 +2416,7 @@ class ModuleSearch {
         // console.debug('Base URL calculated:', baseUrl);
       } if (isCurrentModulePage && !isModuleResult) {
         baseUrl = dkpDocBaseUrl;
-        console.debug('Base URL calculated (from module to DKP doc):', baseUrl);
+        console.debug('Base URL calculated (from module to DP doc):', baseUrl);
       } else if (isCurrentPageVersioned && isModuleResult ) {
         baseUrl = '/';
         // console.debug('Base URL calculated (from versioned page to module):', baseUrl);
@@ -2452,7 +2452,7 @@ class ModuleSearch {
     }
 
     if (isCurrentModulePage && !originalTargetUrl.startsWith('/modules/')) {
-      console.debug('No meta tag found and link from module to DKP doc, returning:', dkpDocBaseUrl + originalTargetUrl);
+      console.debug('No meta tag found and link from module to DP doc, returning:', dkpDocBaseUrl + originalTargetUrl);
       return dkpDocBaseUrl + originalTargetUrl;
     }
 

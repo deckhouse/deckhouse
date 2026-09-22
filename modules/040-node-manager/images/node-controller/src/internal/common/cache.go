@@ -112,12 +112,13 @@ func CacheOptions() (cache.Options, client.Options) {
 					"d8-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},
-					// The release's image digests. The nodeconfig controller watches this
-					// one to re-render when a release changes a system extension; the
-					// scope has to carry it, or that watch has no informer to come from.
-					"d8-cloud-instance-manager": {
-						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "bashible-apiserver-files"}),
-					},
+					// Unfiltered for the same reason: two ConfigMaps are read here —
+					// bashible-apiserver-files (the release's image digests, watched by the
+					// nodeconfig controller) and bashible-bootstrap-templates (the candi
+					// templates the bootstrap render needs, watched by the bootstrap-secrets
+					// controller) — and one field selector cannot name both. The namespace
+					// belongs to this module and holds a handful of ConfigMaps.
+					"d8-cloud-instance-manager": {},
 				},
 			},
 			// The one EndpointSlice behind the kubernetes service: it carries the master
@@ -147,11 +148,13 @@ func CacheOptions() (cache.Options, client.Options) {
 			// No MachineHealthCheck entry: the controller only creates it and never reads it
 			// back, so an informer would never even start. Add a scope here if that changes.
 			newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane"): machineNS,
-			// The NodeGroup webhook reads only ModuleConfig "global"; without this scope the
-			// lazily-created informer would watch and cache every ModuleConfig cluster-wide.
-			newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig"): {
-				Field: fields.SelectorFromSet(fields.Set{"metadata.name": "global"}),
-			},
+			// Unfiltered on purpose: field selectors have no OR, and this binary now reads two
+			// ModuleConfig objects by name — "global" (cluster prefix) and "control-plane-manager"
+			// (network CIDRs). A name FieldSelector can pin exactly one, so narrowing it would
+			// silently starve whichever consumer came second. ModuleConfig objects are small and
+			// bounded by the module count, so one unscoped informer is cheaper than a live GET on
+			// either hot path.
+			newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig"): {},
 		},
 	}
 

@@ -6,9 +6,15 @@ metadata:
     heritage: deckhouse
     module: secret-copier
     rbac.deckhouse.io/aggregate-to-security-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
-  name: d8:manage:permission:module:secret-copier:view
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.secret-copier.view"
+    rbac.deckhouse.io/scope: system
+  name: d8:system-capability:secret-copier:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module secret-copier: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль secret-copier: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the secret-copier module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля secret-copier."
 rules:
 - apiGroups:
   - deckhouse.io

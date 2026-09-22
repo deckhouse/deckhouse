@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package nodeconfig renders a NodeConfig object for every node of an olcedar
+// Package nodeconfig renders a NodeConfig object for every node of a Deckhouse Engine
 // NodeGroup: the on-node agent reconciles the node towards it. This controller
 // writes that desired state from the NodeGroup plus live cluster state.
 package nodeconfig
@@ -23,11 +23,13 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -39,9 +41,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
+	"github.com/deckhouse/node-controller/internal/network"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -74,7 +78,7 @@ func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 }
 
 // ForPredicates drops Node updates that cannot change the render: it reads only
-// name, uid, all labels and creationTimestamp, so kubelet
+// name, uid, all labels (NERs select on any) and creationTimestamp, so kubelet
 // heartbeats are filtered. Applies to the Node watch only; creates/deletes pass.
 func (r *Reconciler) ForPredicates() []predicate.Predicate {
 	return []predicate.Predicate{predicate.Funcs{
@@ -99,14 +103,69 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 			return nodeConfigRolloutInputsChanged(e.ObjectOld, e.ObjectNew)
 		},
 	}))
+	// A NER change re-renders every node, and only a spec change can: the render
+	// reads spec, name and creationTimestamp. The predicate is what breaks the
+	// loop of this controller's own status writes re-entering its queue.
+	// The CRD is a hard dependency: a watch on a missing kind kills the whole
+	// manager after two minutes. Safe because addon-operator applies every
+	// enabled module's crds/ before any Helm run.
+	w.Watches(&deckhousev1alpha1.NodeExtensionRequest{}, allMapper,
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	// The system extension digests of the release. Without this watch a new
 	// release re-renders nothing until some unrelated input moves: nothing else
-	// enqueues a pass, and no resync period is set.
+	// enqueues a pass, and no resync period is set. Scoped to the single
+	// ConfigMap, which is also its cache scope.
 	w.Watches(&corev1.ConfigMap{}, allMapper, builder.WithPredicates(predicate.NewPredicateFuncs(
 		func(obj client.Object) bool {
 			return obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == imagesDigestsConfigMapName
 		},
 	)))
+	// podSubnetNodeCIDRPrefix (network.FromModuleConfig, read fresh every pass in
+	// readClusterConfiguration) otherwise has nothing enqueuing a pass at all: an
+	// operator editing it touches neither a NodeGroup nor a Node, so without this
+	// watch the new value would only reach DefaultMaxPods whenever some unrelated
+	// trigger next fires. Narrowed to spec.settings.network so an unrelated CPM
+	// settings edit (apiserver, etcd, ...) does not re-render the whole fleet.
+	moduleConfigGVK := network.ModuleConfigGVK()
+	watchedModuleConfig := &unstructured.Unstructured{}
+	watchedModuleConfig.SetGroupVersionKind(moduleConfigGVK)
+	w.Watches(watchedModuleConfig, allMapper, builder.WithPredicates(predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return e.Object.GetName() == network.ModuleConfigName
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return e.Object.GetName() == network.ModuleConfigName
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return e.ObjectNew.GetName() == network.ModuleConfigName && moduleConfigNetworkGroupChanged(e.ObjectOld, e.ObjectNew)
+		},
+	}))
+}
+
+// moduleConfigNetworkGroupChanged reports whether spec.settings.network differs between the two
+// ModuleConfig revisions. Both objects come off an unstructured-backed informer (see cache.go); a
+// type assertion failure, or spec/spec.settings existing but not being a map (NestedFieldNoCopy's
+// error case), is a "cannot tell" that must not silently drop the event, so it answers true rather
+// than comparing two nils that both came from a walk that never actually completed.
+func moduleConfigNetworkGroupChanged(oldObj, newObj client.Object) bool {
+	oldU, ok := oldObj.(*unstructured.Unstructured)
+	if !ok {
+		return true
+	}
+	newU, ok := newObj.(*unstructured.Unstructured)
+	if !ok {
+		return true
+	}
+
+	oldNetwork, _, err := unstructured.NestedFieldNoCopy(oldU.UnstructuredContent(), "spec", "settings", "network")
+	if err != nil {
+		return true
+	}
+	newNetwork, _, err := unstructured.NestedFieldNoCopy(newU.UnstructuredContent(), "spec", "settings", "network")
+	if err != nil {
+		return true
+	}
+	return !apiequality.Semantic.DeepEqual(oldNetwork, newNetwork)
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -142,23 +201,41 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 
 	var firstErr error
 	failed := 0
+	requeue := time.Duration(0)
 	p := newPass()
 	for i := range nodes.Items {
 		// The listing already carries the Node, so it is rendered from that
 		// rather than fetched again once per node.
-		if _, err := r.reconcileNodeObject(ctx, &nodes.Items[i], logger, p); err != nil {
+		result, err := r.reconcileNodeObject(ctx, &nodes.Items[i], logger, p)
+		if err != nil {
 			logger.V(1).Info("cannot render the NodeConfig of a node", "node", nodes.Items[i].Name, "error", err.Error())
 			failed++
 			if firstErr == nil {
 				firstErr = err
 			}
+			continue
+		}
+		// A node waiting out a disruption backoff has nothing else to wake it,
+		// and this pass covers the whole fleet: the soonest wait wins.
+		if result.RequeueAfter == 0 {
+			continue
+		}
+		if requeue == 0 || result.RequeueAfter < requeue {
+			requeue = result.RequeueAfter
 		}
 	}
 	if firstErr != nil {
-		firstErr = fmt.Errorf("render the NodeConfig of %d of %d nodes: %w", failed, len(nodes.Items), firstErr)
+		return ctrl.Result{}, fmt.Errorf("render the NodeConfig of %d of %d nodes: %w", failed, len(nodes.Items), firstErr)
 	}
 
-	return ctrl.Result{}, firstErr
+	// Report each request's resolution back on its own status. This runs on the
+	// same all-nodes pass a NER change triggers, so editing a request refreshes
+	// both the nodes it targets and its status.
+	if err := r.reconcileNERStatuses(ctx, logger); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{RequeueAfter: requeue}, nil
 }
 
 // nodeIsReady reports the kubelet's own verdict, which is what "broken" means
@@ -227,7 +304,7 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 	if current == nil {
 		return ctrl.Result{}, nil
 	}
-	return ctrl.Result{}, r.reconcileDisruption(ctx, ng, node, current, logger)
+	return r.reconcileDisruption(ctx, ng, node, current, logger)
 }
 
 // apply creates or patches the object and returns it as it now stands — nil
@@ -243,11 +320,7 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 		return nil, fmt.Errorf("get NodeConfig %s: %w", desired.Name, err)
 	}
 
-	reported, err := r.reportedNodeIPs(ctx, node.Name, existing.Spec.Kubelet.NodeIP)
-	if err != nil {
-		return nil, err
-	}
-	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec, reported)
+	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec)
 
 	if upToDate(existing, desired) {
 		logger.V(1).Info("NodeConfig unchanged", "node", desired.Name)

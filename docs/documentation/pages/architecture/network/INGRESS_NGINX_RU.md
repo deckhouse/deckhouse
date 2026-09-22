@@ -3,7 +3,7 @@ title: Модуль ingress-nginx
 permalink: ru/architecture/network/ingress-nginx.html
 lang: ru
 search: ingress-nginx, ingress, ingress controller, ingress контроллер, nginx, istio
-description: Архитектура модуля ingress-nginx в Deckhouse Kubernetes Platform.
+description: Архитектура модуля ingress-nginx в Deckhouse Platform.
 ---
 
 Модуль `ingress-nginx` устанавливает и управляет [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) с помощью кастомного ресурса IngressNginxController.
@@ -23,7 +23,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`ingress-nginx`](/modules/ingress-nginx/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`ingress-nginx`](/modules/ingress-nginx/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля ingress-nginx](../../images/architecture/network/c4-l2-ingress-nginx.ru.png)
 
@@ -78,12 +78,12 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
 3. **Dex-authenticator служебных сервисов и пользовательских приложений** — используется для аутентификации запросов в dex через dex-authenticator, которые выполняют функции OAuth2 Proxy.
 
-4. **Служебные сервисы DKP** (`console`, `dashboard`, Grafana и прочие) — модуль перенаправляет HTTP-запросы, прошедшие аутентификацию через Dex.
+4. **Служебные сервисы DP** (`console`, `dashboard`, Grafana и прочие) — модуль перенаправляет HTTP-запросы, прошедшие аутентификацию через Dex.
 
-5. **Пользовательские сервисы, развернутые в DKP** — модуль перенаправляет на них внешние HTTP-запросы. Для этого пользователь должен создать соответствующие Ingress-ресурсы, а также кастомный ресурс [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator), если требуется аутентификация через Dex.
+5. **Пользовательские сервисы, развернутые в DP** — модуль перенаправляет на них внешние HTTP-запросы. Для этого пользователь должен создать соответствующие Ingress-ресурсы, а также кастомный ресурс [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator), если требуется аутентификация через Dex.
 
 {% alert level="info" %}
-Для упрощения схемы на ней изображены взаимодействия ingress-controller только c одним служебным сервисом DKP — компонентом frontend модуля `console` и соответствующим console-dex-authenticator.
+Для упрощения схемы на ней изображены взаимодействия ingress-controller только c одним служебным сервисом DP — компонентом frontend модуля `console` и соответствующим console-dex-authenticator.
 {% endalert %}
 
 С модулем взаимодействуют следующие внешние компоненты:
@@ -96,7 +96,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
 Способы приема трафика из внешней сети подробно описаны в параметре [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) кастомного ресурса IngressNginxController.
 
-Для инлетов вида LoadBalancer, LoadBalancerWithProxyProtocol и LoadBalancerWithSSLPassthrough указанный на схеме балансировщик нагрузки автоматически предоставляется облачным провайдером (при развертывании DKP в облаке), либо может быть реализован при помощи MetalLB-контроллера (при установке на bare-metal-хостах). С настройками модуля `metallb` можно ознакомиться в [соответствующем разделе документации](/modules/metallb/configuration.html).
+Для инлетов вида LoadBalancer, LoadBalancerWithProxyProtocol и LoadBalancerWithSSLPassthrough указанный на схеме балансировщик нагрузки автоматически предоставляется облачным провайдером (при развертывании DP в облаке), либо может быть реализован при помощи MetalLB-контроллера (при установке на bare-metal-хостах). С настройками модуля `metallb` можно ознакомиться в [соответствующем разделе документации](/modules/metallb/configuration.html).
 
 Для инлетов вида HostPort, HostPortWithProxyProtocol, HostPortWithSSLPassthrough и HostWithFailover балансировщик нагрузки разворачивается пользователем, либо может отсутствовать. В этом случае пользователь самостоятельно настраивает бэкенды балансировщика или обеспечивает сетевую связность до ingress-controller. Точкой входа в ingress-controller в этом случае являются порты на узлах кластера, на которых запущен контроллер.
 
@@ -150,9 +150,9 @@ Failover Ingress-контроллер взаимодействует со сле
 
 3. **Dex-authenticator служебных сервисов и пользовательских приложений** — используется для аутентификации запросов в dex через dex-authenticator, которые выполняют функции OAuth2 Proxy.
 
-4. **Служебные сервисы DKP** (`console`, `dashboard`, Grafana и прочие) — модуль перенаправляет HTTP-запросы, прошедшие аутентификацию через Dex.
+4. **Служебные сервисы DP** (`console`, `dashboard`, Grafana и прочие) — модуль перенаправляет HTTP-запросы, прошедшие аутентификацию через Dex.
 
-5. **Пользовательские сервисы, развернутые в DKP** — модуль перенаправляет на них внешние HTTP-запросы. Для этого пользователь должен создать соответствующие Ingress-ресурсы, а также кастомный ресурс [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator), если требуется аутентификация через Dex.
+5. **Пользовательские сервисы, развернутые в DP** — модуль перенаправляет на них внешние HTTP-запросы. Для этого пользователь должен создать соответствующие Ingress-ресурсы, а также кастомный ресурс [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator), если требуется аутентификация через Dex.
 
 С failover Ingress-контроллером взаимодействуют следующие внешние компоненты:
 

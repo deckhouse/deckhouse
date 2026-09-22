@@ -22,9 +22,9 @@
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
-{{- $containerd := "containerd1734"}}
+{{- $containerd := "containerd1735"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd227" }}
+  {{- $containerd = "containerd228" }}
 {{- end }}
 
 if ! command -v systemd-run >/dev/null 2>&1 || ! command -v systemctl >/dev/null 2>&1; then
@@ -105,7 +105,8 @@ if ! systemd-run \
       \"registry-proxy:{{ .images.registrypackages.registryProxy }}\" \
       \"kubernetes-api-proxy:{{ .images.registrypackages.kubernetesApiProxy }}\" \
       \"toml-merge:{{ .images.registrypackages.tomlMerge01 }}\" \
-      \"pause:{{ .images.registrypackages.pause }}\"" \
+      \"pause:{{ .images.registrypackages.pause }}\"{{ if .registry.agent }} \
+      \"registry-agent:{{ .images.registrypackages.registryAgent }}\"{{ end }}" \
     >/dev/null 2>&1; then
   bb-log-warning "systemd-run failed to launch $unit, step 007 will fetch packages inline"
   return 0 2>/dev/null || exit 0

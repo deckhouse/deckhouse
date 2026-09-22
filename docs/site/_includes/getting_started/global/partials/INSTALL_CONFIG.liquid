@@ -11,7 +11,7 @@ Installation of {{ page.title_main }} is only possible in the Enterprise Edition
 {% endif %}
 
 <div markdown="1">
-  The recommended settings for a Deckhouse Kubernetes Platform {{ site.data.i18n[revision] }} installation are generated below:
+  The recommended settings for a Deckhouse Platform {{ site.data.i18n[revision] }} installation are generated below:
 - `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc), description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc), access parameters{% endif %} and the initial cluster parameters.
 
 **Please pay attention to**:
@@ -24,7 +24,7 @@ Installation of {{ page.title_main }} is only possible in the Enterprise Edition
 - We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
 {%- endif %}
 {% if page.platform_code == 'yandex' %}
-- Starting with Deckhouse Kubernetes Platform version 1.76, Yandex Cloud uses the `cilium` CNI by default for new clusters. When using CentOS 8, you must explicitly enable the `cni-simple-bridge` module in the `config.yml` file.
+- Starting with Deckhouse Platform version 1.76, Yandex Cloud uses the `cilium` CNI by default for new clusters. When using CentOS 8, you must explicitly enable the `cni-simple-bridge` module in the `config.yml` file.
 
   {% offtopic title="Example configuration for CentOS 8 in Yandex Cloud..." %}
   ```yaml

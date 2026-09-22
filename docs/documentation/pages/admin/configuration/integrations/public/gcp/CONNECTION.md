@@ -1,13 +1,19 @@
 ---
 title: Connection and authorization in Google Cloud Platform
 permalink: en/admin/integrations/public/gcp/connection-and-authorization.html
-description: "Configure GCP connection and authorization for Deckhouse Kubernetes Platform. Service Account setup, credentials configuration, and Google Cloud integration requirements for cloud deployment."
+description: "Configure GCP connection and authorization for Deckhouse Platform. Service Account setup, credentials configuration, and Google Cloud integration requirements for cloud deployment."
 ---
 
-To manage Google Cloud resources using Deckhouse Kubernetes Platform, you need to create a Service Account.
+To manage Google Cloud resources using Deckhouse Platform, you need to create a Service Account.
 
 {% alert level="warning" %}
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
+{% alert level="warning" %}
+Starting with version 1.77, new clusters in Google Cloud use the Cilium CNI by default with pod traffic tunneling over VXLAN. In existing clusters, the CNI stays unchanged.
+
+Make sure all nodes run Linux kernel 5.8 or newer and that firewall rules allow UDP traffic between nodes. For the list of ports, see [Network interaction of the platform components](../../../../reference/network_interaction.html); for CNI settings, see [Internal network configuration](../../../configuration/network/internal/configuration.html).
 {% endalert %}
 
 ## Creating a service account

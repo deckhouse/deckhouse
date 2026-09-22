@@ -232,15 +232,6 @@ spec:
             name: frontend
             port:
               name: http
-{{- if eq $.Values.web.env "web-production" }}
-      - path: /products/code/documentation/
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              name: http
-{{- end }}
       - path: /products/virtualization-platform/documentation/
         pathType: Prefix
         backend:

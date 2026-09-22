@@ -137,7 +137,7 @@ spec:
         - name: PILOT_ENABLE_ANALYSIS
           value: "false"
         - name: CLUSTER_ID
-          value: {{ printf "%s-%s" ($.Values.global.discovery.clusterDomain | replace "." "-") ($.Values.global.discovery.clusterUUID | adler32sum) | quote }}
+          value: {{ include "istioClusterID" $ | quote }}
         - name: ISTIO_MULTIROOT_MESH
           value: "true"
         - name: ENABLE_ENHANCED_RESOURCE_SCOPING

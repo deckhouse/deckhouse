@@ -1,13 +1,13 @@
 ---
 title: Security policies
 permalink: en/admin/configuration/security/policies.html
-description: "Configure security policies in Deckhouse Kubernetes Platform using Gatekeeper and Pod Security Standards. Policy enforcement, compliance, and cluster security management."
+description: "Configure security policies in Deckhouse Platform using Gatekeeper and Pod Security Standards. Policy enforcement, compliance, and cluster security management."
 ---
 
-Deckhouse Kubernetes Platform (DKP) lets you manage application security in the cluster using a set of admission policies.
-These are rules that apply to objects (such as Pods and Services) at the time of their creation and modification in the cluster (but not during their operation), based on the information provided in their manifests. These policies are designed to formalize the parameters that are permitted or prohibited in object manifests. Support for admission policies in the DKP cluster is implemented using the [`admission-policy-engine`](/modules/admission-policy-engine/) module.
+Deckhouse Platform (DP) lets you manage application security in the cluster using a set of admission policies.
+These are rules that apply to objects (such as Pods and Services) at the time of their creation and modification in the cluster (but not during their operation), based on the information provided in their manifests. These policies are designed to formalize the parameters that are permitted or prohibited in object manifests. Support for admission policies in the DP cluster is implemented using the [`admission-policy-engine`](/modules/admission-policy-engine/) module.
 
-In the DKP policies are divided into three categories:
+In the DP policies are divided into three categories:
 
 - [Pod Security Standards](#applying-pod-security-standards): Policies that comply with the relevant [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
 - [Operational policies](#operational-policies): Policies for creating additional requirements for objects by validating the values of parameters that are **not directly related** to security (for example, a list of allowed prefixes for container images, an image download policy, a list of required container images, etc.).
@@ -17,7 +17,7 @@ In the DKP policies are divided into three categories:
 These policies complement each other. If multiple policies are applied to a single namespace, objects are validated against each of them. If even one policy is violated, the object will not be created.
 {% endalert %}
 
-In addition to policies that prohibit using parameters different from the set requirements, DKP supports the [SecurityPolicyException](#security-policy-exceptions) resource, which allows creating fine-grained exceptions from security policy checks. With this resource, you can allow using specific parameters for individual pods or containers without changing security policies applied to the entire namespace.
+In addition to policies that prohibit using parameters different from the set requirements, DP supports the [SecurityPolicyException](#security-policy-exceptions) resource, which allows creating fine-grained exceptions from security policy checks. With this resource, you can allow using specific parameters for individual pods or containers without changing security policies applied to the entire namespace.
 
 ## How validation failure messages are displayed
 
@@ -30,7 +30,7 @@ Depending on how pods are created, there are differences in how the API generate
 
 For all three policy categories (Pod Security Standards, operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.
 
-In DKP, there are alerts (ClusterObservabilityAlert resources) for such cases, notifying you of pods in the namespace that violate policies after an existing policy is modified or a new one is added.
+In DP, there are alerts (ClusterObservabilityAlert resources) for such cases, notifying you of pods in the namespace that violate policies after an existing policy is modified or a new one is added.
 
 To get a list of alerts, use the command:
 
@@ -230,7 +230,7 @@ status:
 
 ## Applying Pod Security Standards
 
-DKP supports three security policy levels:
+DP supports three security policy levels:
 
 - `privileged`: An unrestricted policy with the broadest possible permissions.
 - `baseline`: A minimally restrictive policy that prevents the most well-known and common privilege escalation techniques.
@@ -238,18 +238,18 @@ DKP supports three security policy levels:
 - `restricted`: A highly restrictive policy with the strictest requirements for Pods.
 
 {% alert level="info" %}
-In the Deckhouse Kubernetes Platform, these policies are implemented using Gatekeeper and enforced by the admission controllers of the `admission-policy-engine` module, rather than the Kubernetes [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) controller. Only the policy descriptions are taken from Kubernetes.
+In the Deckhouse Platform, these policies are implemented using Gatekeeper and enforced by the admission controllers of the `admission-policy-engine` module, rather than the Kubernetes [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) controller. Only the policy descriptions are taken from Kubernetes.
 {% endalert %}
 
 ### Default policy
 
 The default policy is determined as follows:
 
-- In DKP versions prior to v1.55, the default policy is `privileged`.
-- Starting from DKP v1.55, the default policy is `baseline`.
+- In DP versions prior to v1.55, the default policy is `privileged`.
+- Starting from DP v1.55, the default policy is `baseline`.
 
 {% alert level="info" %}
-When upgrading DKP to v1.55 or later, the default policy will not change automatically.
+When upgrading DP to v1.55 or later, the default policy will not change automatically.
 {% endalert %}
 
 ### Assigning a policy
@@ -274,7 +274,7 @@ Allowed policy enforcement modes:
   Event information can be viewed in Grafana or in the console using `kubectl`.
 - `warn`: Works like `dryrun` but also displays a warning with the reason the action would have been denied in `deny` mode.
 
-By default, Pod Security Standards policies in DKP are enforced in `deny` mode.
+By default, Pod Security Standards policies in DP are enforced in `deny` mode.
 In this mode, application Pods that do not comply with the policies cannot be run in the cluster.
 
 As with policy assignment, enforcement mode can be set:
@@ -372,10 +372,10 @@ Helpful resources for creating extended policies:
 
 ## Operational policies
 
-DKP provides a mechanism for creating operational policies using the [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy).
+DP provides a mechanism for creating operational policies using the [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy).
 Operational policies define requirements for cluster objects such as allowed repositories, required resources, probes, and more.
 
-The DKP development team recommends applying the following minimal operational policy:
+The DP development team recommends applying the following minimal operational policy:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -918,12 +918,12 @@ Key data and checks for `CONNECT` validation:
 ## Image signature verification
 
 {% alert level="warning" %}
-Available in the following DKP editions: SE+, EE.
+Available in the following DP editions: SE+, EE, Ultimate.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
 
-DKP supports container image signature verification using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).  
+DP supports container image signature verification using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).  
 Container image signature verification allows you to ensure their integrity (that the image has not been modified since its creation) and authenticity (that the image was created by a trusted source). You can enable container image signature verification in the cluster using the [policies.verifyImageSignatures](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter of the SecurityPolicy.  
 
 Images are signed by creating a special tag in the container registry that contains the image signature.  
@@ -958,7 +958,7 @@ To sign an image with Cosign, do the following:
    Here:
    - `<REGISTRY_IMAGE_PATH>` is the path to the image that needs to be specified at startup, for example: registry.private.com/labs/application/image:latest.
 
-To enable container image signature verification in a DKP cluster:
+To enable container image signature verification in a DP cluster:
 
 1. Use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures)
    parameter in SecurityPolicy and specify the generated public key.
@@ -1050,7 +1050,7 @@ Example error output when creating a pod with an image that fails signature veri
 
 ## Using alternative security policy management tools
 
-If you use an alternative solution for security policy management in a DKP cluster
+If you use an alternative solution for security policy management in a DP cluster
 (for example, [Kyverno](https://kyverno.io/docs/introduction/)), configure exceptions for the following namespaces:
 
 - `kube-system`

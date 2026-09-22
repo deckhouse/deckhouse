@@ -1,0 +1,220 @@
+# The helm values internal/bootstrap/testdata/golden was rendered from, kept after the
+# node-group templates and their generator were removed. Each case is global + common +
+# its own fragment, concatenated as text: a fragment continues nodeManager.internal.
+
+global: |
+  global:
+    enabledModules: ["vertical-pod-autoscaler"]
+    modules:
+      placement: {}
+    internal:
+      modules:
+        kubeRBACProxyCA:
+          cert: test
+          key: test
+    discovery:
+      d8SpecificNodeCountByRole:
+        master: 3
+      clusterUUID: deadbeef-dead-beef-dead-beefdeadbeef
+      kubernetesVersion: 1.32.8
+    clusterConfiguration:
+      apiVersion: deckhouse.io/v1
+      cloud:
+        prefix: sandbox
+        provider: vSphere
+      clusterDomain: cluster.local
+      clusterType: Cloud
+      defaultCRI: Containerd
+      kind: ClusterConfiguration
+      kubernetesVersion: "1.32"
+      podSubnetCIDR: 10.111.0.0/16
+      podSubnetNodeCIDRPrefix: "24"
+      serviceSubnetCIDR: 10.222.0.0/16
+    modulesImages:
+      registry:
+        base: registry.example.com
+        dockercfg: Y2ZnCg==
+        address: registry.deckhouse.io
+        path: /deckhouse/fe
+        CA: CACACA
+        scheme: https
+      digests:
+        registrypackages:
+          jq171: sha256:jq
+          d8Curl891: sha256:curl
+          tailLog: sha256:tail
+          rppGet: sha256:rpp
+          ec2DescribeTagsV001Flant3: sha256:ec2
+
+nodeManagerCommon: |
+  nodeManager:
+    mcmEmergencyBrake: false
+    internal:
+      capiControllerManagerWebhookCert:
+        ca: string
+        key: string
+        crt: string
+      capsControllerManagerWebhookCert:
+        ca: string
+        key: string
+        crt: string
+      nodeControllerWebhookCert:
+        ca: string
+        key: string
+        crt: string
+      bashibleApiServerCA: meapiserverca
+      bashibleApiServerCrt: meapiservercrt
+      bashibleApiServerKey: meapiserverprivkey
+      instancePrefix: myprefix
+      clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+      clusterMasterEndpoints:
+      - address: 10.0.0.1
+        kubeApiPort: 6443
+        rppServerPort: 4219
+        rppBootstrapServerPort: 4220
+      kubernetesCA: myclusterca
+      packagesProxy:
+        token: mytoken
+      bootstrapTokens:
+        worker: myworker
+
+cases:
+  # cloud-config -> static-instances-cloud-config.txt, bootstrap.sh -> static-instances-bootstrap-sh.txt
+  static-instances: |
+        nodeGroups:
+        - name: worker
+          nodeType: Static
+          staticInstances:
+            labelSelector:
+              matchLabels:
+                node-group: worker
+          kubernetesVersion: "1.32"
+          cri:
+            type: "Containerd"
+
+  # bootstrap.sh -> cloud-permanent-bootstrap-sh.txt
+  cloud-permanent: |
+        nodeGroups:
+        - name: worker
+          nodeType: CloudPermanent
+          kubernetesVersion: "1.32"
+          cri:
+            type: "Containerd"
+
+  # value -> capi-yandex-value.txt
+  capi-yandex: |
+        cloudProvider:
+          type: yandex
+          capiClusterKind: YandexCluster
+          capiClusterName: sandbox
+          sshPublicKey: ssh-rsa AAAA
+          yandex:
+            instanceClassDefaults: {}
+            serviceAccountJSON: '{"my":"svcacc"}'
+            region: myreg
+            folderID: myfolder
+            sshKey: cert-authority,principals="test" ssh-rsa AAAAB...==
+            sshUser: mysshuser
+            nameservers: ["4.2.2.2"]
+            dns:
+              search: ["qwe"]
+              nameservers: ["1.2.3.4","3.4.5.6"]
+            zoneToSubnetIdMap:
+              zonea: subneta
+        nodeGroups:
+        - name: worker
+          instanceClass:
+            platformID: myplaid
+            cores: 42
+            memory: 42
+            imageID: myimageid
+          nodeType: CloudEphemeral
+          kubernetesVersion: "1.32"
+          cri:
+            type: "Containerd"
+          cloudInstances:
+            classReference:
+              kind: YandexInstanceClass
+              name: worker
+            maxPerZone: 5
+            minPerZone: 2
+            zones:
+            - zonea
+
+  # userData -> mcm-aws-userData.txt
+  mcm-aws: |
+        cloudProvider:
+          type: aws
+          machineClassKind: AWSInstanceClass
+          aws:
+            providerAccessKeyId: myprovaccesskeyid
+            providerSecretAccessKey: myprovsecretaccesskey
+            region: myregion
+            loadBalancerSecurityGroupID: mylbsecuritygroupid
+            keyName: mykeyname
+            instances:
+              iamProfileName: myiamprofilename
+              additionalSecurityGroups: ["mysecgroupid1", "mysecgroupid2"]
+              extraTags: ["extratag1", "extratag2"]
+            internal:
+              zoneToSubnetIdMap:
+                zonea: mysubnetida
+        nodeGroups:
+        - name: worker
+          instanceClass:
+            ami: myami
+            diskSizeGb: 50
+            diskType: gp2
+            iops: 42
+            instanceType: t2.medium
+          nodeType: CloudEphemeral
+          kubernetesVersion: "1.32"
+          cri:
+            type: "Containerd"
+          cloudInstances:
+            classReference:
+              kind: AWSInstanceClass
+              name: worker
+            maxPerZone: 5
+            minPerZone: 2
+            zones:
+            - zonea
+        machineControllerManagerEnabled: true
+
+  # userData -> azure-userData.txt
+  azure: |
+        cloudProvider:
+          type: azure
+          machineClassKind: AzureMachineClass
+          azure:
+            sshPublicKey: ssh-rsa AAAAB...==
+            clientId: clientId
+            clientSecret: clientSecret
+            subscriptionId: subscriptionId
+            tenantId: tenantId
+            location: location
+            resourceGroupName: resourceGroupName
+            vnetName: vnetName
+            subnetName: subnetName
+            urn: urn
+            diskType: diskType
+            additionalTags: []
+        nodeGroups:
+        - name: worker
+          instanceClass:
+            machineSize: mymachinesize
+            urn: myurn
+            diskSizeGb: 42
+          nodeType: CloudEphemeral
+          kubernetesVersion: "1.32"
+          cri:
+            type: "Containerd"
+          cloudInstances:
+            classReference:
+              kind: AzureInstanceClass
+              name: worker
+            maxPerZone: 5
+            minPerZone: 2
+            zones:
+            - zonea
+        machineControllerManagerEnabled: true

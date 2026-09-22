@@ -3,7 +3,7 @@ title: Модуль csi-netapp
 permalink: ru/architecture/storage/external/csi-netapp.html
 lang: ru
 search: csi-netapp, netapp
-description: Архитектура модуля csi-netapp в Deckhouse Kubernetes Platform.
+description: Архитектура модуля csi-netapp в Deckhouse Platform.
 ---
 
 Модуль [`csi-netapp`](/modules/csi-netapp/) предназначен для управления томами c использованием систем хранения данных NetApp. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса NetappStorageClass.
@@ -19,7 +19,7 @@ description: Архитектура модуля csi-netapp в Deckhouse Kuberne
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`csi-netapp`](/modules/csi-netapp/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`csi-netapp`](/modules/csi-netapp/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля csi-netapp](../../../images/architecture/storage/c4-l2-csi-netapp.ru.png)
 
@@ -36,7 +36,7 @@ description: Архитектура модуля csi-netapp в Deckhouse Kuberne
 
     Состоит из одного основного контейнера **controller**.
 
-1. **CSI-драйвер (netapp)** — реализация CSI-драйвера, использующего provisioner `csi.trident.netapp.io`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в описании архитектуры CSI-драйвера](../csi-drivers/csi-driver.html).
+1. **CSI-драйвер (netapp)** — реализация CSI-драйвера, использующего provisioner `csi.trident.netapp.io`. С типовой архитектурой CSI-драйвера, используемого в DP, можно ознакомиться [в описании архитектуры CSI-драйвера](../csi-drivers/csi-driver.html).
 
 ## Взаимодействия модуля
 

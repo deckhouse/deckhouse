@@ -1,5 +1,5 @@
 // DVP GS step 4: install orchestration and config.yml token pass (requires constants + getting-started-dvp.js).
-// Uses generate_password / update_license_parameters from getting-started.js (DKP).
+// Uses generate_password / update_license_parameters from getting-started.js (DP).
 
 // EE license token for <YOUR_ACCESS_STRING_IS_HERE> in DVP config.yml.
 function dvpLicenseToken() {

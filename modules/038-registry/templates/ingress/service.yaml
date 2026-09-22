@@ -1,0 +1,26 @@
+{{- /*
+  `Service/registry-push` is one of the two names both implementations use, so it carries the
+  ownership gate: two definitions of one object are not merged, and whichever renders last wins.
+  See _ownership.tpl.
+*/ -}}
+{{- $orchestrator := .Values.registry.internal.orchestrator -}}
+{{- if and (($orchestrator).state).ingress_enabled (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") (eq (include "registry_legacy_owns_the_cluster" .) "true") -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-push
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
+  annotations:
+    registry.deckhouse.io/config-hash: {{ $orchestrator.hash | quote }}
+spec:
+  selector:
+    component: registry-service
+    type: node-services
+  ports:
+    - name: registry
+      port: 5001
+      protocol: TCP
+      targetPort: distribution
+{{- end }}

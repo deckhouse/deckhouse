@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
+	"time"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
@@ -55,7 +57,8 @@ func adminKubeconfigFromCache(ctx context.Context, stateCache state.Cache) ([]by
 			"read the admin kubeconfig %s a previous attempt collected: %w. "+
 				"The first master has been told the credentials are stored, so it closed its bootstrap channel for good "+
 				"and the installer's client key is gone with it: they cannot be collected a second time. "+
-				"Restore that file, or destroy the cluster and bootstrap it again",
+				"Restore that file; failing that, anyone still holding access to the cluster can issue a new "+
+				"kubeconfig from the CA in the kube-system/d8-pki secret. Otherwise destroy the cluster and bootstrap it again",
 			path, err,
 		)
 	}
@@ -113,59 +116,134 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		return nil, errors.New("the bootstrap handoff credentials are missing from the state cache: rerun the bootstrap so the BaseInfra phase regenerates the master payload")
 	}
 
-	address, stop, err := b.openImmutableChannel(ctx, bctx, handoffPort, "credentials handoff")
-	if err != nil {
-		return nil, err
-	}
-	// Held rather than closed here: ConfirmCollected is the next thing to use it,
-	// and through a bastion a second dial is a second tunnel to the same port.
-	// stopImmutableChannels closes it on the paths that never confirm.
-	bctx.immutable.handoffAddress, bctx.immutable.handoffStop = address, stop
-
-	input := immutable.FetchKubeconfigInput{
-		Address: address,
-		// The endpoint's certificate is issued for the node's name, not for the
-		// address dhctl dialled: that address did not exist when the payload
-		// was built.
-		ServerName: bctx.immutable.masterNodeName,
-		Material:   material,
-	}
-
 	// Narrated rather than silent: the node answers the status endpoint from the
 	// moment it starts working, so an operator sees what it is doing and a node
 	// that fails says why instead of just staying unreachable.
-	var (
-		kubeconfig  []byte
-		lastMessage string
-	)
+	var kubeconfig []byte
+	report := waitProgress(ctx, time.Now)
 
-	// Nothing here rebuilds the channel: the tunnel keeps its listener through a
-	// broken connection and gossh's keepalive reconnects the client underneath it,
-	// so a failed request is retried, not repaired.
-	err = libretry.NewLoop("Waiting for the first master to bring the control plane up", waitAPIServerUp.attempts, waitAPIServerUp.interval).
-		BreakIf(handoffGaveUp).
-		RunContext(ctx, func() error {
-			status, err := immutable.FetchStatus(ctx, input)
-			if err != nil {
-				return err
-			}
-			reportImmutableStatus(ctx, status, &lastMessage)
-			if err := handoffReady(status); err != nil {
-				return err
-			}
+	// openImmutableChannelTo, not openImmutableChannel: a failure here is already
+	// on its way through withBothAddresses below, which would otherwise name both
+	// addresses twice in one message.
+	openChannel := func(ctx context.Context) (string, func(), error) {
+		return b.openImmutableChannelTo(ctx, bctx.immutable.masterIP, handoffPort, "credentials handoff")
+	}
 
-			collected, err := immutable.FetchKubeconfig(ctx, input)
-			if err != nil {
-				return err
-			}
-			kubeconfig = collected
-			return nil
-		})
+	loop := libretry.NewLoop("Waiting for the master node to install Kubernetes", waitAPIServerUp.attempts, waitAPIServerUp.interval).
+		BreakIf(handoffGaveUp)
+
+	err = retryWithFreshChannel(ctx, loop, openChannel, func(address string) error {
+		input := immutable.FetchKubeconfigInput{
+			Address: address,
+			// The endpoint's certificate is issued for the node's name, not for the
+			// address dhctl dialled: that address did not exist when the payload
+			// was built.
+			ServerName: bctx.immutable.masterNodeName,
+			Material:   material,
+		}
+
+		status, err := immutable.FetchStatus(ctx, input)
+		if err != nil {
+			// The node stops answering while kubelet takes the machine over, and
+			// that silence is most of the wait: unreported, it reads as a hang.
+			report(fmt.Sprintf("%s is not answering its bootstrap channel yet", bctx.immutable.masterNodeName))
+			return err
+		}
+		report(fmt.Sprintf("The first master reports: %s", statusLine(status)))
+		if err := handoffReady(status); err != nil {
+			return err
+		}
+
+		collected, err := immutable.FetchKubeconfig(ctx, input)
+		if err != nil {
+			return err
+		}
+		kubeconfig = collected
+		return nil
+	})
 	if err != nil {
-		return nil, err
+		return nil, withBothAddresses(bctx, err)
 	}
 
 	return kubeconfig, nil
+}
+
+// retryWithFreshChannel runs do against a channel of its own on every attempt.
+// A dial to a machine that is booting hangs to gossh's 5s deadline, and that
+// error ends the tunnel's accept loop for good while its listener stays bound.
+//
+// Opening one is narrated file-only: off the compact terminal, in the debug file,
+// for as long as the channel lives. Not a buffer replayed after open: the channel
+// logs on, and reading while it writes is a race that also drops the rest.
+func retryWithFreshChannel(ctx context.Context, loop *libretry.Loop, open func(context.Context) (string, func(), error), do func(address string) error) error {
+	return loop.RunContext(ctx, func() error {
+		narrated := slog.New(fileOnlyHandler{dhlog.FromContext(ctx).Handler()})
+		address, stop, err := open(dhlog.ToContext(ctx, narrated))
+		// open must not hand back a closer together with an error: it is dropped here.
+		if err != nil {
+			return err
+		}
+		defer stop()
+
+		return do(address)
+	})
+}
+
+// fileOnlyHandler tags every record FileOnly on its way to the handler behind it:
+// kept by the debug file, kept off the compact terminal. lib-dhctl offers the tag
+// per record only, and the channel's own code cannot be asked to add it.
+type fileOnlyHandler struct{ slog.Handler }
+
+func (h fileOnlyHandler) Handle(ctx context.Context, record slog.Record) error {
+	record.AddAttrs(dhlog.FileOnly())
+	return h.Handler.Handle(ctx, record)
+}
+
+func (h fileOnlyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return fileOnlyHandler{h.Handler.WithAttrs(attrs)}
+}
+
+func (h fileOnlyHandler) WithGroup(name string) slog.Handler {
+	return fileOnlyHandler{h.Handler.WithGroup(name)}
+}
+
+// waitProgressInterval is how often a wait repeats itself while nothing changes.
+// The control plane takes minutes to come up, and a screen that says nothing for
+// that long is indistinguishable from a hang.
+const waitProgressInterval = 30 * time.Second
+
+// waitProgress returns the reporter a minutes-long wait speaks through. It
+// prints a message that differs from the last one immediately, and one that
+// repeats no more often than waitProgressInterval — every line carrying how long
+// the wait has been running, which is what an operator is really asking.
+func waitProgress(ctx context.Context, now func() time.Time) func(message string) {
+	startedAt := now()
+	var (
+		lastMessage string
+		lastPrinted time.Time
+	)
+	return func(message string) {
+		at := now()
+		repeat := message == lastMessage
+		if repeat && at.Sub(lastPrinted) < waitProgressInterval {
+			return
+		}
+		lastMessage, lastPrinted = message, at
+		dhlog.FromContext(ctx).InfoContext(ctx,
+			fmt.Sprintf("%s (%s so far)", message, at.Sub(startedAt).Round(time.Second)))
+	}
+}
+
+// withBothAddresses names the address the machine was configured through next to
+// the one it was expected to answer on: only the two together tell a static
+// address the machine never took from a machine that died.
+func withBothAddresses(bctx *bootstrapContext, err error) error {
+	pushAddress := bctx.immutable.hosts[bctx.immutable.masterNodeName]
+	if pushAddress == "" || pushAddress == bctx.immutable.masterIP {
+		return err
+	}
+	return fmt.Errorf("reach %s at %s, the static address its document assigns it, after configuring it at %s: %w",
+		bctx.immutable.masterNodeName, bctx.immutable.masterIP, pushAddress, err)
 }
 
 // handoffTerminal are the answers no amount of waiting changes: a payload the
@@ -179,16 +257,6 @@ var handoffTerminal = []error{
 
 func handoffGaveUp(err error) bool {
 	return slices.ContainsFunc(handoffTerminal, func(terminal error) bool { return errors.Is(err, terminal) })
-}
-
-// reportImmutableStatus logs what the node says, once per distinct message.
-func reportImmutableStatus(ctx context.Context, status *immutable.Status, lastMessage *string) {
-	message := statusLine(status)
-	if message == *lastMessage {
-		return
-	}
-	*lastMessage = message
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("The first master reports: %s", message))
 }
 
 // handoffReady answers nil once the node will hand the credentials over. A node
@@ -229,19 +297,12 @@ func (b *ClusterBootstrapper) confirmImmutableHandoff(ctx context.Context, bctx 
 		return
 	}
 
-	// The collection left its channel open for exactly this; a rerun confirms
-	// without collecting and has none to reuse.
-	defer bctx.stopImmutableHandoff()
-	address := bctx.immutable.handoffAddress
-	if address == "" {
-		opened, stop, err := b.openImmutableChannel(ctx, bctx, immutable.HandoffPort, "handoff confirmation")
-		if err != nil {
-			logger.WarnContext(ctx, fmt.Sprintf("confirm the handover to the first master: %v", err))
-			return
-		}
-		defer stop()
-		address = opened
+	address, stop, err := b.openImmutableChannel(ctx, bctx, immutable.HandoffPort, "handoff confirmation")
+	if err != nil {
+		logger.WarnContext(ctx, fmt.Sprintf("confirm the handover to the first master: %v", err))
+		return
 	}
+	defer stop()
 
 	input := immutable.FetchKubeconfigInput{Address: address, ServerName: bctx.immutable.masterNodeName, Material: material}
 	switch err := immutable.ConfirmCollected(ctx, input); {

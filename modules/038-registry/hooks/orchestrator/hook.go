@@ -41,6 +41,7 @@ import (
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
 	registryswitcher "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-switcher"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/users"
+	v2 "github.com/deckhouse/deckhouse/modules/038-registry/hooks/v2"
 )
 
 const (
@@ -154,6 +155,24 @@ var _ = sdk.RegisterFunc(
 
 func handle(ctx context.Context, input *go_hook.HookInput) error {
 	moduleValues := helpers.NewValuesAccessor[Values](input, valuesPath)
+
+	// This implementation stands down entirely while the current one owns the cluster.
+	//
+	// One decision in one place rather than a gate on each of its templates, because all of
+	// them render from these values. Clearing the values is both halves at once: nothing of
+	// this implementation is deployed, and nothing of it is recorded.
+	//
+	// Recording is the half easy to overlook. The gate that decides which implementation is
+	// active reads this one's state secret, so a state machine left running writes down a
+	// mode of its own and, on the next module restart, can take the cluster back while the
+	// current implementation is already configuring every node. And the trigger is easy to
+	// hit: `d8-system/registry-config` exists on every cluster — module 002 renders it
+	// unconditionally — and that secret alone is enough to start that state machine.
+	if v2.IsActive(input) {
+		moduleValues.Clear()
+		return nil
+	}
+
 	values := moduleValues.Get()
 
 	var (

@@ -33,4 +33,11 @@ const (
 	ConfigsNS = "kube-system"
 
 	SSHEnvsPrefix = "DHCTL_CLI_"
+
+	// ImpersonateUser and ImpersonateGroup are the identity every dhctl request
+	// carries. The same one the kubectl proxy on a master is started with
+	// (lib-connection pkg/ssh/base/kubeproxy: --as=dhctl --as-group=system:masters),
+	// and "dhctl" is the username Deckhouse's admission policies exempt.
+	ImpersonateUser  = "dhctl"
+	ImpersonateGroup = "system:masters"
 )

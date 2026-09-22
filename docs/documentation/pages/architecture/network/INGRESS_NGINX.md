@@ -2,7 +2,7 @@
 title: Ingress-nginx module
 permalink: en/architecture/network/ingress-nginx.html
 search: ingress-nginx, ingress, ingress controller, nginx, istio
-description: Architecture of the ingress-nginx module in Deckhouse Kubernetes Platform.
+description: Architecture of the ingress-nginx module in Deckhouse Platform.
 ---
 
 The `ingress-nginx` module installs and manages the [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) using the IngressNginxController custom resource.
@@ -22,7 +22,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`ingress-nginx`](/modules/ingress-nginx/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`ingress-nginx`](/modules/ingress-nginx/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Ingress-nginx module architecture](../../images/architecture/network/c4-l2-ingress-nginx.png)
 
@@ -77,12 +77,12 @@ The module interacts with the following components:
 
 3. **Dex-authenticator of platform services and user applications**: Used to authenticate requests in dex via dex-authenticator, which acts as an OAuth2 proxy.
 
-4. **DKP platform services** (such as `console`, `dashboard`, Grafana, and others): The module forwards HTTP requests that have been authenticated via Dex.
+4. **DP platform services** (such as `console`, `dashboard`, Grafana, and others): The module forwards HTTP requests that have been authenticated via Dex.
 
-5. **User services deployed in DKP**: The module forwards external HTTP requests to user services. To enable this, the user must create the corresponding Ingress resources and, if authentication via Dex is required, the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) custom resource.
+5. **User services deployed in DP**: The module forwards external HTTP requests to user services. To enable this, the user must create the corresponding Ingress resources and, if authentication via Dex is required, the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) custom resource.
 
 {% alert level="info" %}
-To keep the diagram simple, it shows interactions between ingress-controller and only one DKP service, the frontend component of the `console` module and its corresponding console-dex-authenticator.
+To keep the diagram simple, it shows interactions between ingress-controller and only one DP service, the frontend component of the `console` module and its corresponding console-dex-authenticator.
 {% endalert %}
 
 The following external components interact with the module:
@@ -95,7 +95,7 @@ The following external components interact with the module:
 
 Methods for receiving traffic from external networks are described in the [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) parameter of the IngressNginxController custom resource.
 
-For inlet types LoadBalancer, LoadBalancerWithProxyProtocol, and LoadBalancerWithSSLPassthrough, the load balancer shown in the diagram is automatically provided by the cloud provider (when DKP is deployed in a cloud environment) or can be implemented using the MetalLB controller (for bare-metal installations). For configuration details, refer to the [`metallb` module documentation](/modules/metallb/configuration.html).
+For inlet types LoadBalancer, LoadBalancerWithProxyProtocol, and LoadBalancerWithSSLPassthrough, the load balancer shown in the diagram is automatically provided by the cloud provider (when DP is deployed in a cloud environment) or can be implemented using the MetalLB controller (for bare-metal installations). For configuration details, refer to the [`metallb` module documentation](/modules/metallb/configuration.html).
 
 For inlet types HostPort, HostPortWithProxyProtocol, HostPortWithSSLPassthrough, and HostWithFailover, the load balancer is deployed by the user or may be absent. In this case, the user must configure the load balancer backends or otherwise ensure network connectivity to the ingress-controller. The ingress-controller entry point in this case is the ports on the cluster nodes where the controller is running.
 
@@ -109,7 +109,7 @@ The primary controller starts in `hostNetwork`, while the failover controller st
 The following diagram does not show the architecture of the main Ingress controller, as well as the module interactions, as they are described in detail in the diagram above.
 {% endalert %}
 
-The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet type and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet type and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Architecture of ingress-nginx module with HostWithFailover inlet type](../../images/architecture/network/c4-l2-ingress-nginx-failover.png)
 
@@ -151,9 +151,9 @@ Failover Ingress controller interacts with the following components:
 
 3. **Dex-authenticator of platform services and user applications**: Used to authenticate requests in dex via dex-authenticator, which acts as an OAuth2 proxy.
 
-4. **DKP platform services** (such as `console`, `dashboard`, Grafana, and others): The module forwards HTTP requests that have been authenticated via Dex.
+4. **DP platform services** (such as `console`, `dashboard`, Grafana, and others): The module forwards HTTP requests that have been authenticated via Dex.
 
-5. **User services deployed in DKP**: The module forwards external HTTP requests to user services. To enable this, the user must create the corresponding Ingress resources and, if authentication via Dex is required, the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) custom resource.
+5. **User services deployed in DP**: The module forwards external HTTP requests to user services. To enable this, the user must create the corresponding Ingress resources and, if authentication via Dex is required, the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) custom resource.
 
 The following external components interact with the failover Ingress controller:
 

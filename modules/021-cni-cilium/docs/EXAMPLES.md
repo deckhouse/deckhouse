@@ -6,7 +6,7 @@ description: Examples of configuring Egress Gateway, Hubble data export, and per
 ## Egress Gateway
 
 {% alert level="warning" %}
-This feature is available in the following editions: SE+, EE.
+This feature is available in the following editions: SE+, EE, Ultimate.
 {% endalert %}
 
 ### Operation principle

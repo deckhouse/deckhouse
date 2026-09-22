@@ -57,6 +57,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/network"
 )
 
 var webhookLog = logf.Log.WithName("nodegroup-webhook")
@@ -93,6 +94,13 @@ func SetupWithManager(mgr ctrl.Manager) error {
 	})
 	hookServer.Register("/validate-instanceclass-delete", &webhook.Admission{
 		Handler: &InstanceClassDeleteValidator{},
+	})
+	// Validating webhook refusing a reserved NodeExtensionRequest sysext name.
+	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodeextensionrequest", &webhook.Admission{
+		Handler: &NodeExtensionRequestValidator{decoder: decoder},
+	})
+	hookServer.Register("/validate-internal-deckhouse-io-v1alpha1-nodeconfig", &webhook.Admission{
+		Handler: &NodeConfigValidator{decoder: decoder},
 	})
 
 	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
@@ -560,6 +568,19 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterCon
 		}
 	}
 
+	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
+	// ModuleConfig wins over the regex-parsed value above when set (see package network), the same
+	// way the cluster prefix does.
+	mcNetwork, err := network.FromModuleConfig(ctx, w.Client)
+	if err != nil {
+		return nil, fmt.Errorf("resolve network settings: %w", err)
+	}
+	if mcNetwork.PodSubnetNodeCIDRPrefix != "" {
+		if _, err := fmt.Sscanf(mcNetwork.PodSubnetNodeCIDRPrefix, "%d", &config.PodSubnetNodeCIDRPrefix); err != nil {
+			return nil, fmt.Errorf("failed to parse ModuleConfig podSubnetNodeCIDRPrefix: %w", err)
+		}
+	}
+
 	return config, nil
 }
 
@@ -710,7 +731,7 @@ func adoptingBashibleNodes(req admission.Request, ng, oldNG *v1.NodeGroup) bool 
 
 // getBashibleNodes returns the group's nodes that bashible has configured: the
 // label bashible sets once and never removes. The checksum annotation is blind
-// here (approval-waiting nodes delete it); olcedar nodes never get the label.
+// here (approval-waiting nodes delete it); Deckhouse Engine nodes never get the label.
 func (w *NodeGroupValidator) getBashibleNodes(ctx context.Context, nodeGroupName string) ([]string, error) {
 	webhookLog.Info("listing Nodes", "filter", "bashible-first-run-finished", "nodeGroup", nodeGroupName)
 	// Unwrapped: the caller says which group it was listing for.

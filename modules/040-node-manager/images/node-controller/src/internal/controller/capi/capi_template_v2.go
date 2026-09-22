@@ -34,6 +34,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/machinetemplate"
 )
 
@@ -342,9 +343,9 @@ func (r *MachineDeploymentReconciler) buildMachineTemplate(in machineTemplateGen
 	obj.SetName(name)
 	obj.SetNamespace(common.MachineNamespace)
 	obj.SetLabels(map[string]string{
-		"heritage":   "deckhouse",
-		"module":     "node-manager",
-		"node-group": in.ng.Name,
+		"heritage":                               "deckhouse",
+		"module":                                 "node-manager",
+		ngcommon.MachineDeploymentNodeGroupLabel: in.ng.Name,
 	})
 	obj.SetAnnotations(annotations)
 	return obj, nil

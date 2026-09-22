@@ -69,6 +69,7 @@ jobs:
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
       changes_node_controller: ${{ steps.changes.outputs.node_controller }}
+      changes_registry_images: ${{ steps.changes.outputs.registry_images }}
 
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
@@ -275,6 +276,12 @@ jobs:
               - '!./**/*.md'
             node_controller:
               - './modules/040-node-manager/images/node-controller/**'
+            # The registry module's binaries live under their own go.mod, which `make tests-modules`
+            # does not reach: `./modules/...` stops at a nested module boundary. Without this filter
+            # and the job it gates, their tests are written and never run.
+            registry_images:
+              - './modules/038-registry/images/**'
+              - './go_lib/registry/**'
 
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
@@ -699,12 +706,26 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1001,6 +1022,20 @@ jobs:
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
+
           type werf && source $(werf ci-env github --verbose --as-file)
           # Build only the `tests` image (and its transitive werf deps);
           # cache is shared with build_fe via WERF_REPO. The build report is
@@ -1010,7 +1045,8 @@ jobs:
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --final-images-only=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           rm -f images_tags_werf.json
@@ -1019,6 +1055,253 @@ jobs:
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
     # </template: build_tests_template>
+
+
+  build_fuzz:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Build fuzz images
+    needs:
+      - git_info
+      - pull_request_info
+    # <template: build_fuzz_template>
+    runs-on: [self-hosted, large]
+    steps:
+
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_ENDPOINT | FUZZ_S3_ENDPOINT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_ACCESS_KEY | FUZZ_S3_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_SECRET_KEY | FUZZ_S3_SECRET_KEY ;
+
+      # </template: import_secrets>
+
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+
+      # <template: read_werf_version_step>
+      - name: Read werf version from werf_envs.yml
+        id: read_werf_version
+        run: |
+          set -euo pipefail
+          WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
+          if [[ ! -f "$WERF_ENVS_FILE" ]]; then
+            echo "::error title=WERF version::File ${WERF_ENVS_FILE} not found"
+            exit 1
+          fi
+          WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
+          echo "Detected WERF_VERSION=${WERF_VERSION}"
+          echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
+          echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
+      # </template: read_werf_version_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf-dk CLI
+        run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
+            werf_fallback=false
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
+          fi
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
+
+      # <template: add_ssh_keys>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: |
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
+
+      - name: Build fuzz images
+        id: build
+        env:
+          # *-fuzz images are intermediate (final: false); ci-env may force FINAL_IMAGES_ONLY=true
+          WERF_FINAL_IMAGES_ONLY: "false"
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
+          DECKHOUSE_DEV_REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
+          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          FUZZ_S3_ENDPOINT: ${{ steps.secrets.outputs.FUZZ_S3_ENDPOINT }}
+          FUZZ_S3_ACCESS_KEY: ${{ steps.secrets.outputs.FUZZ_S3_ACCESS_KEY }}
+          FUZZ_S3_SECRET_KEY: ${{ steps.secrets.outputs.FUZZ_S3_SECRET_KEY }}
+          CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+        run: |
+          set -euo pipefail
+
+          type werf && source "$(werf ci-env github --as-file)"
+
+          # ci-env re-exports FINAL_IMAGES_ONLY=true from werf_envs.yml — drop it for *-fuzz
+          unset WERF_FINAL_IMAGES_ONLY
+
+          if [[ -z "${FUZZ_S3_ENDPOINT:-}" || -z "${FUZZ_S3_ACCESS_KEY:-}" || -z "${FUZZ_S3_SECRET_KEY:-}" ]]; then
+            echo "Fuzz S3 secrets are not set (required for in-image corpus sync)"
+            exit 1
+          fi
+
+          # Corpus lives under s3://anomaloys-materials/<repository>/<branch slug>/...
+          export FUZZ_S3_REPOSITORY="${GITHUB_REPOSITORY##*/}"
+          # PR builds never publish corpus — always replay from main
+          export FUZZ_S3_BRANCH_SLUG="main"
+          if [[ -z "${FUZZ_S3_REPOSITORY}" || -z "${FUZZ_S3_BRANCH_SLUG}" ]]; then
+            echo "FUZZ_S3_REPOSITORY / FUZZ_S3_BRANCH_SLUG could not be determined"
+            exit 1
+          fi
+          echo "Corpus replay path prefix: anomaloys-materials/${FUZZ_S3_REPOSITORY}/${FUZZ_S3_BRANCH_SLUG}/"
+          # PR/dev: build locally, do not push fuzz images; no build-report upload
+          DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          export WERF_PROJECT_NAME="deckhouse-fuzz-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          export WERF_SECONDARY_REPO_1="${DEV_REGISTRY_PATH}"
+          unset WERF_REPO
+          echo "dev fuzz build: local only, cache from ${WERF_SECONDARY_REPO_1} (no registry push, no build-report upload)"
+
+          FUZZ_IMAGES="$(werf config list --env "${WERF_ENV}" | grep -- '-fuzz$' || true)"
+          if [[ -z "${FUZZ_IMAGES}" ]]; then
+            echo "No fuzz images found; skipping fuzz build"
+            exit 0
+          fi
+
+          echo "Building fuzz images:"
+          echo "${FUZZ_IMAGES}"
+
+          export WERF_BUILD_REPORT_OPERATIONS=true
+
+          # shellcheck disable=SC2086
+          werf build ${FUZZ_IMAGES} \
+            --insecure-registry \
+            --parallel=true --parallel-tasks-limit=10 \
+            --save-build-report=true \
+            --build-report-path images_fuzz_tags_werf.json
+
+    # </template: build_fuzz_template>
 
 
   go_generate:
@@ -1445,12 +1728,26 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1846,12 +2143,26 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -2247,12 +2558,26 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -2648,12 +2973,26 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -3049,12 +3388,26 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -3450,12 +3803,26 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -3943,7 +4310,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:92db515d7e8405bfb5af6f8a4aa68e02a218ec0d35ad22c75576064522d11fd4"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:cfa2c389d79fa8ea0784eee25b8d4149b3624f4a126e2113bf4ae563d139acdd"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -3952,7 +4319,7 @@ jobs:
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
           CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sleep infinity)
           docker exec -u 0:0 ${CONTAINER_ID} pm install git
-          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules test-crd-enricher"
+          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && { set -e; make tests-controller tests-modules; if [ -f pkg/crd-enricher/go.mod ]; then make test-crd-enricher; fi; }"
           docker rm -f ${CONTAINER_ID}
     # </template: tests_before_build_template>
 
@@ -4058,7 +4425,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run node-controller tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:92db515d7e8405bfb5af6f8a4aa68e02a218ec0d35ad22c75576064522d11fd4"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:cfa2c389d79fa8ea0784eee25b8d4149b3624f4a126e2113bf4ae563d139acdd"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -4089,6 +4456,148 @@ jobs:
           docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets GOTESTFMT_CI=github"
           docker rm -f ${CONTAINER_ID}
     # </template: tests_node_controller_envtest_template>
+
+  tests_registry_images:
+    if: ${{ needs.pull_request_info.outputs.changes_registry_images == 'true' }}
+    name: Tests registry images
+    needs:
+      - git_info
+      - pull_request_info
+
+    # <template: tests_registry_images_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
+      - name: Run registry image tests
+        env:
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:cfa2c389d79fa8ea0784eee25b8d4149b3624f4a126e2113bf4ae563d139acdd"
+        run: |
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull base golang image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          # Dedicated on-runner caches, created up front so the bind mounts are owned by the runner user
+          # (Docker would otherwise create a missing host path as root, making it unwritable in-container).
+          # Not the shared ~/go-pkg-cache: root jobs populate that with root-owned entries.
+          mkdir -p ~/go-build-cache-registry ~/go-mod-cache-registry
+          for entry in "go-build|$HOME/go-build-cache-registry" "go-mod|$HOME/go-mod-cache-registry"; do
+            name="${entry%%|*}"; path="${entry#*|}";
+            if [ -e "$path" ] && [ -n "$(ls -A "$path" 2>/dev/null)" ]; then
+              echo "::notice::cache HIT  ${name}";
+            else
+              echo "::warning::cache MISS ${name} — will download/recompile";
+            fi;
+          done
+          echo "⚓️ 🏎 [$(date -u)] Run registry image tests..."
+          # Every binary of the registry module lives under its own go.mod, so `make tests-modules`
+          # (TESTS_PATH = ./modules/...) never reaches them: the pattern stops at a nested module
+          # boundary. This job is the only thing that runs them.
+          #
+          # docker-distribution/wrapper is this module's own code around the upstream registry, which
+          # comes in as a dependency: what is tested here is the mapping of repository paths, the token
+          # proxy, the trust decision about a forwarded client address, the derivation of the write
+          # endpoint's configuration and the sweep. Upstream's own suite is upstream's to run.
+          #
+          # GOFLAGS=-buildvcs=false: the tests need no git stamp, so go does not shell out to git.
+          CONTAINER_ID=$(docker run -d -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-mod-cache-registry:/go/pkg -v ~/go-build-cache-registry:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
+          # Paths, not module names: the wrapper keeps its go.mod at the image root, the rest under src/.
+          for module in registry-agent/src registry-controller/src registry-syncer/src docker-distribution/wrapper ; do
+            echo "::group::${module}"
+            docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse/modules/038-registry/images/${module} ${CONTAINER_ID} go test -race -timeout 15m ./... || exit 1
+            echo "::endgroup::"
+          done
+          docker rm -f ${CONTAINER_ID}
+    # </template: tests_registry_images_template>
+
 
   tests_python_webhooks:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

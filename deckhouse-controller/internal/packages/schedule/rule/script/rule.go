@@ -24,9 +24,8 @@ package script
 import (
 	"context"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 

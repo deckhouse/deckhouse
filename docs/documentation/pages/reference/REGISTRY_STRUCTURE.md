@@ -5,11 +5,11 @@ toc: false
 search: container registry, image registry
 ---
 
-This page provides a general overview of the container image registries used to install the Deckhouse Kubernetes Platform (DKP).
+This page provides a general overview of the container image registries used to install the Deckhouse Platform (DP).
 
 ## Commercial editions container registry
 
-The registry contains modules and components available in the commercial DKP editions:
+The registry contains modules and components available in the commercial DP editions:
 
 - EE (address `registry.deckhouse.io/deckhouse/ee`).
 - SE (address `registry.deckhouse.io/deckhouse/se`).
@@ -26,7 +26,7 @@ Images are provided with [technical support](https://deckhouse.io/tech-support/)
 
 Image build and update specifics:
 
-* built from open-source software [included in DKP](./oss_info.html):
+* built from open-source software [included in DP](./oss_info.html):
   * from upstream (as-is);
   * with deep modernization (fork).
 * includes proprietary company developments;

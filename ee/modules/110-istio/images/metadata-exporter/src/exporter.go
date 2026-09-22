@@ -53,6 +53,7 @@ type Exporter struct {
 	inlet                                string
 	clusterDomain                        string
 	clusterUUID                          string
+	multiclusterClusterID                string
 	multicluserNetworkName               string
 	multiclusterAPIHost                  string
 	federationEnabled                    string
@@ -64,6 +65,7 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 	inlet := os.Getenv("INLET")
 	clusterDomain := os.Getenv("CLUSTER_DOMAIN")
 	clusterUUID := os.Getenv("CLUSTER_UUID")
+	multiclusterClusterID := os.Getenv("MULTICLUSTER_CLUSTER_ID")
 	multicluserNetworkName := os.Getenv("MULTICLUSTER_NETWORK_NAME")
 	multiclusterAPIHost := os.Getenv("MULTICLUSTER_API_HOST")
 	federationEnabled := os.Getenv("FEDERATION_ENABLED")
@@ -165,6 +167,7 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 			inlet:                           inlet,
 			clusterDomain:                   clusterDomain,
 			clusterUUID:                     clusterUUID,
+			multiclusterClusterID:           multiclusterClusterID,
 			multicluserNetworkName:          multicluserNetworkName,
 			multiclusterAPIHost:             multiclusterAPIHost,
 			federationEnabled:               federationEnabled,
@@ -662,6 +665,11 @@ func (exp *Exporter) RenderMulticlusterPrivateMetadataJSON() string {
 	}
 
 	pm.IngressGateways = &ingressGateways
+
+	pm.ClusterID = exp.multiclusterClusterID
+	if len(pm.ClusterID) == 0 {
+		panic("Error reading MULTICLUSTER_CLUSTER_ID from env")
+	}
 
 	pm.NetworkName = exp.multicluserNetworkName
 	if len(pm.NetworkName) == 0 {

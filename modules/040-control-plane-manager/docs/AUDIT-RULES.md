@@ -7,13 +7,13 @@ title: "Built-in audit rules"
 
 ## What is Audit Policy
 
-Audit Policy is a YAML file that defines which events the API server should record.  
-When a request occurs, Kubernetes checks it against the rules in the file.  
+Audit Policy is a YAML file that defines which events the API server should record.
+When a request occurs, Kubernetes checks it against the rules in the file.
 The **first matching rule** determines the logging level.
 
 ## Policy structure
 
-Deckhouse Kubernetes Platform (DKP) deploys a basic audit policy by default, which can be extended with user-defined rules.
+Deckhouse Platform (DP) deploys a basic audit policy by default, which can be extended with user-defined rules.
 
 [Kubernetes documentation](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy)
 [Policy resource field structure](https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/#audit-k8s-io-v1-PolicyRule)
@@ -72,7 +72,7 @@ If a request comes from a user who belongs to at least one group listed in `user
 
 ## Built-in audit rules
 
-Deckhouse Kubernetes Platform uses the following audit rules, which can be extended by users:
+Deckhouse Platform uses the following audit rules, which can be extended by users:
 - [Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.](#rule-1)
 - [Do not log leader election operations on `Lease` resources.](#rule-2)
 - [Do not log cert-manager leader election ConfigMaps.](#rule-3)
@@ -338,13 +338,16 @@ users:
   - system:serviceaccount:d8-system:deckhouse
   - system:serviceaccount:d8-system:documentation
   - system:serviceaccount:d8-system:network-policy-engine
+  - system:serviceaccount:d8-system:registry-controller
   - system:serviceaccount:d8-system:registry-nodeservices
+  - system:serviceaccount:d8-system:registry-storage
   - system:serviceaccount:d8-system:terraform-auto-converger
   - system:serviceaccount:d8-system:terraform-state-exporter
   - system:serviceaccount:d8-system:webhook-handler
   - system:serviceaccount:d8-user-authn:basic-auth-proxy
   - system:serviceaccount:d8-user-authn:controller
   - system:serviceaccount:d8-user-authn:dex
+  - system:serviceaccount:d8-user-authz:controller
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
   - system:serviceaccount:d8-user-authz:webhook
   - system:serviceaccount:kube-system:d8-control-plane-manager
@@ -817,13 +820,16 @@ rules:
       - system:serviceaccount:d8-system:deckhouse
       - system:serviceaccount:d8-system:documentation
       - system:serviceaccount:d8-system:network-policy-engine
+      - system:serviceaccount:d8-system:registry-controller
       - system:serviceaccount:d8-system:registry-nodeservices
+      - system:serviceaccount:d8-system:registry-storage
       - system:serviceaccount:d8-system:terraform-auto-converger
       - system:serviceaccount:d8-system:terraform-state-exporter
       - system:serviceaccount:d8-system:webhook-handler
       - system:serviceaccount:d8-user-authn:basic-auth-proxy
       - system:serviceaccount:d8-user-authn:controller
       - system:serviceaccount:d8-user-authn:dex
+      - system:serviceaccount:d8-user-authz:controller
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
       - system:serviceaccount:d8-user-authz:webhook
       - system:serviceaccount:kube-system:d8-control-plane-manager

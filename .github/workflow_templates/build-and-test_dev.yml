@@ -59,6 +59,14 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "build_tests_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
+  build_fuzz:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Build fuzz images
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "build_fuzz_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
   go_generate:
     name: Go Generate
     needs:
@@ -139,6 +147,14 @@ jobs:
       - git_info
       - pull_request_info
 {!{ tmpl.Exec "tests_node_controller_envtest_template" (slice $ctx) | strings.Indent 4 }!}
+
+  tests_registry_images:
+    if: ${{ needs.pull_request_info.outputs.changes_registry_images == 'true' }}
+    name: Tests registry images
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "tests_registry_images_template" (slice $ctx) | strings.Indent 4 }!}
 
   tests_python_webhooks:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

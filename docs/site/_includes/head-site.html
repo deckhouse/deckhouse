@@ -1,8 +1,15 @@
 {%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <!-- favicon -->
-<link rel="apple-touch-icon" href="{{ site.urls[page.lang] }}/images/favicon/logo-180.png">
-<link rel="icon" type="image/svg+xml" href="{{ site.urls[page.lang] }}/images/favicon/logo.svg">
-<link rel="icon" type="image/svg+xml" media="(prefers-color-scheme: dark)" href="{{ site.urls[page.lang] }}/images/favicon/logo-on-white.svg">
+{%- comment -%}
+  The Russian site carries the new brand mark, the English one does not, so the three
+  files the new brand ships are served from favicon/ru for ru pages only. There is no new
+  .ico - the live site does not link one either - so the shortcut icon below stays shared.
+{%- endcomment -%}
+{%- assign faviconDir = "/images/favicon" -%}
+{%- if page.lang == "ru" -%}{%- assign faviconDir = "/images/favicon/ru" -%}{%- endif -%}
+<link rel="apple-touch-icon" href="{{ site.urls[page.lang] }}{{ faviconDir }}/logo-180.png">
+<link rel="icon" type="image/svg+xml" href="{{ site.urls[page.lang] }}{{ faviconDir }}/logo.svg">
+<link rel="icon" type="image/svg+xml" media="(prefers-color-scheme: dark)" href="{{ site.urls[page.lang] }}{{ faviconDir }}/logo-on-white.svg">
 
 <link rel="shortcut icon" href="{{ site.urls[page.lang] }}/images/favicon/favicon.ico">
 <link rel="manifest" href="/site.webmanifest">

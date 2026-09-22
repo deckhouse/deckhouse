@@ -143,7 +143,7 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 			"region":                  []byte(`"ru-central1"`),
 			"zones":                   []byte(`["ru-central1-a","ru-central1-b"]`),
 		}),
-		secret(cloudInstanceManagerNS, packagesProxyTokenSecretName, map[string][]byte{"token": []byte("packages-proxy-token")}),
+		secret(cloudInstanceManagerNS, PackagesProxyTokenSecretName, map[string][]byte{"token": []byte("packages-proxy-token")}),
 		secret(kubeSystemNS, apiProxyCertSecretName, map[string][]byte{"crt": []byte("PROXY-CERT"), "key": []byte("PROXY-KEY")}),
 		secret(kubeSystemNS, controlPlaneArgsSecretName, map[string][]byte{
 			"arguments.json":    []byte(`{"nodeMonitorGracePeriod":40}`),

@@ -2,7 +2,7 @@
 title: "Стандартный NetworkPolicy Kubernetes"
 permalink: ru/admin/configuration/network/policy/kubernetes_networkpolicy.html
 description: |
-  Описание модели NetworkPolicy Kubernetes, селекторов, default-политик и ограничений API в Deckhouse Kubernetes Platform.
+  Описание модели NetworkPolicy Kubernetes, селекторов, default-политик и ограничений API в Deckhouse Platform.
 lang: ru
 relatedLinks:
   - title: "Network Policies — документация Kubernetes"
@@ -15,7 +15,7 @@ relatedLinks:
     url: troubleshooting.html
 ---
 
-Стандартный ресурс [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) (`networking.k8s.io/v1`) описывает правила фильтрации трафика подов на уровнях L3 и L4 (TCP, UDP, опционально SCTP). В DKP такие политики обрабатываются модулем [`cni-cilium`](/modules/cni-cilium/) или модулем [`network-policy-engine`](/modules/network-policy-engine/) — в зависимости от [выбранного CNI](configuration.html#реализация-сетевых-политик-в-dkp).
+Стандартный ресурс [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) (`networking.k8s.io/v1`) описывает правила фильтрации трафика подов на уровнях L3 и L4 (TCP, UDP, опционально SCTP). В DP такие политики обрабатываются модулем [`cni-cilium`](/modules/cni-cilium/) или модулем [`network-policy-engine`](/modules/network-policy-engine/) — в зависимости от [выбранного CNI](configuration.html#реализация-сетевых-политик-в-dp).
 
 ## Модель изоляции
 

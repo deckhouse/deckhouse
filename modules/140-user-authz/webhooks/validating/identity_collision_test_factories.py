@@ -77,7 +77,8 @@ def _binding_context(kind: str, resource: str, webhook: str, operation: str,
                      spec: typing.Optional[dict], old_spec: typing.Optional[dict],
                      acknowledged: bool, with_rules: bool,
                      cluster_rule_group_subjects: typing.Optional[list] = None,
-                     cluster_rule_user_subjects: typing.Optional[list] = None) -> str:
+                     cluster_rule_user_subjects: typing.Optional[list] = None,
+                     user_info: typing.Optional[dict] = None) -> str:
     metadata = {"name": "test-object"}
     if acknowledged:
         metadata["annotations"] = {COLLISION_ANNOTATION: "true"}
@@ -104,7 +105,9 @@ def _binding_context(kind: str, resource: str, webhook: str, operation: str,
                 "resource": {"group": "deckhouse.io", "version": "v1", "resource": resource},
                 "name": "test-object",
                 "operation": operation,
-                "userInfo": {"username": "kubernetes-admin", "groups": ["system:masters"]},
+                # An ordinary requester with rights on the CRD, not one of the platform
+                # identities the check excludes. Tests that need those pass user_info.
+                "userInfo": user_info or {"username": "helpdesk@example.com", "groups": []},
                 "object": obj,
                 "oldObject": old_obj,
                 "dryRun": False,
@@ -121,14 +124,15 @@ def prepare_group_binding_context(group_name: str, operation: str = "CREATE",
                                   acknowledged: bool = False,
                                   with_rules: bool = True,
                                   with_old_object: bool = True,
-                                  cluster_rule_group_subjects: typing.Optional[list] = None) -> str:
+                                  cluster_rule_group_subjects: typing.Optional[list] = None,
+                                  user_info: typing.Optional[dict] = None) -> str:
     if operation == "DELETE":
         return _binding_context(
             kind="Group", resource="groups",
             webhook="d8-user-authz-group-authorization-rule-collision.deckhouse.io",
             operation=operation, spec=None, old_spec={"name": group_name, "members": []},
             acknowledged=acknowledged, with_rules=with_rules,
-            cluster_rule_group_subjects=cluster_rule_group_subjects,
+            cluster_rule_group_subjects=cluster_rule_group_subjects, user_info=user_info,
         )
 
     # with_old_object=False models an UPDATE whose oldObject the hook cannot read.
@@ -141,7 +145,7 @@ def prepare_group_binding_context(group_name: str, operation: str = "CREATE",
         spec={"name": group_name, "members": []},
         old_spec=old_spec,
         acknowledged=acknowledged, with_rules=with_rules,
-        cluster_rule_group_subjects=cluster_rule_group_subjects,
+        cluster_rule_group_subjects=cluster_rule_group_subjects, user_info=user_info,
     )
 
 
@@ -150,14 +154,15 @@ def prepare_user_binding_context(email: str, operation: str = "CREATE",
                                  acknowledged: bool = False,
                                  with_rules: bool = True,
                                  with_old_object: bool = True,
-                                 cluster_rule_user_subjects: typing.Optional[list] = None) -> str:
+                                 cluster_rule_user_subjects: typing.Optional[list] = None,
+                                 user_info: typing.Optional[dict] = None) -> str:
     if operation == "DELETE":
         return _binding_context(
             kind="User", resource="users",
             webhook="d8-user-authz-user-authorization-rule-collision.deckhouse.io",
             operation=operation, spec=None, old_spec={"email": email},
             acknowledged=acknowledged, with_rules=with_rules,
-            cluster_rule_user_subjects=cluster_rule_user_subjects,
+            cluster_rule_user_subjects=cluster_rule_user_subjects, user_info=user_info,
         )
 
     old_spec = None if operation == "CREATE" or not with_old_object else {"email": old_email}
@@ -166,7 +171,7 @@ def prepare_user_binding_context(email: str, operation: str = "CREATE",
         webhook="d8-user-authz-user-authorization-rule-collision.deckhouse.io",
         operation=operation, spec={"email": email}, old_spec=old_spec,
         acknowledged=acknowledged, with_rules=with_rules,
-        cluster_rule_user_subjects=cluster_rule_user_subjects,
+        cluster_rule_user_subjects=cluster_rule_user_subjects, user_info=user_info,
     )
 
 

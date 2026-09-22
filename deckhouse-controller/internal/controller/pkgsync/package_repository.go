@@ -60,11 +60,13 @@ func (s *syncer) syncPackageRepositories(ctx context.Context) error {
 // to the source: created if missing, the registry settings brought to what the
 // source holds. The module source stays the place where users manage the
 // credentials of a source-backed repository while the old stack lives. The
-// fields the source does not carry (scan interval, login, password) are never
-// touched, so user edits to them survive a restart.
+// repository is not owned by the source: the sync is a one-off migration, and
+// the repository outlives the source it was made from. The fields the source
+// does not carry (scan interval, login, password) are never touched, so user
+// edits to them survive a restart.
 func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.ModuleSource) error {
-	name := repositoryNameForSource(source.Name)
-	desired := registryFromSource(source)
+	name := PackageRepositoryNameForModuleSource(source.Name)
+	desired := packageRepositoryRegistryFromModuleSource(source)
 
 	repo := new(v1alpha1.PackageRepository)
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, repo)
@@ -79,8 +81,7 @@ func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.M
 				Kind:       v1alpha1.PackageRepositoryKind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   name,
-				Labels: map[string]string{"heritage": "deckhouse"},
+				Name: name,
 			},
 			Spec: v1alpha1.PackageRepositorySpec{Registry: desired},
 		}
@@ -120,9 +121,9 @@ func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.M
 	return nil
 }
 
-// registryFromSource maps the source registry block onto the repository shape.
+// packageRepositoryRegistryFromModuleSource maps the source registry block onto the repository shape.
 // Login and password have no source counterpart and stay zero.
-func registryFromSource(source *v1alpha1.ModuleSource) v1alpha1.PackageRepositorySpecRegistry {
+func packageRepositoryRegistryFromModuleSource(source *v1alpha1.ModuleSource) v1alpha1.PackageRepositorySpecRegistry {
 	return v1alpha1.PackageRepositorySpecRegistry{
 		Scheme:    source.Spec.Registry.Scheme,
 		Repo:      source.Spec.Registry.Repo,

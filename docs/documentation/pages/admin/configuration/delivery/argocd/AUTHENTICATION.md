@@ -1,7 +1,7 @@
 ---
 title: "Configuring authentication and authorization"
 permalink: en/admin/configuration/delivery/argocd/authentication/
-description: "Configuring Argo CD authentication and authorization in Deckhouse Kubernetes Platform."
+description: "Configuring Argo CD authentication and authorization in Deckhouse Platform."
 lang: en
 relatedLinks:
   - title: "Official Argo CD website"
@@ -10,8 +10,8 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-Argo CD supports local authentication and is also integrated with the Deckhouse Kubernetes Platform identity and access subsystem.
-You can learn more about configuring [authentication](../../../access/authentication/) and [authorization](../../../access/authorization/) in the DKP documentation.
+Argo CD supports local authentication and is also integrated with the Deckhouse Platform identity and access subsystem.
+You can learn more about configuring [authentication](../../../access/authentication/) and [authorization](../../../access/authorization/) in the DP documentation.
 
 {% alert level="warning" %}
 If no additional settings are defined in the ArgoCD object, the local `admin` account with the `admin` role is active by default.
@@ -26,6 +26,19 @@ When an ArgoCD object is created, the `admin` user with the `admin` role is crea
 ```bash
 d8 k -n argocd get secret argocd-cluster -o jsonpath='{.data.admin\.password}' | base64 -d
 ```
+
+{% alert level="warning" %}
+We recommend changing the automatically generated `admin` user password using Argo CD CLI command:
+
+```bash
+argocd login <ARGOCD_DOMAIN>:443 --username admin --password <ADMIN_PASSWORD>
+argocd account update-password \
+  --account admin \
+  --current-password <ADMIN_PASSWORD> \
+  --new-password <NEW_PASSWORD>
+```
+
+{% endalert %}
 
 ### Creating additional local users
 
@@ -103,7 +116,7 @@ After disabling local authentication, review the access rules in the [Configurin
 
 ## SSO authentication
 
-Before configuring the ArgoCD object, create a [DexClient](/modules/user-authn/cr.html#dexclient) object. It is used as an OAuth2 client and is required for integration with Deckhouse Kubernetes Platform:
+Before configuring the ArgoCD object, create a [DexClient](/modules/user-authn/cr.html#dexclient) object. It is used as an OAuth2 client and is required for integration with Deckhouse Platform:
 
 ```bash
 d8 k create -f -<<EOF
@@ -121,13 +134,13 @@ EOF
 
 `<ARGOCD_DOMAIN>` is the fully qualified domain name (FQDN) set in the [`.spec.server.host`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-host) section of ArgoCD.
 
-Wait until Deckhouse Kubernetes Platform creates a Secret with the client secret key:
+Wait until Deckhouse Platform creates a Secret with the client secret key:
 
 ```shell
 d8 k -n argocd get secret/dex-client-argocd
 ```
 
-Configure the ArgoCD object to use SSO in Deckhouse Kubernetes Platform:
+Configure the ArgoCD object to use SSO in Deckhouse Platform:
 
 ```yaml
 apiVersion: argoproj.io/v1beta1
@@ -192,7 +205,7 @@ time="2024-10-16T14:12:59Z" level=warning msg="Failed to verify token: failed to
 
 ### Using a self-signed certificate
 
-First obtain the self-signed certificate used by the Deckhouse Kubernetes Platform identity and access subsystem:
+First obtain the self-signed certificate used by the Deckhouse Platform identity and access subsystem:
 
 ```bash
 d8 k -n d8-user-authn get secret ingress-tls -o jsonpath='{.data.tls\.crt}' | base64 -d
@@ -249,7 +262,7 @@ Argo CD does not allow issuing permanent tokens for users authenticated with SSO
 argocd login <ARGOCD_DOMAIN>:443 --sso
 ```
 
-When this command runs on the administrator workstation, a web browser opens with the Deckhouse Kubernetes Platform authentication form.
+When this command runs on the administrator workstation, a web browser opens with the Deckhouse Platform authentication form.
 
 {% alert level="info" %}
 To issue a permanent token, create a local Argo CD user and set the `apiKey` attribute for them. In this case, the user has access rights only to the Argo CD API.

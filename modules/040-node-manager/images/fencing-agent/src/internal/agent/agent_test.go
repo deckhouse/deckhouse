@@ -268,7 +268,6 @@ func runCalls(body *ast.BlockStmt) []string {
 	return calls
 }
 
-
 func TestFeedGateLoopsDoNotWaitForTheInformerCache(t *testing.T) {
 	loops := loopBarriers(t)
 
@@ -314,7 +313,7 @@ func TestReadinessNeedsTheInformerCache(t *testing.T) {
 		"all three":            {joined: yes, watchdog: yes, cache: yes, want: true},
 		"not joined":           {joined: no, watchdog: yes, cache: yes, want: false},
 		"watchdog policy down": {joined: yes, watchdog: no, cache: yes, want: false},
-		"cache never synced": {joined: yes, watchdog: yes, cache: no, want: false},
+		"cache never synced":   {joined: yes, watchdog: yes, cache: no, want: false},
 	}
 
 	for name, tc := range cases {

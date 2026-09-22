@@ -14,9 +14,9 @@
 
 {% unless page.ee_only == true -%}
 {% if page.lang == 'ru' %}
-#### Выберите редакцию Deckhouse Kubernetes Platform
+#### Выберите редакцию Deckhouse Platform
 {% else %}
-#### Select the Deckhouse Kubernetes Platform revision
+#### Select the Deckhouse Platform revision
 {% endif %}
 <div class="tabs-block">
    <ul class="tabs__container tabs__container--title">
@@ -34,12 +34,12 @@
 {% alert level="warning" %}
 Установка {{ page.title_main }} в Community Edition недоступна. [Ознакомиться с условиями и ценами](/products/kubernetes-platform/features/) на коммерческие редакции.
 {% endalert %}
-<h4>Выберите редакцию Deckhouse Kubernetes Platform</h4>
+<h4>Выберите редакцию Deckhouse Platform</h4>
 {% else %}
 {% alert level="warning" %}
 The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](/products/kubernetes-platform/).
 {% endalert %}
-<h4>Select the Deckhouse Kubernetes Platform revision</h4>
+<h4>Select the Deckhouse Platform revision</h4>
 {% endif %}
 <div class="tabs-block">
   <ul class="tabs__container tabs__container--title">

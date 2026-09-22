@@ -49,6 +49,11 @@ workflow:
     - *skip_e2e_run
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
 
+.rules:on_schedule_codeql:
+  rules:
+    - *skip_e2e_run
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_CODEQL_ENABLE == "true"
+
 .rules:on_schedule_cve_scans:
   rules:
     - *skip_e2e_run
@@ -73,10 +78,27 @@ workflow:
   rules:
     - *skip_e2e_run
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_SVACE_ANALYZE_ENABLE == "true"
+
+.rules:on_schedule_reprobucibility:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_REPRODUCIBILITY == "true"
+
+.rules:on_schedule_reprobucibility_timing_report:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_REPRODUCIBILITY_TIMING_REPORT == "true"
+
+.rules:on_schedule_svace_analyze:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_SVACE_ANALYZE_ENABLE == "true"
 .rules:on_schedule_k8s_autoupdate:
   rules:
     - *skip_e2e_run
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_K8S_AUTOUPDATE_ENABLE == "true"
+
+.rules:on_schedule_av_scan:
+  rules:
+    - *skip_e2e_run
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_AV_SCAN_ENABLE == "true"
 
 # Manual edition builds (MR / main). Release-branch editions are automatic.
 .rules:on_main_manual:
@@ -116,6 +138,15 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - modules/040-node-manager/images/node-controller/**/*
+
+# Mirrors the `registry_images` path filter of the GitHub workflow.
+.rules:on_merge_request_registry_images:
+  rules:
+    - *skip_e2e_run
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - modules/038-registry/images/**/*
+        - go_lib/registry/**/*
 
 .rules:on_merge_request_docs:
   rules:

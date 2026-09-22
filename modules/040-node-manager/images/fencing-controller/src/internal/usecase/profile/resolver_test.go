@@ -37,10 +37,10 @@ import (
 // shippedTimings are the fallback TTL and the evacuation delay of every built-in
 // profile, as the ADR and the module templates define them.
 var shippedTimings = map[v1alpha1.ProfileName]fsm.Params{
-	v1alpha1.ProfileCritical: {FallbackTTL: time.Second, EvacuationDelay: 1200 * time.Millisecond},
-	v1alpha1.ProfileMedium:   {FallbackTTL: 4 * time.Second, EvacuationDelay: 6 * time.Second},
-	v1alpha1.ProfileModerate: {FallbackTTL: 10 * time.Second, EvacuationDelay: 20 * time.Second},
-	v1alpha1.ProfileSlow:     {FallbackTTL: 20 * time.Second, EvacuationDelay: 45 * time.Second},
+	v1alpha1.ProfileCritical: {FallbackTTL: 3500 * time.Millisecond, EvacuationDelay: 3 * time.Second},
+	v1alpha1.ProfileMedium:   {FallbackTTL: 8 * time.Second, EvacuationDelay: 6 * time.Second},
+	v1alpha1.ProfileModerate: {FallbackTTL: 21 * time.Second, EvacuationDelay: 20 * time.Second},
+	v1alpha1.ProfileSlow:     {FallbackTTL: 41 * time.Second, EvacuationDelay: 45 * time.Second},
 }
 
 // TestResolveReadsEveryBuiltinProfile covers the four names the CRD enum admits,

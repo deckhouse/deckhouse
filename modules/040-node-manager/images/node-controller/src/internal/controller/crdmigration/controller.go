@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -127,7 +128,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	crdName := req.Name
 
-	if isConversionCRD(crdName) {
+	if slices.Contains(conversionCRDNames, crdName) {
 		return r.reconcileConversionWebhook(ctx, logger, crdName)
 	}
 
@@ -272,15 +273,6 @@ func ptrString(v string) *string {
 	return &v
 }
 
-func isConversionCRD(name string) bool {
-	for _, n := range conversionCRDNames {
-		if n == name {
-			return true
-		}
-	}
-	return false
-}
-
 func (r *Reconciler) reconcileConversionWebhook(ctx context.Context, logger logr.Logger, crdName string) (ctrl.Result, error) {
 	secret := &corev1.Secret{}
 	if err := r.apiReader.Get(ctx, types.NamespacedName{
@@ -300,7 +292,7 @@ func (r *Reconciler) reconcileConversionWebhook(ctx context.Context, logger logr
 		return ctrl.Result{RequeueAfter: requeuePrecondition}, nil
 	}
 
-	if err := patchConversionWebhook(ctx, r.Client, crdName, caBundle); err != nil {
+	if err := patchConversionWebhook(ctx, r.apiReader, r.Client, crdName, caBundle); err != nil {
 		return ctrl.Result{}, err
 	}
 

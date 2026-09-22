@@ -2,7 +2,7 @@
 title: "Сетевые политики"
 permalink: ru/admin/configuration/network/policy/configuration.html
 description: |
-  Обзор реализаций сетевых политик в Deckhouse Kubernetes Platform: NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall.
+  Обзор реализаций сетевых политик в Deckhouse Platform: NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall.
 lang: ru
 search: network policy, network policies, NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall, сетевые политики, сетевая безопасность
 relatedLinks:
@@ -16,9 +16,9 @@ relatedLinks:
     url: https://docs.cilium.io/en/v1.17/security/host-firewall/
 ---
 
-Сетевые политики ограничивают сетевое взаимодействие подов друг с другом, с внешними системами и узлами кластера. В Deckhouse Kubernetes Platform (DKP) реализация сетевых политик зависит от выбранного CNI.
+Сетевые политики ограничивают сетевое взаимодействие подов друг с другом, с внешними системами и узлами кластера. В Deckhouse Platform (DP) реализация сетевых политик зависит от выбранного CNI.
 
-## Реализация сетевых политик в DKP
+## Реализация сетевых политик в DP
 
 Доступные форматы политик и движок их обработки зависят от используемого в кластере модуля CNI:
 

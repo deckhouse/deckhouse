@@ -1,19 +1,19 @@
 ---
 title: "Priority classes"
 permalink: en/admin/configuration/app-scaling/pod-eviction/priority-classes.html
-description: "Configure pod priority classes in Deckhouse Kubernetes Platform. Pod eviction policies, resource allocation priorities, and cluster resource management optimization."
+description: "Configure pod priority classes in Deckhouse Platform. Pod eviction policies, resource allocation priorities, and cluster resource management optimization."
 relatedLinks:
   - title: Using priority classes
     url: ../../../../user/configuration/app-scaling/priority-classes.html
 ---
 
-Deckhouse Kubernetes Platform (DKP) creates a set of priority classes (PriorityClass) in the cluster and assigns them to its components. Applications can use these classes by setting the `priorityClassName` field. The scheduler takes pod priority into account: if resources are insufficient, pods with lower priority are preempted first.
+Deckhouse Platform (DP) creates a set of priority classes (PriorityClass) in the cluster and assigns them to its components. Applications can use these classes by setting the `priorityClassName` field. The scheduler takes pod priority into account: if resources are insufficient, pods with lower priority are preempted first.
 
 For example, if a pod with the `production-low` class cannot be scheduled due to insufficient resources, the scheduler first preempts pods with a lower priority, such as `develop`, then `cluster-low`, and so on. If `priorityClassName` is not set, the pod is treated as having the lowest priority.
 
 ## Available priority classes
 
-The table lists the priority classes that DKP creates in the cluster, in descending priority order (the higher the value, the higher the priority). Choose a class based on the environment and workload criticality.
+The table lists the priority classes that DP creates in the cluster, in descending priority order (the higher the value, the higher the priority). Choose a class based on the environment and workload criticality.
 
 {% alert level="danger" %}
 Do not use the `system-node-critical`, `system-cluster-critical`, `cluster-medium`, or `cluster-low` priority classes, as they are reserved for critical cluster components.
@@ -35,7 +35,7 @@ Do not use the `system-node-critical`, `system-cluster-critical`, `cluster-mediu
 
 ## Creating additional priority classes
 
-In addition to the classes that DKP creates in the cluster, you can create an additional priority class by specifying a name and a numeric priority value.
+In addition to the classes that DP creates in the cluster, you can create an additional priority class by specifying a name and a numeric priority value.
 
 The following example creates the `critical-applications` priority class with priority `8000`. Pods that use this priority class are preempted before pods with the `production-high` priority class (and higher), but after pods with the `cluster-medium` priority class (and lower).
 

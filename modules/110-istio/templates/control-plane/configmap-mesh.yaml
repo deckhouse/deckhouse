@@ -21,7 +21,16 @@ data:
     {{- if $multicluster.enableIngressGateway }}
       {{ $multicluster.networkName }}:
         endpoints:
+        {{- /*
+          We renamed the peer's registry from the CR name to the cluster ID.
+          Keep the old name here until istiod reloads the re-keyed remote secret.
+
+          TODO: drop the CR-name entry after 1.78.
+        */}}
+        - fromRegistry: {{ $multicluster.clusterID }}
+        {{- if ne $multicluster.name $multicluster.clusterID }}
         - fromRegistry: {{ $multicluster.name }}
+        {{- end }}
         gateways:
         {{- range $ingressGateway := $multicluster.ingressGateways }}
         - address: {{ $ingressGateway.address }}

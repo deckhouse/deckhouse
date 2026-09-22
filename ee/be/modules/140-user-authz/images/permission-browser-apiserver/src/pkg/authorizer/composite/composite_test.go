@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
@@ -92,6 +93,28 @@ func TestCompositeAuthorizer_NilMultitenancy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, authorizer.DecisionAllow, decision)
 	assert.Equal(t, "RBAC allowed", reason)
+}
+
+type bindSpy struct {
+	mockAuthorizer
+	bound user.Info
+}
+
+func (s *bindSpy) BindSubject(ctx context.Context, u user.Info) context.Context {
+	s.bound = u
+	return ctx
+}
+
+func TestCompositeAuthorizer_BindSubjectForwards(t *testing.T) {
+	mt := &bindSpy{}
+	rbac := &bindSpy{}
+	c := NewCompositeAuthorizer(mt, rbac)
+	u := &user.DefaultInfo{Name: "editor@example.io"}
+
+	c.BindSubject(context.Background(), u)
+
+	assert.Equal(t, u, mt.bound)
+	assert.Equal(t, u, rbac.bound)
 }
 
 func TestCompositeAuthorizer_BothNoOpinion(t *testing.T) {

@@ -3,7 +3,7 @@ title: Модуль cert-manager
 permalink: ru/architecture/security/cert-manager.html
 lang: ru
 search: cert-manager, сертификат, letsencrypt, acme
-description: Архитектура модуля cert-manager в Deckhouse Kubernetes Platform.
+description: Архитектура модуля cert-manager в Deckhouse Platform.
 ---
 
 Модуль [`cert-manager`](/modules/cert-manager/) автоматизирует полный цикл управления сертификатами в кластере: от выпуска и продления сертификатов, включая самоподписанные, до интеграции с внешними центрами сертификации, такими как Let's Encrypt, HashiCorp Vault и Venafi. Это упрощает обеспечение безопасности сервисов и позволяет централизованно контролировать процессы, связанные с сертификатами.
@@ -17,7 +17,7 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура модуля [`cert-manager`](/modules/cert-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`cert-manager`](/modules/cert-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля cert-manager](../../images/architecture/security/c4-l2-cert-manager.ru.png)
 
@@ -25,7 +25,7 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
 
 Модуль `cert-manager` состоит из следующих компонентов:
 
-1. **Cert-manager** — контроллер, обеспечивающий полный цикл управления сертификатами в Deckhouse Kubernetes Platform (DKP). `Cert-manager` управляет следующими кастомными ресурсами:
+1. **Cert-manager** — контроллер, обеспечивающий полный цикл управления сертификатами в Deckhouse Platform (DP). `Cert-manager` управляет следующими кастомными ресурсами:
 
    - Issuer — описывает настройки источника, от которого выпускаются сертификаты, например CA, ACME-сервис или внешний PKI-провайдер. Действует в пределах выбранного неймспейса;
    - ClusterIssuer — кластерный аналог Issuer: действует на весь кластер и доступен во всех неймспейсах;
@@ -47,11 +47,11 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
    - валидацию кастомных ресурсов Issuer, ClusterIssuer, Certificate, CertificateRequest, Challenge, Order;
    - мутацию кастомных ресурсов CertificateRequest — вебхук добавляет информацию о пользователе, создавшем запрос на сертификат.
 
-    В DKP валидация отключена для ресурсов в неймспейсе `d8-cert-manager`, а также для неймспейсов с лейблом `cert-manager.io/disable-validation=true`.
+    В DP валидация отключена для ресурсов в неймспейсе `d8-cert-manager`, а также для неймспейсов с лейблом `cert-manager.io/disable-validation=true`.
 
 1. **Cainjector** — дополнительный компонент, состоящий из одного [контейнера cainjector](https://cert-manager.io/docs/concepts/ca-injector/). Cainjector отвечает за автоматическую подстановку или обновление сертификатов корневого центра сертификации (CA) во все релевантные ресурсы Kubernetes: ValidatingWebhookConfiguration, MutatingWebhookConfiguration, CustomResourceDefinition и APIService. Это обеспечивает актуальность доверенных корневых сертификатов для сервисов, использующих вебхуки и расширения API.
 
-   Cainjector включается параметром [`.spec.settings.enableCAInjector`](/modules/cert-manager/configuration.html#parameters-enablecainjector) в настройках модуля [`cert-manager`](/modules/cert-manager/configuration.html). DKP не использует cainjector для собственных компонентов, поэтому включайте его только в том случае, если вашим приложениям или внешним расширениям требуется инъекция CA в ресурсы Kubernetes.
+   Cainjector включается параметром [`.spec.settings.enableCAInjector`](/modules/cert-manager/configuration.html#parameters-enablecainjector) в настройках модуля [`cert-manager`](/modules/cert-manager/configuration.html). DP не использует cainjector для собственных компонентов, поэтому включайте его только в том случае, если вашим приложениям или внешним расширениям требуется инъекция CA в ресурсы Kubernetes.
 
    Cainjector обрабатывает только ресурсы с аннотациями  `cert-manager.io/inject-ca-from`, `cert-manager.io/inject-ca-from-secret` или `cert-manager.io/inject-apiserver-ca` в зависимости от типа ресурса.
 

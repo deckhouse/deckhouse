@@ -26,28 +26,52 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-// The admin kubeconfig is collected once and is the only way into the cluster,
-// so both ways of losing it are caught before anything is created: a Commander
-// run that names no path, and a path the tmp cleaner sweeps at exit.
+// dhctl-server writes no default kubeconfig and its bootstrap response carries
+// none, so a Commander-mode run without --kubeconfig-out would end with no way
+// into the cluster. Caught before anything is created rather than after.
 func TestImmutableKubeconfigOut(t *testing.T) {
-	tmpDir := t.TempDir()
-
 	tests := []struct {
 		name          string
 		commanderMode bool
 		kubeconfigOut string
-		wantErr       error
-		wantMessage   string
+		wantErr       bool
 	}{
 		{name: "the CLI writes a default path", commanderMode: false},
-		{name: "the CLI with an explicit path", kubeconfigOut: filepath.Join(t.TempDir(), "admin.kubeconfig")},
-		{name: "Commander with a path", commanderMode: true, kubeconfigOut: filepath.Join(t.TempDir(), "admin.kubeconfig")},
-		{
-			name:          "Commander without a path",
-			commanderMode: true,
-			wantErr:       immutable.ErrKubeconfigOutRequired,
-			wantMessage:   "--kubeconfig-out",
-		},
+		{name: "the CLI with an explicit path", kubeconfigOut: "/tmp/admin.kubeconfig"},
+		{name: "Commander with a path", commanderMode: true, kubeconfigOut: "/tmp/admin.kubeconfig"},
+		{name: "Commander without a path", commanderMode: true, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			check := ImmutableKubeconfigOut(
+				&options.BootstrapOptions{KubeconfigOut: tt.kubeconfigOut},
+				tt.commanderMode,
+			)
+
+			err := check.Run(t.Context())
+			if !tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, immutable.ErrKubeconfigOutRequired)
+			require.Contains(t, err.Error(), "--kubeconfig-out")
+		})
+	}
+}
+
+// The admin kubeconfig is collected once and is the only way into the cluster,
+// so a path the tmp cleaner sweeps at exit is caught before anything is created.
+func TestImmutableKubeconfigKept(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	tests := []struct {
+		name          string
+		kubeconfigOut string
+		wantMessage   string
+	}{
+		{name: "no path at all"},
+		{name: "a path outside the tmp directory", kubeconfigOut: filepath.Join(t.TempDir(), "admin.kubeconfig")},
 		{
 			name:          "a path dhctl empties on its way out",
 			kubeconfigOut: filepath.Join(tmpDir, "admin.yaml"),
@@ -62,21 +86,17 @@ func TestImmutableKubeconfigOut(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			check := ImmutableKubeconfigOut(
+			check := ImmutableKubeconfigKept(
 				&options.BootstrapOptions{KubeconfigOut: tt.kubeconfigOut},
 				&options.GlobalOptions{TmpDir: tmpDir},
-				tt.commanderMode,
 			)
 
 			err := check.Run(t.Context())
-			if tt.wantErr == nil && tt.wantMessage == "" {
+			if tt.wantMessage == "" {
 				require.NoError(t, err)
 				return
 			}
 			require.Error(t, err)
-			if tt.wantErr != nil {
-				require.ErrorIs(t, err, tt.wantErr)
-			}
 			require.Contains(t, err.Error(), tt.wantMessage)
 		})
 	}
