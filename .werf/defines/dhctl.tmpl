@@ -29,6 +29,13 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
+- add: {{ printf "%s/pkg/deckhouse-registry" $prefix }}
+  to: /src/pkg/deckhouse-registry
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
 shell:
   install:
   - cd /src

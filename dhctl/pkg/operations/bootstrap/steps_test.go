@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -175,6 +176,31 @@ func TestInstallDeckhouse(t *testing.T) {
 			DeckhouseTimeout:    15 * time.Minute,
 		}
 	}
+
+	// The provider module documents have to reach the cluster before the readiness wait, not after
+	// it: the cloud-controller-manager that clears node.cloudprovider.kubernetes.io/uninitialized
+	// ships inside that module, and while the taint stands Deckhouse's own pods stay Pending and the
+	// wait can never end. There is no Ready pod here, so this failure can surface only if the queue
+	// runs ahead of the wait.
+	t.Run("applies the module queue before waiting for readiness", func(t *testing.T) {
+		fakeClient := client.NewFakeKubernetesClient()
+
+		deploymentExisted := false
+
+		params := getInstallParams()
+		params.DeckhouseTimeout = 2 * time.Second
+		params.AfterManifestsTask = func() error {
+			_, err := fakeClient.AppsV1().Deployments("d8-system").Get(t.Context(), "deckhouse", metav1.GetOptions{})
+			deploymentExisted = err == nil
+
+			return errors.New("module queue refused")
+		}
+
+		_, err := InstallDeckhouse(ctx, fakeClient, conf, params)
+
+		require.ErrorContains(t, err, "module queue refused")
+		require.True(t, deploymentExisted, "the controller Deployment must exist before the module queue is applied")
+	})
 
 	t.Run("Does not have cluster uuid config map", func(t *testing.T) {
 		t.Run("should install Deckhouse", func(t *testing.T) {

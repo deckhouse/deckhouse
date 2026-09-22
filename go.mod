@@ -56,7 +56,6 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/go_lib/dependency/cr v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry/apis v0.0.0-00010101000000-000000000000
@@ -382,7 +381,6 @@ replace github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy => ./go_li
 
 replace github.com/deckhouse/deckhouse/go_lib/configtools/conversion => ./go_lib/configtools/conversion
 
-replace github.com/deckhouse/deckhouse/go_lib/dependency/cr => ./go_lib/dependency/cr
 
 replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ./go_lib/dependency/k8s/drain
 

@@ -44,6 +44,12 @@ type InstallDeckhouseResult struct {
 
 type InstallDeckhouseParams struct {
 	BeforeDeckhouseTask func() error
+
+	// AfterManifestsTask runs once the controller Deployment exists but before the readiness wait.
+	// The ModuleSource and ModulePullOverride CRDs are registered by the controller as it starts, so
+	// documents naming them cannot go into BeforeDeckhouseTask: that one runs before the Deployment
+	// is even created, when only the ModuleConfig CRD has been installed by hand.
+	AfterManifestsTask func() error
 	DeckhouseTimeout    time.Duration
 }
 
@@ -85,6 +91,16 @@ func InstallDeckhouse(
 		}
 
 		res.ManifestResult = resManifests
+
+		// Before the readiness wait, not after it: a cloud provider published outside this image
+		// installs from these documents, and the cloud-controller-manager it ships is what clears
+		// node.cloudprovider.kubernetes.io/uninitialized. Left until after the wait, the taint keeps
+		// Deckhouse's own pods Pending and the wait can never end.
+		if params.AfterManifestsTask != nil {
+			if err := params.AfterManifestsTask(); err != nil {
+				return fmt.Errorf("apply provider module documents: %w", err)
+			}
+		}
 
 		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
 		if err != nil {
