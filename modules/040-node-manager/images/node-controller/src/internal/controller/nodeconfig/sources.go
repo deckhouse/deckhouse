@@ -95,6 +95,10 @@ type clusterInputs struct {
 // decisions are followed by writes and the manager's cache is a beat behind.
 type sourceReader struct {
 	Reader client.Reader
+	// rootHash resolves the OS image digest to the root hash of the root inside it,
+	// once per image. Nil until the first use, so the zero sourceReader the tests
+	// build keeps working.
+	rootHash *rootHashResolver
 }
 
 // readClusterInputs collects everything a NodeConfig is rendered from. Every
@@ -259,7 +263,14 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 	if err != nil {
 		return err
 	}
-	in.OSImage = internalv1alpha1.OSImage{Digest: osImage}
+	// The root hash is what a node compares by; the digest only says where to look.
+	// Best effort on purpose — a node handed no hash reads the same value out of the
+	// artifact, so a registry that cannot be reached costs a download and not a
+	// configuration.
+	in.OSImage = internalv1alpha1.OSImage{
+		Digest:   osImage,
+		RootHash: s.rootHashes().resolve(ctx, in.Registry, imagesRepo, osImage),
+	}
 
 	in.SandboxImage, err = sandboxImage(images, imagesRepo)
 	if err != nil {
@@ -274,6 +285,15 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 	in.NodeExtensionConflicts = resolveNERConflicts(in.NodeExtensions)
 
 	return nil
+}
+
+// rootHashes is the resolver, built on first use so that a sourceReader assembled
+// by hand — which is every test — needs no wiring to stay valid.
+func (s *sourceReader) rootHashes() *rootHashResolver {
+	if s.rootHash == nil {
+		s.rootHash = newRootHashResolver()
+	}
+	return s.rootHash
 }
 
 // readRegistry describes the cluster's registry: the spec a node needs to reach
