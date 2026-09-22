@@ -269,8 +269,6 @@ replace github.com/deckhouse/deckhouse/pkg/log => ../pkg/log
 
 replace github.com/deckhouse/deckhouse/pkg/deckhouse-registry => ../pkg/deckhouse-registry
 
-replace github.com/deckhouse/deckhouse/go_lib/dependency/cr => ../go_lib/dependency/cr
-
 replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ../go_lib/dependency/k8s/drain
 
 replace github.com/deckhouse/deckhouse/go_lib/registry => ../go_lib/registry
