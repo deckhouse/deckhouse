@@ -63,7 +63,7 @@ data "yandex_vpc_subnet" "kube_d" {
 locals { 
   reserved_address_name = join("-", [local.prefix, "master", var.nodeIndex])
 
-  reserved_address_count = (var.nodeIndex < lenght(local.external_ip_addresses)
+  reserved_address_count = (var.nodeIndex < length(local.external_ip_addresses)
     ? (local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0)
     : (length(local.external_ip_addresses) > 0 ? 1 : 0))
 }
