@@ -16,8 +16,12 @@ build:
         # without anyone pinning it by hand; see engine/docs/os-image-identity.md.
         # werf's own labels are left to werf. A base built somewhere else means
         # revisiting this list.
-        - /^pkg\./
-        - /^org\.opencontainers\./
+        # The pattern is matched against the whole label name, which is why the
+        # previous /.*/ took everything: a prefix alone matches nothing, so the
+        # trailing .* is load-bearing. Measured on a build: /^pkg\./ left all nine
+        # pkg.* labels on node-manager/kernel-devel untouched.
+        - /^pkg\..*/
+        - /^org\.opencontainers\..*/
 ---
 {{- $_ := set . "DistroPackagesProxy" (env "DISTRO_PACKAGES_PROXY" "") }}
 {{- $_ := set . "CargoProxy" (env "CARGO_PROXY" "false") }}
