@@ -17,6 +17,7 @@ limitations under the License.
 package validation
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 
@@ -26,9 +27,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // Rejects a first write that disagrees with ClusterConfiguration, and any clearing that would move
@@ -44,13 +44,10 @@ func (v *moduleConfigValidator) validateControlPlaneManagerClusterDomain(
 	}
 
 	if newDomain == "" {
-		return v.rejectClusterDomainRemoval(ctx, oldDomain, func(ccDomain string) string {
-			return fmt.Sprintf(
-				"clearing network.clusterDomain would change the cluster domain from %q to %q, restarting "+
-					"kube-apiserver with a different --service-account-issuer and invalidating every token "+
-					"in the cluster; set clusterDomain: %q in ClusterConfiguration before clearing this field",
-				oldDomain, ccDomain, oldDomain)
-		})
+		if next, moves := v.clusterDomainAfterRemoval(ctx, oldDomain); moves {
+			return rejectResult(clusterDomainRemovalMessage("clearing network.clusterDomain", oldDomain, next))
+		}
+		return nil, nil
 	}
 
 	if oldDomain != "" {
@@ -74,36 +71,33 @@ func (v *moduleConfigValidator) validateControlPlaneManagerClusterDomainDelete(
 	ctx context.Context, oldSettings map[string]interface{},
 ) (*kwhvalidating.ValidatorResult, error) {
 	domain := settingsClusterDomain(oldSettings)
-	return v.rejectClusterDomainRemoval(ctx, domain, func(ccDomain string) string {
-		return fmt.Sprintf(
-			"deleting this ModuleConfig would change the cluster domain from %q to %q, restarting "+
-				"kube-apiserver with a different --service-account-issuer and invalidating every token in "+
-				"the cluster; set clusterDomain: %q in ClusterConfiguration before deleting this setting",
-			domain, ccDomain, domain)
-	})
+	if next, moves := v.clusterDomainAfterRemoval(ctx, domain); moves {
+		return rejectResult(clusterDomainRemovalMessage("deleting this ModuleConfig", domain, next))
+	}
+	return nil, nil
 }
 
-// Shared by the delete and clear paths: rejects only when dropping the domain here would change what
-// the cluster resolves today.
-func (v *moduleConfigValidator) rejectClusterDomainRemoval(
-	ctx context.Context, domain string, message func(ccDomain string) string,
-) (*kwhvalidating.ValidatorResult, error) {
+// Where the domain would move if dropped here, and whether that is a move at all. Fail-open on an
+// unreadable Secret.
+func (v *moduleConfigValidator) clusterDomainAfterRemoval(ctx context.Context, domain string) (string, bool) {
 	if domain == "" {
-		return nil, nil
+		return "", false
 	}
 
 	ccDomain, ok := v.readRawClusterConfigurationDomain(ctx)
 	if !ok {
-		return nil, nil
-	}
-	if ccDomain == "" {
-		ccDomain = hooks.DefaultClusterDomain
-	}
-	if ccDomain == domain {
-		return nil, nil
+		return "", false
 	}
 
-	return rejectResult(message(ccDomain))
+	ccDomain = cmp.Or(ccDomain, hooks.DefaultClusterDomain)
+	return ccDomain, ccDomain != domain
+}
+
+func clusterDomainRemovalMessage(action, from, to string) string {
+	return fmt.Sprintf(
+		"%s would change the cluster domain from %q to %q, restarting kube-apiserver with a different "+
+			"--service-account-issuer and invalidating every token in the cluster; set clusterDomain: %q "+
+			"in ClusterConfiguration before that", action, from, to, from)
 }
 
 // Presence, not value. A read error reports false, which keeps ClusterConfiguration validated - the

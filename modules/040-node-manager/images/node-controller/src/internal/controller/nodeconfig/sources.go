@@ -517,9 +517,7 @@ func (s *sourceReader) readClusterConfiguration(ctx context.Context) (clusterCon
 	if mcNetwork.PodSubnetNodeCIDRPrefix != "" {
 		config.PodSubnetNodeCIDRPrefix = intstr.FromString(mcNetwork.PodSubnetNodeCIDRPrefix)
 	}
-	if mcNetwork.ClusterDomain != "" {
-		config.ClusterDomain = mcNetwork.ClusterDomain
-	}
+	config.ClusterDomain = cmp.Or(mcNetwork.ClusterDomain, config.ClusterDomain)
 
 	return config, nil
 }

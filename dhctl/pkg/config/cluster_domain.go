@@ -17,35 +17,37 @@
 
 package config
 
-import "fmt"
+import (
+	"cmp"
+	"fmt"
+)
 
 // Used when neither ModuleConfig nor ClusterConfiguration sets the domain.
 const DefaultClusterDomain = "cluster.local"
 
-func (m *MetaConfig) moduleConfigClusterDomain() string {
-	return m.moduleConfigNetwork().ClusterDomain
+// One source for both candidate values, so the resolver and the two checks below cannot drift apart.
+func (m *MetaConfig) clusterDomainParam() networkParam {
+	return networkParam{
+		name: "clusterDomain",
+		mc:   m.moduleConfigNetwork().ClusterDomain,
+		cc:   m.clusterConfigString("clusterDomain"),
+	}
 }
 
 func (m *MetaConfig) ClusterDomainResolved() string {
-	if domain := m.moduleConfigClusterDomain(); domain != "" {
-		return domain
-	}
-	if domain := m.clusterConfigString("clusterDomain"); domain != "" {
-		return domain
-	}
-	return DefaultClusterDomain
+	return cmp.Or(m.clusterDomainParam().resolved(), DefaultClusterDomain)
 }
 
 // ClusterDomainKnown is false only when the ModuleConfig could not be read and ClusterConfiguration
 // carries no domain: resolving the default then would render a wrong service-account issuer.
 func (m *MetaConfig) ClusterDomainKnown() bool {
-	return !m.CPMModuleConfigUnreadable || m.clusterConfigString("clusterDomain") != ""
+	return !m.CPMModuleConfigUnreadable || m.clusterDomainParam().cc != ""
 }
 
 // Fails when the domain is set in neither document. Bootstrap and render only: the in-cluster hook
 // parses without ModuleConfig documents, where this would reject every migrated cluster.
 func (m *MetaConfig) RequireClusterDomain() error {
-	if m.moduleConfigClusterDomain() != "" || m.clusterConfigString("clusterDomain") != "" {
+	if m.clusterDomainParam().resolved() != "" {
 		return nil
 	}
 
@@ -58,7 +60,7 @@ func (m *MetaConfig) RequireClusterDomain() error {
 // Set in both documents at once is unresolvable at bootstrap, even though ClusterDomainResolved
 // would silently pick the ModuleConfig one.
 func (m *MetaConfig) RequireClusterDomainSingleSource() error {
-	if m.moduleConfigClusterDomain() != "" && m.clusterConfigString("clusterDomain") != "" {
+	if p := m.clusterDomainParam(); p.mc != "" && p.cc != "" {
 		return fmt.Errorf(
 			"clusterDomain must be set in only one of ModuleConfig control-plane-manager " +
 				"(spec.settings.network.clusterDomain) or ClusterConfiguration (deprecated), not both")

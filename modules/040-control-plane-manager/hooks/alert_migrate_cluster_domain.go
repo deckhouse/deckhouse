@@ -34,8 +34,6 @@ import (
 // DefaultClusterDomain is used when neither document sets the domain.
 const DefaultClusterDomain = "cluster.local"
 
-// Reads the Secret directly: global.clusterConfiguration.clusterDomain carries the resolved value and
-// is never empty, so it cannot tell whether the deprecated field is still there.
 const (
 	obsoleteClusterDomainMetricGroup = "D8ObsoleteClusterDomainInClusterConfiguration"
 	obsoleteClusterDomainMetricName  = "d8_obsolete_cluster_domain_in_cluster_configuration"
@@ -43,6 +41,8 @@ const (
 	obsoleteClusterDomainSnapshot = "clusterConfigurationClusterDomain"
 )
 
+// Reads the Secret directly: global.clusterConfiguration.clusterDomain carries the resolved value and
+// is never empty, so it cannot tell whether the deprecated field is still there.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/control-plane-manager/alerting",
 	Kubernetes: []go_hook.KubernetesConfig{

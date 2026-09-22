@@ -29,10 +29,8 @@ const clusterDomainModuleConfigSnapshot = "controlPlaneManagerModuleConfigCluste
 // Never errors: that would discard the snapshot and leave the cluster without a domain. Reads raw, so
 // a conversion failure elsewhere cannot make a set domain look unset.
 func applyControlPlaneManagerClusterDomainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	domain, _, err := unstructured.NestedString(obj.UnstructuredContent(), "spec", "settings", "network", "clusterDomain")
-	if err != nil {
-		return "", nil
-	}
+	// A missing key and a wrong type both yield "", so neither needs a branch of its own.
+	domain, _, _ := unstructured.NestedString(obj.UnstructuredContent(), "spec", "settings", "network", "clusterDomain")
 	return domain, nil
 }
 
