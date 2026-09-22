@@ -68,28 +68,6 @@ type providerContract struct {
 func providerContracts() []providerContract {
 	return []providerContract{
 		{
-			name:               "dvp",
-			contractPath:       "../../../../../../../030-cloud-provider-dvp/capi/template.yaml",
-			instanceClassKind:  "DVPInstanceClass",
-			templateKind:       "DeckhouseMachineTemplate",
-			templateAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1",
-			providerConfig:     map[string]any{},
-			instanceClass: map[string]any{
-				"virtualMachine": map[string]any{
-					"virtualMachineClassName": "generic",
-					"cpu":                     map[string]any{"cores": int64(4)},
-					"memory":                  map[string]any{"size": "8Gi"},
-				},
-				"rootDisk": map[string]any{
-					"size":  "50Gi",
-					"image": map[string]any{"kind": "ClusterVirtualImage", "name": "ubuntu"},
-				},
-			},
-			rollingEdit: func(spec map[string]any) {
-				spec["rootDisk"].(map[string]any)["size"] = "100Gi"
-			},
-		},
-		{
 			name:               "yandex",
 			contractPath:       "../../../../../../../030-cloud-provider-yandex/capi/template.yaml",
 			instanceClassKind:  "YandexInstanceClass",

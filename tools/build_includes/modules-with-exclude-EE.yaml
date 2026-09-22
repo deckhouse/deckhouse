@@ -146,27 +146,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/030-cloud-provider-dvp
-  to: /deckhouse/modules/030-cloud-provider-dvp
-  excludePaths:
-    - docs
-    - README.md
-    - '*-threat-model.md'
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-    - e2e
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/030-cloud-provider-gcp
   to: /deckhouse/modules/030-cloud-provider-gcp
   excludePaths:

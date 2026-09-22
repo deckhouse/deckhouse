@@ -422,7 +422,6 @@ read:
     - deckhouse.io/deschedulers
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
-    - deckhouse.io/dvpinstanceclasses
     - deckhouse.io/dynamixinstanceclasses
     - deckhouse.io/gcpinstanceclasses
     - deckhouse.io/huaweicloudinstanceclasses
@@ -466,9 +465,6 @@ read:
     - gateway.networking.k8s.io/tcproutes
     - gateway.networking.k8s.io/tlsroutes
     - gateway.networking.k8s.io/udproutes
-    - infrastructure.cluster.x-k8s.io/deckhouseclusters
-    - infrastructure.cluster.x-k8s.io/deckhousemachines
-    - infrastructure.cluster.x-k8s.io/deckhousemachinetemplates
     - infrastructure.cluster.x-k8s.io/dynamixclusters
     - infrastructure.cluster.x-k8s.io/dynamixmachines
     - infrastructure.cluster.x-k8s.io/dynamixmachinetemplates
@@ -688,9 +684,6 @@ get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
 patch,update:
     - deckhouse.io/vcdaffinityrules
-    - infrastructure.cluster.x-k8s.io/deckhouseclusters
-    - infrastructure.cluster.x-k8s.io/deckhousemachines
-    - infrastructure.cluster.x-k8s.io/deckhousemachinetemplates
     - infrastructure.cluster.x-k8s.io/dynamixclusters
     - infrastructure.cluster.x-k8s.io/dynamixmachines
     - infrastructure.cluster.x-k8s.io/dynamixmachinetemplates
@@ -753,7 +746,6 @@ write:
     - deckhouse.io/clusterprojectrolebindings
     - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/deschedulers
-    - deckhouse.io/dvpinstanceclasses
     - deckhouse.io/dynamixinstanceclasses
     - deckhouse.io/gcpinstanceclasses
     - deckhouse.io/huaweicloudinstanceclasses

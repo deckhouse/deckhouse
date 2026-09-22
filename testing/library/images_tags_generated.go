@@ -55,15 +55,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
 		"terraformManager":          "imageHash-cloudProviderAzure-terraformManager",
 	},
-	"cloudProviderDvp": map[string]interface{}{
-		"capdvpControllerManager": "imageHash-cloudProviderDvp-capdvpControllerManager",
-		"cloudControllerManager":  "imageHash-cloudProviderDvp-cloudControllerManager",
-		"cloudDataDiscoverer":     "imageHash-cloudProviderDvp-cloudDataDiscoverer",
-		"dvpCsiDriver":            "imageHash-cloudProviderDvp-dvpCsiDriver",
-		"terraformManager":        "imageHash-cloudProviderDvp-terraformManager",
-		"validationWebhook":       "imageHash-cloudProviderDvp-validationWebhook",
-		"validator":               "imageHash-cloudProviderDvp-validator",
-	},
 	"cloudProviderDynamix": map[string]interface{}{
 		"capdControllerManager":  "imageHash-cloudProviderDynamix-capdControllerManager",
 		"cloudControllerManager": "imageHash-cloudProviderDynamix-cloudControllerManager",
@@ -439,16 +430,15 @@ var DefaultImagesDigests = map[string]interface{}{
 	"terraformManager": map[string]interface{}{
 		"baseOpentofu":                "imageHash-terraformManager-baseOpentofu",
 		"baseTerraform":               "imageHash-terraformManager-baseTerraform",
+		"terraformManager":            "imageHash-terraformManager-terraformManager",
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
 		"terraformManagerAzure":       "imageHash-terraformManager-terraformManagerAzure",
-		"terraformManagerDvp":         "imageHash-terraformManager-terraformManagerDvp",
 		"terraformManagerDynamix":     "imageHash-terraformManager-terraformManagerDynamix",
 		"terraformManagerGcp":         "imageHash-terraformManager-terraformManagerGcp",
 		"terraformManagerHuaweicloud": "imageHash-terraformManager-terraformManagerHuaweicloud",
 		"terraformManagerOpenstack":   "imageHash-terraformManager-terraformManagerOpenstack",
 		"terraformManagerVcd":         "imageHash-terraformManager-terraformManagerVcd",
 		"terraformManagerVsphere":     "imageHash-terraformManager-terraformManagerVsphere",
-		"terraformManagerYandex":      "imageHash-terraformManager-terraformManagerYandex",
 		"terraformManagerZvirt":       "imageHash-terraformManager-terraformManagerZvirt",
 	},
 	"userAuthn": map[string]interface{}{
