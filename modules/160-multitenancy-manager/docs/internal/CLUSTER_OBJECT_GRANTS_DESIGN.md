@@ -214,9 +214,14 @@ catalog reconciler), and
 per resource (`resourceName`) sets `allowed` / `allowedSelector` / `denied` / `deniedSelector` /
 `default` / `availabilityDefault`. A non-empty allow-list or an `allowedSelector` infers a `None` baseline; empty `allowed: []` does not.
 
-### AvailableClusterResource (unchanged)
+### AvailableClusterResource
 
 Per-project catalog (available names + default) the controller renders into each project namespace.
+It lives exactly as long as its `GrantableClusterResourceDefinition`: when the registration is
+deleted, the controller deletes the catalog from every project namespace on the next reconcile. A
+registration held by a finalizer counts as deleted from the moment its `deletionTimestamp` is set.
+The sweep runs on every reconcile, even when another registration fails to resolve; the catalog of
+the failing registration itself is kept in its last good state.
 
 ## Coverage: which CRD closes which story
 
@@ -304,7 +309,8 @@ Registered statically, not derived from the references:
 ## Controller
 
 - **Catalog reconciler** (keyed by namespace) — renders `AvailableClusterResource` per project per
-  definition from resolved availability.
+  definition from resolved availability, and deletes the module-owned catalogs of the namespace whose
+  definition is gone (the catalog is read-only to everyone but the controller, so nothing else could).
 - **Binding reconciler** (keyed by `GrantableClusterResourceReference` and
   `GrantableClusterResourceDefinition`) — sets `reference.status.bound`/`Bound` condition and the
   definition's `status.references`/`referenceCount` reverse index. It also sets `FieldPathsValid`
