@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка Deckhouse Virtualization Platform
+title: Схемы размещения и настройка встроенной виртуализации
 permalink: ru/admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
 lang: ru
 ---
@@ -90,7 +90,7 @@ spec:
 
 ## Конфигурация
 
-Параметры облачного провайдера DVP задаются в четырёх ресурсах:
+Параметры облачного провайдера встроенной виртуализации задаются в четырёх ресурсах:
 
 - [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля `cloud-provider-dvp` задаёт схему размещения и параметры подключения к родительскому кластеру;
 - секрет `d8-credentials` в неймспейсе `d8-cloud-provider-dvp` хранит учётные данные для доступа к API родительского кластера, его формат описан в разделе [«Секрет с учётными данными»](authorization.html#секрет-с-учётными-данными);

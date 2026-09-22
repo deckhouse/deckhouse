@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-To deploy Deckhouse Platform on top of the Deckhouse Platform virtualization environment and enable integration (for example, ordering nodes for a nested cluster within the virtualization environment), you must perform some preliminary configuration. Create a user (ServiceAccount), assign permissions, and obtain a kubeconfig.
+To deploy Deckhouse Platform on built-in virtualization environment and enable integration (for example, ordering nodes for a nested cluster within the virtualization environment), you must perform some preliminary configuration. Create a user (ServiceAccount), assign permissions, and obtain a kubeconfig.
 
 1. Create a user (ServiceAccount and token) by running:
 
