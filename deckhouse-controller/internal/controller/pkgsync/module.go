@@ -239,7 +239,7 @@ func (s *syncer) syncOverrideModules(ctx context.Context, deckhouseReleaseChanne
 			return fmt.Errorf("get the available repositories of the '%s' module: %w", moduleName, err)
 		}
 
-		repositoryName, ok := overrideRepository(config, repositories)
+		repositoryName, ok := getOverrideRepository(config, repositories)
 		if !ok {
 			s.logger.Warn("no config source and no single available repository for the dev module, skip it",
 				slog.String("name", moduleName), slog.Any("repositories", repositories))
@@ -262,10 +262,10 @@ func (s *syncer) syncOverrideModules(ctx context.Context, deckhouseReleaseChanne
 	return nil
 }
 
-// overrideRepository answers which repository a dev module belongs to. The pull override names no
+// getOverrideRepository answers which repository a dev module belongs to. The pull override names no
 // source, so it comes from the module config, or from the only repository the catalog lists for the
 // package - "deckhouse-modules" when it lists several. Nothing left to ask leaves the module unplaced.
-func overrideRepository(config *v1alpha1.ModuleConfig, repositories []string) (string, bool) {
+func getOverrideRepository(config *v1alpha1.ModuleConfig, repositories []string) (string, bool) {
 	if config != nil && config.Spec.Source != "" {
 		return PackageRepositoryNameForModuleSource(config.Spec.Source), true
 	}
