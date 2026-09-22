@@ -16,6 +16,10 @@ package checks
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -57,10 +61,38 @@ func (c DeckhouseUserCheck) Run(ctx context.Context) error {
 	cmd := nodeInterface.UploadScript(file)
 	out, err := cmd.Execute(ctx)
 	if err != nil {
-		return scriptFailure("check the deckhouse user and group", nodeInterface, out, err)
+		return deckhouseUserFailure(nodeInterface, out, err)
 	}
 
 	return nil
+}
+
+// deckhouseUserFailure turns what the node reported into a verdict with a way out.
+//
+// The way out is the point. An account left behind by an earlier cluster is the usual cause, and
+// the operator cannot act on "Deckhouse user existence check failed: execute on remote: exit
+// status 1" — the old message, which dropped the script's own diagnosis and then retried it five
+// times, as though a leftover account might go away by itself. The node says what it found; the
+// report says what to run, and names the cleanup script by path because that is the one step that
+// is not guessable.
+func deckhouseUserFailure(nodeInterface libcon.Interface, out []byte, err error) error {
+	observed := strings.TrimSpace(string(out))
+	if observed == "" {
+		// The script did not get far enough to say anything — a connection that dropped, a
+		// missing interpreter. That is a different failure and scriptFailure names it.
+		return scriptFailure("check the deckhouse user and group", nodeInterface, out, err)
+	}
+
+	return preflight.Permanent(&preflight.Failure{
+		Checked:  fmt.Sprintf("the deckhouse user and group on %s", hostPhrase(nodeInterface)),
+		Observed: observed,
+		Expected: "no deckhouse user or group at all, or the pair Deckhouse creates itself: uid and gid 64535, without sudo",
+		Fix: "if this node was part of a Deckhouse cluster before, run the cleanup it left on the node:\n" +
+			"    sudo bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing\n" +
+			"otherwise the account belongs to something else and has to go by hand:\n" +
+			"    sudo userdel deckhouse && sudo groupdel deckhouse",
+		Err: err,
+	})
 }
 
 func DeckhouseUser(nodeInterface NodeInterfaceFunc, globalOptions *options.GlobalOptions) preflight.Check {

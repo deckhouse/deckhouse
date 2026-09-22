@@ -46,11 +46,12 @@ func TestDeckhouseUserOverTheDefaultBackend(t *testing.T) {
 				prints("deckhouse user and group are not present\n"),
 		},
 		{
-			// What the script said, which names the conflict.
+			// What the script said, which names the conflict. The host is no longer glued onto
+			// the end of it: it is the subject of the failure, so it lives in Checked.
 			name: "the user already exists",
 			node: newFakeNode().onScript("check_deckhouse_user.sh").
 				printsAndExits("user deckhouse already exists on the node", 1),
-			wantErr: "user deckhouse already exists on the node on",
+			wantErr: "user deckhouse already exists on the node",
 		},
 		{
 			// A non-zero status with nothing printed: the status is all there is to report.
