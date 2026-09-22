@@ -98,21 +98,6 @@ func (r *Reconciler) immutableNodeGroupNames(ctx context.Context) ([]string, err
 	return names, nil
 }
 
-// allNodeGroupNames lists every NodeGroup, immutable or not. A static pod also
-// reaches bashible groups, whose step writes it, so its matchedNodeGroups is not
-// the immutable set a NodeExtensionRequest is confined to.
-func (r *Reconciler) allNodeGroupNames(ctx context.Context) ([]string, error) {
-	ngs := &v1.NodeGroupList{}
-	if err := r.Client.List(ctx, ngs); err != nil {
-		return nil, fmt.Errorf("list NodeGroups: %w", err)
-	}
-	var names []string
-	for i := range ngs.Items {
-		names = append(names, ngs.Items[i].Name)
-	}
-	return names, nil
-}
-
 // updateNERStatus computes and patches one request's status, skipping the write
 // when nothing changed.
 func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, immutableGroups []string, nodes []corev1.Node, outcome nerOutcome) error {
