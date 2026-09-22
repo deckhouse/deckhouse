@@ -17,8 +17,13 @@ import:
   - usr/bin/mkdir
   - usr/bin/sleep
   - usr/bin/true
-  - usr/bin/nc
   - usr/bin/busybox
+
+  - usr/bin/nc
+  - usr/lib/libc.so.*
+  - usr/lib/ld-linux-x86-64.so*
+  - lib
+  - lib64
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
