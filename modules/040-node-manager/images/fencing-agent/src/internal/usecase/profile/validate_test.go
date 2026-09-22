@@ -50,12 +50,12 @@ func validProfile() *v1alpha1.FencingSLAProfile {
 			},
 			Fallback: v1alpha1.FencingSLAProfileFallback{
 				Heartbeat:            dur(time.Second),
-				TTL:                  dur(4 * time.Second),
+				TTL:                  dur(8 * time.Second),
 				KubernetesAPITimeout: dur(2 * time.Second),
 			},
 			Rejoin:     v1alpha1.FencingSLAProfileRejoin{Interval: dur(time.Second), MaxInterval: dur(10 * time.Second)},
 			Evacuation: v1alpha1.FencingSLAProfileEvacuation{Delay: dur(6 * time.Second)},
-			Watchdog:   v1alpha1.FencingSLAProfileWatchdog{FeedInterval: dur(time.Second), Timeout: dur(10 * time.Second)},
+			Watchdog:   v1alpha1.FencingSLAProfileWatchdog{FeedInterval: dur(250 * time.Millisecond), Timeout: dur(3 * time.Second)},
 		},
 	}
 }
@@ -135,9 +135,9 @@ func TestValidateRejectsInvalidValues(t *testing.T) {
 			wantSub: "memberlist.suspicionMult",
 		},
 		{
-			name:    "probe timeout not below probe interval",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Memberlist.ProbeTimeout = dur(300 * time.Millisecond) },
-			wantSub: "probeTimeout",
+			name:    "probe timeout not below half the probe interval",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Memberlist.ProbeTimeout = dur(150 * time.Millisecond) },
+			wantSub: "memberlist.probeTimeout 150ms must be less than half",
 		},
 		{
 			name:    "sub-millisecond heartbeat",
@@ -146,13 +146,13 @@ func TestValidateRejectsInvalidValues(t *testing.T) {
 		},
 		{
 			name:    "heartbeat not below ttl",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.Heartbeat = dur(4 * time.Second) },
-			wantSub: "heartbeat",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.Heartbeat = dur(8 * time.Second) },
+			wantSub: "fallback.heartbeat 8s must be less than fallback.ttl",
 		},
 		{
 			name:    "api timeout not below ttl",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.KubernetesAPITimeout = dur(4 * time.Second) },
-			wantSub: "kubernetesAPITimeout",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.KubernetesAPITimeout = dur(8 * time.Second) },
+			wantSub: "fallback.kubernetesAPITimeout 8s must be less than fallback.ttl",
 		},
 		{
 			name:    "rejoin interval above max",
@@ -160,9 +160,36 @@ func TestValidateRejectsInvalidValues(t *testing.T) {
 			wantSub: "rejoin.interval",
 		},
 		{
-			name:    "feed interval not below watchdog timeout",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Watchdog.FeedInterval = dur(10 * time.Second) },
-			wantSub: "feedInterval",
+			name:    "feed interval above half the watchdog timeout",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Watchdog.FeedInterval = dur(1600 * time.Millisecond) },
+			wantSub: "watchdog.feedInterval 1.6s must be at most half",
+		},
+		{
+			name:    "watchdog timeout below the floor",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Watchdog.Timeout = dur(time.Second) },
+			wantSub: "watchdog.timeout: must be at least 2s",
+		},
+		{
+			name:    "watchdog timeout with a fraction of a second",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Watchdog.Timeout = dur(2500 * time.Millisecond) },
+			wantSub: "watchdog.timeout: must be a whole number of seconds",
+		},
+		{
+			name:    "evacuation delay leaves no room for the watchdog",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Evacuation.Delay = dur(5 * time.Second) },
+			wantSub: "evacuation.delay 5s must be at least",
+		},
+		{
+			name:    "ttl leaves no room for the watchdog",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.TTL = dur(7 * time.Second) },
+			wantSub: "fallback.ttl 7s must be at least",
+		},
+		{
+			// The bound takes the longer of heartbeat and API timeout: here the
+			// heartbeat, which the API-timeout-only form would miss.
+			name:    "ttl leaves no room after a slow heartbeat",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.Heartbeat = dur(3 * time.Second) },
+			wantSub: "fallback.ttl 8s must be at least",
 		},
 	}
 
@@ -180,6 +207,20 @@ func TestValidateRejectsInvalidValues(t *testing.T) {
 				t.Errorf("error %q does not mention %q", err, tt.wantSub)
 			}
 		})
+	}
+}
+
+// The CRD rules allow equality at every bound; a profile tuned right up to them
+// must still start.
+func TestValidateAcceptsProfileAtTheBounds(t *testing.T) {
+	p := validProfile()
+	p.Spec.Memberlist.ProbeTimeout = dur(149 * time.Millisecond)
+	p.Spec.Watchdog.FeedInterval = dur(1500 * time.Millisecond)
+	p.Spec.Evacuation.Delay = dur(5500 * time.Millisecond)
+	p.Spec.Fallback.TTL = dur(7500 * time.Millisecond)
+
+	if err := Validate(p); err != nil {
+		t.Fatalf("validate a profile at the bounds: %v", err)
 	}
 }
 
