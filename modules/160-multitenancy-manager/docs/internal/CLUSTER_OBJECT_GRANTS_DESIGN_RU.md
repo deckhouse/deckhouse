@@ -118,14 +118,19 @@ spec:
       - v1
     resources:
       - persistentvolumeclaims
-  fieldPaths:                                     # где ИМЯ, версионно
-    - path: $.spec.storageClassName               # запись без scope = дефолт (для всех версий)
+  fieldPaths:                                     # где ИМЯ, по ресурсам и версиям
+    - path: $.spec.storageClassName               # запись без scope = дефолт (для всех ресурсов и версий)
       defaulting: Coerce                          # None | FillEmpty | Coerce
     # версионно-зависимый пример (класс IngressClass переезжал между версиями):
     # - apiVersions:
     #     - v1beta1
     #   path: $.metadata.annotations['kubernetes.io/ingress.class']
     #   defaulting: None
+    # ресурсно-зависимый пример (путь различается по ресурсу внутри одной группы/версии):
+    # - apiGroups: [batch]
+    #   apiVersions: [v1]
+    #   resources: [cronjobs]
+    #   path: $.spec.jobTemplate.spec.template.spec.priorityClassName
 status:
   observedGeneration: 1
   bound: true                                     # grantableClusterResourceName резолвится
@@ -135,11 +140,22 @@ status:
       reason: Resolved                            # Resolved | UnknownResource (промахнулись именем)
 ```
 
-**Выбор пути.** Для запроса group/version `g/v` берётся запись `fieldPaths`, чьи
-`apiGroups`/`apiVersions` совпали; более специфичная (со scope) бьёт безскоупную; безскоупная —
-fallback. Минимум одна запись; fallback рекомендуется.
+**Выбор пути.** Для запроса ресурса `r` в group/version `g/v` берутся записи `fieldPaths`, чьи
+`resources`/`apiGroups`/`apiVersions` совпали (пустое измерение матчит всё), и из них выигрывает
+самая специфичная: `resources` весит 4, `apiGroups` — 2, `apiVersions` — 1, веса складываются, то
+есть один `resources` бьёт `apiGroups` + `apiVersions` вместе. При равных весах побеждает запись,
+которая идёт в списке раньше. Безскоупная запись весит 0 и служит fallback. Измерение добавляет вес,
+только если действительно сужает запись: список с `*` матчит всё и весит 0, как незаданный, поэтому
+`apiGroups: ["*"]` равен безскоупной записи и никогда не бьёт явный скоуп. То же для
+`fieldPaths[].resources`: `resources: ["*"]` допустим и ведёт себя ровно как незаданное поле. Минимум одна запись;
+fallback рекомендуется.
 
-Поля `fieldPaths[]`: `{apiGroups?, apiVersions?, path, match?, defaulting?}`. `match` =
+Скоуп по ресурсу нужен потому, что одного пути на group/version не хватает: в core/v1 у Pod это
+`$.spec.priorityClassName`, а у ReplicationController — `$.spec.template.spec.priorityClassName`; в
+batch/v1 у Job это `$.spec.template.spec.priorityClassName`, а у CronJob —
+`$.spec.jobTemplate.spec.template.spec.priorityClassName`.
+
+Поля `fieldPaths[]`: `{apiGroups?, apiVersions?, resources?, path, match?, defaulting?}`. `match` =
 `{fieldPath, equals|in}` (guard, применяется только когда предикат истинен). `defaulting`: `None`
 (только валидация), `FillEmpty` (дозаполнить пустое поле дефолтом проекта), `Coerce` (плюс переписать
 недопустимое значение — для полей, что предзаполняет встроенный admission).

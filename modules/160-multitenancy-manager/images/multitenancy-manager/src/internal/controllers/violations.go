@@ -126,7 +126,7 @@ func scanViolations(
 		}
 
 		for _, gvr := range usageGVRs(mapper, ref.Spec.Rule) {
-			fp, ok := engine.SelectFieldPath(ref.Spec.FieldPaths, gvr.Group, gvr.Version)
+			fp, ok := engine.SelectFieldPath(ref.Spec.FieldPaths, gvr.Group, gvr.Version, gvr.Resource)
 			if !ok {
 				continue
 			}

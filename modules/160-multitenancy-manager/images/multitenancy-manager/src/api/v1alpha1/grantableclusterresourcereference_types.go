@@ -68,9 +68,10 @@ type MatchPredicate struct {
 	In []string `json:"in,omitempty"`
 }
 
-// FieldPath is one version-scoped location of the granted name within the usage object, together with
-// its guard and defaulting behaviour. The entry whose APIGroups/APIVersions match the request's GVK
-// wins (a scoped entry beats an unscoped one); an entry with empty scope is the fallback.
+// FieldPath is one scoped location of the granted name within the usage object, together with its
+// guard and defaulting behaviour. Among the entries matching the request's resource/group/version the
+// most specific one wins (Resources beats APIGroups beats APIVersions); an entry with empty scope is
+// the fallback, and "*" in a scope dimension counts as unrestricted.
 type FieldPath struct {
 	// APIGroups restricts this entry to these groups (empty = any matched group).
 	// +optional
@@ -79,6 +80,13 @@ type FieldPath struct {
 	// APIVersions restricts this entry to these versions (empty = any matched version).
 	// +optional
 	APIVersions []string `json:"apiVersions,omitempty"`
+
+	// Resources restricts this entry to these plural resource names, e.g. pods, cronjobs
+	// (empty = any matched resource). "*" behaves like an omitted field: it matches any resource and
+	// adds no specificity.
+	// +optional
+	// +kubebuilder:validation:items:MinLength=1
+	Resources []string `json:"resources,omitempty"`
 
 	// Path is the JSONPath to the granted object's name (a string). May target an annotation, e.g.
 	// $.metadata.annotations['cert-manager.io/cluster-issuer'].
@@ -106,8 +114,8 @@ type GrantableClusterResourceReferenceSpec struct {
 	// +required
 	Rule UsageRule `json:"rule"`
 
-	// FieldPaths are the version-scoped locations of the granted name, with per-entry guard and
-	// defaulting. At least one entry is required; provide an unscoped entry as the fallback.
+	// FieldPaths are the scoped locations of the granted name, with per-entry guard and defaulting.
+	// At least one entry is required; provide an unscoped entry as the fallback.
 	// +required
 	// +kubebuilder:validation:MinItems=1
 	FieldPaths []FieldPath `json:"fieldPaths"`
