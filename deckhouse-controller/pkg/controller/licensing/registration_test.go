@@ -17,6 +17,7 @@ package licensing
 import (
 	"context"
 	"crypto/ed25519"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -410,5 +411,56 @@ func TestRequeueAfter(t *testing.T) {
 	issued := testNow.Add(-requestMaxAge + 30*time.Minute)
 	if got := requeueAfter(licensing.Result{}, th, issued, testNow); got != 30*time.Minute {
 		t.Fatalf("requeueAfter = %s, want the request refresh in 30m", got)
+	}
+}
+
+// A request signed by a key the cluster no longer holds is worthless to the
+// license server: with a jwk header it would even pin the wrong identity. After
+// the cluster key is regenerated the published request has to follow at once,
+// not on the 24 hour refresh.
+func TestRequestFollowsARegeneratedClusterKey(t *testing.T) {
+	license, vendorKey := licenseObject(t)
+	worker := node("worker", "4", true)
+
+	env := newTestEnv(t, vendorKey, license, &worker, discoverySecret())
+	ctx := context.Background()
+
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("first reconcile: %v", err)
+	}
+	before := publishedRequest(t, env)
+
+	var secret corev1.Secret
+	key := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: keySecretName}
+	if err := env.cl.Get(ctx, key, &secret); err != nil {
+		t.Fatalf("get cluster key secret: %v", err)
+	}
+	if err := env.cl.Delete(ctx, &secret); err != nil {
+		t.Fatalf("delete cluster key secret: %v", err)
+	}
+
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+	after := publishedRequest(t, env)
+	if after == before {
+		t.Fatal("published request unchanged after the cluster key was regenerated")
+	}
+
+	var regenerated corev1.Secret
+	if err := env.cl.Get(ctx, key, &regenerated); err != nil {
+		t.Fatalf("get regenerated cluster key secret: %v", err)
+	}
+	pub := ed25519.NewKeyFromSeed(regenerated.Data[keySecretField]).Public().(ed25519.PublicKey)
+	header := headerOf(t, after)
+	if kid, ok := header["kid"]; ok {
+		if kid != licensing.Thumbprint(pub) {
+			t.Fatalf("request kid = %v, want the thumbprint of the regenerated key", kid)
+		}
+		return
+	}
+	jwk, _ := header["jwk"].(map[string]any)
+	if got := jwk["x"]; got != base64.RawURLEncoding.EncodeToString(pub) {
+		t.Fatalf("request jwk.x = %v, want the regenerated key", got)
 	}
 }

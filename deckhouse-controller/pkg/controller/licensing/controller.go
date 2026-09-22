@@ -269,7 +269,7 @@ func (r *reconciler) registrationRequest(
 	res licensing.Result,
 	now time.Time,
 ) (string, error) {
-	if published != "" && !requestStale(published, res, now) {
+	if published != "" && !requestStale(published, priv.Public().(ed25519.PublicKey), res, now) {
 		return published, nil
 	}
 

@@ -17,6 +17,7 @@ package licensing
 import (
 	"context"
 	"crypto/ed25519"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -85,9 +86,9 @@ func requestIssuedAt(request string) time.Time {
 	return payload.issuedAt()
 }
 
-func requestStale(request string, res licensing.Result, now time.Time) bool {
+func requestStale(request string, pub ed25519.PublicKey, res licensing.Result, now time.Time) bool {
 	payload, header, ok := decodeRequest(request)
-	if !ok {
+	if !ok || !signedBy(header, pub) {
 		return true
 	}
 	if iat := payload.issuedAt(); iat.IsZero() || !now.Before(iat.Add(requestMaxAge)) {
@@ -100,6 +101,23 @@ func requestStale(request string, res licensing.Result, now time.Time) bool {
 	return !equalStrings(payload.Records, res.AcceptedRecords) ||
 		!equalStrings(payload.ActiveKeys, res.ActiveKeys) ||
 		!reflect.DeepEqual(payload.Metrics, res.Consumption)
+}
+
+// signedBy reports whether the request header names the current cluster key: a
+// jwk carrying its public part or a kid equal to its thumbprint. After the key
+// is regenerated (the Secret was lost or reset) the published request would
+// otherwise stay signed by a key the cluster no longer holds until it aged out,
+// and the license server would pin the wrong identity.
+func signedBy(header map[string]any, pub ed25519.PublicKey) bool {
+	if kid, ok := header["kid"].(string); ok {
+		return kid == licensing.Thumbprint(pub)
+	}
+	jwk, ok := header["jwk"].(map[string]any)
+	if !ok {
+		return false
+	}
+	x, _ := jwk["x"].(string)
+	return x == base64.RawURLEncoding.EncodeToString(pub)
 }
 
 func equalStrings(a, b []string) bool {
