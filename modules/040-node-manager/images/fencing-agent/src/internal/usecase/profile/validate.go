@@ -28,7 +28,7 @@ import (
 
 const (
 	minWatchdogTimeout = 2 * time.Second
-	fenceMargin = 500 * time.Millisecond
+	fenceMargin        = 500 * time.Millisecond
 )
 
 // validator collects every violation so an invalid profile is reported whole,
