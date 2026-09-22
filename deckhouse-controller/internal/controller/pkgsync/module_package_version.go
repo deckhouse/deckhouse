@@ -87,7 +87,6 @@ func (s *syncer) syncModulePackageVersionsFromFS(ctx context.Context, moduleSour
 // the image; the metadata and the settings/values schemas come from the
 // module files on disk.
 func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName string, moduleSources []v1alpha1.ModuleSource) error {
-	version := app.EmbeddedPackageVersion()
 	moduleDir := filepath.Join(s.embeddedModulesDir, dirName)
 
 	def, err := loader.LoadEmbeddedDefinition(moduleDir)
@@ -98,7 +97,7 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 		return nil
 	}
 
-	name := v1alpha1.MakeModulePackageVersionName(repositoryNameEmbedded, def.Name, version)
+	name := fmt.Sprintf("%s-%s", repositoryNameEmbedded, def.Name)
 	if !s.validModulePackageVersionName(name, def.Name) {
 		return nil
 	}
@@ -130,7 +129,6 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 	spec := v1alpha1.ModulePackageVersionSpec{
 		PackageName:           def.Name,
 		PackageRepositoryName: repositoryNameEmbedded,
-		PackageVersion:        version,
 	}
 
 	return s.ensureFilledModulePackageVersion(ctx, name, spec, meta, schemas)
@@ -149,9 +147,7 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 // the module controller gates registration on, so withholding them over an
 // unreadable dir would strand the global Module rather than degrade it.
 func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context, moduleSources []v1alpha1.ModuleSource) error {
-	version := app.EmbeddedPackageVersion()
-
-	name := v1alpha1.MakeModulePackageVersionName(repositoryNameEmbedded, packageNameGlobal, version)
+	name := fmt.Sprintf("%s-%s", repositoryNameEmbedded, packageNameGlobal)
 	if !s.validModulePackageVersionName(name, packageNameGlobal) {
 		return nil
 	}
@@ -180,7 +176,6 @@ func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context, moduleSourc
 	spec := v1alpha1.ModulePackageVersionSpec{
 		PackageName:           packageNameGlobal,
 		PackageRepositoryName: repositoryNameEmbedded,
-		PackageVersion:        version,
 	}
 
 	return s.ensureFilledModulePackageVersion(ctx, name, spec, new(v1alpha1.ModulePackageVersionStatusMetadata), schemas)

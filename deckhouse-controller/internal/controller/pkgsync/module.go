@@ -24,6 +24,7 @@ import (
 	"slices"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -305,8 +306,19 @@ func (s *syncer) getOverrides(ctx context.Context) ([]*v1alpha2.ModulePullOverri
 	return result, nil
 }
 
+// legacyModuleConditions are the conditions the addon-operator stack wrote. The package runtime
+// owns the status now and never touches a condition type of its own, so they linger until dropped.
+var legacyModuleConditions = []string{
+	v1alpha1.ModuleConditionEnabledByModuleManager,
+	v1alpha1.ModuleConditionEnabledByModuleConfig,
+	v1alpha1.ModuleConditionIsReady,
+	v1alpha1.ModuleConditionLastReleaseDeployed,
+	v1alpha1.ModuleConditionIsOverridden,
+}
+
 // cleanupModules deletes the modules no pass above placed: one carrying no package version at all,
-// and an embedded one left on the version of a build the image no longer ships.
+// and an embedded one left on the version of a build the image no longer ships. A module that stays
+// loses the conditions of the old stack.
 func (s *syncer) cleanupModules(ctx context.Context) error {
 	modules := new(v1beta1.ModuleList)
 	if err := s.reader.List(ctx, modules); err != nil {
@@ -318,6 +330,10 @@ func (s *syncer) cleanupModules(ctx context.Context) error {
 			(module.IsEmbedded() && module.Spec.PackageVersion != app.EmbeddedPackageVersion())
 
 		if !disposable {
+			if err := s.dropLegacyConditions(ctx, &module); err != nil {
+				return fmt.Errorf("drop the legacy conditions of module %s: %w", module.Name, err)
+			}
+
 			continue
 		}
 
@@ -327,6 +343,33 @@ func (s *syncer) cleanupModules(ctx context.Context) error {
 			return fmt.Errorf("delete module %s: %w", module.Name, err)
 		}
 	}
+
+	return nil
+}
+
+// dropLegacyConditions removes the conditions of the old module stack from a module the package
+// runtime now owns. A module carrying none is not patched.
+func (s *syncer) dropLegacyConditions(ctx context.Context, module *v1beta1.Module) error {
+	patch := client.MergeFrom(module.DeepCopy())
+
+	for _, conditionType := range legacyModuleConditions {
+		metautils.RemoveStatusCondition(&module.Status.Conditions, conditionType)
+	}
+
+	patchData, err := patch.Data(module)
+	if err != nil {
+		return fmt.Errorf("build the status patch for the '%s' module: %w", module.Name, err)
+	}
+
+	if string(patchData) == "{}" {
+		return nil
+	}
+
+	if err = s.writer.Status().Patch(ctx, module, client.RawPatch(patch.Type(), patchData)); err != nil {
+		return fmt.Errorf("patch the status of the '%s' module: %w", module.Name, err)
+	}
+
+	s.logger.Debug("legacy module conditions dropped", slog.String("name", module.Name))
 
 	return nil
 }

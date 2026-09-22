@@ -418,11 +418,6 @@ func NewDeckhouseController(
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}
-	}
-
-	// Module package sync (feature flag)
-	if app.ModulePackageSyncEnabled() {
-		logger.Info("Module package sync is enabled")
 
 		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
 		if err != nil {
@@ -484,10 +479,8 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	// give the old module stack its package system objects before any
 	// controller runs; the sync reads through the API reader, so it does not
 	// need the manager cache
-	if app.ModulePackageSyncEnabled() {
-		if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, c.log); err != nil {
-			return fmt.Errorf("sync package objects: %w", err)
-		}
+	if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, c.log); err != nil {
+		return fmt.Errorf("sync package objects: %w", err)
 	}
 
 	// run preflight check
