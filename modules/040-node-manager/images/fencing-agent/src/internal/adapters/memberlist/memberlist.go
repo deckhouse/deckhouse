@@ -51,10 +51,10 @@ type Config struct {
 }
 
 type Cluster struct {
-	list    *hcml.Memberlist
-	logger  *log.Logger
-	stop    chan struct{}
-	changed <-chan struct{}
+	list   *hcml.Memberlist
+	logger *log.Logger
+	stop   chan struct{}
+	events *eventDelegate
 }
 
 func New(cfg Config, logger *log.Logger) (*Cluster, error) {
@@ -74,7 +74,7 @@ func New(cfg Config, logger *log.Logger) (*Cluster, error) {
 	stop := make(chan struct{})
 	go events.run(stop)
 
-	return &Cluster{list: list, logger: logger, stop: stop, changed: events.changed}, nil
+	return &Cluster{list: list, logger: logger, stop: stop, events: events}, nil
 }
 
 func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcml.Config {
@@ -123,7 +123,7 @@ func (c *Cluster) Members() []string {
 }
 
 func (c *Cluster) Changed() <-chan struct{} {
-	return c.changed
+	return c.events.subscribe()
 }
 
 func (c *Cluster) Shutdown() error {

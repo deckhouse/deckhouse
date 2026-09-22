@@ -146,6 +146,27 @@ func TestSelfWatcherReportsEveryMaintenanceAnnotation(t *testing.T) {
 	}
 }
 
+func TestSelfWatcherReportsTheNodeGroupLabel(t *testing.T) {
+	client := fake.NewSimpleClientset(objects(selfNode("worker-1", nil))...)
+
+	recorder := startSelfWatcher(t, client, "worker-1")
+
+	recorder.eventually(t, func(signals domain.NodeSignals, _, _ int) bool {
+		return signals.NodeGroup == "worker"
+	}, "the group label of the own Node must reach the store")
+
+	moved := selfNode("worker-1", nil)
+	moved.Labels[domain.NodeGroupLabel] = "worker-2"
+
+	if _, err := client.CoreV1().Nodes().Update(t.Context(), moved, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update node: %v", err)
+	}
+
+	recorder.eventually(t, func(signals domain.NodeSignals, _, _ int) bool {
+		return signals.NodeGroup == "worker-2"
+	}, "a Node moved to another NodeGroup must be reported with its new group")
+}
+
 func TestSelfWatcherReportsPlannedRemoval(t *testing.T) {
 	client := fake.NewSimpleClientset(objects(selfNode("worker-1", nil))...)
 

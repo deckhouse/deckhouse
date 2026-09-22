@@ -1,6 +1,9 @@
 {{- /* Built-in FencingSLAProfile objects shipped by the module. */}}
 {{- /* They are cluster-scoped configuration objects with no runtime state, */}}
 {{- /* so operators can inspect timings with `kubectl get/describe fencingslaprofiles`. */}}
+{{- /* evacuation.delay and fallback.ttl leave room for kubernetesAPITimeout and the */}}
+{{- /* watchdog timeout, so a node resets before its pods are deleted; the CRD rules */}}
+{{- /* and the agent enforce it. */}}
 ---
 apiVersion: node-manager.deckhouse.io/v1alpha1
 kind: FencingSLAProfile
@@ -8,11 +11,11 @@ metadata:
   name: critical
   {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent" "node-manager.deckhouse.io/builtin-profile" "true")) | nindent 2 }}
 spec:
-  reactionGoal: 2-3s
+  reactionGoal: 3.5-4s
   detectionWindowTarget: 0.8-1.2s
   memberlist:
     probeInterval: 100ms
-    probeTimeout: 50ms
+    probeTimeout: 35ms
     suspicionMult: 2
     suspicionMaxTimeoutMult: 6
     indirectChecks: 4
@@ -22,16 +25,16 @@ spec:
     gossipToTheDeadTime: 2s
   fallback:
     heartbeat: 250ms
-    ttl: 1s
+    ttl: 3.5s
     kubernetesAPITimeout: 500ms
   rejoin:
     interval: 500ms
     maxInterval: 3s
   evacuation:
-    delay: 1.2s
+    delay: 3s
   watchdog:
     feedInterval: 250ms
-    timeout: 3s
+    timeout: 2s
 ---
 apiVersion: node-manager.deckhouse.io/v1alpha1
 kind: FencingSLAProfile
@@ -53,7 +56,7 @@ spec:
     gossipToTheDeadTime: 5s
   fallback:
     heartbeat: 1s
-    ttl: 4s
+    ttl: 8s
     kubernetesAPITimeout: 2s
   rejoin:
     interval: 1s
@@ -61,8 +64,8 @@ spec:
   evacuation:
     delay: 6s
   watchdog:
-    feedInterval: 1s
-    timeout: 10s
+    feedInterval: 250ms
+    timeout: 3s
 ---
 apiVersion: node-manager.deckhouse.io/v1alpha1
 kind: FencingSLAProfile
@@ -84,7 +87,7 @@ spec:
     gossipToTheDeadTime: 10s
   fallback:
     heartbeat: 2s
-    ttl: 10s
+    ttl: 21s
     kubernetesAPITimeout: 5s
   rejoin:
     interval: 2s
@@ -92,8 +95,8 @@ spec:
   evacuation:
     delay: 20s
   watchdog:
-    feedInterval: 2s
-    timeout: 30s
+    feedInterval: 1s
+    timeout: 10s
 ---
 apiVersion: node-manager.deckhouse.io/v1alpha1
 kind: FencingSLAProfile
@@ -115,7 +118,7 @@ spec:
     gossipToTheDeadTime: 20s
   fallback:
     heartbeat: 5s
-    ttl: 20s
+    ttl: 41s
     kubernetesAPITimeout: 10s
   rejoin:
     interval: 5s
@@ -123,5 +126,5 @@ spec:
   evacuation:
     delay: 45s
   watchdog:
-    feedInterval: 5s
-    timeout: 60s
+    feedInterval: 2s
+    timeout: 20s

@@ -24,8 +24,10 @@ import (
 	"fencing-agent/internal/domain"
 )
 
+const testNodeGroup = "worker"
+
 func newState() *SelfState {
-	return NewSelfState("uid-worker-1", log.NewNop())
+	return NewSelfState("uid-worker-1", testNodeGroup, log.NewNop())
 }
 
 func TestSelfStateStartsUnobserved(t *testing.T) {
@@ -41,6 +43,7 @@ func TestSelfStateReportsMaintenance(t *testing.T) {
 
 	state.Observe(domain.NodeSignals{
 		UID:                "uid-worker-1",
+		NodeGroup:          testNodeGroup,
 		Maintenance:        true,
 		MaintenanceReasons: []string{domain.DisruptionApprovedAnnotation},
 	})
@@ -55,7 +58,7 @@ func TestSelfStateReportsMaintenance(t *testing.T) {
 	}
 
 	// Removing the annotation must bring fencing back.
-	state.Observe(domain.NodeSignals{UID: "uid-worker-1"})
+	state.Observe(domain.NodeSignals{UID: "uid-worker-1", NodeGroup: testNodeGroup})
 
 	if state.Snapshot().Maintenance {
 		t.Error("maintenance must clear once the annotations are gone")
@@ -69,12 +72,13 @@ func TestSelfStateKeepsPlannedRemovalSticky(t *testing.T) {
 
 	state.Observe(domain.NodeSignals{
 		UID:            "uid-worker-1",
+		NodeGroup:      testNodeGroup,
 		PlannedRemoval: true,
 		RemovalReason:  domain.RemovalReasonAutoscaler,
 	})
 
 	// A later event without the taint (a stale watch update, a reverted taint).
-	state.Observe(domain.NodeSignals{UID: "uid-worker-1"})
+	state.Observe(domain.NodeSignals{UID: "uid-worker-1", NodeGroup: testNodeGroup})
 
 	snapshot := state.Snapshot()
 	if !snapshot.PlannedRemoval || snapshot.RemovalReason != domain.RemovalReasonAutoscaler {
@@ -85,7 +89,7 @@ func TestSelfStateKeepsPlannedRemovalSticky(t *testing.T) {
 func TestSelfStateTreatsDeletionAsTerminal(t *testing.T) {
 	state := newState()
 
-	state.Observe(domain.NodeSignals{UID: "uid-worker-1"})
+	state.Observe(domain.NodeSignals{UID: "uid-worker-1", NodeGroup: testNodeGroup})
 	state.Deleted()
 
 	snapshot := state.Snapshot()
@@ -99,13 +103,13 @@ func TestSelfStateTreatsDeletionAsTerminal(t *testing.T) {
 func TestSelfStateDetectsAndKeepsUIDMismatch(t *testing.T) {
 	state := newState()
 
-	state.Observe(domain.NodeSignals{UID: "uid-worker-1-recreated"})
+	state.Observe(domain.NodeSignals{UID: "uid-worker-1-recreated", NodeGroup: testNodeGroup})
 
 	if !state.Snapshot().UIDMismatch {
 		t.Fatal("a different uid on the own Node must be reported")
 	}
 
-	state.Observe(domain.NodeSignals{UID: "uid-worker-1"})
+	state.Observe(domain.NodeSignals{UID: "uid-worker-1", NodeGroup: testNodeGroup})
 
 	if !state.Snapshot().UIDMismatch {
 		t.Error("the mismatch must stay: the agent has to restart, not recover in place")
@@ -115,10 +119,40 @@ func TestSelfStateDetectsAndKeepsUIDMismatch(t *testing.T) {
 func TestSelfStateIgnoresAnEmptyUID(t *testing.T) {
 	state := newState()
 
-	state.Observe(domain.NodeSignals{})
+	state.Observe(domain.NodeSignals{NodeGroup: testNodeGroup})
 
 	if state.Snapshot().UIDMismatch {
 		t.Error("a missing uid is not a mismatch")
+	}
+}
+
+// The group label is what scopes fencing to a NodeGroup: once it points
+// elsewhere, this group's quorum and SLA profile no longer describe the Node.
+func TestSelfStateFlagsANodeMovedToAnotherGroup(t *testing.T) {
+	state := newState()
+
+	state.Observe(domain.NodeSignals{UID: "uid-worker-1", NodeGroup: "worker-2"})
+
+	snapshot := state.Snapshot()
+	if !snapshot.LeftNodeGroup || snapshot.NodeGroup != "worker-2" {
+		t.Fatalf("snapshot is %+v, want the Node reported outside the group this agent serves", snapshot)
+	}
+
+	// Unlike a removal this is reversible, so it must not be sticky.
+	state.Observe(domain.NodeSignals{UID: "uid-worker-1", NodeGroup: testNodeGroup})
+
+	if state.Snapshot().LeftNodeGroup {
+		t.Error("a relabel back into the group must put the Node under its fencing policy again")
+	}
+}
+
+func TestSelfStateFlagsANodeWithoutTheGroupLabel(t *testing.T) {
+	state := newState()
+
+	state.Observe(domain.NodeSignals{UID: "uid-worker-1"})
+
+	if !state.Snapshot().LeftNodeGroup {
+		t.Error("a Node with no group label is not a member of the group either")
 	}
 }
 
@@ -127,6 +161,7 @@ func TestSelfStateSnapshotDoesNotShareTheReasonSlice(t *testing.T) {
 
 	state.Observe(domain.NodeSignals{
 		UID:                "uid-worker-1",
+		NodeGroup:          testNodeGroup,
 		Maintenance:        true,
 		MaintenanceReasons: []string{domain.FencingDisableAnnotation},
 	})

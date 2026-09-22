@@ -76,9 +76,9 @@ type FencingFailedNodeStateSpec struct {
 }
 
 type FencingFailedNodeStateFailed struct {
-	DetectedAt metav1.Time  `json:"detectedAt"`
-	DetectedBy string       `json:"detectedBy"`
-	Reason     FailedReason `json:"reason"`
+	DetectedAt metav1.MicroTime `json:"detectedAt"`
+	DetectedBy string           `json:"detectedBy"`
+	Reason     FailedReason     `json:"reason"`
 	// +optional
 	MemberlistIncarnation int64 `json:"memberlistIncarnation,omitempty"`
 	// +optional

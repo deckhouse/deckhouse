@@ -74,16 +74,26 @@ spec:
                 - evacuation
                 - watchdog
               x-kubernetes-validations:
-                - rule: duration(self.memberlist.probeTimeout) < duration(self.memberlist.probeInterval)
-                  message: memberlist.probeTimeout must be less than memberlist.probeInterval.
+                - rule: duration(self.memberlist.probeTimeout) + duration(self.memberlist.probeTimeout) < duration(self.memberlist.probeInterval)
+                  message: memberlist.probeTimeout must be less than half of memberlist.probeInterval.
                 - rule: duration(self.fallback.heartbeat) < duration(self.fallback.ttl)
                   message: fallback.heartbeat must be less than fallback.ttl.
+                - rule: duration(self.fallback.heartbeat) >= duration('1ms')
+                  message: fallback.heartbeat must be at least 1ms.
                 - rule: duration(self.fallback.kubernetesAPITimeout) < duration(self.fallback.ttl)
                   message: fallback.kubernetesAPITimeout must be less than fallback.ttl.
                 - rule: duration(self.rejoin.interval) <= duration(self.rejoin.maxInterval)
                   message: rejoin.interval must be less than or equal to rejoin.maxInterval.
-                - rule: duration(self.watchdog.feedInterval) < duration(self.watchdog.timeout)
-                  message: watchdog.feedInterval must be less than watchdog.timeout.
+                - rule: duration(self.watchdog.feedInterval) + duration(self.watchdog.feedInterval) <= duration(self.watchdog.timeout)
+                  message: watchdog.feedInterval must be at most half of watchdog.timeout.
+                - rule: duration(self.watchdog.timeout) >= duration('2s')
+                  message: watchdog.timeout must be at least 2s.
+                - rule: duration(self.watchdog.timeout).getMilliseconds() % 1000 == 0
+                  message: watchdog.timeout must be a whole number of seconds.
+                - rule: duration(self.fallback.kubernetesAPITimeout) + duration(self.watchdog.timeout) + duration('500ms') <= duration(self.evacuation.delay)
+                  message: evacuation.delay must be at least fallback.kubernetesAPITimeout + watchdog.timeout + 500ms.
+                - rule: "(duration(self.fallback.heartbeat) > duration(self.fallback.kubernetesAPITimeout) ? duration(self.fallback.heartbeat) : duration(self.fallback.kubernetesAPITimeout)) + duration(self.fallback.kubernetesAPITimeout) + duration(self.watchdog.timeout) + duration('500ms') <= duration(self.fallback.ttl)"
+                  message: fallback.ttl must be at least max(fallback.heartbeat, fallback.kubernetesAPITimeout) + fallback.kubernetesAPITimeout + watchdog.timeout + 500ms.
               properties:
                 reactionGoal:
                   type: string
@@ -117,7 +127,7 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        How long to wait for a probe response. Must be less than `probeInterval` and above the p99 network RTT.
+                        How long to wait for a probe response. Must be above the p99 network RTT and less than half of `probeInterval`: a nack from an indirect prober arrives about two probe timeouts after the probe starts, and a nack that misses the probe deadline counts against the Lifeguard health of the probing node.
                     suspicionMult:
                       type: integer
                       format: int32
@@ -171,12 +181,14 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        How often an isolated node that still sees the Kubernetes API writes a fallback heartbeat. Must be noticeably less than `ttl`.
+                        How often an isolated node that still sees the Kubernetes API writes a fallback heartbeat. Must be noticeably less than `ttl`, and at least `1ms`: a shorter interval serializes into a sub-millisecond unit that the `heartbeatInterval` field of `FencingFailedNodeState` rejects, so every heartbeat write would fail, and the agent refuses to start rather than leave the node silently unprotected.
                     ttl:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         Freshness window of a fallback heartbeat. While the last heartbeat is newer than this TTL, evacuation is not allowed.
+
+                        Must be at least max(`heartbeat`, `kubernetesAPITimeout`) + `kubernetesAPITimeout` + `watchdog.timeout` + 500ms. A node that stops reaching the Kubernetes API stops feeding the watchdog after one failed heartbeat, and it must be reset before its last heartbeat goes stale. The 500ms absorb clock skew between the node and the fencing controller.
                     kubernetesAPITimeout:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
@@ -212,6 +224,8 @@ spec:
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         Delay before pods are deleted after a fast-path failure, counted from `status.failed.detectedAt`.
+
+                        Must be at least `fallback.kubernetesAPITimeout` + `watchdog.timeout` + 500ms. A node cut off from both the gossip network and the Kubernetes API stops feeding the watchdog after one failed heartbeat, and it must be reset before its pods are deleted. The 500ms absorb clock skew between the nodes and the fencing controller. The time the isolated node needs to notice its own quorum loss is not included: it grows with the size of the NodeGroup.
                 watchdog:
                   type: object
                   description: |
@@ -224,9 +238,9 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        How often the watchdog is fed and quorum/fallback is re-checked. Must be less than `timeout`, usually one quarter to one tenth of it.
+                        How often the watchdog is fed and quorum/fallback is re-checked. Must be at most half of `timeout`, usually one quarter to one tenth of it.
                     timeout:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        Time until the watchdog panics the node after feeding stops.
+                        Time until the watchdog panics the node after feeding stops. A whole number of seconds, at least 2s: the watchdog device takes whole seconds, and the agent would round a fraction up. `evacuation.delay` and `fallback.ttl` must leave room for it.

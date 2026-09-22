@@ -19,10 +19,16 @@ package profile
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
+)
+
+const (
+	minWatchdogTimeout = 2 * time.Second
+	fenceMargin        = 500 * time.Millisecond
 )
 
 // validator collects every violation so an invalid profile is reported whole,
@@ -35,6 +41,12 @@ func (v *validator) positive(field string, d metav1.Duration) {
 	// The CRD pattern admits "0ms", and zero timings would disable probing.
 	if d.Duration <= 0 {
 		v.errs = append(v.errs, fmt.Errorf("%s: must be positive, got %s", field, d.Duration))
+	}
+}
+
+func (v *validator) atLeast(field string, d metav1.Duration, floor time.Duration) {
+	if d.Duration < floor {
+		v.errs = append(v.errs, fmt.Errorf("%s: must be at least %s, got %s", field, floor, d.Duration))
 	}
 }
 
@@ -53,8 +65,9 @@ func (v *validator) lessThan(fieldA string, a metav1.Duration, fieldB string, b 
 
 // Validate re-checks the profile the agent is about to run on. The CRD schema and
 // CEL rules only guard admission, and an object may predate them, so any error
-// here must stop the agent. evacuation.delay belongs to the controller;
-// fallback.ttl is checked because the agent's timings must fit inside it.
+// here must stop the agent. evacuation.delay and fallback.ttl belong to the
+// controller; they are checked because the agent's watchdog reset must fit
+// inside them.
 func Validate(profile *v1alpha1.FencingSLAProfile) error {
 	if profile == nil {
 		return errors.New("profile is nil")
@@ -72,7 +85,7 @@ func Validate(profile *v1alpha1.FencingSLAProfile) error {
 	v.positive("memberlist.gossipInterval", spec.Memberlist.GossipInterval)
 	v.atLeastOne("memberlist.retransmitMult", spec.Memberlist.RetransmitMult)
 	v.positive("memberlist.gossipToTheDeadTime", spec.Memberlist.GossipToTheDeadTime)
-	v.positive("fallback.heartbeat", spec.Fallback.Heartbeat)
+	v.atLeast("fallback.heartbeat", spec.Fallback.Heartbeat, time.Millisecond)
 	v.positive("fallback.ttl", spec.Fallback.TTL)
 	v.positive("fallback.kubernetesAPITimeout", spec.Fallback.KubernetesAPITimeout)
 	v.positive("rejoin.interval", spec.Rejoin.Interval)
@@ -84,8 +97,19 @@ func Validate(profile *v1alpha1.FencingSLAProfile) error {
 		return errors.Join(v.errs...)
 	}
 
-	// The five CRD CEL rules, re-checked; see the function comment.
-	v.lessThan("memberlist.probeTimeout", spec.Memberlist.ProbeTimeout, "memberlist.probeInterval", spec.Memberlist.ProbeInterval)
+	// The CRD CEL rules beyond positivity, re-checked; see the function comment.
+	heartbeat := spec.Fallback.Heartbeat.Duration
+	apiTimeout := spec.Fallback.KubernetesAPITimeout.Duration
+	watchdogTimeout := spec.Watchdog.Timeout.Duration
+
+	// A nack from an indirect prober arrives about two probe timeouts after the
+	// probe starts; one that misses the probe deadline counts against the health
+	// of the node that probes.
+	if 2*spec.Memberlist.ProbeTimeout.Duration >= spec.Memberlist.ProbeInterval.Duration {
+		v.errs = append(v.errs, fmt.Errorf("memberlist.probeTimeout %s must be less than half of memberlist.probeInterval %s",
+			spec.Memberlist.ProbeTimeout.Duration, spec.Memberlist.ProbeInterval.Duration))
+	}
+
 	v.lessThan("fallback.heartbeat", spec.Fallback.Heartbeat, "fallback.ttl", spec.Fallback.TTL)
 	v.lessThan("fallback.kubernetesAPITimeout", spec.Fallback.KubernetesAPITimeout, "fallback.ttl", spec.Fallback.TTL)
 
@@ -95,7 +119,35 @@ func Validate(profile *v1alpha1.FencingSLAProfile) error {
 			spec.Rejoin.Interval.Duration, spec.Rejoin.MaxInterval.Duration))
 	}
 
-	v.lessThan("watchdog.feedInterval", spec.Watchdog.FeedInterval, "watchdog.timeout", spec.Watchdog.Timeout)
+	if 2*spec.Watchdog.FeedInterval.Duration > watchdogTimeout {
+		v.errs = append(v.errs, fmt.Errorf("watchdog.feedInterval %s must be at most half of watchdog.timeout %s",
+			spec.Watchdog.FeedInterval.Duration, watchdogTimeout))
+	}
+
+	v.atLeast("watchdog.timeout", spec.Watchdog.Timeout, minWatchdogTimeout)
+
+	// The device adapter would round a fraction up, so the reset would come later
+	// than the rules below assume.
+	if watchdogTimeout%time.Second != 0 {
+		v.errs = append(v.errs, fmt.Errorf("watchdog.timeout: must be a whole number of seconds, got %s", watchdogTimeout))
+	}
+
+	// A node cut off from gossip and from the API stops feeding once its first
+	// heartbeat times out, and must be reset before its pods may be deleted.
+	if need := apiTimeout + watchdogTimeout + fenceMargin; spec.Evacuation.Delay.Duration < need {
+		v.errs = append(v.errs, fmt.Errorf(
+			"evacuation.delay %s must be at least fallback.kubernetesAPITimeout %s + watchdog.timeout %s + %s = %s",
+			spec.Evacuation.Delay.Duration, apiTimeout, watchdogTimeout, fenceMargin, need))
+	}
+
+	// lastHeartbeatAt is stamped when an attempt starts. The next attempt starts
+	// up to max(heartbeat, apiTimeout) later and may hang for apiTimeout before
+	// feeding stops, so the reset must still land inside the TTL.
+	if need := max(heartbeat, apiTimeout) + apiTimeout + watchdogTimeout + fenceMargin; spec.Fallback.TTL.Duration < need {
+		v.errs = append(v.errs, fmt.Errorf(
+			"fallback.ttl %s must be at least max(fallback.heartbeat %s, fallback.kubernetesAPITimeout %s) + fallback.kubernetesAPITimeout + watchdog.timeout %s + %s = %s",
+			spec.Fallback.TTL.Duration, heartbeat, apiTimeout, watchdogTimeout, fenceMargin, need))
+	}
 
 	if len(v.errs) > 0 {
 		return errors.Join(v.errs...)

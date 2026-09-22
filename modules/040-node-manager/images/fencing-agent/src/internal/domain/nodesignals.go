@@ -52,7 +52,8 @@ func MaintenanceAnnotations() []string {
 // Kubernetes types, so the policy layer stays free of them.
 type NodeSignals struct {
 	// UID detects a Node recreated under the same name.
-	UID string
+	UID       string
+	NodeGroup string
 	// Maintenance is true while any maintenance annotation is present.
 	Maintenance bool
 	// MaintenanceReasons holds the annotations actually present.
