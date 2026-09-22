@@ -118,6 +118,11 @@ rules:
 - apiGroups: ["deckhouse.io"]
   resources: ["modulesources"]
   verbs: ["get"]
+# spec.registry.dockerCfg is x-kubernetes-sensitive-data: without this subresource the
+# apiserver returns it as <omitted> and the registry auth cannot be decoded.
+- apiGroups: ["deckhouse.io"]
+  resources: ["modulesources/sensitive"]
+  verbs: ["get"]
 - apiGroups: ["deckhouse.io"]
   resources: ["{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"]
   verbs: ["get", "list"]
