@@ -479,7 +479,6 @@ spec:
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
 - --controllers=cloud-node-controller,cloud-node-lifecycle-controller
-- --concurrent-node-syncs=10
 - --v=4`))
 			Expect(ccmDeployment.Field("spec.template.spec.containers.0.volumeMounts").String()).To(MatchYAML(`
 - mountPath: /etc/cloud
@@ -745,7 +744,6 @@ node-role.deckhouse.io/control-plane: ""`))
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
 - --controllers=cloud-node-controller,cloud-node-lifecycle-controller
-- --concurrent-node-syncs=10
 - --v=4
 `))
 		})
@@ -773,7 +771,6 @@ node-role.deckhouse.io/control-plane: ""`))
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
 - --controllers=cloud-node-controller,cloud-node-lifecycle-controller,service-lb-controller
-- --concurrent-node-syncs=10
 - --v=4
 `))
 		})
@@ -801,7 +798,6 @@ node-role.deckhouse.io/control-plane: ""`))
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
 - --controllers=cloud-node,cloud-node-lifecycle
-- --concurrent-node-syncs=10
 - --v=4
 `))
 		})
@@ -829,7 +825,6 @@ node-role.deckhouse.io/control-plane: ""`))
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
 - --controllers=cloud-node,cloud-node-lifecycle,service
-- --concurrent-node-syncs=10
 - --v=4
 `))
 		})
