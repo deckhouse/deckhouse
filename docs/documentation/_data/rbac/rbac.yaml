@@ -1805,14 +1805,6 @@ modules:
           - deletecollection
         - apiGroups:
           - deckhouse.io
-          resources:
-          - clustersecurityscores
-          verbs:
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - deckhouse.io
           resourceNames:
           - operator-trivy
           resources:
@@ -1822,6 +1814,16 @@ modules:
           - update
           - patch
           - delete
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - registryscantargets
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
       use:
       - name: d8:use:capability:module:operator-trivy:view
         rules:
@@ -1871,14 +1873,6 @@ modules:
           verbs:
           - delete
           - deletecollection
-        - apiGroups:
-          - deckhouse.io
-          resources:
-          - securityscores
-          verbs:
-          - get
-          - list
-          - watch
         - apiGroups:
           - spdx.softwarecomposition.kubescape.io
           resources:
@@ -2733,5 +2727,4 @@ subsystems:
     namespaces:
     - d8-admission-policy-engine
     - d8-cert-manager
-    - d8-runtime-audit-engine
     - d8-user-authn
