@@ -264,12 +264,12 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 		return err
 	}
 	// The root hash is what a node compares by; the digest only says where to look.
-	// Best effort on purpose — a node handed no hash reads the same value out of the
-	// artifact, so a registry that cannot be reached costs a download and not a
-	// configuration.
+	// Read, not resolved: the watcher holds the answer for the digest in force, so
+	// nothing here reaches the registry. Empty is a digest it has not caught up with
+	// yet, which costs that node one download and no more.
 	in.OSImage = internalv1alpha1.OSImage{
 		Digest:   osImage,
-		RootHash: s.rootHashes().resolve(ctx, in.Registry, imagesRepo, osImage),
+		RootHash: s.rootHashes().known(osImage),
 	}
 
 	in.SandboxImage, err = sandboxImage(images, imagesRepo)

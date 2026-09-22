@@ -26,6 +26,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	registry "github.com/deckhouse/deckhouse/pkg/registry"
 	registryclient "github.com/deckhouse/deckhouse/pkg/registry/client"
@@ -59,6 +60,11 @@ const (
 	rootHashMember = "rootfs.roothash"
 )
 
+// defaultRootHashInterval is how often the digest in force is re-read. A release
+// changes it, and a release is not a thing that happens every minute; noticing one
+// within half a minute is well inside the time a node takes to act on it anyway.
+const defaultRootHashInterval = 30 * time.Second
+
 // imageSource is the part of a registry client this needs: the config to read a
 // label from, and the content to read a file from. Narrow on purpose — it is the
 // seam the tests replace, and a wider one would have them implement operations
@@ -68,62 +74,82 @@ type imageSource interface {
 	GetImage(ctx context.Context, tag string, opts ...registry.ImageGetOption) (registry.Image, error)
 }
 
-// rootHashResolver turns an OS image digest into the root hash of the root inside
-// it, once per image.
+// rootHashResolver holds the answer for the digest currently in force, and the
+// registry call that produces it.
 //
-// Every failure here returns an empty hash rather than an error, and that is the
-// design rather than laziness: the field it fills is optional, its absence costs a
-// node one download of an artifact it can read the same value from, and failing the
-// pass instead would stop rendering configurations for every node in the cluster
-// because a registry was briefly unreachable.
+// The render path only reads what is held: at any moment the cluster publishes
+// exactly one OS image digest, so the hash is resolved when that digest appears and
+// not while a node is being rendered. Keeping the registry out of the render is the
+// point — a slow registry would otherwise delay every node's configuration, and a
+// failing one would put a round trip into every pass.
+//
+// Failures leave the hash empty rather than propagating, and that is the design
+// rather than laziness: the field it fills is optional, a node handed none reads the
+// same value out of the artifact it downloads anyway, and failing instead would stop
+// rendering configurations for every node in the cluster because a registry was
+// briefly unreachable.
 type rootHashResolver struct {
 	// newSource is the registry client factory, replaced in tests.
 	newSource func(reg *internalv1alpha1.Registry, repo string) (imageSource, error)
 
-	mu    sync.Mutex
-	cache map[string]string
+	mu     sync.Mutex
+	digest string
+	hash   string
 }
 
 func newRootHashResolver() *rootHashResolver {
-	return &rootHashResolver{newSource: dialRegistry, cache: map[string]string{}}
+	return &rootHashResolver{newSource: dialRegistry}
 }
 
-// resolve is the whole entry point: a hash, or "" with the reason logged.
-func (r *rootHashResolver) resolve(ctx context.Context, reg *internalv1alpha1.Registry, repo, digest string) string {
+// known is what the render reads: the hash held for this digest, or "" for any
+// other. Never dials anything — a digest this has not been told about yet is a node
+// rendered without the field, which costs that node one download.
+func (r *rootHashResolver) known(digest string) string {
 	if digest == "" {
 		return ""
 	}
-	if hash, ok := r.cached(digest); ok {
-		return hash
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if digest != r.digest {
+		return ""
 	}
+	return r.hash
+}
 
+// resolved reports whether the hash for this digest is already held, so the watcher
+// can tell "nothing changed" from "changed and not yet read".
+func (r *rootHashResolver) resolved(digest string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return digest != "" && digest == r.digest && r.hash != ""
+}
+
+// hold records the answer for a digest, replacing whatever the previous one was.
+// Only one digest is ever held: the cluster publishes one, and remembering the old
+// ones would be a cache of answers nothing will ask for again.
+func (r *rootHashResolver) hold(digest, hash string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.digest, r.hash = digest, hash
+}
+
+// refresh resolves the hash for digest unless it is already held, and is the only
+// thing that talks to the registry.
+func (r *rootHashResolver) refresh(ctx context.Context, reg *internalv1alpha1.Registry, repo, digest string) {
+	if digest == "" || r.resolved(digest) {
+		return
+	}
 	hash, err := r.lookup(ctx, reg, repo, digest)
 	if err != nil {
 		// Logged at info, not error: the node has its own way to the same answer, so
-		// this is a lost optimisation and not a fault to page anyone about.
+		// this is a lost optimisation and not a fault to page anyone about. The next
+		// tick tries again.
 		log.FromContext(ctx).Info("could not read the root hash of the OS image; nodes will read it from the artifact instead",
 			"digest", digest, "error", err)
-		return ""
+		return
 	}
-
-	r.remember(digest, hash)
-	return hash
-}
-
-func (r *rootHashResolver) cached(digest string) (string, bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	hash, ok := r.cache[digest]
-	return hash, ok
-}
-
-func (r *rootHashResolver) remember(digest, hash string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.cache == nil {
-		r.cache = map[string]string{}
-	}
-	r.cache[digest] = hash
+	r.hold(digest, hash)
+	log.FromContext(ctx).Info("resolved the root hash of the OS image", "digest", digest, "rootHash", hash)
 }
 
 // lookup reads the label, and reads the artifact when there is no label. Both
@@ -247,4 +273,71 @@ func decodeAuth(auth string) (string, string, error) {
 		return "", "", errors.New("the registry credentials are not user:password")
 	}
 	return user, password, nil
+}
+
+// rootHashWatcher keeps the resolver in step with the digest the cluster publishes:
+// it resolves at start and whenever that digest changes, so the render never has to.
+//
+// It polls rather than watches, and that is forced rather than chosen: the ConfigMap
+// the digests live in is outside the manager's cache on purpose (see Setup), and a
+// cached watch on ConfigMaps would mean caching every ConfigMap in the cluster to
+// follow one. The object changes once per release, so a poll costs one Get per
+// interval and notices a new release within it.
+type rootHashWatcher struct {
+	sources  *sourceReader
+	resolver *rootHashResolver
+	interval time.Duration
+}
+
+// NeedLeaderElection keeps this on every replica: it fills an in-memory value this
+// process renders from, so a follower that ever becomes leader must already have it.
+func (w *rootHashWatcher) NeedLeaderElection() bool { return false }
+
+// Start satisfies manager.Runnable. The first pass runs immediately, so a controller
+// that has just started renders with the hash rather than without it.
+func (w *rootHashWatcher) Start(ctx context.Context) error {
+	interval := w.interval
+	if interval <= 0 {
+		interval = defaultRootHashInterval
+	}
+
+	w.tick(ctx)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			w.tick(ctx)
+		}
+	}
+}
+
+// tick reads what the cluster publishes and resolves the hash if that digest is new.
+// Every failure is logged and dropped: this fills an optional field, and nothing here
+// is worth taking the controller down for.
+func (w *rootHashWatcher) tick(ctx context.Context) {
+	logger := log.FromContext(ctx)
+
+	images, err := w.sources.readImagesDigests(ctx)
+	if err != nil {
+		logger.Info("could not read the image digests while resolving the OS image root hash", "error", err)
+		return
+	}
+	digest, err := digestAt(images, nodeManagerDigestsKey, osImageName)
+	if err != nil {
+		logger.Info("the release publishes no OS image digest yet", "error", err)
+		return
+	}
+	if w.resolver.resolved(digest) {
+		return
+	}
+
+	registry, imagesRepo, err := w.sources.readRegistry(ctx)
+	if err != nil {
+		logger.Info("could not read the registry while resolving the OS image root hash", "error", err)
+		return
+	}
+	w.resolver.refresh(ctx, registry, imagesRepo, digest)
 }
