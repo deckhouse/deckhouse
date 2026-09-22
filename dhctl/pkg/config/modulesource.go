@@ -16,6 +16,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -343,7 +344,7 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 
 		rel, err := svc.Releases().Fetch(ctx, tag)
 		if err != nil {
-			return providerBundleRef{}, true, fmt.Errorf("resolve %s/release:%s: %w%s", moduleRepo, tag, err, guessedRepoHint(provider, md.providerSource(moduleName)))
+			return providerBundleRef{}, true, fmt.Errorf("resolve %s/release:%s: %w%s", moduleRepo, tag, err, repoHint(err, provider, md.providerSource(moduleName)))
 		}
 
 		version, err := rel.Version()
@@ -379,8 +380,14 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 // Nothing in an installer distinguishes "this edition does not carry the provider" from "the
 // provider is published outside this repository", so a 404 gets both readings. A named source
 // needs none - the operator wrote the address that failed.
-func guessedRepoHint(provider, sourceName string) string {
-	if sourceName != "" {
+// A named source needs none - the operator wrote the address that failed. A denial gets none
+// either: a token-auth registry answers the same way for a target outside the identity's scope
+// whether or not it exists, and the wrapped error already says access was denied.
+//
+// ErrRepositoryNotFound wraps ErrImageNotFound, so one errors.Is covers a missing repository and a
+// missing tag alike.
+func repoHint(err error, provider, sourceName string) string {
+	if sourceName != "" || !errors.Is(err, registry.ErrImageNotFound) {
 		return ""
 	}
 

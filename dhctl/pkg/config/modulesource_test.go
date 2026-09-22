@@ -427,6 +427,33 @@ spec:
 	require.Equal(t, "test-user", conf.GetUsername())
 }
 
+// A token-auth registry denies anything outside the identity's scope whether or not the target
+// exists, so guessing "this edition ships no such module" on a denial sends the operator down a
+// dead end.
+func TestRepoHintClassifiesRegistryFailure(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		err        error
+		sourceName string
+		wantHint   bool
+	}{
+		{name: "repository missing", err: fmt.Errorf("wrapped: %w", registry.ErrRepositoryNotFound), wantHint: true},
+		{name: "tag missing", err: fmt.Errorf("wrapped: %w", registry.ErrImageNotFound), wantHint: true},
+		{name: "access denied", err: fmt.Errorf("wrapped: %w", registry.ErrAccessDenied), wantHint: false},
+		{name: "named source never guesses", err: registry.ErrImageNotFound, sourceName: "my-source", wantHint: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			hint := repoHint(tc.err, "openstack", tc.sourceName)
+			if tc.wantHint {
+				require.Contains(t, hint, "cloud-provider-openstack")
+
+				return
+			}
+			require.Empty(t, hint)
+		})
+	}
+}
+
 // recordingClient notes which tag each repository was asked for and can fail every request.
 // pkg/registry/fake stores images but records no requests, and half of these tests assert on the
 // request itself - that the release image was NOT fetched when an override pins the tag.
@@ -725,10 +752,11 @@ func TestResolveProviderBundleRefRegistryFailureIsNotAFallback(t *testing.T) {
 	// Stocked so that a fallback would succeed and the test would pass by accident.
 	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
 
-	stubModuleCatalog(t, newModuleStand("registry.example.io/modules").failing(fmt.Errorf("401 Unauthorized")))
+	stubModuleCatalog(t, newModuleStand("registry.example.io/modules").
+		failing(fmt.Errorf("wrapped: %w", registry.ErrAccessDenied)))
 
 	_, err := resolveProviderBundleRef(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, testProviderMCWithSourceDoc, testModuleSourceDoc(t, "registry.example.io/modules")}), testModuleOptions(t))
-	require.ErrorContains(t, err, "401 Unauthorized")
+	require.ErrorIs(t, err, registry.ErrAccessDenied)
 }
 
 // A module image that lists no terraformManager digest has no bundle to unpack, and saying so
