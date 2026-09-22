@@ -12,7 +12,7 @@ Install `deckhouse-cli` (`d8`):
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
 ```
 
-Log in to the package registry with your [license token](https://license.deckhouse.io/):
+Log in to the OCI registry with your [license token](https://license.deckhouse.io/):
 
 ```bash
 d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TOKEN>
@@ -20,7 +20,9 @@ d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TO
 
 ## Bootstrapping an Application package
 
-`d8 package bootstrap application <APPLICATION_NAME>` creates a `<APPLICATION_NAME>/` directory in the current working directory with the package skeleton and initializes a Git repository with the first commit.
+To create a `<APPLICATION_NAME>/` directory in the current working directory with the package skeleton and initialize a Git repository with the first commit, run the command `d8 package bootstrap application <APPLICATION_NAME>`.
+
+Example:
 
 ```bash
 d8 package bootstrap application myapp --hooks
@@ -88,7 +90,7 @@ descriptions:
 version: "v1.0.1"
 stage: "Preview"
 category: "Databases"
-# Environmental requirements.
+# Environment requirements.
 requirements:
   deckhouse:
     constraint: ">= 1.70"
@@ -121,15 +123,14 @@ The `openapi/` directory defines two schemas:
 - `config-values.yaml` (or `settings.yaml`) — the schema for `Application.spec.settings` (user-facing configuration).
 - `values.yaml` — the schema for the full set of Helm values.
 
-### Defaulting a grantable cluster resource value (x-deckhouse-grantable-resource)
+### Defaulting a grantable cluster-wide resource value (x-deckhouse-grantable-resource)
 
-A `settings` field of `type: string` can be bound to a grantable cluster resource managed by the
+A `settings` field of type `string` can be bound to a grantable cluster-wide resource managed by the
 [`multitenancy-manager`](/modules/multitenancy-manager/) (for example, a StorageClass).
 
-When the field is bound and the user leaves it empty, the resource name configured as the project default is injected into `values`. When the user provides a value, it is checked against the names available to the project. A value that is not in this list is rejected.
+When the field is bound and the user leaves it empty, the resource name configured as the project default is injected into `values`. When the user provides a value, it is checked against the resources available to the project. A value that is not in this list is rejected.
 
-Add the `x-deckhouse-grantable-resource` extension to the field and reference the grantable resource by name (the
-AvailableClusterResource / GrantableClusterResourceDefinition name, e.g. `storageclasses`).
+To bind the field to a cluster-wide resource, add the `x-deckhouse-grantable-resource` extension and specify the name of the resource available to the project through a grant (`AvailableClusterResource` or `GrantableClusterResourceDefinition`), for example, `storageclasses`.
 
 {% alert level="info" %}
 The resource group, version, and kind (GVK) are defined by the grant. You do not need to specify them in `openapi/settings.yaml`.
@@ -159,7 +160,7 @@ Behavior:
 
 ### Immutable fields (x-deckhouse-immutable)
 
-Some settings should not be changed after they are applied. For example, changing a `storageClass` after volumes have been created either has no effect or can cause application failures. To freeze the value of such a field after a successful apply, add `x-deckhouse-immutable: true`.
+Some settings should not be changed after the application configuration is applied. For example, changing a `storageClass` after volumes have been created either has no effect or can cause application failures. To prevent changes to the value of such a field after the application configuration has been successfully applied, add the `x-deckhouse-immutable: true` extension to it.
 
 Example `openapi/settings.yaml` with `x-deckhouse-immutable`:
 
@@ -183,23 +184,20 @@ properties:
 Behavior:
 
 - The extension is effective only when set to `true`. Any other value is ignored.
-- Immutability checking starts after the application has been successfully applied for the first time. Before that, the restriction on changing the field does not apply.
-- If a field with the extension has never had an applied value and has no default, it can be set later. After that value is successfully applied, subsequent changes are rejected.
-- When `x-deckhouse-immutable` is added to an object, the entire object becomes immutable. After the first successful apply, changing any nested field is rejected, even if `x-deckhouse-immutable` is not set on that field. Set the extension on an object only when the entire object must be immutable. To make only one field immutable, add `x-deckhouse-immutable` directly to it, as with `postgres.storageClass` in the example above. In this case, the restriction does not apply to `postgres.volumeSize`, and its value can be changed.
-- An update that changes a frozen value is rejected by the validating webhook, naming the field.
+- When `x-deckhouse-immutable` is added to an object, the entire object becomes immutable. After the application configuration has been successfully applied for the first time, changing any nested field is rejected, even if `x-deckhouse-immutable` is not set on that field. Set the extension on an object only when the entire object must be immutable. To make only one field immutable, add `x-deckhouse-immutable` directly to it, as with `postgres.storageClass` in the example above. In this case, the restriction does not apply to `postgres.volumeSize`, and its value can be changed.
+- If an update changes an immutable value, the validating webhook rejects it and reports the field name.
 - In the web interface, the value of a field with the extension can be set when installing the application. In the edit form of an installed application, the field is read-only.
-- Comparison uses the configuration that was actually applied, after schema defaults are applied. Therefore, a field with the extension can be omitted from the manifest only if its `default` restores the value that has already been applied. If there is no default value or it differs from the applied value, the change is rejected.
+- Comparison uses the configuration that was actually applied, after schema defaults are applied. Therefore, a field with the extension can be omitted from the manifest only if its `default` matches the value that has already been applied. If there is no default value or it differs from the applied value, the change is rejected.
 
 {% alert level="info" %}
 If an entire object is removed from the manifest, default values are not applied to its nested fields. Therefore, removing an object that contains fields using `x-deckhouse-immutable` can cause frozen values to be lost and is rejected.
 {% endalert %}
 
-- If a field uses both `x-deckhouse-grantable-resource` and `x-deckhouse-immutable` and the user does not set a value explicitly, the project default is used. As long as the field remains empty, changing this value is not blocked by `x-deckhouse-immutable`. After the application has been successfully applied, explicitly setting a different value is no longer possible.
-- The extension does not apply to array elements or map entries added by an update because a new element has no previous value to compare against.
+- The mark is not inherited into array elements or map entries that the update adds — a new element has no previous value to be frozen against.
 
 ## Local build
 
-To build and publish the package to a registry, run:
+To build and publish the package to an OCI registry, run:
 
 ```bash
 d8 package build -v v0.0.1 -r dev-registry.deckhouse.io/deckhouse/packages
@@ -219,16 +217,16 @@ The command reports errors and warnings based on `.pkglint.yaml` and built-in ru
 
 ## CI/CD setup
 
-The CI/CD pipeline publishes package releases to the registry. To publish a release, configure the registry credentials, then create a Git tag in SemVer format and push it to the repository.
+The CI/CD pipeline publishes package releases to the OCI registry. To publish a release, configure the OCI registry credentials, then create a Git tag in SemVer format and push it to the repository.
 
 ### Environment variables
 
-The pipeline uses the following variables to authenticate to the package registry:
+The pipeline uses the following variables to authenticate to the OCI registry:
 
 | Variable | Description |
 |---|---|
-| `PACKAGES_REGISTRY_LOGIN` | Registry username for publishing |
-| `PACKAGES_REGISTRY_PASSWORD` | Registry password or token |
+| `PACKAGES_REGISTRY_LOGIN` | OCI registry username for publishing |
+| `PACKAGES_REGISTRY_PASSWORD` | OCI registry password or token |
 
 ### Triggering a release
 
@@ -239,28 +237,19 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The pipeline builds the package and pushes it to the registry. Once the pipeline completes, the package version is available for scanning via PackageRepository.
+The pipeline builds the package and pushes it to the OCI registry. Once the pipeline completes, the package version is available for scanning via PackageRepository.
 
 ## OCI artifact layout in the registry
 
 The package and related data are published to an OCI-compatible registry. The package bundle, additional images, and version metadata are stored at separate paths.
 
-```text
-registry.deckhouse.io/deckhouse/<EDITION>/packages:<PACKAGE_NAME>
-    Package name tag — used to list packages
-
-registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>:<PACKAGE_VERSION>
-    Bundle — contains templates, openapi/, hooks/
-
-registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/extra/<IMAGE_NAME>:<PACKAGE_VERSION>
-    Additional images (application containers)
-
-registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/version:<PACKAGE_VERSION>
-    Version metadata — contains package.yaml, version.json, changelog.yaml
-
-registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/version:<RELEASE_CHANNEL>
-    Recommended version for a release channel
-```
+| Path | Description |
+|---|---|
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages:<PACKAGE_NAME>` | Package name tag — used to list packages |
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Bundle — contains templates, `openapi/`, `hooks/` |
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/extra/<IMAGE_NAME>:<PACKAGE_VERSION>` | Additional images (application containers) |
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/version:<PACKAGE_VERSION>` | Version metadata — contains `package.yaml`, `version.json`, `changelog.yaml` |
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/version:<RELEASE_CHANNEL>` | Recommended version for a release channel |
 
 ### Bundle contents
 
