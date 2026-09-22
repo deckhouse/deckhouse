@@ -57,6 +57,14 @@ resource "decort_disk" "kubernetes_data_disk" {
   size_max          = local.master_etcd_disk_size
   storage_policy_id = local.storage_policy_id
 
+  # Destroy settings, read by the provider only when the disk is deleted.
+  # Without "permanently" the disk only moves to the recycle bin, where it keeps
+  # consuming the storage quota of the account until the bin is purged; and the
+  # platform destroys a disk outright only once it is attached to nothing, hence
+  # "detach" for the machine that may still be holding it.
+  detach      = true
+  permanently = true
+
   timeouts {
     create = var.resourceManagementTimeout
     delete = var.resourceManagementTimeout

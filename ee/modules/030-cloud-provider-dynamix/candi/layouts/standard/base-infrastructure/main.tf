@@ -53,6 +53,15 @@ resource "decort_resgroup" "decort_resource_group" {
   gid = local.gid
   def_net_type = "NONE"
 
+  # Destroy settings, read by the provider only when the group is deleted.
+  # "force" lets the group go even when something the cluster created outside this state
+  # (a load balancer, a CSI volume, a machine the node group did not get to remove) is
+  # still inside it, so aborting a half-built cluster does not leave the group behind.
+  # "permanently" keeps the deleted group out of the recycle bin, where it would hold on
+  # to its name and to the resources it contains.
+  force       = true
+  permanently = true
+
   # The set is declarative: a policy the account loses is detached on the next converge,
   # and "limit" is left at the provider default -1, so the module claims no storage quota.
   dynamic "storage_policy" {

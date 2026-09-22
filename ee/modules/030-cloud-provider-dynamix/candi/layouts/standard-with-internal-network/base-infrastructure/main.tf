@@ -58,6 +58,15 @@ resource "decort_resgroup" "decort_resource_group" {
   gid = local.gid
   def_net_type = "NONE"
 
+  # Destroy settings, read by the provider only when the group is deleted.
+  # "force" lets the group go even when something the cluster created outside this state
+  # (a load balancer, a CSI volume, a machine the node group did not get to remove) is
+  # still inside it, so aborting a half-built cluster does not leave the group behind.
+  # "permanently" keeps the deleted group out of the recycle bin, where it would hold on
+  # to its name and to the resources it contains.
+  force       = true
+  permanently = true
+
   # The set is declarative: a policy the account loses is detached on the next converge,
   # and "limit" is left at the provider default -1, so the module claims no storage quota.
   dynamic "storage_policy" {
@@ -77,4 +86,13 @@ resource "decort_vins" "vins" {
   }
   ext_net_id = local.extnet_id
   dns = length(local.nameservers) > 0 ? local.nameservers : []
+
+  # Destroy settings, read by the provider only when the ViNS is deleted.
+  # Without "permanently" the ViNS only moves to the recycle bin, and a ViNS in the
+  # recycle bin still counts as a member of the resource group: the group that is
+  # deleted right after it is refused with "Cannot delete RG ID N: it contains ViNS".
+  # "force" disconnects whatever is still attached, so a machine that outlived its
+  # node group does not hold the ViNS either.
+  force       = true
+  permanently = true
 }
