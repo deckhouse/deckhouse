@@ -22,7 +22,7 @@ The account specified in `DynamixClusterConfiguration.provider` must be allowed 
 | `account`, `locations`, `rg` | all components | resolving the account, the location and the resource group by name |
 | `extnet`, `vins` | terraform, CAPD | external and internal networks |
 | `image` | terraform, CAPD | OS images for the nodes |
-| `storage_policy` | terraform, CAPD, CSI, cloud-data-discoverer | listing the storage policies available to the account and resolving a policy by name |
+| `storage_policy` | terraform, CAPD, CSI, cloud-data-discoverer | listing the storage policies available to the account, resolving a policy by name and attaching the policies to the cluster's resource group |
 | `disks` | terraform, CSI | disks of the master nodes and persistent volumes |
 | `compute`, `kvmx86` | terraform, CCM, CAPD, CSI | virtual machines and disk attachment |
 | `lb` | CCM | load balancers for `LoadBalancer` services |
@@ -30,6 +30,8 @@ The account specified in `DynamixClusterConfiguration.provider` must be allowed 
 {% alert level="info" %}
 The module never chooses a storage endpoint or a pool for a disk. It only names a storage policy, and Basis Dynamix picks the placement within that policy itself.
 {% endalert %}
+
+The module creates the cluster's resource group with every `ENABLED` storage policy of the account attached to it, and brings that set up to date on every converge. Basis Dynamix refuses to create a virtual machine in a resource group its storage policy is not attached to, and a node may ask for any policy of the account — the one in its instance class or the cluster-wide one — while a persistent volume may land in any of them, since the module offers a `StorageClass` per policy. A policy granted to the account later is therefore attached by the next converge, without a separate migration — and, by the same rule, a policy the account loses, or one that stops being `ENABLED`, is detached from the resource group. Disable a policy only once nothing in the cluster uses it.
 
 ### Prepare an operating system image
 

@@ -27,9 +27,38 @@ locals {
   gid = data.decort_locations_list.locations.items[0].gid
 }
 
+data "decort_storage_policy_list" "account_storage_policies" {
+  # Every ENABLED policy of the account, not just DynamixClusterConfiguration.storagePolicy:
+  # the resource group is one per cluster, while a policy is picked per node (in the instance
+  # class or cluster-wide) and the CSI driver offers a StorageClass per policy of the account.
+  # Both filters are exact on the API side, so the list needs no further narrowing here.
+  account_id = local.account_id
+  status     = "ENABLED"
+
+  lifecycle {
+    postcondition {
+      condition     = length([for p in self.items : p if p.name == local.storage_policy]) == 1
+      error_message = <<-EOT
+        ERROR: expected exactly one ENABLED Dynamix storage policy named '${local.storage_policy}' in account '${local.account}', found ${length([for p in self.items : p if p.name == local.storage_policy])} exact match(es) among ${length(self.items)} ENABLED policy(-ies) of the account.
+
+        Set DynamixClusterConfiguration.storagePolicy to the exact name of an ENABLED storage policy available to the account.
+      EOT
+    }
+  }
+}
+
 resource "decort_resgroup" "decort_resource_group" {
   name = local.resource_group_name
   account_id = local.account_id
   gid = local.gid
   def_net_type = "NONE"
+
+  # The set is declarative: a policy the account loses is detached on the next converge,
+  # and "limit" is left at the provider default -1, so the module claims no storage quota.
+  dynamic "storage_policy" {
+    for_each = data.decort_storage_policy_list.account_storage_policies.items
+    content {
+      id = storage_policy.value.storage_policy_id
+    }
+  }
 }
