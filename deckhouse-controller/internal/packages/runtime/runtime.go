@@ -532,13 +532,16 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 // Run binds the API listeners and starts the scheduler event loop in a
 // background goroutine. The loop listens for schedule and disable events from
 // the scheduler and dispatches them to the appropriate handler, driving the
-// enable/disable lifecycle for all packages.
+// enable/disable lifecycle for all packages. It also starts the status resync,
+// the periodic re-enqueue that republishes every package status regardless of
+// whether anything changed.
 func (r *Runtime) Run() error {
 	if err := r.startAPIServers(); err != nil {
 		return fmt.Errorf("start api servers: %w", err)
 	}
 
 	r.hookEventHandler.Start()
+	r.status.StartResync()
 	r.healthService.Start()
 
 	go func() {
@@ -751,7 +754,8 @@ func (r *Runtime) Stop() {
 	// Close scheduler event channel
 	r.scheduler.Stop()
 
-	// Stop reflecting status to CRs (unblocks the status consumer loop)
+	// Stop the status resync and then reflecting status to CRs (unblocks the
+	// status consumer loop)
 	r.status.Shutdown()
 
 	// Close the API listeners last so state stays introspectable during shutdown

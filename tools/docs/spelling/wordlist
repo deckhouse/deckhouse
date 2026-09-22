@@ -1607,9 +1607,15 @@ regex
 regexes
 regexp
 regionTagCategory
+RegistryConfig
 registryDockerCfg
 registryImagesRepo
+RegistryNode
+RegistryNodes
 registrysecret
+RegistryStorage
+RegistryUpstream
+reindex
 releaseChannel
 repo
 repos
@@ -1732,6 +1738,7 @@ txt
 uid
 un
 unboundedly
+unconfigured
 uncordoned
 unicode
 uninstall

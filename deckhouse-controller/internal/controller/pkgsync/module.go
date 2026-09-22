@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -247,7 +248,7 @@ func (s *syncer) readyModulePullOverridesByModule(ctx context.Context) (map[stri
 // Nothing left to ask means the module is not placed: the reason goes to the log,
 // and the override controller reports it on the pull override itself.
 func (s *syncer) repositoryForOverriddenModule(ctx context.Context, moduleName string, moduleConfig *v1alpha1.ModuleConfig) (string, bool) {
-	module := new(v1alpha2.Module)
+	module := new(v1beta1.Module)
 	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, module); err == nil {
 		if name := module.Spec.PackageRepositoryName; name != "" && name != repositoryNameEmbedded {
 			return name, true
@@ -392,7 +393,7 @@ func (s *syncer) ensureReleasedModule(ctx context.Context, moduleName, repositor
 // - only the fields below are written, the module has other writers
 // - a patch with no drift is not sent
 func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, dev bool, moduleConfig *v1alpha1.ModuleConfig) error {
-	module := new(v1alpha2.Module)
+	module := new(v1beta1.Module)
 
 	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -428,7 +429,7 @@ func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, p
 // createModule writes a module the cluster does not carry yet.
 // Rare: the old module stack creates an object for every module it knows.
 func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, dev bool, moduleConfig *v1alpha1.ModuleConfig) error {
-	module := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
+	module := &v1beta1.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
 
 	applyModuleVersion(module, repositoryName, packageVersion, releaseChannel, dev)
 	applyModuleConfig(module, moduleConfig)
@@ -448,26 +449,26 @@ func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, p
 // The embedded mark is written and cleared on every pass: an upgrade drops the
 // embedded copy and the module moves to a repository. The dev mark is only ever
 // written: the override controller takes it off when the pull override goes away.
-func applyModuleVersion(module *v1alpha2.Module, repositoryName, packageVersion, releaseChannel string, dev bool) {
+func applyModuleVersion(module *v1beta1.Module, repositoryName, packageVersion, releaseChannel string, dev bool) {
 	module.Spec.PackageRepositoryName = repositoryName
 	module.Spec.PackageVersion = packageVersion
 	module.Spec.ReleaseChannel = releaseChannel
 
 	if dev {
-		setModuleAnnotation(module, v1alpha2.ModuleAnnotationDev)
+		setModuleAnnotation(module, v1beta1.ModuleAnnotationDev)
 	}
 
 	if repositoryName != repositoryNameEmbedded {
-		delete(module.Annotations, v1alpha2.ModuleAnnotationEmbedded)
+		delete(module.Annotations, v1beta1.ModuleAnnotationEmbedded)
 
 		return
 	}
 
-	setModuleAnnotation(module, v1alpha2.ModuleAnnotationEmbedded)
+	setModuleAnnotation(module, v1beta1.ModuleAnnotationEmbedded)
 }
 
 // setModuleAnnotation marks the key true, allocating the map when the module carries none.
-func setModuleAnnotation(module *v1alpha2.Module, key string) {
+func setModuleAnnotation(module *v1beta1.Module, key string) {
 	if module.Annotations == nil {
 		module.Annotations = make(map[string]string, 1)
 	}
@@ -478,7 +479,7 @@ func setModuleAnnotation(module *v1alpha2.Module, key string) {
 // applyModuleConfig mirrors the module config into the module spec.
 // The four fields belong to the config alone: with no config they are cleared,
 // so a module keeps no settings the user has deleted.
-func applyModuleConfig(module *v1alpha2.Module, moduleConfig *v1alpha1.ModuleConfig) {
+func applyModuleConfig(module *v1beta1.Module, moduleConfig *v1alpha1.ModuleConfig) {
 	if moduleConfig == nil {
 		module.Spec.Enabled = nil
 		module.Spec.Settings = nil

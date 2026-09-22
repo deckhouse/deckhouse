@@ -20,9 +20,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
+	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -78,8 +81,22 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			}
 		}
 
+		// a literal in a field with a fixed set of values must be one of them: a typo used to be
+		// accepted, rendered into a label nothing reads or into no NetworkPolicy at all, and the
+		// project reported Deployed
+		if err := validateLiterals(template); err != nil {
+			return admission.Denied(fmt.Sprintf("the '%s' project template %v", template.Name, err))
+		}
+
 		// the legacy-Helm mark may not be dropped while the template still renders nothing
 		if resp := legacyMarkRemoval(req, template); !resp.Allowed {
+			return resp
+		}
+
+		// the inline grant entries must satisfy the same selector rules the ClusterResourceGrantPolicy
+		// schema enforces, or the managed policy this template materializes is refused at admission
+		// and the reconciler retries it forever
+		if resp := validateInlineGrantSelectors(template); !resp.Allowed {
 			return resp
 		}
 
@@ -140,6 +157,43 @@ func legacyMarkRemoval(req admission.Request, template *v1alpha2.ProjectTemplate
 			"as a bare namespace and delete every object the Helm template used to produce. Rewrite the template and remove "+
 			"the annotation in one request, or move the projects to another template first.",
 		template.Name, v1alpha2.TemplateAnnotationLegacyHelm))
+}
+
+// validateInlineGrantSelectors applies the ClusterResourceGrantPolicy selector rules to the inline
+// spec.resources entries of a template.
+//
+// The template schema accepts selector shapes the policy schema refuses -- an empty selector, or a
+// matchExpressions entry the selector library cannot compile. The templategrants controller copies
+// these entries verbatim into a managed ClusterResourceGrantPolicy, whose creation is then rejected
+// by admission on every attempt, with nothing on the template to say why. Refusing the template is
+// the only place the author finds out.
+func validateInlineGrantSelectors(template *v1alpha2.ProjectTemplate) admission.Response {
+	for i := range template.Spec.Resources {
+		entry := &template.Spec.Resources[i]
+		for _, sel := range []struct {
+			field    string
+			selector *metav1.LabelSelector
+		}{
+			{"allowedSelector", entry.AllowedSelector},
+			{"deniedSelector", entry.DeniedSelector},
+		} {
+			if sel.selector == nil {
+				continue
+			}
+			if len(sel.selector.MatchLabels) == 0 && len(sel.selector.MatchExpressions) == 0 {
+				return admission.Denied(fmt.Sprintf(
+					"the '%s' project template field 'spec.resources[%d].%s' (%s) is an empty selector: a selector must carry "+
+						"matchLabels or matchExpressions; omit the field to grant nothing through it",
+					template.Name, i, sel.field, entry.ResourceName))
+			}
+			if _, err := metav1.LabelSelectorAsSelector(sel.selector); err != nil {
+				return admission.Denied(fmt.Sprintf(
+					"the '%s' project template field 'spec.resources[%d].%s' (%s) is not a valid selector: %v",
+					template.Name, i, sel.field, entry.ResourceName, err))
+			}
+		}
+	}
+	return admission.Allowed("")
 }
 
 // validateGrantPolicies enforces the library convention for spec.grantPolicies: every referenced
@@ -211,4 +265,38 @@ func (v *validator) validateManagedGrantNames(ctx context.Context, template *v1a
 		}
 	}
 	return admission.Allowed("")
+}
+
+// literalValues are the values the fixed-set fields accept as literals. They live here and nowhere
+// else: both fields are untyped in the CRD schema (a string or a fromParam object, under
+// x-kubernetes-preserve-unknown-fields), and the API server builds no CEL declarations for an
+// untyped field, so the schema cannot carry the sets as a validation rule.
+var literalValues = map[string][]string{
+	"podSecurityStandard": {v1alpha2.PodSecurityStandardPrivileged, v1alpha2.PodSecurityStandardBaseline, v1alpha2.PodSecurityStandardRestricted},
+	"networkPolicy.mode":  {v1alpha2.NetworkPolicyModeIsolated, v1alpha2.NetworkPolicyModeNotRestricted},
+}
+
+// validateLiterals checks every fixed-set field that holds a literal (a {fromParam} reference is
+// checked against the parameters schema instead, see FromParamRefs).
+func validateLiterals(template *v1alpha2.ProjectTemplate) error {
+	check := func(field string, param v1alpha2.Param[string]) error {
+		value, isLiteral := param.Literal()
+		if !isLiteral {
+			return nil
+		}
+		allowed := literalValues[field]
+		if slices.Contains(allowed, value) {
+			return nil
+		}
+		return fmt.Errorf("field '%s' must be one of %s or a {fromParam: <name>} reference, got '%s'", field, strings.Join(allowed, ", "), value)
+	}
+	if err := check("podSecurityStandard", template.Spec.PodSecurityStandard); err != nil {
+		return err
+	}
+	if template.Spec.NetworkPolicy != nil {
+		if err := check("networkPolicy.mode", template.Spec.NetworkPolicy.Mode); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -129,7 +129,7 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 	allowExperimental := v.settings.ExperimentalModuleAllowed(cfg.Name)
 
 	var (
-		oldSettings                          map[string]interface{}
+		oldSettings                   map[string]interface{}
 		oldSettingsForMigrationGuards map[string]interface{}
 	)
 

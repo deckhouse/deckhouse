@@ -48,9 +48,15 @@
   and subsystem roles, which are bound with a ClusterRoleBinding and never go through the
   project-scoped registry.
 */ -}}
+{{- /*
+  The use-role aliases also carry rbac.deckhouse.io/disabled-for-direct-use-in-projects (ADR-1): a
+  NEW ProjectRoleBinding or ClusterProjectRoleBinding may not point at an old name -- the project
+  webhooks refuse it and name the new role -- while an existing plain RoleBinding keeps working, which
+  is the whole point of the alias. The annotation is read by the project role binding webhooks only.
+*/ -}}
 {{- range $level := list "viewer" "user" "manager" "admin" -}}
-  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true) -}}
-  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true "disabledForProjects" true) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true "disabledForProjects" true) -}}
 {{- end -}}
 
 {{- /*
@@ -76,6 +82,9 @@ metadata:
     en.meta.deckhouse.io/description: "Deprecated RBACv2 role kept for one release for backward compatibility. Migrate bindings to {{ $alias.target }}."
     ru.meta.deckhouse.io/description: "Устаревшая роль RBACv2, оставленная на один релиз для обратной совместимости. Переведите привязки на {{ $alias.target }}."
     rbac.deckhouse.io/deprecated-replaced-by: {{ $alias.target | quote }}
+    {{- if $alias.disabledForProjects }}
+    rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"
+    {{- end }}
   labels:
     heritage: deckhouse
     module: user-authz

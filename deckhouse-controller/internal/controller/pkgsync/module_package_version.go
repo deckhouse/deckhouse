@@ -327,11 +327,11 @@ func (s *syncer) createModulePackageVersionStub(ctx context.Context, name string
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				"heritage": "deckhouse",
-				v1alpha1.ModulePackageVersionLabelRepository: spec.PackageRepositoryName,
-				v1alpha1.ModulePackageVersionLabelPackage:    spec.PackageName,
-				v1alpha1.ModulePackageVersionLabelDraft:      "true",
-				v1alpha1.ModulePackageVersionLabelLegacy:     "true",
+				"heritage":                      "deckhouse",
+				v1alpha1.PackageLabelRepository: spec.PackageRepositoryName,
+				v1alpha1.PackageLabelPackage:    spec.PackageName,
+				v1alpha1.PackageLabelDraft:      "true",
+				v1alpha1.PackageLabelLegacy:     "true",
 			},
 		},
 		Spec: spec,
@@ -382,7 +382,7 @@ func (s *syncer) fillModulePackageVersionStatus(ctx context.Context, mpv *v1alph
 func (s *syncer) removeModulePackageVersionDraft(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
 	original := mpv.DeepCopy()
 
-	delete(mpv.Labels, v1alpha1.ModulePackageVersionLabelDraft)
+	delete(mpv.Labels, v1alpha1.PackageLabelDraft)
 
 	if err := s.writer.Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch module package version '%s': %w", mpv.Name, err)

@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 )
 
 // In-tree providers without a dedicated validator (gcp, aws, azure, ...)
@@ -45,4 +46,38 @@ func TestSelectValidatorExternalMissingValidator(t *testing.T) {
 	validate := selectValidator(context.Background(), "dvp", t.TempDir())
 	err := validate(context.Background(), config.ProviderInput{})
 	require.ErrorContains(t, err, "external validator for provider \"dvp\" not found")
+}
+
+// Yandex is the provider whose routing this migration changed: it is no longer an in-tree
+// validator provider, so it must take the external path and hard-fail without a binary rather
+// than falling back to the prefix-only check.
+func TestSelectValidatorYandexRequiresExternalBinary(t *testing.T) {
+	orig := providerBundledInCandi
+	providerBundledInCandi = func(string) bool { return false }
+	t.Cleanup(func() { providerBundledInCandi = orig })
+
+	validate := selectValidator(context.Background(), "yandex", t.TempDir())
+	require.NotNil(t, validate)
+
+	err := validate(context.Background(), config.ProviderInput{
+		ProviderName: "yandex",
+		Operation:    DhctlOperationBootstrap,
+	})
+	require.ErrorContains(t, err, "external validator for provider \"yandex\" not found")
+}
+
+func TestSelectValidatorYandexUsesDeliveredBinary(t *testing.T) {
+	orig := providerBundledInCandi
+	providerBundledInCandi = func(string) bool { return false }
+	t.Cleanup(func() { providerBundledInCandi = orig })
+
+	downloadDir := t.TempDir()
+	tests.StubDeliveredProviderBundle(t, downloadDir, "yandex")
+
+	validate := selectValidator(context.Background(), "yandex", downloadDir)
+	require.NotNil(t, validate)
+	require.NoError(t, validate(context.Background(), config.ProviderInput{
+		ProviderName: "yandex",
+		Operation:    DhctlOperationBootstrap,
+	}))
 }

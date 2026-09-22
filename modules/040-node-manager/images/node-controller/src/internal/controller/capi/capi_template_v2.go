@@ -33,16 +33,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/machinetemplate"
 )
 
 const (
-	// machineTemplateContractKey is the single file of the v2 provider contract. Its presence in
-	// the provider Secret is what selects the v2 engine — see readMachineTemplateContract.
-	machineTemplateContractKey = "template.yaml"
-
 	// generationSuffix makes the counter readable in the object name. The number that decides the
 	// next generation is read from the snapshot annotation, not from the name.
 	generationSuffix = "-gen"
@@ -86,32 +83,11 @@ func recentGenerations(names []string) map[string]struct{} {
 	return keep
 }
 
-// readMachineTemplateContract returns the parsed v2 contract, or nil when the provider still ships
-// the v1 trio (machine-template.yaml + instance-class.checksum + machine-deployment-spec-patch).
-//
-// The switch is the presence of the file, not a flag anywhere in Deckhouse: a provider module owns
-// its own release cycle, so it must be able to move to v2 (or be rolled back) on its own, and
-// node-controller must serve both shapes meanwhile.
-func (r *MachineDeploymentReconciler) readMachineTemplateContract(ctx context.Context, cloudType string) (*machinetemplate.Contract, error) {
-	data, found, err := r.readProviderTemplateIfPresent(ctx, cloudType, engineCAPITemplates, machineTemplateContractKey)
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		return nil, nil
-	}
-	contract, err := machinetemplate.ParseContract(data)
-	if err != nil {
-		return nil, fmt.Errorf("cloud provider %s: %w", cloudType, err)
-	}
-	return contract, nil
-}
-
 // machineTemplateGeneration is everything the generation decision needs for one zone.
 type machineTemplateGeneration struct {
 	ng       *deckhousev1.NodeGroup
-	contract *machinetemplate.Contract
-	render   machinetemplate.RenderContext
+	template *cloudprovider.MachineTemplate
+	data     cloudprovider.RenderData
 	// rolloutID is the NodeGroup's manual-rollout-id: the operator's explicit "roll now, with
 	// today's provider config and today's template text".
 	rolloutID string
@@ -207,10 +183,10 @@ func (r *MachineDeploymentReconciler) ensureMachineTemplateGeneration(ctx contex
 
 	if reason != "" && r.Recorder != nil {
 		r.Recorder.Eventf(in.ng, corev1.EventTypeNormal, "MachinesRollout",
-			"rolling machines in zone %s: %s", in.render.Zone, reason)
+			"rolling machines in zone %s: %s", in.data.Zone, reason)
 	}
 	logger.Info("created new CAPI MachineTemplate generation",
-		"name", name, "ng", in.ng.Name, "zone", in.render.Zone, "reason", reason)
+		"name", name, "ng", in.ng.Name, "zone", in.data.Zone, "reason", reason)
 
 	return name, nil
 }
@@ -223,11 +199,11 @@ func (r *MachineDeploymentReconciler) ensureMachineTemplateGeneration(ctx contex
 // providers declare no providerRolloutFields, but vcd's cluster-wide `metadata` is documented to
 // recreate CloudEphemeral nodes.
 func rolloutReasonFor(snapshot machinetemplate.Snapshot, in machineTemplateGeneration) (string, error) {
-	changes, err := machinetemplate.Changes(snapshot.InstanceClass, in.render.InstanceClass, in.contract.RolloutFields)
+	changes, err := machinetemplate.Changes(snapshot.InstanceClass, in.data.InstanceClass, in.template.Contract.RolloutFields)
 	if err != nil {
 		return "", fmt.Errorf("compare InstanceClass for NodeGroup %s: %w", in.ng.Name, err)
 	}
-	providerChanges, err := machinetemplate.Changes(snapshot.Provider, in.render.Provider, in.contract.ProviderRolloutFields)
+	providerChanges, err := machinetemplate.Changes(snapshot.Provider, in.data.Provider, in.template.Contract.ProviderRolloutFields)
 	if err != nil {
 		return "", fmt.Errorf("compare provider config for NodeGroup %s: %w", in.ng.Name, err)
 	}
@@ -277,7 +253,7 @@ func (r *MachineDeploymentReconciler) createNextGeneration(ctx context.Context, 
 		}
 	}
 	return "", false, fmt.Errorf("no free MachineTemplate generation for NodeGroup %s in zone %s after %d attempts",
-		in.ng.Name, in.render.Zone, maxGenerationAttempts)
+		in.ng.Name, in.data.Zone, maxGenerationAttempts)
 }
 
 // holdsDesiredSnapshot reports whether the named object already carries the snapshot the caller is
@@ -302,12 +278,12 @@ func (r *MachineDeploymentReconciler) holdsDesiredSnapshot(ctx context.Context, 
 // newSnapshot records what a generation was built from. Both callers go through it so that an
 // adopted object and a created one carry the same shape — they are later compared by one rule.
 func newSnapshot(in machineTemplateGeneration, generation int) (machinetemplate.Snapshot, error) {
-	provider, err := machinetemplate.PickFields(in.render.Provider, in.contract.ProviderRolloutFields)
+	provider, err := machinetemplate.PickFields(in.data.Provider, in.template.Contract.ProviderRolloutFields)
 	if err != nil {
 		return machinetemplate.Snapshot{}, fmt.Errorf("snapshot provider config for NodeGroup %s: %w", in.ng.Name, err)
 	}
 	return machinetemplate.Snapshot{
-		InstanceClass: in.render.InstanceClass,
+		InstanceClass: in.data.InstanceClass,
 		Provider:      provider,
 		RolloutID:     in.rolloutID,
 		Generation:    generation,
@@ -320,9 +296,9 @@ func newSnapshot(in machineTemplateGeneration, generation int) (machinetemplate.
 // The object is created, never applied: it is immutable for the life of its generation, and an
 // apply would let a later reconcile write into it.
 func (r *MachineDeploymentReconciler) buildMachineTemplate(in machineTemplateGeneration, name string, generation int) (*unstructured.Unstructured, error) {
-	rendered, err := machinetemplate.Render(in.contract, in.render)
+	rendered, err := in.template.Render(in.data)
 	if err != nil {
-		return nil, fmt.Errorf("render machine template for NodeGroup %s zone %s: %w", in.ng.Name, in.render.Zone, err)
+		return nil, fmt.Errorf("render machine template for NodeGroup %s zone %s: %w", in.ng.Name, in.data.Zone, err)
 	}
 
 	obj := &unstructured.Unstructured{Object: rendered}

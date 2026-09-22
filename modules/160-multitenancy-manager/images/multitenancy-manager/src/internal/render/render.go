@@ -37,6 +37,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/naming"
 	"controller/internal/validate"
 )
 
@@ -169,26 +170,9 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 
 	annotations := map[string]any{}
 
-	if tols, ok, err := spec.Tolerations.Resolve(r.params); err != nil {
-		return nil, fmt.Errorf("resolve tolerations: %w", err)
-	} else if ok && len(tols) > 0 {
-		raw, mErr := json.Marshal(tols)
-		if mErr != nil {
-			return nil, fmt.Errorf("marshal tolerations: %w", mErr)
-		}
-		annotations["scheduler.alpha.kubernetes.io/defaultTolerations"] = string(raw)
-	}
-
-	if nodeSel, ok, err := spec.NodeSelector.Resolve(r.params); err != nil {
-		return nil, fmt.Errorf("resolve nodeSelector: %w", err)
-	} else if ok && len(nodeSel) > 0 {
-		annotation, sErr := stringifyNodeSelector(nodeSel)
-		if sErr != nil {
-			return nil, fmt.Errorf("render nodeSelector: %w", sErr)
-		}
-		annotations["scheduler.alpha.kubernetes.io/node-selector"] = annotation
-	}
-
+	// The free-form namespace metadata is merged first so that the dedicated fields below win a
+	// shared key. Adoption mirrors the placement annotations of a namespace into this parameter, and
+	// a stale mirror must not outrank a template that declares nodeSelector or tolerations itself.
 	if spec.NamespaceMetadata != nil {
 		if extra, ok, err := spec.NamespaceMetadata.Labels.Resolve(r.params); err != nil {
 			return nil, fmt.Errorf("resolve namespaceMetadata.labels: %w", err)
@@ -204,6 +188,26 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 				annotations[k] = v
 			}
 		}
+	}
+
+	if tols, ok, err := spec.Tolerations.Resolve(r.params); err != nil {
+		return nil, fmt.Errorf("resolve tolerations: %w", err)
+	} else if ok && len(tols) > 0 {
+		raw, mErr := json.Marshal(tols)
+		if mErr != nil {
+			return nil, fmt.Errorf("marshal tolerations: %w", mErr)
+		}
+		annotations[naming.TolerationsAnnotation] = string(raw)
+	}
+
+	if nodeSel, ok, err := spec.NodeSelector.Resolve(r.params); err != nil {
+		return nil, fmt.Errorf("resolve nodeSelector: %w", err)
+	} else if ok && len(nodeSel) > 0 {
+		annotation, sErr := stringifyNodeSelector(nodeSel)
+		if sErr != nil {
+			return nil, fmt.Errorf("render nodeSelector: %w", sErr)
+		}
+		annotations[naming.NodeSelectorAnnotation] = annotation
 	}
 
 	metadata := map[string]any{"name": r.name}

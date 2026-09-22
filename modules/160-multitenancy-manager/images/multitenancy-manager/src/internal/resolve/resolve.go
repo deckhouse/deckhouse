@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/api/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/engine"
 	"controller/internal/naming"
 )
@@ -48,8 +50,8 @@ func ProjectName(ns *corev1.Namespace) string {
 	return ns.Name
 }
 
-// ApplicableGrants returns every ClusterResourceGrantPolicy whose projectSelector matches the labels of the
-// given namespace. A nil selector matches nothing; an invalid selector is skipped.
+// ApplicableGrants returns every ClusterResourceGrantPolicy that applies to the namespace of the
+// given name (see GrantsForNamespace). A namespace that does not exist has no grants.
 func ApplicableGrants(ctx context.Context, cl client.Reader, namespace string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
 	ns := &corev1.Namespace{}
 	if err := cl.Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
@@ -58,10 +60,51 @@ func ApplicableGrants(ctx context.Context, cl client.Reader, namespace string) (
 		}
 		return nil, fmt.Errorf("get namespace %s: %w", namespace, err)
 	}
-	return GrantsForLabels(ctx, cl, ns.Labels)
+	return GrantsForNamespace(ctx, cl, ns)
 }
 
-// GrantsForLabels returns every ClusterResourceGrantPolicy whose projectSelector matches the given labels.
+// GrantsForNamespace returns every ClusterResourceGrantPolicy whose projectSelector matches the
+// namespace. The selector is evaluated against the union of the labels of the Project object and
+// the labels of the namespace itself (EffectiveLabels), so a policy written against a label the
+// administrator put on the Project -- the way USAGE describes it -- covers the main and every
+// additional namespace of that project, while the labels the controller stamps on namespaces
+// (projects.deckhouse.io/project-namespace and the rest) keep selecting as they always did.
+//
+// This is the one place the rule lives: /is-granted, /defaults, the catalog reconciler and the
+// violation recount all come through here, so they cannot disagree about which policies apply.
+func GrantsForNamespace(ctx context.Context, cl client.Reader, ns *corev1.Namespace) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
+	project := &v1alpha3.Project{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: ProjectName(ns)}, project); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return nil, fmt.Errorf("get project %s: %w", ProjectName(ns), err)
+		}
+		// A namespace no Project owns yet (adoption pending) or a namespace of a virtual project is
+		// selected by its own labels only.
+		project = nil
+	}
+	var projectLabels map[string]string
+	if project != nil {
+		projectLabels = project.Labels
+	}
+	return GrantsForLabels(ctx, cl, EffectiveLabels(projectLabels, ns.Labels))
+}
+
+// EffectiveLabels merges the labels of a Project with the labels of one of its namespaces. On a
+// shared key the namespace wins: it is the object closest to what is being checked, and a
+// per-namespace override is the only reason to put the same key on both.
+func EffectiveLabels(projectLabels, nsLabels map[string]string) map[string]string {
+	out := make(map[string]string, len(projectLabels)+len(nsLabels))
+	for k, v := range projectLabels {
+		out[k] = v
+	}
+	for k, v := range nsLabels {
+		out[k] = v
+	}
+	return out
+}
+
+// GrantsForLabels returns every ClusterResourceGrantPolicy whose projectSelector matches the given
+// labels. Callers that hold a namespace use GrantsForNamespace; this is the matching step itself.
 func GrantsForLabels(ctx context.Context, cl client.Reader, nsLabels map[string]string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
 	grantList := &v1alpha1.ClusterResourceGrantPolicyList{}
 	if err := cl.List(ctx, grantList); err != nil {
@@ -398,9 +441,12 @@ func defaultFromAnnotation(ctx context.Context, cl client.Reader, mapper meta.RE
 	if err := cl.List(ctx, list); err != nil {
 		return "", err
 	}
+	// The annotation has to say "true": the Kubernetes convention marks a class that is NOT the
+	// default with the same key set to "false" (storageclass.kubernetes.io/is-default-class), and the
+	// presence of the key alone would have made that class the default.
 	var found []string
 	for i := range list.Items {
-		if _, ok := list.Items[i].GetAnnotations()[reg.Spec.DefaultFrom.AnnotationKey]; ok {
+		if value, ok := list.Items[i].GetAnnotations()[reg.Spec.DefaultFrom.AnnotationKey]; ok && strings.EqualFold(value, "true") {
 			found = append(found, list.Items[i].GetName())
 		}
 	}

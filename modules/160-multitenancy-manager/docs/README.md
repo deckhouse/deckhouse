@@ -58,10 +58,10 @@ When creating a [Project](./cr.html#project) resource from a specific [ProjectTe
 1. A `Namespace` is created with a name matching the name of [Project](./cr.html#project);
 1. The project resources are created from the template:
    * in modern templates (`deckhouse.io/v1alpha2`) the settings are described by structured fields (pod security profile, network isolation, log collection, node placement, etc. — [see details](usage.html#structured-templates)). The controller itself creates the corresponding objects in every namespace of the project;
-   * in legacy templates (`deckhouse.io/v1alpha1`) the [resources template](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is rendered using [Helm](https://helm.sh/docs/); values are taken from the [`parameters`](./cr.html#project-v1alpha3-spec-parameters) field of the [Project](./cr.html#project) resource;
+   * a template stored as `deckhouse.io/v1alpha1` with a Helm `resourcesTemplate` is not rendered: its projects switch to `Error` with the `ProjectTemplateUsable` condition set to `False` until the template is rewritten with structured fields ([see details](usage.html#template-checks));
 1. The standard fields of the project are applied independently of the template: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) is reconciled into a `ResourceQuota`, and [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) into an auto-managed [ProjectRoleBinding](./cr.html#projectrolebinding).
 
-The Project API is served as `deckhouse.io/v1alpha3`. A conversion webhook keeps older `v1alpha1`/`v1alpha2` manifests working by lifting `parameters.administrators` and `parameters.resourceQuota` into the standard fields. The `projectTemplateName` field is optional: when omitted, the `simple` template is used, which only creates the project namespace.
+The Project API is served as `deckhouse.io/v1alpha3`. A conversion webhook keeps `v1alpha2` manifests working by lifting `parameters.administrators` and `parameters.resourceQuota` into the standard fields; `v1alpha1` is no longer served. The `projectTemplateName` field is optional: when omitted, the `simple` template is used, which only creates the project namespace.
 
 Project names are validated on creation: names longer than 61 characters and names with the system prefixes `d8-` and `kube-` are not allowed. Also, if a project `foo` exists, a project `foo-bar` cannot be created (and vice versa): names like `foo-*` are reserved for the additional namespaces of the `foo` project.
 
@@ -168,7 +168,7 @@ The behavior when an object is created depends on the mode configured in [Granta
 
 * `None`: The value is checked for availability but is not assigned automatically.
 * `FillEmpty`: If no value is specified, the project default is assigned.
-* `Coerce`: If no value is specified or the specified cluster-wide resource is unavailable to the project, the project default is assigned.
+* `Coerce`: If no value is specified or the specified cluster-wide resource is unavailable to the project, the project default is assigned. Replacing a specified value is reported as an admission warning in the response to the request.
 
 The project default is determined in the following order:
 
@@ -192,7 +192,7 @@ If an existing object uses a cluster-wide resource that becomes unavailable to t
 
 When such objects are detected, the [`ClusterResourceGrantPolicyViolation`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation) alert is triggered. Information about violations is available on the Grafana dashboard under "Security" → "Cluster Resource Grant Violations".
 
-The `d8_cluster_objects_grant_violated` metric is used for monitoring.
+The `d8_cluster_objects_grant_violated` metric is used for monitoring. It is exported by the module controller, which recounts the violations of a project namespace on every reconcile and at least every two minutes, using the same availability rules as the admission webhook.
 
 ### Resources registered by DP
 

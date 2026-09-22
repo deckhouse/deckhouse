@@ -27,13 +27,6 @@ const (
 	ApplicationKind     = "Application"
 
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
-
-	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
-
-	// ApplicationAnnotationEndpointDescription marks an Ingress in the application
-	// chart as an application endpoint and holds its description; the hosts and
-	// paths of that Ingress are reflected in status.urls.
-	ApplicationAnnotationEndpointDescription = "packages.deckhouse.io/application-endpoint-description"
 )
 
 var (

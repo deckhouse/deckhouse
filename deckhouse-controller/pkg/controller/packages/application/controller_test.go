@@ -346,7 +346,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 
 		annotations := suite.getApplication(appName, appNamespace).Annotations
-		assert.NotContains(suite.T(), annotations, v1alpha1.ApplicationAnnotationRegistrySpecChanged)
+		assert.NotContains(suite.T(), annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 		assert.Contains(suite.T(), annotations, "packages.deckhouse.io/keep-me")
 	})
 

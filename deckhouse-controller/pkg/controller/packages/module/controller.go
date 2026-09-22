@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module/status"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -85,7 +85,7 @@ func RegisterController(
 
 	if err := ctrl.NewControllerManagedBy(runtime).
 		Named(controllerName).
-		For(&v1alpha2.Module{}).
+		For(&v1beta1.Module{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: maxConcurrentReconciles,
@@ -127,7 +127,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	r.logger.Debug("reconcile module", slog.String("name", req.Name))
 
-	module := new(v1alpha2.Module)
+	module := new(v1beta1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: req.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Warn("module not found", slog.String("name", req.Name))
@@ -166,7 +166,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 // handleCreateOrUpdate validates the module's package and version, moves the module
 // onto them and hands it to the package runtime.
-func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.Module) error {
+func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.Module) error {
 	logger := r.logger.With(slog.String("name", module.Name))
 
 	logger.Debug("handle module")
@@ -176,9 +176,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 
 	// The finalizer is claimed before the module reaches the runtime: it is what
 	// guarantees handleDelete gets to call RemoveModule and release the version.
-	if !controllerutil.ContainsFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered) {
+	if !controllerutil.ContainsFinalizer(module, v1beta1.ModuleFinalizerStatisticRegistered) {
 		patch := client.MergeFrom(module.DeepCopy())
-		controllerutil.AddFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered)
+		controllerutil.AddFinalizer(module, v1beta1.ModuleFinalizerStatisticRegistered)
 
 		if err := r.client.Patch(ctx, module, patch); err != nil {
 			logger.Error("failed to add the module finalizer", log.Err(err))
@@ -245,7 +245,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 // and version gate as a downloaded one — the bootstrap fills both from the module files on disk
 // before any Module is written — and differs in exactly two ways: the reserved "embedded"
 // repository resolves to no object, so none is read, and the files are already in place.
-func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1alpha2.Module) error {
+func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1beta1.Module) error {
 	logger := r.logger.With(slog.String("name", module.Name))
 
 	logger.Debug("handle embedded module")
@@ -279,7 +279,7 @@ func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1alp
 // package and version gate as an embedded module — the bootstrap fills both from the global
 // hooks dir before any Module is written — but the runtime built the module itself at startup,
 // so the settings are the only thing that crosses over.
-func (r *reconciler) handleGlobal(ctx context.Context, module, original *v1alpha2.Module) error {
+func (r *reconciler) handleGlobal(ctx context.Context, module, original *v1beta1.Module) error {
 	logger := r.logger.With(slog.String("name", module.Name))
 
 	logger.Debug("handle global module")
@@ -301,7 +301,7 @@ func (r *reconciler) handleGlobal(ctx context.Context, module, original *v1alpha
 
 // resolvePackage reads the module's package and the version its spec names. A version still in
 // draft is not published, so its metadata must never reach the runtime.
-func (r *reconciler) resolvePackage(ctx context.Context, module *v1alpha2.Module) (*v1alpha1.ModulePackage, *v1alpha1.ModulePackageVersion, error) {
+func (r *reconciler) resolvePackage(ctx context.Context, module *v1beta1.Module) (*v1alpha1.ModulePackage, *v1alpha1.ModulePackageVersion, error) {
 	logger := r.logger.With(slog.String("name", module.Name))
 
 	pkg := new(v1alpha1.ModulePackage)
@@ -332,12 +332,12 @@ func (r *reconciler) resolvePackage(ctx context.Context, module *v1alpha2.Module
 // commit records the package and the version as the module's owners and clears the registry
 // annotation in one patch. Both references are non-controller and block owner deletion, so
 // neither the package nor the version can disappear from under a running module.
-func (r *reconciler) commit(ctx context.Context, module, original *v1alpha2.Module, pkg *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
+func (r *reconciler) commit(ctx context.Context, module, original *v1beta1.Module, pkg *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
 	ctrlutils.ReplaceOwnerReferences(module,
 		ctrlutils.OwnerReference(v1alpha1.ModulePackageVersionGVK, mpv.Name, mpv.UID),
 		ctrlutils.OwnerReference(v1alpha1.ModulePackageGVK, pkg.Name, pkg.UID),
 	)
-	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+	delete(module.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 
 	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
 		r.logger.Error("failed to patch the module", slog.String("name", module.Name), log.Err(err))
@@ -354,7 +354,7 @@ func (r *reconciler) commit(ctx context.Context, module, original *v1alpha2.Modu
 // a version as the change signal: it is compared with the one the module was last handed over on,
 // and a move forces the runtime past change detection that only ever sees the same tag. The digest
 // is recorded after the handover, so a failure before it re-forces rather than skips.
-func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.Module) error {
+func (r *reconciler) handleDev(ctx context.Context, module, original *v1beta1.Module) error {
 	logger := r.logger.With(slog.String("name", module.Name))
 
 	logger.Debug("handle dev module")
@@ -381,7 +381,7 @@ func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.M
 
 	// Only the digest tells a repushed image from an untouched one, and force is what carries that
 	// verdict past change detection, which sees the same tag either way.
-	forced := module.Annotations[v1alpha2.ModuleAnnotationHash] != digest
+	forced := module.Annotations[v1beta1.ModuleAnnotationHash] != digest
 
 	// A version the repository scan produced cannot back a dev tag, and the reference to it would
 	// block its owner's deletion for ever — the module arrives with one when it was released before.
@@ -415,8 +415,8 @@ func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.M
 	}, forced)
 
 	ctrlutils.DropOwnerReferences(module, v1alpha1.ModulePackageVersionKind, v1alpha1.ModulePackageKind)
-	module.Annotations[v1alpha2.ModuleAnnotationHash] = digest
-	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+	module.Annotations[v1beta1.ModuleAnnotationHash] = digest
+	delete(module.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 
 	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
 		logger.Error("failed to patch the module", log.Err(err))
@@ -431,7 +431,7 @@ func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.M
 // on purpose: holding the finalizer is what keeps a Helm release from outliving the CR that owns
 // it, so a teardown the queue keeps retrying keeps the module in Terminating rather than orphaning
 // its resources.
-func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
+func (r *reconciler) handleDelete(ctx context.Context, module *v1beta1.Module) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", module.Name))
 
 	logger.Debug("handle delete module")
@@ -489,12 +489,12 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) 
 		return ctrl.Result{}, err
 	}
 
-	if !controllerutil.ContainsFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered) {
+	if !controllerutil.ContainsFinalizer(module, v1beta1.ModuleFinalizerStatisticRegistered) {
 		return ctrl.Result{}, nil
 	}
 
 	patch := client.MergeFrom(module.DeepCopy())
-	controllerutil.RemoveFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered)
+	controllerutil.RemoveFinalizer(module, v1beta1.ModuleFinalizerStatisticRegistered)
 
 	if err := r.client.Patch(ctx, module, patch); err != nil {
 		logger.Error("failed to remove the module finalizer", log.Err(err))
@@ -513,7 +513,7 @@ func removeNothing(string) bool { return true }
 //
 // Only the version is ever switched away from: a module package is named after its module, so the
 // module cannot move to another one and there is no old package to release here.
-func (r *reconciler) relink(ctx context.Context, module *v1alpha2.Module, pkg *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
+func (r *reconciler) relink(ctx context.Context, module *v1beta1.Module, pkg *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
 	if old := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); old != "" && old != mpv.Name {
 		if err := r.detachVersion(ctx, old); err != nil {
 			return err
@@ -545,7 +545,7 @@ func (r *reconciler) attachVersion(ctx context.Context, mpv *v1alpha1.ModulePack
 
 // attachPackage records the module and the version it runs on in the package status, so a
 // reader of the package can tell which version is in use without listing modules.
-func (r *reconciler) attachPackage(ctx context.Context, module *v1alpha2.Module, pkg *v1alpha1.ModulePackage) error {
+func (r *reconciler) attachPackage(ctx context.Context, module *v1beta1.Module, pkg *v1alpha1.ModulePackage) error {
 	patch := client.MergeFrom(pkg.DeepCopy())
 
 	if !pkg.AddInstalledModule(module.Spec.PackageVersion, module.Spec.PackageRepositoryName) {
