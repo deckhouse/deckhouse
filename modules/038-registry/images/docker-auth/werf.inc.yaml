@@ -69,3 +69,36 @@ import:
 imageSpec:
   config:
     entrypoint: ["/auth_server"]
+{{- if env "FUZZ_S3_ENDPOINT" "" }}
+{{- $fuzzCommit := "e6de61a54bfb2016595cf569847b6df1f84eec5d" }}
+---
+# The deckhouse branch contains the fuzz harnesses; the release tag above does not.
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-fuzz-src-artifact"
+fromImage: common/src-artifact
+final: false
+secrets:
+  - id: SOURCE_REPO
+    value: "{{ $.SOURCE_REPO }}"
+shell:
+  install:
+    - git init /src/docker_auth
+    - cd /src/docker_auth
+    - git remote add origin $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-docker_auth.git
+    - git fetch --depth 1 origin {{ $fuzzCommit }}
+    - git checkout --detach FETCH_HEAD
+    - rm -rf .git
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-fuzz-artifact"
+from: {{ index $.Images "builder/golang" }}
+final: false
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-fuzz-src-artifact"
+    add: /src/docker_auth/auth_server
+    before: install
+---
+{{- $_ := set . "FuzzEngine" "go" }}
+{{- $_ := set . "FuzzSrcImage" (printf "%s/%s-fuzz-artifact" .ModuleName .ImageName) }}
+{{- $_ := set . "FuzzSrcAdd" "/src/docker_auth/auth_server" }}
+{{- $_ := set . "FuzzPackages" "./server" }}
+{{- include "fuzz image" . }}
+{{- end }}

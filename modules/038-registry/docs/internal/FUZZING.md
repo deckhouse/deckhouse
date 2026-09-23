@@ -143,15 +143,28 @@ under test in-process, so they live in the forks rather than here; see
 The dedicated CI fuzz build includes six images for the harnesses in this repository:
 `registry/hooks-fuzz`, `registry/library-fuzz`, `registry/nodeservices-manager-fuzz`,
 `registry/mirrorer-fuzz`, `registry/syncer-fuzz` and `registry/registry-proxy-fuzz`.
-They use the shared `fuzz image` template, like `user-authn`, and are only rendered
-when `FUZZ_S3_ENDPOINT` is set. All of them are intermediate images (`final: false`).
+It also includes `registry/docker-distribution-fuzz` and `registry/docker-auth-fuzz`
+for the harnesses in the third-party forks' `deckhouse` branches. The fork commits
+are pinned in the corresponding `werf.inc.yaml` files. These sources are separate
+from the production builds: distribution now uses a local v3 wrapper, and the
+docker-auth release tag does not yet include the harnesses.
+All eight images use the shared `fuzz image` template, like `user-authn`, and are
+only rendered when `FUZZ_S3_ENDPOINT` is set. All are intermediate images (`final: false`).
 
 Each image contains `Taskfile.yml` in its Go module directory and sets
 `FUZZ_PACKAGES` to the packages with harnesses. The tasks `fuzz:list`, `fuzz:run`,
 `fuzz:coverage` and `fuzz:replay` use the same interface as `user-authn`.
 The shared build restores the S3 corpus, replays every discovered target and
-removes the restored corpus before publishing the image. The third-party fork
-harnesses described below are not included in these images.
+removes the restored corpus before publishing the image. The distribution image
+selects `. ./registry ./registry/handlers ./registry/proxy`; docker-auth selects
+`./server` from its `auth_server` Go module. The existing CI job discovers both
+images by their `-fuzz` suffix. The nginx harnesses are not included.
+
+Replay failures remain fatal. Distribution is pinned to `b998a276dc7e09abbdc36b012d8e898580f17bc9`
+on `deckhouse` after merging [PR #8](https://github.com/deckhouse/3p-distribution/pull/8), including fixes
+for the `FuzzProxyHeadersClientCert` and `FuzzManifestPut` seed failures.
+All six distribution targets and both docker-auth targets pass local seed replay.
+No targets are excluded and `FUZZ_ALLOW_KNOWN_5XX` is not enabled by the image.
 
 ## Running
 
@@ -229,14 +242,15 @@ inside them deliberately, each with the reason recorded at the guard:
 
 ## Third-party forks
 
-Three of the module's images are built from forks, and the code that reads
-attacker-shaped input lives in them rather than here. Their harnesses live on a
-`deckhouse-fuzzing` branch in each fork, next to the code they test.
+The third-party harnesses live next to the code they test. The distribution and
+docker-auth harnesses have been merged into their forks' `deckhouse` branches;
+nginx still uses `deckhouse-fuzzing`. The distribution fork covers the legacy
+implementation, while the current production image builds the local v3 wrapper.
 
 | Fork | Branch | Harnesses |
 | --- | --- | --- |
-| `3p-distribution` | `deckhouse-fuzzing` | `FuzzUnmarshalManifest`, `FuzzProxyHeadersClientCert`, `FuzzBlobUploadSession`, `FuzzManifestPut`, `FuzzAuthProxyRequest`, `FuzzProxyCachePoisoning`, `TestManifestGetAcceptIsCaseInsensitive` |
-| `3p-docker_auth` | `deckhouse-fuzzing` | `FuzzAuthEndpoint`, `FuzzAuthRequest`, `TestStaticUserWithoutPasswordAuthenticatesAnyPassword`, `TestScopeTypeIsNotAnchored`, `TestAccountOverridesAreRefused` |
+| `3p-distribution` | `deckhouse` | `FuzzUnmarshalManifest`, `FuzzProxyHeadersClientCert`, `FuzzBlobUploadSession`, `FuzzManifestPut`, `FuzzAuthProxyRequest`, `FuzzProxyCachePoisoning`, `TestManifestGetAcceptIsCaseInsensitive` |
+| `3p-docker_auth` | `deckhouse` | `FuzzAuthEndpoint`, `FuzzAuthRequest`, `TestStaticUserWithoutPasswordAuthenticatesAnyPassword`, `TestScopeTypeIsNotAnchored`, `TestAccountOverridesAreRefused` |
 | `nginx` | `deckhouse-fuzzing` (from `release-1.27.3`) | `fuzz/conf_parse_fuzzer.c`, `fuzz/stream_fuzz.c`, see `fuzz/README.md` |
 
 ### What they cover
@@ -255,7 +269,7 @@ digest describing its bytes, and that an accepted manifest names only blobs the
 registry already holds.
 
 `FuzzProxyHeadersClientCert` covers the fork's own `real_ip` filter (TM-10 /
-AS-10) and is the one that reproduces a defect. See below.
+AS-10) and guards against the fixed certificate-chain defect described below.
 
 `FuzzAuthProxyRequest` covers `registry/auth_proxy.go`, the reverse proxy the
 fork puts in front of the authentication service, against an upstream that
@@ -311,6 +325,10 @@ path.
 
 ### Findings
 
+The distribution findings below describe the code before PR #8. All three are
+fixed in the pinned commit `b998a27`; their regression tests pass without
+`FUZZ_ALLOW_KNOWN_5XX`.
+
 `FuzzProxyHeadersClientCert` reproduces **AS-10**. `registry/proxy_headers.go`
 loops over every element of `r.TLS.PeerCertificates` and trusts
 `X-Forwarded-For` if *any* of them verifies against the configured CA. The
@@ -328,13 +346,12 @@ Two lower-severity findings in `distribution`, both stated by tests rather than
 left to the fuzzer:
 
 - A manifest whose `schemaVersion` is absent or not 2 answers **500** instead of
-  400. `verifyManifest` accumulates every other failure into
-  `distribution.ErrManifestVerification`, which maps to `MANIFEST_INVALID`, but
-  the schema-version branch returns a bare `fmt.Errorf` that falls through to
-  `UNKNOWN` (`registry/storage/schema2manifesthandler.go:75`, and the same in
-  `ocimanifesthandler.go:69`). A client can produce it with a 15-byte body.
-  `FuzzManifestPut` reports it from a seed; set `FUZZ_ALLOW_KNOWN_5XX=1` to fuzz
-  past it.
+  400. The schema-version branch in `verifyManifest` returns a bare `fmt.Errorf`
+  that falls through to `UNKNOWN` in the HTTP handler. PR #8 returns a typed
+  `distribution.ErrManifestInvalid` from both `schema2manifesthandler.go` and
+  `ocimanifesthandler.go` and maps it to `400 MANIFEST_INVALID`.
+  `FuzzManifestPut` and `TestManifestPutSchemaVersionIsRejectedAsBadRequest`
+  cover this regression.
 - `Accept` is matched case-sensitively (`registry/handlers/manifests.go:109`)
   while `Content-Type` goes through `mime.ParseMediaType`, which lowercases. A
   media type is case-insensitive, so a client naming schema2 in a different case
@@ -410,22 +427,25 @@ config:
 
 ### Running them
 
-The forks are separate checkouts, not part of this module's build.
+For local runs, check out the forks separately. CI uses the pinned sources in
+the fuzz images described above.
 
 ```sh
 # distribution
-cd <3p-distribution> && git switch deckhouse-fuzzing
+cd <3p-distribution>
+git fetch origin b998a276dc7e09abbdc36b012d8e898580f17bc9
+git switch --detach FETCH_HEAD
 go test ./registry/ ./registry/handlers/ ./registry/proxy/ .    # findings and seeds
-FUZZ_ALLOW_KNOWN_5XX=1 go test ./registry/handlers/ -fuzz FuzzManifestPut
+go test ./registry/handlers/ -fuzz FuzzManifestPut
 go test ./registry/proxy/ -fuzz FuzzProxyCachePoisoning
 # The auth proxy makes a real HTTP round trip per iteration; bound the workers.
 go test ./registry/ -fuzz FuzzAuthProxyRequest -parallel 4
 
 # docker_auth
-cd <3p-docker_auth>/auth_server && git switch deckhouse-fuzzing
-GOTOOLCHAIN=go1.25.0 go test ./server/ ./authz/
-GOTOOLCHAIN=go1.25.0 go test ./server/ -fuzz FuzzAuthEndpoint
-GOTOOLCHAIN=go1.25.0 go test ./server/ -fuzz FuzzAuthRequest
+cd <3p-docker_auth>/auth_server && git switch deckhouse
+go test ./server/ ./authz/
+go test ./server/ -fuzz FuzzAuthEndpoint
+go test ./server/ -fuzz FuzzAuthRequest
 
 # nginx -- needs linux/amd64; see the note below
 cd <nginx> && git switch deckhouse-fuzzing
