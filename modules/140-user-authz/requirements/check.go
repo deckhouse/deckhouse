@@ -25,9 +25,10 @@ import (
 )
 
 const (
-	// legacyRBACv2CustomRolesRequirementKey is the release requirement key. The DKP 1.78 release.yaml
-	// sets it to the maximum allowed number of legacy custom roles (0), which blocks the release
-	// until every legacy-scheme custom role is migrated to the new d8:custom:* scheme.
+	// legacyRBACv2CustomRolesRequirementKey is the release requirement key. The release.yaml of the
+	// release after DKP 1.78 sets it to the maximum allowed number of legacy custom roles (0), which
+	// blocks that release until every legacy-scheme custom role is migrated to the new d8:custom:*
+	// scheme; the upgrade to 1.78 itself is not held back.
 	legacyRBACv2CustomRolesRequirementKey = "legacyRBACv2CustomRolesCount"
 
 	// legacyRBACv2CustomRolesValueKey mirrors hooks.LegacyRBACv2CustomRolesValueKey (the packages
@@ -69,7 +70,7 @@ func init() {
 
 		return false, fmt.Errorf(
 			"the cluster has %d custom role(s) of the legacy experimental RBACv2 scheme: %s; "+
-				"they will stop aggregating permissions in DKP 1.78 — migrate them to the new d8:custom:* scheme, %s",
+				"they stopped aggregating permissions in DKP 1.78 — migrate them to the new d8:custom:* scheme, %s",
 			len(names), strings.Join(names, ", "), migrationFAQReference)
 	}
 

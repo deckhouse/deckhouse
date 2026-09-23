@@ -4509,7 +4509,7 @@ alerts:
 
         In DKP 1.78, the role model changes the labels that drive aggregation. Legacy custom roles get **no compatibility aliases** and will stop aggregating permissions entirely after the upgrade.
 
-        Until every such role is migrated, the upgrade to DKP 1.78 is blocked by the `legacyRBACv2CustomRolesCount` release requirement.
+        The upgrade to DKP 1.78 is not blocked. Until every such role is migrated, the upgrade to the release after 1.78 is held back by the `legacyRBACv2CustomRolesCount` release requirement.
 
         Migrate the role to the new scheme:
 
