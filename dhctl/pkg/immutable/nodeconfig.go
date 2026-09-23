@@ -125,11 +125,6 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		return nil, err
 	}
 
-	pauseImage, err := sandboxImage(registry, images)
-	if err != nil {
-		return nil, err
-	}
-
 	podsPerNode, err := maxPods(in.MetaConfig)
 	if err != nil {
 		return nil, err
@@ -175,8 +170,10 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 			Interfaces: []networkInterface{{Name: "eth0", DHCP: true}},
 		},
 		Kubelet: nodeKubelet(in.MetaConfig, kubernetesVersion, podsPerNode, in.NodeGroupName),
+		// No sandboxImage: the containerd extension ships pause and nodelet names it.
+		// Mirrors renderContainerRuntime in
+		// modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/render.go.
 		ContainerRuntime: containerRuntime{
-			SandboxImage:           pauseImage,
 			MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
 		},
 		// The zeroth master is its own apiserver and its address is unknown
