@@ -251,3 +251,39 @@ func TestDisabledModule(t *testing.T) {
 
 	runTestCases(t, cases)
 }
+
+func TestScaledRule(t *testing.T) {
+	cases := []testCase{
+		{
+			name: "true when first install completes",
+			opts: withSuccessfulApply(),
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionTrue, reason: ConditionInstalled},
+				ConditionScaled:    {status: metav1.ConditionTrue, reason: ConditionScaled},
+			},
+		},
+		{
+			// The health monitor can report Scaled before the install pipeline finishes.
+			name: "absent when Scaled arrives before manifests are applied",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: nil,
+				ConditionScaled:    nil,
+			},
+		},
+		{
+			name: "absent while first install manifests are being applied",
+			opts: append(withSuccessfulApply(),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+			),
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: nil,
+				ConditionScaled:    nil,
+			},
+		},
+	}
+
+	runTestCases(t, cases)
+}
