@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,7 @@ func TestParseResourcesKeepsNodeConfigDocumentsOutOfTheQueues(t *testing.T) {
 
 	require.NoError(t, (&ClusterBootstrapper{}).bootstrapParseResources(t.Context(), bctx))
 
-	queued := append(append(bctx.resourcesToCreateBefore, bctx.resourcesToCreateProvider...), bctx.resourcesToCreateAfter...)
+	queued := slices.Concat(bctx.resourcesToCreateBefore, bctx.resourcesToCreateModules, bctx.resourcesToCreateProvider, bctx.resourcesToCreateAfter)
 	kinds := make([]string, 0, len(queued))
 	for _, resource := range queued {
 		kinds = append(kinds, resource.Object.GetKind())
@@ -116,13 +117,36 @@ func newResource(t *testing.T, apiVersion, kind, name, namespace string, fields 
 	}
 }
 
+// parseResourceDocs renders the documents the way bootstrapParseResources does, so what the split
+// is handed is what the parser produces - the GVK it derives, and the kind sort it applies before
+// anything downstream sees the queue.
+func parseResourceDocs(t *testing.T, docs string) template.Resources {
+	t.Helper()
+
+	resources, err := template.ParseResourcesContent(context.TODO(), docs, nil)
+	require.NoError(t, err)
+
+	return resources
+}
+
+// resourceNames is what the queue assertions compare: the kind and the name are what places a
+// document in a queue, and reading them back names the failure.
+func resourceNames(resources template.Resources) []string {
+	names := make([]string, 0, len(resources))
+	for _, resource := range resources {
+		names = append(names, resource.GVK.Kind+"/"+resource.Object.GetName())
+	}
+
+	return names
+}
+
 func TestSplitResources_CredentialSecretGoesToBefore(t *testing.T) {
 	credSecret := newResource(t, "v1", "Secret", "d8-credentials", "d8-cloud-provider-dvp", map[string]any{
 		"type": "cloud-provider.deckhouse.io/credentials",
 	})
 	regularResource := newResource(t, "deckhouse.io/v1alpha1", "ModuleConfig", "user-authn", "", nil)
 
-	before, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, regularResource}, true)
+	before, _, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, regularResource}, true, "dvp")
 
 	// before queue must contain the credential Secret AND a namespace stub for d8-cloud-provider-dvp.
 	require.Len(t, before, 2)
@@ -140,7 +164,7 @@ func TestSplitResources_NonCredentialSecretGoesToAfter(t *testing.T) {
 		"type": "Opaque",
 	})
 
-	before, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{plainSecret}, true)
+	before, _, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{plainSecret}, true, "dvp")
 
 	require.Empty(t, before)
 	require.Len(t, after, 1)
@@ -153,7 +177,7 @@ func TestSplitResources_BeforeAnnotationStillRespected(t *testing.T) {
 		"dhctl.deckhouse.io/bootstrap-resource-place": "before-deckhouse",
 	})
 
-	before, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{annotated}, true)
+	before, _, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{annotated}, true, "dvp")
 
 	require.Empty(t, after)
 	// Namespace stub for kube-system is added even though kube-system always exists; harmless.
@@ -171,7 +195,7 @@ func TestSplitResources_ExplicitNamespaceNotDuplicated(t *testing.T) {
 		"dhctl.deckhouse.io/bootstrap-resource-place": "before-deckhouse",
 	})
 
-	before, _, _ := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, explicitNS}, true)
+	before, _, _, _ := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, explicitNS}, true, "dvp")
 
 	// Only one Namespace entry — the user-provided one, no auto-stub.
 	nsCount := 0
@@ -298,8 +322,8 @@ func TestSplitResources_ProviderNodeResourcesGoToProviderQueue(t *testing.T) {
 	instanceClass := newResource(t, "deckhouse.io/v1alpha1", "DVPInstanceClass", "master-dvp", "", nil)
 	moduleConfig := newResource(t, "deckhouse.io/v1alpha1", "ModuleConfig", "user-authn", "", nil)
 
-	before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
-		context.TODO(), template.Resources{masterNg, ephemeralNg, instanceClass, moduleConfig}, true)
+	before, _, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+		context.TODO(), template.Resources{masterNg, ephemeralNg, instanceClass, moduleConfig}, true, "dvp")
 
 	require.Empty(t, before)
 
@@ -320,8 +344,8 @@ func TestSplitResources_StaticClusterKeepsProviderResourcesInAfter(t *testing.T)
 		"spec": map[string]any{"nodeType": "CloudEphemeral"},
 	})
 
-	before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
-		context.TODO(), template.Resources{instanceClass, ephemeralNg}, false)
+	before, _, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+		context.TODO(), template.Resources{instanceClass, ephemeralNg}, false, "dvp")
 
 	require.Empty(t, before)
 	require.Empty(t, provider, "a Static cluster never applies the provider queue")
@@ -429,4 +453,217 @@ func TestApplyMasterNodeGroupDefaults_IgnoresOtherNodeGroups(t *testing.T) {
 	require.False(t, found)
 	_, found, _ = unstructured.NestedMap(instanceClass.Object.Object, "spec")
 	require.False(t, found, "an InstanceClass named master must not be mistaken for the NodeGroup")
+}
+
+// The documents an external provider module is installed from. They reach the split only because
+// the module is not in the installer image: a ModuleConfig whose module is there is validated
+// against its schema and parsed into MetaConfig.ModuleConfigs instead of ResourcesYAML, which is
+// the only thing this split is fed.
+const (
+	providerModuleSourceDoc = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    repo: registry.deckhouse.io/deckhouse/ee/modules
+`
+	providerModuleConfigDoc = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  enabled: true
+  version: 1
+`
+	providerNodeDocs = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: master-dvp
+spec:
+  virtualMachineClassName: generic
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+`
+	userModuleConfigDoc = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  enabled: true
+`
+)
+
+// The provider module ships the InstanceClass CRDs the rest of the provider queue is written
+// against, so the documents that install it lead that queue instead of waiting for the final
+// phase. They are not left behind in the final queue as well: that queue would re-apply the
+// config.yml body over what the controllers wrote into those same objects during the run, and
+// nothing needs the copy - a bootstrap that skips the phase draining the provider queue is
+// refused outright (runPhases), and the standalone create-resources command applies every
+// document of the configuration without consulting this split at all.
+func TestSplitResources_ExternalProviderModuleLeadsTheProviderQueue(t *testing.T) {
+	resources := parseResourceDocs(t, providerModuleSourceDoc+providerModuleConfigDoc+providerNodeDocs+userModuleConfigDoc)
+
+	before, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), resources, true, "dvp")
+
+	require.Empty(t, before)
+
+	// The module queue is applied while Deckhouse is still starting, the node queue only after it
+	// is Ready, so the two cannot share a slice.
+	require.Equal(t, []string{
+		"ModuleSource/deckhouse",
+		"ModuleConfig/cloud-provider-dvp",
+	}, resourceNames(modules))
+
+	require.Equal(t, []string{
+		"DVPInstanceClass/master-dvp",
+		"NodeGroup/master",
+	}, resourceNames(provider))
+
+	require.Equal(t, []string{"ModuleConfig/user-authn"}, resourceNames(after))
+}
+
+// The cloud-controller-manager that clears node.cloudprovider.kubernetes.io/uninitialized ships
+// inside the provider module in every shape of the configuration, not only the one where the nodes
+// come from resource documents. A cluster that still carries a provider *ClusterConfiguration
+// deadlocks exactly the same way if its module waits behind the node queue, so the module queue is
+// filled on the module's own evidence and not on how the nodes are described.
+func TestSplitResources_ProviderModuleLeadsEvenWithLegacyProviderConfig(t *testing.T) {
+	resources := parseResourceDocs(t, providerModuleConfigDoc+providerNodeDocs)
+
+	_, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), resources, false, "dvp")
+
+	require.Equal(t, []string{"ModuleConfig/cloud-provider-dvp"}, resourceNames(modules))
+	require.Empty(t, provider, "a legacy provider config keeps the node documents in the final queue")
+	require.Equal(t, []string{"DVPInstanceClass/master-dvp", "NodeGroup/master"}, resourceNames(after))
+}
+
+// A ModulePullOverride is the one reason to pin which build of the module gets installed, so it
+// has to be in the cluster before the module is installed at all - a phase later, and it can only
+// replace what the release channel already deployed. The order inside the queue is the order the
+// controllers consume it in: the source scan creates the Module the override controller looks up,
+// and the override has to exist before the ModuleConfig enables the module.
+func TestSplitResources_PullOverrideTravelsWithTheModule(t *testing.T) {
+	overrideDoc := `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: cloud-provider-dvp
+spec:
+  imageTag: pr123
+`
+	resources := parseResourceDocs(t, providerModuleConfigDoc+overrideDoc+providerModuleSourceDoc+providerNodeDocs)
+
+	_, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), resources, true, "dvp")
+
+	require.Equal(t, []string{
+		"ModuleSource/deckhouse",
+		"ModulePullOverride/cloud-provider-dvp",
+		"ModuleConfig/cloud-provider-dvp",
+	}, resourceNames(modules))
+
+	require.Equal(t, []string{
+		"DVPInstanceClass/master-dvp",
+		"NodeGroup/master",
+	}, resourceNames(provider))
+
+	require.Empty(t, after)
+}
+
+// The whole split, for the configurations where the early queue must NOT carry an enabling
+// document. A ModuleSource and a ModulePullOverride travel early always: neither turns a module
+// on. A ModuleConfig does, so it moves only when it names this cluster's own provider.
+func TestSplitResources_OnlyTheProviderModuleConfigMovesEarly(t *testing.T) {
+	tests := []struct {
+		name               string
+		docs               string
+		nodesFromResources bool
+		providerName       string
+		wantModules        []string
+		wantProvider       []string
+		wantAfter          []string
+	}{
+		{
+			// An in-tree provider's ModuleConfig never reaches these documents, so a ModuleSource
+			// for some other module is all there is. It may travel; the module it serves is turned
+			// on by a ModuleConfig that stays behind.
+			name:               "in-tree provider, ModuleSource for another module",
+			docs:               providerModuleSourceDoc + providerNodeDocs + userModuleConfigDoc,
+			nodesFromResources: true,
+			providerName:       "dvp",
+			wantModules:        []string{"ModuleSource/deckhouse"},
+			wantProvider:       []string{"DVPInstanceClass/master-dvp", "NodeGroup/master"},
+			wantAfter:          []string{"ModuleConfig/user-authn"},
+		},
+		{
+			// The guard that matters. The cloud-provider ModuleConfig migration leaves the previous
+			// provider's entry behind, and installing that provider ahead of the readiness wait
+			// would pull a cloud-controller-manager and a CSI this cluster never asked for.
+			name:               "ModuleConfig of a provider this cluster does not run",
+			docs:               providerModuleSourceDoc + providerModuleConfigDoc + providerNodeDocs,
+			nodesFromResources: true,
+			providerName:       "openstack",
+			wantModules:        []string{"ModuleSource/deckhouse"},
+			wantProvider:       []string{"DVPInstanceClass/master-dvp", "NodeGroup/master"},
+			wantAfter:          []string{"ModuleConfig/cloud-provider-dvp"},
+		},
+		{
+			// An override enables nothing on its own - the override controller answers "module is
+			// disabled" - so it travels without dragging its module along. spec.imageTag is left
+			// out to pin that the split never reads it.
+			name: "ModulePullOverride with no ModuleConfig to enable the module",
+			docs: providerModuleSourceDoc + providerNodeDocs + `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: cloud-provider-dvp
+spec:
+  scanInterval: 60s
+`,
+			nodesFromResources: true,
+			providerName:       "dvp",
+			wantModules:        []string{"ModuleSource/deckhouse", "ModulePullOverride/cloud-provider-dvp"},
+			wantProvider:       []string{"DVPInstanceClass/master-dvp", "NodeGroup/master"},
+			wantAfter:          []string{},
+		},
+		{
+			// A static cluster has no provider at all, so no ModuleConfig can name one.
+			name:               "static cluster",
+			docs:               providerModuleSourceDoc + providerModuleConfigDoc,
+			nodesFromResources: false,
+			providerName:       "",
+			wantModules:        []string{"ModuleSource/deckhouse"},
+			wantProvider:       []string{},
+			wantAfter:          []string{"ModuleConfig/cloud-provider-dvp"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resources := parseResourceDocs(t, tt.docs)
+
+			before, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+				context.TODO(), resources, tt.nodesFromResources, tt.providerName)
+
+			require.Empty(t, before)
+			require.Equal(t, tt.wantModules, resourceNames(modules))
+			require.Equal(t, tt.wantProvider, resourceNames(provider))
+			require.Equal(t, tt.wantAfter, resourceNames(after))
+		})
+	}
 }
