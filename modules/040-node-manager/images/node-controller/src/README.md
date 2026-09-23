@@ -96,7 +96,7 @@ Details: [docs/controller-capi.md](docs/controller-capi.md).
 
 | Controller | Watches | What it does |
 |---|---|---|
-| `node-config` | Node | Renders a `NodeConfig` for every node of an olcedar NodeGroup from the NodeGroup and live cluster state; the on-node agent reconciles the node towards it. |
+| `node-config` | Node | Renders a `NodeConfig` for every node of an olcedar NodeGroup from the NodeGroup and live cluster state; the on-node agent reconciles the node towards it. Compiles the `NodeStaticPodRequest` objects that select the group into `spec.staticPods`, and owns the `NodeStaticPodRequest` / `NodeExtensionRequest` status counters (matched, applied, failed, pending nodes). |
 | `node-bootstrap` | NodeBootstrapConfig | Cluster API bootstrap provider for immutable NodeGroups: renders each Machine's `NodeConfig` userdata into a Secret and advertises it through the `NodeBootstrapConfig` status CAPI waits on. |
 | `node-operation` | NodeOperation | Carries a node-interrupting operation (reboot, eviction, permission to apply a disruptive config) from recorded intent to result: evicts, hands over via `InProgress`, the node reports back. |
 
@@ -580,7 +580,9 @@ node-controller/src/
 │       ├── nodegroup_webhook.go               # Validation webhook (17 checks)
 │       ├── nodegroup_webhook_test.go
 │       ├── nodegroup_conversion_handler.go    # Conversion webhook
-│       └── nodegroup_conversion_handler_test.go
+│       ├── nodegroup_conversion_handler_test.go
+│       ├── nodestaticpodrequest_webhook.go    # NodeStaticPodRequest validation: name, reserved names, manifest
+│       └── nodestaticpodrequest_webhook_test.go
 ├── docs/
 │   └── hooks-migration.md
 ├── hack/
