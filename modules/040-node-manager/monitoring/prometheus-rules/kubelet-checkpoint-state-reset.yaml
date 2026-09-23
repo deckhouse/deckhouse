@@ -1,9 +1,6 @@
 - name: d8.kubelet-checkpoint-state-reset
   rules:
     - alert: D8KubeletCheckpointStateUnpinnedContainers
-      # A gauge, so this is the live state and not a trace of an event: it resolves when the container is gone,
-      # whoever made it go, and it survives a kubelet restart because kubelet keeps the list on the Node.
-      # By Pod, not by container: the fix is recreating the Pod, and that is decided for the Pod as a whole.
       expr: |
         max by (node, namespace, pod) (
           kubelet_checkpoint_state_unpinned_containers{job="kubelet"}
