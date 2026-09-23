@@ -73,3 +73,52 @@ func TestLegacyRBACv2CustomRolesRequirement(t *testing.T) {
 
 	requirements.RemoveValue(legacyRBACv2CustomRolesValueKey)
 }
+
+func TestDeprecatedRBACv2BindingsRequirement(t *testing.T) {
+	// Pins the duplicated value-key literal to the hooks package contract (see the counterpart
+	// assertion in hooks/alert_deprecated_rbacv2_bindings_test.go).
+	assert.Equal(t, "userAuthz:deprecatedRBACv2Bindings", deprecatedRBACv2BindingsValueKey)
+
+	t.Run("no value stored (module disabled or not synced) — pass", func(t *testing.T) {
+		requirements.RemoveValue(deprecatedRBACv2BindingsValueKey)
+		ok, err := requirements.CheckRequirement(deprecatedRBACv2BindingsRequirementKey, "0")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("no bindings to deprecated names — pass", func(t *testing.T) {
+		requirements.SaveValue(deprecatedRBACv2BindingsValueKey, []string{})
+		ok, err := requirements.CheckRequirement(deprecatedRBACv2BindingsRequirementKey, "0")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("bindings present — block with the bindings in the error", func(t *testing.T) {
+		requirements.SaveValue(deprecatedRBACv2BindingsValueKey, []string{
+			"ClusterRoleBinding legacy-observability -> d8:manage:observability:manager",
+			"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer",
+		})
+		ok, err := requirements.CheckRequirement(deprecatedRBACv2BindingsRequirementKey, "0")
+		assert.False(t, ok)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ClusterRoleBinding legacy-observability -> d8:manage:observability:manager")
+		assert.Contains(t, err.Error(), "RoleBinding team-a/legacy-viewer -> d8:use:role:viewer")
+		assert.Contains(t, err.Error(), "Deprecated role names")
+	})
+
+	t.Run("deserialized []any representation is tolerated", func(t *testing.T) {
+		requirements.SaveValue(deprecatedRBACv2BindingsValueKey, []any{"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer"})
+		ok, err := requirements.CheckRequirement(deprecatedRBACv2BindingsRequirementKey, "0")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+
+	t.Run("unparsable requirement value — error", func(t *testing.T) {
+		requirements.SaveValue(deprecatedRBACv2BindingsValueKey, []string{"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer"})
+		ok, err := requirements.CheckRequirement(deprecatedRBACv2BindingsRequirementKey, "not-a-number")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+
+	requirements.RemoveValue(deprecatedRBACv2BindingsValueKey)
+}

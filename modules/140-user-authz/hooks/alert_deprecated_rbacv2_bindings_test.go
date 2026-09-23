@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -130,6 +131,31 @@ subjects:
 var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
 
+	It("value key matches the contract with modules/140-user-authz/requirements", func() {
+		// The requirements package duplicates this literal (module requirements packages stay
+		// import-free of the hooks package); this assertion and its counterpart in
+		// requirements/check_test.go pin both copies to the same string.
+		Expect(DeprecatedRBACv2BindingsValueKey).To(Equal("userAuthz:deprecatedRBACv2Bindings"))
+	})
+
+	Context("Bindings to deprecated roles and to a deprecated capability", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(rbDeprecatedUse + crbDeprecatedManage + crbNewModel + rbOrdinary + crbDeprecatedManageCap))
+			f.RunHook()
+		})
+
+		It("Saves the offenders, sorted, as the requirement value", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(Equal([]string{
+				"ClusterRoleBinding legacy-modcap -> d8:manage:permission:module:prometheus:view",
+				"ClusterRoleBinding legacy-observability -> d8:manage:observability:manager",
+				"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer",
+			}))
+		})
+	})
+
 	Context("An empty cluster", func() {
 		BeforeEach(func() {
 			f.RunHook()
@@ -143,6 +169,12 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 				Group:  deprecatedRBACv2Metric,
 				Action: operation.ActionExpireMetrics,
 			}))
+		})
+
+		It("Saves an empty list to the requirement value", func() {
+			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEmpty())
 		})
 	})
 

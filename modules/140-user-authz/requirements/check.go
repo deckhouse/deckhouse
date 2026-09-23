@@ -35,6 +35,17 @@ const (
 	legacyRBACv2CustomRolesValueKey = "userAuthz:legacyRBACv2CustomRoles"
 
 	migrationFAQReference = "see the user-authz module FAQ, section \"How do I migrate custom roles to the new scheme in DKP 1.78?\""
+
+	// deprecatedRBACv2BindingsRequirementKey is the release requirement key of the release that
+	// removes the compatibility aliases of the pre-1.78 RBACv2 role names (d8:manage:*,
+	// d8:use:role:*). That release.yaml sets it to the maximum allowed number of bindings to the
+	// deprecated names (0): with the aliases gone such a binding grants nothing, so the release
+	// stays Pending until every binding is recreated on the new name.
+	deprecatedRBACv2BindingsRequirementKey = "deprecatedRBACv2BindingsCount"
+	// deprecatedRBACv2BindingsValueKey mirrors hooks.DeprecatedRBACv2BindingsValueKey (locked by
+	// tests, like the pair above).
+	deprecatedRBACv2BindingsValueKey = "userAuthz:deprecatedRBACv2Bindings"
+	deprecatedNamesReference         = "see the user-authz module documentation, section \"Deprecated role names\", and the D8UserAuthzDeprecatedRBACv2RoleInUse / D8UserAuthzDeprecatedRBACv2CapabilityInUse alerts"
 )
 
 func init() {
@@ -63,6 +74,28 @@ func init() {
 	}
 
 	requirements.RegisterCheck(legacyRBACv2CustomRolesRequirementKey, checkLegacyCustomRolesFunc)
+
+	checkDeprecatedBindingsFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		allowed, err := strconv.Atoi(requirementValue)
+		if err != nil {
+			return false, fmt.Errorf("parse requirement value %q: %w", requirementValue, err)
+		}
+		raw, exists := getter.Get(deprecatedRBACv2BindingsValueKey)
+		if !exists {
+			// The hook has not published a value (the module is disabled or has not synced yet) —
+			// nothing to enforce.
+			return true, nil
+		}
+		bindings := toStringSlice(raw)
+		if len(bindings) <= allowed {
+			return true, nil
+		}
+		return false, fmt.Errorf(
+			"the cluster has %d binding(s) to deprecated RBACv2 role names (d8:manage:*, d8:use:role:*, d8:use:capability:*): %s; "+
+				"this release removes the compatibility aliases and such bindings would grant nothing — recreate them on the new role names, %s",
+			len(bindings), strings.Join(bindings, "; "), deprecatedNamesReference)
+	}
+	requirements.RegisterCheck(deprecatedRBACv2BindingsRequirementKey, checkDeprecatedBindingsFunc)
 }
 
 // toStringSlice tolerates both the in-memory ([]string) and a deserialized ([]any) representation

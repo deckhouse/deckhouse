@@ -339,7 +339,7 @@ d8 k annotate clusterrole d8:namespace:admin \
 Устаревшая роль `d8:use:role:admin` соответствует роли `d8:namespace:admin` и, как и она, [больше не даёт](#ограничения-уровня-admin-и-права-superadmin) права выпускать токены ServiceAccount'ов и impersonate — теперь для этого нужен уровень `superadmin`.
 {% endalert %}
 
-Пока в кластере остаются привязки к устаревшим именам, срабатывают алерты `D8UserAuthzDeprecatedRBACv2RoleInUse` (привязка к роли-псевдониму) и `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (привязка к устаревшей capability, которая больше не даёт прав).
+Пока в кластере остаются привязки к устаревшим именам, срабатывают алерты `D8UserAuthzDeprecatedRBACv2RoleInUse` (привязка к роли-псевдониму) и `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (привязка к устаревшей capability, которая больше не даёт прав). Релиз, который удаляет псевдонимы, несёт требование релиза `deprecatedRBACv2BindingsCount`: обновление остаётся в ожидании, а список привязок выводится в статусе `DeckhouseRelease`, пока каждая такая привязка не пересоздана на новое имя роли.
 
 Переведите существующие RoleBinding и ClusterRoleBinding на новые имена ролей. Найти привязки, использующие устаревшие имена, можно с помощью команды:
 

@@ -19,12 +19,18 @@ limitations under the License.
 // alive for one release by the aliases in templates/rbacv2-compat/. This metric drives the
 // D8UserAuthzDeprecatedRBACv2RoleInUse alert that nudges operators to migrate their bindings to the
 // new names (d8:{system,subsystem,namespace,project}:*) before the aliases are removed next release.
+//
+// The same list is published as a release requirement value: the release that removes the aliases
+// carries the deprecatedRBACv2BindingsCount requirement (modules/140-user-authz/requirements) and
+// stays Pending while a binding to a deprecated name is still in the cluster, so nobody loses access
+// by upgrading with such a binding in place.
 
 package hooks
 
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -34,9 +40,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-const deprecatedRBACv2Metric = "d8_rbacv2_deprecated_role_in_use"
+const (
+	deprecatedRBACv2Metric = "d8_rbacv2_deprecated_role_in_use"
+
+	// DeprecatedRBACv2BindingsValueKey is the requirements memory-storage key holding the sorted
+	// descriptions of the bindings that still reference a deprecated RBACv2 role name. The
+	// requirement check function (modules/140-user-authz/requirements) reads it when a release
+	// carries the deprecatedRBACv2BindingsCount requirement.
+	DeprecatedRBACv2BindingsValueKey = "userAuthz:deprecatedRBACv2Bindings"
+)
 
 // Legacy RBACv2 name families replaced by the new model. Two tiers matter for the operator:
 //
@@ -157,14 +173,31 @@ func boolLabel(v bool) string {
 	return "false"
 }
 
+// describe names a binding the way the requirement error shows it:
+// "RoleBinding team-a/legacy-viewer -> d8:use:role:viewer".
+func (b deprecatedBinding) describe() string {
+	name := b.BindingName
+	if b.Namespace != "" {
+		name = b.Namespace + "/" + name
+	}
+
+	return b.BindingKind + " " + name + " -> " + b.RoleName
+}
+
+// handleDeprecatedRBACv2Bindings publishes the sorted list of offending bindings as a requirement
+// value and one alert metric per binding on every synchronization/event, so the release unblocks
+// itself (and the alert resolves) as soon as the operator recreates the bindings on the new names.
 func handleDeprecatedRBACv2Bindings(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(deprecatedRBACv2Metric)
+
+	described := make([]string, 0)
 
 	for _, snapshotName := range []string{"deprecated_clusterrolebindings", "deprecated_rolebindings"} {
 		for binding, err := range sdkobjectpatch.SnapshotIter[deprecatedBinding](input.Snapshots.Get(snapshotName)) {
 			if err != nil {
 				return fmt.Errorf("failed to iterate over '%s' snapshot: %w", snapshotName, err)
 			}
+			described = append(described, binding.describe())
 			input.MetricsCollector.Set(
 				deprecatedRBACv2Metric, 1,
 				map[string]string{
@@ -178,5 +211,9 @@ func handleDeprecatedRBACv2Bindings(_ context.Context, input *go_hook.HookInput)
 			)
 		}
 	}
+
+	slices.Sort(described)
+	requirements.SaveValue(DeprecatedRBACv2BindingsValueKey, described)
+
 	return nil
 }

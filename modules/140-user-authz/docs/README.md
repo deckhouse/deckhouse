@@ -333,7 +333,7 @@ Name mapping:
 The deprecated `d8:use:role:admin` role maps to `d8:namespace:admin` and, just like it, [no longer grants](#admin-level-restrictions-and-superadmin-rights) the right to mint ServiceAccount tokens or impersonate ServiceAccounts — that now requires the `superadmin` level.
 {% endalert %}
 
-As long as bindings to the deprecated names remain in the cluster, the `D8UserAuthzDeprecatedRBACv2RoleInUse` (a binding to an alias role) and `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (a binding to a deprecated capability that no longer grants access) alerts fire.
+As long as bindings to the deprecated names remain in the cluster, the `D8UserAuthzDeprecatedRBACv2RoleInUse` (a binding to an alias role) and `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (a binding to a deprecated capability that no longer grants access) alerts fire. The release that removes the aliases carries the `deprecatedRBACv2BindingsCount` release requirement: the upgrade stays pending, with the offending bindings listed in the `DeckhouseRelease` status, until every such binding is recreated on a new role name.
 
 Migrate your existing RoleBinding and ClusterRoleBinding objects to the new role names. You can find bindings that still use the deprecated names with the command:
 
