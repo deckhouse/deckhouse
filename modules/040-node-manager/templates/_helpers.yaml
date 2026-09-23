@@ -124,3 +124,33 @@ nodeSelector:
   node.deckhouse.io/gpu: ""
   {{- end }}
 {{- end }}
+
+{{- /* Unreachable is tolerated for 60s only: forever pins the replica to a powered-off master, */ -}}
+{{- /* and NoSchedule is not tolerated so a replacement never lands on it. */ -}}
+{{- define "node_manager_master_controller_tolerations" }}
+tolerations:
+- key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
+- key: dedicated.deckhouse.io
+  operator: Exists
+- key: dedicated
+  operator: Exists
+- key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+  effect: NoSchedule
+- key: node.deckhouse.io/uninitialized
+  operator: Exists
+  effect: NoSchedule
+- key: node.deckhouse.io/csi-not-bootstrapped
+  operator: Exists
+  effect: NoSchedule
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/network-unavailable
+- key: node.kubernetes.io/unreachable
+  operator: Exists
+  effect: NoExecute
+  tolerationSeconds: 60
+{{- end }}
