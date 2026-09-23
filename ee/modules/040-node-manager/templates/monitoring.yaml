@@ -20,6 +20,14 @@
 
 {{- include "helm_lib_prometheus_rules" (list . "d8-cloud-instance-manager" $prometheusRules) }}
 
-{{- include "helm_lib_grafana_dashboard_definitions" . }}
+{{- if (.Values.global.enabledModules | has "prometheus-crd") }}
+  {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list . "monitoring/grafana-dashboards" "monitoring/grafana-dashboards/kubernetes-cluster") }}
+
+  {{- if not (.Values.global.enabledModules | has "gpu") }}
+    {{- if include "nvidia_gpu_enabled" . }}
+      {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list . "monitoring/grafana-dashboards" "monitoring/grafana-dashboards/nvidia-gpu") }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 
 
