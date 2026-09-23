@@ -34,8 +34,8 @@ func applyControlPlaneManagerClusterDomainFilter(obj *unstructured.Unstructured)
 	return domain, nil
 }
 
-// fromClusterConfiguration reports whether the deprecated document still decides, for the log line.
-func resolveClusterDomain(mc string, cc string) (domain string, fromClusterConfiguration bool) {
+// Returns the resolved domain and whether the deprecated document still decides, for the log line.
+func resolveClusterDomain(mc, cc string) (string, bool) {
 	switch {
 	case mc != "":
 		return mc, false

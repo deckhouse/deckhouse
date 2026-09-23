@@ -105,9 +105,9 @@ handler:
                         dns_domains.append(domain)
 
             if not dns_domains:
-                # Neither the ModuleConfig nor the deprecated ClusterConfiguration field sets
-                # clusterDomain: the cluster resolves it to the default.
-                dns_domains.append("cluster.local")
+                # Neither document sets clusterDomain, so take the domain the cluster resolved:
+                # a cluster without the ClusterConfiguration Secret discovers it from CoreDNS.
+                dns_domains.append("{{ .Values.global.discovery.clusterDomain }}")
 
         public_domain_template = ctx.review.request.object.spec.settings.modules.get(
             "publicDomainTemplate", ""
