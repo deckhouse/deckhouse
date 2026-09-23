@@ -146,7 +146,7 @@ If the [`alb`](/modules/alb/) module is enabled in the cluster and a Gateway can
 This publication method:
 
 * Is controlled by the same [`apiserver.publishAPI.ingress.enabled`](configuration.html#parameters-apiserver-publishapi-ingress) parameter. There is no separate parameter to enable it.
-* Requires the `global.modules.publicDomainTemplate` parameter to be set (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+* Requires the `global.modules.publicDomainTemplate` parameter to be set (for more details, see the [section on service domains in the API documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
 * Does not depend on whether the Ingress controller is enabled — it works as a fully independent mechanism alongside it.
 
 {% alert level="warning" %}

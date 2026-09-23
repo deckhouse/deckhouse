@@ -146,7 +146,7 @@ spec:
 Особенности этого способа публикации:
 
 * Управляется тем же параметром [`apiserver.publishAPI.ingress.enabled`](configuration.html#parameters-apiserver-publishapi-ingress). Отдельного параметра для включения нет.
-* Требует, чтобы был задан параметр `global.modules.publicDomainTemplate` (подробнее см. [раздел о служебных доменах в документации](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+* Требует, чтобы был задан параметр `global.modules.publicDomainTemplate` (подробнее — [в разделе о служебных доменах в документации API](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
 * Не зависит от того, включён ли Ingress-контроллер — работает как полностью независимый механизм.
 
 {% alert level="warning" %}
