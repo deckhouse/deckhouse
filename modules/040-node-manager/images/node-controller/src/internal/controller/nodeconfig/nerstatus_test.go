@@ -230,3 +230,42 @@ func TestNERStatusRefusedByTheNodesKeepsItsArithmetic(t *testing.T) {
 		meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Reason)
 	require.Equal(t, int32(1), fresh.Status.PendingNodes, "the third node still owes an answer")
 }
+
+// The denominator is the nodes the render gives the sysext to, so a request
+// narrowed by node labels does not wait for the nodes it never reached.
+func TestNERStatusCountsOnlyTheNodesItsLabelsSelect(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, v1.AddToScheme(scheme))
+	require.NoError(t, deckhousev1alpha1.AddToScheme(scheme))
+	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	ner := &deckhousev1alpha1.NodeExtensionRequest{
+		ObjectMeta: metav1.ObjectMeta{Name: "bob-request"},
+		Spec: deckhousev1alpha1.NodeExtensionRequestSpec{
+			Sysext: deckhousev1alpha1.Sysext{
+				Name:   "bob",
+				Digest: "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+			},
+			NodeSelector: deckhousev1alpha1.NodeSelector{MatchLabels: map[string]string{"gpu": "true"}},
+		},
+	}
+	selected := nodeInGroup("worker-0", "worker")
+	selected.Labels["gpu"] = "true"
+	other := nodeInGroup("worker-1", "worker")
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(ner, immutableGroup("worker"), &selected, &other).
+		WithStatusSubresource(&deckhousev1alpha1.NodeExtensionRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNERStatuses(t.Context(), logr.Discard()))
+
+	fresh := &deckhousev1alpha1.NodeExtensionRequest{}
+	require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: ner.Name}, fresh))
+	require.Equal(t, int32(1), fresh.Status.MatchedNodes)
+	require.Equal(t, int32(1), fresh.Status.PendingNodes)
+}
