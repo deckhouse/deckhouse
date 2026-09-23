@@ -56,10 +56,9 @@ func TestRequestNodeNameIsANoOpWithoutAName(t *testing.T) {
 }
 
 // The command does not run on the node as written: dhctl wraps it for sudo and
-// hands the result to a shell, and a backslash does not survive that - a
-// printf '%s\n' arrives as printf '%sn' and names the node <name>n. Nothing
-// downstream can catch that, since <name>n is a perfectly good node name, so the
-// command must carry no backslash at all.
+// hands the result to a shell, and a backslash does not survive that. A name
+// mangled that way is still a valid node name, which nothing downstream can
+// object to, so the command must carry no backslash at all.
 func TestNodeNameCommandCarriesNothingAShellCouldEat(t *testing.T) {
 	cmd := nodeNameRemoteCommand("/var/lib/bashible", "master-alpha-01")
 
@@ -98,10 +97,8 @@ func TestNodeNameCommandWritesTheName(t *testing.T) {
 	}
 }
 
-// The command runs under a sudo wrapper that announces itself on the same
-// stream, so the name read back is the last line of the output and not the whole
-// of it. Comparing the whole output failed a bootstrap whose node-name file was
-// perfectly correct.
+// The command runs under a sudo wrapper that announces itself on the same stream,
+// so the name read back is the last line of the output and not the whole of it.
 func TestLastLineIsWhatTheNodeReadBack(t *testing.T) {
 	for _, tc := range []struct{ out, want string }{
 		{"SUDO-SUCCESS\nmaster-alpha-01\n", "master-alpha-01"},

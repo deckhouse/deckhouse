@@ -247,7 +247,7 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
    echo <Base64-CODE> | base64 -d | D8_NODE_NAME=worker-rack3-07 bash
    ```
 
-   See [how do I give a node a name of its own](faq.html#how-do-i-give-a-node-a-name-of-its-own).
+   More on [giving a node a name](faq.html#how-do-i-give-a-node-a-name-of-its-own).
 
 ### Using the Cluster API Provider Static
 

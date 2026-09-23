@@ -326,11 +326,10 @@ const nodeNameDir = "/var/lib/bashible"
 // nodeNameRemoteCommand writes the name into dir/node-name on the node and prints
 // back what landed there.
 //
-// echo rather than printf '%s\n': the command travels to the node through a shell
-// of its own, which eats a backslash on the way - a printf '%s\n' arrives as
-// printf '%sn' and names the node <name>n. Nothing downstream could notice, since
-// that is a perfectly good node name, so the caller reads the file back rather
-// than take the write on trust.
+// echo rather than printf '%s\n': the command reaches the node through a shell of
+// its own, and a backslash does not survive that. The name it writes would still be
+// a valid one, so nothing downstream could object to it - hence the caller reads the
+// file back rather than take the write on trust.
 //
 // The name has already been through app.ValidateNodeName, so it holds nothing a
 // shell would look at. The quoting is here so that stays true of a caller that has
