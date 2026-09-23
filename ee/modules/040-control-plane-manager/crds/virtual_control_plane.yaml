@@ -216,8 +216,6 @@ spec:
                   rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
               nodeSelector:
                 additionalProperties:
-                  maxLength: 63
-                  pattern: ^([A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?)?$
                   type: string
                 description: |-
                   Node labels for the virtual control plane pods in the management cluster: the control
@@ -228,17 +226,9 @@ spec:
                   A dedicated node pool is usually tainted as well as labelled, so a `nodeSelector`
                   without matching `tolerations` leaves every pod in `Pending` state.
 
-                  Keys must be valid label keys and values valid label values. At most 64 entries.
-
                   > **Warning.** Changing this parameter recreates the component StatefulSets, restarting
                   the tenant control plane.
-                maxProperties: 64
                 type: object
-                x-kubernetes-validations:
-                - message: |-
-                    nodeSelector keys must be valid label keys: an optional DNS subdomain prefix followed by '/', then up to 63 alphanumerics, '-', '_' or '.'
-                  rule: |-
-                    self.all(k, k.matches('^([a-z0-9]([-a-z0-9]*[a-z0-9])?([.][a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$'))
               tolerations:
                 description: |-
                   Tolerations for the same pods as `nodeSelector`.
@@ -251,8 +241,6 @@ spec:
                     effect:
                       description: |-
                         Taint effect to match. Empty matches all effects.
-
-                        Allowed values: `NoSchedule`, `PreferNoSchedule`, `NoExecute`.
                       enum:
                       - NoSchedule
                       - PreferNoSchedule

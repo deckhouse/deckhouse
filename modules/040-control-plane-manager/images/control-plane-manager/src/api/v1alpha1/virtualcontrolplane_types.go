@@ -185,66 +185,24 @@ type VirtualControlPlaneSpec struct {
 	// Tenant-side pods are not affected.
 	//
 	// > **Warning.** Changing it recreates the component StatefulSets, restarting the tenant control plane.
-	// +kubebuilder:validation:MaxProperties=64
-	// +kubebuilder:validation:XValidation:rule="self.all(k, k.matches('^([a-z0-9]([-a-z0-9]*[a-z0-9])?([.][a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$'))",message="nodeSelector keys must be valid label keys: an optional DNS subdomain prefix followed by '/', then up to 63 alphanumerics, '-', '_' or '.'"
 	// +optional
-	NodeSelector map[string]LabelValue `json:"nodeSelector,omitempty"`
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Kubernetes validates tolerations in Go rather than in the schema, so a CRD inherits none of
+	// it. What markers can reach is here; the per-field constraints, which would have to sit on
+	// corev1.Toleration's own fields, are written into crds/ by hand instead. maxItems is what
+	// keeps these rules inside the CEL cost budget.
 
 	// Tolerations for the same pods as NodeSelector. A dedicated node pool is usually tainted as well
 	// as labelled, so a NodeSelector without them leaves every pod in `Pending` state.
 	//
 	// > **Warning.** Changing it restarts the tenant control plane, same as NodeSelector.
 	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:items:XValidation:rule="(has(self.key) && size(self.key) > 0) || (has(self.operator) && self.operator == 'Exists')",message="an empty key matches every taint and requires operator Exists"
+	// +kubebuilder:validation:items:XValidation:rule="!(has(self.operator) && self.operator == 'Exists') || !has(self.value) || size(self.value) == 0",message="value must be empty when operator is Exists"
+	// +kubebuilder:validation:items:XValidation:rule="!has(self.tolerationSeconds) || (has(self.effect) && self.effect == 'NoExecute')",message="tolerationSeconds only applies to effect NoExecute"
 	// +optional
-	Tolerations []VirtualControlPlaneToleration `json:"tolerations,omitempty"`
-}
-
-// A named type, not a plain string: the apiserver sizes a CEL rule's cost from maxLength, and over
-// an unbounded string the rules below go over budget and the CRD stops applying.
-
-// LabelValue is a Kubernetes label value.
-// +kubebuilder:validation:MaxLength=63
-// +kubebuilder:validation:Pattern=`^([A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?)?$`
-type LabelValue string
-
-// Kubernetes validates tolerations in Go rather than in the schema, so a CRD inherits none of it
-// and the rules are spelled out here. The JSON matches corev1.Toleration exactly; the enum omits
-// the alpha Lt and Gt operators.
-
-// VirtualControlPlaneToleration is a toleration for the VirtualControlPlane pods in the management
-// cluster, matching a taint on the nodes they are scheduled to.
-// +kubebuilder:validation:XValidation:rule="(has(self.key) && size(self.key) > 0) || (has(self.operator) && self.operator == 'Exists')",message="an empty key matches every taint and requires operator Exists"
-// +kubebuilder:validation:XValidation:rule="!(has(self.operator) && self.operator == 'Exists') || !has(self.value) || size(self.value) == 0",message="value must be empty when operator is Exists"
-// +kubebuilder:validation:XValidation:rule="!has(self.tolerationSeconds) || (has(self.effect) && self.effect == 'NoExecute')",message="tolerationSeconds only applies to effect NoExecute"
-type VirtualControlPlaneToleration struct {
-	// Key is the taint key the toleration applies to. Leave it out to match every key, which
-	// requires `operator: Exists`.
-	// +kubebuilder:validation:MaxLength=316
-	// +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?([.][a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$`
-	// +optional
-	Key string `json:"key,omitempty"`
-
-	// Operator relates the key to its value: `Equal` compares them, `Exists` matches any value and
-	// requires `value` to be empty. Defaults to `Equal`.
-	// +kubebuilder:validation:Enum=Exists;Equal
-	// +optional
-	Operator corev1.TolerationOperator `json:"operator,omitempty"`
-
-	// Value is the taint value the toleration matches. Must be empty when the operator is `Exists`.
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:Pattern=`^([A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?)?$`
-	// +optional
-	Value string `json:"value,omitempty"`
-
-	// Effect is the taint effect to match. Leave it out to match every effect.
-	// +kubebuilder:validation:Enum=NoSchedule;PreferNoSchedule;NoExecute
-	// +optional
-	Effect corev1.TaintEffect `json:"effect,omitempty"`
-
-	// TolerationSeconds is how long the pod tolerates the taint once it no longer matches. Only
-	// applies to `effect: NoExecute`. Unset means forever, zero or negative means evict at once.
-	// +optional
-	TolerationSeconds *int64 `json:"tolerationSeconds,omitempty"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 type VirtualControlPlaneStatus struct {

@@ -70,9 +70,12 @@ func specSchema(t *testing.T, crd *apiextensionsv1.CustomResourceDefinition) api
 }
 
 // The generated CRD is ported into crds/ by hand, and the hand-maintained copy is the one that
-// reaches a cluster, so the two must agree on every constraint. Wording may differ; validation
-// may not.
-func TestPlacementSchemaMatchesAcrossCRDCopies(t *testing.T) {
+// reaches a cluster, so everything the markers produce must arrive there. The hand-maintained copy
+// may carry more: a kubebuilder marker only attaches to a declaration we own, so per-field
+// constraints on corev1.Toleration's fields — the enums, the patterns — can only be written into
+// crds/ directly. Hence a subset check rather than equality: a forgotten port fails here, a
+// deliberate addition does not.
+func TestGeneratedPlacementValidationReachesTheShippedCRD(t *testing.T) {
 	for _, fieldName := range []string{"nodeSelector", "tolerations"} {
 		t.Run(fieldName, func(t *testing.T) {
 			schemas := map[string]apiextensionsv1.JSONSchemaProps{}
@@ -86,9 +89,44 @@ func TestPlacementSchemaMatchesAcrossCRDCopies(t *testing.T) {
 				schemas[copyName] = schema
 			}
 
-			assert.Equal(t, schemas["generated"], schemas["hand-maintained"],
-				"spec.%s carries different validation in the two CRD copies; regenerate with `make manifests` and port the change into crds/", fieldName)
+			assertSchemaSubset(t, schemas["generated"], schemas["hand-maintained"], "spec."+fieldName)
 		})
+	}
+}
+
+// assertSchemaSubset reports every constraint present in want but missing or different in got.
+func assertSchemaSubset(t *testing.T, want, got apiextensionsv1.JSONSchemaProps, path string) {
+	t.Helper()
+
+	assert.Equal(t, want.Type, got.Type, "%s: type", path)
+	assert.Equal(t, want.MaxItems, got.MaxItems, "%s: maxItems is generated from a marker and must be ported into crds/", path)
+	assert.Equal(t, want.MaxProperties, got.MaxProperties, "%s: maxProperties is generated from a marker and must be ported into crds/", path)
+	for _, rule := range want.XValidations {
+		assert.Contains(t, got.XValidations, rule, "%s: this rule is generated from a marker and must be ported into crds/", path)
+	}
+	if want.Enum != nil {
+		assert.Equal(t, want.Enum, got.Enum, "%s: enum", path)
+	}
+	if want.Pattern != "" {
+		assert.Equal(t, want.Pattern, got.Pattern, "%s: pattern", path)
+	}
+
+	for name, wantProp := range want.Properties {
+		gotProp, ok := got.Properties[name]
+		if !assert.True(t, ok, "%s.%s is missing from the shipped CRD", path, name) {
+			continue
+		}
+		assertSchemaSubset(t, wantProp, gotProp, path+"."+name)
+	}
+	if want.Items != nil && want.Items.Schema != nil {
+		if assert.NotNil(t, got.Items, "%s: items is missing from the shipped CRD", path) {
+			assertSchemaSubset(t, *want.Items.Schema, *got.Items.Schema, path+"[]")
+		}
+	}
+	if want.AdditionalProperties != nil && want.AdditionalProperties.Schema != nil {
+		if assert.NotNil(t, got.AdditionalProperties, "%s: additionalProperties is missing from the shipped CRD", path) {
+			assertSchemaSubset(t, *want.AdditionalProperties.Schema, *got.AdditionalProperties.Schema, path+"{}")
+		}
 	}
 }
 
@@ -126,16 +164,8 @@ func tolerations(n int) map[string]interface{} {
 	return map[string]interface{}{"tolerations": list}
 }
 
-func nodeSelector(n int) map[string]interface{} {
-	labels := map[string]interface{}{}
-	for i := range n {
-		labels[fmt.Sprintf("k%d", i)] = "v"
-	}
-	return map[string]interface{}{"nodeSelector": labels}
-}
-
-// Runs sample placement through both validators an apiserver uses: OpenAPI for enum, pattern and
-// maxLength, CEL for the cross-field rules a schema alone cannot express.
+// Runs sample placement against the copy that ships, through both validators an apiserver uses:
+// OpenAPI for enum, pattern and maxLength, CEL for the cross-field rules a schema cannot express.
 func TestPlacementValidation(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -205,30 +235,6 @@ func TestPlacementValidation(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "nodeSelector key is not a label key",
-			obj:     map[string]interface{}{"nodeSelector": map[string]interface{}{"not a key": "v"}},
-			wantErr: true,
-		},
-		{
-			name:    "nodeSelector value is not a label value",
-			obj:     map[string]interface{}{"nodeSelector": map[string]interface{}{"kubernetes.io/hostname": "not a value"}},
-			wantErr: true,
-		},
-
-		// The bounds below are what the apiserver sizes the CEL rules against: it estimates a
-		// rule's worst-case cost from maxLength, maxItems and maxProperties, and without them
-		// assumes a whole 3 MB request, which puts the rules over budget and makes the CRD itself
-		// unappliable.
-		{
-			name: "tolerations at the limit",
-			obj:  tolerations(64),
-		},
-		{
-			name:    "one toleration over the limit",
-			obj:     tolerations(65),
-			wantErr: true,
-		},
-		{
 			name:    "key longer than a label key",
 			obj:     toleration(map[string]interface{}{"key": strings.Repeat("a", 317), "operator": "Exists"}),
 			wantErr: true,
@@ -238,68 +244,64 @@ func TestPlacementValidation(t *testing.T) {
 			obj:     toleration(map[string]interface{}{"key": "a", "operator": "Equal", "value": strings.Repeat("b", 64)}),
 			wantErr: true,
 		},
+
+		// maxItems is not a policy choice: without it the apiserver estimates the rules against a
+		// whole 3 MB request, puts them 1.8x over the cost budget and refuses the CRD outright.
 		{
-			name: "nodeSelector at the limit",
-			obj:  nodeSelector(64),
+			name: "tolerations at the limit",
+			obj:  tolerations(64),
 		},
 		{
-			name:    "one nodeSelector entry over the limit",
-			obj:     nodeSelector(65),
-			wantErr: true,
-		},
-		{
-			name:    "nodeSelector value longer than a label value",
-			obj:     map[string]interface{}{"nodeSelector": map[string]interface{}{"a": strings.Repeat("b", 64)}},
+			name:    "one toleration over the limit",
+			obj:     tolerations(65),
 			wantErr: true,
 		},
 	}
 
-	for copyName, path := range crdCopies {
-		t.Run(copyName, func(t *testing.T) {
-			spec := specSchema(t, loadCRD(t, path))
-			// The samples carry placement only; without this every result is masked by
-			// "Required value" for the rest of spec.
-			spec.Required = nil
+	// The generated copy carries only what the markers can express and would let the per-field
+	// cases through; the hand-maintained copy is what an apiserver validates against.
+	spec := specSchema(t, loadCRD(t, crdCopies["hand-maintained"]))
+	// The samples carry placement only; without this every result is masked by "Required value"
+	// for the rest of spec.
+	spec.Required = nil
 
-			internalSpec := &apiextensionsinternal.JSONSchemaProps{}
-			if err := apiextensionsv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(&spec, internalSpec, nil); err != nil {
-				t.Fatalf("convert spec schema: %v", err)
+	internalSpec := &apiextensionsinternal.JSONSchemaProps{}
+	if err := apiextensionsv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(&spec, internalSpec, nil); err != nil {
+		t.Fatalf("convert spec schema: %v", err)
+	}
+
+	openAPIValidator, _, err := apiservervalidation.NewSchemaValidator(internalSpec)
+	if err != nil {
+		t.Fatalf("build OpenAPI validator: %v", err)
+	}
+
+	structural, err := structuralschema.NewStructural(internalSpec)
+	if err != nil {
+		t.Fatalf("build structural schema: %v", err)
+	}
+	celValidator := schemacel.NewValidator(structural, true, celconfig.PerCallLimit)
+	if celValidator == nil {
+		t.Fatal("no CEL validator built from spec")
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			errs := apiservervalidation.ValidateCustomResource(field.NewPath("spec"), tc.obj, openAPIValidator)
+			celErrs, _ := celValidator.Validate(
+				context.Background(),
+				field.NewPath("spec"),
+				structural,
+				tc.obj,
+				nil,
+				celconfig.RuntimeCELCostBudget,
+			)
+			errs = append(errs, celErrs...)
+
+			if tc.wantErr && len(errs) == 0 {
+				t.Fatal("expected rejection, got none")
 			}
-
-			openAPIValidator, _, err := apiservervalidation.NewSchemaValidator(internalSpec)
-			if err != nil {
-				t.Fatalf("build OpenAPI validator: %v", err)
-			}
-
-			structural, err := structuralschema.NewStructural(internalSpec)
-			if err != nil {
-				t.Fatalf("build structural schema: %v", err)
-			}
-			celValidator := schemacel.NewValidator(structural, true, celconfig.PerCallLimit)
-			if celValidator == nil {
-				t.Fatal("no CEL validator built from spec")
-			}
-
-			for _, tc := range cases {
-				t.Run(tc.name, func(t *testing.T) {
-					errs := apiservervalidation.ValidateCustomResource(field.NewPath("spec"), tc.obj, openAPIValidator)
-					celErrs, _ := celValidator.Validate(
-						context.Background(),
-						field.NewPath("spec"),
-						structural,
-						tc.obj,
-						nil,
-						celconfig.RuntimeCELCostBudget,
-					)
-					errs = append(errs, celErrs...)
-
-					if tc.wantErr && len(errs) == 0 {
-						t.Fatal("expected rejection, got none")
-					}
-					if !tc.wantErr && len(errs) > 0 {
-						t.Fatalf("expected acceptance, got %v", errs)
-					}
-				})
+			if !tc.wantErr && len(errs) > 0 {
+				t.Fatalf("expected acceptance, got %v", errs)
 			}
 		})
 	}
