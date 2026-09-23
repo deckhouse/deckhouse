@@ -27,7 +27,7 @@ import (
 )
 
 // The lock's UpdateFunc is a deliberate no-op, so anything that routes a failed create to it
-// turns a denial into "OK!" and leaves the installer believing the Deckhouse queue is locked.
+// turns a denial into a success and leaves the installer believing the Deckhouse queue is locked.
 func TestALockThatWasDeniedIsNotReportedAsTaken(t *testing.T) {
 	kubeCl := client.NewFakeKubernetesClient()
 

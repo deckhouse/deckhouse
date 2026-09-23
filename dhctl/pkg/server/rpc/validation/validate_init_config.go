@@ -25,12 +25,12 @@ import (
 )
 
 func (s *Service) ValidateInitConfig(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.ValidateInitConfigRequest,
 ) (*pb.ValidateInitConfigResponse, error) {
 	var errResponse string
 
-	err := config.ValidateInitConfiguration(request.Config, s.schemaStore, optionsFromRequest(request.Opts)...)
+	err := config.ValidateInitConfiguration(ctx, request.Config, s.schemaStore, optionsFromRequest(request.Opts)...)
 	if err != nil {
 		if errResponse, err = errorToResponse(err); err != nil {
 			return nil, status.Errorf(codes.Internal, "%s", err)

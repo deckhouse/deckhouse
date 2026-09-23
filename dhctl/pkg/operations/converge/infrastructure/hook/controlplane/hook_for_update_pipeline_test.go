@@ -16,7 +16,10 @@ package controlplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -117,7 +120,40 @@ func TestAfterActionReportsUnavailableSSHClient(t *testing.T) {
 		false,
 	).WithNodeToConverge("cluster-master-0")
 
-	err := hook.AfterAction(t.Context(), recreatedMasterRunner{})
+	err := hook.AfterAction(t.Context(), recreatedMasterRunner{}, nil)
 
 	require.ErrorContains(t, err, "get ssh client")
+}
+
+// TestAfterActionSkipsWaitsWhenApplyFailed: the waits below the bookkeeping are for the node the
+// apply was supposed to produce, and an apply that failed produced none. The converge that
+// prompted this failed on plan ordering in seconds and then sat waiting for a master that no
+// longer existed, reporting a second failure that only restated the first.
+//
+// commanderMode skips the SSH bookkeeping, leaving the fake kube client to carry the rest, so what
+// the two cases differ in is only whether the waiting happens.
+func TestAfterActionSkipsWaitsWhenApplyFailed(t *testing.T) {
+	retry.InTestEnvironment = true
+	t.Cleanup(func() { retry.InTestEnvironment = false })
+
+	newHook := func() *HookForUpdatePipeline {
+		kubeCl := client.NewFakeKubernetesClient()
+		return NewHookForUpdatePipeline(
+			kubernetes.NewSimpleKubeClientGetter(kubeCl),
+			sshProviderWithoutClient{},
+			map[string]string{"cluster-master-0": "10.12.1.10"},
+			true, // commanderMode: no session to move
+			true,
+			false,
+		).WithNodeToConverge("cluster-master-0")
+	}
+
+	applyErr := errors.New("infrastructure utility exited with code 1")
+	require.NoError(t, newHook().AfterAction(t.Context(), recreatedMasterRunner{}, applyErr),
+		"a failed apply must not be followed by waiting, nor by a second error restating the first")
+
+	// Without an apply error the same call does wait - and against a cluster where the node never
+	// appears, that wait is what fails. This is what the case above is skipping.
+	require.Error(t, newHook().AfterAction(t.Context(), recreatedMasterRunner{}, nil),
+		"a successful apply must still be followed by the readiness checks")
 }

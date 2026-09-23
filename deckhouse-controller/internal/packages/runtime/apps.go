@@ -18,7 +18,6 @@ import (
 	"context"
 	"log/slog"
 	"path/filepath"
-	"slices"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -58,15 +57,12 @@ type App struct {
 
 // UpdateApp handles application creation and version changes from the Application controller.
 //
-// Flow:
-//  1. NeedUpdate fast-path: skip if version and settings checksum are unchanged
-//  2. Store.Update: if version changed → new root context, enqueue full pipeline
-//     (Disable → Deploy → Load); if only settings changed → nil context,
-//     trigger Reschedule so the scheduler re-runs Configure → Startup → Run
-//  3. CheckConstraints: validate Kubernetes/Deckhouse version requirements before enqueuing
+// The store decides: a version change restarts the pipeline (Disable → Deploy → Load), any other
+// change only reschedules, so the scheduler re-runs Configure → Startup → Run. Applications have
+// immutable tags, so a version change is the only invalidation.
 //
-// Settings are applied lazily: the scheduler's schedulePackage reads pending settings
-// from the Store via GetPendingSettings when the package is scheduled for startup.
+// Settings are applied lazily: schedulePackage reads them back from the store when the package is
+// scheduled, so a change that lands mid-pipeline is still picked up.
 func (r *Runtime) UpdateApp(app App) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -82,31 +78,51 @@ func (r *Runtime) UpdateApp(app App) {
 	}
 
 	name := apps.BuildName(app.Namespace, app.Name)
-	version := app.Definition.Version
-	packageName := app.Definition.Name
 
-	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.SettingsVersion, app.Maintenance) {
+	decision := r.packages.Reconcile(name, lifecycle.DesiredState{
+		Version:         app.Definition.Version,
+		Settings:        app.Settings,
+		SettingsVersion: app.SettingsVersion,
+		Maintenance:     app.Maintenance,
+	})
+
+	switch decision.Kind {
+	case lifecycle.DecisionNone:
 		return
-	}
 
-	// applications have immutable tags, so a version change is the only invalidation
-	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance, false)
-	if ctx == nil {
-		r.scheduler.Reschedule(name, reasonSettingsChanged)
+	case lifecycle.DecisionReconfigure:
+		r.scheduler.Reschedule(name, rescheduleReason(decision.Changes))
+
+	case lifecycle.DecisionUpdate:
+		r.enqueueApp(name, app)
+	}
+}
+
+// enqueueApp puts the application's pipeline on its queue: Disable the live instance, then Deploy
+// and Load the new version. Enqueues nothing if a removal owns the package.
+func (r *Runtime) enqueueApp(name string, app App) {
+	ctx, ok := r.packages.BeginUpdate(name)
+	if !ok {
+		r.logger.Debug("application removal is in flight, skip the update", slog.String("name", name))
+
 		return
 	}
 
 	r.status.NewStatus(name)
 
-	tasks := []queue.Task{
-		taskdeploy.NewAppTask(name, packageName, version, app.Repository, r.appDeployer, r.status, r.logger),
-		taskload.NewAppTask(name, app.Repository, r.loadApp, r.status, r.logger),
+	tasks := make([]queue.Task, 0, 3)
+
+	// A registered instance keeps its hooks and its release, so it is torn down before the new
+	// version takes its place.
+	if pkg := r.apps[name]; pkg != nil {
+		tasks = append(tasks, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.logger))
 	}
 
-	// If there's an existing app, disable it first
-	if pkg := r.apps[name]; pkg != nil {
-		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.logger))
-	}
+	// Deploy goes first: the queue holds its head until it succeeds, so a Load enqueued ahead of it
+	// would spin on files nothing has placed yet and never let the Deploy behind it run.
+	tasks = append(tasks,
+		taskdeploy.NewAppTask(name, app.Definition.Name, app.Definition.Version, app.Repository, r.appDeployer, r.status, r.logger),
+		taskload.NewAppTask(name, app.Repository, r.loadApp, r.status, r.logger))
 
 	for _, task := range tasks {
 		r.queueService.Enqueue(ctx, name, task)
@@ -170,25 +186,21 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 // teardown has finished. The caller polls it and holds the Application's finalizer until it
 // returns true, so the CR outlives the Helm release it owns.
 //
-// It is idempotent by contract: a call made while the teardown runs must not re-issue
-// EventRemove, because that cancels the whole context tree (lifecycle.Package.newContext) and
-// would restart the very uninstall the caller is waiting for.
+// It is idempotent by contract: BeginRemoval reports a teardown already in flight instead of
+// beginning a second one, which would cancel the very uninstall the caller is waiting for.
 //
-// After the undeploy task succeeds, a cleanup goroutine removes the
-// Store entry and stops the queue. The goroutine is necessary because
-// queueService.Remove stops the queue — calling it synchronously from
-// within the queue's own processing loop would deadlock on WaitGroup.
-//
-// Store.Delete has a state guard: if UpdateApp re-created the package between undeploy and cleanup,
-// Update cleared the removal marker, so Delete is a no-op and removal reports unfinished again for
-// the re-created generation.
+// After the undeploy task succeeds, a cleanup goroutine removes the store entry and stops the
+// queue. The goroutine is necessary because queueService.Remove stops the queue — calling it
+// synchronously from within the queue's own processing loop would deadlock on WaitGroup.
 func (r *Runtime) RemoveApp(namespace, instance string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	name := apps.BuildName(namespace, instance)
 
-	switch r.packages.RemovalState(name) {
+	ctx, state := r.packages.BeginRemoval(name)
+
+	switch state {
 	case lifecycle.RemovalDone:
 		// nothing is tracked under the name: the teardown finished, or never had to run
 		return true
@@ -206,11 +218,6 @@ func (r *Runtime) RemoveApp(namespace, instance string) bool {
 	// A removed application no longer reconciles anything, so drop its maintenance gauge.
 	r.setMaintenanceMetric(name, nelm.Managed)
 
-	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name, errPackageRemoved)
-	if ctx == nil {
-		return true
-	}
-
 	r.status.SetDeleting(name)
 
 	if pkg := r.apps[name]; pkg != nil {
@@ -225,7 +232,7 @@ func (r *Runtime) RemoveApp(namespace, instance string) bool {
 			r.mu.Lock()
 			defer r.mu.Unlock()
 
-			if r.packages.Delete(name) {
+			if r.packages.CompleteRemoval(name) {
 				r.queueService.Remove(name)
 				r.status.DeleteStatus(name)
 				delete(r.apps, name)

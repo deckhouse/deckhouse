@@ -250,8 +250,6 @@ jobs:
   # ============================================================================
   test_cve_report_main:
     name: Trivy scan dev images
-    if: ${{ false }}
-    # External/fork PRs gated by 'status/ok-to-test' via pull_request_info (setFailed → this job is skipped).
     needs:
       - pull_request_info
       - build_fe

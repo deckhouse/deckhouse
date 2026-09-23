@@ -91,14 +91,15 @@ spec:
                 type: string
                 x-doc-examples:
                 - v1.0.0
-                x-kubernetes-validations:
-                - message: packageVersion is immutable
-                  rule: self == oldSelf
             required:
             - packageName
             - packageRepositoryName
             - packageVersion
             type: object
+            x-kubernetes-validations:
+            - message: packageVersion is immutable outside the embedded repository
+              rule: oldSelf.packageRepositoryName == 'embedded' || self.packageVersion
+                == oldSelf.packageVersion
           status:
             description: Status of a ModulePackageVersion.
             properties:

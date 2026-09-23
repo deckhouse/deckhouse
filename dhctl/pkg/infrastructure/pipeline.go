@@ -333,7 +333,7 @@ func GetBaseInfraResult(ctx context.Context, r RunnerInterface, globalOptions *o
 	}
 
 	schemaStore := config.NewSchemaStore(globalOptions)
-	_, err = schemaStore.Validate(&cloudDiscovery)
+	_, err = schemaStore.Validate(ctx, &cloudDiscovery)
 	if err != nil {
 		return nil, fmt.Errorf("validate cloud_discovery_data: %v", err)
 	}

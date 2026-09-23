@@ -87,6 +87,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 			installConfig,
 			InstallDeckhouseParams{
 				BeforeDeckhouseTask: func() error { return nil },
+				AfterManifestsTask:  func() error { return nil },
 				DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,
 			},
 		)

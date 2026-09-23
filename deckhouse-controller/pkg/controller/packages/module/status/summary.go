@@ -411,6 +411,8 @@ func suspendedFor(state condmap.State) advice {
 // reconcile so the summary cannot disagree with the conditions: the
 // reconcileChain gates (which break Ready/Managed) first, then Configured
 // (which breaks only ConfigurationApplied), then Scaled (workload health).
+// Configured=False/SettingsChanged is progress, not degradation: firstFalse
+// skips it and the summary stays Ready.
 //
 // intScaled is last: a real artifact, hook or manifest failure outranks
 // workload health. Only a False is a degradation — the health monitor reports
