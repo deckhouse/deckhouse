@@ -112,6 +112,19 @@ func masterNodeYAML() string {
 	}})
 }
 
+// Snapshot gets the CM the hook just wrote only via a watch. Wait for it.
+func setScheduleContextWithState(f *HookExecutionConfig) {
+	EventuallyWithOffset(1, func() int {
+		contexts := f.GenerateScheduleContext("0 3 * * *")
+		f.BindingContexts.Set(contexts)
+		snapshots := 0
+		for _, bc := range contexts.BindingContexts {
+			snapshots += len(bc.Snapshots[snapshotAutotune])
+		}
+		return snapshots
+	}, 10*time.Second, 10*time.Millisecond).Should(BeNumerically(">", 0))
+}
+
 func cpmResourcesRequestsMC(cpu, memory string) string {
 	settings := ""
 	if cpu != "" || memory != "" {
@@ -625,7 +638,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: autotune", func()
 
 			// The ConfigMap the hook just wrote is now in the cluster.
 			callsAfterFirst := usageCalls
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			setScheduleContextWithState(f)
 			f.RunHook()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(usageCalls).To(Equal(callsAfterFirst))
