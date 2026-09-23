@@ -191,10 +191,6 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 	registration := pCatalog.ByNodeGroup(ng)
-	if err := cloudprovider.ValidateNodeGroupPType(ng, registration); err != nil {
-		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
-		return ctrl.Result{}, err
-	}
 
 	if !ng.DeletionTimestamp.IsZero() {
 		done, err := r.cleanupMachineDeployments(ctx, ng.Name, registration)
