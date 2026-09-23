@@ -70,7 +70,7 @@ func (CloudAPICheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c CloudAPICheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", errors.New("meta config is required")
+		return "", errors.New("no configuration was loaded from --config")
 	}
 
 	cloudAPIConfig, err := c.endpoint()
@@ -125,10 +125,10 @@ func (c CloudAPICheck) endpoint() (*cca.CloudAPIConfig, error) {
 	providerConfig, ok := c.MetaConfig.ProviderClusterConfig["provider"]
 	if !ok || len(providerConfig) == 0 {
 		return nil, preflight.Permanent(&preflight.Failure{
-			Checked:  fmt.Sprintf("%sClusterConfiguration.provider", c.MetaConfig.ProviderName),
+			Checked:  fmt.Sprintf("%s.provider", providerDocumentKind(c.MetaConfig.ProviderName)),
 			Observed: "the document has no provider section",
 			Expected: "the connection parameters of the cloud the cluster is being created in",
-			Fix:      "add the provider section to the <Provider>ClusterConfiguration document in --config",
+			Fix:      fmt.Sprintf("add a provider section to %s in --config", providerDocumentKind(c.MetaConfig.ProviderName)),
 		})
 	}
 
@@ -137,8 +137,8 @@ func (c CloudAPICheck) endpoint() (*cca.CloudAPIConfig, error) {
 		return nil, preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the cloud API endpoint of provider %q", c.MetaConfig.ProviderName),
 			Observed: err.Error(),
-			Expected: "an address the master node can be asked to reach",
-			Fix:      "correct the provider section of the <Provider>ClusterConfiguration document in --config",
+			Expected: "an address the master node can reach",
+			Fix:      fmt.Sprintf("correct the provider section of %s in --config", providerDocumentKind(c.MetaConfig.ProviderName)),
 		})
 	}
 	return cloudAPIConfig, nil
@@ -212,8 +212,8 @@ func (c CloudAPICheck) request(ctx context.Context, cloudAPIConfig *cca.CloudAPI
 		return preflight.Permanent(&preflight.Failure{
 			Checked:  cloudAPIConfig.Field,
 			Observed: err.Error(),
-			Expected: "TLS settings the request can be made with",
-			Fix:      "correct the CA certificate in the provider section of the <Provider>ClusterConfiguration document",
+			Expected: "a usable CA bundle",
+			Fix:      fmt.Sprintf("correct the CA certificate in the provider section of %s", providerDocumentKind(c.MetaConfig.ProviderName)),
 		})
 	}
 
@@ -243,7 +243,7 @@ func (c CloudAPICheck) request(ctx context.Context, cloudAPIConfig *cca.CloudAPI
 		return &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from the master node", cloudAPIConfig.URL),
 			Observed: fmt.Sprintf("HTTP %d", resp.StatusCode),
-			Expected: "any answer below 500",
+			Expected: "an answer from the API (any status below 500)",
 			Fix:      c.proxyOrNetworkFix(cloudAPIConfig, proxyURL, throughProxy),
 		}
 	}
@@ -260,7 +260,7 @@ func (c CloudAPICheck) transportFailure(cloudAPIConfig *cca.CloudAPIConfig, prox
 	failure := &preflight.Failure{
 		Checked:  fmt.Sprintf("GET %s from the master node", cloudAPIConfig.URL),
 		Observed: classifyNetworkError(err),
-		Expected: "the API to answer",
+		Expected: "an answer from the API",
 		Fix:      c.proxyOrNetworkFix(cloudAPIConfig, proxyURL, throughProxy),
 		Err:      err,
 	}
@@ -268,9 +268,9 @@ func (c CloudAPICheck) transportFailure(cloudAPIConfig *cca.CloudAPIConfig, prox
 	// A certificate problem is settled: retrying changes nothing about it.
 	if isCertificateError(err) {
 		failure.Fix = fmt.Sprintf(
-			"if the API uses a private CA, put it in the provider section of the %sClusterConfiguration document; "+
-				"if its certificate is not yet valid, check the clock on the master node",
-			c.MetaConfig.ProviderName,
+			"put the private CA of the API into the provider section of %s. "+
+				"If the certificate is not yet valid, correct the clock on the master node",
+			providerDocumentKind(c.MetaConfig.ProviderName),
 		)
 		return preflight.Permanent(failure)
 	}
@@ -280,12 +280,12 @@ func (c CloudAPICheck) transportFailure(cloudAPIConfig *cca.CloudAPIConfig, prox
 func (c CloudAPICheck) proxyOrNetworkFix(cloudAPIConfig *cca.CloudAPIConfig, proxyURL *url.URL, throughProxy bool) string {
 	if throughProxy {
 		return fmt.Sprintf(
-			"check that %s reaches %s, or add %s to ClusterConfiguration.proxy.noProxy so the node goes direct",
+			"check that %s reaches %s, or add %s to ClusterConfiguration.proxy.noProxy",
 			proxyURL.Redacted(), cloudAPIConfig.URL.Host, cloudAPIConfig.URL.Hostname(),
 		)
 	}
 	return fmt.Sprintf(
-		"give the master node egress to %s (NAT, route, security group), and check %s",
+		"give the master node egress to %s through a NAT, a route or a security group. Check %s",
 		cloudAPIConfig.URL.Host, cloudAPIConfig.Field,
 	)
 }
@@ -304,10 +304,10 @@ func tunnelFailure(sshClient libcon.SSHClient, target *url.URL, err error) error
 
 	return &preflight.Failure{
 		Checked:  fmt.Sprintf("ssh port forward to %s through %s", target.Host, hostLabelOfClient(sshClient)),
-		Observed: err.Error(),
-		Expected: "the master node to forward a local port",
-		Fix: "check that sshd on the master node has AllowTcpForwarding yes and DisableForwarding no, " +
-			"and that no other process on this host holds port " + utils.ProxyTunnelPort,
+		Observed: classifyNetworkError(err),
+		Expected: "a local port forwarded by the master node",
+		Fix: "set AllowTcpForwarding yes and DisableForwarding no in sshd_config on the master node. " +
+			"Free port " + utils.ProxyTunnelPort + " on this host",
 		Err: err,
 	}
 }

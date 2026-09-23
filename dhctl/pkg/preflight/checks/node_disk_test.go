@@ -74,7 +74,7 @@ func TestNodeDiskSpace(t *testing.T) {
 		{
 			name:    "a disk below the floor",
 			node:    newFakeNode().on("df -Pk /var/lib").prints(dfOutput(30, 25)),
-			wantErr: "it is 30 GB",
+			wantErr: "the filesystem is 30 GB",
 		},
 		{
 			name:    "df is not there",
@@ -84,7 +84,7 @@ func TestNodeDiskSpace(t *testing.T) {
 		{
 			name:    "df printed something else",
 			node:    newFakeNode().on("df -Pk /var/lib").prints("df: /var/lib: No such file or directory"),
-			wantErr: "its output could not be read",
+			wantErr: "the output of df could not be read",
 		},
 	}
 
@@ -125,7 +125,7 @@ func TestStaticFreeDiskSpace(t *testing.T) {
 			// lands in the retry storm, which repeats it until the bundle is killed.
 			name:    "a nearly full disk",
 			node:    newFakeNode().on("df -Pk /var/lib").prints(dfOutput(100, 5)),
-			wantErr: "5 GiB is free",
+			wantErr: "the filesystem has 5 GiB free",
 		},
 	}
 

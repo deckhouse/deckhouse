@@ -93,7 +93,7 @@ func TestCloudAPIFromInstaller(t *testing.T) {
 
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
-		assert.Contains(t, failure.Fix, "the installer's network, not the cluster's",
+		assert.Contains(t, failure.Fix, "the host or container where dhctl runs",
 			"the fix must point at dhctl's own egress: the master this check's sibling talks about does not exist yet")
 	})
 
@@ -106,7 +106,7 @@ func TestCloudAPIFromInstaller(t *testing.T) {
 
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
-		assert.Contains(t, failure.Fix, "HTTP_PROXY/HTTPS_PROXY",
+		assert.Contains(t, failure.Fix, "HTTP_PROXY or HTTPS_PROXY",
 			"the proxy dhctl hands the infrastructure utility is the one that has to be named")
 	})
 
@@ -120,7 +120,7 @@ func TestCloudAPIFromInstaller(t *testing.T) {
 		}}.Run(t.Context())
 
 		require.ErrorIs(t, err, preflight.ErrNotApplicable)
-		assert.Contains(t, err.Error(), "dvpClusterConfiguration")
+		assert.Contains(t, err.Error(), "DVPClusterConfiguration")
 	})
 
 	t.Run("a provider whose API address is not in the configuration", func(t *testing.T) {

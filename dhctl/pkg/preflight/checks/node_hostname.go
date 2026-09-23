@@ -68,8 +68,8 @@ func (c NodeHostnameCheck) Run(ctx context.Context) (string, error) {
 	if hostname == "" {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("`hostname` on %s", host),
-			Observed: "it printed nothing",
-			Expected: "a host name",
+			Observed: "`hostname` printed nothing",
+			Expected: "a hostname set on the node",
 			Fix:      "set a hostname on the node (hostnamectl set-hostname <name>)",
 		})
 	}
@@ -77,10 +77,10 @@ func (c NodeHostnameCheck) Run(ctx context.Context) (string, error) {
 	if !nodeNamePattern.MatchString(hostname) {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the hostname of %s", host),
-			Observed: fmt.Sprintf("%q: %s", hostname, hostnameProblem(hostname)),
-			Expected: "at most 63 characters of lower-case letters, digits, '-' and '.', starting and ending with a letter or a digit",
-			Fix: "rename the node before bootstrapping it (hostnamectl set-hostname <name>); the node's certificates " +
-				"are issued for this name, so it cannot be changed afterwards without recreating the node",
+			Observed: fmt.Sprintf("%q %s", hostname, hostnameProblem(hostname)),
+			Expected: "a hostname of at most 63 characters, made of lower-case letters, digits, '-' and '.', " +
+				"starting and ending with a letter or a digit",
+			Fix: "rename the node before bootstrapping it (hostnamectl set-hostname <name>)",
 		})
 	}
 
@@ -91,17 +91,17 @@ func (c NodeHostnameCheck) Run(ctx context.Context) (string, error) {
 func hostnameProblem(hostname string) string {
 	switch {
 	case len(hostname) > 63:
-		return fmt.Sprintf("it is %d characters, the limit is 63", len(hostname))
+		return fmt.Sprintf("is %d characters, the limit is 63", len(hostname))
 	case strings.ToLower(hostname) != hostname:
-		return "it contains upper-case letters"
+		return "contains upper-case letters"
 	case strings.ContainsAny(hostname, "_"):
-		return "it contains an underscore"
+		return "contains an underscore"
 	case strings.HasPrefix(hostname, "-") || strings.HasPrefix(hostname, "."):
-		return "it starts with '-' or '.'"
+		return "starts with '-' or '.'"
 	case strings.HasSuffix(hostname, "-") || strings.HasSuffix(hostname, "."):
-		return "it ends with '-' or '.'"
+		return "ends with '-' or '.'"
 	default:
-		return "it contains characters a node name may not have"
+		return "contains characters a node name may not have"
 	}
 }
 

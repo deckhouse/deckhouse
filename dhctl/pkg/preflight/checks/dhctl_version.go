@@ -64,7 +64,7 @@ func (c DhctlVersionCheck) Run(_ context.Context) (string, error) {
 
 	ref, imageConfig, ok := c.Image.Get()
 	if !ok {
-		return "", preflight.NotApplicable("the Deckhouse image was not read")
+		return "", preflight.NotApplicable("deckhouse-image-available did not read the image, so there is nothing to compare")
 	}
 
 	// A development image is built from a branch and labelled with whatever that branch carried.

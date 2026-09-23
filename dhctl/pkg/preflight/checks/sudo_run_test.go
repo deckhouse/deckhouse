@@ -114,7 +114,7 @@ func TestSudoInstalledOverTheDefaultBackend(t *testing.T) {
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
 		assert.Equal(t, "sudo is not installed", failure.Observed)
-		assert.Contains(t, failure.Fix, "Connecting as root does not avoid this")
+		assert.Contains(t, failure.Fix, "including root")
 	})
 }
 

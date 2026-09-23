@@ -35,7 +35,7 @@ type PythonCheck struct {
 const PythonCheckName preflight.CheckName = "python-modules"
 
 func (PythonCheck) Description() string {
-	return "python and required modules are installed"
+	return "the node has Python with the modules Deckhouse needs"
 }
 
 func (PythonCheck) Phase() preflight.Phase {
@@ -57,8 +57,8 @@ func (c PythonCheck) Run(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("python3, python2 and python on %s", host),
-			Observed: "none of them is on PATH",
-			Expected: "a Python interpreter, which the bootstrap scripts are written against",
+			Observed: "the node has none of them on PATH",
+			Expected: "a Python interpreter on PATH",
 			Fix:      "install python3 on the node",
 			Err:      err,
 		})
@@ -85,7 +85,7 @@ func (c PythonCheck) Run(ctx context.Context) (string, error) {
 				if status, ok := exitStatus(err); ok && status != 255 {
 					continue
 				}
-				return "", scriptFailure("check the python modules", nodeInterface, nil, err)
+				return "", scriptFailure("check the Python modules", nodeInterface, nil, err)
 			}
 			found = true
 			break
@@ -97,7 +97,7 @@ func (c PythonCheck) Run(ctx context.Context) (string, error) {
 
 	if len(missing) > 0 {
 		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  fmt.Sprintf("the modules %s needs on %s", pythonBinary, host),
+			Checked:  fmt.Sprintf("%s on %s", pythonBinary, host),
 			Observed: "- " + strings.Join(missing, "\n- "),
 			Expected: "the standard library modules the bootstrap scripts import",
 			Fix:      fmt.Sprintf("install the missing modules on the node (on most distributions they come with the %s package)", pythonBinary),
@@ -118,11 +118,11 @@ func detectPythonBinary(ctx context.Context, nodeInterface libcon.Interface) (st
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && exitErr.ExitCode() != 255 {
 			continue
 		}
-		return "", fmt.Errorf("Unexpected error during python binary lookup: %w", err)
+		return "", fmt.Errorf("look for a Python interpreter on the node: %w", err)
 	}
 
 	return "", fmt.Errorf(
-		"Python was not found under any of the expected names (%s), please install Python 2 or 3 on the node",
+		"no %s on PATH",
 		strings.Join(possibleBinaries, ", "),
 	)
 }

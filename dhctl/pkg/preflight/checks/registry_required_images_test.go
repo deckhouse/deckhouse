@@ -80,9 +80,9 @@ func TestRegistryRequiredImagesFindsAMirrorWithOnlyTheTag(t *testing.T) {
 
 	var failure *preflight.Failure
 	require.ErrorAs(t, err, &failure)
-	assert.Contains(t, failure.Observed, "5 of them are not there")
+	assert.Contains(t, failure.Observed, "5 of the 5 sampled images are missing")
 	assert.Contains(t, failure.Fix, "d8 mirror pull")
-	assert.Contains(t, failure.Fix, "crane copy")
+	assert.Contains(t, failure.Fix, "d8 mirror pull")
 }
 
 func TestRegistryRequiredImagesAcceptsAProperMirror(t *testing.T) {
@@ -116,7 +116,7 @@ func TestRegistryRequiredImagesReportsOnlyWhatIsMissing(t *testing.T) {
 
 	var failure *preflight.Failure
 	require.ErrorAs(t, err, &failure)
-	assert.Contains(t, failure.Observed, "1 of them are not there")
+	assert.Contains(t, failure.Observed, "1 of the 5 sampled images are missing")
 	assert.Contains(t, failure.Observed, "sha256:000000000000", "the digest is shortened to something readable")
 }
 

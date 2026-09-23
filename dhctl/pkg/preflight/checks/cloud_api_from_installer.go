@@ -51,7 +51,7 @@ func (CloudAPIFromInstallerCheck) Description() string {
 
 func (c CloudAPIFromInstallerCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", errors.New("meta config is required")
+		return "", errors.New("no configuration was loaded from --config")
 	}
 
 	endpoint, err := c.endpoint()
@@ -68,8 +68,8 @@ func (c CloudAPIFromInstallerCheck) Run(ctx context.Context) (string, error) {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  endpoint.Field,
 			Observed: err.Error(),
-			Expected: "TLS settings the request can be made with",
-			Fix:      "correct the CA certificate in the provider section of the <Provider>ClusterConfiguration document",
+			Expected: "a usable CA bundle",
+			Fix:      fmt.Sprintf("correct the CA certificate in the provider section of %s", providerDocumentKind(c.MetaConfig.ProviderName)),
 		})
 	}
 
@@ -96,7 +96,7 @@ func (c CloudAPIFromInstallerCheck) Run(ctx context.Context) (string, error) {
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from the installer", endpoint.URL),
 			Observed: fmt.Sprintf("HTTP %d", resp.StatusCode),
-			Expected: "any answer below 500",
+			Expected: "an answer from the API (any status below 500)",
 			Fix:      c.egressFix(endpoint, proxyURL),
 		}
 	}
@@ -123,8 +123,8 @@ func (c CloudAPIFromInstallerCheck) endpoint() (*cca.CloudAPIConfig, error) {
 	providerConfig, ok := c.MetaConfig.ProviderClusterConfig["provider"]
 	if !ok || len(providerConfig) == 0 {
 		return nil, preflight.NotApplicable(
-			"there is no %sClusterConfiguration with a provider section to read the API address from",
-			c.MetaConfig.ProviderName)
+			"there is no %s with a provider section to read the API address from",
+			providerDocumentKind(c.MetaConfig.ProviderName))
 	}
 
 	endpoint, err := cca.EndpointFor(c.MetaConfig.ProviderName, providerConfig)
@@ -133,7 +133,7 @@ func (c CloudAPIFromInstallerCheck) endpoint() (*cca.CloudAPIConfig, error) {
 			Checked:  fmt.Sprintf("the cloud API endpoint of provider %q", c.MetaConfig.ProviderName),
 			Observed: err.Error(),
 			Expected: "an address the installer can reach",
-			Fix:      "correct the provider section of the <Provider>ClusterConfiguration document in --config",
+			Fix:      fmt.Sprintf("correct the provider section of %s in --config", providerDocumentKind(c.MetaConfig.ProviderName)),
 		})
 	}
 	if endpoint == nil {
@@ -146,7 +146,7 @@ func (c CloudAPIFromInstallerCheck) transportFailure(endpoint *cca.CloudAPIConfi
 	failure := &preflight.Failure{
 		Checked:  fmt.Sprintf("GET %s from the installer", endpoint.URL),
 		Observed: classifyNetworkError(err),
-		Expected: "the API to answer",
+		Expected: "an answer from the API",
 		Fix:      c.egressFix(endpoint, proxyURL),
 		Err:      err,
 	}
@@ -154,9 +154,9 @@ func (c CloudAPIFromInstallerCheck) transportFailure(endpoint *cca.CloudAPIConfi
 	// A certificate problem is settled: retrying changes nothing about it.
 	if isCertificateError(err) {
 		failure.Fix = fmt.Sprintf(
-			"if the API uses a private CA, put it in the provider section of the %sClusterConfiguration document; "+
-				"if its certificate is not yet valid, check the clock where dhctl runs",
-			c.MetaConfig.ProviderName,
+			"put the private CA of the API into the provider section of %s. "+
+				"If the certificate is not yet valid, correct the clock where dhctl runs",
+			providerDocumentKind(c.MetaConfig.ProviderName),
 		)
 		return preflight.Permanent(failure)
 	}
@@ -169,14 +169,12 @@ func (c CloudAPIFromInstallerCheck) transportFailure(endpoint *cca.CloudAPIConfi
 func (c CloudAPIFromInstallerCheck) egressFix(endpoint *cca.CloudAPIConfig, proxyURL *url.URL) string {
 	if proxyURL != nil {
 		return fmt.Sprintf(
-			"check that %s reaches %s; it comes from HTTP_PROXY/HTTPS_PROXY in dhctl's own environment, "+
-				"which is also what the infrastructure utility is handed",
+			"check that %s reaches %s. Change HTTP_PROXY or HTTPS_PROXY where dhctl runs",
 			proxyURL.Redacted(), endpoint.URL.Host,
 		)
 	}
 	return fmt.Sprintf(
-		"give dhctl itself egress to %s — this is the installer's network, not the cluster's, and in a container "+
-			"it is the container's — and check %s",
+		"give the host or container where dhctl runs egress to %s. Check %s",
 		endpoint.URL.Host, endpoint.Field,
 	)
 }

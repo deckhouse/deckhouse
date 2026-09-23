@@ -84,7 +84,7 @@ func TestParseSSHCredentials(t *testing.T) {
 		sc.Spec.PrivateSSHKey = base64.StdEncoding.EncodeToString([]byte("k"))
 
 		_, err := parseSSHCredentials(sc)
-		if err == nil || !strings.Contains(err.Error(), "metadata.name is empty") {
+		if err == nil || !strings.Contains(err.Error(), "empty metadata.name") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -96,7 +96,7 @@ func TestParseSSHCredentials(t *testing.T) {
 		sc.Spec.PrivateSSHKey = base64.StdEncoding.EncodeToString([]byte("k"))
 
 		_, err := parseSSHCredentials(sc)
-		if err == nil || !strings.Contains(err.Error(), "User must be specified") {
+		if err == nil || !strings.Contains(err.Error(), "spec.user is empty") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -108,7 +108,7 @@ func TestParseSSHCredentials(t *testing.T) {
 		sc.Spec.PrivateSSHKey = "%%%"
 
 		_, err := parseSSHCredentials(sc)
-		if err == nil || !strings.Contains(err.Error(), "Cannot decode privateSSHKey") {
+		if err == nil || !strings.Contains(err.Error(), "decode spec.privateSSHKey from base64") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -119,7 +119,7 @@ func TestParseSSHCredentials(t *testing.T) {
 		sc.Spec.User = "ubuntu"
 
 		_, err := parseSSHCredentials(sc)
-		if err == nil || !strings.Contains(err.Error(), "Must contain privateSSHKey or sudoPasswordEncoded") {
+		if err == nil || !strings.Contains(err.Error(), "neither spec.privateSSHKey nor spec.sudoPasswordEncoded is set") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -172,7 +172,7 @@ spec:
 
 	t.Run("err: invalid YAML", func(t *testing.T) {
 		_, _, err := parseResources([]string{`kind: StaticInstance: [`})
-		if err == nil || !strings.Contains(err.Error(), "Cannot unmarshal YAML") {
+		if err == nil || !strings.Contains(err.Error(), "parse a resources document of the --config file") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -188,7 +188,7 @@ spec:
   credentialsRef:
     name: cred-1
 `})
-		if err == nil || !strings.Contains(err.Error(), "metadata.name is empty") {
+		if err == nil || !strings.Contains(err.Error(), "empty metadata.name") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -204,7 +204,7 @@ spec:
   credentialsRef:
     name: cred-1
 `})
-		if err == nil || !strings.Contains(err.Error(), "spec.address is empty") {
+		if err == nil || !strings.Contains(err.Error(), "empty spec.address") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -220,7 +220,7 @@ spec:
   credentialsRef:
     name: "   "
 `})
-		if err == nil || !strings.Contains(err.Error(), "spec.credentialsRef.name is empty") {
+		if err == nil || !strings.Contains(err.Error(), "empty spec.credentialsRef.name") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})

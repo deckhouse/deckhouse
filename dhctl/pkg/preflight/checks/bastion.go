@@ -81,7 +81,7 @@ func bastionPort(cfg *sshconfig.Config) string {
 func (c BastionAvailabilityCheck) Run(ctx context.Context) (string, error) {
 	connCfg := c.SSHProviderInitializer.GetConfig()
 	if connCfg == nil || !bastionConfigured(connCfg.Config) {
-		return "", preflight.NotApplicable("no --ssh-bastion-host")
+		return "", preflight.NotApplicable("no --ssh-bastion-host was given")
 	}
 
 	sshCfg := connCfg.Config
@@ -114,7 +114,7 @@ func (c BastionAvailabilityCheck) Run(ctx context.Context) (string, error) {
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("tcp connection to bastion %s", addr),
 			Observed: classifyNetworkError(err),
-			Expected: "the bastion to answer",
+			Expected: "an answer from the bastion",
 			Fix:      "check --ssh-bastion-host and --ssh-bastion-port, and that the port is open from this host",
 			Err:      err,
 		}
@@ -138,9 +138,9 @@ func (c BastionAvailabilityCheck) Run(ctx context.Context) (string, error) {
 		failure := &preflight.Failure{
 			Checked:  fmt.Sprintf("ssh login to bastion %s as %q", addr, user),
 			Observed: "the bastion rejected every authentication method offered",
-			Expected: "the bastion user to be authorized",
-			Fix: "check --ssh-bastion-user (it defaults to --ssh-user), make sure one of " +
-				"--ssh-agent-private-keys is authorized for it on the bastion, or pass --ask-bastion-pass",
+			Expected: "an authorized bastion user",
+			Fix: "check --ssh-bastion-user. Authorize one of --ssh-agent-private-keys for that user " +
+				"on the bastion, or pass --ask-bastion-pass",
 			Err: err,
 		}
 		if isSSHAuthError(err) {
@@ -160,7 +160,7 @@ func (c BastionAvailabilityCheck) Run(ctx context.Context) (string, error) {
 			return "", preflight.Permanent(&preflight.Failure{
 				Checked:  fmt.Sprintf("a direct-tcpip forward through bastion %s", addr),
 				Observed: "the bastion refused to forward (administratively prohibited)",
-				Expected: "the bastion to forward TCP connections",
+				Expected: "a bastion that forwards TCP connections",
 				Fix:      "set AllowTcpForwarding yes in sshd_config on the bastion",
 				Err:      err,
 			})
@@ -202,7 +202,7 @@ func bastionAuthMethods(cfg *sshconfig.Config) ([]ssh.AuthMethod, func(), error)
 	}
 
 	if len(methods) == 0 {
-		return nil, cleanup, fmt.Errorf("no ssh auth methods available (no private keys, ssh-agent or password)")
+		return nil, cleanup, fmt.Errorf("dhctl has no private key, no ssh-agent identity and no password for the bastion")
 	}
 
 	return methods, cleanup, nil
@@ -218,7 +218,7 @@ func bastionSigners(keys []sshconfig.AgentPrivateKey) ([]ssh.Signer, error) {
 		if k.IsPath {
 			b, err := os.ReadFile(k.Key)
 			if err != nil {
-				return nil, fmt.Errorf("read private key %s: %w", k.Key, err)
+				return nil, fmt.Errorf("dhctl could not read the private key %s: %w", k.Key, err)
 			}
 			pemBytes = b
 		}
@@ -233,7 +233,7 @@ func bastionSigners(keys []sshconfig.AgentPrivateKey) ([]ssh.Signer, error) {
 			signer, err = ssh.ParsePrivateKey(pemBytes)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("parse private key: %w", err)
+			return nil, fmt.Errorf("dhctl could not parse the private key %s: %w", k.Key, err)
 		}
 		signers = append(signers, signer)
 	}

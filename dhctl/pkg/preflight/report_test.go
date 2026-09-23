@@ -57,7 +57,7 @@ fix: change ClusterConfiguration.podSubnetCIDR or serviceSubnetCIDR
 skip: --preflight-skip-check=cidr-intersection
 docs: ` + DocsURL + `
 
-Re-run the same command after fixing, or add the skip flags above to proceed anyway.`
+Re-run the same command after fixing. To proceed without fixing, add the skip flags printed above.`
 
 	if err.Error() != want {
 		t.Errorf("report mismatch\n--- got ---\n%s\n--- want ---\n%s", err, want)
@@ -91,7 +91,7 @@ reason: python3 is not found on the node
 skip: --preflight-skip-check=python-modules
 docs: ` + DocsURL + `
 
-Re-run the same command after fixing, or add the skip flags above to proceed anyway.`
+Re-run the same command after fixing. To proceed without fixing, add the skip flags printed above.`
 
 	if err.Error() != want {
 		t.Errorf("report mismatch\n--- got ---\n%s\n--- want ---\n%s", err, want)
@@ -118,7 +118,7 @@ func TestUnskippableCheckSaysSoInsteadOfPrintingAFlag(t *testing.T) {
 	if err == nil {
 		t.Fatal("want an error")
 	}
-	if want := "skip: this check cannot be skipped"; !strings.Contains(err.Error(), want) {
+	if want := "skip: cannot be skipped"; !strings.Contains(err.Error(), want) {
 		t.Errorf("want %q in:\n%s", want, err)
 	}
 }
@@ -186,7 +186,7 @@ func TestNoSkipHintWhenSkippingCannotHelp(t *testing.T) {
 	if strings.Contains(report, "--preflight-skip-check=cloud-api-accessibility") {
 		t.Errorf("the flag gets the reader as far as the next check asked over the same connection:\n%s", report)
 	}
-	if !strings.Contains(report, "skipping this check does not get past it") {
+	if !strings.Contains(report, "no flag gets past this") {
 		t.Errorf("the skip line must say the flag is not a way out, got:\n%s", report)
 	}
 	if strings.Contains(report, "add the skip flags above") {

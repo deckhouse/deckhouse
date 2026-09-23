@@ -78,7 +78,7 @@ func TestCloudSystemRequirementsCheck(t *testing.T) {
 				}
 				// The field path is in `checked:`, which is what the reader edits.
 				return assert.Equal(t, "ZvirtClusterConfiguration.masterNodeGroup.instanceClass.memory", failure.Checked) &&
-					assert.Equal(t, "the field is not set", failure.Observed)
+					assert.Equal(t, "masterNodeGroup.instanceClass.memory is not set", failure.Observed)
 			},
 		},
 		{
@@ -110,7 +110,7 @@ func TestCloudSystemRequirementsCheck(t *testing.T) {
 				ProviderClusterConfig: quotedNumberPCC,
 			},
 			assertionCheck: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, `"8192" is a string; expected a number`)
+				return assert.ErrorContains(t, err, `"8192" is a string, not a number`)
 			},
 		},
 	}

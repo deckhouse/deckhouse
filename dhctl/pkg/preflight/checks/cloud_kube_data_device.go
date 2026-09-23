@@ -74,10 +74,10 @@ func (c CloudKubeDataDeviceCheck) Run(ctx context.Context) (string, error) {
 		// The disk is attached by the provider; it does not appear between two attempts.
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("%s on %s", path, host),
-			Observed: "it is not a block device on the node",
+			Observed: "the path is not a block device on the node",
 			Expected: "the disk the provider reported as attached for Kubernetes data",
-			Fix: "check that the master node group asks for the data disk and that the provider attached it; " +
-				"without it bashible falls back to autodetecting an unused disk, and puts etcd wherever that lands",
+			Fix: "check that the master node group requests a disk for Kubernetes data. " +
+				"Check in the cloud that the disk is attached to the master node",
 		})
 	}
 
@@ -89,7 +89,7 @@ func (c CloudKubeDataDeviceCheck) Run(ctx context.Context) (string, error) {
 	// Already carrying a filesystem is not a failure — a resumed bootstrap finds its own — but it
 	// is worth saying, because a disk with someone else's data on it looks exactly the same.
 	if fsType := commandOutput(ctx, nodeInterface, "lsblk", "-no", "FSTYPE", resolved); fsType != "" {
-		return fmt.Sprintf("%s is attached to %s and already carries a %s filesystem", resolved, host, fsType), nil
+		return fmt.Sprintf("%s is attached to %s and already carries a filesystem (%s)", resolved, host, fsType), nil
 	}
 
 	return fmt.Sprintf("%s is attached to %s and is empty", resolved, host), nil

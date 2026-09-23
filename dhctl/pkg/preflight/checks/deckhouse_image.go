@@ -47,14 +47,18 @@ type DeckhouseImage struct {
 	// branch and carries whatever labels that branch happened to have, so the checks that
 	// compare labels have nothing to compare against.
 	fromDevBranch bool
+	// registryMode is the mode the image was fetched in, carried here so the checks that read
+	// the image afterwards can name the ModuleConfig section its fields live under without a
+	// configuration of their own.
+	registryMode string
 }
 
 func NewDeckhouseImage() *DeckhouseImage { return &DeckhouseImage{} }
 
-func (i *DeckhouseImage) set(ref string, config *v1.ConfigFile, fromDevBranch bool) {
+func (i *DeckhouseImage) set(ref string, config *v1.ConfigFile, fromDevBranch bool, registryMode string) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	i.ref, i.config, i.fromDevBranch = ref, config, fromDevBranch
+	i.ref, i.config, i.fromDevBranch, i.registryMode = ref, config, fromDevBranch, registryMode
 }
 
 // Get returns the image reference and its config, and whether they have been fetched.
@@ -75,6 +79,16 @@ func (i *DeckhouseImage) FromDevBranch() bool {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	return i.fromDevBranch
+}
+
+// RegistryMode is the registry mode the image was fetched in, or "" when it was never fetched.
+func (i *DeckhouseImage) RegistryMode() string {
+	if i == nil {
+		return ""
+	}
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	return i.registryMode
 }
 
 // DeckhouseImageAvailableCheck answers the question that used to be reported under the name
@@ -106,7 +120,7 @@ func (DeckhouseImageAvailableCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c DeckhouseImageAvailableCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil || c.Installer == nil {
-		return "", fmt.Errorf("metaConfig and installConfig are required")
+		return "", fmt.Errorf("no cluster configuration was loaded")
 	}
 
 	registry := c.MetaConfig.Registry.Settings.RemoteData
@@ -115,7 +129,7 @@ func (c DeckhouseImageAvailableCheck) Run(ctx context.Context) (string, error) {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  "the Deckhouse version this installer asks for",
 			Observed: err.Error(),
-			Expected: "a version to pull",
+			Expected: "a version this installer can pull (a version file in the installer image, or devBranch)",
 			Fix:      "set InitConfiguration.deckhouse.devBranch for a development build, or use a release installer image",
 		})
 	}
@@ -123,20 +137,20 @@ func (c DeckhouseImageAvailableCheck) Run(ctx context.Context) (string, error) {
 	ref, err := parseImageReference(image, string(registry.Scheme))
 	if err != nil {
 		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  registryImagesRepoField,
+			Checked:  registryImagesRepoField(c.registryMode()),
 			Observed: fmt.Sprintf("%q is not a valid image reference: %s", image, err),
 			Expected: "a registry address and a repository path",
-			Fix:      "correct " + registryImagesRepoField,
+			Fix:      "correct " + registryImagesRepoField(c.registryMode()),
 		})
 	}
 
 	client, err := registryutil.NewRegistryClient(ctx, string(registry.Scheme), registry.CA)
 	if err != nil {
 		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  registryCAField,
+			Checked:  registryCAField(c.registryMode()),
 			Observed: err.Error(),
-			Expected: "a PEM bundle the request can be made with",
-			Fix:      "correct " + registryCAField,
+			Expected: "a PEM-encoded CA bundle dhctl can parse",
+			Fix:      "correct " + registryCAField(c.registryMode()),
 		})
 	}
 
@@ -147,14 +161,14 @@ func (c DeckhouseImageAvailableCheck) Run(ctx context.Context) (string, error) {
 		remote.WithTransport(client.Transport),
 	)
 	if err != nil {
-		return "", imageFetchFailure(image, err)
+		return "", imageFetchFailure(image, c.registryMode(), err)
 	}
 
 	// The tag is the version this installer was built for, unless there is none embedded in it —
 	// then GetImageTag falls back to devBranch, and what was pulled is a development build.
 	fromDevBranch := c.Installer.DevBranch != "" && strings.HasSuffix(image, ":"+c.Installer.DevBranch)
 
-	c.Image.set(image, imageConfig, fromDevBranch)
+	c.Image.set(image, imageConfig, fromDevBranch, c.registryMode())
 	if fromDevBranch {
 		return fmt.Sprintf("%s is present in the registry (a development build of branch %s)", image, c.Installer.DevBranch), nil
 	}
@@ -163,7 +177,7 @@ func (c DeckhouseImageAvailableCheck) Run(ctx context.Context) (string, error) {
 
 // imageFetchFailure separates the registry's answers from one another. go-containerregistry
 // reports them all as one *transport.Error whose text ends in a dump of a Go map.
-func imageFetchFailure(image string, err error) error {
+func imageFetchFailure(image, mode string, err error) error {
 	failure := &preflight.Failure{
 		Checked: fmt.Sprintf("the image %s", image),
 		Err:     err,
@@ -172,8 +186,8 @@ func imageFetchFailure(image string, err error) error {
 	var transportErr *transport.Error
 	if !errors.As(err, &transportErr) {
 		failure.Observed = classifyNetworkError(err)
-		failure.Expected = "the registry to answer"
-		failure.Fix = fmt.Sprintf("check %s", registryImagesRepoField)
+		failure.Expected = "an answer from the registry"
+		failure.Fix = fmt.Sprintf("check %s", registryImagesRepoField(mode))
 		return failure
 	}
 
@@ -181,15 +195,15 @@ func imageFetchFailure(image string, err error) error {
 		switch diagnostic.Code {
 		case transport.ManifestUnknownErrorCode:
 			failure.Observed = fmt.Sprintf("the tag of %s is not in the registry", image)
-			failure.Expected = "the version this installer asks for to be present"
+			failure.Expected = "the tag of this version, present in the registry"
 			failure.Fix = "mirror this Deckhouse version into the registry (`d8 mirror pull` / `d8 mirror push`), " +
 				"or run the installer image of a version the registry holds"
 			return preflight.Permanent(failure)
 
 		case transport.NameUnknownErrorCode:
 			failure.Observed = fmt.Sprintf("the repository of %s does not exist on the registry", image)
-			failure.Expected = "the repository named by imagesRepo to exist"
-			failure.Fix = "correct " + registryImagesRepoField
+			failure.Expected = "the repository named by imagesRepo, present in the registry"
+			failure.Fix = "correct " + registryImagesRepoField(mode)
 			return preflight.Permanent(failure)
 
 		case transport.UnauthorizedErrorCode, transport.DeniedErrorCode:
@@ -202,14 +216,14 @@ func imageFetchFailure(image string, err error) error {
 
 	if transportErr.StatusCode >= http.StatusInternalServerError {
 		failure.Observed = fmt.Sprintf("the registry answered HTTP %d", transportErr.StatusCode)
-		failure.Expected = "the registry to serve the manifest"
+		failure.Expected = "the manifest served by the registry"
 		failure.Fix = "check that the registry (or the mirror in front of it) is healthy"
 		return failure
 	}
 
 	failure.Observed = strings.TrimSpace(transportErr.Error())
-	failure.Expected = "the registry to serve the manifest"
-	failure.Fix = fmt.Sprintf("check %s", registryImagesRepoField)
+	failure.Expected = "the manifest served by the registry"
+	failure.Fix = fmt.Sprintf("check %s", registryImagesRepoField(mode))
 	return failure
 }
 
@@ -246,4 +260,14 @@ func DeckhouseImageAvailable(meta *config.MetaConfig, cfg *config.DeckhouseInsta
 		Retry:       check.RetryPolicy(),
 		Run:         check.Run,
 	}
+}
+
+// registryMode is the mode the registry is configured in, used to name the ModuleConfig section
+// the fields live under. Empty when no configuration was loaded, which registrySection reports
+// as a placeholder rather than guessing.
+func (c DeckhouseImageAvailableCheck) registryMode() string {
+	if c.MetaConfig == nil {
+		return ""
+	}
+	return string(c.MetaConfig.Registry.Settings.Mode)
 }

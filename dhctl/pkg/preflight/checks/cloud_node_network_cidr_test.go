@@ -62,14 +62,14 @@ func TestCloudNodeNetworkCIDRIntersection(t *testing.T) {
 			metaConfig: cloudNetworkMetaConfig("10.111.0.0/16", "10.222.0.0/16", map[string]string{
 				"nodeNetworkCIDR": `"10.111.32.0/24"`,
 			}),
-			wantErrContain: "podSubnetCIDR 10.111.0.0/16 overlaps nodeNetworkCIDR 10.111.32.0/24",
+			wantErrContain: "podSubnetCIDR 10.111.0.0/16 overlaps YandexClusterConfiguration.nodeNetworkCIDR 10.111.32.0/24",
 		},
 		{
 			name: "the service subnet contains the node network",
 			metaConfig: cloudNetworkMetaConfig("10.111.0.0/16", "10.222.0.0/16", map[string]string{
 				"nodeNetworkCIDR": `"10.222.32.0/24"`,
 			}),
-			wantErrContain: "serviceSubnetCIDR 10.222.0.0/16 overlaps nodeNetworkCIDR 10.222.32.0/24",
+			wantErrContain: "serviceSubnetCIDR 10.222.0.0/16 overlaps YandexClusterConfiguration.nodeNetworkCIDR 10.222.32.0/24",
 		},
 		{
 			// AWS declares two, and both are compared.
@@ -78,7 +78,7 @@ func TestCloudNodeNetworkCIDRIntersection(t *testing.T) {
 				"nodeNetworkCIDR": `"192.168.0.0/24"`,
 				"vpcNetworkCIDR":  `"172.16.0.0/16"`,
 			}),
-			wantErrContain: "podSubnetCIDR 172.16.0.0/16 overlaps vpcNetworkCIDR 172.16.0.0/16",
+			wantErrContain: "podSubnetCIDR 172.16.0.0/16 overlaps YandexClusterConfiguration.vpcNetworkCIDR 172.16.0.0/16",
 		},
 		{
 			// OpenStack and Huawei keep it inside the layout section.
@@ -86,7 +86,7 @@ func TestCloudNodeNetworkCIDRIntersection(t *testing.T) {
 			metaConfig: cloudNetworkMetaConfig("192.168.195.0/24", "10.222.0.0/16", map[string]string{
 				"standard": `{"internalNetworkCIDR": "192.168.195.0/24"}`,
 			}),
-			wantErrContain: "overlaps standard.internalNetworkCIDR 192.168.195.0/24",
+			wantErrContain: "overlaps YandexClusterConfiguration.standard.internalNetworkCIDR 192.168.195.0/24",
 		},
 		{
 			name: "a provider configuration with no network declared",

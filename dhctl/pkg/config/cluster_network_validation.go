@@ -56,12 +56,12 @@ func validateClusterNetworking(ctx context.Context, m *MetaConfig) error {
 	}
 
 	if cidrsOverlap(podCIDR.network, serviceCIDR.network) {
-		return fmt.Errorf(
-			"%s %s overlaps %s %s. "+
-				"Pod and service addresses are routed differently and cannot share a range; "+
-				"use disjoint ranges (for example 10.111.0.0/16 and 10.222.0.0/16). "+
-				"Neither can be changed after the cluster is created",
-			podCIDR.field, podCIDR.value, serviceCIDR.field, serviceCIDR.value)
+		return configurationFailure(
+			fmt.Sprintf("%s against %s", podCIDR.field, serviceCIDR.field),
+			fmt.Sprintf("%s overlaps %s", podCIDR.value, serviceCIDR.value),
+			"two ranges that do not overlap",
+			fmt.Sprintf("set %s to a range outside %s, for example 10.222.0.0/16",
+				shortFieldName(serviceCIDR.field), shortFieldName(podCIDR.field)))
 	}
 
 	if err := validateInternalNetworkCIDRs(m, podCIDR, serviceCIDR); err != nil {
@@ -122,9 +122,11 @@ func clusterCIDRField(m *MetaConfig, field string) (*clusterCIDR, error) {
 
 	_, network, err := net.ParseCIDR(value)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"%s %q is not an IPv4 CIDR: write an address and a prefix length, for example 10.111.0.0/16",
-			label, value)
+		return nil, configurationFailure(
+			label,
+			fmt.Sprintf("%q", value),
+			"an IPv4 CIDR",
+			fmt.Sprintf("set %s to an address with a prefix length, for example 10.111.0.0/16", shortFieldName(label)))
 	}
 	return &clusterCIDR{field: label, value: value, network: network}, nil
 }
@@ -143,23 +145,31 @@ func validateInternalNetworkCIDRs(m *MetaConfig, cidrs ...*clusterCIDR) error {
 
 	var internal []string
 	if err := json.Unmarshal(raw, &internal); err != nil {
-		return fmt.Errorf("StaticClusterConfiguration.internalNetworkCIDRs is not a list of CIDRs")
+		return configurationFailure(
+			"StaticClusterConfiguration.internalNetworkCIDRs",
+			"not a list",
+			"a list of IPv4 CIDRs",
+			`write internalNetworkCIDRs as a list, for example ["192.168.0.0/24"]`)
 	}
 
 	for _, entry := range internal {
 		_, internalNet, err := net.ParseCIDR(entry)
 		if err != nil {
-			return fmt.Errorf(
-				"StaticClusterConfiguration.internalNetworkCIDRs contains %q, which is not an IPv4 CIDR", entry)
+			return configurationFailure(
+				"StaticClusterConfiguration.internalNetworkCIDRs",
+				fmt.Sprintf("entry %q", entry),
+				"an IPv4 CIDR",
+				"set the entry to an address with a prefix length, for example 192.168.0.0/24")
 		}
 
 		for _, cidr := range cidrs {
 			if cidrsOverlap(cidr.network, internalNet) {
-				return fmt.Errorf(
-					"%s %s overlaps StaticClusterConfiguration.internalNetworkCIDRs entry %s. "+
-						"The cluster would route its own traffic into the network the nodes reach each other over; "+
-						"use a range the nodes do not use",
-					cidr.field, cidr.value, entry)
+				return configurationFailure(
+					fmt.Sprintf("%s against StaticClusterConfiguration.internalNetworkCIDRs", cidr.field),
+					fmt.Sprintf("%s overlaps entry %s", cidr.value, entry),
+					"two ranges that do not overlap",
+					fmt.Sprintf("set %s to a range outside internalNetworkCIDRs, for example 10.222.0.0/16",
+						shortFieldName(cidr.field)))
 			}
 		}
 	}
@@ -180,10 +190,12 @@ func validateServiceSubnetSize(serviceCIDR *clusterCIDR) error {
 		return nil
 	}
 
-	return fmt.Errorf(
-		"%s %s is too small: the cluster DNS address is the eleventh address of "+
-			"the service subnet, so the range must be /%d or wider (a /16 is the usual choice)",
-		serviceCIDR.field, serviceCIDR.value, serviceSubnetMinimumPrefix)
+	return configurationFailure(
+		serviceCIDR.field,
+		fmt.Sprintf("%s, narrower than /%d", serviceCIDR.value, serviceSubnetMinimumPrefix),
+		fmt.Sprintf("/%d or wider. The cluster DNS address is the eleventh address of the subnet.",
+			serviceSubnetMinimumPrefix),
+		fmt.Sprintf("set %s to a wider range, for example 10.222.0.0/16", shortFieldName(serviceCIDR.field)))
 }
 
 // podSubnetNodeCIDRPrefixMax is the narrowest slice a node can be given and still run pods: a /28
@@ -210,32 +222,37 @@ func validatePodSubnetNodeCIDRPrefix(ctx context.Context, m *MetaConfig, podCIDR
 
 	nodePrefix, err := strconv.Atoi(value)
 	if err != nil {
-		return fmt.Errorf(
-			"%s %q is not a number: it is the prefix length of the slice "+
-				"each node receives, for example \"24\"", label, value)
+		return configurationFailure(
+			label,
+			fmt.Sprintf("%q", value),
+			"a prefix length written as a number",
+			fmt.Sprintf("set %s to \"24\"", shortFieldName(label)))
 	}
 
 	podPrefix, _ := podCIDR.network.Mask.Size()
 	if nodePrefix <= podPrefix {
-		return fmt.Errorf(
-			"%s %q must be larger than the prefix of podSubnetCIDR %s: "+
-				"every node receives a /%d slice of it, and /%d is the whole network. "+
-				"Use a value between %d and %d (the default is \"24\")",
-			label, value, podCIDR.value, nodePrefix, nodePrefix, podPrefix+1, podSubnetNodeCIDRPrefixMax)
+		return configurationFailure(
+			fmt.Sprintf("%s against %s", label, podCIDR.field),
+			fmt.Sprintf("%q, and podSubnetCIDR is %s", value, podCIDR.value),
+			fmt.Sprintf("a value between %d and %d", podPrefix+1, podSubnetNodeCIDRPrefixMax),
+			fmt.Sprintf("set %s to \"24\"", shortFieldName(label)))
 	}
 	if nodePrefix > podSubnetNodeCIDRPrefixMax {
-		return fmt.Errorf(
-			"%s %q leaves a node too few addresses for its pods: "+
-				"use /%d or wider (the default is \"24\")", label, value, podSubnetNodeCIDRPrefixMax)
+		return configurationFailure(
+			label,
+			fmt.Sprintf("%q", value),
+			fmt.Sprintf("%d or lower", podSubnetNodeCIDRPrefixMax),
+			fmt.Sprintf("set %s to \"24\"", shortFieldName(label)))
 	}
 
 	capacity := 1 << (nodePrefix - podPrefix)
 	if requested := m.requestedNodeCount(); requested > 0 && capacity < requested {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-			"podSubnetCIDR %s with podSubnetNodeCIDRPrefix %q allows %d nodes, "+
-				"and the configuration asks for %d. Widen podSubnetCIDR or raise podSubnetNodeCIDRPrefix; "+
-				"neither can be changed after the cluster is created",
-			podCIDR.value, value, capacity, requested))
+		dhlog.FromContext(ctx).WarnContext(ctx, configurationFailure(
+			fmt.Sprintf("%s against the replicas the configuration asks for", podCIDR.field),
+			fmt.Sprintf("%s with podSubnetNodeCIDRPrefix %q allows %d nodes, the configuration asks for %d",
+				podCIDR.value, value, capacity, requested),
+			"room for every node the configuration asks for. Neither field can be changed after the cluster is created.",
+			"widen podSubnetCIDR, or raise podSubnetNodeCIDRPrefix").Error())
 	}
 
 	return nil
@@ -281,11 +298,12 @@ func validatePublicDomainTemplate(m *MetaConfig) error {
 		return nil
 	}
 
-	return fmt.Errorf(
-		"publicDomainTemplate %q is inside clusterDomain %q: Ingress host names would collide with in-cluster DNS "+
-			"names. Set spec.settings.modules.publicDomainTemplate in the \"global\" ModuleConfig to a domain outside "+
-			"%q (for example \"%%s.example.com\"), or change ClusterConfiguration.clusterDomain",
-		template, m.ClusterDomain, m.ClusterDomain)
+	return configurationFailure(
+		"publicDomainTemplate in the \"global\" ModuleConfig against ClusterConfiguration.clusterDomain",
+		fmt.Sprintf("%q is inside %q", template, m.ClusterDomain),
+		"a template outside clusterDomain",
+		"set spec.settings.modules.publicDomainTemplate to \"%s.example.com\", "+
+			"or change ClusterConfiguration.clusterDomain")
 }
 
 func domainIsInside(template, domain string) bool {
@@ -295,4 +313,14 @@ func domainIsInside(template, domain string) bool {
 		return false
 	}
 	return template == domain || strings.HasSuffix(template, "."+domain)
+}
+
+// shortFieldName is the bare field, for the sentence that tells the reader what to set. The
+// qualified form names the document and belongs in "checked"; repeating it inside the fix makes
+// the instruction longer than the thing it instructs.
+func shortFieldName(qualified string) string {
+	if i := strings.LastIndex(qualified, "."); i >= 0 {
+		return qualified[i+1:]
+	}
+	return qualified
 }

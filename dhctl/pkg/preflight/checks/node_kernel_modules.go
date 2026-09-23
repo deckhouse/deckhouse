@@ -75,9 +75,9 @@ func (c NodeKernelModulesCheck) Run(ctx context.Context) (string, error) {
 
 	if len(missing) > 0 {
 		return "", &preflight.Failure{
-			Checked:  fmt.Sprintf("the kernel modules Deckhouse loads on %s", host),
-			Observed: "cannot be loaded: " + strings.Join(missing, ", "),
-			Expected: strings.Join(wanted, ", ") + " to be loadable",
+			Checked:  fmt.Sprintf("the kernel modules Deckhouse needs on %s", host),
+			Observed: "the node cannot load " + strings.Join(missing, ", "),
+			Expected: strings.Join(wanted, ", ") + " loadable on the node",
 			Fix: "install the kernel module package for the running kernel " +
 				"(linux-modules-extra-$(uname -r) on Debian and Ubuntu, kernel-modules-extra on RHEL and its derivatives) " +
 				"and reboot if the kernel changes",
@@ -168,10 +168,10 @@ func (c NodeSELinuxToolsCheck) Run(ctx context.Context) (string, error) {
 	if len(missing) > 0 {
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("the SELinux policy tools on %s", host),
-			Observed: "missing: " + strings.Join(missing, ", "),
+			Observed: "the node does not have " + strings.Join(missing, ", "),
 			Expected: strings.Join(selinuxPolicyTools, ", ") + " on a node with SELinux enforcing",
-			Fix: "install them (dnf install checkpolicy policycoreutils-python-utils), " +
-				"or take SELinux out of enforcing mode on this node",
+			Fix: "install the packages that provide them (dnf install checkpolicy policycoreutils-python-utils), " +
+				"or take SELinux out of enforcing mode on the node",
 		}
 	}
 

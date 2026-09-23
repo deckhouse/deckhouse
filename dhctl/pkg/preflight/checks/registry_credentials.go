@@ -50,7 +50,7 @@ func (RegistryCredentialsCheck) RetryPolicy() preflight.RetryPolicy {
 // cannot be reached at all is reported once instead of twice.
 func (c RegistryCredentialsCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil || c.InstallConfig == nil {
-		return "", fmt.Errorf("metaConfig and installConfig are required")
+		return "", fmt.Errorf("dhctl was given no cluster configuration")
 	}
 
 	registry := c.MetaConfig.Registry.Settings.RemoteData
@@ -61,16 +61,16 @@ func (c RegistryCredentialsCheck) Run(ctx context.Context) (string, error) {
 	if authData == "" {
 		// Nothing to check: the registry is used anonymously. Whether an anonymous pull actually
 		// works is deckhouse-image-available's question, not this one.
-		return "", preflight.NotApplicable("no registry credentials are configured; the registry is used anonymously")
+		return "", preflight.NotApplicable("no registry credentials are configured, so the registry is used anonymously")
 	}
 
 	client, err := prepareAuthHTTPClient(ctx, c.MetaConfig)
 	if err != nil {
 		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  registryCAField,
+			Checked:  registryCAField(c.registryMode()),
 			Observed: err.Error(),
-			Expected: "a PEM bundle the request can be made with",
-			Fix:      "correct " + registryCAField,
+			Expected: "a valid PEM certificate bundle",
+			Fix:      "correct " + registryCAField(c.registryMode()),
 		})
 	}
 
@@ -87,8 +87,8 @@ func (c RegistryCredentialsCheck) Run(ctx context.Context) (string, error) {
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s as %q", registryV2URL(c.MetaConfig), user),
 			Observed: classifyNetworkError(basicErr),
-			Expected: "the registry to answer",
-			Fix:      fmt.Sprintf("check %s", registryImagesRepoField),
+			Expected: "an answer from the registry",
+			Fix:      fmt.Sprintf("check %s", registryImagesRepoField(c.registryMode())),
 			Err:      basicErr,
 		}
 	}
@@ -105,7 +105,7 @@ func (c RegistryCredentialsCheck) Run(ctx context.Context) (string, error) {
 func (c RegistryCredentialsCheck) authFailure(address, repoPath, user string, err error) error {
 	failure := &preflight.Failure{
 		Checked:  fmt.Sprintf("the credentials for %s as %q", address, user),
-		Expected: "the registry to accept them",
+		Expected: "credentials the registry accepts",
 		Err:      err,
 	}
 
@@ -113,7 +113,7 @@ func (c RegistryCredentialsCheck) authFailure(address, repoPath, user string, er
 	case errors.Is(err, ErrRegistryPullDenied):
 		failure.Observed = fmt.Sprintf("the credentials authenticate but have no pull permission on %s", strings.TrimLeft(repoPath, "/"))
 		failure.Fix = fmt.Sprintf("grant pull access to %q on %s, or correct %s",
-			user, strings.TrimLeft(repoPath, "/"), registryImagesRepoField)
+			user, strings.TrimLeft(repoPath, "/"), registryImagesRepoField(c.registryMode()))
 
 	case errors.Is(err, ErrRegistryBearerUnsupported):
 		// The old text advised enabling bearer auth here, which is wrong for a Basic-only
@@ -131,7 +131,7 @@ func (c RegistryCredentialsCheck) authFailure(address, repoPath, user string, er
 }
 
 const registryCredentialsFix = `check .spec.settings.registry.direct.license (or username/password) in the "deckhouse" ModuleConfig, ` +
-	`or InitConfiguration.deckhouse.registryDockerCfg; the dockercfg entry must be keyed by the registry address exactly`
+	`or InitConfiguration.deckhouse.registryDockerCfg. Key the dockercfg entry by the registry address exactly`
 
 func RegistryCredentials(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) preflight.Check {
 	check := RegistryCredentialsCheck{
@@ -145,4 +145,14 @@ func RegistryCredentials(meta *config.MetaConfig, cfg *config.DeckhouseInstaller
 		Retry:       check.RetryPolicy(),
 		Run:         check.Run,
 	}
+}
+
+// registryMode is the mode the registry is configured in, used to name the ModuleConfig section
+// the fields live under. Empty when no configuration was loaded, which registrySection reports
+// as a placeholder rather than guessing.
+func (c RegistryCredentialsCheck) registryMode() string {
+	if c.MetaConfig == nil {
+		return ""
+	}
+	return string(c.MetaConfig.Registry.Settings.Mode)
 }

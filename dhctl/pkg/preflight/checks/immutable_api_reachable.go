@@ -65,7 +65,7 @@ var masterAPIBudget = struct {
 func ImmutableAPIReachable(resolve func(context.Context) (*MasterAPIEndpoint, error)) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableAPIReachableCheckName,
-		Description: "the API port of the first master answers through the bastion",
+		Description: "the API port of the first master answers",
 		Phase:       preflight.PhasePostInfra,
 		// The waiting is inside, against a budget shaped to a machine that is booting.
 		// Retrying the whole check on top of that would multiply it.
@@ -73,7 +73,7 @@ func ImmutableAPIReachable(resolve func(context.Context) (*MasterAPIEndpoint, er
 		Timeout: preflight.LongCheckTimeout,
 		Run: func(ctx context.Context) (string, error) {
 			if resolve == nil {
-				return "", preflight.NotApplicable("the master of this cluster is not an immutable one")
+				return "", preflight.NotApplicable("the master NodeGroup of this cluster does not ask for systemType: Immutable")
 			}
 			return dialMasterAPI(ctx, resolve)
 		},
@@ -94,16 +94,16 @@ func dialMasterAPI(ctx context.Context, resolve func(context.Context) (*MasterAP
 
 	lastErr := waitForTCP(ctx, endpoint.Dial)
 	if lastErr == nil {
-		return fmt.Sprintf("%s answers%s", endpoint.Master, throughBastion(endpoint)), nil
+		return fmt.Sprintf("the API port of %s answers%s", endpoint.Master, throughBastion(endpoint)), nil
 	}
 
 	return "", &preflight.Failure{
-		Checked:  fmt.Sprintf("a tcp connection to %s%s", endpoint.Master, throughBastion(endpoint)),
+		Checked:  fmt.Sprintf("a TCP connection to the API port of %s%s", endpoint.Master, throughBastion(endpoint)),
 		Observed: classifyNetworkError(lastErr),
-		Expected: "the API server of the first master to accept connections",
+		Expected: "an API port on the first master that accepts connections",
 		Fix: fmt.Sprintf(
-			"allow the API port to %s from %s in the security group or firewall, "+
-				"and check in the cloud console that the machine finished booting",
+			"allow the API port to %s from %s in the security group or firewall. Then "+
+				"check in the cloud console that the machine finished booting",
 			endpoint.Master, bastionOrHere(endpoint),
 		),
 		Err: lastErr,
@@ -125,7 +125,7 @@ func waitForTCP(ctx context.Context, address string) error {
 
 		if attempt == 0 {
 			dhlog.FromContext(ctx).InfoContext(ctx,
-				fmt.Sprintf("Waiting for the first master to answer on %s", address))
+				fmt.Sprintf("Waiting for the first master to answer on its API port (%s)", address))
 		}
 
 		select {

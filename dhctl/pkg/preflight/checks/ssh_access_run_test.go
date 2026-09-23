@@ -119,7 +119,7 @@ func TestSSHCredentialRun(t *testing.T) {
 		detail, err := check.Run(t.Context())
 
 		require.NoError(t, err)
-		assert.Contains(t, detail, "ssh login works for ubuntu@10.0.0.5")
+		assert.Contains(t, detail, "SSH login works for ubuntu@10.0.0.5")
 	})
 
 	t.Run("the credentials are turned down", func(t *testing.T) {
@@ -223,7 +223,7 @@ func TestSSHCredentialAfterInfra(t *testing.T) {
 		detail, err := check.Run(t.Context())
 
 		require.NoError(t, err)
-		assert.Contains(t, detail, "ssh login works for ubuntu@10.0.0.5")
+		assert.Contains(t, detail, "SSH login works for ubuntu@10.0.0.5")
 		// A machine that was created seconds ago needs minutes, not the handful of seconds a
 		// network retry allows — and the budget must not fall short of the wait the bootstrap
 		// does on its own straight after this phase.
@@ -248,18 +248,18 @@ func TestSSHCredentialAfterInfra(t *testing.T) {
 		require.Error(t, err)
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
-		assert.Contains(t, failure.Observed, "the node answers, and it kept refusing the credential")
+		assert.Contains(t, failure.Observed, "the node answers and kept refusing the credential")
 		assert.Contains(t, failure.Observed, "4m", "the wait it sat through is what makes this a verdict")
 		assert.Contains(t, failure.Fix, "--ssh-user")
 		// The other reading has to be there: the operator may have the user right and an image
 		// whose cloud-init never created it.
-		assert.Contains(t, failure.Fix, "cloud-init")
+		assert.Contains(t, failure.Fix, "sshPublicKey")
 	})
 
 	t.Run("the wait is not multiplied by the runner", func(t *testing.T) {
 		// The waiting is inside the check. A retry policy on top of it would restart a
 		// four-minute wait several times over, and a permanent marker would be a lie besides.
-		check := SSHCredentialAfterInfra(FixedNodeInterface(newFakeNode()), nil)
+		check := SSHCredentialAfterInfra(FixedNodeInterface(newFakeNode()), nil, "yandex")
 
 		assert.Equal(t, preflight.NoRetry, check.Retry)
 		assert.Equal(t, preflight.LongCheckTimeout, check.Timeout)
@@ -342,7 +342,7 @@ func TestSSHCredentialWhenTheClientCannotBeBuilt(t *testing.T) {
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
 		assert.Contains(t, failure.Fix, "--ssh-user")
-		assert.Contains(t, failure.Fix, "cloud-init")
+		assert.Contains(t, failure.Fix, "sshPublicKey")
 		// The raw text names the user and the address, and it has to stay reachable — it is the
 		// only place they appear when there is no client to ask.
 		require.ErrorIs(t, err, refused)

@@ -136,7 +136,7 @@ func TestCheckClusterCIDRsAgainstHost(t *testing.T) {
 					},
 				},
 			},
-			wantErrorContains: `invalid CIDR "not-a-cidr" discovered from interface eth0`,
+			wantErrorContains: `parse CIDR "not-a-cidr" reported by interface eth0`,
 		},
 	}
 
@@ -452,7 +452,7 @@ func TestHostCommandOutputReturnsCommandError(t *testing.T) {
 	)
 
 	assert.Nil(t, output)
-	assert.ErrorContains(t, err, "execute host command ip")
+	assert.ErrorContains(t, err, "run ip on the node")
 	assert.ErrorContains(t, err, "exit status 127")
 	assert.ErrorContains(t, err, "ip: command not found")
 

@@ -46,7 +46,7 @@ const (
 
 // PhaseStoppedError is the sentence the summary carries when a check on the critical path failed
 // and the rest of the phase was not attempted.
-const phaseStoppedSuffix = "not run (the phase stopped here)"
+const phaseStoppedSuffix = "not run after the phase stopped"
 
 func (s Status) glyph() string {
 	switch s {
@@ -83,6 +83,8 @@ type Result struct {
 	// CannotBeSkipped is carried over from the check so the report can say that there is no
 	// flag for this one rather than print a flag that will be refused.
 	CannotBeSkipped bool
+	// CannotBeSkippedReason is carried over with it.
+	CannotBeSkippedReason string
 	// Age is how long ago the remembered pass behind StatusCached was recorded. Zero when the
 	// entry predates the timestamped format and carries no time.
 	Age time.Duration
@@ -108,7 +110,7 @@ func (r Result) text() string {
 		case StatusNotApplicable:
 			return fmt.Sprintf("not applicable: %s", r.Detail)
 		case StatusBlocked:
-			return fmt.Sprintf("not run: %s", r.Detail)
+			return fmt.Sprintf("blocked: %s", r.Detail)
 		default:
 			return r.Detail
 		}

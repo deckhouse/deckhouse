@@ -76,6 +76,10 @@ type Check struct {
 	// against, so --preflight-skip-check must refuse to turn it off rather than let the run
 	// proceed into a state it cannot handle.
 	CannotBeSkipped bool
+	// CannotBeSkippedReason is why, in the reader's terms. The report prints it in place of the
+	// skip flag it cannot offer: "this check cannot be skipped" answers a question the reader
+	// did not ask and leaves the one they did.
+	CannotBeSkippedReason string
 	// DependsOn names the checks this one needs to have passed. When one of them fails, this
 	// check is reported blocked instead of being run: it would fail for the same reason and
 	// bury the one error that matters under a pile of copies.

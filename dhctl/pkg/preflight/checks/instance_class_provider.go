@@ -30,7 +30,7 @@ type InstanceClassProviderCheck struct {
 const InstanceClassProviderCheckName preflight.CheckName = "instance-class-provider"
 
 func (InstanceClassProviderCheck) Description() string {
-	return "instance classes match current cloud provider"
+	return "the InstanceClass resources match the cloud provider"
 }
 
 func (InstanceClassProviderCheck) Phase() preflight.Phase {
@@ -43,7 +43,7 @@ func (InstanceClassProviderCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c InstanceClassProviderCheck) Run(_ context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", fmt.Errorf("meta config is nil")
+		return "", fmt.Errorf("the cluster configuration was not passed to this check")
 	}
 	if c.MetaConfig.ProviderName == "" {
 		return "", preflight.NotApplicable("this is not a cloud cluster")
@@ -54,7 +54,7 @@ func (c InstanceClassProviderCheck) Run(_ context.Context) (string, error) {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the InstanceClass resources in the --config file against provider %q", c.MetaConfig.ProviderName),
 			Observed: err.Error(),
-			Expected: fmt.Sprintf("every InstanceClass to be of the kind provider %q defines", c.MetaConfig.ProviderName),
+			Expected: fmt.Sprintf("InstanceClass resources of the kind provider %q defines", c.MetaConfig.ProviderName),
 			Fix:      "change the kind (and spec) of that resource to the provider's InstanceClass, or remove it",
 		})
 	}

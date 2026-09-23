@@ -81,7 +81,7 @@ func (c NodeOSSupportedCheck) Run(ctx context.Context) (string, error) {
 	if manager := firstAvailable(ctx, nodeInterface, supportedPackageManagers); manager != "" {
 		found = append(found, manager)
 	} else {
-		unmet = append(unmet, fmt.Sprintf("none of %s is installed, and bashible installs packages with one of them",
+		unmet = append(unmet, fmt.Sprintf("none of %s is installed",
 			strings.Join(supportedPackageManagers, ", ")))
 	}
 
@@ -104,7 +104,7 @@ func (c NodeOSSupportedCheck) Run(ctx context.Context) (string, error) {
 		})
 	}
 
-	return fmt.Sprintf("%s runs %s", host, strings.Join(found, ", ")), nil
+	return fmt.Sprintf("%s has %s", host, strings.Join(found, ", ")), nil
 }
 
 // firstAvailable returns the first of the binaries that is on PATH.

@@ -197,7 +197,7 @@ func TestBastionAuthMethods(t *testing.T) {
 		defer cleanup()
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parse private key")
+		assert.Contains(t, err.Error(), "could not parse the private key")
 	})
 
 	t.Run("a key file that is not there", func(t *testing.T) {
@@ -210,7 +210,7 @@ func TestBastionAuthMethods(t *testing.T) {
 		defer cleanup()
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "read private key")
+		assert.Contains(t, err.Error(), "could not read the private key")
 	})
 
 	t.Run("the bastion password on its own", func(t *testing.T) {
@@ -249,7 +249,7 @@ func TestBastionAuthMethods(t *testing.T) {
 		defer cleanup()
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "no private keys, ssh-agent or password")
+		assert.Contains(t, err.Error(), "no private key, no ssh-agent identity and no password")
 	})
 
 	t.Run("a running ssh-agent counts as a method", func(t *testing.T) {
@@ -284,6 +284,6 @@ func TestBastionAuthMethods(t *testing.T) {
 		// No agent, no keys, no password: the socket being dead adds nothing rather than
 		// failing on its own.
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "no private keys")
+		assert.Contains(t, err.Error(), "no private key")
 	})
 }

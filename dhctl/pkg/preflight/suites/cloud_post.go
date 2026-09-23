@@ -61,7 +61,7 @@ func NewPostCloudSuite(deps PostCloudDeps) preflight.Suite {
 		//
 		// AfterInfra, not the plain one: this phase runs between creating the machine and waiting
 		// for it, so the first minutes of refusals are the machine booting, not a bad credential.
-		checks.SSHCredentialAfterInfra(nodeInterface, endpointOf(deps.SSHProviderInitializer)),
+		checks.SSHCredentialAfterInfra(nodeInterface, endpointOf(deps.SSHProviderInitializer), providerNameOf(deps.MetaConfig)),
 		// Declared, not merely relied on: the credential check is what proves this connection
 		// and carries the wait for the machine to boot, so this one no longer probes it itself.
 		checks.CloudAPIAccess(deps.MetaConfig, deps.SSHProviderInitializer, endpointOf(deps.SSHProviderInitializer)).
@@ -80,4 +80,14 @@ func NewPostCloudSuite(deps PostCloudDeps) preflight.Suite {
 	})...)
 
 	return preflight.NewSuite(built...)
+}
+
+// providerNameOf tolerates a suite built without a configuration. The name listers build every
+// suite with nil dependencies to read the check names out of it, and a suite that panics there
+// cannot be enumerated — which is how `dhctl preflight list` and the generated-list guard work.
+func providerNameOf(meta *config.MetaConfig) string {
+	if meta == nil {
+		return ""
+	}
+	return meta.ProviderName
 }

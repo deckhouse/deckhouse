@@ -64,7 +64,7 @@ func (e *PhaseError) Error() string {
 		b.WriteString("s")
 	}
 	if e.Tally != "" {
-		// Not parentheses: the tally ends in "22 not run (the phase stopped here)" often enough
+		// Not parentheses: the tally ends in "22 not run after the phase stopped" often enough
 		// that wrapping it produced nested brackets.
 		fmt.Fprintf(&b, " failed — %s", e.Tally)
 		b.WriteString(":\n")
@@ -90,7 +90,7 @@ func (e *PhaseError) writeResults(b *strings.Builder) {
 	// out, in which case pointing at skip flags that were never printed above is an invitation
 	// to spend another bootstrap discovering that.
 	if e.anySkippable() {
-		b.WriteString("\nRe-run the same command after fixing, or add the skip flags above to proceed anyway.")
+		b.WriteString("\nRe-run the same command after fixing. To proceed without fixing, add the skip flags printed above.")
 		return
 	}
 	b.WriteString("\nRe-run the same command after fixing.")
@@ -124,7 +124,13 @@ func writeCause(b *strings.Builder, err error) {
 // the reader could not derive it from the failure they were looking at.
 func writeSkipLine(b *strings.Builder, r Result) {
 	if r.CannotBeSkipped {
-		writeField(b, "skip", "this check cannot be skipped")
+		// The reason, when the check gave one. Without it the line still has to say there is no
+		// flag, which is the half the reader acts on.
+		if r.CannotBeSkippedReason == "" {
+			writeField(b, "skip", "cannot be skipped")
+			return
+		}
+		writeField(b, "skip", "cannot be skipped: "+r.CannotBeSkippedReason)
 		return
 	}
 
@@ -135,7 +141,7 @@ func writeSkipLine(b *strings.Builder, r Result) {
 	// 2026-09-16 by running with --preflight-skip-check=ssh-credential,cloud-api-accessibility:
 	// registry-access-from-master then reported the same failure, just as quickly.
 	if stopsPhase(r.Err) {
-		writeField(b, "skip", "skipping this check does not get past it — the next one is asked over the same connection")
+		writeField(b, "skip", "no flag gets past this. Every check after it needs the same connection.")
 		return
 	}
 

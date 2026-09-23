@@ -33,7 +33,7 @@ type StaticInstancesIPDuplicationCheck struct {
 const StaticInstancesIPDuplicationCheckName preflight.CheckName = "static-instances-ip-duplication"
 
 func (StaticInstancesIPDuplicationCheck) Description() string {
-	return "static instances have unique addresses"
+	return "StaticInstances have unique addresses"
 }
 
 func (StaticInstancesIPDuplicationCheck) Phase() preflight.Phase {

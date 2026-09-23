@@ -41,6 +41,10 @@ type SSHCredentialCheck struct {
 	// to read the user and the address back from. Optional; without it such a failure can only
 	// say "the master node".
 	Endpoint EndpointFunc
+	// ProviderName names the document that declares sshPublicKey, for the failure that asks the
+	// operator to compare their key against it. Empty on a static cluster, which has no such
+	// document and never reaches that branch.
+	ProviderName string
 }
 
 var ErrAuthSSHFailed = fmt.Errorf("authentication failed")
@@ -92,7 +96,7 @@ func (c *SSHConnectivityCheck) Run(ctx context.Context) (string, error) {
 	conn, err := (&net.Dialer{Timeout: sshDialTimeout}).DialContext(ctx, "tcp", address)
 	if err != nil {
 		return "", &preflight.Failure{
-			Checked:  fmt.Sprintf("tcp connection to %s", address),
+			Checked:  fmt.Sprintf("TCP connection to %s", address),
 			Observed: classifyNetworkError(err),
 			Expected: "sshd listening on the node",
 			Fix:      "check --ssh-host and --ssh-port, and that the machine is up and reachable from this host",
@@ -123,7 +127,7 @@ func SSHConnectivity(sshProvider *providerinitializer.SSHProviderInitializer) pr
 }
 
 func (*SSHCredentialCheck) Description() string {
-	return "ssh credentials are valid"
+	return "the SSH credentials are valid"
 }
 
 func (*SSHCredentialCheck) Phase() preflight.Phase {
@@ -148,19 +152,19 @@ func (c *SSHCredentialCheck) Run(ctx context.Context) (string, error) {
 	}
 	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
-		return "", preflight.NotApplicable("dhctl was given no SSH host: it is running against the local machine")
+		return "", preflight.NotApplicable("dhctl was given no SSH host, so it runs against the local machine")
 	}
 
 	client := wrapper.Client()
 
 	if c.FreshlyCreated {
-		return awaitFreshMachineLogin(ctx, client)
+		return awaitFreshMachineLogin(ctx, client, c.providerDocument())
 	}
 
 	if err := client.Check().CheckAvailability(ctx); err != nil {
 		return "", sshLoginFailure(hostLabelOfClient(client), err)
 	}
-	return fmt.Sprintf("ssh login works for %s", hostLabelOfClient(client)), nil
+	return fmt.Sprintf("SSH login works for %s", hostLabelOfClient(client)), nil
 }
 
 // loginFailure words the failure for the machine this check is about. A machine created moments
@@ -175,7 +179,7 @@ func (c *SSHCredentialCheck) loginFailure(client libcon.SSHClient, err error) er
 	}
 
 	if c.FreshlyCreated {
-		return freshMachineLoginFailure(label, err)
+		return freshMachineLoginFailure(label, c.providerDocument(), err)
 	}
 	return sshLoginFailure(label, err)
 }
@@ -200,43 +204,42 @@ var freshMachineBudget = struct {
 // What separates them is time. Once the budget is spent, cloud-init has long finished, so a node
 // that answers and still refuses the credential is refusing it for good — and one that has not
 // answered at all was never a credential problem.
-func awaitFreshMachineLogin(ctx context.Context, client libcon.SSHClient) (string, error) {
+func awaitFreshMachineLogin(ctx context.Context, client libcon.SSHClient, providerDocument string) (string, error) {
 	err := client.Check().WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
 		retry.WithWait(freshMachineBudget.wait),
 		retry.WithAttempts(freshMachineBudget.attempts),
 		retry.WithLogger(dhlog.FromContext(ctx)),
 	))
 	if err == nil {
-		return fmt.Sprintf("ssh login works for %s", hostLabelOfClient(client)), nil
+		return fmt.Sprintf("SSH login works for %s", hostLabelOfClient(client)), nil
 	}
 
-	return "", freshMachineLoginFailure(hostLabelOfClient(client), err)
+	return "", freshMachineLoginFailure(hostLabelOfClient(client), providerDocument, err)
 }
 
 // freshMachineLoginFailure says which of the two readings the failure supports, for a machine the
 // cloud created moments ago. client may be nil: the connection can fail before there is one.
-func freshMachineLoginFailure(label string, err error) error {
+func freshMachineLoginFailure(label, providerDocument string, err error) error {
 	waited := roundedBudget(freshMachineBudget.attempts, freshMachineBudget.wait)
 
 	if sshNeverConnected(err) {
 		return &preflight.Failure{
-			Checked:  fmt.Sprintf("ssh login to %s", label),
-			Observed: fmt.Sprintf("the node answers, and it kept refusing the credential for %s", waited),
-			Expected: "the login user of the node's image to accept the key",
+			Checked:  fmt.Sprintf("SSH login to %s", label),
+			Observed: fmt.Sprintf("the node answers and kept refusing the credential for %s", waited),
+			Expected: "a login user on the node that accepts the key",
 			// Deliberately not preflight.Permanent: the runner retrying the whole check would
 			// start the wait again, which is the one thing that must not happen here.
-			Fix: "check --ssh-user against the login user of the node's image (ubuntu, ec2-user, debian, " +
-				"altlinux, opensuse — it differs per image) and that the key it is given is the one " +
-				"<Provider>ClusterConfiguration.sshPublicKey declares; if both are right, the image's " +
-				"cloud-init did not create the user",
+			Fix: fmt.Sprintf("check --ssh-user against the login user of the node's image "+
+				"(ubuntu, ec2-user, debian, altlinux, opensuse). Check that the key passed to dhctl "+
+				"matches %s.sshPublicKey.", providerDocument),
 			Err: err,
 		}
 	}
 
 	return &preflight.Failure{
-		Checked:  fmt.Sprintf("ssh to %s", label),
-		Observed: fmt.Sprintf("%s, for %s", classifyNetworkError(err), waited),
-		Expected: "the machine the cloud has just created to accept SSH",
+		Checked:  fmt.Sprintf("SSH connection to %s", label),
+		Observed: fmt.Sprintf("%s for %s", classifyNetworkError(err), waited),
+		Expected: "an SSH connection to the newly created machine",
 		Fix: "check in the cloud console that the instance started, and that its security groups " +
 			"allow 22/TCP from this host",
 		Err: err,
@@ -253,16 +256,16 @@ func roundedBudget(attempts int, wait time.Duration) string {
 // arrive as one sentence with the raw x/crypto text appended.
 func sshLoginFailure(label string, err error) error {
 	failure := &preflight.Failure{
-		Checked: fmt.Sprintf("ssh login to %s", label),
+		Checked: fmt.Sprintf("SSH login to %s", label),
 		Err:     err,
 	}
 
 	if isSSHAuthError(err) {
 		// No key, password or agent identity is going to become the right one on a second try.
 		failure.Observed = "the server rejected every authentication method offered"
-		failure.Expected = "the SSH user to be authorized on the node"
-		failure.Fix = "check --ssh-user, and that one of --ssh-agent-private-keys is authorized for it on the node; " +
-			"pass --ask-become-pass if the user authenticates by password"
+		failure.Expected = "an SSH user authorized on the node"
+		failure.Fix = "check --ssh-user, and that one of --ssh-agent-private-keys is authorized for it on the node. " +
+			"Pass --ask-become-pass if the user authenticates by password."
 		return preflight.Permanent(failure)
 	}
 
@@ -273,8 +276,8 @@ func sshLoginFailure(label string, err error) error {
 	// goes first: cloud images disagree about the login user (ubuntu, ec2-user, debian, altlinux,
 	// opensuse) and picking the wrong one is the common mistake.
 	if status, ok := exitStatus(err); ok && status == sshCouldNotOpenSession {
-		failure.Observed = "ssh could not open a session (exit status 255)"
-		failure.Expected = "the node to accept an SSH session"
+		failure.Observed = "the ssh client could not open a session (exit status 255)"
+		failure.Expected = "an SSH session the node accepts"
 		failure.Fix = "check --ssh-user against the login user of the node's image " +
 			"(ubuntu, ec2-user, debian, altlinux, opensuse — it differs per image), that one of " +
 			"--ssh-agent-private-keys is authorized for that user, and that 22/TCP is open from this host"
@@ -282,7 +285,7 @@ func sshLoginFailure(label string, err error) error {
 	}
 
 	failure.Observed = classifyNetworkError(err)
-	failure.Expected = "the node to accept an SSH connection"
+	failure.Expected = "an SSH connection the node accepts"
 	failure.Fix = "check --ssh-host and --ssh-port, and that 22/TCP is open from this host to the node"
 	return failure
 }
@@ -336,8 +339,8 @@ func isSSHAuthError(err error) bool {
 // until cloud-init has run, the login user does not exist yet, and a refusal means nothing.
 // Everything else in this phase is asked over this connection, so the wait belongs here — the
 // phase runs before dhctl's own wait for SSH on the master.
-func SSHCredentialAfterInfra(nodeInterface NodeInterfaceFunc, endpoint EndpointFunc) preflight.Check {
-	check := SSHCredentialCheck{NodeInterface: nodeInterface, Endpoint: endpoint, FreshlyCreated: true}
+func SSHCredentialAfterInfra(nodeInterface NodeInterfaceFunc, endpoint EndpointFunc, providerName string) preflight.Check {
+	check := SSHCredentialCheck{NodeInterface: nodeInterface, Endpoint: endpoint, FreshlyCreated: true, ProviderName: providerName}
 	built := SSHCredential(nodeInterface, endpoint)
 	// The waiting is inside. Letting the runner retry the check on top of that would multiply a
 	// four-minute wait by the retry count.
@@ -359,4 +362,9 @@ func SSHCredential(nodeInterface NodeInterfaceFunc, endpoint EndpointFunc) prefl
 		StopsPhaseOnFailure: true,
 		Run:                 check.Run,
 	}
+}
+
+// providerDocument names the document that declares sshPublicKey.
+func (c SSHCredentialCheck) providerDocument() string {
+	return providerDocumentKind(c.ProviderName)
 }

@@ -74,7 +74,7 @@ func (RegistryRequiredImagesCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c RegistryRequiredImagesCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", fmt.Errorf("meta config is required")
+		return "", fmt.Errorf("dhctl was given no cluster configuration")
 	}
 
 	all, err := c.imageDigests()
@@ -95,10 +95,10 @@ func (c RegistryRequiredImagesCheck) Run(ctx context.Context) (string, error) {
 	client, err := registryutil.NewRegistryClient(ctx, string(registry.Scheme), registry.CA)
 	if err != nil {
 		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  registryCAField,
+			Checked:  registryCAField(c.registryMode()),
 			Observed: err.Error(),
-			Expected: "a PEM bundle the request can be made with",
-			Fix:      "correct " + registryCAField,
+			Expected: "a valid PEM certificate bundle",
+			Fix:      "correct " + registryCAField(c.registryMode()),
 		})
 	}
 
@@ -125,8 +125,8 @@ func (c RegistryRequiredImagesCheck) Run(ctx context.Context) (string, error) {
 			return "", &preflight.Failure{
 				Checked:  fmt.Sprintf("the images of this release in %s", repo),
 				Observed: classifyNetworkError(err),
-				Expected: "the registry to answer",
-				Fix:      fmt.Sprintf("check %s", registryImagesRepoField),
+				Expected: "an answer from the registry",
+				Fix:      fmt.Sprintf("check %s", registryImagesRepoField(c.registryMode())),
 				Err:      err,
 			}
 		}
@@ -135,12 +135,10 @@ func (c RegistryRequiredImagesCheck) Run(ctx context.Context) (string, error) {
 	if len(missing) > 0 {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked: fmt.Sprintf("%d of the images this release is made of, in %s", len(sample), repo),
-			Observed: fmt.Sprintf("%d of them are not there:\n- %s",
-				len(missing), strings.Join(missing, "\n- ")),
-			Expected: "every image of the release, which is what the Deckhouse image refers to",
-			Fix: "mirror the release with `d8 mirror pull` and `d8 mirror push`. Copying the tag alone " +
-				"(crane copy, skopeo copy) brings the Deckhouse image without the images it needs, " +
-				"and the control plane never comes up",
+			Observed: fmt.Sprintf("%d of the %d sampled images are missing:\n- %s",
+				len(missing), len(sample), strings.Join(missing, "\n- ")),
+			Expected: fmt.Sprintf("every image of the release in %s", repo),
+			Fix:      "mirror the release with `d8 mirror pull` and `d8 mirror push`",
 		})
 	}
 
@@ -232,4 +230,14 @@ func RegistryRequiredImages(meta *config.MetaConfig) preflight.Check {
 		Retry:       check.RetryPolicy(),
 		Run:         check.Run,
 	}
+}
+
+// registryMode is the mode the registry is configured in, used to name the ModuleConfig section
+// the fields live under. Empty when no configuration was loaded, which registrySection reports
+// as a placeholder rather than guessing.
+func (c RegistryRequiredImagesCheck) registryMode() string {
+	if c.MetaConfig == nil {
+		return ""
+	}
+	return string(c.MetaConfig.Registry.Settings.Mode)
 }

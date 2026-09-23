@@ -67,11 +67,11 @@ func TestHostnameProblemNamesTheRuleThatWasBroken(t *testing.T) {
 		hostname string
 		want     string
 	}{
-		{strings.Repeat("a", 70), "it is 70 characters, the limit is 63"},
-		{"Master-0", "it contains upper-case letters"},
-		{"master_0", "it contains an underscore"},
-		{"-master", "it starts with '-' or '.'"},
-		{"master-", "it ends with '-' or '.'"},
+		{strings.Repeat("a", 70), "is 70 characters, the limit is 63"},
+		{"Master-0", "contains upper-case letters"},
+		{"master_0", "contains an underscore"},
+		{"-master", "starts with '-' or '.'"},
+		{"master-", "ends with '-' or '.'"},
 	}
 
 	for _, tt := range tests {
@@ -252,17 +252,17 @@ func TestNodeHostnameRun(t *testing.T) {
 		{
 			name:    "upper case",
 			node:    newFakeNode().on("hostname").prints("Master-0\n"),
-			wantErr: "it contains upper-case letters",
+			wantErr: "contains upper-case letters",
 		},
 		{
 			name:    "an underscore",
 			node:    newFakeNode().on("hostname").prints("master_0\n"),
-			wantErr: "it contains an underscore",
+			wantErr: "contains an underscore",
 		},
 		{
 			name:    "nothing at all",
 			node:    newFakeNode().on("hostname").prints("\n"),
-			wantErr: "it printed nothing",
+			wantErr: "`hostname` printed nothing",
 		},
 		{
 			name:    "hostname could not be run",

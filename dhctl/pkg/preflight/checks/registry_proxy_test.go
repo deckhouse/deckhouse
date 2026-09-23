@@ -275,7 +275,7 @@ func TestRegistryProxyIsSkippedWhenItDoesNotApply(t *testing.T) {
 		_, err := check.Run(context.Background())
 
 		require.ErrorIs(t, err, preflight.ErrNotApplicable)
-		assert.Contains(t, err.Error(), "no SSH connection")
+		assert.Contains(t, err.Error(), "no SSH host to make the request from")
 	})
 }
 

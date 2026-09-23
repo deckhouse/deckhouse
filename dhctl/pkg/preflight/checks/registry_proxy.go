@@ -43,7 +43,7 @@ type RegistryProxyCheck struct {
 	LegacyMode bool
 }
 
-var ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
+var ErrRegistryUnreachable = errors.New("cannot reach the registry through the proxy")
 
 const (
 	registryPath         = "/v2/"
@@ -66,7 +66,7 @@ func (RegistryProxyCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c RegistryProxyCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", errors.New("meta config is required")
+		return "", errors.New("dhctl was given no cluster configuration")
 	}
 
 	proxyURL, noProxy, err := utils.GetProxyFromMetaConfig(c.MetaConfig)
@@ -90,7 +90,7 @@ func (c RegistryProxyCheck) Run(ctx context.Context) (string, error) {
 	}
 
 	if c.NodeInterface == nil {
-		return "", errors.New("no connection resolver was given to the check")
+		return "", errors.New("dhctl was given no SSH connection to the node")
 	}
 
 	nodeInterface, err := c.NodeInterface(ctx)
@@ -99,7 +99,7 @@ func (c RegistryProxyCheck) Run(ctx context.Context) (string, error) {
 	}
 	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
-		return "", preflight.NotApplicable("there is no SSH connection to a node to make the request from")
+		return "", preflight.NotApplicable("dhctl was given no SSH host to make the request from")
 	}
 
 	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, wrapper.Client(), proxyURL, c.LegacyMode)
@@ -122,10 +122,10 @@ func (c RegistryProxyCheck) Run(ctx context.Context) (string, error) {
 	})
 	if err != nil {
 		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  "the registry CA certificate",
+			Checked:  registryCAField(c.registryMode()),
 			Observed: err.Error(),
-			Expected: "a PEM bundle the request can be made with",
-			Fix:      `correct .spec.settings.registry.<mode>.ca in the "deckhouse" ModuleConfig (InitConfiguration.deckhouse.registryCA)`,
+			Expected: "a valid PEM certificate bundle",
+			Fix:      "correct " + registryCAField(c.registryMode()),
 		})
 	}
 
@@ -141,10 +141,10 @@ func (c RegistryProxyCheck) Run(ctx context.Context) (string, error) {
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from %s via proxy %s", registryURL, hostLabelOfClient(wrapper.Client()), proxyURL.Redacted()),
 			Observed: classifyNetworkError(err),
-			Expected: "the registry API to answer",
+			Expected: "an answer from the registry API",
 			Fix: fmt.Sprintf(
 				"check that the node reaches %s and that the proxy reaches %s, "+
-					"or add %s to ClusterConfiguration.proxy.noProxy so the node goes direct",
+					"or add %s to ClusterConfiguration.proxy.noProxy",
 				proxyURL.Redacted(), registryAddress, registryURL.Hostname(),
 			),
 			Err: err,
@@ -171,30 +171,35 @@ func (c RegistryProxyCheck) checkResponse(resp *http.Response, registryURL, prox
 	case resp.StatusCode >= 500:
 		return &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s via proxy %s", registryURL, proxyURL.Redacted()),
-			Observed: fmt.Sprintf("HTTP %d", resp.StatusCode),
+			Observed: fmt.Sprintf("%s answered with HTTP %d", registryURL.Host, resp.StatusCode),
 			Expected: "HTTP 200 or 401 from the registry API",
 			Fix:      fmt.Sprintf("check that the proxy reaches %s and that the registry is up", registryURL.Host),
 		}
 	}
 
-	return checkResponseIsFromDockerRegistry(resp)
+	return checkResponseIsFromDockerRegistry(resp, registryURL.Host, c.registryMode())
 }
 
-func checkResponseIsFromDockerRegistry(resp *http.Response) error {
+// host is passed in rather than read off resp.Request: a response built by hand — every caller
+// in a test — carries no request, and the message must not depend on that.
+func checkResponseIsFromDockerRegistry(resp *http.Response, host, mode string) error {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
 		return fmt.Errorf(
-			"%w: got %d status code from the container registry API, this is not a valid registry API response.\n"+
-				"Check that the container registry address is correct and that there are no misconfigured reverse proxies.",
+			"%w: %s answered with HTTP %d, which is not how a registry answers /v2/. "+
+				"Check %s, and any reverse proxy in front of the registry.",
 			ErrRegistryUnreachable,
+			host,
 			resp.StatusCode,
+			registryImagesRepoField(mode),
 		)
 	}
 
 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
 		return fmt.Errorf(
-			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
-				"Check that the container registry address is correct and that there are no misconfigured reverse proxies",
+			"%w: the answer carries no Docker-Distribution-API-Version: registry/2.0 header. "+
+				"Check %s, and that no reverse proxy strips the header.",
 			ErrRegistryUnreachable,
+			registryImagesRepoField(mode),
 		)
 	}
 
@@ -215,4 +220,12 @@ func RegistryProxy(meta *config.MetaConfig, sshProviderInitializer *providerinit
 		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
+}
+
+// registryMode is the mode the registry is configured in; see registrySection.
+func (c RegistryProxyCheck) registryMode() string {
+	if c.MetaConfig == nil {
+		return ""
+	}
+	return string(c.MetaConfig.Registry.Settings.Mode)
 }

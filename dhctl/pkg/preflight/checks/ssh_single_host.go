@@ -32,7 +32,7 @@ type SingleSSHHostCheck struct {
 const SingleSSHHostCheckName preflight.CheckName = "static-single-ssh-host"
 
 func (SingleSSHHostCheck) Description() string {
-	return "only one ssh host is provided"
+	return "only one SSH host is given"
 }
 
 func (SingleSSHHostCheck) Phase() preflight.Phase {
@@ -63,15 +63,14 @@ func (c SingleSSHHostCheck) Run(ctx context.Context) (string, error) {
 			Checked:  "the --ssh-host arguments (or the SSHHost resources of --connection-config)",
 			Observed: fmt.Sprintf("%d hosts were given: %s", len(hosts), strings.Join(addresses, ", ")),
 			Expected: "one host, the machine the first master will be bootstrapped on",
-			Fix: "pass a single --ssh-host for the bootstrap; the other masters are added afterwards " +
-				"by `dhctl converge` once the first one is up",
+			Fix:      "pass a single --ssh-host for the bootstrap. Add the other masters afterwards with `dhctl converge`.",
 		})
 	}
 
 	if len(hosts) == 0 {
 		return "", preflight.NotApplicable("dhctl was given no SSH host")
 	}
-	return fmt.Sprintf("one ssh host was given: %s", hosts[0].Host), nil
+	return fmt.Sprintf("one SSH host was given: %s", hosts[0].Host), nil
 }
 
 func SingleSSHHost(nodeInterface NodeInterfaceFunc) preflight.Check {

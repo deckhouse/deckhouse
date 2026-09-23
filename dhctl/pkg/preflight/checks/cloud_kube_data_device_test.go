@@ -65,7 +65,7 @@ func TestCloudKubeDataDevice(t *testing.T) {
 
 		detail, err := check.Run(t.Context())
 		require.NoError(t, err)
-		assert.Contains(t, detail, "already carries a ext4 filesystem")
+		assert.Contains(t, detail, "already carries a filesystem (ext4)")
 	})
 
 	t.Run("the path is not a block device", func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestCloudKubeDataDevice(t *testing.T) {
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
 		assert.Contains(t, failure.Observed, "not a block device on the node")
-		assert.Contains(t, failure.Fix, "autodetecting an unused disk")
+		assert.Contains(t, failure.Fix, "the disk is attached to the master node")
 	})
 
 	t.Run("no separate disk in this layout", func(t *testing.T) {

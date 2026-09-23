@@ -57,7 +57,7 @@ func TestNormalize(t *testing.T) {
 		{
 			name:    "a near miss is refused with the name that was meant",
 			input:   []string{"sudo"},
-			wantErr: `did you mean "sudo-allowed"`,
+			wantErr: `Did you mean "sudo-allowed"`,
 		},
 		{
 			name:    "an unknown name is refused",

@@ -53,7 +53,7 @@ func (RegistryFromMasterCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", fmt.Errorf("metaConfig is required")
+		return "", fmt.Errorf("dhctl was given no cluster configuration")
 	}
 
 	nodeInterface, err := c.nodeInterface(ctx)
@@ -61,7 +61,7 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if nodeInterface == nil {
-		return "", preflight.NotApplicable("there is no SSH connection to a node to make the request from")
+		return "", preflight.NotApplicable("dhctl was given no SSH host to make the request from")
 	}
 	host := hostPhrase(nodeInterface)
 
@@ -82,11 +82,11 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	status := strings.TrimSpace(string(stdout))
 
 	if runErr != nil && status == "" {
-		observed, fix := probe.classify(runErr, registryV2URL(c.MetaConfig).Hostname(), address)
+		observed, fix := probe.classify(runErr, registryV2URL(c.MetaConfig).Hostname(), address, c.registryMode())
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from %s", endpoint, host),
 			Observed: observed,
-			Expected: "the registry API to answer from the node",
+			Expected: "an answer from the registry API to the node",
 			Fix:      fix,
 			Err:      runErr,
 		}
@@ -101,7 +101,7 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from %s", endpoint, host),
 			Observed: "the node got no answer",
-			Expected: "the registry API to answer from the node",
+			Expected: "an answer from the registry API to the node",
 			Fix:      fmt.Sprintf("give the node egress to %s, or set ClusterConfiguration.proxy", address),
 		}
 	default:
@@ -109,8 +109,7 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 			Checked:  fmt.Sprintf("GET %s from %s", endpoint, host),
 			Observed: fmt.Sprintf("the node got HTTP %s, which is not how a registry answers /v2/", status),
 			Expected: "HTTP 200 or 401 from the registry API",
-			Fix: fmt.Sprintf("check what answers at %s from the node — a captive portal, a proxy or an "+
-				"error page rather than the registry", address),
+			Fix:      fmt.Sprintf("check from the node what answers at %s", endpoint),
 		}
 	}
 }
@@ -133,7 +132,7 @@ type registryProbe struct {
 	binary string
 	args   func(endpoint string) []string
 	// classify turns the probe's exit status into what went wrong and what to do about it.
-	classify func(err error, hostname, address string) (observed, fix string)
+	classify func(err error, hostname, address, mode string) (observed, fix string)
 }
 
 // curlExitCodes are the ones worth telling apart. They are the four things that stop a node from
@@ -143,7 +142,7 @@ type registryProbe struct {
 // The name not resolving is the one worth the most: it is what a node with the wrong resolver
 // does, and it surfaces from bashible as "etcd not running after 200s", because crictl could not
 // resolve the registry and never pulled the image. Nothing in that message mentions DNS.
-func curlClassify(err error, hostname, address string) (string, string) {
+func curlClassify(err error, hostname, address, mode string) (string, string) {
 	status, ok := exitStatus(err)
 	if !ok {
 		return "the node could not reach the registry", registryEgressFix(address)
@@ -152,17 +151,16 @@ func curlClassify(err error, hostname, address string) (string, string) {
 	switch status {
 	case 6:
 		return fmt.Sprintf("the node cannot resolve %s", hostname),
-			fmt.Sprintf("give the node a resolver that knows %s — check /etc/resolv.conf on it — "+
-				"or put the address in its /etc/hosts; the container runtime resolves the same way, "+
-				"and an image it cannot resolve stops the control plane from starting", hostname)
+			fmt.Sprintf("check /etc/resolv.conf on the node and give it a resolver that knows %s, "+
+				"or add the address to /etc/hosts on the node", hostname)
 	case 7:
-		return fmt.Sprintf("the node reached no service at %s", address), registryEgressFix(address)
+		return fmt.Sprintf("the node could not connect to %s", address), registryEgressFix(address)
 	case 28:
 		return fmt.Sprintf("the node timed out reaching %s", address), registryEgressFix(address)
 	case 35, 60:
 		return "the node rejected the registry certificate",
-			fmt.Sprintf("give the node the CA of %s (.spec.settings.registry.<mode>.ca in the \"deckhouse\" "+
-				"ModuleConfig), or correct the certificate the registry serves", address)
+			fmt.Sprintf("put the registry CA into %s, or correct the certificate the registry serves",
+				registryCAField(mode))
 	default:
 		return "the node could not reach the registry", registryEgressFix(address)
 	}
@@ -170,17 +168,18 @@ func curlClassify(err error, hostname, address string) (string, string) {
 
 // wgetClassify is the same question of a node with no curl. wget collapses every network failure
 // into one status, so only the certificate is separable.
-func wgetClassify(err error, _, address string) (string, string) {
+func wgetClassify(err error, _, address, mode string) (string, string) {
 	if status, ok := exitStatus(err); ok && status == 5 {
 		return "the node rejected the registry certificate",
-			fmt.Sprintf("give the node the CA of %s, or correct the certificate the registry serves", address)
+			fmt.Sprintf("put the registry CA into %s, or correct the certificate the registry serves",
+				registryCAField(mode))
 	}
 	return "the node could not reach the registry", registryEgressFix(address)
 }
 
 func registryEgressFix(address string) string {
-	return fmt.Sprintf("give the node egress to %s — a NAT gateway or a route, and a security group that "+
-		"allows it; if the node goes through a proxy, set ClusterConfiguration.proxy", address)
+	return fmt.Sprintf("give the node egress to %s: add a route or a NAT gateway, and allow it in the "+
+		"security group. If the node goes through a proxy, set ClusterConfiguration.proxy.", address)
 }
 
 func nodeRegistryProbe(ctx context.Context, nodeInterface nodeCommandRunner, insecure bool) (registryProbe, error) {
@@ -230,4 +229,12 @@ func RegistryFromMaster(meta *config.MetaConfig, sshProviderInitializer *provide
 		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
+}
+
+// registryMode is the mode the registry is configured in; see registrySection.
+func (c RegistryFromMasterCheck) registryMode() string {
+	if c.MetaConfig == nil {
+		return ""
+	}
+	return string(c.MetaConfig.Registry.Settings.Mode)
 }

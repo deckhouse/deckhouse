@@ -84,7 +84,7 @@ func TestNodeOSSupported(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Contains(t, detail, "runs kernel")
+			assert.Contains(t, detail, "has kernel")
 		})
 	}
 }
@@ -121,7 +121,7 @@ func TestNodeXFSFtype(t *testing.T) {
 		detail, err := check.Run(t.Context())
 
 		require.NoError(t, err)
-		assert.Contains(t, detail, "the 2 XFS filesystems on")
+		assert.Contains(t, detail, "all XFS filesystems on")
 	})
 
 	t.Run("one was formatted without it", func(t *testing.T) {
@@ -154,7 +154,7 @@ func TestNodeResolveHostname(t *testing.T) {
 		detail, err := check.Run(t.Context())
 
 		require.NoError(t, err)
-		assert.Contains(t, detail, `resolves its own name "master-0" to 10.0.0.5`)
+		assert.Contains(t, detail, `resolves its own hostname "master-0" to 10.0.0.5`)
 	})
 
 	t.Run("it does not", func(t *testing.T) {
@@ -166,7 +166,7 @@ func TestNodeResolveHostname(t *testing.T) {
 
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
-		assert.Contains(t, failure.Observed, `cannot resolve its own name "master-0"`)
+		assert.Contains(t, failure.Observed, `cannot resolve its own hostname "master-0"`)
 		assert.Contains(t, failure.Fix, "/etc/hosts")
 	})
 
@@ -175,6 +175,6 @@ func TestNodeResolveHostname(t *testing.T) {
 		_, err := check.Run(t.Context())
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "it printed nothing")
+		assert.Contains(t, err.Error(), "`hostname` printed nothing")
 	})
 }

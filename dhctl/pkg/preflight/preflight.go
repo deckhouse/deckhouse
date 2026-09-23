@@ -154,7 +154,7 @@ func (p *Preflight) runChecks(ctx context.Context, checks []Check, title string)
 
 	if line, ok := p.allSkippedByFlag(checks); ok {
 		log.InfoContext(ctx, line, dhlog.ShowInCompacted())
-		log.WarnContext(ctx, "Preflight checks skipped by --preflight-skip-all-checks; the run may fail later for a reason the checks would have named")
+		log.WarnContext(ctx, "Preflight checks skipped by --preflight-skip-all-checks. The run may fail later for a reason the checks would have named.")
 		return nil
 	}
 
@@ -205,7 +205,12 @@ func (p *Preflight) runChecks(ctx context.Context, checks []Check, title string)
 
 // evaluate decides one check's outcome without running anything it does not have to.
 func (p *Preflight) evaluate(ctx context.Context, check Check, broken map[CheckName]struct{}) Result {
-	result := Result{Name: check.Name, Description: check.Description, CannotBeSkipped: check.CannotBeSkipped}
+	result := Result{
+		Name:                  check.Name,
+		Description:           check.Description,
+		CannotBeSkipped:       check.CannotBeSkipped,
+		CannotBeSkippedReason: check.CannotBeSkippedReason,
+	}
 
 	if check.Disabled {
 		// A check dhctl turned off for a reason it can state did not apply here; a check the
@@ -449,7 +454,7 @@ func (p *Preflight) store(ctx context.Context, check Check) {
 	value := []byte(time.Now().Format(time.RFC3339))
 	if err := p.cache.Save(ctx, p.cacheKey(check.Name), value); err != nil {
 		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-			"cannot remember that %s passed (state cache write failed: %v); the check will run again next time",
+			"Cannot remember that %s passed: %v. The check will run again next time.",
 			check.Name, err,
 		))
 	}

@@ -99,7 +99,7 @@ func TestCheckPythonAndItsModules(t *testing.T) {
 					mni.On("Command", "command", []string{"-v", binary}).Return(cmd)
 				}
 			},
-			expectedError: "none of them is on PATH",
+			expectedError: "the node has none of them on PATH",
 		},
 		{
 			// Every module set is probed, not just the first: they are installed together, and
@@ -201,7 +201,7 @@ func TestDetectPythonBinary(t *testing.T) {
 					mni.On("Command", "command", []string{"-v", binary}).Return(cmd)
 				}
 			},
-			expectedError: "Python was not found under any of the expected names",
+			expectedError: "on PATH",
 		},
 	}
 

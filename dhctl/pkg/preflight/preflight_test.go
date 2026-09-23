@@ -154,7 +154,7 @@ func TestDependentCheckIsBlockedNotRun(t *testing.T) {
 	if got := r.count("python-modules"); got != 1 {
 		t.Errorf("python-modules ran %d times, want 1: it does not depend on sudo", got)
 	}
-	if !strings.Contains(buf.String(), "sudo-allowed not run: sudo-installed did not pass") {
+	if !strings.Contains(buf.String(), "sudo-allowed blocked: sudo-installed did not pass") {
 		t.Errorf("the blocked record must name what blocked it, got:\n%s", buf)
 	}
 	if strings.Contains(err.Error(), "sudo-allowed") {
@@ -197,7 +197,7 @@ func TestCriticalPathFailureStopsThePhase(t *testing.T) {
 	}
 	// The tally rides in the report, not on a line of its own: the process box already prints
 	// the phase as failed, and a second line naming the same phase said it twice.
-	if !strings.Contains(err.Error(), "3 not run (the phase stopped here)") {
+	if !strings.Contains(err.Error(), "3 not run after the phase stopped") {
 		t.Errorf("the report must account for the checks that were not reached, got:\n%s", err)
 	}
 	if !strings.Contains(err.Error(), "1 preflight check failed") {
@@ -679,7 +679,7 @@ func TestUnskippableCheckIsNotSkipped(t *testing.T) {
 	if got := r.count("ordinary-check"); got != 0 {
 		t.Errorf("an ordinary check must still be skipped, ran %d times", got)
 	}
-	if !strings.Contains(err.Error(), "skip: this check cannot be skipped") {
+	if !strings.Contains(err.Error(), "skip: cannot be skipped") {
 		t.Errorf("the report must say there is no flag for it, got:\n%s", err)
 	}
 	if !strings.Contains(buf.String(), "– ordinary-check skipped") {

@@ -53,8 +53,8 @@ var legacyPreflightSkipAliases = map[string]string{
 // The list is kept in step with the CannotBeSkipped fields of the checks themselves by
 // TestUnskippableChecksMatchTheSuites in pkg/preflight/suites.
 var unskippablePreflightChecks = map[string]string{
-	"immutable-supported-provider": "an immutable master is only implemented for some platforms; skipping the check does not implement it for the others",
-	"immutable-registry-mode":      "an immutable master pulls from the registry directly, and there is no code path for the other registry modes",
+	"immutable-supported-provider": "an immutable master is only implemented for some platforms. Remove it from --preflight-skip-check.",
+	"immutable-registry-mode":      "an immutable master pulls from the registry directly, and the other registry modes are not implemented. Remove it from --preflight-skip-check.",
 }
 
 // retiredPreflightChecks are names that no longer name a check, mapped to what became of them.
@@ -63,9 +63,9 @@ var unskippablePreflightChecks = map[string]string{
 // must not start failing at argument parsing because the check moved. The flag is accepted, has no
 // effect, and says so once.
 var retiredPreflightChecks = map[string]string{
-	"cidr-intersection":        "the cluster CIDRs are now compared while the configuration is loaded, which no flag skips",
-	"static-cidr-intersection": "the cluster CIDRs are now compared with internalNetworkCIDRs while the configuration is loaded, which no flag skips",
-	"public-domain-template":   "publicDomainTemplate is now compared with clusterDomain while the configuration is loaded, which no flag skips",
+	"cidr-intersection":        "The cluster CIDRs are now compared while the configuration is loaded. Remove the flag.",
+	"static-cidr-intersection": "The cluster CIDRs are now compared with internalNetworkCIDRs while the configuration is loaded. Remove the flag.",
+	"public-domain-template":   "publicDomainTemplate is now compared with clusterDomain while the configuration is loaded. Remove the flag.",
 }
 
 // splitPreflightChecks keeps a skip flag meaning what it meant before the check behind it was
@@ -183,9 +183,9 @@ func (o *PreflightOptions) Validate() error {
 
 func unknownCheckError(name string, known []string) error {
 	if suggestion, ok := closestName(name, known); ok {
-		return fmt.Errorf("unknown preflight check name %q; did you mean %q? Run `dhctl bootstrap --help` for all names", name, suggestion)
+		return fmt.Errorf("unknown preflight check name %q. Did you mean %q? Run `dhctl preflight list` for all names.", name, suggestion)
 	}
-	return fmt.Errorf("unknown preflight check name %q; run `dhctl bootstrap --help` for all names", name)
+	return fmt.Errorf("unknown preflight check name %q. Run `dhctl preflight list` for all names.", name)
 }
 
 // closestName picks the known name nearest to what was typed. The common mistake is a fragment

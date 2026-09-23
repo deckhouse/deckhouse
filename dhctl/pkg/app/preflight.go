@@ -34,11 +34,8 @@ func DefinePreflight(cmd *kingpin.CmdClause, o *options.PreflightOptions) {
 	// The names, and where to find out what they mean. Grouping them by phase here would be
 	// better still, but the phase lives on the check and pkg/app cannot reach the suites without
 	// an import cycle — `dhctl preflight list` prints that table, from the suites themselves.
-	desc := fmt.Sprintf(
-		"Disable specific preflight checks by name (repeatable, or comma-separated). "+
-			"Run `dhctl preflight list` for what each one applies to and asserts. Known checks: %s",
-		strings.Join(options.GeneratedChecks(), ", "),
-	)
+	desc := "Disable specific preflight checks by name (repeatable, or comma-separated). " +
+		"Run `dhctl preflight list` for the names and what each one asserts."
 	cmd.Flag("preflight-skip-check", desc).
 		Envar(configEnvName("PREFLIGHT_SKIP_CHECKS")).
 		PlaceHolder("name").
@@ -59,7 +56,7 @@ func DefinePreflight(cmd *kingpin.CmdClause, o *options.PreflightOptions) {
 		for _, retired := range o.Retired {
 			// Not an error: the flag is still accepted so an existing pipeline keeps working.
 			// It is said once, so the operator learns the check moved.
-			fmt.Fprintf(os.Stderr, "WARNING --preflight-skip-check=%s no longer skips anything: %s\n",
+			fmt.Fprintf(os.Stderr, "WARNING --preflight-skip-check=%s no longer skips anything. %s\n",
 				strings.SplitN(retired, ":", 2)[0], strings.TrimSpace(strings.SplitN(retired, ":", 2)[1]))
 		}
 		return nil

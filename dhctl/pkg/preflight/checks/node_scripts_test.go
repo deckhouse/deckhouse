@@ -148,7 +148,7 @@ func TestPortsOverTheDefaultBackend(t *testing.T) {
 		{
 			name:    "the script could not be run",
 			node:    newFakeNode().onScript("check_ports.sh").fails(errors.New("ssh: connection lost")),
-			wantErr: "cannot check that the required ports are free on",
+			wantErr: "cannot check the required ports on",
 		},
 	}
 
@@ -197,7 +197,7 @@ func TestPythonModulesOverTheDefaultBackend(t *testing.T) {
 
 		_, err := check.Run(t.Context())
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "none of them is on PATH")
+		assert.Contains(t, err.Error(), "the node has none of them on PATH")
 	})
 
 	t.Run("a module is missing", func(t *testing.T) {
@@ -234,6 +234,6 @@ func TestPythonModulesOverTheDefaultBackend(t *testing.T) {
 
 		_, err := check.Run(t.Context())
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot check the python modules on")
+		assert.Contains(t, err.Error(), "cannot check the Python modules on")
 	})
 }

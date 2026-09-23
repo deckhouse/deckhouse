@@ -57,12 +57,12 @@ func TestNodeCRIRequirementsRun(t *testing.T) {
 		{
 			name:    "a kernel below the floor",
 			node:    supportedNode().on("uname -r").prints("4.18.0-513.el8.x86_64"),
-			wantErr: "kernel 4.18.0-513.el8.x86_64, at least 5.8 is required",
+			wantErr: "kernel 4.18.0-513.el8.x86_64 is older than 5.8",
 		},
 		{
 			name:    "systemd below the floor",
 			node:    supportedNode().on("systemctl --version").prints("systemd 219 (219)"),
-			wantErr: "systemd 219, at least 244 is required",
+			wantErr: "systemd 219 is older than 244",
 		},
 		{
 			name:    "the node still boots on cgroup v1",

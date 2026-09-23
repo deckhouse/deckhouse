@@ -109,7 +109,12 @@ func difference(a, b []string) []string {
 // descriptionStyle is the shape a Description has to have to read under both a ✓ and a ✗: it is
 // an assertion about the cluster, not an imperative and not a sentence. Lower-case first letter
 // (the record line puts it after the check name), no trailing period.
-var descriptionStyle = regexp.MustCompile(`^[a-z].*[^.]$`)
+//
+// The one exception is a first word that is a name rather than a word: an acronym (SSH) or a
+// resource kind (StaticInstances). Lower-casing those spells them wrong, which is a worse
+// misfeature than the capital. The pattern asks for a second upper-case letter, so a plain
+// capitalised word ("Skip the…") is still refused.
+var descriptionStyle = regexp.MustCompile(`^([a-z]|[A-Z][a-z]*[A-Z]).*[^.]$`)
 
 // TestDescriptionsAreAssertions guards the wording the whole report is built on. The suite used
 // to mix imperatives ("validate cluster prefix…", "resolve the localhost domain") with

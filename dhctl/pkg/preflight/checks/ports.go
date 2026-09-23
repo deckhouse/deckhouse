@@ -33,7 +33,7 @@ type PortsCheck struct {
 const PortsCheckName preflight.CheckName = "ports-availability"
 
 func (PortsCheck) Description() string {
-	return "required ports are open on the node"
+	return "the node can listen on the ports Deckhouse needs"
 }
 
 func (PortsCheck) Phase() preflight.Phase {
@@ -61,7 +61,7 @@ func checkAvailabilityPorts(ctx context.Context, nodeInterface libcon.Interface,
 	scriptCmd := nodeInterface.UploadScript(file)
 	out, err := scriptCmd.Execute(ctx)
 	if err != nil {
-		return scriptFailure("check that the required ports are free", nodeInterface, out, err)
+		return scriptFailure("check the required ports", nodeInterface, out, err)
 	}
 
 	return nil

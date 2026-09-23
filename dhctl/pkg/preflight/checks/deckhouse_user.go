@@ -86,10 +86,10 @@ func deckhouseUserFailure(nodeInterface libcon.Interface, out []byte, err error)
 	return preflight.Permanent(&preflight.Failure{
 		Checked:  fmt.Sprintf("the deckhouse user and group on %s", hostPhrase(nodeInterface)),
 		Observed: observed,
-		Expected: "no deckhouse user or group at all, or the pair Deckhouse creates itself: uid and gid 64535, without sudo",
-		Fix: "if this node was part of a Deckhouse cluster before, run the cleanup it left on the node:\n" +
+		Expected: "no deckhouse user or group, or the pair Deckhouse creates itself (uid and gid 64535, no sudo)",
+		Fix: "if this node ran Deckhouse before, run:\n" +
 			"    sudo bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing\n" +
-			"otherwise the account belongs to something else and has to go by hand:\n" +
+			"otherwise remove the account by hand:\n" +
 			"    sudo userdel deckhouse && sudo groupdel deckhouse",
 		Err: err,
 	})

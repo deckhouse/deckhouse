@@ -41,7 +41,7 @@ type TimeDriftCheck struct {
 const TimeDriftCheckName preflight.CheckName = "time-drift"
 
 func (TimeDriftCheck) Description() string {
-	return "server time drift has an acceptable value"
+	return "the node clock matches the clock on this host"
 }
 
 func (TimeDriftCheck) Phase() preflight.Phase {
@@ -78,7 +78,7 @@ func (c TimeDriftCheck) Run(ctx context.Context) (string, error) {
 			Checked:  fmt.Sprintf("the clock on %s against this host", hostPhrase(nodeInterface)),
 			Observed: fmt.Sprintf("%s on the node, %s here: %s apart", time.Unix(remote, 0).Format(time.RFC3339), time.Unix(local, 0).Format(time.RFC3339), time.Duration(diff)*time.Second),
 			Expected: fmt.Sprintf("the two clocks within %s of each other", time.Duration(maxTimeDriftSeconds)*time.Second),
-			Fix:      "sync the clocks (enable NTP or chrony on the node); certificates issued during bootstrap are dated by these clocks",
+			Fix:      "enable NTP or chrony on the node and sync its clock",
 		})
 	}
 
@@ -89,16 +89,16 @@ func getRemoteTimeStamp(ctx context.Context, nodeInterface libcon.Interface) (in
 	cmd := nodeInterface.Command("date", "+%s")
 	dateOutput, _, err := cmd.Output(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to execute date command: %w", err)
+		return 0, fmt.Errorf("execute the date command on the node: %w", err)
 	}
 	out := strings.TrimSpace(string(dateOutput))
 	match := timestampRegexp.FindStringSubmatch(out)
 	if match == nil {
-		return 0, errors.New("invalid timestamp format received")
+		return 0, errors.New("the node printed something other than a Unix timestamp")
 	}
 	timeStamp, err := strconv.ParseInt(match[1], 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse timestamp: %w", err)
+		return 0, fmt.Errorf("parse the timestamp the node printed: %w", err)
 	}
 	return timeStamp, nil
 }

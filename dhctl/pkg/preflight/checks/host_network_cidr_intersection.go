@@ -71,7 +71,7 @@ type ipRouteEntry struct {
 }
 
 func (HostNetworkCIDRIntersectionCheck) Description() string {
-	return "cluster CIDRs do not intersect with host networks"
+	return "the cluster CIDRs do not overlap the networks the node uses"
 }
 
 func (HostNetworkCIDRIntersectionCheck) Phase() preflight.Phase {
@@ -84,10 +84,10 @@ func (HostNetworkCIDRIntersectionCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c HostNetworkCIDRIntersectionCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", fmt.Errorf("metaConfig is required")
+		return "", fmt.Errorf("the cluster configuration was not passed to this check")
 	}
 	if c.NodeInterface == nil {
-		return "", fmt.Errorf("node interface is required")
+		return "", fmt.Errorf("the connection to the node was not passed to this check")
 	}
 
 	nodeInterface, err := c.NodeInterface(ctx)
@@ -114,9 +114,8 @@ func (c HostNetworkCIDRIntersectionCheck) Run(ctx context.Context) (string, erro
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("ClusterConfiguration.%s against the networks of %s", conflict.field, hostPhrase(nodeInterface)),
 			Observed: conflict.observed,
-			Expected: "cluster CIDRs that no network or address of the node falls inside",
-			Fix: fmt.Sprintf("change ClusterConfiguration.%s to a range the node does not use; "+
-				"it cannot be changed after the cluster is created", conflict.field),
+			Expected: "cluster CIDRs that do not overlap any network or address of the node",
+			Fix:      fmt.Sprintf("change ClusterConfiguration.%s to a range the node does not use", conflict.field),
 		})
 	}
 
@@ -221,14 +220,14 @@ func hostCommandOutput(
 	stderrMessage := strings.TrimSpace(string(stderr))
 	if stderrMessage == "" {
 		return nil, fmt.Errorf(
-			"execute host command %s: %w",
+			"run %s on the node: %w",
 			name,
 			err,
 		)
 	}
 
 	return nil, fmt.Errorf(
-		"execute host command %s: %w: %s",
+		"run %s on the node: %w: %s",
 		name,
 		err,
 		stderrMessage,
@@ -256,9 +255,13 @@ func findClusterCIDRConflict(
 		if err != nil {
 			return nil, preflight.Permanent(&preflight.Failure{
 				Checked:  fmt.Sprintf("ClusterConfiguration.%s", clusterNetwork.name),
-				Observed: fmt.Sprintf("%q is not a CIDR: %s", clusterNetwork.cidr, err),
-				Expected: "an IPv4 range in CIDR notation",
-				Fix:      fmt.Sprintf("write %s as an address and a prefix, for example 10.111.0.0/16", clusterNetwork.name),
+				Observed: fmt.Sprintf("%s is %q, which is not a CIDR: %s", clusterNetwork.name, clusterNetwork.cidr, err),
+				// Both families: netip.ParsePrefix takes either, and the comparison below works on
+				// whatever it returns. Saying IPv4 here promised a restriction the check does not
+				// have, and an operator with an IPv6 range would read it as a refusal.
+				Expected: "an IPv4 or IPv6 range in CIDR notation",
+				Fix: fmt.Sprintf("write %s as an address and a prefix, for example 10.111.0.0/16 or fd00::/48",
+					clusterNetwork.name),
 			})
 		}
 		clusterPrefix = clusterPrefix.Masked()
@@ -266,7 +269,7 @@ func findClusterCIDRConflict(
 		for _, detected := range host.Networks {
 			detectedPrefix, err := netip.ParsePrefix(detected.CIDR)
 			if err != nil {
-				return nil, fmt.Errorf("invalid CIDR %q discovered from %s: %w", detected.CIDR, detected.Source, err)
+				return nil, fmt.Errorf("parse CIDR %q reported by %s: %w", detected.CIDR, detected.Source, err)
 			}
 
 			if clusterPrefix.Overlaps(detectedPrefix.Masked()) {
@@ -280,7 +283,7 @@ func findClusterCIDRConflict(
 		for _, detected := range host.Addresses {
 			detectedAddress, err := netip.ParseAddr(detected.Address)
 			if err != nil {
-				return nil, fmt.Errorf("invalid IP address %q discovered from %s: %w", detected.Address, detected.Source, err)
+				return nil, fmt.Errorf("parse IP address %q reported by %s: %w", detected.Address, detected.Source, err)
 			}
 
 			if clusterPrefix.Contains(detectedAddress) {
@@ -305,7 +308,7 @@ func findClusterCIDRConflict(
 func parseIPAddresses(output []byte) (hostNetworkState, error) {
 	var entries []ipAddressEntry
 	if err := json.Unmarshal(output, &entries); err != nil {
-		return hostNetworkState{}, fmt.Errorf("parse ip address output: %w", err)
+		return hostNetworkState{}, fmt.Errorf("parse the output of `ip -j address show`: %w", err)
 	}
 
 	var state hostNetworkState
@@ -361,7 +364,7 @@ func parseIPRoutes(output []byte) (hostNetworkState, error) {
 	var routes []ipRouteEntry
 	if err := json.Unmarshal(output, &routes); err != nil {
 		return hostNetworkState{}, fmt.Errorf(
-			"parse ip route output: %w",
+			"parse the output of `ip -j route show table all`: %w",
 			err,
 		)
 	}
@@ -483,7 +486,7 @@ func parseResolvConf(output []byte) ([]detectedAddress, error) {
 		address, err := netip.ParseAddr(fields[1])
 		if err != nil {
 			return nil, fmt.Errorf(
-				"parse nameserver %q on line %d: %w",
+				"parse nameserver %q on line %d of /etc/resolv.conf: %w",
 				fields[1],
 				lineNumber,
 				err,
@@ -503,7 +506,7 @@ func parseResolvConf(output []byte) ([]detectedAddress, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scan resolv.conf: %w", err)
+		return nil, fmt.Errorf("read /etc/resolv.conf: %w", err)
 	}
 
 	return addresses, nil

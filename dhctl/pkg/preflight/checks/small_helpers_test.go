@@ -178,6 +178,6 @@ spec:
 		_, err := InstanceClassProviderCheck{}.Run(t.Context())
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "meta config is nil")
+		assert.Contains(t, err.Error(), "the cluster configuration was not passed to this check")
 	})
 }

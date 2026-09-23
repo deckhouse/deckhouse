@@ -49,22 +49,20 @@ func validateClusterTypeAgainstDocuments(m *MetaConfig) error {
 	switch m.ClusterType {
 	case CloudClusterType:
 		if len(m.StaticClusterConfig) > 0 {
-			return fmt.Errorf(
-				"ClusterConfiguration.clusterType is %q and the configuration also carries a "+
-					"StaticClusterConfiguration. A cloud cluster takes its node network from the provider, "+
-					"and the two documents would describe it differently. Remove the StaticClusterConfiguration, "+
-					"or set clusterType to Static",
-				CloudClusterType)
+			return configurationFailure(
+				"ClusterConfiguration.clusterType",
+				fmt.Sprintf("%q, and the configuration also carries a StaticClusterConfiguration", CloudClusterType),
+				"a cloud cluster with no StaticClusterConfiguration",
+				"remove the StaticClusterConfiguration, or set clusterType to Static")
 		}
 
 	case StaticClusterType:
 		if len(m.ProviderClusterConfig) > 0 {
-			return fmt.Errorf(
-				"ClusterConfiguration.clusterType is %q and the configuration also carries a "+
-					"<Provider>ClusterConfiguration. dhctl would write that document into the cluster, where the "+
-					"modules would configure a cloud provider for a cluster that has none. Remove the "+
-					"<Provider>ClusterConfiguration, or set clusterType to Cloud",
-				StaticClusterType)
+			return configurationFailure(
+				"ClusterConfiguration.clusterType",
+				fmt.Sprintf("%q, and the configuration also carries a <Provider>ClusterConfiguration", StaticClusterType),
+				"a static cluster with no <Provider>ClusterConfiguration",
+				"remove the <Provider>ClusterConfiguration, or set clusterType to Cloud")
 		}
 	}
 
@@ -83,8 +81,9 @@ func warnAboutMasterReplicaParity(ctx context.Context, m *MetaConfig) {
 		return
 	}
 
-	dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-		"masterNodeGroup.replicas is %d. etcd keeps quorum with a majority, so %d masters tolerate the loss of "+
-			"%d — the same as %d would, with one more machine to lose. Use an odd number",
-		replicas, replicas, replicas/2-1, replicas-1))
+	dhlog.FromContext(ctx).WarnContext(ctx, configurationFailure(
+		"masterNodeGroup.replicas",
+		fmt.Sprintf("%d, an even number", replicas),
+		"an odd number of masters. An even number adds a machine without raising how many failures etcd survives.",
+		"set masterNodeGroup.replicas to 1, 3 or 5").Error())
 }

@@ -199,7 +199,7 @@ func classifyNetworkError(err error) string {
 	var invalidCert x509.CertificateInvalidError
 	if errors.As(err, &invalidCert) {
 		if invalidCert.Reason == x509.Expired {
-			return "TLS verification failed: the certificate is expired or not yet valid (check the clock on both ends)"
+			return "TLS verification failed: the certificate is expired or not yet valid (the clock on either end may be wrong)"
 		}
 		return "TLS verification failed: " + invalidCert.Error()
 	}
@@ -261,7 +261,7 @@ func nodeInterfaceResolverFor(initializer *providerinitializer.SSHProviderInitia
 // ErrNodeConnectionGone is what every node check gets when the connection they all share has been
 // torn down. It is a cause of its own, and naming it is what keeps one broken connection from
 // being reported as two dozen unrelated findings.
-var ErrNodeConnectionGone = errors.New("the ssh connection to the node is no longer usable")
+var ErrNodeConnectionGone = errors.New("the SSH connection to the node is no longer usable")
 
 // ResolveNodeInterface hands out the connection to the node, refusing to hand out a dead one.
 //
@@ -287,7 +287,7 @@ func ResolveNodeInterface(ctx context.Context, initializer *providerinitializer.
 		failure := noConnection(EndpointOfConfig(initializer.GetConfig())(), ErrNodeConnectionGone)
 		var f *preflight.Failure
 		if errors.As(failure, &f) {
-			f.Observed = "it was working earlier in this phase, so something closed it"
+			f.Observed = "the connection was working earlier in this phase and is closed now"
 		}
 		return nil, failure
 	}
@@ -311,10 +311,10 @@ func noConnection(label string, err error) error {
 	}
 
 	failure := &preflight.Failure{
-		Checked:    fmt.Sprintf("an ssh connection to %s", label),
+		Checked:    fmt.Sprintf("an SSH connection to %s", label),
 		Observed:   classifyNetworkError(err),
-		Expected:   "the node to accept an SSH connection",
-		Fix:        "let ssh-credential run — it is the check that diagnoses this, and nothing on the node can be asked until it passes",
+		Expected:   "an SSH connection the node accepts",
+		Fix:        "run the checks without --preflight-skip-check=ssh-credential",
 		Err:        err,
 		StopsPhase: true,
 	}
@@ -362,14 +362,14 @@ func proxyRefusal(status int, proxyURL, target *url.URL) error {
 		return preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("proxy %s", proxyURL.Redacted()),
 			Observed: "HTTP 407: the proxy rejected the request without credentials",
-			Expected: "the proxy to accept the credentials in ClusterConfiguration.proxy",
+			Expected: "credentials in ClusterConfiguration.proxy that the proxy accepts",
 			Fix:      "put the user and password into ClusterConfiguration.proxy.httpsProxy (https://user:password@host:port)",
 		})
 	case http.StatusForbidden, http.StatusUnauthorized:
 		return preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("%s via proxy %s", target, proxyURL.Redacted()),
 			Observed: fmt.Sprintf("HTTP %d: the proxy refused to forward the request", status),
-			Expected: "the proxy to allow requests to this address",
+			Expected: "a proxy that forwards requests to this address",
 			Fix:      fmt.Sprintf("allow %s on the proxy, or add it to ClusterConfiguration.proxy.noProxy", target.Hostname()),
 		})
 	case 0:
@@ -378,7 +378,7 @@ func proxyRefusal(status int, proxyURL, target *url.URL) error {
 		return &preflight.Failure{
 			Checked:  fmt.Sprintf("%s via proxy %s", target, proxyURL.Redacted()),
 			Observed: fmt.Sprintf("HTTP %d from the proxy: the connection was not established", status),
-			Expected: "the proxy to connect to the address",
+			Expected: "a proxy connection to the address",
 			Fix: fmt.Sprintf("check that the proxy reaches %s, or add %s to ClusterConfiguration.proxy.noProxy",
 				target.Host, target.Hostname()),
 		}

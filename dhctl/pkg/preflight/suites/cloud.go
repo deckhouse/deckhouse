@@ -30,7 +30,7 @@ type CloudDeps struct {
 func NewCloudSuite(deps CloudDeps) preflight.Suite {
 	return preflight.NewSuite(
 		checks.CloudDiskNameLength(deps.MetaConfig),
-		checks.CloudSystemRequirements(deps.InstallConfig),
+		checks.CloudSystemRequirements(deps.InstallConfig, deps.MetaConfig),
 		checks.InstanceClassProvider(deps.MetaConfig),
 		// Both read the configuration and answer in microseconds, and both catch a mistake that
 		// otherwise costs the whole of base infrastructure to discover.

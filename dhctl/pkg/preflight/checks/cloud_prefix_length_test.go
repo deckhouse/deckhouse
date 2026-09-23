@@ -37,7 +37,7 @@ func TestCloudDiskNameLength(t *testing.T) {
 			name:        "nil MetaConfig returns error",
 			metaConfig:  nil,
 			expectError: true,
-			errContains: "meta config is nil",
+			errContains: "no configuration was loaded from --config",
 		},
 		{
 			name: "AWS: prefix at max length passes",

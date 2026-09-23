@@ -35,7 +35,7 @@ type NodeXFSFtypeCheck struct {
 const NodeXFSFtypeCheckName preflight.CheckName = "node-xfs-ftype"
 
 func (NodeXFSFtypeCheck) Description() string {
-	return "no XFS filesystem on the node is formatted without d_type"
+	return "every XFS filesystem on the node is formatted with ftype=1"
 }
 
 func (NodeXFSFtypeCheck) Phase() preflight.Phase {
@@ -62,7 +62,7 @@ func (c NodeXFSFtypeCheck) Run(ctx context.Context) (string, error) {
 	// xfs_info is in xfsprogs, which a node with XFS mounted normally has; without it the
 	// question cannot be asked from here.
 	if nodeInterface.Command("command", "-v", "xfs_info").Run(ctx) != nil {
-		return "", preflight.NotApplicable("xfs_info is not installed on %s, so d_type cannot be read", host)
+		return "", preflight.NotApplicable("xfs_info is not installed on %s, so ftype cannot be read", host)
 	}
 
 	var withoutFtype []string
@@ -77,13 +77,12 @@ func (c NodeXFSFtypeCheck) Run(ctx context.Context) (string, error) {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the XFS filesystems mounted on %s", host),
 			Observed: fmt.Sprintf("%s formatted with ftype=0", strings.Join(withoutFtype, ", ")),
-			Expected: "ftype=1, which the overlayfs snapshotter containerd uses requires",
-			Fix: "recreate the filesystem with `mkfs.xfs -n ftype=1` and restore its contents; the option " +
-				"cannot be turned on in place, and the default has been ftype=1 since XFS v5",
+			Expected: "an XFS filesystem formatted with ftype=1",
+			Fix:      "recreate the filesystem with `mkfs.xfs -n ftype=1` and restore its contents from a backup",
 		})
 	}
 
-	return fmt.Sprintf("the %d XFS filesystems on %s have d_type", len(devices), host), nil
+	return fmt.Sprintf("all XFS filesystems on %s are formatted with ftype=1 (%d checked)", host, len(devices)), nil
 }
 
 // xfsDevices reads the device names out of `mount -l -t xfs`, whose first column they are.
@@ -145,8 +144,8 @@ func (c NodeResolveHostnameCheck) Run(ctx context.Context) (string, error) {
 	if hostname == "" {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("`hostname` on %s", host),
-			Observed: "it printed nothing",
-			Expected: "a host name",
+			Observed: "`hostname` printed nothing",
+			Expected: "a hostname set on the node",
 			Fix:      "set a hostname on the node (hostnamectl set-hostname <name>)",
 		})
 	}
@@ -155,15 +154,14 @@ func (c NodeResolveHostnameCheck) Run(ctx context.Context) (string, error) {
 	if strings.TrimSpace(resolved) == "" {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("`getent hosts %s` on %s", hostname, host),
-			Observed: fmt.Sprintf("the node cannot resolve its own name %q", hostname),
-			Expected: "the name to resolve to an address of the node",
-			Fix: fmt.Sprintf("add %q to /etc/hosts on the node, or make it resolvable by DNS; "+
-				"kubelet and kubeadm both look it up", hostname),
+			Observed: fmt.Sprintf("the node cannot resolve its own hostname %q", hostname),
+			Expected: "a hostname that resolves to an address of the node",
+			Fix:      fmt.Sprintf("add %q to /etc/hosts on the node, or make it resolvable by DNS", hostname),
 		})
 	}
 
 	address := strings.Fields(resolved)
-	return fmt.Sprintf("%s resolves its own name %q to %s", host, hostname, address[0]), nil
+	return fmt.Sprintf("%s resolves its own hostname %q to %s", host, hostname, address[0]), nil
 }
 
 func NodeResolveHostname(nodeInterface NodeInterfaceFunc) preflight.Check {

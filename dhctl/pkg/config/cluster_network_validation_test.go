@@ -49,7 +49,7 @@ func TestValidateClusterNetworking(t *testing.T) {
 		{
 			name:    "the pod subnet contains the service subnet",
 			cluster: map[string]string{"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.111.128.0/17"},
-			wantErr: "podSubnetCIDR 10.111.0.0/16 overlaps ClusterConfiguration.serviceSubnetCIDR 10.111.128.0/17",
+			wantErr: "10.111.0.0/16 overlaps 10.111.128.0/17",
 		},
 		{
 			name:    "the service subnet contains the pod subnet",
@@ -59,14 +59,14 @@ func TestValidateClusterNetworking(t *testing.T) {
 		{
 			name:    "an address without a prefix length",
 			cluster: map[string]string{"podSubnetCIDR": "10.111.0.0", "serviceSubnetCIDR": "10.222.0.0/16"},
-			wantErr: `ClusterConfiguration.podSubnetCIDR "10.111.0.0" is not an IPv4 CIDR`,
+			wantErr: `expected: an IPv4 CIDR`,
 		},
 		{
 			// getDNSAddress takes the eleventh address of the service subnet and returns "" when
 			// the subnet has no eleventh address — silently, leaving the cluster with no DNS.
 			name:    "a service subnet too small for the cluster DNS address",
 			cluster: map[string]string{"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/29"},
-			wantErr: "is too small: the cluster DNS address is the eleventh address",
+			wantErr: "narrower than /28",
 		},
 		{
 			name:    "a service subnet exactly wide enough",
@@ -78,7 +78,7 @@ func TestValidateClusterNetworking(t *testing.T) {
 				"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16",
 				"podSubnetNodeCIDRPrefix": "16",
 			},
-			wantErr: `podSubnetNodeCIDRPrefix "16" must be larger than the prefix of podSubnetCIDR`,
+			wantErr: `a value between 17 and 28`,
 		},
 		{
 			name: "a per-node prefix that leaves a node no addresses",
@@ -86,7 +86,7 @@ func TestValidateClusterNetworking(t *testing.T) {
 				"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16",
 				"podSubnetNodeCIDRPrefix": "30",
 			},
-			wantErr: "leaves a node too few addresses",
+			wantErr: "expected: 28 or lower",
 		},
 		{
 			name: "a per-node prefix that is not a number",
@@ -94,7 +94,7 @@ func TestValidateClusterNetworking(t *testing.T) {
 				"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16",
 				"podSubnetNodeCIDRPrefix": "twenty-four",
 			},
-			wantErr: "is not a number",
+			wantErr: "a prefix length written as a number",
 		},
 		{
 			name: "the default per-node prefix",
@@ -135,7 +135,7 @@ func TestValidateClusterNetworkingAgainstInternalNetworks(t *testing.T) {
 
 	err := validateClusterNetworking(t.Context(), metaConfig)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "podSubnetCIDR 10.111.0.0/16 overlaps StaticClusterConfiguration.internalNetworkCIDRs entry 10.111.32.0/24")
+	assert.Contains(t, err.Error(), "10.111.0.0/16 overlaps entry 10.111.32.0/24")
 }
 
 // TestValidatePublicDomainTemplate: the comparison that used to be strings.Contains, which
@@ -174,7 +174,7 @@ func TestValidatePublicDomainTemplate(t *testing.T) {
 				return
 			}
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "is inside clusterDomain")
+			assert.Contains(t, err.Error(), "is inside")
 		})
 	}
 }
@@ -214,7 +214,7 @@ func TestValidateClusterNetworkingReadsTheModuleConfig(t *testing.T) {
 			"podSubnetNodeCIDRPrefix": "16",
 		}))
 
-		require.ErrorContains(t, err, "must be larger than the prefix of podSubnetCIDR")
+		require.ErrorContains(t, err, "a value between 17 and 28")
 	})
 
 	t.Run("disjoint subnets pass", func(t *testing.T) {

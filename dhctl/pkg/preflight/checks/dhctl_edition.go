@@ -76,7 +76,7 @@ func (c DhctlEditionCheck) Run(_ context.Context) (string, error) {
 
 	ref, imageConfig, ok := c.Image.Get()
 	if !ok {
-		return "", preflight.NotApplicable("the Deckhouse image was not read")
+		return "", preflight.NotApplicable("deckhouse-image-available did not read the image, so there is nothing to compare")
 	}
 
 	// This check is about a release: an installer built for version X must not install the image
@@ -95,8 +95,8 @@ func (c DhctlEditionCheck) Run(_ context.Context) (string, error) {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the %s label of %s", editionLabel, ref),
 			Observed: "the image carries no edition label",
-			Expected: "a Deckhouse release image, which is always labelled with its edition",
-			Fix:      fmt.Sprintf("check %s and the version tag; a development build has no label and needs InitConfiguration.deckhouse.devBranch", registryImagesRepoField),
+			Expected: "a release image with the io.deckhouse.edition label",
+			Fix:      fmt.Sprintf("check %s and the version tag. For a development build, set InitConfiguration.deckhouse.devBranch", registryImagesRepoField(c.Image.RegistryMode())),
 		})
 	}
 

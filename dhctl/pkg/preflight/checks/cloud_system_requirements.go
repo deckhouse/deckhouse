@@ -28,6 +28,9 @@ import (
 
 type CloudSystemRequirementsCheck struct {
 	InstallConfig *config.DeckhouseInstaller
+	// MetaConfig is here only to name the document in the messages: the sizing itself is read
+	// out of InstallConfig.ProviderClusterConfig.
+	MetaConfig *config.MetaConfig
 }
 
 const CloudSystemRequirementsCheckName preflight.CheckName = "cloud-master-system-requirements"
@@ -49,7 +52,7 @@ func (c CloudSystemRequirementsCheck) Run(_ context.Context) (string, error) {
 	// input file) the master sizing lives in NodeGroup + InstanceClass resources
 	// resolved by the provider validator, not in PCC.
 	if c.InstallConfig == nil || len(c.InstallConfig.ProviderClusterConfig) == 0 {
-		return "", preflight.NotApplicable("there is no <Provider>ClusterConfiguration to read the master sizing from")
+		return "", preflight.NotApplicable("the input file has no %s to read the master sizing from", c.providerDocument())
 	}
 
 	requirements := systemRequirementsForConfig(c.InstallConfig)
@@ -57,14 +60,14 @@ func (c CloudSystemRequirementsCheck) Run(_ context.Context) (string, error) {
 	configObject := make(map[string]any)
 	configKind, err := unmarshalProviderClusterConfiguration(c.InstallConfig.ProviderClusterConfig, configObject)
 	if err != nil {
-		return "", fmt.Errorf("unmarshal provider cluster configuration: %w", err)
+		return "", fmt.Errorf("read the provider cluster configuration: %w", err)
 	}
 
 	paths, known := masterSizingPaths[configKind]
 	if !known {
 		// External providers ship their own validator binary that checks master sizing from
 		// NodeGroup/InstanceClass.
-		return "", preflight.NotApplicable("%s is checked by the provider's own validator", configKind)
+		return "", preflight.NotApplicable("master sizing in %s is checked by the provider's own validator", configKind)
 	}
 
 	// Every violation, not the first: the three values are independent, and reporting them one
@@ -93,7 +96,7 @@ func (c CloudSystemRequirementsCheck) Run(_ context.Context) (string, error) {
 	case memory == nil && len(paths.memory) > 0:
 		return "", c.missing(configKind, paths.memory)
 	case memory != nil && *memory < requirements.memoryMB:
-		violations = append(violations, fmt.Sprintf("%s: %d MB configured, at least %d MB required (%d GB minus %d MB tolerance)",
+		violations = append(violations, fmt.Sprintf("%s: %d MB configured, at least %d MB required (%d GB minus the %d MB tolerance)",
 			pathString(paths.memory), *memory, requirements.memoryMB, (requirements.memoryMB+reservedMemoryThresholdMB)/1024, reservedMemoryThresholdMB))
 	case memory != nil:
 		reported = append(reported, fmt.Sprintf("%d MB RAM", *memory))
@@ -116,16 +119,18 @@ func (c CloudSystemRequirementsCheck) Run(_ context.Context) (string, error) {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("%s.masterNodeGroup.instanceClass", configKind),
 			Observed: "- " + strings.Join(violations, "\n- "),
-			Expected: fmt.Sprintf("at least %d CPU, %d MB RAM and %d GB of root disk",
-				requirements.cpuCores, requirements.memoryMB, requirements.rootDiskSizeGB),
-			Fix: fmt.Sprintf("raise these values in %s, or set bundle: Minimal in the \"deckhouse\" ModuleConfig (%d CPU / %d MB)",
-				configKind, minimalBundleRequiredCPUCores, minimalBundleRequiredMemoryMB),
+			Expected: fmt.Sprintf("a master with at least %d CPU, %d MB RAM (%d GB minus the %d MB tolerance) and a %d GB root disk",
+				requirements.cpuCores, requirements.memoryMB,
+				(requirements.memoryMB+reservedMemoryThresholdMB)/1024, reservedMemoryThresholdMB,
+				requirements.rootDiskSizeGB),
+			Fix: fmt.Sprintf("raise these values in %s.masterNodeGroup.instanceClass, or set bundle: Minimal "+
+				"in the \"deckhouse\" ModuleConfig", configKind),
 		})
 	}
 
 	if len(paths.cores) == 0 && len(paths.memory) == 0 {
 		// The flavour providers: the CPU and RAM come from an instance type dhctl cannot size.
-		return fmt.Sprintf("master %s checked; CPU and RAM come from the instance type and are not verified",
+		return fmt.Sprintf("master instanceClass has %s. CPU and RAM come from the instance type and are not checked",
 			strings.Join(reported, ", ")), nil
 	}
 	return fmt.Sprintf("master instanceClass has %s", strings.Join(reported, ", ")), nil
@@ -168,8 +173,8 @@ var masterSizingPaths = map[string]struct{ cores, memory, rootDisk []string }{
 func (c CloudSystemRequirementsCheck) malformed(configKind string, path []string, err error) error {
 	return preflight.Permanent(&preflight.Failure{
 		Checked:  fmt.Sprintf("%s.%s", configKind, pathString(path)),
-		Observed: err.Error(),
-		Expected: "an integer",
+		Observed: fmt.Sprintf("the provider cluster configuration is malformed: %s", err),
+		Expected: "a whole number",
 		Fix:      fmt.Sprintf("write %s as a plain number, without quotes or a unit suffix", pathString(path)),
 	})
 }
@@ -177,8 +182,8 @@ func (c CloudSystemRequirementsCheck) malformed(configKind string, path []string
 func (c CloudSystemRequirementsCheck) missing(configKind string, path []string) error {
 	return preflight.Permanent(&preflight.Failure{
 		Checked:  fmt.Sprintf("%s.%s", configKind, pathString(path)),
-		Observed: "the field is not set",
-		Expected: "the size of the master node",
+		Observed: fmt.Sprintf("%s is not set", pathString(path)),
+		Expected: fmt.Sprintf("a number in %s (the size of the master node)", pathString(path)),
 		Fix:      fmt.Sprintf("set %s in the %s document", pathString(path), configKind),
 	})
 }
@@ -187,8 +192,8 @@ func pathString(path []string) string {
 	return strings.Join(path, ".")
 }
 
-func CloudSystemRequirements(installConfig *config.DeckhouseInstaller) preflight.Check {
-	check := CloudSystemRequirementsCheck{InstallConfig: installConfig}
+func CloudSystemRequirements(installConfig *config.DeckhouseInstaller, meta *config.MetaConfig) preflight.Check {
+	check := CloudSystemRequirementsCheck{InstallConfig: installConfig, MetaConfig: meta}
 	return preflight.Check{
 		Name:        CloudSystemRequirementsCheckName,
 		Description: check.Description(),
@@ -232,22 +237,31 @@ func readIntegerProperty(configObject map[string]any, propertyPath []string) (*i
 		converted := int(value)
 		return &converted, nil
 	case string:
-		return nil, fmt.Errorf("%q is a string; expected a number", value)
+		return nil, fmt.Errorf("%q is a string, not a number", value)
 	default:
-		return nil, fmt.Errorf("%v is a %T; expected a number", propertyValue, propertyValue)
+		return nil, fmt.Errorf("%v is a %T, not a number", propertyValue, propertyValue)
 	}
 }
 
 func unmarshalProviderClusterConfiguration(pccYaml []byte, configObject map[string]any) (string, error) {
 	if err := yaml.Unmarshal(pccYaml, &configObject); err != nil {
-		return "", fmt.Errorf("yaml.Unmarshal: %w", err)
+		return "", fmt.Errorf("parse YAML: %w", err)
 	}
 	configKind, found, err := unstructured.NestedString(configObject, "kind")
 	if err != nil {
-		return "", fmt.Errorf("reading .kind: %w", err)
+		return "", fmt.Errorf("read .kind: %w", err)
 	}
 	if !found {
-		return "", fmt.Errorf("reading .kind: no such field")
+		return "", fmt.Errorf("read .kind: the document has no kind field")
 	}
 	return configKind, nil
+}
+
+// providerDocument names the document the sizing would have come from, for the message that says
+// there is none. A nil MetaConfig — a check built without one — falls back to the placeholder.
+func (c CloudSystemRequirementsCheck) providerDocument() string {
+	if c.MetaConfig == nil {
+		return "<Provider>ClusterConfiguration"
+	}
+	return providerDocumentKind(c.MetaConfig.ProviderName)
 }

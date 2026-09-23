@@ -72,8 +72,8 @@ func (c SudoInstalledCheck) Run(ctx context.Context) (string, error) {
 			Checked:  fmt.Sprintf("`command -v sudo` on %s", host),
 			Observed: "sudo is not installed",
 			Expected: "sudo on PATH",
-			Fix: "install the sudo package on the node. Connecting as root does not avoid this: " +
-				"every privileged command dhctl runs is wrapped in sudo, whoever the SSH user is",
+			Fix: "install the sudo package on the node. dhctl runs privileged commands through sudo " +
+				"for every SSH user, including root.",
 			Err: err,
 		})
 	}
@@ -125,10 +125,10 @@ func checkSudo(ctx context.Context, nodeInterface libcon.Interface) error {
 			return preflight.Permanent(&preflight.Failure{
 				Checked:  fmt.Sprintf("`sudo -n true` on %s", host),
 				Observed: firstNonEmpty(strings.TrimSpace(string(cmd.StderrBytes())), "sudo refused"),
-				Expected: "passwordless sudo for the SSH user, or a sudo password",
-				Fix: "add the SSH user to sudoers on the node, " +
-					"or pass the password with --ask-become-pass / becomePass in --connection-config. " +
-					"This applies to root too: dhctl runs privileged commands through sudo regardless of the user",
+				Expected: "passwordless sudo for the SSH user, or a sudo password given to dhctl",
+				Fix: "add the SSH user to sudoers on the node, or pass the password with --ask-become-pass " +
+					"or becomePass in --connection-config. dhctl runs privileged commands through sudo " +
+					"for every SSH user, including root.",
 				Err: err,
 			})
 		}
@@ -138,7 +138,7 @@ func checkSudo(ctx context.Context, nodeInterface libcon.Interface) error {
 		return &preflight.Failure{
 			Checked:  fmt.Sprintf("`sudo -n true` on %s", host),
 			Observed: firstNonEmpty(strings.TrimSpace(string(cmd.StderrBytes())), "the command did not complete"),
-			Expected: "sudo to answer",
+			Expected: "an answer from sudo",
 			Fix:      "check that the node is reachable over SSH and that the SSH user can run commands on it",
 			Err:      err,
 		}

@@ -53,7 +53,7 @@ type StaticInstancesSSHAccessCheck struct {
 const StaticInstancesSSHAccessCheckName preflight.CheckName = "static-instances-ssh-access"
 
 func (StaticInstancesSSHAccessCheck) Description() string {
-	return "ssh access to StaticInstances is configured correctly"
+	return "SSH access to StaticInstances works"
 }
 
 func (StaticInstancesSSHAccessCheck) Phase() preflight.Phase {
@@ -99,7 +99,7 @@ func (c StaticInstancesSSHAccessCheck) Run(ctx context.Context) (string, error) 
 		if !ok {
 			return "", preflight.Permanent(&preflight.Failure{
 				Checked:  fmt.Sprintf("StaticInstance %q in the --config file", inst.Name),
-				Observed: fmt.Sprintf("it refers to SSHCredentials %q, which the file does not contain", inst.CredName),
+				Observed: fmt.Sprintf("the StaticInstance refers to SSHCredentials %q, which the --config file does not contain", inst.CredName),
 				Expected: "an SSHCredentials resource for every StaticInstance",
 				Fix:      fmt.Sprintf("add the SSHCredentials %q document, or correct spec.credentialsRef.name", inst.CredName),
 			})
@@ -114,11 +114,11 @@ func (c StaticInstancesSSHAccessCheck) Run(ctx context.Context) (string, error) 
 
 	if len(unreachable) > 0 {
 		return "", &preflight.Failure{
-			Checked:  fmt.Sprintf("ssh login to each of the %d StaticInstances, from the master node", len(instances)),
+			Checked:  fmt.Sprintf("SSH login to each of the %d StaticInstances, from the master node", len(instances)),
 			Observed: "- " + strings.Join(unreachable, "\n- "),
-			Expected: "every StaticInstance to accept the SSHCredentials it names",
-			Fix: "check spec.user and the private key of the SSHCredentials, and that the machines accept SSH " +
-				"from the master node (Deckhouse adopts them from there, not from this host)",
+			Expected: "a successful login to every StaticInstance with the SSHCredentials it names",
+			Fix: "check spec.user and spec.privateSSHKey of the SSHCredentials, and that the machines " +
+				"accept SSH from the master node",
 		}
 	}
 
@@ -146,7 +146,7 @@ func parseResources(docs []string) ([]staticInstance, map[string]*v1alpha2.SSHCr
 
 		var m map[string]any
 		if err := yaml.Unmarshal([]byte(doc), &m); err != nil {
-			return nil, nil, fmt.Errorf("Cannot unmarshal YAML: %w", err)
+			return nil, nil, fmt.Errorf("parse a resources document of the --config file: %w", err)
 		}
 
 		res := unstructured.Unstructured{Object: m}
@@ -156,7 +156,7 @@ func parseResources(docs []string) ([]staticInstance, map[string]*v1alpha2.SSHCr
 		case "StaticInstance":
 			var si v1alpha2.StaticInstance
 			if err := sdk.FromUnstructured(&res, &si); err != nil {
-				return nil, nil, fmt.Errorf("StaticInstance: cannot convert from unstructured: %w", err)
+				return nil, nil, fmt.Errorf("read the StaticInstance document: %w", err)
 			}
 
 			name := si.GetName()
@@ -164,13 +164,13 @@ func parseResources(docs []string) ([]staticInstance, map[string]*v1alpha2.SSHCr
 			credName := strings.TrimSpace(si.Spec.CredentialsRef.Name)
 
 			if name == "" {
-				return nil, nil, fmt.Errorf("StaticInstance: metadata.name is empty")
+				return nil, nil, fmt.Errorf("a StaticInstance in the --config file has an empty metadata.name")
 			}
 			if address == "" {
-				return nil, nil, fmt.Errorf("StaticInstance %s: spec.address is empty", name)
+				return nil, nil, fmt.Errorf("StaticInstance %s has an empty spec.address", name)
 			}
 			if credName == "" {
-				return nil, nil, fmt.Errorf("StaticInstance %s: spec.credentialsRef.name is empty", name)
+				return nil, nil, fmt.Errorf("StaticInstance %s has an empty spec.credentialsRef.name", name)
 			}
 
 			instances = append(instances, staticInstance{
@@ -182,7 +182,7 @@ func parseResources(docs []string) ([]staticInstance, map[string]*v1alpha2.SSHCr
 		case "SSHCredentials":
 			var sc v1alpha2.SSHCredentials
 			if err := sdk.FromUnstructured(&res, &sc); err != nil {
-				return nil, nil, fmt.Errorf("SSHCredentials: cannot convert from unstructured: %w", err)
+				return nil, nil, fmt.Errorf("read the SSHCredentials document: %w", err)
 			}
 
 			name := sc.GetName()
@@ -203,12 +203,12 @@ func parseResources(docs []string) ([]staticInstance, map[string]*v1alpha2.SSHCr
 func parseSSHCredentials(sc *v1alpha2.SSHCredentials) (*v1alpha2.SSHCredentialsSpec, error) {
 	name := sc.GetName()
 	if name == "" {
-		return nil, fmt.Errorf("SSHCredentials: metadata.name is empty")
+		return nil, fmt.Errorf("an SSHCredentials in the --config file has an empty metadata.name")
 	}
 
 	user := strings.TrimSpace(sc.Spec.User)
 	if user == "" {
-		return nil, fmt.Errorf("User must be specified and not empty")
+		return nil, fmt.Errorf("spec.user is empty")
 	}
 
 	var privateKey string
@@ -217,7 +217,7 @@ func parseSSHCredentials(sc *v1alpha2.SSHCredentials) (*v1alpha2.SSHCredentialsS
 	if k := strings.TrimSpace(sc.Spec.PrivateSSHKey); k != "" {
 		keyBytes, err := base64.StdEncoding.DecodeString(k)
 		if err != nil {
-			return nil, fmt.Errorf("Cannot decode privateSSHKey: %w", err)
+			return nil, fmt.Errorf("decode spec.privateSSHKey from base64: %w", err)
 		}
 		privateKey = string(keyBytes)
 	}
@@ -225,13 +225,13 @@ func parseSSHCredentials(sc *v1alpha2.SSHCredentials) (*v1alpha2.SSHCredentialsS
 	if sp := strings.TrimSpace(sc.Spec.SudoPasswordEncoded); sp != "" {
 		passBytes, err := base64.StdEncoding.DecodeString(sp)
 		if err != nil {
-			return nil, fmt.Errorf("Cannot decode sudoPasswordEncoded: %w", err)
+			return nil, fmt.Errorf("decode spec.sudoPasswordEncoded from base64: %w", err)
 		}
 		sudoPassword = string(passBytes)
 	}
 
 	if privateKey == "" && sudoPassword == "" {
-		return nil, fmt.Errorf("Must contain privateSSHKey or sudoPasswordEncoded")
+		return nil, fmt.Errorf("neither spec.privateSSHKey nor spec.sudoPasswordEncoded is set")
 	}
 
 	port := sc.Spec.SSHPort

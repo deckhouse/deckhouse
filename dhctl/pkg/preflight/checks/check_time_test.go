@@ -134,7 +134,7 @@ func TestGetRemoteTimeStamp(t *testing.T) {
 					[]byte(""), []byte(""), errors.New("command failed"))
 				mni.On("Command", "date", []string{"+%s"}).Return(mc)
 			},
-			expectedError: "failed to execute date command:",
+			expectedError: "execute the date command on the node:",
 		},
 		{
 			name: "invalid timestamp format",
@@ -143,7 +143,7 @@ func TestGetRemoteTimeStamp(t *testing.T) {
 					[]byte("not-a-timestamp\n"), []byte(""), nil)
 				mni.On("Command", "date", []string{"+%s"}).Return(mc)
 			},
-			expectedError: "invalid timestamp format received",
+			expectedError: "something other than a Unix timestamp",
 		},
 		{
 			name: "timestamp parsing failed",
@@ -152,7 +152,7 @@ func TestGetRemoteTimeStamp(t *testing.T) {
 					[]byte("99999999999999999999999999999\n"), []byte(""), nil)
 				mni.On("Command", "date", []string{"+%s"}).Return(mc)
 			},
-			expectedError: "failed to parse timestamp:",
+			expectedError: "parse the timestamp the node printed:",
 		},
 	}
 

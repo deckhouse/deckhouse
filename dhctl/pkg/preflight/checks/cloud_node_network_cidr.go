@@ -41,7 +41,7 @@ type CloudNodeNetworkCIDRIntersectionCheck struct {
 const CloudNodeNetworkCIDRIntersectionCheckName preflight.CheckName = "cloud-node-network-cidr-intersection"
 
 func (CloudNodeNetworkCIDRIntersectionCheck) Description() string {
-	return "cluster CIDRs do not intersect the cloud network the nodes will sit on"
+	return "cluster CIDRs do not intersect the cloud network the nodes are placed on"
 }
 
 func (CloudNodeNetworkCIDRIntersectionCheck) Phase() preflight.Phase {
@@ -67,13 +67,13 @@ var nodeNetworkCIDRFields = map[string]struct{}{
 
 func (c CloudNodeNetworkCIDRIntersectionCheck) Run(_ context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", fmt.Errorf("metaConfig is required")
+		return "", fmt.Errorf("no configuration was loaded from --config")
 	}
 	if !c.MetaConfig.HasClusterConfiguration() {
 		return "", preflight.NotApplicable("there is no ClusterConfiguration to read the subnets from")
 	}
 	if len(c.MetaConfig.ProviderClusterConfig) == 0 {
-		return "", preflight.NotApplicable("there is no <Provider>ClusterConfiguration to read the node network from")
+		return "", preflight.NotApplicable("there is no %s to read the node network from", providerDocumentKind(c.MetaConfig.ProviderName))
 	}
 
 	podCIDR, serviceCIDR, err := getCIDRs(c.MetaConfig)
@@ -81,9 +81,9 @@ func (c CloudNodeNetworkCIDRIntersectionCheck) Run(_ context.Context) (string, e
 		return "", err
 	}
 
-	networks := collectNodeNetworkCIDRs(c.MetaConfig.ProviderClusterConfig)
+	networks := collectNodeNetworkCIDRs(c.MetaConfig.ProviderClusterConfig, providerDocumentKind(c.MetaConfig.ProviderName))
 	if len(networks) == 0 {
-		return "", preflight.NotApplicable("the %s configuration declares no node network CIDR", c.MetaConfig.ProviderName)
+		return "", preflight.NotApplicable("%s declares no node network CIDR", providerDocumentKind(c.MetaConfig.ProviderName))
 	}
 
 	clusterNetworks := []struct{ name, cidr string }{
@@ -122,8 +122,8 @@ func (c CloudNodeNetworkCIDRIntersectionCheck) Run(_ context.Context) (string, e
 			Checked:  "the cluster subnets against the cloud network the nodes are created on",
 			Observed: "- " + strings.Join(overlaps, "\n- "),
 			Expected: "ranges that do not overlap",
-			Fix: "change ClusterConfiguration.podSubnetCIDR or serviceSubnetCIDR, or the node network in the " +
-				"<Provider>ClusterConfiguration; the cluster subnets cannot be changed after the cluster is created",
+			Fix: fmt.Sprintf("change ClusterConfiguration.podSubnetCIDR or ClusterConfiguration.serviceSubnetCIDR, "+
+				"or the node network in %s", providerDocumentKind(c.MetaConfig.ProviderName)),
 		})
 	}
 
@@ -139,14 +139,16 @@ type nodeNetwork struct {
 // collectNodeNetworkCIDRs walks the provider configuration two levels deep — the fields live
 // either at the top level or inside the layout section — and picks out the ones that name a
 // network.
-func collectNodeNetworkCIDRs(providerConfig map[string]json.RawMessage) []nodeNetwork {
+// document is the kind the fields are read from, so every message names the document the
+// operator has to open rather than a bare field name that appears in several of them.
+func collectNodeNetworkCIDRs(providerConfig map[string]json.RawMessage, document string) []nodeNetwork {
 	var networks []nodeNetwork
 
 	for key, raw := range providerConfig {
 		if _, isNetwork := nodeNetworkCIDRFields[key]; isNetwork {
 			var cidr string
 			if err := json.Unmarshal(raw, &cidr); err == nil && cidr != "" {
-				networks = append(networks, nodeNetwork{field: key, cidr: cidr})
+				networks = append(networks, nodeNetwork{field: document + "." + key, cidr: cidr})
 			}
 			continue
 		}
@@ -161,7 +163,7 @@ func collectNodeNetworkCIDRs(providerConfig map[string]json.RawMessage) []nodeNe
 			}
 			var cidr string
 			if err := json.Unmarshal(nestedRaw, &cidr); err == nil && cidr != "" {
-				networks = append(networks, nodeNetwork{field: key + "." + nested, cidr: cidr})
+				networks = append(networks, nodeNetwork{field: document + "." + key + "." + nested, cidr: cidr})
 			}
 		}
 	}

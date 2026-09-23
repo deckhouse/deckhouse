@@ -43,7 +43,7 @@ type NodeInternalNetworkCheck struct {
 const NodeInternalNetworkCheckName preflight.CheckName = "node-internal-network"
 
 func (NodeInternalNetworkCheck) Description() string {
-	return "the node has an address inside internalNetworkCIDRs"
+	return "the node has an address inside StaticClusterConfiguration.internalNetworkCIDRs"
 }
 
 func (NodeInternalNetworkCheck) Phase() preflight.Phase {
@@ -56,7 +56,7 @@ func (NodeInternalNetworkCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c NodeInternalNetworkCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", fmt.Errorf("metaConfig is required")
+		return "", fmt.Errorf("the cluster configuration was not loaded")
 	}
 
 	declared, err := declaredInternalNetworkCIDRs(c.MetaConfig)
@@ -86,7 +86,7 @@ func (c NodeInternalNetworkCheck) Run(ctx context.Context) (string, error) {
 			Checked:  fmt.Sprintf("the addresses of %s", host),
 			Observed: "the node reported none",
 			Expected: "at least one address on an interface",
-			Fix:      "check that the node has a configured network interface",
+			Fix:      "configure a network interface on the node",
 		})
 	}
 
@@ -107,7 +107,7 @@ func (c NodeInternalNetworkCheck) Run(ctx context.Context) (string, error) {
 				continue
 			}
 			if prefix.Masked().Contains(parsed) {
-				return fmt.Sprintf("%s has %s, inside internalNetworkCIDRs entry %s", host, address, declaredCIDR), nil
+				return fmt.Sprintf("%s has %s, inside StaticClusterConfiguration.internalNetworkCIDRs entry %s", host, address, declaredCIDR), nil
 			}
 		}
 	}
@@ -115,7 +115,7 @@ func (c NodeInternalNetworkCheck) Run(ctx context.Context) (string, error) {
 	return "", preflight.Permanent(&preflight.Failure{
 		Checked:  fmt.Sprintf("the addresses of %s against StaticClusterConfiguration.internalNetworkCIDRs", host),
 		Observed: fmt.Sprintf("the node has %s, and none of them is inside %s", strings.Join(addresses, ", "), strings.Join(declared, ", ")),
-		Expected: "one address of the node inside one of the declared networks",
+		Expected: "an address of the node inside one of the declared networks",
 		Fix: "add the network the node is actually on to StaticClusterConfiguration.internalNetworkCIDRs, " +
 			"or give the node an address inside one of them",
 	})

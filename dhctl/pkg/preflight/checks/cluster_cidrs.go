@@ -42,8 +42,8 @@ func getCIDRs(meta *config.MetaConfig) (string, string, error) {
 
 	if network.PodSubnetCIDR == "" || network.ServiceSubnetCIDR == "" {
 		return "", "", fmt.Errorf(
-			"podSubnetCIDR and serviceSubnetCIDR must be set either in ModuleConfig " +
-				"control-plane-manager (spec.settings.network) or in ClusterConfiguration (deprecated)")
+			"podSubnetCIDR and serviceSubnetCIDR are set neither in ModuleConfig " +
+				"control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
 	}
 
 	return network.PodSubnetCIDR, network.ServiceSubnetCIDR, nil
@@ -57,6 +57,6 @@ func invalidCIDRFailure(name, cidr string) error {
 		Observed: fmt.Sprintf("%q is not a CIDR", cidr),
 		Expected: "an address and a prefix length, for example 10.111.0.0/16",
 		Fix: fmt.Sprintf("correct %s in ModuleConfig control-plane-manager (spec.settings.network), "+
-			"or in ClusterConfiguration if it is still declared there", name),
+			"or in ClusterConfiguration if it is declared there", name),
 	})
 }

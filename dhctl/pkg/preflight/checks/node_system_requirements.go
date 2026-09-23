@@ -85,8 +85,7 @@ func (c NodeSystemRequirementsCheck) Run(ctx context.Context) (string, error) {
 			Checked:  fmt.Sprintf("/proc/cpuinfo and /proc/meminfo on %s", host),
 			Observed: "- " + strings.Join(violations, "\n- "),
 			Expected: fmt.Sprintf("at least %d CPU and %d MiB of RAM", requirements.cpuCores, requirements.memoryMB),
-			Fix: fmt.Sprintf("give the machine more resources, or set bundle: Minimal in the \"deckhouse\" ModuleConfig (%d CPU / %d MiB)",
-				minimalBundleRequiredCPUCores, minimalBundleRequiredMemoryMB),
+			Fix:      "give the machine more CPU and RAM, or set bundle: Minimal in the \"deckhouse\" ModuleConfig",
 		})
 	}
 
@@ -97,16 +96,16 @@ func extractRAMCapacityFromNode(ctx context.Context, nodeInterface libcon.Interf
 	cmd := nodeInterface.Command("cat", "/proc/meminfo")
 	memInfo, _, err := cmd.Output(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("Failed to read MemTotal from /proc/meminfo: %w", err)
+		return 0, fmt.Errorf("cat /proc/meminfo: %w", err)
 	}
 
 	submatch := regexp.MustCompile(`^MemTotal:\s*(\d+)\s.B`).FindSubmatch(memInfo)
 	if len(submatch) < 2 {
-		return 0, fmt.Errorf("Failed to parse MemTotal from /proc/meminfo")
+		return 0, fmt.Errorf("/proc/meminfo has no MemTotal line")
 	}
 	ramKb, err := strconv.Atoi(string(submatch[1]))
 	if err != nil {
-		return 0, fmt.Errorf("Failed to parse MemTotal from /proc/meminfo: %w", err)
+		return 0, fmt.Errorf("MemTotal in /proc/meminfo is not a number: %w", err)
 	}
 	return ramKb, nil
 }
@@ -115,12 +114,12 @@ func extractCPULogicalCoresCountFromNode(ctx context.Context, nodeInterface libc
 	cmd := nodeInterface.Command("cat", "/proc/cpuinfo")
 	stdout, _, err := cmd.Output(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("Failed to read CPU info from /proc/cpuinfo: %w", err)
+		return 0, fmt.Errorf("cat /proc/cpuinfo: %w", err)
 	}
 
 	count, err := logicalCoresCountFromCPUInfo(stdout)
 	if err != nil {
-		return 0, fmt.Errorf("Failed to parse CPU info from /proc/cpuinfo: %w", err)
+		return 0, fmt.Errorf("count the processors in /proc/cpuinfo: %w", err)
 	}
 	return count, nil
 }
@@ -140,7 +139,7 @@ func logicalCoresCountFromCPUInfo(cpuinfo []byte) (int, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("Failed to parse cpu info from /proc/cpuinfo: %w", err)
+		return 0, fmt.Errorf("scan /proc/cpuinfo: %w", err)
 	}
 
 	return len(processors), nil

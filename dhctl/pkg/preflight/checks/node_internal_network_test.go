@@ -71,7 +71,7 @@ func TestNodeInternalNetwork(t *testing.T) {
 			name:       "the node is on the declared network",
 			cidrs:      []string{"192.168.1.0/24"},
 			node:       nodeWithAddress("192.168.1.15", 24),
-			wantDetail: "has 192.168.1.15, inside internalNetworkCIDRs entry 192.168.1.0/24",
+			wantDetail: "has 192.168.1.15, inside StaticClusterConfiguration.internalNetworkCIDRs entry 192.168.1.0/24",
 		},
 		{
 			name:       "one of several networks matches",

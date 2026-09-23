@@ -86,7 +86,7 @@ func (CloudDiskNameLengthCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c CloudDiskNameLengthCheck) Run(_ context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", fmt.Errorf("meta config is nil")
+		return "", fmt.Errorf("no configuration was loaded from --config")
 	}
 
 	prefix := c.MetaConfig.ClusterPrefix
@@ -126,8 +126,8 @@ func (c CloudDiskNameLengthCheck) Run(_ context.Context) (string, error) {
 			Observed: fmt.Sprintf("%q is %d characters, the limit is %d", longest, len(longest), maxDiskNameLength),
 			Expected: fmt.Sprintf("every generated disk name within %d characters", maxDiskNameLength),
 			Fix: fmt.Sprintf("shorten ClusterConfiguration.cloud.prefix (or the prefix in the %q ModuleConfig) "+
-				"to at most %d characters; it is %d now, and the suffix %q takes %d",
-				"global", maxDiskNameLength-suffix, len(prefix), longest[len(prefix):], suffix),
+				"from %d characters to at most %d. The provider appends the suffix %q",
+				"global", len(prefix), maxDiskNameLength-suffix, longest[len(prefix):]),
 		})
 	}
 

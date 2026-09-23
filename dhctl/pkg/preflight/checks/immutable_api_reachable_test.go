@@ -94,7 +94,7 @@ func TestImmutableAPIReachable(t *testing.T) {
 		detail, err := check.Run(context.Background())
 
 		require.NoError(t, err)
-		assert.Equal(t, "10.1.0.5:6443 answers through the bastion bastion.example.com", detail)
+		assert.Equal(t, "the API port of 10.1.0.5:6443 answers through the bastion bastion.example.com", detail)
 		assert.True(t, stopped, "the tunnel the check opened has to be closed again")
 	})
 
@@ -146,7 +146,7 @@ func TestImmutableAPIReachable(t *testing.T) {
 		_, err := ImmutableAPIReachable(nil).Run(context.Background())
 
 		require.ErrorIs(t, err, preflight.ErrNotApplicable)
-		assert.Contains(t, err.Error(), "not an immutable one")
+		assert.Contains(t, err.Error(), "does not ask for systemType: Immutable")
 	})
 
 	t.Run("the address is not known yet", func(t *testing.T) {

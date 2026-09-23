@@ -66,7 +66,7 @@ func (c SSHTunnelCheck) Run(ctx context.Context) (string, error) {
 	}
 	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
-		return "", preflight.NotApplicable("dhctl was given no SSH host: there is no tunnel to open")
+		return "", preflight.NotApplicable("dhctl was given no SSH host to open a tunnel from")
 	}
 	sshCl := wrapper.Client()
 	host := hostLabelOfClient(sshCl)
@@ -101,12 +101,11 @@ func (c SSHTunnelCheck) Run(ctx context.Context) (string, error) {
 	tun := sshCl.ReverseTunnel(addr)
 	if err := tun.Up(); err != nil {
 		return "", &preflight.Failure{
-			Checked:  fmt.Sprintf("reverse ssh tunnel %d -> %s:%d", defaultTunnelLocalPort, host, defaultTunnelRemotePort),
+			Checked:  fmt.Sprintf("reverse SSH tunnel from port %d on %s to port %d on this host", defaultTunnelRemotePort, host, defaultTunnelLocalPort),
 			Observed: "the node refused to open the reverse forward",
-			Expected: "sshd on the node to allow a remote port forward",
-			Fix: "set AllowTcpForwarding yes and DisableForwarding no in sshd_config on the node; " +
-				"GatewayPorts is not required, the forward binds to 127.0.0.1",
-			Err: err,
+			Expected: "a remote port forward allowed by sshd on the node",
+			Fix:      "set AllowTcpForwarding yes and DisableForwarding no in sshd_config on the node",
+			Err:      err,
 		}
 	}
 	defer tun.Stop()
@@ -120,7 +119,7 @@ func (c SSHTunnelCheck) Run(ctx context.Context) (string, error) {
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from %s through the reverse tunnel", healthURL(defaultTunnelRemotePort), host),
 			Observed: "the node opened the tunnel but could not reach back through it",
-			Expected: "the node to reach the installer on the forwarded port",
+			Expected: "a connection from the node to the installer on the forwarded port",
 			Fix: fmt.Sprintf("check that nothing on the node blocks 127.0.0.1:%d (a local firewall, SELinux), "+
 				"and that sshd has AllowTcpForwarding yes", defaultTunnelRemotePort),
 			Err: err,
@@ -149,7 +148,7 @@ func startHTTPServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	address := fmt.Sprintf(":%d", port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		return nil, fmt.Errorf("cannot start HTTP server for tunnel preflight check on %s: %w", address, err)
+		return nil, fmt.Errorf("the installer host cannot listen on %s: %w", address, err)
 	}
 
 	server := &http.Server{

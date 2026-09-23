@@ -104,26 +104,26 @@ func TestCheckResponseSuccess_OKResponse(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusOK, Header: http.Header{}}
 	resp.Header.Set("Docker-Distribution-API-Version", "registry/2.0")
-	s.Nil(checkResponseIsFromDockerRegistry(resp))
+	s.Nil(checkResponseIsFromDockerRegistry(resp, "registry.example.com", "Direct"))
 }
 
 func TestCheckResponseSuccess_UnauthorizedResponse(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusUnauthorized, Header: http.Header{}}
 	resp.Header.Set("Docker-Distribution-API-Version", "registry/2.0")
-	s.Nil(checkResponseIsFromDockerRegistry(resp))
+	s.Nil(checkResponseIsFromDockerRegistry(resp, "registry.example.com", "Direct"))
 }
 
 func TestCheckResponse_NoAPIVersionHeader(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusUnauthorized, Header: http.Header{}}
-	s.ErrorIs(checkResponseIsFromDockerRegistry(resp), ErrRegistryUnreachable)
+	s.ErrorIs(checkResponseIsFromDockerRegistry(resp, "registry.example.com", "Direct"), ErrRegistryUnreachable)
 }
 
 func TestCheckResponse_WrongStatus(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusForbidden, Header: http.Header{}}
-	s.ErrorIs(checkResponseIsFromDockerRegistry(resp), ErrRegistryUnreachable)
+	s.ErrorIs(checkResponseIsFromDockerRegistry(resp, "registry.example.com", "Direct"), ErrRegistryUnreachable)
 }
 
 // TestRegistryCredentialsWithoutCredentialsIsNotApplicable: a registry used anonymously has no

@@ -59,7 +59,7 @@ func (CloudSSHKeyCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", fmt.Errorf("metaConfig is required")
+		return "", fmt.Errorf("no cluster configuration was loaded")
 	}
 
 	declared, err := declaredSSHPublicKey(c.MetaConfig)
@@ -67,7 +67,7 @@ func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 		return "", err
 	}
 	if declared == nil {
-		return "", preflight.NotApplicable("the <Provider>ClusterConfiguration declares no sshPublicKey")
+		return "", preflight.NotApplicable("%s declares no sshPublicKey", providerDocumentKind(c.MetaConfig.ProviderName))
 	}
 
 	connCfg := c.SSHProviderInitializer.GetConfig()
@@ -82,8 +82,8 @@ func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  "the private keys given with --ssh-agent-private-keys",
 			Observed: err.Error(),
-			Expected: "keys dhctl can read and parse",
-			Fix:      "check the paths, and pass the passphrase if a key has one",
+			Expected: "private keys dhctl can read (an existing file, and the passphrase if the key has one)",
+			Fix:      "check the paths given to --ssh-agent-private-keys, and pass the passphrase if a key has one",
 			Err:      err,
 		})
 	}
@@ -109,14 +109,14 @@ func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 	document := providerDocumentKind(c.MetaConfig.ProviderName)
 	named := len(configured) > 0
 
-	expected := "dhctl to hold the private key of the public key the cloud installs"
-	fix := fmt.Sprintf("pass the private key of sshPublicKey with --ssh-agent-private-keys, "+
-		"or set %s.sshPublicKey to the public key of the key you are passing", document)
+	expected := "the private key of sshPublicKey among the keys dhctl will offer (same SHA256 fingerprint)"
+	fix := fmt.Sprintf("pass the private key of %s.sshPublicKey with --ssh-agent-private-keys, "+
+		"or set %s.sshPublicKey to the public key of the key you are passing", document, document)
 	if named {
 		// The operator named a key. A running agent may hold the right one as well, and the
 		// connection would offer both — but the key they asked for is still the wrong one, and
 		// each wrong key offered spends one of the few authentication attempts the node allows.
-		expected = "the key named with --ssh-agent-private-keys to be the one the cloud installs"
+		expected = "the key given with --ssh-agent-private-keys as the private key of sshPublicKey (same SHA256 fingerprint)"
 		fix = fmt.Sprintf("pass the private key of %s.sshPublicKey with --ssh-agent-private-keys "+
 			"(drop the flag to use the keys your ssh-agent holds), or set %s.sshPublicKey to the "+
 			"public key of the key you are passing", document, document)
@@ -124,7 +124,7 @@ func (c CloudSSHKeyCheck) Run(_ context.Context) (string, error) {
 
 	return "", preflight.Permanent(&preflight.Failure{
 		Checked:  fmt.Sprintf("%s.sshPublicKey against the private keys dhctl will offer", document),
-		Observed: fmt.Sprintf("the cloud will install %s; dhctl holds %s", ssh.FingerprintSHA256(declared), strings.Join(offered, ", ")),
+		Observed: fmt.Sprintf("the cloud will install %s. dhctl holds %s", ssh.FingerprintSHA256(declared), strings.Join(offered, ", ")),
 		Expected: expected,
 		Fix:      fix,
 	})
@@ -190,7 +190,7 @@ func heldPublicKeys(configured []sshconfig.AgentPrivateKey, authSock string) ([]
 	for i, signer := range signers {
 		source := "the key given with --ssh-agent-private-keys"
 		if len(signers) > 1 {
-			source = fmt.Sprintf("key %d of --ssh-agent-private-keys", i+1)
+			source = fmt.Sprintf("key %d given with --ssh-agent-private-keys", i+1)
 		}
 		held = append(held, heldKey{publicKey: signer.PublicKey(), source: source})
 	}
@@ -256,6 +256,7 @@ func agentPublicKeys(socket string) []heldKey {
 // declaredSSHPublicKey reads sshPublicKey out of the provider configuration. A key that does not
 // parse is a failure of its own: the cloud would reject it much later, during apply.
 func declaredSSHPublicKey(meta *config.MetaConfig) (ssh.PublicKey, error) {
+	document := providerDocumentKind(meta.ProviderName)
 	raw, ok := meta.ProviderClusterConfig["sshPublicKey"]
 	if !ok || len(raw) == 0 {
 		return nil, nil
@@ -264,8 +265,8 @@ func declaredSSHPublicKey(meta *config.MetaConfig) (ssh.PublicKey, error) {
 	var authorizedKey string
 	if err := json.Unmarshal(raw, &authorizedKey); err != nil {
 		return nil, preflight.Permanent(&preflight.Failure{
-			Checked:  "<Provider>ClusterConfiguration.sshPublicKey",
-			Observed: "the field is not a string",
+			Checked:  document + ".sshPublicKey",
+			Observed: "sshPublicKey is not a string",
 			Expected: "an OpenSSH public key, as in ~/.ssh/id_ed25519.pub",
 			Fix:      "set sshPublicKey to the contents of the .pub file",
 		})
@@ -277,8 +278,8 @@ func declaredSSHPublicKey(meta *config.MetaConfig) (ssh.PublicKey, error) {
 	publicKey, err := parseAuthorizedKey(authorizedKey)
 	if err != nil {
 		return nil, preflight.Permanent(&preflight.Failure{
-			Checked:  "<Provider>ClusterConfiguration.sshPublicKey",
-			Observed: fmt.Sprintf("it is not an OpenSSH public key: %s", err),
+			Checked:  document + ".sshPublicKey",
+			Observed: fmt.Sprintf("sshPublicKey is not an OpenSSH public key: %s", err),
 			Expected: "one line of the form `ssh-ed25519 AAAA… comment`",
 			Fix:      "paste the contents of the .pub file, not the private key and not a PEM block",
 			Err:      err,

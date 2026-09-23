@@ -50,7 +50,7 @@ func (RegistryReachableCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c RegistryReachableCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return "", fmt.Errorf("meta config is required")
+		return "", fmt.Errorf("dhctl was given no cluster configuration")
 	}
 
 	registry := c.MetaConfig.Registry.Settings.RemoteData
@@ -60,10 +60,10 @@ func (c RegistryReachableCheck) Run(ctx context.Context) (string, error) {
 	client, err := prepareAuthHTTPClient(ctx, c.MetaConfig)
 	if err != nil {
 		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  registryCAField,
+			Checked:  registryCAField(c.registryMode()),
 			Observed: err.Error(),
-			Expected: "a PEM bundle the request can be made with",
-			Fix:      "correct " + registryCAField,
+			Expected: "a valid PEM certificate bundle",
+			Fix:      "correct " + registryCAField(c.registryMode()),
 		})
 	}
 
@@ -74,7 +74,7 @@ func (c RegistryReachableCheck) Run(ctx context.Context) (string, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", registryTransportFailure(endpoint, address, string(registry.Scheme), err)
+		return "", registryTransportFailure(endpoint, address, string(registry.Scheme), c.registryMode(), err)
 	}
 	defer resp.Body.Close()
 
@@ -84,10 +84,10 @@ func (c RegistryReachableCheck) Run(ctx context.Context) (string, error) {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s", endpoint),
-			Observed: fmt.Sprintf("HTTP %d, which is not how a registry answers /v2/", resp.StatusCode),
+			Observed: fmt.Sprintf("%s answered with HTTP %d, which is not how a registry answers /v2/", address, resp.StatusCode),
 			Expected: "HTTP 200 or 401 from the registry API",
-			Fix: fmt.Sprintf("check %s; something other than a container registry is answering at %s "+
-				"(a reverse proxy, a load balancer, an error page)", registryImagesRepoField, address),
+			Fix: fmt.Sprintf("check %s, and any reverse proxy or load balancer in front of the registry",
+				registryImagesRepoField(c.registryMode())),
 		})
 	}
 
@@ -97,7 +97,7 @@ func (c RegistryReachableCheck) Run(ctx context.Context) (string, error) {
 			Observed: "the answer carries no Docker-Distribution-API-Version: registry/2.0 header",
 			Expected: "a registry API v2 endpoint",
 			Fix: fmt.Sprintf("check %s, and that no reverse proxy in front of the registry strips "+
-				"the header", registryImagesRepoField),
+				"the header", registryImagesRepoField(c.registryMode())),
 		})
 	}
 
@@ -110,17 +110,17 @@ func (c RegistryReachableCheck) Run(ctx context.Context) (string, error) {
 // registryTransportFailure names what went wrong before any HTTP answer came back. A private CA,
 // a name that does not resolve and the wrong scheme are three different problems with three
 // different fixes; they used to arrive as the single word "authentication failed".
-func registryTransportFailure(endpoint, address, scheme string, err error) error {
+func registryTransportFailure(endpoint, address, scheme, mode string, err error) error {
 	failure := &preflight.Failure{
 		Checked:  fmt.Sprintf("GET %s from the installer host", endpoint),
 		Observed: classifyNetworkError(err),
-		Expected: "the registry to answer",
+		Expected: "an answer from the registry",
 		Err:      err,
 	}
 
 	switch {
 	case isCertificateError(err):
-		failure.Fix = fmt.Sprintf("put the registry CA into %s; if the certificate is not yet valid, check the clock on this host", registryCAField)
+		failure.Fix = fmt.Sprintf("put the registry CA into %s. If the certificate is not yet valid, check the clock on this host.", registryCAField(mode))
 		return preflight.Permanent(failure)
 
 	case strings.Contains(err.Error(), "server gave HTTP response to HTTPS client"):
@@ -130,17 +130,34 @@ func registryTransportFailure(endpoint, address, scheme string, err error) error
 
 	default:
 		failure.Fix = fmt.Sprintf("check %s. If the installer host reaches the Internet through a proxy, "+
-			"export HTTPS_PROXY and NO_PROXY inside the installer container", registryImagesRepoField)
+			"export HTTPS_PROXY and NO_PROXY inside the installer container", registryImagesRepoField(mode))
 		return failure
 	}
 }
 
 // The two configuration paths every registry failure points at. Spelled out once: the field moved
 // from InitConfiguration to a ModuleConfig, and both spellings are still in use.
-const (
-	registryImagesRepoField = `.spec.settings.registry.<mode>.imagesRepo in the "deckhouse" ModuleConfig (InitConfiguration.deckhouse.imagesRepo)`
-	registryCAField         = `.spec.settings.registry.<mode>.ca in the "deckhouse" ModuleConfig (InitConfiguration.deckhouse.registryCA)`
-)
+//
+// The mode is filled in rather than left as a placeholder. The fields live under the section of
+// the mode in use — registry.direct.imagesRepo, registry.proxy.imagesRepo — so a message printing
+// "<mode>" names a path that is in nobody's document, and the reader has to work out which of the
+// four sections is theirs before they can act on it.
+func registryImagesRepoField(mode string) string {
+	return fmt.Sprintf(`.spec.settings.registry.%s.imagesRepo in the "deckhouse" ModuleConfig (InitConfiguration.deckhouse.imagesRepo)`, registrySection(mode))
+}
+
+func registryCAField(mode string) string {
+	return fmt.Sprintf(`.spec.settings.registry.%s.ca in the "deckhouse" ModuleConfig (InitConfiguration.deckhouse.registryCA)`, registrySection(mode))
+}
+
+// registrySection is the ModuleConfig key of a registry mode, which is its name lowercased. An
+// unset mode keeps the placeholder: guessing a section would be worse than admitting the gap.
+func registrySection(mode string) string {
+	if mode == "" {
+		return "<mode>"
+	}
+	return strings.ToLower(mode)
+}
 
 func RegistryReachable(meta *config.MetaConfig) preflight.Check {
 	check := RegistryReachableCheck{MetaConfig: meta}
@@ -151,4 +168,14 @@ func RegistryReachable(meta *config.MetaConfig) preflight.Check {
 		Retry:       check.RetryPolicy(),
 		Run:         check.Run,
 	}
+}
+
+// registryMode is the mode the registry is configured in, used to name the ModuleConfig section
+// the fields live under. Empty when no configuration was loaded, which registrySection reports
+// as a placeholder rather than guessing.
+func (c RegistryReachableCheck) registryMode() string {
+	if c.MetaConfig == nil {
+		return ""
+	}
+	return string(c.MetaConfig.Registry.Settings.Mode)
 }

@@ -87,7 +87,7 @@ func (c NodeDiskSpaceCheck) Run(ctx context.Context) (string, error) {
 	if !ok {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("`df -Pk %s` on %s", nodeStatePath, host),
-			Observed: fmt.Sprintf("its output could not be read: %q", strings.TrimSpace(string(stdout))),
+			Observed: fmt.Sprintf("the output of df could not be read: %q", strings.TrimSpace(string(stdout))),
 			Expected: "the size of the filesystem holding " + nodeStatePath,
 			Fix:      "check that df is installed on the node",
 		})
@@ -102,9 +102,9 @@ func (c NodeDiskSpaceCheck) Run(ctx context.Context) (string, error) {
 		// A disk does not grow between two attempts of the same check.
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the filesystem holding %s on %s", nodeStatePath, host),
-			Observed: fmt.Sprintf("it is %d GB", totalGB),
-			Expected: fmt.Sprintf("at least %d GB of filesystem, which is what a %d GB disk holds once it is "+
-				"partitioned and formatted", nodeFilesystemFloorGB, minimumRequiredRootDiskSizeGB),
+			Observed: fmt.Sprintf("the filesystem is %d GB", totalGB),
+			Expected: fmt.Sprintf("at least %d GB of filesystem at %s (what a %d GB disk holds after "+
+				"partitioning and formatting)", nodeFilesystemFloorGB, nodeStatePath, minimumRequiredRootDiskSizeGB),
 			Fix: "give the node a larger disk, or mount a larger filesystem at " + nodeStatePath,
 		})
 	}
@@ -153,7 +153,7 @@ func (c StaticFreeDiskSpaceCheck) Run(ctx context.Context) (string, error) {
 	if !ok {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("`df -Pk %s` on %s", nodeStatePath, host),
-			Observed: fmt.Sprintf("its output could not be read: %q", strings.TrimSpace(string(stdout))),
+			Observed: fmt.Sprintf("the output of df could not be read: %q", strings.TrimSpace(string(stdout))),
 			Expected: "the free space on the filesystem holding " + nodeStatePath,
 			Fix:      "check that df is installed on the node",
 		})
@@ -163,8 +163,8 @@ func (c StaticFreeDiskSpaceCheck) Run(ctx context.Context) (string, error) {
 	if freeGiB < minimumFreeDiskGiB {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the free space at %s on %s", nodeStatePath, host),
-			Observed: fmt.Sprintf("%d GiB is free", freeGiB),
-			Expected: fmt.Sprintf("at least %d GiB free for packages, images and the first etcd state", minimumFreeDiskGiB),
+			Observed: fmt.Sprintf("the filesystem has %d GiB free", freeGiB),
+			Expected: fmt.Sprintf("at least %d GiB free at %s", minimumFreeDiskGiB, nodeStatePath),
 			Fix:      "free space on the node, or mount a larger filesystem at " + nodeStatePath,
 		})
 	}

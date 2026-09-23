@@ -44,7 +44,7 @@ func (NetworkSingleSourceCheck) RetryPolicy() preflight.RetryPolicy {
 
 func (c NetworkSingleSourceCheck) Run(ctx context.Context) error {
 	if c.MetaConfig == nil {
-		return fmt.Errorf("metaConfig is required")
+		return fmt.Errorf("the cluster configuration was not passed to this check")
 	}
 
 	return c.MetaConfig.RequireNetworkSingleSource()

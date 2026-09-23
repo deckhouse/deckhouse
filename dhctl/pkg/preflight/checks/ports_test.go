@@ -57,7 +57,7 @@ func TestCheckAvailabilityPorts(t *testing.T) {
 			name:          "generic execution error",
 			executeError:  errors.New("network error"),
 			executeOutput: []byte(""),
-			expectedError: "cannot check that the required ports are free on ",
+			expectedError: "cannot check the required ports on ",
 			setupMock: func(mni *mocks.MockNodeInterface, msc *mocks.MockScript) {
 				mni.On("UploadScript", mock.AnythingOfType("string"), mock.AnythingOfType("[]string")).Return(msc)
 				msc.On("Execute", mock.Anything).Return([]byte(""), errors.New("network error"))

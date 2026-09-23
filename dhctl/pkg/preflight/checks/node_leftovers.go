@@ -82,9 +82,9 @@ func (c NodeLeftoversCheck) Run(ctx context.Context) (string, error) {
 
 	if len(leftovers) > 0 {
 		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  fmt.Sprintf("the container runtime and Kubernetes binaries on %s", host),
+			Checked:  fmt.Sprintf("the container runtime, Kubernetes binaries and bootstrap state on %s", host),
 			Observed: "- " + strings.Join(leftovers, "\n- "),
-			Expected: "a node with none of them: Deckhouse installs and owns its own",
+			Expected: "a node with none of them installed",
 			Fix: "remove them and their state (/var/lib/containerd, /var/lib/kubelet, /var/lib/bashible, " +
 				"/etc/kubernetes), or bootstrap onto a clean machine",
 		})

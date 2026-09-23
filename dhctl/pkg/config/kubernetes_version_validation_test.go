@@ -52,7 +52,7 @@ func TestWarnAboutKubernetesVersion(t *testing.T) {
 		{
 			name:         "an end-of-life version",
 			version:      "1.32",
-			wantWarnings: []string{"Kubernetes 1.32 has reached end of life"},
+			wantWarnings: []string{"1.32, marked end-of-life"},
 		},
 		{
 			name:      "a supported version",
@@ -70,7 +70,7 @@ func TestWarnAboutKubernetesVersion(t *testing.T) {
 			name:          "the two disagree",
 			version:       "1.33",
 			moduleConfigs: moduleConfig("1.34"),
-			wantWarnings:  []string{"the cluster will be created on 1.34"},
+			wantWarnings:  []string{"The cluster will be created on 1.34."},
 		},
 		{
 			name:          "the two agree",

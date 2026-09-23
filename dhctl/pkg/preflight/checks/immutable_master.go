@@ -56,11 +56,11 @@ func ImmutableInstallerImages(metaConfig *config.MetaConfig) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableInstallerImagesCheckName,
 		Retry:       preflight.NetworkRetry,
-		Description: "installer image carries the system extensions and the control plane of the requested Kubernetes version",
+		Description: "the installer image carries the system extensions and the control plane of the requested Kubernetes version",
 		Phase:       preflight.PhasePreInfra,
 		Run: preflight.Detailless(func(ctx context.Context) error {
 			if metaConfig == nil {
-				return errors.New("meta config is nil")
+				return errors.New("the cluster configuration was not passed to this check")
 			}
 			if err := immutable.ValidateSysext(ctx, metaConfig); err != nil {
 				return err
@@ -84,13 +84,15 @@ func ImmutableRegistryMode(metaConfig *config.MetaConfig) preflight.Check {
 		Retry:           preflight.NoRetry,
 		Cacheable:       true,
 		CannotBeSkipped: true,
-		Description:     "registry runs in Unmanaged mode",
-		Phase:           preflight.PhasePreInfra,
+		CannotBeSkippedReason: "an immutable master pulls from the registry directly, and the other " +
+			"registry modes are not implemented",
+		Description: "the registry runs in Unmanaged mode",
+		Phase:       preflight.PhasePreInfra,
 		Run: preflight.Detailless(func(_ context.Context) error {
 			mode := metaConfig.Registry.Settings.Mode
 			if mode != constant.ModeUnmanaged {
 				return fmt.Errorf(
-					"an immutable master supports registry mode %q only, got %q: the node pulls from the registry directly during bootstrap",
+					"an immutable master supports registry mode %q only, got %q. Set the registry mode to Unmanaged",
 					constant.ModeUnmanaged, mode,
 				)
 			}
@@ -107,7 +109,7 @@ func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.G
 		Name:        ImmutableSignatureModeCheckName,
 		Retry:       preflight.NoRetry,
 		Cacheable:   true,
-		Description: "control-plane signature mode is off",
+		Description: "the control-plane signature mode is off",
 		Phase:       preflight.PhasePreInfra,
 		Run: preflight.Detailless(func(ctx context.Context) error {
 			extractor := controlplane.NewSettingsExtractor(
@@ -126,8 +128,8 @@ func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.G
 			}
 
 			return fmt.Errorf(
-				"control-plane-manager runs with apiserver.signature %q, which an immutable master does not support: "+
-					"the signing keys and the encryption provider config are uploaded to the node over SSH, and an immutable node runs no sshd",
+				"an immutable master does not support apiserver.signature %q. "+
+					"Remove apiserver.signature from the control-plane-manager settings",
 				mode,
 			)
 		}),
@@ -157,12 +159,13 @@ func ImmutableKubeconfigKept(bootstrapOpts *options.BootstrapOptions, globalOpts
 // supports, not about the operator's cluster, and there is nothing behind the flag to reach.
 func ImmutableSupportedProvider(metaConfig *config.MetaConfig) preflight.Check {
 	return preflight.Check{
-		Name:            ImmutableSupportedProviderCheckName,
-		CannotBeSkipped: true,
-		Retry:           preflight.NoRetry,
-		Cacheable:       true,
-		Description:     "the platform is one an immutable master has been tested on",
-		Phase:           preflight.PhasePreInfra,
+		Name:                  ImmutableSupportedProviderCheckName,
+		CannotBeSkipped:       true,
+		CannotBeSkippedReason: "an immutable master is only implemented for some platforms",
+		Retry:                 preflight.NoRetry,
+		Cacheable:             true,
+		Description:           "the platform is one an immutable master has been tested on",
+		Phase:                 preflight.PhasePreInfra,
 		Run: preflight.Detailless(func(_ context.Context) error {
 			if metaConfig.ClusterType == config.StaticClusterType {
 				return nil
@@ -172,9 +175,9 @@ func ImmutableSupportedProvider(metaConfig *config.MetaConfig) preflight.Check {
 			}
 
 			return fmt.Errorf(
-				"bootstrap an immutable master on cloud provider %q: immutable nodes are tested on the DVP cloud "+
-					"and in a %s cluster only, and the limit lifts once the remaining clouds are tested as well",
-				metaConfig.ProviderName, config.StaticClusterType,
+				"an immutable master is supported on the DVP cloud and in a %s cluster only, "+
+					"got cloud provider %q",
+				config.StaticClusterType, metaConfig.ProviderName,
 			)
 		}),
 	}
@@ -212,7 +215,7 @@ func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) prefl
 				return nil
 			}
 			return fmt.Errorf(
-				"--post-bootstrap-script-path (%s) is not supported for an immutable master: the script is executed over SSH and an immutable node runs no sshd",
+				"an immutable master does not support --post-bootstrap-script-path (%s). Remove the flag",
 				bootstrapOpts.PostBootstrapScriptPath,
 			)
 		}),
@@ -235,7 +238,7 @@ func ImmutableMachinesAvailability(run func(context.Context) error) preflight.Ch
 		Phase:       preflight.PhasePreInfra,
 		Run: preflight.Detailless(func(ctx context.Context) error {
 			if run == nil {
-				return preflight.NotApplicable("this bootstrap names no machines with --master-host; the provider creates the masters")
+				return preflight.NotApplicable("this bootstrap names no machines with --master-host. The provider creates the masters")
 			}
 			return run(ctx)
 		}),

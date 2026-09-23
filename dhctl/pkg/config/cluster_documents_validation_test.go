@@ -44,7 +44,7 @@ func TestValidateClusterTypeAgainstDocuments(t *testing.T) {
 
 		err := validateClusterTypeAgainstDocuments(meta)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "configure a cloud provider for a cluster that has none")
+		assert.Contains(t, err.Error(), "a static cluster with no <Provider>ClusterConfiguration")
 	})
 
 	t.Run("a cloud cluster with a static document", func(t *testing.T) {
@@ -55,7 +55,7 @@ func TestValidateClusterTypeAgainstDocuments(t *testing.T) {
 
 		err := validateClusterTypeAgainstDocuments(meta)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "the two documents would describe it differently")
+		assert.Contains(t, err.Error(), "a cloud cluster with no StaticClusterConfiguration")
 	})
 
 	t.Run("each with its own document", func(t *testing.T) {
@@ -104,7 +104,7 @@ func TestWarnAboutMasterReplicaParity(t *testing.T) {
 			warned := strings.Contains(logged.String(), "WARN")
 			assert.Equal(t, tt.warns, warned, "log was:\n%s", logged.String())
 			if tt.warns {
-				assert.Contains(t, logged.String(), "Use an odd number")
+				assert.Contains(t, logged.String(), "an odd number of masters")
 			}
 		})
 	}

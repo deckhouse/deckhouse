@@ -45,18 +45,19 @@ func warnAboutKubernetesVersion(ctx context.Context, m *MetaConfig) {
 	}
 
 	if status := m.kubernetesVersionStatus(declared); status == endOfLifeStatus {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-			"Kubernetes %s has reached end of life in this Deckhouse release. The cluster will be created on it and "+
-				"will need upgrading; consider setting kubernetesVersion to a supported version, or to Automatic",
-			declared))
+		dhlog.FromContext(ctx).WarnContext(ctx, configurationFailure(
+			"ClusterConfiguration.kubernetesVersion",
+			fmt.Sprintf("%s, marked end-of-life in this Deckhouse release", declared),
+			"a version that is still supported",
+			"set kubernetesVersion to a supported version, or to Automatic").Error())
 	}
 
 	if moduleVersion := m.moduleKubernetesVersion(); moduleVersion != "" && moduleVersion != declared {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-			"ClusterConfiguration.kubernetesVersion is %q and kubernetesVersion in the \"control-plane-manager\" "+
-				"ModuleConfig is %q. The ModuleConfig setting is the one that decides the cluster version, so the "+
-				"cluster will be created on %s",
-			declared, moduleVersion, moduleVersion))
+		dhlog.FromContext(ctx).WarnContext(ctx, configurationFailure(
+			"ClusterConfiguration.kubernetesVersion against kubernetesVersion in the \"control-plane-manager\" ModuleConfig",
+			fmt.Sprintf("%q and %q. The cluster will be created on %s.", declared, moduleVersion, moduleVersion),
+			"the same version in both documents",
+			"set both to the same version, or remove ClusterConfiguration.kubernetesVersion").Error())
 	}
 }
 
