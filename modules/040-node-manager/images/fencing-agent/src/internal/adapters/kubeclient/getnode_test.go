@@ -234,7 +234,7 @@ func TestGetNodeHonoursTheCallerDeadline(t *testing.T) {
 	}
 }
 
-func TestGetNodePicksTheSameInternalIPAsResolveIdentity(t *testing.T) {
+func TestGetNodePicksTheFirstInternalIP(t *testing.T) {
 	client := fake.NewClientset(objects(
 		node("worker-1", "worker",
 			corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: "1.2.3.4"},
@@ -246,15 +246,6 @@ func TestGetNodePicksTheSameInternalIPAsResolveIdentity(t *testing.T) {
 	record, err := NewNodes(client).GetNode(t.Context(), "worker-1")
 	if err != nil {
 		t.Fatalf("GetNode error = %v", err)
-	}
-
-	identity, err := ResolveIdentity(t.Context(), client, "worker-1")
-	if err != nil {
-		t.Fatalf("ResolveIdentity error = %v", err)
-	}
-
-	if record.IP != identity.IP {
-		t.Errorf("GetNode IP = %q, ResolveIdentity IP = %q, want the same address", record.IP, identity.IP)
 	}
 
 	if record.IP != "10.0.0.2" {

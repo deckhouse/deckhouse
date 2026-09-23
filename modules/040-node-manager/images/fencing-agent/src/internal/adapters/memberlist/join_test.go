@@ -70,10 +70,9 @@ func TestJoinDialsEachSeedInItsOwnConcurrentJoin(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		seeds := []string{seedA, seedB, seedC}
 		fake := &barrierJoin{t: t, want: len(seeds), all: make(chan struct{})}
-		c := &Cluster{joinSeed: fake.join}
 
 		start := time.Now()
-		joined, err := c.Join(seeds)
+		joined, err := joinEach(seeds, fake.join)
 		elapsed := time.Since(start)
 
 		if joined != len(seeds) || err != nil {
@@ -96,15 +95,15 @@ func TestJoinWaitsForTheSlowestSeed(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		const slow = 5 * time.Second
 
-		c := &Cluster{joinSeed: func(seed string) (int, error) {
+		join := func(seed string) (int, error) {
 			if seed == seedB {
 				time.Sleep(slow)
 			}
 			return 1, nil
-		}}
+		}
 
 		start := time.Now()
-		joined, err := c.Join([]string{seedA, seedB})
+		joined, err := joinEach([]string{seedA, seedB}, join)
 		elapsed := time.Since(start)
 
 		if joined != 2 || err != nil {
@@ -160,7 +159,7 @@ func TestJoinCountsEveryAcceptedSeedAndDropsErrorsOnSuccess(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var calls atomic.Int32
-			c := &Cluster{joinSeed: func(seed string) (int, error) {
+			join := func(seed string) (int, error) {
 				calls.Add(1)
 				if slices.Contains(tt.failing, seed) {
 					return 0, fmt.Errorf("failed to join %s: connection refused", seed)
@@ -169,9 +168,9 @@ func TestJoinCountsEveryAcceptedSeedAndDropsErrorsOnSuccess(t *testing.T) {
 					return n, nil
 				}
 				return 1, nil
-			}}
+			}
 
-			joined, err := c.Join(tt.seeds)
+			joined, err := joinEach(tt.seeds, join)
 
 			if joined != tt.wantJoined {
 				t.Errorf("Join joined %d, want %d", joined, tt.wantJoined)
@@ -180,7 +179,7 @@ func TestJoinCountsEveryAcceptedSeedAndDropsErrorsOnSuccess(t *testing.T) {
 				t.Errorf("Join error = %T(%v), want error: %t", err, err, tt.wantErr)
 			}
 			if got := int(calls.Load()); got != len(tt.seeds) {
-				t.Errorf("joinSeed called %d times, want %d", got, len(tt.seeds))
+				t.Errorf("join called %d times, want %d", got, len(tt.seeds))
 			}
 		})
 	}
@@ -196,7 +195,7 @@ func TestJoinErrorsKeepSeedOrder(t *testing.T) {
 
 		var mu sync.Mutex
 		var finished []string
-		c := &Cluster{joinSeed: func(seed string) (int, error) {
+		join := func(seed string) (int, error) {
 			time.Sleep(delays[seed])
 
 			mu.Lock()
@@ -204,9 +203,9 @@ func TestJoinErrorsKeepSeedOrder(t *testing.T) {
 			mu.Unlock()
 
 			return 0, multierror.Append(nil, fmt.Errorf("failed to join %s: i/o timeout", seed))
-		}}
+		}
 
-		joined, err := c.Join([]string{seedA, seedB, seedC})
+		joined, err := joinEach([]string{seedA, seedB, seedC}, join)
 
 		mu.Lock()
 		order := slices.Clone(finished)

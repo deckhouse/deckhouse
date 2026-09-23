@@ -36,8 +36,8 @@ import (
 
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/logtest"
 	"fencing-agent/internal/usecase/failedstate"
-	"fencing-agent/internal/usecase/fallback"
 	"fencing-agent/internal/usecase/rejoin"
 )
 
@@ -270,8 +270,6 @@ func checkRecordTimeline(t *testing.T, s recordScenario, loops []recordLoop) {
 	}
 }
 
-const recordTakeoverDelay = 10 * time.Second
-
 type recordHarness struct {
 	start    time.Time
 	api      *recordAPI
@@ -290,14 +288,13 @@ func runRecordHarness(t *testing.T, s recordScenario) *recordHarness {
 	h := &recordHarness{
 		start:    start,
 		api:      newRecordAPI(),
-		expected: make(recordExpected, 0, len(s.group)),
+		expected: recordPeers(s.group),
 		views:    make(map[string]*recordGossip, len(s.group)),
 		ops:      &recordOps{start: start},
 		attempts: &rejoinAttempts{},
 	}
 
 	for _, name := range s.group {
-		h.expected = append(h.expected, domain.Peer{Name: name, IP: "10.0.0.1", UID: "node-uid-" + name})
 		h.views[name] = &recordGossip{members: slices.Clone(s.group)}
 	}
 
@@ -311,26 +308,10 @@ func runRecordHarness(t *testing.T, s recordScenario) *recordHarness {
 
 		logger := log.NewNop()
 		if w, ok := s.writerLogs[name]; ok {
-			logger = newJSONLogger(w)
+			logger = logtest.NewJSONLogger(w)
 		}
 
-		writer := failedstate.New(
-			failedstate.Params{
-				NodeName:         name,
-				RetryInterval:    time.Second,
-				MaxRetryInterval: 10 * time.Second,
-				TakeoverDelay:    recordTakeoverDelay,
-				FallbackTTL:      recordTTL,
-				StartedAt:        startedAt,
-			},
-			failedstate.Deps{
-				Alive:    h.views[name],
-				Expected: h.expected,
-				States:   newLoggedClient(h.api, h.ops, name, roleWriter),
-				Events:   recordEvents{},
-			},
-			logger,
-		)
+		writer := newRecordWriter(name, startedAt, h.views[name], h.expected, newLoggedClient(h.api, h.ops, name, roleWriter), logger)
 
 		starts = append(starts, recordLoop{at: at, run: func(ctx context.Context) { _ = writer.Run(ctx) }})
 	}
@@ -341,21 +322,7 @@ func runRecordHarness(t *testing.T, s recordScenario) *recordHarness {
 			t.Fatalf("agent x %s is not in the group %v", s.x, s.group)
 		}
 
-		monitor := fallback.New(
-			fallback.Params{
-				Node:            domain.NodeIdentity{Name: s.x, UID: "node-uid-" + s.x, IP: "10.0.0.1"},
-				Heartbeat:       recordHeartbeat,
-				APITimeout:      2 * time.Second,
-				WatchdogTimeout: 10 * time.Second,
-			},
-			fallback.Deps{
-				Alive:    view,
-				Expected: h.expected,
-				States:   newLoggedClient(h.api, h.ops, s.x, roleMonitor),
-				Events:   recordEvents{},
-			},
-			log.NewNop(),
-		)
+		monitor := newRecordMonitor(s.x, view, h.expected, newLoggedClient(h.api, h.ops, s.x, roleMonitor))
 
 		hasQuorum := func() bool { return domain.NewView(h.expected, view.Members()).HasQuorum() }
 
@@ -368,7 +335,7 @@ func runRecordHarness(t *testing.T, s recordScenario) *recordHarness {
 					return nil
 				},
 				HasQuorum:       hasQuorum,
-				OwnFailedRecord: ownFailedRecord(recordClient{api: h.api, agent: s.x}.List, func() bool { return true }, s.x, startedAt),
+				OwnFailedRecord: ownFailedRecord(recordClient{api: h.api, agent: s.x}.Get, func() bool { return true }, s.x, startedAt),
 			},
 			log.NewNop(),
 		)
@@ -522,8 +489,8 @@ func TestAgentTheMajorityRecordedFailedRejoinsAndRecordsNobody(t *testing.T) {
 			t.Errorf("the record of %s changed after the writer of %s paused at %s: %v, want no churn", rejoinLost, rejoinX, pausedAt, churn)
 		}
 
-		logs := decodeLogs(t, xLog.String())
-		if pauses, resumes := countMsg(logs, writerPausedMsg), countMsg(logs, writerResumedMsg); pauses != 1 || resumes != 0 {
+		logs := logtest.Decode(t, xLog.String())
+		if pauses, resumes := len(logtest.WithMsg(logs, writerPausedMsg)), len(logtest.WithMsg(logs, writerResumedMsg)); pauses != 1 || resumes != 0 {
 			t.Errorf("the writer of %s paused %d times and resumed %d times, want one pause that lasts", rejoinX, pauses, resumes)
 		}
 
@@ -621,8 +588,8 @@ func TestHealedAgentLeavesRejoinAndResumesWriting(t *testing.T) {
 				rejoinX, writes, pausedAt, deletedAt)
 		}
 
-		logs := decodeLogs(t, xLog.String())
-		if pauses, resumes := countMsg(logs, writerPausedMsg), countMsg(logs, writerResumedMsg); pauses != 1 || resumes != 1 {
+		logs := logtest.Decode(t, xLog.String())
+		if pauses, resumes := len(logtest.WithMsg(logs, writerPausedMsg)), len(logtest.WithMsg(logs, writerResumedMsg)); pauses != 1 || resumes != 1 {
 			t.Errorf("the writer of %s paused %d times and resumed %d times, want one pause, ended once", rejoinX, pauses, resumes)
 		}
 
@@ -780,8 +747,8 @@ func TestFallbackRecordMarkedFailedIsDroppedByItsNodeOnceItsViewRegainsQuorum(t 
 			t.Errorf("a record of %s with uid %s is left, want every verdict of %s removed by the majority", rejoinLost, lost.UID, rejoinX)
 		}
 
-		logs := decodeLogs(t, xLog.String())
-		if pauses, resumes := countMsg(logs, writerPausedMsg), countMsg(logs, writerResumedMsg); pauses != 1 || resumes != 0 {
+		logs := logtest.Decode(t, xLog.String())
+		if pauses, resumes := len(logtest.WithMsg(logs, writerPausedMsg)), len(logtest.WithMsg(logs, writerResumedMsg)); pauses != 1 || resumes != 0 {
 			t.Errorf("the writer of %s paused %d times and resumed %d times, want one pause, over the recreated record, that lasts",
 				rejoinX, pauses, resumes)
 		}
@@ -886,28 +853,7 @@ func TestWriterPauseAndRejoinTriggerAgreeOnEveryRow(t *testing.T) {
 				api := newRecordAPI()
 				view := &recordGossip{members: []string{rejoinX, rejoinPeer, rejoinLost}}
 
-				expected := make(recordExpected, 0, len(view.members))
-				for _, name := range view.members {
-					expected = append(expected, domain.Peer{Name: name, IP: "10.0.0.1", UID: "node-uid-" + name})
-				}
-
-				writer := failedstate.New(
-					failedstate.Params{
-						NodeName:         rejoinX,
-						RetryInterval:    time.Second,
-						MaxRetryInterval: 10 * time.Second,
-						TakeoverDelay:    recordTakeoverDelay,
-						FallbackTTL:      recordTTL,
-						StartedAt:        startedAt,
-					},
-					failedstate.Deps{
-						Alive:    view,
-						Expected: expected,
-						States:   recordClient{api: api, agent: rejoinX},
-						Events:   recordEvents{},
-					},
-					log.NewNop(),
-				)
+				writer := newRecordWriter(rejoinX, startedAt, view, recordPeers(view.members), recordClient{api: api, agent: rejoinX}, log.NewNop())
 
 				ctx, cancel := context.WithCancel(t.Context())
 
@@ -929,7 +875,7 @@ func TestWriterPauseAndRejoinTriggerAgreeOnEveryRow(t *testing.T) {
 					sleepUntil(start, probe.pass-500*time.Millisecond)
 					api.remove(rejoinLost)
 
-					trigger := ownFailedRecord(recordClient{api: api, agent: rejoinX}.List, func() bool { return true }, rejoinX, startedAt)(t.Context())
+					trigger := ownFailedRecord(recordClient{api: api, agent: rejoinX}.Get, func() bool { return true }, rejoinX, startedAt)(t.Context())
 					if trigger != want {
 						t.Errorf("before the pass at %s the rejoin trigger is %t, want %t: the copy of the row lost its meaning",
 							probe.pass, trigger, want)
@@ -984,18 +930,6 @@ func mutuallyRankedGroup(t *testing.T) []string {
 	t.Fatalf("no two of %v are each other's writer of rank 0 in a group of three", names)
 
 	return nil
-}
-
-func countMsg(records []logRecord, msg string) int {
-	count := 0
-
-	for _, record := range records {
-		if record.msg() == msg {
-			count++
-		}
-	}
-
-	return count
 }
 
 func TestMutuallyRecordedPairClearsEachOtherWhilePaused(t *testing.T) {
@@ -1135,9 +1069,9 @@ func TestMutuallyRecordedPairClearsEachOtherWhilePaused(t *testing.T) {
 				}
 
 				for _, member := range []string{first, second} {
-					records := decodeLogs(t, logs[member].String())
+					records := logtest.Decode(t, logs[member].String())
 
-					if pauses, resumes := countMsg(records, writerPausedMsg), countMsg(records, writerResumedMsg); pauses != 1 || resumes != 1 {
+					if pauses, resumes := len(logtest.WithMsg(records, writerPausedMsg)), len(logtest.WithMsg(records, writerResumedMsg)); pauses != 1 || resumes != 1 {
 						t.Errorf("the writer of %s paused %d times and resumed %d times, want one pause, ended once", member, pauses, resumes)
 					}
 				}
@@ -1288,7 +1222,7 @@ func TestHealthyPeersRecordedByOneAsymmetricViewClearEachOtherWithoutPausing(t *
 		}
 
 		for _, victim := range victims {
-			if pauses := countMsg(decodeLogs(t, logs[victim].String()), writerPausedMsg); pauses != 0 {
+			if pauses := len(logtest.WithMsg(logtest.Decode(t, logs[victim].String()), writerPausedMsg)); pauses != 0 {
 				t.Errorf("the writer of %s paused %d times, want never: no record about it stood for a TakeoverDelay", victim, pauses)
 			}
 
@@ -1388,7 +1322,7 @@ func TestPartitionedPairThatSeesEveryoneClearsEachOtherAndNeverPauses(t *testing
 					member, len(created), minRecords, until, created)
 			}
 
-			if pauses := countMsg(decodeLogs(t, logs[member].String()), writerPausedMsg); pauses != 0 {
+			if pauses := len(logtest.WithMsg(logtest.Decode(t, logs[member].String()), writerPausedMsg)); pauses != 0 {
 				t.Errorf("the writer of %s paused %d times, want never: every record about it goes before it stands a TakeoverDelay",
 					member, pauses)
 			}

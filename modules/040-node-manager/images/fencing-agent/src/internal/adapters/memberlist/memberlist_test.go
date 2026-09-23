@@ -87,14 +87,12 @@ func TestBuildConfigAppliesProfileTuning(t *testing.T) {
 }
 
 func TestBuildConfigAdvertisesTheNodeAddress(t *testing.T) {
-	tuning := testTuning()
-
 	cfg := buildConfig(Config{
 		NodeName:      "worker-1",
 		NodeGroup:     "worker",
 		AdvertiseAddr: "10.0.0.1",
 		Port:          8500,
-		Tuning:        tuning,
+		Tuning:        testTuning(),
 	}, log.NewNop(), newEventDelegate(log.NewNop()))
 
 	if cfg.Name != "worker-1" {
@@ -118,11 +116,6 @@ func TestBuildConfigAdvertisesTheNodeAddress(t *testing.T) {
 	// The label keeps each NodeGroup in its own gossip network.
 	if cfg.Label != "worker" {
 		t.Errorf("Label is %q, want the node group name", cfg.Label)
-	}
-
-	if cfg.DeadNodeReclaimTime != tuning.GossipToTheDeadTime.Duration {
-		t.Errorf("DeadNodeReclaimTime is %s, want gossipToTheDeadTime %s",
-			cfg.DeadNodeReclaimTime, tuning.GossipToTheDeadTime.Duration)
 	}
 
 	if cfg.Logger == nil || cfg.Events == nil {

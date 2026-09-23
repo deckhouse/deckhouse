@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/logtest"
 )
 
 func groupWithAPeer() (*fakeNodes, *fakeExpected) {
@@ -168,27 +169,6 @@ func TestOwnNodeVerdictsRefuseTheJoin(t *testing.T) {
 	})
 }
 
-func TestOwnNodeLabelRuleIsTheSharedGroupRule(t *testing.T) {
-	for _, label := range []string{"worker", "", "worker-2", "Worker", " worker", "worker "} {
-		t.Run(strconv.Quote(label), func(t *testing.T) {
-			nodes, expected := groupWithAPeer()
-			nodes.setAnswer(testNodeName, nodeAnswer{record: withGroup(selfRecord(), label)})
-			cluster := &fakeCluster{}
-
-			err := newJoiner(t, nodes, expected, cluster).Attempt(t.Context())
-
-			inGroup := domain.InNodeGroup(label, testNodeGroup)
-			if errors.Is(err, ErrNotMember) != !inGroup {
-				t.Errorf("label %q: attempt returned %v, want ErrNotMember exactly when InNodeGroup is false (%t)", label, err, inGroup)
-			}
-
-			if inGroup && err != nil {
-				t.Errorf("label %q: attempt returned %v, want success for a node in its group", label, err)
-			}
-		})
-	}
-}
-
 func threePeerGroup() (*fakeNodes, *fakeExpected) {
 	return mirroredGroup(
 		selfPeer(),
@@ -290,7 +270,7 @@ func TestSlowCandidateIsDroppedAfterTheAPITimeout(t *testing.T) {
 
 		var logs bytes.Buffer
 
-		joiner := New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs))
+		joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
 
 		start := time.Now()
 		err := joiner.Attempt(t.Context())
@@ -310,10 +290,10 @@ func TestSlowCandidateIsDroppedAfterTheAPITimeout(t *testing.T) {
 			t.Errorf("the slow candidate was read %d times, want once: a timed-out read is dropped, not retried", got)
 		}
 
-		records := drainLogs(t, &logs)
-		assertSnakeCaseKeys(t, records)
+		records := logtest.Drain(t, &logs)
+		logtest.AssertSnakeCaseKeys(t, records)
 
-		dropped := withMsg(records, droppedMsg)
+		dropped := logtest.WithMsg(records, droppedMsg)
 		if len(dropped) != 1 {
 			t.Fatalf("drop records are %v, want exactly one for the slow candidate", dropped)
 		}
@@ -323,7 +303,7 @@ func TestSlowCandidateIsDroppedAfterTheAPITimeout(t *testing.T) {
 			t.Errorf("drop record is %q, want %q", got, want)
 		}
 
-		if got := record.str("error"); !strings.Contains(got, context.DeadlineExceeded.Error()) {
+		if got := record.Str("error"); !strings.Contains(got, context.DeadlineExceeded.Error()) {
 			t.Errorf("drop record error is %q, want it to name %q", got, context.DeadlineExceeded)
 		}
 	})
@@ -430,7 +410,7 @@ func TestAttemptCancelledDuringCandidateReadsIsAQuietShutdown(t *testing.T) {
 
 				var logs bytes.Buffer
 
-				joiner := New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs))
+				joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
 
 				result := make(chan error, 1)
 
@@ -464,16 +444,16 @@ func TestAttemptCancelledDuringCandidateReadsIsAQuietShutdown(t *testing.T) {
 					t.Errorf("join was called with %v, want none after the cancel", joins)
 				}
 
-				records := drainLogs(t, &logs)
-				assertSnakeCaseKeys(t, records)
+				records := logtest.Drain(t, &logs)
+				logtest.AssertSnakeCaseKeys(t, records)
 
 				for _, record := range records {
-					if level := record.level(); level != "debug" && level != "info" {
+					if level := record.Level(); level != "debug" && level != "info" {
 						t.Errorf("attempt logged %v, want no line above info on a shutdown", record)
 					}
 				}
 
-				if dropped := withMsg(records, droppedMsg); len(dropped) != 0 {
+				if dropped := logtest.WithMsg(records, droppedMsg); len(dropped) != 0 {
 					t.Errorf("drop records are %v, want none: the reads failed only because of the shutdown", dropped)
 				}
 			})

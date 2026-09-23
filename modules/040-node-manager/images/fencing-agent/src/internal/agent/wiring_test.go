@@ -19,16 +19,12 @@ package agent
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"go/types"
-	"io"
-	"log/slog"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -36,54 +32,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/memberlist"
-	"fencing-agent/internal/config"
-	"fencing-agent/internal/domain"
+	"fencing-agent/internal/logtest"
 	"fencing-agent/internal/usecase/failedstate"
 )
 
 const wiringMoved = "the wiring this test reads has moved"
-
-func testAgentWithTimings() *Agent {
-	return New(
-		&config.Config{NodeGroup: "worker", MemberlistPort: 8500},
-		Deps{},
-		domain.NodeIdentity{Name: "worker-1", UID: "uid-1", IP: "10.0.0.1"},
-		v1alpha1.FencingSLAProfileSpec{
-			Memberlist: v1alpha1.FencingSLAProfileMemberlist{
-				ProbeInterval:           metav1.Duration{Duration: 300 * time.Millisecond},
-				ProbeTimeout:            metav1.Duration{Duration: 120 * time.Millisecond},
-				SuspicionMult:           4,
-				SuspicionMaxTimeoutMult: 6,
-				IndirectChecks:          2,
-				AwarenessMaxMultiplier:  8,
-				GossipInterval:          metav1.Duration{Duration: 150 * time.Millisecond},
-				RetransmitMult:          3,
-				GossipToTheDeadTime:     metav1.Duration{Duration: 7 * time.Second},
-			},
-			Fallback: v1alpha1.FencingSLAProfileFallback{
-				Heartbeat:            metav1.Duration{Duration: 1 * time.Second},
-				TTL:                  metav1.Duration{Duration: 4 * time.Second},
-				KubernetesAPITimeout: metav1.Duration{Duration: 2 * time.Second},
-			},
-			Rejoin: v1alpha1.FencingSLAProfileRejoin{
-				Interval:    metav1.Duration{Duration: 5 * time.Second},
-				MaxInterval: metav1.Duration{Duration: 30 * time.Second},
-			},
-			Evacuation: v1alpha1.FencingSLAProfileEvacuation{
-				Delay: metav1.Duration{Duration: 12 * time.Second},
-			},
-			Watchdog: v1alpha1.FencingSLAProfileWatchdog{
-				FeedInterval: metav1.Duration{Duration: 6 * time.Second},
-				Timeout:      metav1.Duration{Duration: 60 * time.Second},
-			},
-		},
-		log.NewNop(),
-	)
-}
 
 func parseAgentRun(t *testing.T) *ast.FuncDecl {
 	t.Helper()
@@ -175,7 +130,7 @@ func isSelector(expr ast.Expr, receiver, name string) bool {
 }
 
 func TestMemberlistConfigCarriesTheAPITimeout(t *testing.T) {
-	cfg := testAgentWithTimings().memberlistConfig()
+	cfg := testAgent().memberlistConfig()
 
 	switch cfg.APITimeout {
 	case 2 * time.Second:
@@ -463,99 +418,22 @@ func TestSelfStateReachesOnlyTheOwnNodeWatcherAndTheWatchdog(t *testing.T) {
 	}
 }
 
-func newJSONLogger(w io.Writer) *log.Logger {
-	return log.NewLogger(
-		log.WithOutput(w),
-		log.WithHandlerType(log.JSONHandlerType),
-		log.WithLevel(slog.LevelDebug),
-	)
-}
-
-type logRecord map[string]any
-
-func (r logRecord) msg() string {
-	s, _ := r["msg"].(string)
-
-	return s
-}
-
-func decodeLogs(t *testing.T, snapshot string) []logRecord {
-	t.Helper()
-
-	var records []logRecord
-
-	dec := json.NewDecoder(strings.NewReader(snapshot))
-
-	for dec.More() {
-		var record logRecord
-		if err := dec.Decode(&record); err != nil {
-			t.Fatalf("log output is not JSON lines: %v", err)
-		}
-
-		records = append(records, record)
-	}
-
-	return records
-}
-
-var serviceLogKeys = map[string]bool{
-	"level":      true,
-	"logger":     true,
-	"msg":        true,
-	"source":     true,
-	"stacktrace": true,
-	"time":       true,
-}
-
-var snakeCaseKey = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-
-func assertSnakeCaseKeys(t *testing.T, records []logRecord) {
-	t.Helper()
-
-	for _, record := range records {
-		for key, value := range record {
-			if serviceLogKeys[key] {
-				continue
-			}
-
-			assertSnakeCaseKey(t, record.msg(), key, key, value)
-		}
-	}
-}
-
-func assertSnakeCaseKey(t *testing.T, msg, path, key string, value any) {
-	t.Helper()
-
-	if !snakeCaseKey.MatchString(key) {
-		t.Errorf("log key %q in %q is not snake_case", path, msg)
-	}
-
-	nested, ok := value.(map[string]any)
-	if !ok {
-		return
-	}
-
-	for nestedKey, nestedValue := range nested {
-		assertSnakeCaseKey(t, msg, path+"."+nestedKey, nestedKey, nestedValue)
-	}
-}
-
 func TestStartupLogCarriesTheDerivedMemberlistTimings(t *testing.T) {
 	var buf bytes.Buffer
 
-	a := testAgentWithTimings()
+	a := testAgent()
 	a.cfg.ProfileRefName = "standard"
 	a.cfg.WatchdogDevice = "/dev/watchdog1"
 	a.cfg.APISocketPath = "/run/fencing-agent.sock"
-	a.logger = newJSONLogger(&buf)
+	a.logger = logtest.NewJSONLogger(&buf)
 
 	cfg := a.memberlistConfig()
 	a.logStart(memberlist.DeriveTimings(cfg.Tuning, cfg.APITimeout))
 
-	records := decodeLogs(t, buf.String())
-	assertSnakeCaseKeys(t, records)
+	records := logtest.Decode(t, buf.String())
+	logtest.AssertSnakeCaseKeys(t, records)
 
-	if len(records) != 1 || records[0].msg() != "fencing-agent starting" {
+	if len(records) != 1 || records[0].Msg() != "fencing-agent starting" {
 		t.Fatalf("logStart wrote %d records %v, want one \"fencing-agent starting\"", len(records), records)
 	}
 
@@ -574,7 +452,7 @@ func TestStartupLogCarriesTheDerivedMemberlistTimings(t *testing.T) {
 		"tcp_timeout":            "2s",
 		"push_pull_interval":     "7s",
 		"dead_node_reclaim_time": "7s",
-		"leave_timeout":          "900ms",
+		"leave_timeout":          "1.2s",
 	}
 
 	record := records[0]
@@ -593,7 +471,7 @@ func TestStartupLogCarriesTheDerivedMemberlistTimings(t *testing.T) {
 	}
 
 	for key, value := range record {
-		if _, known := want[key]; !known && !serviceLogKeys[key] {
+		if _, known := want[key]; !known && !logtest.IsServiceKey(key) {
 			t.Errorf("startup line has unexpected key %s=%v", key, value)
 		}
 	}
@@ -607,7 +485,7 @@ func TestStartupLogCarriesTheDerivedMemberlistTimings(t *testing.T) {
 		LeaveTimeout:        440 * time.Millisecond,
 	})
 
-	records = decodeLogs(t, buf.String())
+	records = logtest.Decode(t, buf.String())
 	if len(records) != 1 {
 		t.Fatalf("logStart wrote %d records %v, want one", len(records), records)
 	}
@@ -635,22 +513,26 @@ func TestOwnFailedRecordIsFalseUntilTheFencingCacheSyncs(t *testing.T) {
 	}
 
 	var (
-		synced  bool
-		calls   int
-		listErr error
+		synced bool
+		calls  int
+		getErr error
 	)
 
-	list := func(context.Context) ([]v1alpha1.FencingFailedNodeState, error) {
+	get := func(_ context.Context, name string) (*v1alpha1.FencingFailedNodeState, error) {
 		calls++
 
 		if !synced {
-			t.Error("List ran before the fencing state cache synced, want no read until it syncs")
+			t.Error("Get ran before the fencing state cache synced, want no read until it syncs")
 		}
 
-		return []v1alpha1.FencingFailedNodeState{fresh}, listErr
+		if name != "worker-1" {
+			t.Errorf("Get read %q, want the record of this node", name)
+		}
+
+		return &fresh, getErr
 	}
 
-	trigger := ownFailedRecord(list, func() bool { return synced }, "worker-1", startedAt)
+	trigger := ownFailedRecord(get, func() bool { return synced }, "worker-1", startedAt)
 
 	for range 3 {
 		if trigger(t.Context()) {
@@ -659,7 +541,7 @@ func TestOwnFailedRecordIsFalseUntilTheFencingCacheSyncs(t *testing.T) {
 	}
 
 	if calls != 0 {
-		t.Errorf("List ran %d times before the fencing state cache synced, want 0", calls)
+		t.Errorf("Get ran %d times before the fencing state cache synced, want 0", calls)
 	}
 
 	synced = true
@@ -669,13 +551,13 @@ func TestOwnFailedRecordIsFalseUntilTheFencingCacheSyncs(t *testing.T) {
 	}
 
 	if calls != 1 {
-		t.Errorf("List ran %d times for one synced check, want 1", calls)
+		t.Errorf("Get ran %d times for one synced check, want 1", calls)
 	}
 
-	listErr = errors.New("list fencingfailednodestates: context canceled")
+	getErr = errors.New("get fencingfailednodestate \"worker-1\": context canceled")
 
 	if trigger(t.Context()) {
-		t.Error("trigger is true when List fails, want false")
+		t.Error("trigger is true when Get fails, want false")
 	}
 }
 
@@ -829,7 +711,7 @@ func TestWriterAndRejoinUseOneProcessStart(t *testing.T) {
 		t.Fatalf("found %d ownFailedRecord calls in Run, want exactly one: %s", len(triggers), wiringMoved)
 	}
 
-	const wantTrigger = "ownFailedRecord(states.List, closed(synced), a.identity.Name, startedAt)"
+	const wantTrigger = "ownFailedRecord(states.Get, closed(synced), a.identity.Name, startedAt)"
 
 	if got := types.ExprString(triggers[0]); got != wantTrigger {
 		t.Errorf("Run builds the rejoin trigger as %s, want %s", got, wantTrigger)
@@ -841,7 +723,7 @@ func TestWriterAndRejoinUseOneProcessStart(t *testing.T) {
 	}
 
 	if value, ok := depsField(t, run, "failedstate", "States").(*ast.Ident); !ok || value.Name != "states" {
-		t.Errorf("failedstate.Deps States is %s, want states, the store the rejoin trigger lists",
+		t.Errorf("failedstate.Deps States is %s, want states, the store the rejoin trigger reads",
 			types.ExprString(depsField(t, run, "failedstate", "States")))
 	}
 }

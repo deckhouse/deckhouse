@@ -426,4 +426,37 @@ func TestListIsScopedToTheNodeGroup(t *testing.T) {
 	}
 }
 
+func TestGetIsScopedToTheNodeGroup(t *testing.T) {
+	mine := &v1alpha1.FencingFailedNodeState{
+		ObjectMeta: metav1.ObjectMeta{Name: testPeerName, Labels: map[string]string{domain.NodeGroupLabel: testNodeGroup}},
+	}
+	other := &v1alpha1.FencingFailedNodeState{
+		ObjectMeta: metav1.ObjectMeta{Name: "master-1", Labels: map[string]string{domain.NodeGroupLabel: "master"}},
+	}
+	states, _ := newStates(t, interceptor.Funcs{}, mine, other)
+
+	for name, want := range map[string]bool{testPeerName: true, "master-1": false, "worker-9": false} {
+		state, err := states.Get(t.Context(), name)
+		if err != nil {
+			t.Fatalf("get %q: %v", name, err)
+		}
+
+		if got := state != nil; got != want {
+			t.Errorf("get %q returned an object: %t, want %t: only an existing object of this NodeGroup", name, got, want)
+		}
+	}
+}
+
+func TestGetReportsAFailedRead(t *testing.T) {
+	states, _ := newStates(t, interceptor.Funcs{
+		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+			return apierrors.NewServiceUnavailable("etcd is down")
+		},
+	})
+
+	if _, err := states.Get(t.Context(), testPeerName); err == nil {
+		t.Error("get returned no error for a failed read, want the error, not a missing object")
+	}
+}
+
 func ptr[T any](v T) *T { return &v }

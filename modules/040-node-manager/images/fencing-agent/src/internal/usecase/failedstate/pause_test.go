@@ -18,10 +18,7 @@ package failedstate
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
-	"log/slog"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -30,10 +27,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/logtest"
 )
 
 func removeRecord(store *stubStore, name string) {
@@ -79,116 +75,23 @@ func ownRecord(self, detectedBy string, ct time.Time) v1alpha1.FencingFailedNode
 	}
 }
 
+func (h *harness) pauseByOwnRecord(t *testing.T, self, detectedBy string, failed ...string) {
+	t.Helper()
+
+	h.store.states = append(h.store.states, ownRecord(self, detectedBy, h.clock.now))
+	h.failPeer(t.Context(), failed...)
+	h.clock.advance(takeoverDelay)
+	h.failPeer(t.Context(), failed...)
+
+	if !h.writer.paused {
+		t.Fatalf("the writer is not paused, want the own failed record to pause it after %s", takeoverDelay)
+	}
+}
+
 func deleteCalls(store *stubStore) []string {
 	return slices.DeleteFunc(slices.Clone(store.calls), func(call string) bool {
 		return !strings.HasPrefix(call, "delete:")
 	})
-}
-
-func newJSONLogger(buf *bytes.Buffer) *log.Logger {
-	return log.NewLogger(
-		log.WithOutput(buf),
-		log.WithHandlerType(log.JSONHandlerType),
-		log.WithLevel(slog.LevelDebug),
-	)
-}
-
-type logRecord map[string]any
-
-func (r logRecord) level() string {
-	return r.str("level")
-}
-
-func (r logRecord) msg() string {
-	return r.str("msg")
-}
-
-func (r logRecord) str(key string) string {
-	s, _ := r[key].(string)
-
-	return s
-}
-
-func (r logRecord) count(key string) int {
-	n, ok := r[key].(float64)
-	if !ok {
-		return -1
-	}
-
-	return int(n)
-}
-
-func drainLogs(t *testing.T, logs *bytes.Buffer) []logRecord {
-	t.Helper()
-
-	var records []logRecord
-
-	dec := json.NewDecoder(logs)
-
-	for dec.More() {
-		var record logRecord
-		if err := dec.Decode(&record); err != nil {
-			t.Fatalf("log output is not JSON lines: %v", err)
-		}
-
-		records = append(records, record)
-	}
-
-	return records
-}
-
-func withMsg(records []logRecord, msg string) []logRecord {
-	var matched []logRecord
-
-	for _, record := range records {
-		if record.msg() == msg {
-			matched = append(matched, record)
-		}
-	}
-
-	return matched
-}
-
-var serviceLogKeys = map[string]bool{
-	"level":      true,
-	"logger":     true,
-	"msg":        true,
-	"source":     true,
-	"stacktrace": true,
-	"time":       true,
-}
-
-var snakeCaseKey = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-
-func assertSnakeCaseKeys(t *testing.T, records []logRecord) {
-	t.Helper()
-
-	for _, record := range records {
-		for key, value := range record {
-			if serviceLogKeys[key] {
-				continue
-			}
-
-			assertSnakeCaseKey(t, record.msg(), key, key, value)
-		}
-	}
-}
-
-func assertSnakeCaseKey(t *testing.T, msg, path, key string, value any) {
-	t.Helper()
-
-	if !snakeCaseKey.MatchString(key) {
-		t.Errorf("log key %q in %q is not snake_case", path, msg)
-	}
-
-	nested, ok := value.(map[string]any)
-	if !ok {
-		return
-	}
-
-	for nestedKey, nestedValue := range nested {
-		assertSnakeCaseKey(t, msg, path+"."+nestedKey, nestedKey, nestedValue)
-	}
 }
 
 func TestVanishedRecordIsRecreatedWithAFreshDetectedAt(t *testing.T) {
@@ -606,15 +509,7 @@ func TestRecordWrittenDuringThePauseEndsTheRetryOfItsIncident(t *testing.T) {
 	}
 
 	store.failCreate = nil
-	store.states = append(store.states, ownRecord(self, otherThan(failed), h.clock.now))
-	h.failPeer(t.Context(), failed)
-
-	h.clock.advance(takeoverDelay)
-	h.failPeer(t.Context(), failed)
-
-	if !h.writer.paused {
-		t.Fatalf("the writer is not paused, want the own failed record to pause it")
-	}
+	h.pauseByOwnRecord(t, self, otherThan(failed), failed)
 
 	if inc.attempts == 0 || inc.retryAfter.IsZero() {
 		t.Fatalf("calls = %v, want the retry still pending when the pause starts", store.calls)
@@ -691,15 +586,7 @@ func TestWriterRemovesNoOtherRecordWhileItsOwnFailedRecordExists(t *testing.T) {
 				}
 			}
 
-			store.states = append(store.states, ownRecord(self, "worker-2", h.clock.now))
-			h.settle(t.Context())
-
-			h.clock.advance(takeoverDelay)
-			h.settle(t.Context())
-
-			if !h.writer.paused {
-				t.Fatalf("the writer is not paused, want the own failed record to pause it after %s", takeoverDelay)
-			}
+			h.pauseByOwnRecord(t, self, "worker-2")
 
 			if !row.seenBefore {
 				store.states = append(store.states, row.record(h.clock.now))
@@ -745,14 +632,7 @@ func TestPausedWriterRemovesItsOwnVerdictOnAPeerBackInGossip(t *testing.T) {
 			store := newStore()
 			h := newHarness(t, row.self, store)
 
-			store.states = append(store.states, ownRecord(row.self, peer, h.clock.now))
-			h.settle(t.Context())
-			h.clock.advance(takeoverDelay)
-			h.settle(t.Context())
-
-			if !h.writer.paused {
-				t.Fatalf("the writer is not paused, want the own failed record to pause it after %s", takeoverDelay)
-			}
+			h.pauseByOwnRecord(t, row.self, peer)
 
 			verdict := failedRecordAt(peer, types.UID("cr-"+peer), h.clock.now)
 			verdict.Status.Failed.DetectedBy = row.self
@@ -906,14 +786,13 @@ func TestWriterResumesWhenTheOwnFailedRecordGoes(t *testing.T) {
 	const (
 		failed = "worker-3"
 
-		resumedMsg  = "no peer records this node as failed any more, the fencing state writer resumes"
 		recordedMsg = "fencing state recorded"
 	)
 
 	self := writerFor(failed)
 	logs := &bytes.Buffer{}
 	store := newStore()
-	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(newJSONLogger(logs)))
+	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(logtest.NewJSONLogger(logs)))
 
 	h.settle(t.Context())
 
@@ -950,24 +829,24 @@ func TestWriterResumesWhenTheOwnFailedRecordGoes(t *testing.T) {
 			got, want, failedPaused)
 	}
 
-	records := drainLogs(t, logs)
-	assertSnakeCaseKeys(t, records)
+	records := logtest.Drain(t, logs)
+	logtest.AssertSnakeCaseKeys(t, records)
 
-	ends := withMsg(records, resumedMsg)
+	ends := logtest.WithMsg(records, writerResumedMsg)
 	if len(ends) != 1 {
 		t.Fatalf("pause end logged %d times, want once", len(ends))
 	}
 
-	if got := ends[0].count("open_incidents"); got != 1 {
+	if got := ends[0].Int("open_incidents"); got != 1 {
 		t.Errorf("pause end open_incidents = %d, want 1: the incident of %s opened during the pause", got, failed)
 	}
 
-	if got, want := ends[0].str("paused_for"), time.Minute.String(); got != want {
+	if got, want := ends[0].Str("paused_for"), time.Minute.String(); got != want {
 		t.Errorf("pause end paused_for = %q, want %q from the pass that started the pause", got, want)
 	}
 
 	want := resumed.UTC().Format(metav1.RFC3339Micro)
-	if lines := withMsg(records, recordedMsg); len(lines) != 1 || lines[0].str("detected_at") != want {
+	if lines := logtest.WithMsg(records, recordedMsg); len(lines) != 1 || lines[0].Str("detected_at") != want {
 		t.Errorf("%q lines = %v, want one with detected_at %q", recordedMsg, lines, want)
 	}
 }
@@ -1059,14 +938,7 @@ func TestRecordThatVanishedDuringThePauseIsStampedWhenItIsRecreated(t *testing.T
 	h.failPeer(t.Context(), failed)
 
 	h.clock.advance(time.Second)
-	store.states = append(store.states, ownRecord(self, writerFor(failed), h.clock.now))
-	h.failPeer(t.Context(), failed)
-	h.clock.advance(takeoverDelay)
-	h.failPeer(t.Context(), failed)
-
-	if !h.writer.paused {
-		t.Fatalf("the writer is not paused, want the own failed record to pause it")
-	}
+	h.pauseByOwnRecord(t, self, writerFor(failed), failed)
 
 	h.clock.advance(time.Second)
 	removeRecord(store, failed)
@@ -1127,14 +999,7 @@ func TestPeerThatRecoversAndFailsAgainDuringThePauseIsTimedAfresh(t *testing.T) 
 	h.settle(t.Context())
 
 	h.clock.advance(time.Hour)
-	store.states = append(store.states, ownRecord(self, firstWriter, h.clock.now))
-	h.settle(t.Context())
-	h.clock.advance(takeoverDelay)
-	h.settle(t.Context())
-
-	if !h.writer.paused {
-		t.Fatalf("the writer is not paused, want the own failed record to pause it")
-	}
+	h.pauseByOwnRecord(t, self, firstWriter)
 
 	h.clock.advance(time.Second)
 	secondFailure := h.clock.now
@@ -1165,18 +1030,15 @@ func TestWriterPauseIsLoggedOnceAndRaisesNoEvent(t *testing.T) {
 		self        = "worker-1"
 		detectedBy  = "worker-2"
 		pausePasses = 5
-
-		pausedMsg  = "a peer recorded this node as failed, the fencing state writer is paused"
-		resumedMsg = "no peer records this node as failed any more, the fencing state writer resumes"
 	)
 
 	logs := &bytes.Buffer{}
 	store := newStore()
-	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(newJSONLogger(logs)))
+	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(logtest.NewJSONLogger(logs)))
 
 	h.settle(t.Context())
 
-	records := drainLogs(t, logs)
+	records := logtest.Drain(t, logs)
 	normal, warnings := slices.Clone(h.events.normal), slices.Clone(h.events.warnings)
 
 	detectedAt := h.clock.now
@@ -1202,7 +1064,7 @@ func TestWriterPauseIsLoggedOnceAndRaisesNoEvent(t *testing.T) {
 		t.Fatalf("the writer is not paused, want the own failed record to pause it")
 	}
 
-	paused := drainLogs(t, logs)
+	paused := logtest.Drain(t, logs)
 
 	removeRecord(store, self)
 
@@ -1215,54 +1077,54 @@ func TestWriterPauseIsLoggedOnceAndRaisesNoEvent(t *testing.T) {
 		t.Fatalf("the writer is still paused, want it resumed once the own failed record is gone")
 	}
 
-	resumed := drainLogs(t, logs)
+	resumed := logtest.Drain(t, logs)
 	window := slices.Concat(paused, resumed)
 
-	assertSnakeCaseKeys(t, slices.Concat(records, window))
+	logtest.AssertSnakeCaseKeys(t, slices.Concat(records, window))
 
-	starts := withMsg(paused, pausedMsg)
-	if len(starts) != 1 || len(withMsg(window, pausedMsg)) != 1 {
+	starts := logtest.WithMsg(paused, writerPausedMsg)
+	if len(starts) != 1 || len(logtest.WithMsg(window, writerPausedMsg)) != 1 {
 		t.Fatalf("pause start logged %d times during the pause and %d times in all, want once when the pause starts",
-			len(starts), len(withMsg(window, pausedMsg)))
+			len(starts), len(logtest.WithMsg(window, writerPausedMsg)))
 	}
 
-	ends := withMsg(resumed, resumedMsg)
-	if len(ends) != 1 || len(withMsg(window, resumedMsg)) != 1 {
+	ends := logtest.WithMsg(resumed, writerResumedMsg)
+	if len(ends) != 1 || len(logtest.WithMsg(window, writerResumedMsg)) != 1 {
 		t.Fatalf("pause end logged %d times after the pause and %d times in all, want once when the writer resumes",
-			len(ends), len(withMsg(window, resumedMsg)))
+			len(ends), len(logtest.WithMsg(window, writerResumedMsg)))
 	}
 
-	if got := starts[0].level(); got != "warn" {
+	if got := starts[0].Level(); got != "warn" {
 		t.Errorf("pause start logged at %q, want warn", got)
 	}
 
-	if got, want := starts[0].str("detected_by"), detectedBy; got != want {
+	if got, want := starts[0].Str("detected_by"), detectedBy; got != want {
 		t.Errorf("pause start detected_by = %q, want %q", got, want)
 	}
 
-	if got, want := starts[0].str("detected_at"), detectedAt.UTC().Format(metav1.RFC3339Micro); got != want {
+	if got, want := starts[0].Str("detected_at"), detectedAt.UTC().Format(metav1.RFC3339Micro); got != want {
 		t.Errorf("pause start detected_at = %q, want %q", got, want)
 	}
 
-	if got := ends[0].level(); got != "info" {
+	if got := ends[0].Level(); got != "info" {
 		t.Errorf("pause end logged at %q, want info", got)
 	}
 
-	if got, want := ends[0].str("paused_for"), (pausePasses * time.Second).String(); got != want {
+	if got, want := ends[0].Str("paused_for"), (pausePasses * time.Second).String(); got != want {
 		t.Errorf("pause end paused_for = %q, want %q", got, want)
 	}
 
-	if got := ends[0].count("open_incidents"); got != 0 {
+	if got := ends[0].Int("open_incidents"); got != 0 {
 		t.Errorf("pause end open_incidents = %d, want 0", got)
 	}
 
 	for _, record := range window {
-		if record.msg() == pausedMsg || record.msg() == resumedMsg {
+		if record.Msg() == writerPausedMsg || record.Msg() == writerResumedMsg {
 			continue
 		}
 
-		if record.level() != "debug" {
-			t.Errorf("%s line %q around the pause, want every line but its start and end at debug", record.level(), record.msg())
+		if record.Level() != "debug" {
+			t.Errorf("%s line %q around the pause, want every line but its start and end at debug", record.Level(), record.Msg())
 		}
 	}
 
@@ -1276,16 +1138,13 @@ func TestWriterPauseStartsAndEndsWithoutLocalQuorum(t *testing.T) {
 	const (
 		size = 5
 		self = "worker-1"
-
-		pausedMsg  = "a peer recorded this node as failed, the fencing state writer is paused"
-		resumedMsg = "no peer records this node as failed any more, the fencing state writer resumes"
 	)
 
 	failed := []string{"worker-4", "worker-5"}
 
 	logs := &bytes.Buffer{}
 	store := newStore()
-	h := newHarnessWith(t, size, self, store, withLogger(newJSONLogger(logs)))
+	h := newHarnessWith(t, size, self, store, withLogger(logtest.NewJSONLogger(logs)))
 
 	h.settle(t.Context())
 
@@ -1296,7 +1155,7 @@ func TestWriterPauseStartsAndEndsWithoutLocalQuorum(t *testing.T) {
 		t.Fatalf("open incidents = %d, want %d before quorum is lost", len(h.writer.incidents), len(failed))
 	}
 
-	passBelowQuorum := func() []logRecord {
+	passBelowQuorum := func() []logtest.Record {
 		t.Helper()
 
 		h.alive.members = []string{self, "worker-2"}
@@ -1306,7 +1165,7 @@ func TestWriterPauseStartsAndEndsWithoutLocalQuorum(t *testing.T) {
 			t.Fatalf("the writer holds local quorum with alive %v, the test needs it lost", h.alive.members)
 		}
 
-		return drainLogs(t, logs)
+		return logtest.Drain(t, logs)
 	}
 
 	h.clock.advance(time.Second)
@@ -1316,7 +1175,7 @@ func TestWriterPauseStartsAndEndsWithoutLocalQuorum(t *testing.T) {
 	store.states = append(store.states, ownRecord(self, "worker-2", h.clock.now))
 	records := passBelowQuorum()
 
-	if h.writer.paused || len(withMsg(records, pausedMsg)) != 0 {
+	if h.writer.paused || len(logtest.WithMsg(records, writerPausedMsg)) != 0 {
 		t.Fatalf("the writer paused in the pass that first saw the own record, want it paused %s later", takeoverDelay)
 	}
 
@@ -1328,7 +1187,7 @@ func TestWriterPauseStartsAndEndsWithoutLocalQuorum(t *testing.T) {
 		t.Fatalf("the writer is not paused, want the own failed record to pause it in a pass without quorum")
 	}
 
-	if starts := withMsg(records, pausedMsg); len(starts) != 1 {
+	if starts := logtest.WithMsg(records, writerPausedMsg); len(starts) != 1 {
 		t.Errorf("pause start logged %d times in the pass one handover step after the own record was seen without quorum, want once",
 			len(starts))
 	}
@@ -1342,18 +1201,18 @@ func TestWriterPauseStartsAndEndsWithoutLocalQuorum(t *testing.T) {
 		t.Fatalf("the writer is still paused, want it resumed in the pass without quorum that saw the own record go")
 	}
 
-	assertSnakeCaseKeys(t, records)
+	logtest.AssertSnakeCaseKeys(t, records)
 
-	ends := withMsg(records, resumedMsg)
+	ends := logtest.WithMsg(records, writerResumedMsg)
 	if len(ends) != 1 {
 		t.Fatalf("pause end logged %d times in the pass that saw the own record go without quorum, want once", len(ends))
 	}
 
-	if got, want := ends[0].str("paused_for"), resumed.Sub(pausedAt).String(); got != want {
+	if got, want := ends[0].Str("paused_for"), resumed.Sub(pausedAt).String(); got != want {
 		t.Errorf("pause end paused_for = %q, want %q", got, want)
 	}
 
-	if got, want := ends[0].count("open_incidents"), len(failed); got != want {
+	if got, want := ends[0].Int("open_incidents"), len(failed); got != want {
 		t.Errorf("pause end open_incidents = %d, want %d", got, want)
 	}
 
@@ -1400,7 +1259,7 @@ func TestPausedWriterKeepsObservingHeartbeats(t *testing.T) {
 		t.Run(row.name, func(t *testing.T) {
 			logs := &bytes.Buffer{}
 			store := newStore()
-			h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(newJSONLogger(logs)))
+			h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(logtest.NewJSONLogger(logs)))
 
 			store.states = append(store.states, fallbackRecord(node, types.UID("cr-"+node), h.clock.now))
 			h.settle(t.Context())
@@ -1434,10 +1293,10 @@ func TestPausedWriterKeepsObservingHeartbeats(t *testing.T) {
 				t.Fatalf("the writer is still paused, want it resumed once the own failed record is gone")
 			}
 
-			records := drainLogs(t, logs)
-			assertSnakeCaseKeys(t, records)
+			records := logtest.Drain(t, logs)
+			logtest.AssertSnakeCaseKeys(t, records)
 
-			removals := withMsg(records, removedMsg)
+			removals := logtest.WithMsg(records, removedMsg)
 			deletes := deleteCalls(store)
 
 			if !row.removed {
@@ -1454,7 +1313,7 @@ func TestPausedWriterKeepsObservingHeartbeats(t *testing.T) {
 					deletes, want, row.resumeAfter)
 			}
 
-			if len(removals) != 1 || removals[0].str("member") != node || removals[0].str("reason") != removedReason {
+			if len(removals) != 1 || removals[0].Str("member") != node || removals[0].Str("reason") != removedReason {
 				t.Errorf("%q lines = %v, want one with member %q and reason %q", removedMsg, removals, node, removedReason)
 			}
 		})
@@ -1485,7 +1344,7 @@ func TestWriterPausesOneHandoverStepAfterItFirstSeesItsOwnRecord(t *testing.T) {
 		t.Run(row.name, func(t *testing.T) {
 			logs := &bytes.Buffer{}
 			store := newStore()
-			h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(newJSONLogger(logs)))
+			h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(logtest.NewJSONLogger(logs)))
 
 			h.settle(t.Context())
 			h.clock.advance(2 * takeoverDelay)
@@ -1497,11 +1356,11 @@ func TestWriterPausesOneHandoverStepAfterItFirstSeesItsOwnRecord(t *testing.T) {
 			h.clock.advance(takeoverDelay - time.Millisecond)
 			h.settle(t.Context())
 
-			waiting := drainLogs(t, logs)
+			waiting := logtest.Drain(t, logs)
 
-			if h.writer.paused || len(withMsg(waiting, writerPausedMsg)) != 0 {
+			if h.writer.paused || len(logtest.WithMsg(waiting, writerPausedMsg)) != 0 {
 				t.Fatalf("paused = %t with %d pause lines %s after the pass that first saw the own record, want no pause before %s",
-					h.writer.paused, len(withMsg(waiting, writerPausedMsg)), takeoverDelay-time.Millisecond, takeoverDelay)
+					h.writer.paused, len(logtest.WithMsg(waiting, writerPausedMsg)), takeoverDelay-time.Millisecond, takeoverDelay)
 			}
 
 			h.clock.advance(time.Millisecond)
@@ -1516,15 +1375,15 @@ func TestWriterPausesOneHandoverStepAfterItFirstSeesItsOwnRecord(t *testing.T) {
 				h.settle(t.Context())
 			}
 
-			records := slices.Concat(waiting, drainLogs(t, logs))
-			assertSnakeCaseKeys(t, records)
+			records := slices.Concat(waiting, logtest.Drain(t, logs))
+			logtest.AssertSnakeCaseKeys(t, records)
 
-			starts := withMsg(records, writerPausedMsg)
+			starts := logtest.WithMsg(records, writerPausedMsg)
 			if len(starts) != 1 {
 				t.Fatalf("pause start logged %d times, want once", len(starts))
 			}
 
-			if got, want := starts[0].str("detected_at"), stamp.UTC().Format(metav1.RFC3339Micro); got != want {
+			if got, want := starts[0].Str("detected_at"), stamp.UTC().Format(metav1.RFC3339Micro); got != want {
 				t.Errorf("pause start detected_at = %q, want %q from the record", got, want)
 			}
 
@@ -1541,7 +1400,7 @@ func TestOwnRecordThatGoesBeforeTheWaitEndsLeavesTheWriterRunning(t *testing.T) 
 	self := rankOneFor(t, nodeGroupSize, failed)
 	logs := &bytes.Buffer{}
 	store := newStore()
-	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(newJSONLogger(logs)))
+	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(logtest.NewJSONLogger(logs)))
 
 	h.settle(t.Context())
 
@@ -1577,10 +1436,10 @@ func TestOwnRecordThatGoesBeforeTheWaitEndsLeavesTheWriterRunning(t *testing.T) 
 		t.Errorf("detectedAt of the marks = %v, want %v: the failure, not the moment the own record went", got, want)
 	}
 
-	records := drainLogs(t, logs)
-	assertSnakeCaseKeys(t, records)
+	records := logtest.Drain(t, logs)
+	logtest.AssertSnakeCaseKeys(t, records)
 
-	if starts, ends := withMsg(records, writerPausedMsg), withMsg(records, writerResumedMsg); len(starts) != 0 || len(ends) != 0 {
+	if starts, ends := logtest.WithMsg(records, writerPausedMsg), logtest.WithMsg(records, writerResumedMsg); len(starts) != 0 || len(ends) != 0 {
 		t.Fatalf("pause logged %d times and its end %d times, want neither for a record gone within %s",
 			len(starts), len(ends), takeoverDelay)
 	}
@@ -1603,8 +1462,8 @@ func TestOwnRecordThatGoesBeforeTheWaitEndsLeavesTheWriterRunning(t *testing.T) 
 		t.Fatalf("the writer is not paused %s after the own record came back, want it paused", takeoverDelay)
 	}
 
-	records = drainLogs(t, logs)
-	if starts, ends := withMsg(records, writerPausedMsg), withMsg(records, writerResumedMsg); len(starts) != 1 || len(ends) != 0 {
+	records = logtest.Drain(t, logs)
+	if starts, ends := logtest.WithMsg(records, writerPausedMsg), logtest.WithMsg(records, writerResumedMsg); len(starts) != 1 || len(ends) != 0 {
 		t.Errorf("pause logged %d times and its end %d times after the record came back, want the start once", len(starts), len(ends))
 	}
 }
@@ -1614,7 +1473,7 @@ func TestOwnRecordRecreatedUnderANewUIDRestartsTheWait(t *testing.T) {
 
 	logs := &bytes.Buffer{}
 	store := newStore()
-	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(newJSONLogger(logs)))
+	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(logtest.NewJSONLogger(logs)))
 
 	h.settle(t.Context())
 
@@ -1650,8 +1509,8 @@ func TestOwnRecordRecreatedUnderANewUIDRestartsTheWait(t *testing.T) {
 		t.Fatalf("the writer is not paused %s after it saw the new record, want it paused", takeoverDelay)
 	}
 
-	starts := withMsg(drainLogs(t, logs), writerPausedMsg)
-	if len(starts) != 1 || starts[0].str("detected_by") != "worker-3" {
+	starts := logtest.WithMsg(logtest.Drain(t, logs), writerPausedMsg)
+	if len(starts) != 1 || starts[0].Str("detected_by") != "worker-3" {
 		t.Errorf("pause start lines = %v, want one with detected_by %q from the new record", starts, "worker-3")
 	}
 }
@@ -1668,22 +1527,15 @@ func TestPausedWriterStaysPausedWhenItsOwnRecordIsRecreatedUnderANewUID(t *testi
 
 	logs := &bytes.Buffer{}
 	store := newStore()
-	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(newJSONLogger(logs)))
+	h := newHarnessWith(t, nodeGroupSize, self, store, withLogger(logtest.NewJSONLogger(logs)))
 
 	h.settle(t.Context())
 
-	store.states = append(store.states, ownRecord(self, other, h.clock.now))
-	h.settle(t.Context())
-	h.clock.advance(takeoverDelay)
-	h.settle(t.Context())
-
-	if !h.writer.paused {
-		t.Fatalf("the writer is not paused, want the own failed record to pause it after %s", takeoverDelay)
-	}
+	h.pauseByOwnRecord(t, self, other)
 
 	pausedAt := h.clock.now
 
-	if starts := withMsg(drainLogs(t, logs), writerPausedMsg); len(starts) != 1 {
+	if starts := logtest.WithMsg(logtest.Drain(t, logs), writerPausedMsg); len(starts) != 1 {
 		t.Fatalf("pause start logged %d times, want once", len(starts))
 	}
 
@@ -1713,15 +1565,15 @@ func TestPausedWriterStaysPausedWhenItsOwnRecordIsRecreatedUnderANewUID(t *testi
 			store.calls, failed, other)
 	}
 
-	records := drainLogs(t, logs)
-	assertSnakeCaseKeys(t, records)
+	records := logtest.Drain(t, logs)
+	logtest.AssertSnakeCaseKeys(t, records)
 
-	if starts, ends := withMsg(records, writerPausedMsg), withMsg(records, writerResumedMsg); len(starts) != 0 || len(ends) != 0 {
+	if starts, ends := logtest.WithMsg(records, writerPausedMsg), logtest.WithMsg(records, writerResumedMsg); len(starts) != 0 || len(ends) != 0 {
 		t.Errorf("pause logged %d more times and its end %d times after the own record was recreated, want neither while a record stands",
 			len(starts), len(ends))
 	}
 
-	if waits := withMsg(records, writerWaitsMsg); len(waits) != 0 {
+	if waits := logtest.WithMsg(records, writerWaitsMsg); len(waits) != 0 {
 		t.Errorf("a wait for the pause logged %d times after the own record was recreated, want none: the writer is paused already", len(waits))
 	}
 
@@ -1729,12 +1581,12 @@ func TestPausedWriterStaysPausedWhenItsOwnRecordIsRecreatedUnderANewUID(t *testi
 	removeRecord(store, self)
 	h.failPeer(t.Context(), failed)
 
-	ends := withMsg(drainLogs(t, logs), writerResumedMsg)
+	ends := logtest.WithMsg(logtest.Drain(t, logs), writerResumedMsg)
 	if len(ends) != 1 {
 		t.Fatalf("pause end logged %d times once no own record stands, want once", len(ends))
 	}
 
-	if got, want := ends[0].str("paused_for"), h.clock.now.Sub(pausedAt).String(); got != want {
+	if got, want := ends[0].Str("paused_for"), h.clock.now.Sub(pausedAt).String(); got != want {
 		t.Errorf("paused_for = %q, want %q counted from the pass that paused over the first record", got, want)
 	}
 }
@@ -1798,7 +1650,7 @@ func TestWriterWithoutATakeoverDelayPausesInThePassThatSeesItsOwnRecord(t *testi
 		t.Run("takeover delay "+delay.String(), func(t *testing.T) {
 			logs := &bytes.Buffer{}
 			store := newStore()
-			h := newHarnessWith(t, nodeGroupSize, self, store, withTakeoverDelay(delay), withLogger(newJSONLogger(logs)))
+			h := newHarnessWith(t, nodeGroupSize, self, store, withTakeoverDelay(delay), withLogger(logtest.NewJSONLogger(logs)))
 
 			h.settle(t.Context())
 
@@ -1810,7 +1662,7 @@ func TestWriterWithoutATakeoverDelayPausesInThePassThatSeesItsOwnRecord(t *testi
 					h.writer.paused, store.calls)
 			}
 
-			if starts := withMsg(drainLogs(t, logs), writerPausedMsg); len(starts) != 1 {
+			if starts := logtest.WithMsg(logtest.Drain(t, logs), writerPausedMsg); len(starts) != 1 {
 				t.Errorf("pause start logged %d times, want once", len(starts))
 			}
 		})

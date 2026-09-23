@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/logtest"
 	"fencing-agent/internal/usecase/join"
 	"fencing-agent/internal/usecase/rejoin"
 )
@@ -189,33 +190,6 @@ func stepUntil(t *testing.T, what string, done func() bool) {
 	}
 }
 
-func (r logRecord) level() string {
-	s, _ := r["level"].(string)
-
-	return s
-}
-
-func (r logRecord) count(key string) int {
-	n, ok := r[key].(float64)
-	if !ok {
-		return -1
-	}
-
-	return int(n)
-}
-
-func levelsOf(records []logRecord, msg string) []string {
-	levels := make([]string, 0, len(records))
-
-	for _, record := range records {
-		if record.msg() == msg {
-			levels = append(levels, record.level())
-		}
-	}
-
-	return levels
-}
-
 func TestJoinPathDedupeResetsForANewRejoinEpisode(t *testing.T) {
 	const attemptsPerEpisode = 3
 
@@ -230,7 +204,7 @@ func TestJoinPathDedupeResetsForANewRejoinEpisode(t *testing.T) {
 
 		var logs bytes.Buffer
 
-		logger := newJSONLogger(&logs)
+		logger := logtest.NewJSONLogger(&logs)
 		peers := episodePeers()
 		cluster := &episodeCluster{t: t, cancel: cancel}
 
@@ -288,13 +262,13 @@ func TestJoinPathDedupeResetsForANewRejoinEpisode(t *testing.T) {
 			t.Fatalf("the join path joined %d times, want %d: one Bootstrap and two episodes of %d attempts", joins, want, attemptsPerEpisode)
 		}
 
-		records := decodeLogs(t, logs.String())
-		assertSnakeCaseKeys(t, records)
+		records := logtest.Decode(t, logs.String())
+		logtest.AssertSnakeCaseKeys(t, records)
 
 		bounds := []int{0}
 
 		for i, record := range records {
-			if record.msg() == rejoinStartedMsg {
+			if record.Msg() == rejoinStartedMsg {
 				bounds = append(bounds, i)
 			}
 		}
@@ -333,12 +307,12 @@ func TestJoinPathDedupeResetsForANewRejoinEpisode(t *testing.T) {
 		for i, row := range rows {
 			segment := records[bounds[i]:bounds[i+1]]
 
-			if got := levelsOf(segment, joinPartialMsg); !slices.Equal(got, row.partial) {
+			if got := logtest.Levels(logtest.WithMsg(segment, joinPartialMsg)); !slices.Equal(got, row.partial) {
 				t.Errorf("in %s %q was logged at %v, want %v: the first of an episode at warn, its repeats at debug",
 					row.name, joinPartialMsg, got, row.partial)
 			}
 
-			if got := levelsOf(segment, joinCompletedMsg); !slices.Equal(got, row.completed) {
+			if got := logtest.Levels(logtest.WithMsg(segment, joinCompletedMsg)); !slices.Equal(got, row.completed) {
 				t.Errorf("in %s %q was logged at %v, want %v: the first of an episode at info, its repeats at debug",
 					row.name, joinCompletedMsg, got, row.completed)
 			}
@@ -347,8 +321,8 @@ func TestJoinPathDedupeResetsForANewRejoinEpisode(t *testing.T) {
 				continue
 			}
 
-			summaries := slices.DeleteFunc(slices.Clone(segment), func(record logRecord) bool { return record.msg() != row.summary })
-			if len(summaries) != 1 || summaries[0].count("attempts") != attemptsPerEpisode {
+			summaries := logtest.WithMsg(segment, row.summary)
+			if len(summaries) != 1 || summaries[0].Int("attempts") != attemptsPerEpisode {
 				t.Errorf("%s ended with %v, want one %q with %d attempts", row.name, summaries, row.summary, attemptsPerEpisode)
 			}
 		}

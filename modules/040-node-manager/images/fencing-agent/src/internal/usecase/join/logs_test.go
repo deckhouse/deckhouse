@@ -18,124 +18,14 @@ package join
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
-	"log/slog"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/logtest"
 )
-
-func newJSONLogger(buf *bytes.Buffer) *log.Logger {
-	return log.NewLogger(
-		log.WithOutput(buf),
-		log.WithHandlerType(log.JSONHandlerType),
-		log.WithLevel(slog.LevelDebug),
-	)
-}
-
-type logRecord map[string]any
-
-func (r logRecord) level() string {
-	return r.str("level")
-}
-
-func (r logRecord) msg() string {
-	return r.str("msg")
-}
-
-func (r logRecord) str(key string) string {
-	s, _ := r[key].(string)
-
-	return s
-}
-
-func (r logRecord) count(key string) int {
-	n, ok := r[key].(float64)
-	if !ok {
-		return -1
-	}
-
-	return int(n)
-}
-
-func drainLogs(t *testing.T, logs *bytes.Buffer) []logRecord {
-	t.Helper()
-
-	var records []logRecord
-
-	dec := json.NewDecoder(logs)
-
-	for dec.More() {
-		var record logRecord
-		if err := dec.Decode(&record); err != nil {
-			t.Fatalf("log output is not JSON lines: %v", err)
-		}
-
-		records = append(records, record)
-	}
-
-	return records
-}
-
-func withMsg(records []logRecord, msg string) []logRecord {
-	var matched []logRecord
-
-	for _, record := range records {
-		if record.msg() == msg {
-			matched = append(matched, record)
-		}
-	}
-
-	return matched
-}
-
-var serviceLogKeys = map[string]bool{
-	"level":      true,
-	"logger":     true,
-	"msg":        true,
-	"source":     true,
-	"stacktrace": true,
-	"time":       true,
-}
-
-var snakeCaseKey = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-
-func assertSnakeCaseKeys(t *testing.T, records []logRecord) {
-	t.Helper()
-
-	for _, record := range records {
-		for key, value := range record {
-			if serviceLogKeys[key] {
-				continue
-			}
-
-			assertSnakeCaseKey(t, record.msg(), key, key, value)
-		}
-	}
-}
-
-func assertSnakeCaseKey(t *testing.T, msg, path, key string, value any) {
-	t.Helper()
-
-	if !snakeCaseKey.MatchString(key) {
-		t.Errorf("log key %q in %q is not snake_case", path, msg)
-	}
-
-	nested, ok := value.(map[string]any)
-	if !ok {
-		return
-	}
-
-	for nestedKey, nestedValue := range nested {
-		assertSnakeCaseKey(t, msg, path+"."+nestedKey, nestedKey, nestedValue)
-	}
-}
 
 const (
 	completedMsg = "memberlist join completed"
@@ -143,19 +33,19 @@ const (
 	droppedMsg   = "join candidate dropped"
 )
 
-func lineOf(record logRecord) string {
-	return strings.Join([]string{record.msg(), record.level(), record.str("member"), record.str("reason")}, "|")
+func lineOf(record logtest.Record) string {
+	return strings.Join([]string{record.Msg(), record.Level(), record.Str("member"), record.Str("reason")}, "|")
 }
 
-func unleveledLineOf(record logRecord) string {
-	return strings.Join([]string{record.msg(), record.str("member"), record.str("reason")}, "|")
+func unleveledLineOf(record logtest.Record) string {
+	return strings.Join([]string{record.Msg(), record.Str("member"), record.Str("reason")}, "|")
 }
 
-func loudLines(records []logRecord) []string {
+func loudLines(records []logtest.Record) []string {
 	var lines []string
 
 	for _, record := range records {
-		if record.level() != "debug" {
+		if record.Level() != "debug" {
 			lines = append(lines, lineOf(record))
 		}
 	}
@@ -254,7 +144,7 @@ func TestJoinPathLinesAreDedupedAcrossAttempts(t *testing.T) {
 
 			var logs bytes.Buffer
 
-			joiner := New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs))
+			joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
 
 			attempt := func() {
 				if err := joiner.Attempt(t.Context()); (err != nil) != tc.wantErr {
@@ -264,7 +154,7 @@ func TestJoinPathLinesAreDedupedAcrossAttempts(t *testing.T) {
 
 			attempt()
 
-			first := drainLogs(t, &logs)
+			first := logtest.Drain(t, &logs)
 			if got, want := loudLines(first), slices.Sorted(slices.Values(tc.want)); !slices.Equal(got, want) {
 				t.Fatalf("first attempt lines above debug are %v, want %v", got, want)
 			}
@@ -273,8 +163,8 @@ func TestJoinPathLinesAreDedupedAcrossAttempts(t *testing.T) {
 				attempt()
 			}
 
-			rest := drainLogs(t, &logs)
-			assertSnakeCaseKeys(t, slices.Concat(first, rest))
+			rest := logtest.Drain(t, &logs)
+			logtest.AssertSnakeCaseKeys(t, slices.Concat(first, rest))
 
 			if got := loudLines(slices.Concat(first, rest)); len(got) != len(tc.want) {
 				t.Errorf("lines above debug after %d attempts are %v, want the %d of the first attempt only", attempts, got, len(tc.want))
@@ -290,7 +180,7 @@ func TestJoinPathLinesAreDedupedAcrossAttempts(t *testing.T) {
 			}
 
 			for _, record := range rest {
-				if record.level() != "debug" || !firstLines[unleveledLineOf(record)] {
+				if record.Level() != "debug" || !firstLines[unleveledLineOf(record)] {
 					t.Errorf("repeated record %v, want a line of the first attempt at level debug", record)
 				}
 			}
@@ -307,18 +197,18 @@ func TestJoinPathLinesAreDedupedAcrossAttempts(t *testing.T) {
 
 		var logs bytes.Buffer
 
-		joiner := New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs))
+		joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
 
 		attemptDrops := func() []string {
 			if err := joiner.Attempt(t.Context()); err == nil {
 				t.Fatal("attempt succeeded, want every candidate dropped")
 			}
 
-			records := drainLogs(t, &logs)
-			assertSnakeCaseKeys(t, records)
+			records := logtest.Drain(t, &logs)
+			logtest.AssertSnakeCaseKeys(t, records)
 
 			var lines []string
-			for _, record := range withMsg(records, droppedMsg) {
+			for _, record := range logtest.WithMsg(records, droppedMsg) {
 				lines = append(lines, lineOf(record))
 			}
 
@@ -374,18 +264,18 @@ func TestJoinPathLinesAreDedupedAcrossAttempts(t *testing.T) {
 
 		var logs bytes.Buffer
 
-		joiner := New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs))
+		joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
 
 		attemptClones := func() []string {
 			if err := joiner.Attempt(t.Context()); err != nil {
 				t.Fatalf("attempt returned %v, want this node to start alone", err)
 			}
 
-			records := drainLogs(t, &logs)
-			assertSnakeCaseKeys(t, records)
+			records := logtest.Drain(t, &logs)
+			logtest.AssertSnakeCaseKeys(t, records)
 
 			var lines []string
-			for _, record := range withMsg(records, cloneMsg) {
+			for _, record := range logtest.WithMsg(records, cloneMsg) {
 				lines = append(lines, lineOf(record))
 			}
 
@@ -437,7 +327,7 @@ func TestStartEpisodeRestartsTheDedupe(t *testing.T) {
 
 	var logs bytes.Buffer
 
-	joiner := New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs))
+	joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
 
 	attempts := func(n int) {
 		for range n {
@@ -453,15 +343,10 @@ func TestStartEpisodeRestartsTheDedupe(t *testing.T) {
 
 	joiner.Bootstrap(t.Context())
 
-	records := drainLogs(t, &logs)
-	assertSnakeCaseKeys(t, records)
+	records := logtest.Drain(t, &logs)
+	logtest.AssertSnakeCaseKeys(t, records)
 
-	completed := withMsg(records, completedMsg)
-	levels := make([]string, 0, len(completed))
-
-	for _, record := range completed {
-		levels = append(levels, record.level())
-	}
+	levels := logtest.Levels(logtest.WithMsg(records, completedMsg))
 
 	want := []string{"info", "debug", "debug", "info", "debug", "debug", "info"}
 	if !slices.Equal(levels, want) {

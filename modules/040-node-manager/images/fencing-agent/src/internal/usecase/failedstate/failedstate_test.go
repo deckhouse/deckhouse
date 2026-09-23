@@ -1139,6 +1139,7 @@ func TestNextInLineAlsoTakesOverTheRemoval(t *testing.T) {
 func TestOwnRecordWrittenAfterThisProcessStartedIsLeftAlone(t *testing.T) {
 	// A record younger than the agent means a peer considers this node dead right
 	// now. That is a live disagreement for the fallback path to settle: deleting
+	// it would only start a delete-and-create war with the quorate side.
 	const (
 		self   = "worker-1"
 		failed = "worker-3"

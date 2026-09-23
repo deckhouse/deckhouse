@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"slices"
 	"strings"
 	"testing"
@@ -36,6 +35,7 @@ import (
 
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/logtest"
 )
 
 const (
@@ -420,11 +420,7 @@ func TestFailuresAfterTheErrorAreLoggedAtDebugUntilTheStreakEnds(t *testing.T) {
 	logs := &bytes.Buffer{}
 	store := newStore()
 	store.failHeartbeat = unreachable
-	h := newLoggedHarness(t, store, log.NewLogger(
-		log.WithOutput(logs),
-		log.WithHandlerType(log.JSONHandlerType),
-		log.WithLevel(slog.LevelDebug),
-	))
+	h := newLoggedHarness(t, store, logtest.NewJSONLogger(logs))
 
 	h.loseQuorum(t.Context())
 
