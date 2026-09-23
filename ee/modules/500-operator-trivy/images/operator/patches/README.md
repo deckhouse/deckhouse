@@ -86,10 +86,19 @@ Updated operator dependencies. Fixes CVEs:
 ### 999-FixCVE.patch
 
 Fixes:
-- GO-2026-5932 / CVE-2026-56854 (`golang.org/x/crypto` -> `v0.55.0`, `golang.org/x/net` -> `v0.57.0`)
+- GO-2026-5932 / CVE-2026-56854 (`golang.org/x/crypto` -> `v0.55.0`, `golang.org/x/net` -> `v0.58.0`)
 - CVE-2026-49835 (`github.com/sigstore/timestamp-authority` -> `/v2 v2.1.2` via replace + exclude v1.2.2)
 - CVE-2026-2303 (`go.mongodb.org/mongo-driver` -> `v1.17.7` via replace)
+- CVE-2026-53495 (`github.com/containerd/containerd` -> `v1.7.35`)
+- CVE-2026-81870 (`go.opentelemetry.io/otel/sdk` -> `v1.45.0`)
+- CVE-2026-56864, CVE-2026-56865 (`golang.org/x/mod` -> `v0.40.0`)
+- CVE-2026-84303, CVE-2026-84304, CVE-2026-84445 (`google.golang.org/grpc` -> `v1.83.2`)
 
 Also pins `github.com/docker/docker` to `v27.1.1+incompatible` (same as the trivy image)
 so `go mod tidy` after the timestamp-authority replace stays buildable, and regenerates a
 complete `go.sum` (partial sum updates break CI with missing go.sum entry errors).
+
+`golang.org/x/crypto` stays at `v0.55.0`: the fixed `v0.56.0` declares `go 1.26.0`, while the
+`builder/golang-alpine` image of the release-1.73 branch provides Go 1.25. The two SSH
+vulnerabilities that remain, CVE-2026-56855 and CVE-2026-78662, are covered by
+`known_vulnerabilities.vex`.
