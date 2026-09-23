@@ -1,17 +1,18 @@
 From 9fd5160f293001a6e318c161dcc980992735a34f Mon Sep 17 00:00:00 2001
 From: Flant JSC <support@flant.com>
-Date: Mon, 22 Sep 2026 21:00:00 +0300
-Subject: [PATCH] Expose TLS iPXE endpoint when Ironic TLS is enabled
+Date: Wed, 23 Sep 2026 12:30:00 +0300
+Subject: [PATCH] Enable TLS iPXE firmware provisioning
 
-The ironic image enables its iPXE TLS vhost when the serving certificate is
+The Ironic image enables its iPXE TLS vhost when the serving certificate is
 available at /certs/ipxe. Mount the Ironic TLS Secret there and expose the
 corresponding host-network port. Project only ca.crt into a separate volume
 for custom firmware download init containers.
 
----
- pkg/ironic/containers.go | 29 +++++++++++++++++++++++++++++
- 1 file changed, 29 insertions(+)
+IRSO did not copy Container.Args while reconciling an existing Deployment.
+As a result, custom init containers were created without their commands.
+Preserve Args and cover it with a regression test.
 
+---
 diff --git a/pkg/ironic/containers.go b/pkg/ironic/containers.go
 index 4549070..ade0001 100644
 --- a/pkg/ironic/containers.go
@@ -72,3 +73,42 @@ index 4549070..ade0001 100644
  	}
  
  	return ironicPorts, httpdPorts
+}
+diff --git a/pkg/ironic/utils.go b/pkg/ironic/utils.go
+index 728bb65..5d98b55 100644
+--- a/pkg/ironic/utils.go
++++ b/pkg/ironic/utils.go
+@@ -75,6 +75,7 @@ func mergeContainers(target, source []corev1.Container) []corev1.Container {
+ 		dest.Name = src.Name
+ 		dest.Image = src.Image
+ 		dest.Command = src.Command
++		dest.Args = src.Args
+ 		dest.Ports = src.Ports
+ 		dest.Env = src.Env
+ 		dest.EnvFrom = src.EnvFrom
+diff --git a/pkg/ironic/utils_test.go b/pkg/ironic/utils_test.go
+index 27653c4..de8e448 100644
+--- a/pkg/ironic/utils_test.go
++++ b/pkg/ironic/utils_test.go
+@@ -416,3 +416,21 @@ func TestApplyOverridesToPod(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestMergePodTemplatesPreservesInitContainerArgs(t *testing.T) {
++	target := corev1.PodTemplateSpec{}
++	source := corev1.PodTemplateSpec{
++		Spec: corev1.PodSpec{
++			InitContainers: []corev1.Container{{
++				Name:    "firmware-downloader",
++				Image:   "test-image",
++				Command: []string{"/bin/sh", "-c"},
++				Args:    []string{"download firmware"},
++			}},
++		},
++	}
++
++	mergePodTemplates(&target, source)
++
++	assert.Equal(t, []string{"download firmware"}, target.Spec.InitContainers[0].Args)
++}
