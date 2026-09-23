@@ -49,10 +49,10 @@ index 00000000000..ddc6f69950c
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal.go b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
 new file mode 100644
-index 00000000000..ad0a3b80582
+index 00000000000..60493b9ce03
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
-@@ -0,0 +1,90 @@
+@@ -0,0 +1,97 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -87,6 +87,9 @@ index 00000000000..ad0a3b80582
 +	ManagerMemory ManagerName = "memory"
 +)
 +
++// memorymanager.PolicyTypeStatic; importing it would be an import cycle.
++const staticMemoryPolicy = "Static"
++
 +// assignmentKey is how the resource managers address their assignments: by pod
 +// UID and container name, not by container id.
 +type assignmentKey struct {
@@ -114,10 +117,14 @@ index 00000000000..ad0a3b80582
 +// CPUs, so its isolation comes back by itself within one reconcile period.
 +// Nothing rewrites cpuset.mems of a running container, so the recorded NUMA
 +// zone and the real one stay apart until the container is recreated.
-+func ResetCheckpointFile(manager ManagerName, stateDir, checkpointName string, cause error) bool {
++//
++// And only under the Static policy: None assigns no zones, so after a switch
++// from Static no zone can be given twice, and reporting every Guaranteed
++// container of the Node would be noise.
++func ResetCheckpointFile(manager ManagerName, policy, stateDir, checkpointName string, cause error) bool {
 +	path := filepath.Join(stateDir, checkpointName)
 +	var lost []assignmentKey
-+	if manager == ManagerMemory {
++	if manager == ManagerMemory && policy == staticMemoryPolicy {
 +		// The checksum is not checked and read errors are ignored: the file is
 +		// unusable anyway, and what can still be read of it is what gets reported.
 +		blob, _ := os.ReadFile(path)
@@ -140,15 +147,15 @@ index 00000000000..ad0a3b80582
 +	// Not an error: with this patch the kubelet recovers instead of exiting. klog
 +	// has no structured Warning, so the cause goes in as a key.
 +	klog.InfoS("Checkpoint unusable, resetting manager state", "err", cause,
-+		"manager", manager, "stateFile", path, "lostAssignments", len(lost))
++		"manager", manager, "policy", policy, "stateFile", path, "lostAssignments", len(lost))
 +	return true
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/unpinned.go b/pkg/kubelet/cm/checkpointselfheal/unpinned.go
 new file mode 100644
-index 00000000000..5f6e9f99674
+index 00000000000..733bf67b2fb
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/unpinned.go
-@@ -0,0 +1,217 @@
+@@ -0,0 +1,222 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -170,6 +177,7 @@ index 00000000000..5f6e9f99674
 +import (
 +	"context"
 +	"encoding/json"
++	"errors"
 +	"time"
 +
 +	v1 "k8s.io/api/core/v1"
@@ -297,7 +305,11 @@ index 00000000000..5f6e9f99674
 +			}
 +		}
 +
-+		time.Sleep(recheckPeriod)
++		select {
++		case <-ctx.Done():
++			return
++		case <-time.After(recheckPeriod):
++		}
 +	}
 +}
 +
@@ -343,7 +355,7 @@ index 00000000000..5f6e9f99674
 +func load(store checkpointmanager.CheckpointManager) []unpinnedEntry {
 +	cp := &unpinnedCheckpoint{}
 +	if err := store.GetCheckpoint(unpinnedCheckpointName, cp); err != nil {
-+		if err != checkpointerrors.ErrCheckpointNotFound {
++		if !errors.Is(err, checkpointerrors.ErrCheckpointNotFound) {
 +			klog.ErrorS(err, "Unusable unpinned containers report, removing it", "stateFile", unpinnedCheckpointName)
 +			_ = store.RemoveCheckpoint(unpinnedCheckpointName)
 +		}
@@ -390,7 +402,7 @@ index 7c744da1645..3f7ffd934dc 100644
  	// allocatable of the node
  	cm.nodeInfo = node
 diff --git a/pkg/kubelet/cm/cpumanager/cpu_manager.go b/pkg/kubelet/cm/cpumanager/cpu_manager.go
-index 8b59ba67121..2a2becc0488 100644
+index 8b59ba67121..0058c77bb23 100644
 --- a/pkg/kubelet/cm/cpumanager/cpu_manager.go
 +++ b/pkg/kubelet/cm/cpumanager/cpu_manager.go
 @@ -29,6 +29,7 @@ import (
@@ -405,7 +417,7 @@ index 8b59ba67121..2a2becc0488 100644
  	m.containerMap = initialContainers
  
  	stateImpl, err := state.NewCheckpointState(m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
-+	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName, err) {
++	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.policy.Name(), m.stateFileDirectory, cpuManagerStateFileName, err) {
 +		// Upstream gives up here and kubelet exits. Drop the unusable file and
 +		// start from scratch instead.
 +		stateImpl, err = state.NewCheckpointState(m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
@@ -417,7 +429,7 @@ index 8b59ba67121..2a2becc0488 100644
  	m.state = stateImpl
  
  	err = m.policy.Start(m.state)
-+	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName, err) {
++	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.policy.Name(), m.stateFileDirectory, cpuManagerStateFileName, err) {
 +		// Here the state was restored, but the policy rejected it, e.g. after a
 +		// CPU hotplug, so policy.Start is retried as well. At most one of the two
 +		// resets fires: an empty state always passes validateState.
@@ -429,7 +441,7 @@ index 8b59ba67121..2a2becc0488 100644
  		klog.ErrorS(err, "Policy start error")
  		return err
 diff --git a/pkg/kubelet/cm/memorymanager/memory_manager.go b/pkg/kubelet/cm/memorymanager/memory_manager.go
-index 572f58599a0..b28076d444a 100644
+index 572f58599a0..08c1e4274af 100644
 --- a/pkg/kubelet/cm/memorymanager/memory_manager.go
 +++ b/pkg/kubelet/cm/memorymanager/memory_manager.go
 @@ -32,6 +32,7 @@ import (
@@ -444,7 +456,7 @@ index 572f58599a0..b28076d444a 100644
  	m.containerMap = initialContainers
  
  	stateImpl, err := state.NewCheckpointState(logger, m.stateFileDirectory, memoryManagerStateFileName, m.policy.Name())
-+	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerMemory, m.stateFileDirectory, memoryManagerStateFileName, err) {
++	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerMemory, m.policy.Name(), m.stateFileDirectory, memoryManagerStateFileName, err) {
 +		// See the CPU manager: reset rather than let kubelet exit.
 +		stateImpl, err = state.NewCheckpointState(logger, m.stateFileDirectory, memoryManagerStateFileName, m.policy.Name())
 +	}
@@ -455,7 +467,7 @@ index 572f58599a0..b28076d444a 100644
  	m.state = stateImpl
  
  	err = m.policy.Start(ctx, m.state)
-+	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerMemory, m.stateFileDirectory, memoryManagerStateFileName, err) {
++	if err != nil && checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerMemory, m.policy.Name(), m.stateFileDirectory, memoryManagerStateFileName, err) {
 +		// Here the state was restored, but the policy rejected it, e.g. after a
 +		// memory hotplug, so policy.Start is retried as well. At most one of the
 +		// two resets fires: an empty state always passes validateState.
