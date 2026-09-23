@@ -122,6 +122,12 @@ type OSImageStatus struct {
 	// Slot is the A/B slot that image lives in ("a" or "b").
 	// +optional
 	Slot string `json:"slot,omitempty"`
+	// RootHash is the root hash of the image the node is actually running, read
+	// from its active slot. It is what makes "asked for X, running Y" answerable
+	// from the cluster: the digest can differ while the root is the same, and the
+	// hash is what says which of the two happened.
+	// +optional
+	RootHash string `json:"rootHash,omitempty"`
 	// TrialDigest is the image staged for the next boot, or on trial in this one.
 	// Set only while an update is in flight, which is exactly when Digest still
 	// names the old image.
@@ -331,6 +337,17 @@ type OSImage struct {
 	// spec.registry.path already names.
 	// +optional
 	AdditionalPath string `json:"additionalPath,omitempty"`
+	// RootHash is the dm-verity root hash of the root inside the image, as ASCII
+	// hex. It is what tells "the same root, published again" from "a different
+	// root": the digest names the packaging and changes on every republish, so a
+	// node comparing digests alone goes off to update itself onto a copy of itself.
+	//
+	// Optional, and filled in from the image's own label when the registry can be
+	// read. Its absence costs the node one download — it reads the same hash out of
+	// the artifact itself — which is why nothing here fails when the lookup does.
+	// +optional
+	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+	RootHash string `json:"rootHash,omitempty"`
 }
 
 // Storage selects the target disk for the OS install. The partition layout is

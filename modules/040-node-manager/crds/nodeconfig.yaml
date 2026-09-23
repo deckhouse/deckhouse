@@ -388,6 +388,18 @@ spec:
                       registry-packages-proxy as its "repository" parameter. Empty leaves the
                       parameter out, so the proxy uses its own default registry.
                     type: string
+                  rootHash:
+                    description: |-
+                      RootHash is the dm-verity root hash of the root inside the image, as ASCII
+                      hex. It is what tells "the same root, published again" from "a different
+                      root": the digest names the packaging and changes on every republish, so a
+                      node comparing digests alone goes off to update itself onto a copy of itself.
+
+                      Optional, and filled in from the image's own label when the registry can be
+                      read. Its absence costs the node one download — it reads the same hash out of
+                      the artifact itself — which is why nothing here fails when the lookup does.
+                    pattern: ^[a-f0-9]{64}$
+                    type: string
                 required:
                 - digest
                 type: object
@@ -850,6 +862,13 @@ spec:
                       FailedDigest is an image this node booted and rolled back from. It is never
                       tried again: a digest names immutable content, so a fixed image is a
                       different digest.
+                    type: string
+                  rootHash:
+                    description: |-
+                      RootHash is the root hash of the image the node is actually running, read
+                      from its active slot. It is what makes "asked for X, running Y" answerable
+                      from the cluster: the digest can differ while the root is the same, and the
+                      hash is what says which of the two happened.
                     type: string
                   slot:
                     description: Slot is the A/B slot that image lives in ("a" or
