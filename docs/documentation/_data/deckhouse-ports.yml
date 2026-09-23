@@ -96,6 +96,16 @@ groups:
     description:
       en: "Deckhouse controller metrics"
       ru: "Метрики контроллера Deckhouse"
+  - ports: "4284"
+    protocol: TCP
+    description:
+      en: "`registry` storage metrics, the 127.0.0.1 upstream of its kube-rbac-proxy. The port carries no traffic between nodes and needs no firewall rule; it is listed because the storage runs on the host network and occupies this port on every master node"
+      ru: "Метрики хранилища модуля `registry`, upstream на 127.0.0.1 для его kube-rbac-proxy. Трафик между узлами через этот порт не идёт, правило firewall для него не нужно; порт указан, потому что хранилище работает в сетевом пространстве имён узла и занимает этот порт на каждом master-узле"
+  - ports: "4285"
+    protocol: TCP
+    description:
+      en: "`registry` storage metrics"
+      ru: "Метрики хранилища модуля `registry`"
   - ports: "4296"
     protocol: TCP
     description:
@@ -307,16 +317,11 @@ groups:
     description:
       en: "`csi-yadro-tatlin-unified` CSI node healthcheck"
       ru: "Healthcheck CSI-агентов модуля `csi-yadro-tatlin-unified`"
-  - ports: "4250"
-    protocol: TCP
-    description:
-      en: "`sds-local-volume` CSI controller healthcheck"
-      ru: "Healthcheck CSI-контроллера модуля `sds-local-volume`"
   - ports: "4251"
     protocol: TCP
     description:
-      en: "`sds-local-volume` CSI node healthcheck"
-      ru: "Healthcheck CSI-агентов модуля `sds-local-volume`"
+      en: "`csi-hitachi` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `csi-hitachi`"
   - ports: "4252"
     protocol: TCP
     description:
@@ -362,11 +367,6 @@ groups:
     description:
       en: "`csi-huawei` CSI controller metrics"
       ru: "Метрики CSI-контроллера модуля `csi-huawei`"
-  - ports: "4261"
-    protocol: TCP
-    description:
-      en: "`sds-replicated-volume` CSI controller healthcheck"
-      ru: "Healthcheck CSI-контроллера модуля `sds-replicated-volume`"
   - ports: "4262"
     protocol: TCP
     description:
@@ -412,16 +412,6 @@ groups:
     description:
       en: "`sds-replicated-volume` agent metrics, the address the proxy forwards to"
       ru: "Метрики агента модуля `sds-replicated-volume`, адрес, на который проксируется запрос"
-  - ports: "4271"
-    protocol: TCP
-    description:
-      en: "`sds-replicated-volume` controller healthcheck"
-      ru: "Healthcheck контроллера модуля `sds-replicated-volume`"
-  - ports: "4272"
-    protocol: TCP
-    description:
-      en: "`sds-replicated-volume` controller metrics"
-      ru: "Метрики контроллера модуля `sds-replicated-volume`"
   - ports: "4273"
     protocol: TCP
     description:
@@ -432,6 +422,26 @@ groups:
     description:
       en: "`sds-replicated-volume` DRBD metrics of the agent, the address the proxy forwards to"
       ru: "Метрики DRBD агента модуля `sds-replicated-volume`, адрес, на который проксируется запрос"
+  - ports: "4275"
+    protocol: TCP
+    description:
+      en: "`sdn` agent healthcheck"
+      ru: "Healthcheck компонента agent модуля `sdn`"
+  - ports: "4276"
+    protocol: TCP
+    description:
+      en: "`user-authz` Permission Browser API server metrics"
+      ru: "Метрики API-сервера Permission Browser модуля `user-authz`"
+  - ports: "4278"
+    protocol: TCP
+    description:
+      en: "`csi-mind-ustor` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `csi-mind-ustor`"
+  - ports: "4279"
+    protocol: TCP
+    description:
+      en: "`csi-hitachi` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `csi-hitachi`"
   - ports: "4135-4199"
     protocol: TCP
     description:
