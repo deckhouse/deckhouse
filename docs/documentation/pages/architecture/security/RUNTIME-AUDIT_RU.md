@@ -27,10 +27,17 @@ DP запускает объединённые в DaemonSet агенты Falco �
 
 - `falco` — собирает события, обогащает их метаданными и отправляет в stdout;
 - `rules-loader` — собирает данные с правилами из [кастомных ресурсов FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules)
-  и сохраняет их в общую директорию;
+  и сохраняет их в общую директорию, а также проверяет эти ресурсы admission-вебхуком,
+  поэтому правило, которое Falco не может разобрать, отклоняется при применении, а не после доставки агентам;
 - [`falcosidekick`](https://github.com/falcosecurity/falcosidekick) — принимает события от `falco`
   и экспортирует их в виде метрик во внешние системы;
 - `kube-rbac-proxy` — защищает эндпоинт метрик `falcosidekick` от неавторизованного доступа.
+
+Метаданные Kubernetes, которыми `falco` дополняет событие, поступают от `k8s-metacollector` —
+отдельного Deployment в пространстве имён модуля.
+Агенты подключаются к нему по gRPC и получают метаданные подов своего узла,
+а также неймспейсов и рабочих нагрузок, которым эти поды принадлежат.
+Без этого подключения агенты продолжают выявлять события, но события приходят без контекста Kubernetes.
 
 Подробнее с архитектурой модуля [`runtime-audit-engine`](/modules/runtime-audit-engine/), реализующего аудит событий безопасности DP, можно ознакомиться [в разделе с описанием архитектуры модуля](./runtime-audit-engine.html).
 
@@ -54,10 +61,14 @@ DP запускает объединённые в DaemonSet агенты Falco �
 
 Для добавления пользовательских правил используется [кастомный ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 
-У каждого агента Falco есть сайдкар-контейнер с экземпляром сервиса [`shell-operator`](https://github.com/flant/shell-operator).
-Этот экземпляр считывает правила из ресурсов Kubernetes, конвертирует их в правила Falco
+У каждого агента Falco есть сайдкар-контейнер `rules-loader`.
+Он следит за ресурсами FalcoAuditRules, конвертирует их в правила Falco
 и сохраняет правила в директорию `/etc/falco/rules.d/` в поде.
-При добавлении нового правила Falco автоматически обновляет конфигурацию.
+Falco следит за этой директорией и перечитывает конфигурацию при изменении правил,
+поэтому новое правило начинает действовать без перезапуска агентов.
 
-![Работа shell-operator с правилами Falco](../../images/runtime-audit-engine/falco_shop.svg)
+Встроенные правила проходят тот же путь: DP описывает их ресурсами FalcoAuditRules,
+поэтому `kubectl get falcoauditrules` показывает их рядом с пользовательскими.
+
+![Работа rules-loader с правилами Falco](../../images/runtime-audit-engine/falco_shop.svg)
 <!--- Source: https://docs.google.com/drawings/d/13MFYtiwH4Y66SfEPZIcS7S2wAY6vnKcoaztxsmX1hug --->
